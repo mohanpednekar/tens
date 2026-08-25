@@ -4,8 +4,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -289,7 +289,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // wipes all held Compute tokens and rolls back Compute-funded Bandwidth progress — that warning
   // only belongs in the confirm once Compute actually exists. Uses the in-game ConfirmDialog, not
   // window.confirm, so the prompt matches the rest of the UI.
-  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
+  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  const atCapacityCap = isMemoryCapacityAtCap(state)
   const handleSacrificeClick = () => {
     if (!canSacrifice) return
     setSacrificeConfirmOpen(true)
@@ -316,12 +317,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
   const diskSize = getDiskSize(state)
   const diskCost = getDiskCost(diskSize)
+  const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
   const canStartDiskBuild = isDiskBuildTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
-  const diskBuildBlockedByPriority = intro.bits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
+  const diskBuildBlockedByPriority = !diskLadderExhausted && intro.bits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
   const diskBuildProgress = diskBuildInProgress
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
-    : clampPercent((intro.bits / diskCost) * 100)
+    : diskLadderExhausted
+      ? 100
+      : clampPercent((intro.bits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
@@ -360,20 +364,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const sacrificeButton = (
     <Button
-      aria-label="sacrifice all bits for 10x capacity"
+      aria-label="sacrifice all bits for 2x capacity"
       disabled={!canSacrifice}
       onClick={handleSacrificeClick}
       title={
-        isFull && !canSacrifice
-          ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
-          : 'Empty Memory for 10x capacity'
+        atCapacityCap
+          ? 'This pool’s Memory Capacity is already at its cap'
+          : isFull && !canSacrifice
+            ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
+            : 'Empty Memory for 2x capacity'
       }
       type="button"
       variant={canSacrifice ? 'prestige' : 'neutral'}
       $progress={fullProgress}
     >
       <MilestoneButtonContent>
-        <span>💥 Memory ×10</span>
+        <span>💥 Memory ×2</span>
         <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
       </MilestoneButtonContent>
       <VisuallyHidden
@@ -500,17 +506,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       {storageRevealed && (
         <>
           <Button
-            aria-label={diskBuildInProgress ? 'disk array rebuilding' : 'build disk'}
+            aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete for this pool' : 'build disk'}
             disabled={!canStartDiskBuild || !!diskBuildInProgress}
             onClick={actions.startDiskBuild}
             title={
               diskBuildInProgress
                 ? `Rebuilding ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-                : diskBuildBlockedByPriority
-                  ? 'Take Bandwidth (or redeem a full Disk) first'
-                  : diskRedeemTierName
-                    ? `Costs ${formatBitsInNearestUnit(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                    : `Costs ${formatBitsInNearestUnit(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
+                : diskLadderExhausted
+                  ? `Every Disk size this pool can fund (up to ${formatDiskSize(diskSize)}) is fully built — more storage pools are coming in a future update`
+                  : diskBuildBlockedByPriority
+                    ? 'Take Bandwidth (or redeem a full Disk) first'
+                    : diskRedeemTierName
+                      ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                      : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
             }
             type="button"
             variant={canStartDiskBuild ? 'info' : 'neutral'}
@@ -519,7 +527,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <ButtonContent>
               {diskBuildInProgress
                 ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-                : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatBitsInNearestUnit(diskCost)})`}
+                : diskLadderExhausted
+                  ? `🏦 Pool complete (${formatDiskSize(diskSize)})`
+                  : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
             </ButtonContent>
             <VisuallyHidden
               role="progressbar"
@@ -604,7 +614,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         onCancel={cancelSacrifice}
       >
         <p>
-          Empty Memory to multiply capacity ×10, from{' '}
+          Empty Memory to multiply capacity ×2, from{' '}
           {formatBitsInNearestUnit(intro.capacity)} to{' '}
           {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
         </p>

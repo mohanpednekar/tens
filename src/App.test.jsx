@@ -10,14 +10,18 @@ import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
   DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
+  INTRO_BANDWIDTH_COST_MULTIPLIER,
+  INTRO_CAPACITY_CAP_BITS,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
+  INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
@@ -28,6 +32,7 @@ import {
   TICK_RATE_MS,
   TIER_DEFINITIONS,
 } from 'game/layers'
+import { isDevModeActive } from 'game/storage'
 import App from './App'
 
 // A fresh cycle's full purchase block, in bits — exactly enough for tickIntroAutoInvest to convert
@@ -2401,17 +2406,17 @@ test('the milestone offers stay disabled while the bit balance is below capacity
   seedIntroState({ bits: 5, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })).toBeDisabled()
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
 })
 
 // The single most important behavioral regression to cover per the milestone-offer asymmetry
 // correction (see docs/DESIGN_HISTORY.md): "Invest for Double Production" is an ordinary
-// cost-gated purchase (requires bits >= capacity), unaffected by clicking "Sacrifice for 10x
+// cost-gated purchase (requires bits >= capacity), unaffected by clicking "Sacrifice for 2x
 // Capacity" itself (which alone requires a full balance and drains it to 0) — the coupling between
 // the two now runs only the other way: Sacrifice is gated on Invest's current tier already being
 // claimed (see isMemoryCapacityUpgradeAvailable in engine.js), not the reverse.
-test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/×10-capacity effect as a side effect', async () => {
+test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/×2-capacity effect as a side effect', async () => {
   const user = userEvent.setup()
 
   // Invest's own current-tier claim is deliberately left unused here — Sacrifice requires every
@@ -2420,7 +2425,7 @@ test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0 })
   render(<App />)
 
-  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
+  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(sacrificeButton).toBeDisabled()
   expect(investButton).toBeEnabled()
@@ -2428,7 +2433,7 @@ test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/
   await user.click(investButton)
 
   // Capacity is untouched by Invest — the balance bar's own max stays at the starting capacity,
-  // proving Sacrifice's 10x-capacity effect was never triggered as a side effect of claiming Invest.
+  // proving Sacrifice's 2x-capacity effect was never triggered as a side effect of claiming Invest.
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
   // Invest deducted its own cost (bits == capacity at this tier), so the balance is no longer full —
@@ -2440,17 +2445,18 @@ test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/
   expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
 })
 
-test('Sacrifice for 10x Capacity shows what it will drain — the current capacity — on its own line below the label', () => {
+test('Sacrifice for 2x Capacity shows what it will drain — the current capacity — on its own line below the label', () => {
   seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
   render(<App />)
 
-  // INTRO_STARTING_CAPACITY * 100 = 800 bits = 100 Bytes, in the nearest fitting unit.
-  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
-  expect(sacrificeButton).toHaveTextContent('💥 Memory ×10')
+  // INTRO_STARTING_CAPACITY * 100 = 800 bits = 100 Bytes, in the nearest fitting binary unit
+  // (below the 1024 KiB threshold, so still raw Bytes).
+  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
+  expect(sacrificeButton).toHaveTextContent('💥 Memory ×2')
   expect(sacrificeButton).toHaveTextContent('100 B')
 })
 
-test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, and leaves production untouched, once the confirm dialog is accepted', async () => {
+test('Sacrifice for 2x Capacity requires a full balance, drains it entirely, and leaves production untouched, once the confirm dialog is accepted', async () => {
   const user = userEvent.setup()
 
   // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
@@ -2459,7 +2465,7 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
 
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
   expect(dialog).toBeInTheDocument()
@@ -2470,9 +2476,18 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
 
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * 10))
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP))
   // productionMultiplier is untouched by Sacrifice — still the base 1x rate.
   expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+})
+
+test('Sacrifice is disabled with a cap-specific title once pool 1\'s capacity is already at INTRO_CAPACITY_CAP_BITS', () => {
+  seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  render(<App />)
+
+  const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
+  expect(sacrifice).toBeDisabled()
+  expect(sacrifice).toHaveAttribute('title', 'This pool’s Memory Capacity is already at its cap')
 })
 
 test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouched', async () => {
@@ -2481,7 +2496,7 @@ test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouch
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
   render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
 
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
   await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
@@ -2502,19 +2517,20 @@ test('Sacrifice confirm warns that Compute tokens will be wiped only once Comput
   vi.useFakeTimers()
 
   // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
-  // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either.
+  // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either
+  // (tier 10 costs 8 * 4^10 = 8,388,608 bits, past the 4,194,304-bit capacity here).
   // No Compute tokens held → Boost isn't activatable, so Compute doesn't block Sacrifice.
   seedIntroState({
     bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
     capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
     byteCreated: true,
-    productionMilestoneTier: 7,
+    productionMilestoneTier: 10,
     productionMilestoneTierClaims: 0,
     diskBuild: { size: 8000, remainingSeconds: 10, totalSeconds: 10 },
   })
   const { unmount } = render(<App />)
 
-  fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+  fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
 
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
   expect(dialog).toHaveTextContent(/wipes all held Compute tokens/i)
@@ -2534,7 +2550,9 @@ test('the manual convert button appears once capacity reaches the conversion-unl
   })
   render(<App />)
 
-  const convertButton = screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })
+  // 8000 bits = 1000 Bytes, below the 1024-Byte KiB threshold — still raw Bytes under the new
+  // binary-unit Memory formatting.
+  const convertButton = screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })
   expect(convertButton).toBeEnabled()
 
   await user.click(convertButton)
@@ -2552,7 +2570,7 @@ test('the convert button stays hidden below the conversion-unlock capacity', () 
   seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
   render(<App />)
 
-  expect(screen.queryByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).not.toBeInTheDocument()
 })
 
 test('the transfer section hides once Storage unlocks, once the main game is already unlocked', () => {
@@ -2588,9 +2606,9 @@ test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit leve
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   // tier01 is at level 2 — its own current per-unit cost is 10,000 bits; the transfer block
-  // spends BITS_PER_BYTE × that (80,000 bits, "10 KB" in Memory's own Byte-based scale), not the
-  // level-1 rate (8,000 bits/"1 KB") it used to be pinned to forever.
-  const activeBlock = screen.getByRole('button', { name: /convert 10 KB into 1 Kilobyte/i })
+  // spends BITS_PER_BYTE × that (80,000 bits, "9.765 KiB" in Memory's own binary-unit scale — 80000
+  // / 8192, the KiB divisor), not the level-1 rate (8,000 bits/"1,000 B") it used to be pinned to.
+  const activeBlock = screen.getByRole('button', { name: /convert 9\.765 KiB into 1 Kilobyte/i })
   expect(activeBlock).toBeDisabled()
   const progressbar = within(activeBlock).getByRole('progressbar', { name: /byte foundry convert progress/i })
   expect(progressbar).toHaveAttribute('aria-valuemax', '80000')
@@ -2621,7 +2639,7 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const transferGroup = screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })
-  const activeBlock = screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })
+  const activeBlock = screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })
   const lockedBlocks = screen.getAllByRole('button', { name: /^locked transfer block/i })
   expect(activeBlock).toBeEnabled()
   expect(lockedBlocks).toHaveLength(7)
@@ -2637,7 +2655,7 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   // spent stays on screen too, greyed out as consumed, instead of disappearing — the group still
   // holds all 8 blocks total.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).toBeEnabled()
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(6)
   expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
@@ -2675,12 +2693,13 @@ test('auto-transfers a full block once the threshold is reached, then rolls the 
   // Navigating back to the Byte Foundry shows a fresh, empty row for the next level rather than the
   // blocks staying permanently "consumed" — there is no per-cycle transfer cap any more, so the row
   // just keeps mirroring tier01's own live purchase-block progress, which reset to 0 once the level
-  // completed. tier01 is now at level 2, so each block's own cost has stepped up to 10 KB
-  // (getIntroKilobyteConversionCost), not the level-1 1 KB rate.
+  // completed. tier01 is now at level 2, so each block's own cost has stepped up to 80,000 bits
+  // ("9.765 KiB" in Memory's binary-unit scale — getIntroKilobyteConversionCost), not the level-1
+  // 8,000-bit ("1,000 B") rate.
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(7)
-  expect(screen.getByRole('button', { name: /convert 10 KB into 1 Kilobyte/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /convert 9\.765 KiB into 1 Kilobyte/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -2753,15 +2772,15 @@ test('Invest for Double Production shows its cost on its own line below the labe
   expect(investButton.textContent).not.toContain(',')
 })
 
-test('Invest for Double Production shows its cost in the nearest fitting unit once it grows past 1000 Bytes', () => {
-  // Tier 3's cost is 8000 bits = 1000 Bytes — Memory's own B/KB/MB/… scale rolls that over to
-  // "1 KB" once a cost reaches the next unit boundary, rather than a fixed-unit "1,000 B".
+test('Invest for Double Production shows its cost in the nearest fitting binary unit', () => {
+  // Tier 3's cost is 8 * 4^3 = 512 bits = 64 Bytes — below the 1024-Byte KiB threshold, so it
+  // still renders in raw Bytes under Memory's own binary-unit scale.
   seedIntroState({ productionMilestoneTier: 3, bits: 0, byteCreated: true })
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
-  expect(investButton).toHaveTextContent('1 KB')
+  expect(investButton).toHaveTextContent('64 B')
 })
 
 test('Invest for Double Production grants 2 claims at tier 0\'s cost before advancing to the 10x-higher tier-1 cost — independent of capacity', async () => {
@@ -2889,26 +2908,27 @@ test('Memory still renders raw bits (not a fractional Byte) before the Byte gene
   expect(balanceBar.closest('section')).not.toHaveTextContent(/\bB\b/)
 })
 
-test('Memory renders bits/capacity scaled into the same appropriate unit (KB), not raw bits, once capacity grows past the Byte range', () => {
-  // capacity 8000 bits = 1000 Bytes = 1 KB; bits 4000 = 500 Bytes = 0.5 KB — both share the unit
-  // picked off capacity (getMemoryUnit), never a mismatched pairing like "500 B / 1 KB".
-  seedIntroState({ bits: 4000, capacity: 8000, byteCreated: true })
+test('Memory renders bits/capacity scaled into the same appropriate binary unit (KiB), not raw bits, once capacity grows past the Byte range', () => {
+  // capacity 8192 bits = 1024 Bytes = 1 KiB; bits 4096 = 512 Bytes = 0.5 KiB — both share the unit
+  // picked off capacity (getMemoryUnit), never a mismatched pairing like "500 B / 1 KiB". 1024, not
+  // 1000 (the old SI threshold), since Memory Capacity is now binary-unit-denominated.
+  seedIntroState({ bits: 4096, capacity: 8192, byteCreated: true })
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('0.5 KB / 1 KB')
+  expect(balanceBar.closest('section')).toHaveTextContent('0.5 KiB / 1 KiB')
 })
 
-test('Memory balance floors the Bytes-unit conversion instead of rounding, so it never reads complete early', () => {
-  // 7999/8000 bits *rounds* to "1 KB" at formatAmount's default 3-decimal precision but should
-  // *floor* to "0.999 KB" — the same never-overstate rationale as formatCurrency in engine.js,
-  // applied to the Byte Foundry's own Bytes-unit display.
-  seedIntroState({ bits: 7999, capacity: 8000, byteCreated: true })
+test('Memory balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
+  // 8191/8192 bits *rounds* to "1 KiB" at formatAmount's default 3-decimal precision but should
+  // *floor* to "0.999 KiB" — the same never-overstate rationale as formatCurrency in engine.js,
+  // applied to the Byte Foundry's own binary-unit display.
+  seedIntroState({ bits: 8191, capacity: 8192, byteCreated: true })
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('0.999 KB / 1 KB')
-  expect(balanceBar.closest('section')).not.toHaveTextContent('1 KB / 1 KB')
+  expect(balanceBar.closest('section')).toHaveTextContent('0.999 KiB / 1 KiB')
+  expect(balanceBar.closest('section')).not.toHaveTextContent('1 KiB / 1 KiB')
 })
 
 test('Memory tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
@@ -2987,15 +3007,39 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).toBeDisabled()
   })
 
-  test('Build Disk shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
+  test('Build Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
 
-    // currentBankCost is 80,000 bits = 10,000 Bytes = 10 KB in Memory's own B/KB/MB/… scale — shown
-    // as "10 KB", not the raw "80,000" bit count with no unit at all.
+    // currentBankCost is 80,000 bits = 10,000 Bytes — "10 KB" in the Disk's own SI scale
+    // (getDiskCost = diskSize * DISK_BUILD_COST_MULTIPLIER, exactly 10x the array's own SI face
+    // value), shown as "10 KB" rather than Memory's binary scale ("9.765 KiB") or the raw "80,000"
+    // bit count — a Disk's build cost is a Disk-denominated amount, so it renders on the same SI
+    // scale as the Disk's own size right next to it, not Memory's binary Sacrifice-ladder scale.
     const buildButton = screen.getByRole('button', { name: /build disk/i })
     expect(buildButton).toHaveTextContent('10 KB')
     expect(buildButton).not.toHaveTextContent('80,000')
+  })
+
+  test('Build Disk shows a distinct "pool complete" state once every size pool 1 can fund (up to 100 KB) is fully built, instead of an unaffordable cost', () => {
+    // 1 MB's own build cost (8,000,000 bits) would permanently exceed INTRO_CAPACITY_CAP_BITS with
+    // no pool 2 generator yet to fund it — getDiskSize stays at 100 KB forever once its own array is
+    // full, and the Build button reflects that as a distinct "nothing left to build" state rather
+    // than an ever-unaffordable cost line (see isDiskLadderExhaustedForActivePools in engine.js).
+    const size10kb = currentBankSize * 10
+    const size100kb = currentBankSize * 100
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP, [size10kb]: DISK_ARRAY_LADDER_CAP, [size100kb]: DISK_ARRAY_LADDER_CAP },
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /disk ladder complete for this pool/i })
+    expect(buildButton).toBeDisabled()
+    expect(buildButton).toHaveTextContent('Pool complete')
+    expect(buildButton).toHaveTextContent('100 KB')
+    expect(buildButton).not.toHaveTextContent('Build')
+    expect(buildButton).toHaveAttribute('title', expect.stringContaining('fully built'))
   })
 
   test('Build Disk stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
@@ -3929,12 +3973,12 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
   // Tap/Sacrifice/Invest all stay fully interactive — nothing here ever goes read-only.
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeInTheDocument()
   // The transfer row mirrors tier01's own live purchase-block progress — no per-cycle cap, so it
   // keeps offering an active (if currently unaffordable) block rather than ever going fully consumed.
   expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(3)
-  expect(screen.getByRole('button', { name: /convert 1 KB into 1 Kilobyte/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).toBeDisabled()
   expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(4)
 
   await user.click(screen.getByRole('button', { name: /open factory/i }))
@@ -4182,6 +4226,134 @@ describe('Compute (Flops) screen', () => {
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.prestige.points).toBe(0)
     expect(saved.computeFlops.owned.flop01).toBe(1)
+  })
+})
+
+const openDevMode = async user => {
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open dev mode/i }))
+}
+
+describe('Dev Mode', () => {
+  it('is reachable from the More menu (dev build only)', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
+    expect(isDevModeActive()).toBe(false)
+  })
+
+  it('enabling switches to an isolated save and disabling resumes the real one untouched', async () => {
+    const user = userEvent.setup()
+    seedMainGameState({ resources: { base: 4242 } })
+    render(<App />)
+    await openDevMode(user)
+
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    expect(isDevModeActive()).toBe(true)
+    // 'dev' is gate-exempt, so toggling stays on the Dev Mode page rather than bouncing to the
+    // Foundry gate — but the dev save it's now reading/writing starts out fresh and separate.
+    expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^disable dev mode$/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^disable dev mode$/i }))
+    expect(isDevModeActive()).toBe(false)
+    // Real save's own money is untouched by whatever happened on the dev save.
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).resources.base).toBe(4242)
+  })
+
+  it('the Variables tree is read straight off game.state and stays editable via setDevState', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
+    // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
+    // the input.
+    await user.click(screen.getByText(/^resources \(\d+\)$/))
+    const bitsInput = screen.getByLabelText('resources.base')
+    await user.clear(bitsInput)
+    await user.type(bitsInput, '777')
+    await user.click(screen.getByRole('button', { name: /^set resources\.base$/i }))
+
+    expect(screen.getByText(/777 b\b/)).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).resources.base).toBe(777)
+  })
+
+  it('boolean leaves in the Variables tree toggle on click', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByText(/^intro \(\d+\)$/))
+    const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
+    expect(toggle).toHaveTextContent('false')
+    await user.click(toggle)
+
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
+  })
+
+  it('quick-seed presets and the raw JSON editor both stay scoped to the dev save', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByRole('button', { name: /unlock factory/i }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
+
+    const jsonField = screen.getByLabelText(/dev save state json/i)
+    fireEvent.change(jsonField, { target: { value: JSON.stringify({ prestige: { points: 123 } }) } })
+    await user.click(screen.getByRole('button', { name: /^apply json to dev save$/i }))
+
+    expect(await screen.findByText(/applied\./i)).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(123)
+  })
+
+  // Round-4 adversarial review flagged that only the 'unlock-factory' preset (covered above) had
+  // direct coverage — the other six were only traced by reading code. One table covers the rest,
+  // each asserting the exact state change its own label promises, per CLAUDE.md's test.each
+  // convention for near-identical cases.
+  it.each([
+    [/^💰 Bits → 99% to Prestige$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD * 0.99)],
+    [/^💰 Bits → Prestige threshold$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD)],
+    [/^🏆 \+1,000 PP$/, state => expect(state.prestige.points).toBe(1000)],
+    [/^🏆 PP → Era-ready \(1 Googol\)$/, state => expect(state.prestige.points).toBe(ERA_ELIGIBILITY_PP)],
+    [/^🖥️ Unlock Compute \(Flops\)$/, state => {
+      expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP)
+      expect(state.computeFlops.pageUnlocked).toBe(true)
+    }],
+    [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
+  ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: buttonName }))
+    assertState(JSON.parse(localStorage.getItem('tens_dev_state')))
+  })
+
+  it('Settings disables real-slot actions (Play/Clear/Erase all) while Dev Mode is active', async () => {
+    const user = userEvent.setup()
+    seedMainGameState({ resources: { base: 4242 } })
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await openSettings(user)
+    // Erase all is the only real-slot action reachable on a free (single-slot) account without a
+    // Supporter unlock — Play/Clear only render per-slot once a slot is unlocked. The underlying
+    // guard itself (storage.js refusing the write regardless of UI state) is covered directly in
+    // storage.test.js's "refuses to touch real player slots while Dev Mode is active" block; this
+    // just confirms the disabled affordance so the no-op isn't silent to whoever's using it.
+    expect(screen.getByRole('button', { name: /^erase all save progress$/i })).toBeDisabled()
   })
 })
 

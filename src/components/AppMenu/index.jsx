@@ -4,7 +4,8 @@ import styled from 'styled-components'
 // screen, including the mandatory Byte Foundry gate, without requiring any progress. Guide stays
 // on AppNav itself; this sheet holds everything else that shouldn't consume a nav slot. Reset
 // lives only under Settings → Danger zone (not duplicated here). Opened from AppNav's More item;
-// closes on backdrop click, Escape, or any action.
+// closes on backdrop click, Escape, or any action. A third Dev Mode entry (pages/DevModePage)
+// renders only when `import.meta.env.DEV` is true — absent from a production build.
 
 const Backdrop = styled.div`
   background: rgba(0, 0, 0, 0.55);
@@ -105,6 +106,12 @@ const AppMenu = ({ open, onClose, onNavigate }) => {
           <Icon aria-hidden="true">⚙️</Icon>
           Settings
         </MenuButton>
+        {import.meta.env.DEV && (
+          <MenuButton aria-label="open dev mode" onClick={() => go('dev')} type="button">
+            <Icon aria-hidden="true">🛠️</Icon>
+            Dev Mode
+          </MenuButton>
+        )}
       </Sheet>
     </Backdrop>
   )
