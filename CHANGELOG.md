@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   warning stays.
 
 ### Fixed
+- **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
+  least one Flops tier (previously hardcoded off).
 - **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
   minute, `standard` ×8/10 minutes, `sustain` ×2/1 hour) gave Sustain less total extra production
   than Standard despite its much longer commitment. Replaced with `burst` ×20/10 minutes,
