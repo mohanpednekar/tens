@@ -714,7 +714,8 @@ Bytes are no longer a purchasable tier — they're produced entirely by the **By
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
 into a permanent, passively-producing Byte generator, then grows via Sacrifice (2x capacity — binary
-KiB/MiB/… display, hard-capped at 512 KiB, the largest power of two below 1 MiB — see below) and
+KiB/MiB/… display, hard-capped at 1 MiB, large enough to afford building the pool's own largest Disk
+— see below) and
 Invest (double production, own cost ladder now stepped ×4 per tier) on independent cost ladders,
 plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
@@ -748,14 +749,18 @@ balance render in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, 
 (`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
 Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). Sacrifice
 multiplies capacity by `INTRO_CAPACITY_DOUBLING_STEP` (2) each claim, but is hard-capped at
-`INTRO_CAPACITY_CAP_BITS` — the largest power of two strictly below 1 MiB (512 KiB, 4,194,304
-bits) for this generator — after which `isMemoryCapacityUpgradeAvailable` returns `false`
-permanently (`isMemoryCapacityAtCap`); no partial/clamped final step. "Invest for Double
-Production"'s own independent cost ladder (`getIntroProductionMilestoneCost`) now steps by
-`INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier instead of ×10 — its production-doubling effect
-(`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at
-half the cap (2,097,152 bits / 256 KiB) so Compute Cores stay reachable within it. This is the
-first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md`.
+`INTRO_CAPACITY_CAP_BITS` — exactly 1 MiB (8,388,608 bits) for this generator, large enough to cover
+`getDiskCost` for pool 1's own largest (100 KB) buildable Disk (8,000,000 bits) — after which
+`isMemoryCapacityUpgradeAvailable` returns `false` permanently (`isMemoryCapacityAtCap`); no
+partial/clamped final step. An earlier version capped at half this (the largest power of two
+strictly below 1 MiB) purely by binary-tier convention without checking against the pool's own
+largest Disk's build cost, which left that Disk permanently unbuildable — see
+`docs/DESIGN_HISTORY.md`. "Invest for Double Production"'s own independent cost ladder
+(`getIntroProductionMilestoneCost`) now steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier
+instead of ×10 — its production-doubling effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the cap (4,194,304 bits / 512 KiB) so Compute
+Cores stay reachable within it. This is the first slice of a larger per-storage-pool generator
+design — see `docs/DESIGN_HISTORY.md`.
 
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
 `getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/

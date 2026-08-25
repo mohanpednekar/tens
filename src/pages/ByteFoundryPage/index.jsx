@@ -512,8 +512,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 : diskBuildBlockedByPriority
                   ? 'Take Bandwidth (or redeem a full Disk) first'
                   : diskRedeemTierName
-                    ? `Costs ${formatBitsInNearestUnit(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                    : `Costs ${formatBitsInNearestUnit(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
+                    ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                    : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
             }
             type="button"
             variant={canStartDiskBuild ? 'info' : 'neutral'}
@@ -522,7 +522,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <ButtonContent>
               {diskBuildInProgress
                 ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-                : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatBitsInNearestUnit(diskCost)})`}
+                : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
             </ButtonContent>
             <VisuallyHidden
               role="progressbar"

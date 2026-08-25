@@ -161,8 +161,10 @@ built" fill, using `totalSeconds` as the fixed denominator so the fill only ever
 `remainingSeconds` counts down); idle, `(bits / diskCost) * 100` (progress toward affording the next
 build), paired with a hidden `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
-label and `title` render the disk's size via `formatDiskSize` and the cost via
-`formatBitsInNearestUnit` (see "Numbers are formatted" below). Building only ever constructs an EMPTY
+label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
+formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER`
+× the array's own SI face value), so it renders on the same SI scale as the disk's own size right
+next to it, not Memory's binary Sacrifice-ladder scale. Building only ever constructs an EMPTY
 container — Memory / read cache / write cache fill it afterward (see DiskArrayRow continuous
 sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
 split — every shown size's full interactive DiskArrayRow already lives on this page.
@@ -210,8 +212,8 @@ extending `TIER_DEFINITIONS`' own tier symbols with an "i" — `1 KiB = 1024 Byt
 floored (not rounded) at up to 3 decimal places once converted into a binary unit — same
 never-overstate rationale as `formatCurrency` in `engine.js`, so a balance never reads as a complete
 unit ("1 KiB") one tick before it actually is — a display-only convention, internal state always
-stores raw bits. Every standalone Memory-denominated cost (Sacrifice, Invest, Disk build's own cost
-paid out of Memory) reuses this exact binary scale via `engine.js`'s own
+stores raw bits. Every standalone Memory-denominated cost (Sacrifice, Invest, the transfer block's
+own dynamic cost) reuses this exact binary scale via `engine.js`'s own
 `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))` — calling
 `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance) picks whichever
 unit fits that specific amount, so a cost keeps scaling into KiB/MiB/… as it grows instead of
@@ -222,10 +224,11 @@ internal `formatBitsInNearestSiUnit` helper, deliberately **not** the same funct
 `formatBitsInNearestUnit` any more, so a disk's size never renders in Ki/Mi units even though Memory
 Capacity itself now does (see docs/DESIGN_HISTORY.md for the earlier "kilobit" formatting bug this
 SI scale originally fixed, back when both scales were still identical and `formatDiskSize` really
-was a direct alias of `formatBitsInNearestUnit`). A disk's *size* renders through `formatDiskSize`
-(SI); any bit amount actually spent out of Memory — including the transfer block's own dynamic
-cost, the active block's `aria-label`/`title`, and Disk Build's own cost line — renders through
-`formatBitsInNearestUnit` (binary) instead.
+was a direct alias of `formatBitsInNearestUnit`). A disk's *size* AND its own build cost both render
+through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that same SI size); any
+bit amount actually spent out of Memory's own binary-scaled balance — the transfer block's own
+dynamic cost and the active block's `aria-label`/`title` — renders through `formatBitsInNearestUnit`
+(binary) instead.
 This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in

@@ -3405,7 +3405,7 @@ export const purchaseBoosterFromDataLake = tierIndex => state => {
 
 // Predicate, not a reducer: whether ByteFoundryPage's/ComputePage's "Compute" section should be
 // active at all. True once capacity has grown enough to ever hold INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
-// (2,097,152 bits, "256 KiB" in Memory's own binary display scale) at once — the same
+// (4,194,304 bits, "512 KiB" in Memory's own binary display scale) at once — the same
 // "capacity-magnitude reveal gate" convention isIntroConversionUnlocked/isStorageUnlocked already
 // use, one Sacrifice stage later than Storage's own reveal.
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY

@@ -2421,6 +2421,42 @@ comparison: a save already past the cap simply can't Sacrifice further from load
 no data loss, no special-cased migration function. Covered by an explicit test
 (`engine.test.js`, "does not crash on a save whose capacity already exceeds the new cap").
 
+**Update: the cap was wrong — 512 KiB couldn't afford the pool's own largest Disk.** The original cap
+derivation above (largest power of two strictly below the next binary tier — 512 KiB for pool 1)
+matched the maintainer's literal framing ("shall not reach 1GiB capacity" for the MB-pool example)
+but didn't check the number against the pool's own mechanics: pool 1's largest buildable Disk is the
+100 KB rung (the third and last size before `getDiskSize` would advance into pool 2), and
+`startDiskBuild` spends `getDiskCost` — `DISK_BUILD_COST_MULTIPLIER` (10) times that Disk's own
+800,000-bit face value, 8,000,000 bits — from Memory in one shot. Since Memory's balance can never
+exceed `capacity`, a 512 KiB cap (4,194,304 bits) made that Disk permanently unbuildable — the player
+could Sacrifice all the way to the cap and still never afford it. Caught by the maintainer directly,
+with a worked example ("if KB Data lake is AT capacity 64 KB, we can only do KB to Core conversion
+only 64 times unless we upgrade it" for Data Lakes, generalized to "the max memory capacity of MB
+pool should be 1 GiB. So that we can build 100 MB disks" for capacity) — not caught by any of the
+four adversarial review rounds this PR went through, since none of them cross-checked the cap against
+`getDiskCost` for the pool's own ladder. Fixed by changing `INTRO_CAPACITY_CAP_BITS` from `BITS_PER_BYTE
+* (MEMORY_BINARY_UNIT_STEP ** 2 / INTRO_CAPACITY_DOUBLING_STEP)` (512 KiB) to `BITS_PER_BYTE *
+MEMORY_BINARY_UNIT_STEP ** 2` (exactly 1 MiB, 8,388,608 bits) — the smallest value in the doubling
+sequence (`8 * 2^n`) that covers the 8,000,000-bit build cost, which happens to land exactly on the
+next full binary-unit boundary. This generalizes cleanly to the deferred multi-pool system: each
+pool's cap is "one full binary tier" (1 MiB for the KB pool, 1 GiB for the MB pool, matching the
+maintainer's own corrected example, and so on), not "just under" it.
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (still half the cap) moved in lockstep, from 2,097,152 to
+4,194,304 bits (512 KiB) — coincidentally the exact value the *old*, pre-this-PR cap used to be. Every
+doc/test numeric reference to the old 512 KiB/256 KiB values was swept and updated to match.
+
+**Update: Disk build cost now renders in SI, not binary.** Raised in the same round of maintainer
+feedback: `ByteFoundryPage`'s "Build Disk" button and its `title` showed the build cost
+(`getDiskCost`) through `formatBitsInNearestUnit` — Memory's own binary scale — even though that
+cost is `DISK_BUILD_COST_MULTIPLIER` (10) times the Disk's own SI-scaled face value ("Because they
+are exactly 10x of their own capacity which is measured in SI units," in the maintainer's words),
+so it read as e.g. "9.765 KiB" beside the disk's own "1 KB" size label — two different unit systems
+in the same sentence for two numbers that are a fixed multiple of each other. Switched to
+`formatDiskSize` (SI) so the cost renders as "10 KB" instead, matching the Disk's own size scale.
+Memory's own balance/capacity, Sacrifice's cost, and Invest's cost are unaffected — they stay on the
+binary scale, since those are genuinely Memory-denominated (capacity-relative) amounts, not
+Disk-denominated ones.
+
 **Deferred to #456's follow-up epic**: the actual per-storage-pool multi-generator system (pools
 2–10, each an independent instance of the mechanics above), the unlock cascade keyed off the
 previous pool's Disk arrays all being complete, and the full 10-pool compact UI. Rebuilding those

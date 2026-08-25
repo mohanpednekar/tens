@@ -250,15 +250,15 @@ describe('constants', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 
-  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 2,097,152 bits (256 KiB in Memory\'s own binary display scale) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(2097152)
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 4,194,304 bits (512 KiB in Memory\'s own binary display scale) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(4194304)
     expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 1024 * 256)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 1024 * 512)
   })
 
-  it('INTRO_CAPACITY_CAP_BITS is 4,194,304 bits (512 KiB) — the largest power of two strictly below 1 MiB', () => {
-    expect(INTRO_CAPACITY_CAP_BITS).toBe(4194304)
-    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * 1024 * 512)
+  it('INTRO_CAPACITY_CAP_BITS is 8,388,608 bits (exactly 1 MiB) — large enough to afford building pool 1\'s own largest (100 KB) Disk', () => {
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(8388608)
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * 1024 * 1024)
   })
 
   it('INTRO_CAPACITY_DOUBLING_STEP is 2 ("Sacrifice for 2x Capacity")', () => {

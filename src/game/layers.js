@@ -104,14 +104,19 @@ export const INTRO_CAPACITY_DOUBLING_STEP = 2
 // throughout; only Memory Capacity's own display and growth math switched to binary.
 export const MEMORY_BINARY_UNIT_STEP = 1024
 // Pool 1 (the Kilobyte pool, i.e. today's only Byte generator)'s hard capacity ceiling, in bits —
-// the largest power of two strictly below 1 MiB (1024^2 bytes), so pool 1's generator can grow
-// right up to the edge of "MiB territory" but never cross into it. Once `capacity` would double
-// past this (INTRO_CAPACITY_DOUBLING_STEP applied to an already-at-cap capacity), Sacrifice becomes
-// permanently unavailable (see isMemoryCapacityUpgradeAvailable in engine.js). Derived, not a bare
-// literal, so a future per-pool generator (pool N's own ceiling sits one binary tier higher per
-// pool — see docs/DESIGN_HISTORY.md) can reuse the same halving-below-a-power-of-1024 formula.
-export const INTRO_CAPACITY_CAP_BITS =
-  BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** 2 / INTRO_CAPACITY_DOUBLING_STEP)
+// exactly 1 MiB (1024^2 Bytes), the same binary-tier boundary the next pool up would start at. Set
+// this high on purpose: the pool's own largest buildable Disk (the 100 KB rung, the third and last
+// size before getDiskSize would advance into the next pool — DISK_LADDER_BASE_SIZE_BITS *
+// DISK_LADDER_SIZE_MULTIPLIER ** 2) costs DISK_BUILD_COST_MULTIPLIER times its own face value to
+// build — 8,000,000 bits — spent from Memory in one shot via startDiskBuild, so the cap must be
+// able to hold at least that much at once or the array's last Disk size could never be built. An
+// earlier version capped at half this (the largest power of two strictly BELOW 1 MiB) purely by
+// binary-tier convention, without checking against the pool's own largest Disk's build cost — which
+// left the 100 KB Disk permanently unbuildable, since its 8,000,000-bit cost exceeds that lower cap;
+// see docs/DESIGN_HISTORY.md. Derived, not a bare literal, so a future per-pool generator (pool N's
+// own ceiling sits one binary tier higher per pool, matching that pool's own largest Disk the same
+// way) can reuse the same formula.
+export const INTRO_CAPACITY_CAP_BITS = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 2
 // "Invest for Double Production"'s own cost ladder now steps ×4 per tier instead of ×10 — see
 // getIntroProductionMilestoneCost in engine.js. Deliberately a separate constant from
 // INTRO_CAPACITY_DOUBLING_STEP above even though both ladders once shared the same ×10 multiplier —
@@ -229,10 +234,11 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // advanced-game gate than Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching
 // the same "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
 // 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's new
-// hard cap (INTRO_CAPACITY_CAP_BITS) — one Sacrifice doubling-step short of it — since the old
-// value sits ABOVE the new cap and would otherwise be permanently unreachable. Preserves the
-// original's "last/highest of the two capacity-gated reveals" relative ordering (conversion <
-// storage < compute); see docs/DESIGN_HISTORY.md.
+// hard cap (INTRO_CAPACITY_CAP_BITS, 1 MiB) — one Sacrifice doubling-step short of it, i.e.
+// 4,194,304 bits (512 KiB) — since the old value no longer lines up with any capacity the doubling
+// ladder actually passes through. Preserves the original's "last/highest of the two
+// capacity-gated reveals" relative ordering (conversion < storage < compute); see
+// docs/DESIGN_HISTORY.md.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
 // How many Compute Cores the separate, unrelated lifetime-counter latch
 // (computeCoresEverEarned/computeMergePageUnlocked — see latchComputeMergePageIfNeeded in

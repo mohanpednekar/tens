@@ -1202,7 +1202,7 @@ describe('pickIntroProductionMilestone', () => {
 
   it('sacrifices COMPUTE_ENTITY_CAP Cores for ×2 when bit cost exceeds capacity (#323)', () => {
     // Tier 10 costs 8 * 4^10 = 8,388,608 bits; capacity (INTRO_COMPUTE_CORE_UNLOCK_CAPACITY) is
-    // 2,097,152 bits → compute path. Rate already at floor from prior invests.
+    // 4,194,304 bits → compute path. Rate already at floor from prior invests.
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: 0,
@@ -1504,8 +1504,8 @@ describe('getMemoryUnit', () => {
   })
 
   it('steps up through multiple binary units as capacity grows, matching tier symbols with an "i"', () => {
-    // 2,097,152 bits = 256 KiB in Memory's own binary scale (see INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-    // half of pool 1's INTRO_CAPACITY_CAP_BITS / 512 KiB).
+    // 4,194,304 bits = 512 KiB in Memory's own binary scale (see INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    // half of pool 1's INTRO_CAPACITY_CAP_BITS / 1 MiB).
     expect(getMemoryUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, true)).toEqual({ symbol: 'KiB', divisor: BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP })
   })
 
@@ -1535,11 +1535,11 @@ describe('formatMemoryAmount', () => {
 
 describe('formatBitsInNearestUnit', () => {
   it('picks the binary unit that best fits the given amount itself', () => {
-    expect(formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)).toBe('256 KiB')
+    expect(formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)).toBe('512 KiB')
   })
 
-  it('renders exactly INTRO_CAPACITY_CAP_BITS (pool 1\'s cap) as 512 KiB', () => {
-    expect(formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)).toBe('512 KiB')
+  it('renders exactly INTRO_CAPACITY_CAP_BITS (pool 1\'s cap) as 1 MiB', () => {
+    expect(formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)).toBe('1 MiB')
   })
 })
 

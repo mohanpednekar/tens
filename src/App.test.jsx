@@ -2516,7 +2516,7 @@ test('Sacrifice confirm warns that Compute tokens will be wiped only once Comput
 
   // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
   // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either
-  // (tier 10 costs 8 * 4^10 = 8,388,608 bits, past the 2,097,152-bit capacity here).
+  // (tier 10 costs 8 * 4^10 = 8,388,608 bits, past the 4,194,304-bit capacity here).
   // No Compute tokens held → Boost isn't activatable, so Compute doesn't block Sacrifice.
   seedIntroState({
     bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -3005,14 +3005,17 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).toBeDisabled()
   })
 
-  test('Build Disk shows its cost in the nearest fitting unit, not a raw unitless bit count', () => {
+  test('Build Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
 
-    // currentBankCost is 80,000 bits = 10,000 Bytes — 9.765 KiB in Memory's own binary-unit scale
-    // (80000 / 8192, the KiB divisor) — shown as "9.765 KiB", not the raw "80,000" bit count.
+    // currentBankCost is 80,000 bits = 10,000 Bytes — "10 KB" in the Disk's own SI scale
+    // (getDiskCost = diskSize * DISK_BUILD_COST_MULTIPLIER, exactly 10x the array's own SI face
+    // value), shown as "10 KB" rather than Memory's binary scale ("9.765 KiB") or the raw "80,000"
+    // bit count — a Disk's build cost is a Disk-denominated amount, so it renders on the same SI
+    // scale as the Disk's own size right next to it, not Memory's binary Sacrifice-ladder scale.
     const buildButton = screen.getByRole('button', { name: /build disk/i })
-    expect(buildButton).toHaveTextContent('9.765 KiB')
+    expect(buildButton).toHaveTextContent('10 KB')
     expect(buildButton).not.toHaveTextContent('80,000')
   })
 
