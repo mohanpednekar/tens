@@ -1,6 +1,11 @@
 import {
+  canDepositDiskToDataLake,
   formatCacheSize,
   formatDiskSize,
+  getDataLakeTierIndex,
+  getDataLakeTierLabel,
+  getDiskReadCacheFlush,
+  getDiskReadCacheFlushFill,
   getDiskRedeemTierName,
   getDiskWriteCacheFlushFill,
   getDiskWriteCacheMerge,
@@ -9,8 +14,10 @@ import {
   isDiskCacheBlockAutoReleaseEligible,
   isDiskCacheBlockManualReleaseAvailable,
   isDiskManualRedeemAvailable,
+  isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
 } from 'game/engine'
+import Button, { ButtonContent } from 'components/Button'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
 
@@ -52,6 +59,12 @@ const RebuildingText = styled.p`
   text-align: center;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.accent};
+`
+
+const DepositRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 `
 
 // Always one unbroken row of DISK_ARRAY_LADDER_CAP disks — never wraps on mobile. Circles
@@ -126,7 +139,8 @@ const DiskSquare = styled.button`
 // refills whole blocks when a block was just released or the size was just unlocked (see
 // tickDiskAutoFill). A full block ($full) can be manually released ($manualRelease — accent border,
 // clickable) or auto-released ($autoRelease — info styling) when Smart is on, but ONLY while no
-// full redeemable disk of that size exists — disks always take priority. Cache does not pour into disks.
+// full redeemable disk of that size exists — disks always take priority. When flushing to disk,
+// blocks drain left-to-right over one cache-block production duration.
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -144,15 +158,21 @@ const CacheBlock = styled.button`
   padding: 0;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
-    props.$manualRelease || props.$autoRelease
-      ? props.theme.color.accent
-      : props.theme.color.surfaceSunken};
+    props.$flushing
+      ? props.theme.color.info
+      : props.$manualRelease || props.$autoRelease
+        ? props.theme.color.accent
+        : props.theme.color.surfaceSunken};
   background: ${props =>
     props.$full
-      ? (props.$autoRelease ? props.theme.color.info : props.theme.color.surfaceRaised)
+      ? (props.$autoRelease || props.$flushing
+        ? props.theme.color.info
+        : props.theme.color.surfaceRaised)
       : 'transparent'};
   cursor: ${props => (props.$manualRelease ? 'pointer' : 'default')};
-  transition: filter 0.15s ease, transform 0.05s ease;
+  transition: filter 0.15s ease, transform 0.05s ease, background 0.15s ease;
+  overflow: hidden;
+  position: relative;
 
   &:hover:not(:disabled) {
     filter: brightness(1.2);
@@ -165,6 +185,16 @@ const CacheBlock = styled.button`
   &:disabled {
     cursor: not-allowed;
   }
+`
+
+const CacheFlushFill = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${props => props.theme.color.info};
+  transform-origin: left center;
+  transform: scaleX(${props => props.$fill});
+  opacity: 0.85;
+  pointer-events: none;
 `
 
 // Write cache — per-array upward merge buffer (empty at rest). Collect shows DISK_ARRAY_LADDER_CAP
@@ -235,6 +265,19 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const writeFlushFill = writeMerge ? getDiskWriteCacheFlushFill(writeMerge) : 0
   const writeCollecting = writeMerge && writeMerge.segmentsCollected < DISK_ARRAY_LADDER_CAP
   const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_ARRAY_LADDER_CAP
+  const readFlush = getDiskReadCacheFlush(state, size)
+  const readFlushing = Boolean(readFlush)
+  const readFlushPaused = readFlushing && isDiskReadCacheFlushPaused(state, size)
+  // Drain left-to-right: remaining fill fraction across all blocks (1 → 0 as flush completes).
+  const readFlushRemainingFraction = readFlushing
+    ? Math.max(0, 1 - getDiskReadCacheFlushFill(readFlush))
+    : 1
+  const displayCached = readFlushing
+    ? size * readFlushRemainingFraction
+    : cached
+  const dataLakeTierIndex = getDataLakeTierIndex(size)
+  const dataLakeLabel = dataLakeTierIndex ? getDataLakeTierLabel(dataLakeTierIndex) : null
+  const canDeposit = canDepositDiskToDataLake(state, size)
 
   return (
     <DiskSizeRow>
@@ -243,39 +286,57 @@ const DiskArrayRow = ({ actions, size, state }) => {
           {`Rebuilding ${sizeLabel} x ${buildOrdinal} array - Ready in ${rebuildReadySeconds}s`}
         </RebuildingText>
       ) : (
-        <CacheBlocksRow role="group" aria-label={`${sizeLabel} read cache`}>
+        <CacheBlocksRow
+          role="group"
+          aria-label={
+            readFlushing
+              ? `${sizeLabel} read cache flushing to disk${readFlushPaused ? ' paused for tier match' : ''}`
+              : `${sizeLabel} read cache`
+          }
+        >
           {Array.from({ length: DISK_CACHE_BLOCK_COUNT }, (_, index) => {
-            const blockFilledBits = Math.min(blockBits, Math.max(0, cached - index * blockBits))
+            const blockFilledBits = Math.min(blockBits, Math.max(0, displayCached - index * blockBits))
             const isFull = blockFilledBits >= blockBits
-            const autoRelease = isFull && isDiskCacheBlockAutoReleaseEligible(state, size)
-            const manualRelease = isFull && isDiskCacheBlockManualReleaseAvailable(state, size)
+            const partialFill = !isFull && blockFilledBits > 0 ? blockFilledBits / blockBits : 0
+            const autoRelease = isFull && !readFlushing && isDiskCacheBlockAutoReleaseEligible(state, size)
+            const manualRelease = isFull && !readFlushing && isDiskCacheBlockManualReleaseAvailable(state, size)
             return (
               <CacheBlock
                 key={index}
                 aria-label={
-                  autoRelease
-                    ? `auto-release ${sizeLabel} cache block ${index + 1} to Factory Bits`
-                    : manualRelease
-                      ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
-                      : `${sizeLabel} cache block ${index + 1}`
+                  readFlushing
+                    ? `${sizeLabel} cache block ${index + 1} flushing to disk`
+                    : autoRelease
+                      ? `auto-release ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                      : manualRelease
+                        ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
+                        : `${sizeLabel} cache block ${index + 1}`
                 }
                 disabled={!manualRelease}
                 onClick={manualRelease ? () => actions.releaseDiskCacheBlock(size) : undefined}
                 title={
-                  isFull
-                    ? (autoRelease
-                      ? `Auto-releases this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
-                      : manualRelease
-                        ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — no matching disk available`
-                        : `Use the matching ${sizeLabel} disk first — cache is blocked while a full redeemable disk exists`)
-                    : 'Filling from Memory'
+                  readFlushing
+                    ? (readFlushPaused
+                      ? 'Flush paused — matching tier claims this size first'
+                      : `Flushing read cache to disk (${Math.ceil(readFlush.remainingSeconds)}s)`)
+                    : isFull
+                      ? (autoRelease
+                        ? `Auto-releases this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
+                        : manualRelease
+                          ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — no matching disk available`
+                          : `Use the matching ${sizeLabel} disk first — cache is blocked while a full redeemable disk exists`)
+                      : 'Filling from Memory'
                 }
                 type="button"
                 $full={isFull}
                 $manualRelease={manualRelease}
                 $autoRelease={autoRelease}
+                $flushing={readFlushing && (isFull || partialFill > 0)}
               >
-                <CellLabel $emphasis={isFull || manualRelease || autoRelease}>{blockLabel}</CellLabel>
+                {readFlushing && partialFill > 0 ? (
+                  <CacheFlushFill $fill={partialFill} />
+                ) : null}
+                <CellLabel $emphasis={isFull || manualRelease || autoRelease || readFlushing}>{blockLabel}</CellLabel>
               </CacheBlock>
             )
           })}
@@ -374,6 +435,24 @@ const DiskArrayRow = ({ actions, size, state }) => {
           )
         })}
       </SquaresRow>
+      {dataLakeTierIndex && full > 0 && (
+        <DepositRow>
+          <Button
+            aria-label={`deposit one ${sizeLabel} disk into the ${dataLakeLabel} Data Lake`}
+            disabled={!canDeposit}
+            onClick={() => actions.depositDiskToDataLake(size)}
+            title={
+              canDeposit
+                ? `Deposit 1 full ${sizeLabel} disk into the ${dataLakeLabel} Data Lake to fund ${dataLakeLabel} Booster purchases`
+                : `Need this array fully built (all ${DISK_ARRAY_LADDER_CAP} disks ever built), a full disk, an open lake slot (max 9 per size), and room under the 999-unit lake cap`
+            }
+            type="button"
+            variant="info"
+          >
+            <ButtonContent>{`→ ${dataLakeLabel} Lake`}</ButtonContent>
+          </Button>
+        </DepositRow>
+      )}
     </DiskSizeRow>
   )
 }

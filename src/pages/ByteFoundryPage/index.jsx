@@ -1,9 +1,10 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import ConfirmDialog from 'components/ConfirmDialog'
 import DiskArrayRow from 'components/DiskArrayRow'
+import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreClaimAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_MULTIPLIER, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -279,22 +280,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
   const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
-  // Once autoClaimCoreEnabled (see engine.js's enableAutoClaimCore, unlockable on ComputePage by
-  // sacrificing 10 Nodes), Memory → Core conversion resumes automatically and this manual button
-  // is removed entirely, not merely disabled — see "Byte Foundry" in CLAUDE.md.
-  const canClaimComputeCore = isComputeCoreClaimAvailable(state)
-  const showManualClaimCore = computeCoreRevealed && !intro.autoClaimCoreEnabled
-  // After Boosts (Compute Core conversion) unlocks, Claim Core and Memory ×10 swap: Claim Core
-  // takes the milestones-row slot next to Bandwidth, and Memory ×10 moves below the disk section.
-  const sacrificeInMilestones = !computeCoreRevealed
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
-  // Sacrifice is permanent and irreversible (drains Memory to 0). Once Compute Cores are unlocked,
-  // higher capacity also makes every future Core conversion more expensive — that warning only
-  // belongs in the confirm once Cores actually exist. Uses the in-game ConfirmDialog, not
+  // Sacrifice is permanent and irreversible (drains Memory to 0). Once Compute is unlocked, it also
+  // wipes all held Compute tokens and rolls back Compute-funded Bandwidth progress — that warning
+  // only belongs in the confirm once Compute actually exists. Uses the in-game ConfirmDialog, not
   // window.confirm, so the prompt matches the rest of the UI.
   const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_MULTIPLIER
   const handleSacrificeClick = () => {
@@ -393,27 +386,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     </Button>
   )
 
-  const claimCoreButton = (
-    <Button
-      aria-label="claim a compute core"
-      disabled={!canClaimComputeCore}
-      onClick={actions.claimComputeCore}
-      title={
-        canClaimComputeCore
-          ? `Claim 1 Core, flushing your current capacity (${formatBitsInNearestUnit(intro.capacity)})`
-          : 'Fill Memory to claim a Core — or sacrifice 10 Nodes on the Compute screen to automate this'
-      }
-      type="button"
-      variant={canClaimComputeCore ? 'prestige' : 'neutral'}
-      $progress={fullProgress}
-    >
-      <MilestoneButtonContent>
-        <span>🧮 Claim Core</span>
-        <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
-      </MilestoneButtonContent>
-    </Button>
-  )
-
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
@@ -481,7 +453,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
         {intro.byteCreated && (
           <MilestonesRow>
-            {sacrificeInMilestones ? sacrificeButton : (showManualClaimCore ? claimCoreButton : null)}
+            {sacrificeButton}
 
             <Button
               aria-label={
@@ -561,10 +533,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {diskSizesToShow.map(size => (
             <DiskArrayRow key={size} actions={actions} size={size} state={state} />
           ))}
+
+          <DataLakePanel state={state} />
         </>
       )}
-
-      {!sacrificeInMilestones && intro.byteCreated && sacrificeButton}
 
       {showTransferSection && (<>
         <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
@@ -637,13 +609,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
         </p>
         {computeCoreRevealed && (
-          <>
-            <p>Every future Core will cost more — a higher capacity means a bigger Memory flush each time.</p>
-            <p>
-              This also wipes all held Compute tokens and rolls back Bandwidth upgrades bought with
-              Compute tokens.
-            </p>
-          </>
+          <p>
+            This also wipes all held Compute tokens and rolls back Bandwidth upgrades bought with
+            Compute tokens.
+          </p>
         )}
       </ConfirmDialog>
     </RootDiv>

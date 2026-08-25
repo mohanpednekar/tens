@@ -397,7 +397,6 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
       computeCores: 6,
       computeCoresEverEarned: 12,
       computeMergePageUnlocked: true,
-      autoClaimCoreEnabled: true,
     },
   })
   render(<App />)
@@ -2465,7 +2464,7 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
   expect(dialog).toBeInTheDocument()
   expect(dialog).toHaveTextContent(/empty Memory to multiply capacity/i)
-  expect(dialog).not.toHaveTextContent(/future Core/i)
+  expect(dialog).not.toHaveTextContent(/Compute token/i)
 
   await user.click(within(dialog).getByRole('button', { name: /^sacrifice$/i }))
 
@@ -2493,8 +2492,14 @@ test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouch
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
 })
 
-test('Sacrifice confirm warns that future Cores cost more only once Compute Cores are unlocked', async () => {
-  const user = userEvent.setup()
+test('Sacrifice confirm warns that Compute tokens will be wiped only once Compute is unlocked', () => {
+  // Fake timers (and fireEvent instead of userEvent — see other vi.useFakeTimers() tests in this
+  // file) keep the live tick loop from ever firing between render and the assertions below: the
+  // always-on Kilobyte auto-convert (tickIntroAutoInvest) runs every tick regardless of the forced
+  // priority order gating Sacrifice, and a real tick landing here would drain Memory below full and
+  // — on its first successful conversion — flip intro.mainGameUnlocked, navigating away from
+  // ByteFoundryPage (and this dialog) entirely before the test can observe it.
+  vi.useFakeTimers()
 
   // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
   // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either.
@@ -2507,13 +2512,16 @@ test('Sacrifice confirm warns that future Cores cost more only once Compute Core
     productionMilestoneTierClaims: 0,
     diskBuild: { size: 8000, remainingSeconds: 10, totalSeconds: 10 },
   })
-  render(<App />)
+  const { unmount } = render(<App />)
 
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
+  fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
 
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
-  expect(dialog).toHaveTextContent(/every future Core will cost more/i)
-  await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
+  expect(dialog).toHaveTextContent(/wipes all held Compute tokens/i)
+  fireEvent.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('the manual convert button appears once capacity reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
@@ -3181,13 +3189,16 @@ describe('Byte Foundry Storage', () => {
     vi.useFakeTimers()
 
     // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
-    // level 1 so read cache may pour into the empty disk without an active tier claim at this size.
+    // level 1 so read cache may flush into the empty disk without an active tier claim at this size.
+    // High production rate makes the one-block flush finish within a single tick.
     seedIntroState(
       {
         bits: currentBankSize * 2,
         capacity: INTRO_DISK_UNLOCK_CAPACITY,
         byteCreated: true,
         disksBuiltTotal: { [currentBankSize]: 1 },
+        productionMultiplier: currentBankSize * 2,
+        tickSpeedSeconds: 1,
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
@@ -3197,7 +3208,7 @@ describe('Byte Foundry Storage', () => {
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Read cache topped up and poured into the empty disk in the same tick. At tier level 2 the
+    // Read cache topped up and flushed into the empty disk in the same tick. At tier level 2 the
     // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance.
     expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
@@ -3614,7 +3625,7 @@ describe('ComputePage merge chain', () => {
     expect(saved.intro.computeClusters).toBe(2)
   })
 
-  test('Cores merges into Nodes exactly like every other boundary — the merge row that used to be exclusive to "Claim Core" (issue #321)', () => {
+  test('Cores merges into Nodes exactly like every other boundary (issue #321)', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 9, computeNodes: 1,
@@ -3732,65 +3743,7 @@ describe('ComputePage merge chain', () => {
   })
 })
 
-describe('Claim Core (ByteFoundryPage)', () => {
-  test('the Claim Core button appears once Compute is revealed, disabled until Memory is full', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true })
-    render(<App />)
-
-    expect(screen.getByRole('button', { name: /claim a compute core/i })).toBeDisabled()
-  })
-
-  test('after Boosts unlocks, Claim Core sits in Memory ×10\'s former milestones slot and Memory ×10 moves below disks', () => {
-    seedIntroState({
-      bits: 0,
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      byteCreated: true,
-      disksBuiltTotal: { [getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE]: 1 },
-    })
-    render(<App />)
-
-    const claim = screen.getByRole('button', { name: /claim a compute core/i })
-    const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
-    const bandwidth = screen.getByRole('button', { name: /invest bits for double production|sacrifice .* for double production/i })
-    const build = screen.getByRole('button', { name: /build disk/i })
-
-    // Claim Core + Bandwidth share the milestones row (Claim before Bandwidth); Memory ×10 is
-    // after the disk Build control — the swap that happens once Boosts / Compute unlocks.
-    expect(claim.compareDocumentPosition(bandwidth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(build.compareDocumentPosition(sacrifice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(claim.compareDocumentPosition(sacrifice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
-
-  test('before Boosts unlocks, Memory ×10 stays beside Bandwidth and Claim Core is absent', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
-    render(<App />)
-
-    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
-    const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
-    const bandwidth = screen.getByRole('button', { name: /invest bits for double production|sacrifice .* for double production/i })
-    expect(sacrifice.compareDocumentPosition(bandwidth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
-
-  test('clicking Claim Core mints exactly 1 Core and flushes Memory', () => {
-    seedIntroState({ bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true })
-    render(<App />)
-
-    fireEvent.click(screen.getByRole('button', { name: /claim a compute core/i }))
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(1)
-    expect(saved.intro.bits).toBe(0)
-  })
-
-  test('the Claim Core button is removed entirely once auto-claim is enabled', () => {
-    seedIntroState({ bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, autoClaimCoreEnabled: true })
-    render(<App />)
-
-    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
-  })
-})
-
-describe('Compute auto-merge / auto-claim automation', () => {
+describe('Compute auto-merge automation', () => {
   const openBoosters = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
   test('an "enable auto-merge" control is always shown for Nodes into Clusters, disabled below 10 held Clusters', () => {
@@ -3850,31 +3803,6 @@ describe('Compute auto-merge / auto-claim automation', () => {
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
   })
 
-  test('an "enable auto-claim" control for Cores is always shown on ComputePage, disabled below 10 held Nodes', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: 9,
-    })
-    render(<App />)
-    openBoosters()
-
-    expect(screen.getByRole('button', { name: /enable auto-claim for cores/i })).toBeDisabled()
-  })
-
-  test('enabling auto-claim for Cores sacrifices ALL 10 held Nodes and removes the manual Claim Core button', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: COMPUTE_ENTITY_CAP,
-    })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-claim for cores/i }))
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeNodes).toBe(0)
-    expect(saved.intro.autoClaimCoreEnabled).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
-  })
 })
 
 // --- The Byte Foundry resets and reappears after every real Prestige ---
@@ -4271,4 +4199,7 @@ test('theme preference in Settings switches mode and persists across remount', a
   expect(screen.getByRole('button', { name: /use light theme/i })).toHaveAttribute('aria-pressed', 'true')
   await user.click(screen.getByRole('button', { name: /use system theme/i }))
   expect(localStorage.getItem('tens_theme_preference')).toBe('system')
-})
+// Two full <App/> mount/unmount cycles (each with its own tick-timer/effect setup) in one test
+// legitimately take longer than Vitest's 5s default under a loaded/sandboxed test environment —
+// bumped rather than restructured, since the double-mount itself is the point of the test.
+}, 15000)

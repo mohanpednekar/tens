@@ -410,12 +410,13 @@ describe('schema merge on load', () => {
         capacityUpgradeQueued: false,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
         diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
+        diskReadCacheFlush: {},
         diskWriteCache: {},
         diskAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
         computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeFabrics: 0, computeClouds: 0,
         computeDatacenters: 0, computeSupercomputers: 0, computeMegacomputers: 0,
         computeMergePageUnlocked: false,
-        autoClaimCoreEnabled: false, autoMergeCoresIntoNode: false, autoMergeNodesIntoCluster: false,
+        autoMergeCoresIntoNode: false, autoMergeNodesIntoCluster: false,
         autoMergeClustersIntoNetwork: false,
         autoMergeNetworksIntoGrid: false, autoMergeGridsIntoFabric: false, autoMergeFabricsIntoCloud: false,
         autoMergeCloudsIntoDatacenter: false, autoMergeDatacentersIntoSupercomputer: false,
@@ -430,6 +431,7 @@ describe('schema merge on load', () => {
         computeBoostType: null, computeBoostTierIndex: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
         computeFundedBandwidthClaims: 0, computeBandwidthSacrificeIndex: 0,
         foundryResetCaps: null,
+        dataLakes: createInitialGameState().intro.dataLakes,
       },
     }
     saveGameState(state)
@@ -583,6 +585,12 @@ describe('supporter unlock + save slots', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     expect(renameSaveSlot('1', 'Alt run').ok).toBe(true)
     expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt run')
+  })
+
+  it('refuses to rename a slot to an empty/whitespace-only name', () => {
+    const originalName = listSaveSlots().find(s => s.id === '0').name
+    expect(renameSaveSlot('0', '   ')).toEqual({ ok: false, reason: 'empty' })
+    expect(listSaveSlots().find(s => s.id === '0').name).toBe(originalName)
   })
 
   it('clearSaveSlot wipes one slot and leaves others + unlock intact', () => {
