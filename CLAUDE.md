@@ -250,15 +250,16 @@ keeps both milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 
-Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, opening,
-fixing up, and merging PRs with no human in the loop — except a narrow, conservative class of low-risk
-bot-authored PRs that merge on green checks alone. All three authenticate via the `GH_AUTOMATION_PAT`
-repo secret rather than the default `GITHUB_TOKEN` (whose commits/pushes/merges can't trigger other
-workflows). That PAT is deliberately narrowly-scoped and includes `Workflows: write`, so autonomous
-runs can push commits that touch `.github/workflows/**` when a task authorizes it (e.g. Phase B
-self-improvement on `autonomous-maintenance.yml`, or a new workflow file from a Phase A issue).
-Owner review via `.github/CODEOWNERS` still applies once branch protection requires it (see issue
-#62 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
+Four Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
+unattended, opening, fixing up, and merging PRs with no human in the loop — except a narrow,
+conservative class of low-risk bot-authored PRs that merge on green checks alone. All four
+authenticate via the `GH_AUTOMATION_PAT` repo secret rather than the default `GITHUB_TOKEN`
+(whose commits/pushes/merges can't trigger other workflows). That PAT is deliberately
+narrowly-scoped and includes `Workflows: write`, so autonomous runs can push commits that touch
+`.github/workflows/**` when a task authorizes it (e.g. Phase B self-improvement on
+`autonomous-maintenance.yml`, or a new workflow file from a Phase A issue). Owner review via
+`.github/CODEOWNERS` still applies once branch protection requires it (see issue #62 and
+`docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
@@ -270,9 +271,11 @@ always outranks Phase B (a maintenance menu: test coverage, dependency/security 
 medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
 workflow self-improvement, gap analysis).
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` PRs.
-`pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR) or on green
-checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the diff meets a
-conservative low-risk bar.
+`dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
+itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
+`main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
+or on green checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the
+diff meets a conservative low-risk bar.
 
 **Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
 `cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones

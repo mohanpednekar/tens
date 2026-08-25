@@ -239,7 +239,8 @@ Without `GH_TOKEN`, land issue-only changes via a housekeeping GHA run (determin
 ## Automation engines (Claude now, Cursor successor)
 
 The unattended pipeline currently runs the **Claude** engine (`autonomous-maintenance.yml` +
-`autonomous-pr-followup.yml`, via `anthropics/claude-code-action`). Two twin workflows —
+`autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml`, via
+`anthropics/claude-code-action` where an agent is involved). Two twin workflows —
 `cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same orchestration on the
 **Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the Claude engine, but not
 immediately: both coexist for now. The Cursor twins share the `claude-task` backlog and the same
