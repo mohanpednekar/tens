@@ -2,6 +2,7 @@ import {
   AUTO_SPEED_UP_COST,
   BYTES_ID,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
@@ -9,6 +10,7 @@ import {
   TIER_DEFINITIONS,
 } from 'game/layers'
 import {
+  canBuyComputeFlopsTier,
   getAutoPrestigeCost,
   getDiskSizesToShow,
   getGlobalTickspeedMultiplierCost,
@@ -20,6 +22,7 @@ import {
   getSpeedUpRequirement,
   getTierAffordableQuantity,
   getTierSpendableAmount,
+  isComputeFlopsPageRevealed,
   isAutoMergeCloudsIntoDatacenterUnlockAvailable,
   isAutoMergeClustersIntoNetworkUnlockAvailable,
   isAutoMergeCoresIntoNodeUnlockAvailable,
@@ -255,6 +258,15 @@ export const getComputeAttentionLevel = state => {
   )
 }
 
+/** PP Compute (Flops) screen — any tier buyable with current spendable PP. */
+export const hasAffordableComputeFlopsTier = state => {
+  if (!isComputeFlopsPageRevealed(state)) return false
+  return COMPUTE_FLOPS_TIER_DEFINITIONS.some(tier => canBuyComputeFlopsTier(state, tier.id))
+}
+
+export const getComputeFlopsAttentionLevel = state =>
+  hasAffordableComputeFlopsTier(state) ? ATTENTION_NORMAL : false
+
 /** Prefer the stronger of two attention levels. */
 export const maxAttention = (a, b) => {
   if (a === ATTENTION_HIGH || b === ATTENTION_HIGH) return ATTENTION_HIGH
@@ -270,5 +282,5 @@ export const getNavAttention = state => ({
   game: getTiersAttentionLevel(state),
   foundry: maxAttention(getFoundryAttentionLevel(state), getStorageAttentionLevel(state)),
   boosters: getComputeAttentionLevel(state),
-  compute: false,
+  compute: getComputeFlopsAttentionLevel(state),
 })
