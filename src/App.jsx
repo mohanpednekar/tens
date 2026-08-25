@@ -4,6 +4,7 @@ import IncompatibleSaveNotice from 'components/IncompatibleSaveNotice'
 import ByteFoundryPage from 'pages/ByteFoundryPage'
 import ComputeFlopsPage from 'pages/ComputeFlopsPage'
 import ComputePage from 'pages/ComputePage'
+import DevModePage from 'pages/DevModePage'
 import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
 import MilestonesPage from 'pages/MilestonesPage'
@@ -19,8 +20,11 @@ import styled from 'styled-components'
 const resolveInitialThemeMode = () => resolveThemeMode(loadThemePreference())
 
 // Utilities stay reachable during the Byte Foundry gate. Storage is no longer a top-level page —
-// it lives under Foundry as continuous sections — so it is not gate-exempt on its own.
-const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings'])
+// it lives under Foundry as continuous sections — so it is not gate-exempt on its own. 'dev' is
+// exempt for the same reason Settings/Milestones are — Dev Mode has to be reachable precisely
+// when you want to seed past the gate, and it's a dev-build-only destination regardless (see
+// AppMenu's `import.meta.env.DEV` guard).
+const GATE_EXEMPT_PAGES = new Set(['info', 'boosters', 'compute', 'milestones', 'settings', 'dev'])
 
 const PageShell = styled.div`
   padding-bottom: ${APP_NAV_BOTTOM_PAD};
@@ -122,6 +126,8 @@ function App() {
     content = <ComputeFlopsPage game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
+  } else if (page === 'dev') {
+    content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage focusNonce={tiersFocusNonce} game={game} />
   } else if (page === 'settings') {
     content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} onThemePreferenceChange={handleThemePreferenceChange} themePreference={themePreference} />
   } else {
