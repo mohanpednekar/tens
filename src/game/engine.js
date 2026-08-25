@@ -2264,7 +2264,7 @@ export const getIntroProductionMilestoneCost = tier =>
   INTRO_STARTING_CAPACITY * (INTRO_BANDWIDTH_COST_MULTIPLIER ** clampNonNegative(tier))
 
 // How many claims a given productionMilestoneTier grants before advancing to the next: 2 for the
-// three cheapest tiers (0/1/2, i.e. 1/10/100 Bytes), 1 for every tier from there on — unlike
+// three cheapest tiers (0/1/2, i.e. 1/4/16 Bytes), 1 for every tier from there on — unlike
 // "Sacrifice for 2x Capacity"'s own flat one-attempt-per-cost posture, the earliest, cheapest
 // Invest tiers get a second attempt each before advancing. A previous iteration simplified this to
 // a flat 1 across the board; see docs/DESIGN_HISTORY.md for both that change and this reinstatement.

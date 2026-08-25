@@ -1096,7 +1096,7 @@ describe('getIntroProductionMilestoneCost', () => {
 })
 
 describe('getIntroProductionMilestoneMaxClaims', () => {
-  it('grants 2 claims for the three cheapest tiers (0/1/2 — 1/10/100 Bytes), then 1 for every tier after', () => {
+  it('grants 2 claims for the three cheapest tiers (0/1/2 — 1/4/16 Bytes), then 1 for every tier after', () => {
     expect(getIntroProductionMilestoneMaxClaims(0)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(1)).toBe(2)
     expect(getIntroProductionMilestoneMaxClaims(2)).toBe(2)
@@ -1146,7 +1146,7 @@ describe('pickIntroProductionMilestone', () => {
     expect(getIntroProductionRate(afterScaleUp.intro)).toBe(getIntroProductionRate(scalingAmount.intro) * INTRO_PRODUCTION_MULTIPLIER_STEP)
   })
 
-  it('requires 2 claims to advance from tiers 0-2 (the three cheapest, 1/10/100 Bytes), but only 1 from tier 3 on', () => {
+  it('requires 2 claims to advance from tiers 0-2 (the three cheapest, 1/4/16 Bytes), but only 1 from tier 3 on', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 1, productionMultiplier: 1 })
     const afterFirstTier0Claim = pickIntroProductionMilestone(state)
     expect(afterFirstTier0Claim.intro.productionMilestoneTier).toBe(0)
