@@ -147,10 +147,14 @@ const hasStoredStateForSlot = slotId => {
 export const listSaveSlots = () => {
   const meta = loadSavesMeta()
   const rows = []
+  const slotsById = new Map()
+  for (const slot of meta.slots) {
+    slotsById.set(slot.id, slot)
+  }
   for (let i = 0; i < SUPPORTER_SLOT_COUNT; i += 1) {
     const id = String(i)
     const unlocked = i < meta.unlockedSlotCount
-    const named = meta.slots.find(s => s.id === id)
+    const named = slotsById.get(id)
     rows.push({
       id,
       name: named?.name ?? defaultSlotName(i),
