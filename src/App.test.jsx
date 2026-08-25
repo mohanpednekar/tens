@@ -10,6 +10,7 @@ import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
@@ -31,6 +32,7 @@ import {
   TICK_RATE_MS,
   TIER_DEFINITIONS,
 } from 'game/layers'
+import { isDevModeActive } from 'game/storage'
 import App from './App'
 
 // A fresh cycle's full purchase block, in bits — exactly enough for tickIntroAutoInvest to convert
@@ -4224,6 +4226,134 @@ describe('Compute (Flops) screen', () => {
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.prestige.points).toBe(0)
     expect(saved.computeFlops.owned.flop01).toBe(1)
+  })
+})
+
+const openDevMode = async user => {
+  await user.click(screen.getByRole('button', { name: /open more menu/i }))
+  await user.click(screen.getByRole('button', { name: /open dev mode/i }))
+}
+
+describe('Dev Mode', () => {
+  it('is reachable from the More menu (dev build only)', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
+    expect(isDevModeActive()).toBe(false)
+  })
+
+  it('enabling switches to an isolated save and disabling resumes the real one untouched', async () => {
+    const user = userEvent.setup()
+    seedMainGameState({ resources: { base: 4242 } })
+    render(<App />)
+    await openDevMode(user)
+
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    expect(isDevModeActive()).toBe(true)
+    // 'dev' is gate-exempt, so toggling stays on the Dev Mode page rather than bouncing to the
+    // Foundry gate — but the dev save it's now reading/writing starts out fresh and separate.
+    expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^disable dev mode$/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^disable dev mode$/i }))
+    expect(isDevModeActive()).toBe(false)
+    // Real save's own money is untouched by whatever happened on the dev save.
+    expect(JSON.parse(localStorage.getItem('tens_game_state')).resources.base).toBe(4242)
+  })
+
+  it('the Variables tree is read straight off game.state and stays editable via setDevState', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
+    // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
+    // the input.
+    await user.click(screen.getByText(/^resources \(\d+\)$/))
+    const bitsInput = screen.getByLabelText('resources.base')
+    await user.clear(bitsInput)
+    await user.type(bitsInput, '777')
+    await user.click(screen.getByRole('button', { name: /^set resources\.base$/i }))
+
+    expect(screen.getByText(/777 b\b/)).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).resources.base).toBe(777)
+  })
+
+  it('boolean leaves in the Variables tree toggle on click', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByText(/^intro \(\d+\)$/))
+    const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
+    expect(toggle).toHaveTextContent('false')
+    await user.click(toggle)
+
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
+  })
+
+  it('quick-seed presets and the raw JSON editor both stay scoped to the dev save', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByRole('button', { name: /unlock factory/i }))
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
+
+    const jsonField = screen.getByLabelText(/dev save state json/i)
+    fireEvent.change(jsonField, { target: { value: JSON.stringify({ prestige: { points: 123 } }) } })
+    await user.click(screen.getByRole('button', { name: /^apply json to dev save$/i }))
+
+    expect(await screen.findByText(/applied\./i)).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(123)
+  })
+
+  // Round-4 adversarial review flagged that only the 'unlock-factory' preset (covered above) had
+  // direct coverage — the other six were only traced by reading code. One table covers the rest,
+  // each asserting the exact state change its own label promises, per CLAUDE.md's test.each
+  // convention for near-identical cases.
+  it.each([
+    [/^💰 Bits → 99% to Prestige$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD * 0.99)],
+    [/^💰 Bits → Prestige threshold$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD)],
+    [/^🏆 \+1,000 PP$/, state => expect(state.prestige.points).toBe(1000)],
+    [/^🏆 PP → Era-ready \(1 Googol\)$/, state => expect(state.prestige.points).toBe(ERA_ELIGIBILITY_PP)],
+    [/^🖥️ Unlock Compute \(Flops\)$/, state => {
+      expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP)
+      expect(state.computeFlops.pageUnlocked).toBe(true)
+    }],
+    [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
+  ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: buttonName }))
+    assertState(JSON.parse(localStorage.getItem('tens_dev_state')))
+  })
+
+  it('Settings disables real-slot actions (Play/Clear/Erase all) while Dev Mode is active', async () => {
+    const user = userEvent.setup()
+    seedMainGameState({ resources: { base: 4242 } })
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await openSettings(user)
+    // Erase all is the only real-slot action reachable on a free (single-slot) account without a
+    // Supporter unlock — Play/Clear only render per-slot once a slot is unlocked. The underlying
+    // guard itself (storage.js refusing the write regardless of UI state) is covered directly in
+    // storage.test.js's "refuses to touch real player slots while Dev Mode is active" block; this
+    // just confirms the disabled affordance so the no-op isn't silent to whoever's using it.
+    expect(screen.getByRole('button', { name: /^erase all save progress$/i })).toBeDisabled()
   })
 })
 
