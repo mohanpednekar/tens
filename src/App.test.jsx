@@ -3339,6 +3339,23 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
   })
 
+  test('Data Lake renders bare (no separate "Data Lakes" card) as part of the same pool card once a lake has any deposit', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0 } },
+    })
+    render(<App />)
+    openStorage()
+
+    expect(screen.getByText(/KB Data Lake.*Cores/i)).toBeInTheDocument()
+    // `bare` mode (see components/DataLakePanel) skips its own StatCard wrapper — there is no
+    // separately-labeled "Data Lakes" region; it renders as the last sub-section of the same
+    // PoolCard as Memory/Storage above it.
+    expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
+  })
+
   test('a full disk above 1 KB auto-redeems once the matching tier\'s own autobuyer is unlocked and enabled — there is no separate storage-specific pause toggle any more', () => {
     vi.useFakeTimers()
 
