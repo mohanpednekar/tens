@@ -8,7 +8,7 @@ state each is currently in.
 ## `AppNav/index.jsx`
 
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
-**Compute** (`open compute`, once revealed) → **Factory** (`open factory`, page id `'game'`, only once
+**Compute** (`open compute`, once revealed) → **Ladder** (`open ladder`, page id `'game'`, only once
 `mainGameUnlocked`) → **Guide** (`open guide`, always) → **More** (`open more menu`, always —
 opens `AppMenu`). Storage is **not** a top-level item — it lives under Foundry as continuous
 Memory + Disk sections on the same screen.
@@ -22,7 +22,7 @@ high = larger pulsing green dot).
 ## `AppMenu/index.jsx`
 
 Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
-must not depend on unlocking Factory: **Milestones** and **Settings**. Destructive **Reset** / **Reset
+must not depend on unlocking Ladder: **Milestones** and **Settings**. Destructive **Reset** / **Reset
 Byte Foundry** live only under Settings → Danger zone (not duplicated in this sheet or on MainPage).
 Closes on backdrop
 click, Escape, or any action. Takes `{ open, onClose, onNavigate }`.
@@ -36,7 +36,7 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
 `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares (`aria-label="… read cache"`), each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
-full and `isDiskCacheBlockReleasable` — manual transfer to Factory Bits only; Smart autobuyers may
+full and `isDiskCacheBlockReleasable` — manual transfer to Ladder Bits only; Smart autobuyers may
 auto-release when no matching disk exists), then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
 below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never

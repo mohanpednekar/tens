@@ -899,17 +899,17 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
 A separate top-level screen (nav **Compute**, page id `'compute'`, `ComputeFlopsPage`) from the
 Foundry **Boosters** screen (nav **Boosters**, page id `'boosters'`, `ComputePage` — Cores/merge/Boost).
 Ten PP-funded tiers **KFlops → QFlops** (`COMPUTE_FLOPS_TIER_DEFINITIONS` in `layers.js`, ids
-`flop01`…`flop10`), each 1:1 with a Factory tier via `boostsTierId`. Constants:
+`flop01`…`flop10`), each 1:1 with a Ladder tier via `boostsTierId`. Constants:
 
 - `COMPUTE_FLOPS_REVEAL_PP = 100` — nav item appears once spendable PP first reaches this (latched in
   `computeFlops.pageUnlocked` via `latchComputeFlopsPageUnlocked` / `isComputeFlopsPageRevealed`).
 - `COMPUTE_FLOPS_FIRST_TIER_COST_PP = 1E3` … `COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30` — same 10³
   triangular ladder as `TIER_DEFINITIONS` `baseCost`.
 - `COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001` — each owned unit adds 0.01%/real-second to
-  that tier's cumulative boost on the matching Factory tier (linear in owned count).
+  that tier's cumulative boost on the matching Ladder tier (linear in owned count).
 
 **Buying:** `buyComputeFlopsTier(flopId)` spends PP from `prestige.points` at the tier's current
-per-unit price. Unlike Factory tiers (same `getTierCost` / `getCostEpochExponent` formula but
+per-unit price. Unlike Ladder tiers (same `getTierCost` / `getCostEpochExponent` formula but
 level advances only after each 8-purchase block), Flops uses **one cost epoch per owned unit** —
 the price for the next purchase is `getComputeFlopsTierCost(flopTier, owned)` =
 `getTierCost({ baseCost: flopTier.baseCostPP }, owned + 1)`. No-op if unaffordable. Owned counts
@@ -926,7 +926,7 @@ production batch in `tickGame`.
 
 **Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
 **E = k + 10M + 100G + 1000T + … + 10⁹Q** — each Flops tier's `cumulativeBoost` on its matching
-Factory tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
+Ladder tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
 renders the hero line; per-tier rows still use `formatComputeFlopsBoost` on the unweighted boost.
 Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weighting.
 
@@ -965,7 +965,7 @@ save Reset only).
 (Eon Amplifier shop upgrade deferred to #414).
 
 **On `eraGame` — resets:** full Foundry (generator upgrades, Memory/gate, Disks, compute ladder
-entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `prestigeGame`),
+entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined.
 
@@ -1824,7 +1824,7 @@ disabled while production is frozen at the Prestige threshold.
   computeFlops: {                                         // PP Compute (Flops) screen — see "PP Compute (Flops)"
                                                           // above. pageUnlocked latches true once PP >= reveal;
                                                           // owned counts permanent across Prestige; cumulativeBoost
-                                                          // per Factory tierId resets each Prestige cycle
+                                                          // per Ladder tierId resets each Prestige cycle
     pageUnlocked: false,
     owned:      { flop01: 0, … flop10: 0 },
     cumulativeBoost: { tier01: 0, … tier10: 0 },

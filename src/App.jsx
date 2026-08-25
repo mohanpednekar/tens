@@ -39,7 +39,7 @@ function App() {
   // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Factory so MainPage resets to the Data tab (not Upgrades).
+  // Bumped when AppNav selects Ladder so MainPage resets to the Data tab (not Upgrades).
   const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
@@ -53,7 +53,7 @@ function App() {
 
   const showBoosters = isComputeCoreConversionUnlocked(game.state)
   const showComputeFlops = isComputeFlopsPageRevealed(game.state)
-  // Factory is the only progress-gated primary destination — utilities (Guide / More) stay available
+  // Ladder is the only progress-gated primary destination — utilities (Guide / More) stay available
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
 

@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
 
 ### Changed
+- **Factory screen renamed to Ladder** (#399) — the main production screen's header, AppNav label/
+  accessible name/title, and other player-facing copy referring to it (cache transfer hints, Settings
+  danger-zone copy, the Era ascension confirm dialog, Guide/PP Compute prose naming "Factory tier(s)")
+  now say **Ladder**, to avoid colliding with "tier" language used elsewhere (Compute merge-chain
+  tiers, PP Compute Flops tiers). Internal ids (`page === 'game'`, `showTiers`, etc.) are unchanged.
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during

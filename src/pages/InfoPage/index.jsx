@@ -402,23 +402,23 @@ const InfoPage = () => {
         <h2>Compute</h2>
         <p>
           A separate PP-funded screen (nav <strong>Compute</strong>) with ten tiers{' '}
-          <strong>KFlops → QFlops</strong>, each boosting the matching Factory tier. Reveals once
+          <strong>KFlops → QFlops</strong>, each boosting the matching Ladder tier. Reveals once
           you hold {COMPUTE_FLOPS_REVEAL_PP} PP; the first tier costs{' '}
           {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} PP, so the screen is visible before
           you can buy anything.
         </p>
         <ul>
           <li>
-            Base costs follow the same 10³ ladder as Factory tiers (
+            Base costs follow the same 10³ ladder as Ladder tiers (
             {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} –{' '}
             {COMPUTE_FLOPS_LAST_TIER_COST_PP.toExponential(0).replace('+', '')} PP). Per-unit price
             then rises on <strong>every</strong> purchase via the triangular power-of-ten epoch (same
-            curve as Factory, but not gated behind 8-purchase level blocks).
+            curve as Ladder, but not gated behind 8-purchase level blocks).
           </li>
           <li>
             Each owned unit adds{' '}
             {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per real second to its
-            matching Factory tier — linear in owned count, applied as production multiplier{' '}
+            matching Ladder tier — linear in owned count, applied as production multiplier{' '}
             <strong>(1 + cumulative boost)</strong>.
           </li>
           <li>
@@ -577,7 +577,7 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Resets:</strong> Foundry generator upgrades, Memory and the main-game gate,
-            Disks, Compute entities, ordinary Factory cycle (resources, owned tiers, Double PP
+            Disks, Compute entities, ordinary Ladder cycle (resources, owned tiers, Double PP
             level), unspent PP and prestige count, and Compute owned units.
           </li>
           <li>

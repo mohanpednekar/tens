@@ -11,14 +11,14 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 **Tens** — a React incremental game. Every mechanic (costs, production, prestige) is themed around powers
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between top-level screens via a plain `useState` toggle in `App.jsx` plus a shared bottom
-`AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture" below):
+`AppNav` (Foundry → Boosters → Compute → Ladder → Guide → More) — not a router (see "Architecture" below):
 `ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
-then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
+then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades, screen name **Ladder**), `InfoPage` (Guide),
 `ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
 `StoragePage` is not an AppNav destination — disk arrays live under Foundry as continuous Memory +
 Storage sections on the same screen (no second-level tabs).
 Guide and More (Milestones / Settings) are always available, including during the mandatory Byte
-Foundry gate; only Factory stays progress-gated. A third More entry, **Dev Mode** (`DevModePage`),
+Foundry gate; only Ladder stays progress-gated. A third More entry, **Dev Mode** (`DevModePage`),
 renders only in a dev build (`import.meta.env.DEV`) — see "Dev Mode" below.
 
 ## Tech stack
@@ -397,8 +397,8 @@ src/
                                current-compatible game state (or failure); runs on every load; see
                                DESIGN_HISTORY.md "Save persistence".
   components/
-    AppNav/index.jsx        ← fixed bottom bar: Foundry → Boosters → Compute → Factory → Guide → More
-                               (progression order); Factory omits during the Foundry gate
+    AppNav/index.jsx        ← fixed bottom bar: Foundry → Boosters → Compute → Ladder → Guide → More
+                               (progression order); Ladder omits during the Foundry gate
                                (Guide/More stay); green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset
                                Byte Foundry are Settings → Danger zone only)
@@ -441,12 +441,12 @@ src/
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
                                once `isComputeCoreConversionUnlocked`; page id `'boosters'`. Takes `{ game }`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen — KFlops→QFlops tiers bought with PP,
-                               boosting matching Factory tiers. Reached via AppNav once
+                               boosting matching Ladder tiers. Reached via AppNav once
                                `isComputeFlopsPageRevealed` (100 PP); page id `'compute'`. Takes `{ game }`
-    MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
-                               — the full `useIncrementalGame()` object, lifted up into App.jsx so
-                               ByteFoundryPage and MainPage can share one save/tick loop. Second-
-                               level tabs: Data | Upgrades (after first Prestige). Full
+    MainPage/index.jsx      ← the tier ladder, screen name **Ladder** (see "Architecture" below). Takes
+                               `{ game, focusNonce }` — the full `useIncrementalGame()` object, lifted up
+                               into App.jsx so ByteFoundryPage and MainPage can share one save/tick loop.
+                               Second-level tabs: Data | Upgrades (after first Prestige). Full
                                field-by-field reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (see "Architecture" below), including Byte
                                Foundry/Storage/Compute sections. Reached via AppNav's Guide item;
@@ -487,7 +487,7 @@ src/
                                <ComputeFlopsPage/>/<MilestonesPage/>/<SettingsPage/> via a local `page` useState
                                (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`,
                                default `'game'`) — not a routing library — plus a shared fixed bottom
-                               `AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) and `AppMenu`
+                               `AppNav` (Foundry → Boosters → Compute → Ladder → Guide → More) and `AppMenu`
                                (More sheet → Milestones / Settings). Legacy `page === 'storage'`
                                navigations rewrite to `'foundry'` (Disks live on Foundry, not a
                                top-level page). Same "local toggle, not real routing" convention
@@ -504,7 +504,7 @@ src/
                                Gate-exempt pages stay reachable during the gate so Guide / Boosters
                                (once capacity reveals it) / Compute (once 100 PP) / More utilities are never yanked away; the
                                gate picks back up the instant the player navigates to `'game'`
-                               (Factory). Since `page` is independent of `intro.mainGameUnlocked`, no
+                               (Ladder). Since `page` is independent of `intro.mainGameUnlocked`, no
                                syncing effect is needed at all: the gate resolving just reveals
                                whatever `page` already was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
@@ -587,12 +587,12 @@ Strict three-layer separation:
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
    each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
    controls, numbers, and status text only; top-level destinations live in `App.jsx`'s shared `AppNav`
-   (Factory / Byte Factory is this page), so MainPage itself carries no page-to-page open-* links. See
+   (Ladder is this page's screen name), so MainPage itself carries no page-to-page open-* links. See
    docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
    taking `{ game, focusNonce }` as props. It's the only way any Prestige cycle ever earns its first
    Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
-   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during
+   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Ladder during
    the gate; Guide and More stay). Once that cycle's `intro.mainGameUnlocked` flips true (the first
    bits ever converted into Kilobytes this cycle), it stops being a gate and becomes a permanent
    screen the player can voluntarily reopen at any time via AppNav's Foundry item — but it stays just
@@ -605,7 +605,7 @@ Strict three-layer separation:
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Starting the next Disk's
    build (its own core-loop action, alongside Sacrifice/Invest) and every shown size's full
    interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half →
-   Factory Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
+   Ladder Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
    on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
    layout" above), ascending smallest→largest with Cache of a row immediately above that row's
    Disks. The Build button always stays visible/usable regardless of eligibility (building ahead of
@@ -663,10 +663,10 @@ Strict three-layer separation:
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
    `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
-   with PP on the same 10³ base ladder as Factory tiers (1,000 – 10³⁰ PP). Per-unit price scales on
-   every purchase via `getCostEpochExponent` (not Factory's 8-buy blocks). First tier's first buy
+   with PP on the same 10³ base ladder as Ladder tiers (1,000 – 10³⁰ PP). Per-unit price scales on
+   every purchase via `getCostEpochExponent` (not Ladder's 8-buy blocks). First tier's first buy
    costs 1,000 PP so the screen is visible but unusable until then. Each owned unit adds 0.01%/s
-   matching Factory tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
+   matching Ladder tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
    10⁹Q**. Owned counts permanent across Prestige; per-cycle boost resets on Prestige. Pure renderer — see `docs/ECONOMY_REFERENCE.md`
    "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
@@ -717,7 +717,7 @@ slot bookkeeping.
 `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both no-op outside Dev Mode as a defense-
 in-depth guard, even though the UI only ever renders them while active):
 - **Quick seed** — one-click presets (`PRESETS` in `DevModePage`) applying a small delta directly
-  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Factory gate or setting
+  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Ladder gate or setting
   Bits to the Prestige threshold. Reference the same `layers.js` constants
   (`PRESTIGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates on, so a preset can't drift
   out of sync with what actually unlocks each milestone.
@@ -798,12 +798,12 @@ continues and Prestige is optional (see `isProductionFrozen`). **Era ascension**
 separate voluntary meta-prestige at **1 Googol unspent PP** (`ERA_ELIGIBILITY_PP`): it awards
 **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414), increments `era.count`,
 resets the full Foundry (generator upgrades, Disks, compute ladder entities, Memory/gate) plus the
-ordinary Factory cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
+ordinary Ladder cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
 `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
 museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
 free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscalers (bought with
-Eons in #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
+Eons in #414) add permanent +0.01%/s each to every Ladder tier's Flops multiplier via
 `getHyperscalerFlopsBoostRate`. Prestige Points are awarded by `getPrestigePointsAwarded`: 1 base PP at 1 Googol
 Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64) additional money-exponent powers beyond
 Googol's own 10^100 exponent, scaled by permanent Double PP upgrades (`prestigeDoublePpLevel` — each
@@ -823,7 +823,7 @@ into a permanent, passively-producing Byte generator, then grows via Sacrifice (
 Invest (double production) on independent cost ladders, plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
-KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Factory tier;
+KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Ladder tier;
 owned counts persist across Prestige, cumulative boost resets each cycle. Five recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
 Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine

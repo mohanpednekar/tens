@@ -160,7 +160,7 @@ export const hasOverclockAvailable = state => {
   return level >= getOverclockRequirement(state.overclockCount ?? 0)
 }
 
-/** Ladder-view cues on Factory (buys, prestige, Speed Up / Overclock, Money tickspeed). */
+/** Ladder-view cues on the Ladder screen (buys, prestige, Speed Up / Overclock, Money tickspeed). */
 export const hasTiersGameAttention = state =>
   isProductionFrozen(state) ||
   hasAffordableFullLevel(state) ||

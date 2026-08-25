@@ -8,15 +8,15 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 ## Project
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
-shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Guide → More**. Storage
+shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Ladder → Guide → More**. Storage
 is under Foundry as continuous **Memory + Disk** sections on the same screen (not its own AppNav
-item, and no second-level Memory | Storage tabs). Factory uses **Data | Upgrades**
+item, and no second-level Memory | Storage tabs). Ladder (the tier ladder screen) uses **Data | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a local sandbox for seeding/experimenting with an isolated save,
 never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
 Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
-highs; Capacity stays manual; Factory + Prestige kept) live under Settings → Danger zone. No backend
+highs; Capacity stays manual; Ladder + Prestige kept) live under Settings → Danger zone. No backend
 — state
 lives in React and persists to `localStorage`.
 
@@ -69,7 +69,7 @@ src/
     storage.js             ← localStorage persistence; calls save-migration on every load, then mergeState.
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
-    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
+    AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Ladder → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
                             styled components; see docs/COMPONENTS_REFERENCE.md
   pages/
@@ -78,7 +78,7 @@ src/
     StoragePage/index.jsx  ← thin Disks list wrapper (primary UI is Foundry; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
-    MainPage/index.jsx     ← the game; Data | Upgrades; data-driven from TIER_DEFINITIONS
+    MainPage/index.jsx     ← Ladder screen; Data | Upgrades; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
     SettingsPage/index.jsx ← Supporter / saves / museum / Era ascension / Ops / Reset; via AppNav → More
@@ -103,10 +103,10 @@ localStorage persistence), called once in `App.jsx` and shared by every page via
 state); `StoragePage`/`ComputePage`/`ComputeFlopsPage`/`MilestonesPage`/`SettingsPage`/`DevModePage`
 are pure renderers. `App.jsx`
 switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Boosters → Compute →
-Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
+Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is continuous Foundry sections (Memory + Disks), not gate-exempt on its own. Factory
+below). Storage is continuous Foundry sections (Memory + Disks), not gate-exempt on its own. Ladder
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 
