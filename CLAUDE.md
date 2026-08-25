@@ -713,7 +713,7 @@ Strict three-layer separation:
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
     Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up
-    to prior highs; Capacity stays manual; Factory + Prestige kept). Takes `{ game, onReset,
+    to prior highs; Capacity stays manual; Ladder + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
@@ -746,7 +746,7 @@ slot bookkeeping.
 `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both no-op outside Dev Mode as a defense-
 in-depth guard, even though the UI only ever renders them while active):
 - **Quick seed** — one-click presets (`PRESETS` in `DevModePage`) applying a small delta directly
-  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Factory gate or setting
+  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Ladder gate or setting
   Bits to the Prestige threshold. Reference the same `layers.js` constants
   (`PRESTIGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates on, so a preset can't drift
   out of sync with what actually unlocks each milestone.
@@ -1101,8 +1101,9 @@ already cover the genuinely useful items on that checklist.
   standalone WCAG relative-luminance contrast-ratio utility) plus `contrast.test.js` and
   `tokens.contrast.test.js` add two more files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
-  `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics. Together with
-  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 9 of the 11 files; the
+  `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics;
+  `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path. Together with
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 10 of the 12 files; the
   remaining two are `scripts/adversarialReviewMarker.test.js` and
   `scripts/pr-low-risk-eligible.test.js` — Vitest's default glob picks these up alongside `src/`
   since `vite.config.js`'s `test` block sets no custom `include`.

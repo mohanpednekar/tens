@@ -768,9 +768,9 @@ const CategoryHeading = styled.h2`
   text-transform: uppercase;
 `
 
-// One row per tier/upgrade within a category — a simpler flex layout than the Game view's
+// One row per tier/upgrade within a category — a simpler flex layout than the Ladder view's
 // TierLine grid. In the Tier Autobuyers category, a row's badge order (tickspeed-autobuyer cluster,
-// then unit-autobuyer cluster) mirrors the Game view's own TierName badge order (⚙ before 🤖), and
+// then unit-autobuyer cluster) mirrors the Ladder view's own TierName badge order (⚙ before 🤖), and
 // Smart is nested inside the same UpgradeRowControls as the unit-autobuyer badge/toggle since it
 // specifically modifies that autobuyer's behavior, rather than trailing as an unrelated fourth item.
 // No border/background of its own — the enclosing UpgradeCategory provides that — just a thin top
@@ -1124,7 +1124,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // frequency by another getGlobalTickspeedProductionMultiplier's own regular step (1% by default,
   // permanently raised by Overclock — see above), not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
-  // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Game view instead
+  // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Ladder view instead
   // of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
