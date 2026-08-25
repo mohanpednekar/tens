@@ -1,12 +1,10 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
-import ConfirmDialog from 'components/ConfirmDialog'
 import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
-import { useState } from 'react'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -269,7 +267,6 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
-  const [sacrificeConfirmOpen, setSacrificeConfirmOpen] = useState(false)
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
@@ -279,27 +276,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const canSacrifice = isMemoryCapacityUpgradeAvailable(state)
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
-  const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
-  // Sacrifice is permanent and irreversible (drains Memory to 0). Once Compute is unlocked, it also
-  // wipes all held Compute tokens and rolls back Compute-funded Bandwidth progress — that warning
-  // only belongs in the confirm once Compute actually exists. Uses the in-game ConfirmDialog, not
-  // window.confirm, so the prompt matches the rest of the UI.
-  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  // Sacrifice is permanent and irreversible (drains Memory to 0), and fires immediately on click —
+  // no confirm prompt.
   const atCapacityCap = isMemoryCapacityAtCap(state)
   const handleSacrificeClick = () => {
     if (!canSacrifice) return
-    setSacrificeConfirmOpen(true)
-  }
-  const confirmSacrifice = () => {
-    setSacrificeConfirmOpen(false)
     actions.pickIntroCapacityMilestone()
   }
-  const cancelSacrifice = () => setSacrificeConfirmOpen(false)
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
   const computeBandwidthLabel = getComputeBandwidthSacrificeLabel(state)
   const computeFundedInvest = isComputeFundedBandwidthAvailable(state)
@@ -603,28 +591,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           👆 Tap
         </TapArea>
       )}
-
-      <ConfirmDialog
-        open={sacrificeConfirmOpen}
-        title="Sacrifice Memory?"
-        confirmLabel="Sacrifice"
-        cancelLabel="Cancel"
-        confirmVariant="prestige"
-        onConfirm={confirmSacrifice}
-        onCancel={cancelSacrifice}
-      >
-        <p>
-          Empty Memory to multiply capacity ×2, from{' '}
-          {formatBitsInNearestUnit(intro.capacity)} to{' '}
-          {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
-        </p>
-        {computeCoreRevealed && (
-          <p>
-            This also wipes all held Compute tokens and rolls back Bandwidth upgrades bought with
-            Compute tokens.
-          </p>
-        )}
-      </ConfirmDialog>
     </RootDiv>
   )
 }

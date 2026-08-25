@@ -941,6 +941,7 @@ describe('resetByteFoundry', () => {
       productionMilestoneTier: 4,
       productionMilestoneTierClaims: 1,
       disksBuiltTotal: { [String(diskSize)]: 5 },
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
     })
     expect(after.resources).toEqual(state.resources)
     expect(after.owned).toEqual(state.owned)
@@ -976,6 +977,7 @@ describe('resetByteFoundry', () => {
     expect(second.intro.foundryResetCaps.productionMilestoneTierClaims).toBe(0)
     expect(second.intro.foundryResetCaps.disksBuiltTotal['8000']).toBe(3)
     expect(second.intro.foundryResetCaps.disksBuiltTotal['80000']).toBe(2)
+    expect(second.intro.foundryResetCaps.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
   })
 
   it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {
@@ -996,7 +998,7 @@ describe('resetByteFoundry', () => {
 })
 
 describe('tickFoundryResetConvenience', () => {
-  it('auto-combines and auto-Invests up to caps without touching Capacity', () => {
+  it('auto-combines and auto-Invests up to caps without touching Capacity beyond its own cap', () => {
     const caps = {
       byteCreated: true,
       productionMilestoneTier: 1,
@@ -1066,7 +1068,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(tickFoundryResetConvenience(state)).toBe(state)
   })
 
-  it('never auto-Sacrifices Capacity even when Memory is full', () => {
+  it('never auto-Sacrifices Capacity when the cap has no headroom above the current capacity', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
@@ -1083,6 +1085,50 @@ describe('tickFoundryResetConvenience', () => {
     const after = tickFoundryResetConvenience(state)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
     expect(after.intro.capacityUpgradeQueued).toBe(false)
+  })
+
+  it('auto-Sacrifices Capacity up to the pre-reset high once Memory is full', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: {},
+        capacity: INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP,
+      },
+    })
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('stops auto-Sacrificing once Capacity reaches its cap, even if Memory refills again', () => {
+    let state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      productionMilestoneTier: 99,
+      productionMilestoneTierClaims: 0,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: {},
+        capacity: INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP,
+      },
+    })
+    state = tickFoundryResetConvenience(state)
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
+
+    // Memory refills to the new capacity — convenience should not Sacrifice again past the cap.
+    state = { ...state, intro: { ...state.intro, bits: state.intro.capacity } }
+    state = tickFoundryResetConvenience(state)
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
   })
 })
 

@@ -70,10 +70,10 @@ specific size's own array being mid-build.
 
 styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed
 dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
-Foundry actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
+actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
 confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
-`ByteFoundryPage` for Sacrifice for 2x Capacity (Compute-token-wipe warning in `children` only when
-Compute is unlocked).
+`SettingsPage` for Era ascension. Sacrifice for 2x Capacity on `ByteFoundryPage` does **not** use
+this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
 ## `Money/index.js`
 

@@ -2456,7 +2456,7 @@ test('Sacrifice for 2x Capacity shows what it will drain — the current capacit
   expect(sacrificeButton).toHaveTextContent('100 B')
 })
 
-test('Sacrifice for 2x Capacity requires a full balance, drains it entirely, and leaves production untouched, once the confirm dialog is accepted', async () => {
+test('Sacrifice for 2x Capacity requires a full balance, fires immediately with no confirm prompt, and leaves production untouched', async () => {
   const user = userEvent.setup()
 
   // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
@@ -2467,13 +2467,7 @@ test('Sacrifice for 2x Capacity requires a full balance, drains it entirely, and
 
   await user.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
 
-  const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
-  expect(dialog).toBeInTheDocument()
-  expect(dialog).toHaveTextContent(/empty Memory to multiply capacity/i)
-  expect(dialog).not.toHaveTextContent(/Compute token/i)
-
-  await user.click(within(dialog).getByRole('button', { name: /^sacrifice$/i }))
-
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP))
@@ -2490,36 +2484,22 @@ test('Sacrifice is disabled with a cap-specific title once pool 1\'s capacity is
   expect(sacrifice).toHaveAttribute('title', 'This pool’s Memory Capacity is already at its cap')
 })
 
-test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouched', async () => {
-  const user = userEvent.setup()
-
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
-  render(<App />)
-
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
-
-  const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
-  await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
-
-  expect(screen.queryByRole('dialog', { name: /sacrifice memory/i })).not.toBeInTheDocument()
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
-  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
-})
-
-test('Sacrifice confirm warns that Compute tokens will be wiped only once Compute is unlocked', () => {
+test('Sacrifice wipes held Compute tokens immediately on click, with no confirm prompt, once Compute is unlocked', () => {
   // Fake timers (and fireEvent instead of userEvent — see other vi.useFakeTimers() tests in this
   // file) keep the live tick loop from ever firing between render and the assertions below: the
   // always-on Kilobyte auto-convert (tickIntroAutoInvest) runs every tick regardless of the forced
   // priority order gating Sacrifice, and a real tick landing here would drain Memory below full and
   // — on its first successful conversion — flip intro.mainGameUnlocked, navigating away from
-  // ByteFoundryPage (and this dialog) entirely before the test can observe it.
+  // ByteFoundryPage entirely before the test can observe it.
   vi.useFakeTimers()
 
   // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
   // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either
   // (tier 10 costs 8 * 4^10 = 8,388,608 bits, past the 4,194,304-bit capacity here).
-  // No Compute tokens held → Boost isn't activatable, so Compute doesn't block Sacrifice.
+  // No Compute tokens held (computeCores: 0) — holding any would itself make a Boost activatable,
+  // which ranks above Sacrifice in the forced priority order and would disable the button
+  // entirely; computeFundedBandwidthClaims/computeBandwidthSacrificeIndex exercise the rollback
+  // path (rollbackComputeFundedBandwidth) without needing held tokens.
   seedIntroState({
     bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
     capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -2527,14 +2507,21 @@ test('Sacrifice confirm warns that Compute tokens will be wiped only once Comput
     productionMilestoneTier: 10,
     productionMilestoneTierClaims: 0,
     diskBuild: { size: 8000, remainingSeconds: 10, totalSeconds: 10 },
+    computeCores: 0,
+    computeFundedBandwidthClaims: 1,
+    computeBandwidthSacrificeIndex: 2,
   })
   const { unmount } = render(<App />)
 
   fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
 
-  const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
-  expect(dialog).toHaveTextContent(/wipes all held Compute tokens/i)
-  fireEvent.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP))
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.computeFundedBandwidthClaims).toBe(0)
+  expect(saved.intro.computeBandwidthSacrificeIndex).toBe(0)
 
   unmount()
   vi.useRealTimers()

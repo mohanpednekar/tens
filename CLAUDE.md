@@ -417,8 +417,9 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); replaces
-                               native `window.confirm` for Sacrifice on ByteFoundryPage. Full
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
+                               SettingsPage's Era ascension action (Sacrifice on ByteFoundryPage
+                               fires immediately on click, with no confirm prompt). Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
                                JSX), extracted so both MainPage and ByteFoundryPage can render it —
@@ -713,8 +714,8 @@ Strict three-layer separation:
     Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up
-    to prior highs; Capacity stays manual; Ladder + Prestige kept). Takes `{ game, onReset,
+    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build / Sacrifice
+    (Capacity) convenience-auto up to prior highs; Ladder + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.

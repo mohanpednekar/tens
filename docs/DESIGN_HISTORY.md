@@ -12,6 +12,12 @@ itself was removed once Cores stopped being minted from a Memory flush at all �
 `isComputeCoreConversionUnlocked`-gated warning in the dialog now only covers the still-accurate
 "this wipes all held Compute tokens" line.
 
+**Superseded again — 2026-08-25:** the confirm dialog itself was removed at the maintainer's
+request. Clicking "Memory ×2" now fires `pickIntroCapacityMilestone` immediately, with no prompt —
+same as every other Byte Foundry action (Combine, Invest, Disk Build, Disk Fill/redeem all fire
+directly on click already). `components/ConfirmDialog` remains in use elsewhere (SettingsPage's Era
+ascension) — this only removed its one Sacrifice call site.
+
 This file holds the **why** behind decisions in `CLAUDE.md`: incident write-ups, empirical simulation
 results, superseded designs, and the reasoning for choices that aren't self-evident from current
 behavior alone. `CLAUDE.md` states what the system currently does and is what loads into every
@@ -625,6 +631,20 @@ The following records *why* specific MainPage/component behaviors were built the
      still wanted — only the rounding *direction* needed to change, not the precision.
 
 ## Economy model
+
+### Reset Byte Foundry convenience-auto now includes Capacity/Sacrifice — 2026-08-25
+
+`resetByteFoundry`'s convenience auto-replay (`tickFoundryResetConvenience`) originally covered
+Combine, bit-funded Invest, and Disk Build, but deliberately left Capacity/Sacrifice out —
+`captureFoundryUpgradeCaps`'s own comment used to read "Capacity is deliberately omitted," and
+`resetByteFoundry`'s doc comment said "Capacity stays manual." No historical incident forced that
+choice; it wasn't previously documented beyond the code comments themselves. Changed at the
+maintainer's request so Sacrifice auto-replays up to its own pre-reset high-water mark exactly like
+Combine/Invest/Disk Build already did — `captureFoundryUpgradeCaps`/`mergeFoundryUpgradeCaps` now
+also track/merge a `capacity` field, and `tickFoundryResetConvenience` presses Sacrifice
+(`pickIntroCapacityMilestone`) through its own normal `isMemoryCapacityUpgradeAvailable` gate once
+Memory naturally refills to the current capacity, same waiting behavior the other convenience steps
+already have.
 
 ### Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry intro
 

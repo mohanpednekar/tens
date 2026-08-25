@@ -63,6 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Memory ×2 (Sacrifice) fires immediately, no confirm prompt** — clicking the button now drains
+  Memory and doubles Capacity right away, the same as every other Byte Foundry action; the
+  "Sacrifice Memory?" confirm dialog (with its Compute-token-wipe warning) is removed.
+- **Reset Byte Foundry now auto-replays Capacity/Sacrifice too** — the convenience auto-clicker that
+  already re-presses Combine/Invest/Disk Build up to their pre-reset highs after Settings → Reset
+  Byte Foundry now also re-Sacrifices Capacity up to its own prior high-water mark, instead of
+  requiring that one upgrade to be clicked back up manually.
 - **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
   readers announce only a button's own `aria-label`, not redundant icon content; the offline-
   progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
