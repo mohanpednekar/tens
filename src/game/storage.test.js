@@ -29,6 +29,17 @@ describe('loadGameState', () => {
     })
     expect(loadGameState()).toBeNull()
   })
+
+  it('strips __proto__ / constructor from polluted save JSON without polluting Object.prototype', () => {
+    localStorage.setItem(
+      'tens_game_state',
+      `{"saveSchemaVersion":${SAVE_SCHEMA_VERSION},"resources":{"${MONEY_ID}":4242},"__proto__":{"polluted":true},"constructor":{"evil":true}}`,
+    )
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(4242)
+    expect(Object.hasOwn(loaded, 'constructor')).toBe(false)
+    expect(Object.prototype.polluted).toBeUndefined()
+  })
 })
 
 describe('saveGameState / loadGameState round-trip', () => {
@@ -732,6 +743,17 @@ describe('Dev Mode', () => {
     const result = applyDevGameStateJson(JSON.stringify({ resources: { [MONEY_ID]: 5 } }), createInitialGameState())
     expect(result.ok).toBe(false)
     expect(result.reason).toBe('dev_mode_inactive')
+  })
+
+  it('applyDevGameStateJson strips __proto__ / constructor from polluted editor JSON', () => {
+    setDevModeActive(true)
+    const result = applyDevGameStateJson(
+      `{"resources":{"${MONEY_ID}":777},"__proto__":{"polluted":true},"constructor":{"evil":true}}`,
+      createInitialGameState(),
+    )
+    expect(result.ok).toBe(true)
+    expect(result.state.resources[MONEY_ID]).toBe(777)
+    expect(Object.prototype.polluted).toBeUndefined()
   })
 
   it('applyDevGameStateJson rejects invalid JSON without touching the dev save', () => {
