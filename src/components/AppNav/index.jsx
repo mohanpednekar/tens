@@ -118,7 +118,7 @@ const AppNav = ({
     { id: 'info', ariaLabel: 'open guide', icon: 'ℹ️', label: 'Guide', title: 'How this game works' },
   ].filter(Boolean)
 
-  const utilityActive = currentPage === 'milestones' || currentPage === 'settings' || moreOpen
+  const utilityActive = currentPage === 'milestones' || currentPage === 'settings' || currentPage === 'dev' || moreOpen
 
   return (
     <Bar aria-label="main navigation">
