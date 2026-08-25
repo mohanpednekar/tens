@@ -100,7 +100,7 @@ export const INTRO_STARTING_CAPACITY = 8
 export const INTRO_CAPACITY_DOUBLING_STEP = 2
 // Byte Foundry Memory Capacity's own binary-unit ladder step — 1 KiB = 1024 Bytes (vs. a Disk's own
 // SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/getMemoryUnit in engine.js). Distinct
-// from DISK_LADDER_SIZE_MULTIPLIER/MEMORY_UNIT_SCALE (both still 1000/SI) — Storage stays SI-scaled
+// from DISK_LADDER_SIZE_MULTIPLIER/SI_BYTE_UNIT_SCALE (both still 1000/SI) — Storage stays SI-scaled
 // throughout; only Memory Capacity's own display and growth math switched to binary.
 export const MEMORY_BINARY_UNIT_STEP = 1024
 // Pool 1 (the Kilobyte pool, i.e. today's only Byte generator)'s hard capacity ceiling, in bits —
@@ -175,12 +175,13 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
-// until Memory's own capacity reaches 10 KB in its OWN B/KB/MB/… scale (BITS_PER_BYTE (8) × 1000
-// per step — see ByteFoundryPage's getMemoryUnit, the SAME real-Kilobyte scale a Disk's own size
-// now uses — see getDiskSize in engine.js) — 80,000 bits, the 5th capacity stage (8 → 80 → 800 →
-// 8000 → 80000 via Sacrifice). A deliberate pacing gate: Storage is a later-game mechanic, revealed
-// only once the player has grown capacity a bit past the Kilobyte-transfer row's own, earlier
-// 1000-bit reveal.
+// until Memory's own capacity reaches this many bits — 80,000 bits, "9.765 KiB" in Memory's own
+// binary display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
+// (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
+// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS ceiling, reachable via repeated Sacrifice
+// doublings from INTRO_STARTING_CAPACITY. A deliberate pacing gate: Storage is a later-game
+// mechanic, revealed only once the player has grown capacity a bit past the Kilobyte-transfer
+// row's own, earlier 1000-bit reveal.
 export const INTRO_DISK_UNLOCK_CAPACITY = 80000
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000

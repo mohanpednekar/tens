@@ -186,8 +186,9 @@ const InfoPage = () => {
             ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
             ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance). When
             that bit cost exceeds Memory capacity, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
-            the next Compute tier (Cores → … → Megacomputers, once each) for the same ×2 — separate
-            from auto-merge sacrifices. Memory Sacrifice rolls those compute-funded Bandwidth
+            the next Compute tier (Cores → … → Megacomputers, then wrapping back to Cores) for the
+            same ×2 — separate from auto-merge sacrifices, and still usable even once Sacrifice
+            itself is permanently capped. Memory Sacrifice rolls those compute-funded Bandwidth
             claims back.
           </li>
           <li>

@@ -17,6 +17,7 @@ import {
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
+  INTRO_CAPACITY_CAP_BITS,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_DOUBLING_STEP,
@@ -2476,6 +2477,15 @@ test('Sacrifice for 2x Capacity requires a full balance, drains it entirely, and
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP))
   // productionMultiplier is untouched by Sacrifice — still the base 1x rate.
   expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+})
+
+test('Sacrifice is disabled with a cap-specific title once pool 1\'s capacity is already at INTRO_CAPACITY_CAP_BITS', () => {
+  seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  render(<App />)
+
+  const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
+  expect(sacrifice).toBeDisabled()
+  expect(sacrifice).toHaveAttribute('title', 'This pool’s Memory Capacity is already at its cap')
 })
 
 test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouched', async () => {
