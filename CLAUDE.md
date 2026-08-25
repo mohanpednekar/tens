@@ -434,7 +434,7 @@ src/
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage; Memory + every DiskArrayRow as continuous sections
-                               (no second-level tabs). Memory ×10 (Sacrifice) always sits in the
+                               (no second-level tabs). Memory ×2 (Sacrifice) always sits in the
                                milestones row beside Bandwidth
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
@@ -612,7 +612,7 @@ Strict three-layer separation:
    every tier's current cost is a deliberate strategy — see "Economy model" below); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. Memory ×10 (Sacrifice) always sits in the milestones row beside
+   slots in one unbroken row. Memory ×2 (Sacrifice) always sits in the milestones row beside
    Bandwidth. Every action — here or on either dedicated screen — stays gated by the forced
    priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
@@ -819,8 +819,11 @@ Bytes are no longer a purchasable tier — they're produced entirely by the **By
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
-into a permanent, passively-producing Byte generator, then grows via Sacrifice (10x capacity) and
-Invest (double production) on independent cost ladders, plus — once far enough along — Disks
+into a permanent, passively-producing Byte generator, then grows via Sacrifice (2x capacity — binary
+KiB/MiB/… display, hard-capped at 1 MiB, large enough to afford building the pool's own largest Disk
+— see below) and
+Invest (double production, own cost ladder now stepped ×4 per tier) on independent cost ladders,
+plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
 KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Factory tier;
@@ -845,14 +848,40 @@ permanent across every real Prestige; only Memory itself, the main-game-unlock g
 own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.
 
+**Memory's binary units and capacity cap** (`getMemoryUnit`/`formatBitsInNearestUnit`/
+`isMemoryCapacityAtCap` in `engine.js`, `INTRO_CAPACITY_DOUBLING_STEP`/`INTRO_CAPACITY_CAP_BITS`/
+`INTRO_BANDWIDTH_COST_MULTIPLIER`/`MEMORY_BINARY_UNIT_STEP` in `layers.js`) — Memory Capacity and
+balance render in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024
+(`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
+Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). Sacrifice
+multiplies capacity by `INTRO_CAPACITY_DOUBLING_STEP` (2) each claim, but is hard-capped at
+`INTRO_CAPACITY_CAP_BITS` — exactly 1 MiB (8,388,608 bits) for this generator, large enough to cover
+`getDiskCost` for pool 1's own largest (100 KB) buildable Disk (8,000,000 bits) — after which
+`isMemoryCapacityUpgradeAvailable` returns `false` permanently (`isMemoryCapacityAtCap`); no
+partial/clamped final step. An earlier version capped at half this (the largest power of two
+strictly below 1 MiB) purely by binary-tier convention without checking against the pool's own
+largest Disk's build cost, which left that Disk permanently unbuildable — see
+`docs/DESIGN_HISTORY.md`. "Invest for Double Production"'s own independent cost ladder
+(`getIntroProductionMilestoneCost`) now steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier
+instead of ×10 — its production-doubling effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the cap (4,194,304 bits / 512 KiB) so Compute
+Cores stay reachable within it. This is the first slice of a larger per-storage-pool generator
+design — see `docs/DESIGN_HISTORY.md`.
+
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
 `getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
-`DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → 100 KB → **1 MB** → 10 MB → …, so a "1 KB"
-disk needs 8000 bits, not a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the
-current size. Starting
+`DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → **100 KB**, so a "1 KB" disk needs 8000 bits, not
+a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the current size — but only up
+to the highest size any currently-unlocked storage pool's own generator can fund (`getDiskSize` never
+advances past `MAX_ACTIVE_DISK_LADDER_STEP`, today just pool 1's own 3 sizes — 1/10/100 KB — since
+only pool 1 has a Byte generator; an unfunded further size, like 1 MB, would cost more than
+`INTRO_CAPACITY_CAP_BITS` could ever hold). Once that last size's array is fully built,
+`isDiskLadderExhaustedForActivePools` goes permanently true and `isDiskBuildAvailable` follows it —
+ByteFoundryPage's Build button shows a distinct "Pool complete" state instead of an ever-unaffordable
+cost, until a future pool's own generator (epic #456) raises the ceiling. Starting
 a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
 size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size for the first disk,
@@ -1013,7 +1042,11 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
+<<<<<<< HEAD
 - `yarn test` is green (1508 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+=======
+- `yarn test` is green (1523 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+>>>>>>> origin/main
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
