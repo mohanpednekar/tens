@@ -14,11 +14,9 @@ item, and no second-level Memory | Storage tabs). Factory uses **Data | Upgrades
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a local sandbox for seeding/experimenting with an isolated save,
-never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section. Reset (full save wipe) and **Reset Byte Foundry** (Capacity / Storage /
-Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up to prior
-highs; Capacity stays manual; Factory + Prestige kept) live under Settings → Danger zone. No backend
-— state
-lives in React and persists to `localStorage`.
+never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section. Reset (full save wipe) and
+Reset Byte Foundry live under Settings → Danger zone (see CLAUDE.md's SettingsPage entry for what
+each wipes/keeps). No backend — state lives in React and persists to `localStorage`.
 
 ## Tech stack
 
