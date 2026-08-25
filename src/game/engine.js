@@ -2434,8 +2434,9 @@ export const formatMemoryAmount = (bits, unit) =>
     ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
     : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
 
-// Any Memory-denominated amount (capacity, balance, Invest cost, Disk build cost paid out of
-// Memory, transfer-block cost, the Sacrifice confirm line) reads in whatever binary B/KiB/MiB/…
+// Any Memory-denominated amount (capacity, balance, Invest cost, transfer-block cost, the
+// Sacrifice confirm line — NOT Disk build cost, which renders via formatDiskSize/SI instead, since
+// it's a fixed multiple of the Disk's own SI-scaled size) reads in whatever binary B/KiB/MiB/…
 // unit best fits that specific amount. `getMemoryUnit(bits, true)` picks the unit that fits `bits`
 // itself when called this way; the `true` is always safe here since every caller of this helper
 // only renders once `byteCreated`.

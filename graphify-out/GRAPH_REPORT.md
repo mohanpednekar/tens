@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-08-25)
 
 ## Corpus Check
-- 96 files · ~296,334 words
+- 96 files · ~296,373 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `01692019`
+- Built from commit: `62f8adad`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -72,7 +72,7 @@
 - scripts
 - DiskArrayRow/index.jsx
 - Era ascension and Eons (#407)
-- activateComputeBoost
+- ComputePage
 - App.test.jsx
 - package.json
 - clampNonNegative
@@ -118,11 +118,11 @@
   e2e/data-lake.e2e.js → src/game/engine.js
 - `actFoundry()` --calls--> `activateComputeBoost()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
+- `actFoundry()` --calls--> `canActivateComputeBoost()`  [EXTRACTED]
+  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `actFoundry()` --calls--> `combineIntroByte()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 - `actFoundry()` --calls--> `convertIntroBitsToKilobytes()`  [EXTRACTED]
-  .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
-- `actFoundry()` --calls--> `isDiskRedeemable()`  [EXTRACTED]
   .claude/skills/simulate-run-times/run-simulation.mjs → src/game/engine.js
 
 ## Import Cycles
@@ -264,7 +264,7 @@ Nodes (15): @fontsource/inter, @fontsource/space-grotesk, dependencies, @fontsou
 
 ### Community 50 - "ComputePage/index.jsx"
 Cohesion: 0.07
-Nodes (33): getComputeBoostTierMultiplier(), getNextComputeMergeDurationUpgradeIndex(), COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow, BoostRow (+25 more)
+Nodes (28): COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow, BoostRow, CompactButton, COMPUTE_BOOST_DISPLAY (+20 more)
 
 ### Community 51 - "MilestonesPage/index.jsx"
 Cohesion: 0.14
@@ -310,9 +310,9 @@ Nodes (41): CacheBlock, CacheBlocksRow, CacheFlushFill, CellLabel, DepositRow, D
 Cohesion: 0.25
 Nodes (8): Era ascension and Eons (#407), Multiplier overflow safety, Pause/resume for per-tier automations, Pause/resume for the global automations, The global tickspeed multiplier, The last tier's XP-funded tickspeed, Tickspeed multiplier, Tier autobuyer/tier-tickspeed-autobuyer milestones
 
-### Community 63 - "activateComputeBoost"
-Cohesion: 0.36
-Nodes (9): activateComputeBoost(), canStackComputeBoost(), getBiggestComputeTierWaitingOnMerge(), getComputeBoostTierDurationSeconds(), getComputeBoostTierField(), isStackComputeBoostTurnAvailable(), isValidComputeBoostTier(), stackComputeBoost() (+1 more)
+### Community 63 - "ComputePage"
+Cohesion: 0.20
+Nodes (16): activateComputeBoost(), canActivateComputeBoost(), canStackComputeBoost(), getBiggestComputeTierWaitingOnMerge(), getComputeBoostTierDurationSeconds(), getComputeBoostTierField(), getComputeBoostTierMultiplier(), getNextComputeMergeDurationUpgradeIndex() (+8 more)
 
 ### Community 64 - "App.test.jsx"
 Cohesion: 0.12
@@ -379,8 +379,8 @@ Cohesion: 0.47
 Nodes (8): add_label_if_missing(), close_if_open(), has_marker_comment(), post_comment_once(), remove_label_if_present(), run(), set_milestone_if_missing(), backlog-issue-hygiene.sh script
 
 ### Community 82 - "actFoundry"
-Cohesion: 0.21
-Nodes (21): actFoundry(), canActivateComputeBoost(), eraseAllComputeTokens(), getDiskCost(), isBandwidthAvailable(), isBandwidthTurnAvailable(), isComputeBoostTurnAvailable(), isComputeCoreConversionUnlocked() (+13 more)
+Cohesion: 0.23
+Nodes (19): actFoundry(), eraseAllComputeTokens(), getDiskCost(), isBandwidthAvailable(), isBandwidthTurnAvailable(), isComputeCoreConversionUnlocked(), isDiskBuildAvailable(), isDiskBuildTurnAvailable() (+11 more)
 
 ### Community 83 - "epic-407-issue-hygiene.sh"
 Cohesion: 0.50

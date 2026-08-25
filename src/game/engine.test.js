@@ -681,8 +681,9 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
   })
 
   it('is false while a Compute Boost (higher priority) is currently available', () => {
-    // Cap the Disk Build ladder through 100 KB so the next offer is 1 MB (build cost 10 MB /
-    // 80,000,000 bits) — unaffordable at 1 MB capacity — isolating the Compute check itself.
+    // Fully build 1/10/100 KB so the Disk ladder is permanently exhausted
+    // (isDiskLadderExhaustedForActivePools) — isolating the Compute check itself from Disk Build's
+    // own higher-priority claim.
     const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
