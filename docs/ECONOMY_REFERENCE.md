@@ -1172,7 +1172,7 @@ toggle** — it's a batch-size behavior modifier for the unit autobuyer (buy sin
 completes, then in full blocks), not something that independently "acts" each tick, so "pausing" it
 has no clean meaning distinct from "temporarily not being smart." `mergeState` merges missing
 `autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
-but does not transform legacy save formats. See "Unit autobuyer status (Game view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
+but does not transform legacy save formats. See "Unit autobuyer status (Ladder view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
 view" above for where each toggle renders.
 
 XP (`prestige.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
@@ -1406,7 +1406,7 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   to a single-line default (60px, i.e. the old `3.75rem` constant) in environments without
   `ResizeObserver` (e.g. jsdom in tests).
 
-There used to also be a bottom `PrestigeCard` (Game view) mirroring the analogous informational
+There used to also be a bottom `PrestigeCard` (Ladder view) mirroring the analogous informational
 `SpeedUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
 see "Balances (top HUD)" above, already doubles as the Prestige button once `canPrestige`), so it was
 purely informational: prestige progress/award preview, prestiged count, unspent PP, and Auto-Prestige
@@ -1464,7 +1464,7 @@ player who already bought it doesn't need to re-buy it after a Prestige — it j
 re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
 Speed Up is bought.
 
-`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered directly below
+`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Ladder view only), rendered directly below
 `TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, wrapping to
 stacked on narrow viewports) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
 view, since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
@@ -1554,9 +1554,9 @@ Overclock" automation (unlike Speed Up's `autoSpeedUp`) — Overclock is meant t
 occasional player decision given how much it costs the run (wiping Speed Up's bonus along with
 everything else).
 
-`MainPage` surfaces this as an `OverclockCard` (orange accent; Game view only), rendered directly below
+`MainPage` surfaces this as an `OverclockCard` (orange accent; Ladder view only), rendered directly below
 `TierList`, side by side with `SpeedUpCard` inside the shared `SpeedCardsRow` flex row (see "Speed Up"
-above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Game view.
+above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Ladder view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `speedUpEverRevealed`. The button (`OverclockButton`, sized to match
 `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
@@ -1807,7 +1807,7 @@ disabled while production is frozen at the Prestige threshold.
                                                           // starts false. Read by isTierUnlocked as an
                                                           // additional way to stay unlocked, so a tier that's
                                                           // ever been reached within the current run doesn't
-                                                          // disappear from the Game view just because a
+                                                          // disappear from the Ladder view just because a
                                                           // narrower reset than a full Prestige/Speed Up zeroed
                                                           // its `owned` count — specifically
                                                           // consumeXpForLastTierTickspeed (see "The last

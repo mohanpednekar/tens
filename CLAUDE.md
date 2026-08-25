@@ -41,7 +41,9 @@ Use Yarn for all dependency work, not npm. `package-lock.json` is gitignored so 
 ```sh
 yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locally after lockfile changes
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
-yarn build        # production build → dist/
+yarn build        # production build → dist/ (GitHub Pages base `/tens/` + PWA service worker)
+yarn build:capacitor # CAPACITOR=1 vite build → dist/ with relative base, no PWA plugin (for native wrap)
+yarn cap:sync     # npx cap sync (copies web assets; native project update waits until android/ios exist — #70)
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
@@ -513,7 +515,15 @@ src/
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
                                is a no-op in practice today
-vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin. Full PWA
+capacitor.config.json        ← Capacitor app id/name + `webDir: dist` (foundation for #70; no
+                               android/ios platforms checked in yet)
+vite.config.js               ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
+viteConfigFactory.js          ← the real Vite config — path aliases, dev/test server config, and the
+                               VitePWA plugin (skipped when `CAPACITOR=1`, along with the GitHub
+                               Pages `/tens/` base — see "Repo layout"'s Capacitor note below).
+                               Extracted out of `vite.config.js` so `capacitorConfig.test.js` can pin
+                               the CAPACITOR=1 behavior without loading Vite's config entry point
+                               (whose `import.meta.url` isn't a `file:` URL under Vitest). Full PWA
                                reference: `docs/PWA_REFERENCE.md`
 playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
                                "Testing" below) — separate from vite.config.js's own `test` block, which
@@ -703,7 +713,7 @@ Strict three-layer separation:
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
     Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up
-    to prior highs; Capacity stays manual; Factory + Prestige kept). Takes `{ game, onReset,
+    to prior highs; Capacity stays manual; Ladder + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
@@ -736,7 +746,7 @@ slot bookkeeping.
 `useIncrementalGame`'s `setDevState`/`applyDevStateJson` (both no-op outside Dev Mode as a defense-
 in-depth guard, even though the UI only ever renders them while active):
 - **Quick seed** — one-click presets (`PRESETS` in `DevModePage`) applying a small delta directly
-  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Factory gate or setting
+  onto the live state via `game.setDevState(updater)`, e.g. unlocking the Ladder gate or setting
   Bits to the Prestige threshold. Reference the same `layers.js` constants
   (`PRESTIGE_THRESHOLD`/`ERA_ELIGIBILITY_PP`/etc.) the real game gates on, so a preset can't drift
   out of sync with what actually unlocks each milestone.
@@ -1016,6 +1026,19 @@ This was a deliberate choice over Capacitor/native app-store publishing or a Rea
 in `localStorage` is unaffected by the service worker's precache, are in `docs/PWA_REFERENCE.md`. Read
 it before touching `vite.config.js`'s `VitePWA` block, the manifest fields, or `public/pwa-*`/
 `scripts/generate-pwa-icons.mjs`.
+
+### Capacitor foundation (in progress — #70)
+
+A Capacitor wrap is scaffolding-only so far (not store-ready; no `android/` / `ios/` trees yet):
+
+- `@capacitor/core` (runtime) + `@capacitor/cli` (dev) are dependencies; `capacitor.config.json`
+  names the app **Tens** (`appId: com.mohanpednekar.tens`, `webDir: dist`).
+- `yarn build:capacitor` sets `CAPACITOR=1` so Vite uses `base: './'` and omits `VitePWA` — a
+  Workbox SW under Capacitor's origin is redundant/harmful; the ordinary `yarn build` path is
+  unchanged for GitHub Pages.
+- `.gitignore` already excludes native build artifacts for when `npx cap add android|ios` lands.
+- Remaining for #70: `@capacitor/android` / `@capacitor/ios`, generated platform projects, and
+  `.github/workflows/mobile-build.yml` (debug APK + iOS Simulator artifacts via `workflow_dispatch`).
 
 ## Funding
 

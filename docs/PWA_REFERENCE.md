@@ -5,7 +5,10 @@ Referenced from `CLAUDE.md`'s "PWA support" section. Full breakdown of the insta
 `docs/MAINPAGE_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`. Read this before touching `vite.config.js`'s
 `VitePWA` block, the manifest fields, `public/pwa-*.png`/`apple-touch-icon.png`, or
 `scripts/generate-pwa-icons.mjs`. For the *why* behind choosing this over Capacitor/native app-store
-publishing or a React Native rewrite, see `docs/DESIGN_HISTORY.md`.
+publishing or a React Native rewrite, see `docs/DESIGN_HISTORY.md`. A Capacitor foundation is in
+progress (#70): `yarn build:capacitor` (`CAPACITOR=1`) rebuilds `dist/` with `base: './'` and
+**without** `VitePWA`, so a Workbox SW is not injected into the native shell. Ordinary `yarn build`
+(Pages + PWA) is unchanged.
 
 The app is installable as a Progressive Web App on both Android Chrome and iOS Safari — home-screen
 icon, standalone display with no browser chrome, offline-capable after a first visit — via

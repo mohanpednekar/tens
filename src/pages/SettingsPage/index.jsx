@@ -9,7 +9,7 @@ import styled from 'styled-components'
 
 // Always-reachable Settings screen (via AppNav → More). Holds Supporter pack
 // (unlock code / dummy checkout), save slots, Prestige museum, Ops dashboard, and Reset —
-// utilities that must not depend on unlocking Factory or any other progress gate.
+// utilities that must not depend on unlocking Ladder or any other progress gate.
 
 const RootDiv = styled.main`
   width: min(520px, calc(100vw - 2rem));

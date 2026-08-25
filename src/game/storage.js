@@ -290,7 +290,7 @@ export const buildResetActiveSlotConfirmMessage = () => {
 
 /**
  * Confirm copy for wiping only Byte Foundry / Storage / Compute on the active save.
- * Factory + Prestige progress stay; other slots and Supporter unlock are untouched.
+ * Ladder + Prestige progress stay; other slots and Supporter unlock are untouched.
  */
 export const buildResetByteFoundryConfirmMessage = () => {
   const name = getActiveSlotDisplayName()
