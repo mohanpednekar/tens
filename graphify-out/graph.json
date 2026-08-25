@@ -4737,7 +4737,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "actmainbuys()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
@@ -4749,7 +4749,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "wouldautobuyerstall()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
@@ -4761,7 +4761,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "buytier()",
       "source_file": "src/game/engine.js",
@@ -4773,23 +4773,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "buytierquantity()",
       "source_file": "src/game/engine.js",
       "source_location": "L1883"
-    },
-    {
-      "id": "src_game_engine_getautoprestigeattemptrate",
-      "label": "getAutoPrestigeAttemptRate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getautoprestigeattemptrate()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1276"
     },
     {
       "id": "src_game_engine_getcostepochexponent",
@@ -4797,23 +4785,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "getcostepochexponent()",
       "source_file": "src/game/engine.js",
       "source_location": "L629"
-    },
-    {
-      "id": "src_game_engine_getprestigeproductionmultiplier",
-      "label": "getPrestigeProductionMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getprestigeproductionmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L897"
     },
     {
       "id": "src_game_engine_getpurchaseblocksize",
@@ -4821,35 +4797,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "getpurchaseblocksize()",
       "source_file": "src/game/engine.js",
       "source_location": "L652"
-    },
-    {
-      "id": "src_game_engine_getpurchasemilestonemultiplier",
-      "label": "getPurchaseMilestoneMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getpurchasemilestonemultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1215"
-    },
-    {
-      "id": "src_game_engine_getspeedupmultiplier",
-      "label": "getSpeedUpMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getspeedupmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1226"
     },
     {
       "id": "src_game_engine_gettieraffordablequantity",
@@ -4857,7 +4809,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettieraffordablequantity()",
       "source_file": "src/game/engine.js",
@@ -4869,7 +4821,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettierbulkquantity()",
       "source_file": "src/game/engine.js",
@@ -4881,7 +4833,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettiercost()",
       "source_file": "src/game/engine.js",
@@ -4893,7 +4845,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettierdiskredeemcost()",
       "source_file": "src/game/engine.js",
@@ -4905,7 +4857,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettierpurchasedcount()",
       "source_file": "src/game/engine.js",
@@ -4917,7 +4869,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettierquantitycost()",
       "source_file": "src/game/engine.js",
@@ -4929,7 +4881,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "gettierspendableamount()",
       "source_file": "src/game/engine.js",
@@ -4941,11 +4893,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "granttierunits()",
       "source_file": "src/game/engine.js",
       "source_location": "L1912"
+    },
+    {
+      "id": "src_game_engine_istierunlocked",
+      "label": "isTierUnlocked()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "getPurchaseBlockSize",
+      "file_type": "code",
+      "norm_label": "istierunlocked()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1306"
     },
     {
       "id": "src_game_engine_latcheverunlockedtiers",
@@ -4953,7 +4917,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "latcheverunlockedtiers()",
       "source_file": "src/game/engine.js",
@@ -4965,47 +4929,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "withlasttiertickspeedxpunlocked()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L392"
-    },
-    {
-      "id": "src_game_engine_tickcomputeboost",
-      "label": "tickComputeBoost()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "tickcomputeboost()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3924"
-    },
-    {
-      "id": "src_game_engine_tickdiskbuild",
-      "label": "tickDiskBuild()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "tickdiskbuild()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2708"
-    },
-    {
-      "id": "src_game_engine_tickgame",
-      "label": "tickGame()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "tickgame()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1479"
     },
     {
       "id": "src_game_engine_tickintroautoinvest",
@@ -5013,11 +4941,71 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "tickGame",
+      "community_name": "getPurchaseBlockSize",
       "file_type": "code",
       "norm_label": "tickintroautoinvest()",
       "source_file": "src/game/engine.js",
       "source_location": "L2533"
+    },
+    {
+      "id": "src_game_navattention_hasaffordablefulllevel",
+      "label": "hasAffordableFullLevel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "getPurchaseBlockSize",
+      "file_type": "code",
+      "norm_label": "hasaffordablefulllevel()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L122"
+    },
+    {
+      "id": "src_game_navattention_hasoverclockavailable",
+      "label": "hasOverclockAvailable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "getPurchaseBlockSize",
+      "file_type": "code",
+      "norm_label": "hasoverclockavailable()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L158"
+    },
+    {
+      "id": "src_game_navattention_hasspeedupavailable",
+      "label": "hasSpeedUpAvailable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "getPurchaseBlockSize",
+      "file_type": "code",
+      "norm_label": "hasspeedupavailable()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L150"
+    },
+    {
+      "id": "src_game_navattention_hastiersgameattention",
+      "label": "hasTiersGameAttention()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "getPurchaseBlockSize",
+      "file_type": "code",
+      "norm_label": "hastiersgameattention()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L167"
+    },
+    {
+      "id": "src_game_navattention_lasttier",
+      "label": "lastTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "getPurchaseBlockSize",
+      "file_type": "code",
+      "norm_label": "lasttier()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L68"
     },
     {
       "id": "src_game_engine_buyglobaltickspeedmultiplier",
@@ -5116,6 +5104,18 @@
       "source_location": "L819"
     },
     {
+      "id": "src_game_engine_getautoprestigeattemptrate",
+      "label": "getAutoPrestigeAttemptRate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getautoprestigeattemptrate()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1276"
+    },
+    {
       "id": "src_game_engine_geteffectivetiertickspeedseconds",
       "label": "getEffectiveTierTickSpeedSeconds()",
       "_callable": true,
@@ -5200,6 +5200,42 @@
       "source_location": "L1260"
     },
     {
+      "id": "src_game_engine_getprestigeproductionmultiplier",
+      "label": "getPrestigeProductionMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getprestigeproductionmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L897"
+    },
+    {
+      "id": "src_game_engine_getpurchasemilestonemultiplier",
+      "label": "getPurchaseMilestoneMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getpurchasemilestonemultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1215"
+    },
+    {
+      "id": "src_game_engine_getspeedupmultiplier",
+      "label": "getSpeedUpMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getspeedupmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1226"
+    },
+    {
       "id": "src_game_engine_gettickspeedmultiplierbasecost",
       "label": "getTickspeedMultiplierBaseCost()",
       "_callable": true,
@@ -5258,6 +5294,42 @@
       "norm_label": "islasttiertickspeedxpunlocked()",
       "source_file": "src/game/engine.js",
       "source_location": "L870"
+    },
+    {
+      "id": "src_game_engine_tickcomputeboost",
+      "label": "tickComputeBoost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "tickcomputeboost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3924"
+    },
+    {
+      "id": "src_game_engine_tickdiskbuild",
+      "label": "tickDiskBuild()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "tickdiskbuild()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2708"
+    },
+    {
+      "id": "src_game_engine_tickgame",
+      "label": "tickGame()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 86,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "tickgame()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1479"
     },
     {
       "id": "src_game_layers_gettierbasetickspeedseconds",
@@ -5517,7 +5589,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "isTierUnlocked",
+      "community_name": "getOverclockRequirement",
       "file_type": "code",
       "norm_label": "actsoftresets()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
@@ -5529,7 +5601,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "isTierUnlocked",
+      "community_name": "getOverclockRequirement",
       "file_type": "code",
       "norm_label": "getoverclockrequirement()",
       "source_file": "src/game/engine.js",
@@ -5541,23 +5613,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "isTierUnlocked",
+      "community_name": "getOverclockRequirement",
       "file_type": "code",
       "norm_label": "getspeeduprequirement()",
       "source_file": "src/game/engine.js",
       "source_location": "L1236"
-    },
-    {
-      "id": "src_game_engine_istierunlocked",
-      "label": "isTierUnlocked()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "isTierUnlocked",
-      "file_type": "code",
-      "norm_label": "istierunlocked()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1306"
     },
     {
       "id": "src_game_engine_overclockgame",
@@ -5565,71 +5625,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "isTierUnlocked",
+      "community_name": "getOverclockRequirement",
       "file_type": "code",
       "norm_label": "overclockgame()",
       "source_file": "src/game/engine.js",
       "source_location": "L4717"
-    },
-    {
-      "id": "src_game_navattention_hasaffordablefulllevel",
-      "label": "hasAffordableFullLevel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "isTierUnlocked",
-      "file_type": "code",
-      "norm_label": "hasaffordablefulllevel()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L122"
-    },
-    {
-      "id": "src_game_navattention_hasoverclockavailable",
-      "label": "hasOverclockAvailable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "isTierUnlocked",
-      "file_type": "code",
-      "norm_label": "hasoverclockavailable()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L158"
-    },
-    {
-      "id": "src_game_navattention_hasspeedupavailable",
-      "label": "hasSpeedUpAvailable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "isTierUnlocked",
-      "file_type": "code",
-      "norm_label": "hasspeedupavailable()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L150"
-    },
-    {
-      "id": "src_game_navattention_hastiersgameattention",
-      "label": "hasTiersGameAttention()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "isTierUnlocked",
-      "file_type": "code",
-      "norm_label": "hastiersgameattention()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L167"
-    },
-    {
-      "id": "src_game_navattention_lasttier",
-      "label": "lastTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 97,
-      "community_name": "isTierUnlocked",
-      "file_type": "code",
-      "norm_label": "lasttier()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L68"
     },
     {
       "id": "src_pages_infopage_index_infopage",
@@ -5637,7 +5637,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "isTierUnlocked",
+      "community_name": "getOverclockRequirement",
       "file_type": "code",
       "norm_label": "infopage()",
       "source_file": "src/pages/InfoPage/index.jsx",
@@ -7372,7 +7372,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.0] - 2026-07-05",
       "source_file": "CHANGELOG.md",
-      "source_location": "L496"
+      "source_location": "L492"
     },
     {
       "id": "changelog_0_2_0_2026_07_12",
@@ -7384,7 +7384,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2026-07-12",
       "source_file": "CHANGELOG.md",
-      "source_location": "L484"
+      "source_location": "L480"
     },
     {
       "id": "changelog_0_3_0_2026_07_13",
@@ -7396,7 +7396,7 @@
       "node_kind": "heading",
       "norm_label": "[0.3.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L467"
+      "source_location": "L463"
     },
     {
       "id": "changelog_0_4_0_2026_07_13",
@@ -7408,7 +7408,7 @@
       "node_kind": "heading",
       "norm_label": "[0.4.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L451"
+      "source_location": "L447"
     },
     {
       "id": "changelog_0_5_0_2026_07_14",
@@ -7420,7 +7420,7 @@
       "node_kind": "heading",
       "norm_label": "[0.5.0] - 2026-07-14",
       "source_file": "CHANGELOG.md",
-      "source_location": "L438"
+      "source_location": "L434"
     },
     {
       "id": "changelog_added",
@@ -7435,7 +7435,7 @@
       "source_location": "L15"
     },
     {
-      "id": "changelog_added_158",
+      "id": "changelog_added_154",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7444,10 +7444,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L158"
+      "source_location": "L154"
     },
     {
-      "id": "changelog_added_242",
+      "id": "changelog_added_238",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7456,10 +7456,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L242"
+      "source_location": "L238"
     },
     {
-      "id": "changelog_added_440",
+      "id": "changelog_added_436",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7468,10 +7468,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L440"
+      "source_location": "L436"
     },
     {
-      "id": "changelog_added_453",
+      "id": "changelog_added_449",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7480,10 +7480,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L453"
+      "source_location": "L449"
     },
     {
-      "id": "changelog_added_469",
+      "id": "changelog_added_465",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7492,10 +7492,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L469"
+      "source_location": "L465"
     },
     {
-      "id": "changelog_added_486",
+      "id": "changelog_added_482",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7504,10 +7504,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L486"
+      "source_location": "L482"
     },
     {
-      "id": "changelog_added_498",
+      "id": "changelog_added_494",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7516,7 +7516,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L498"
+      "source_location": "L494"
     },
     {
       "id": "changelog_changed",
@@ -7531,7 +7531,7 @@
       "source_location": "L65"
     },
     {
-      "id": "changelog_changed_189",
+      "id": "changelog_changed_185",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7540,10 +7540,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L189"
+      "source_location": "L185"
     },
     {
-      "id": "changelog_changed_295",
+      "id": "changelog_changed_291",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7552,10 +7552,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L295"
+      "source_location": "L291"
     },
     {
-      "id": "changelog_changed_444",
+      "id": "changelog_changed_440",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7564,10 +7564,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L444"
+      "source_location": "L440"
     },
     {
-      "id": "changelog_changed_457",
+      "id": "changelog_changed_453",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7576,10 +7576,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L457"
+      "source_location": "L453"
     },
     {
-      "id": "changelog_changed_474",
+      "id": "changelog_changed_470",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7588,7 +7588,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L474"
+      "source_location": "L470"
     },
     {
       "id": "changelog_changelog",
@@ -7615,7 +7615,7 @@
       "source_location": "L51"
     },
     {
-      "id": "changelog_fixed_412",
+      "id": "changelog_fixed_408",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7624,10 +7624,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L412"
+      "source_location": "L408"
     },
     {
-      "id": "changelog_fixed_448",
+      "id": "changelog_fixed_444",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7636,10 +7636,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L448"
+      "source_location": "L444"
     },
     {
-      "id": "changelog_fixed_461",
+      "id": "changelog_fixed_457",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7648,10 +7648,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L461"
+      "source_location": "L457"
     },
     {
-      "id": "changelog_fixed_480",
+      "id": "changelog_fixed_476",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7660,10 +7660,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L480"
+      "source_location": "L476"
     },
     {
-      "id": "changelog_fixed_491",
+      "id": "changelog_fixed_487",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7672,7 +7672,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L491"
+      "source_location": "L487"
     },
     {
       "id": "changelog_removed",
@@ -7687,7 +7687,7 @@
       "source_location": "L44"
     },
     {
-      "id": "changelog_removed_182",
+      "id": "changelog_removed_178",
       "label": "Removed",
       "_origin": "ast",
       "community": 22,
@@ -7696,7 +7696,7 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L182"
+      "source_location": "L178"
     },
     {
       "id": "changelog_security",
@@ -7711,7 +7711,7 @@
       "source_location": "L10"
     },
     {
-      "id": "changelog_security_434",
+      "id": "changelog_security_430",
       "label": "Security",
       "_origin": "ast",
       "community": 22,
@@ -7720,7 +7720,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L434"
+      "source_location": "L430"
     },
     {
       "id": "changelog_unreleased",
@@ -41331,73 +41331,84 @@
     },
     {
       "source": "changelog_0_1_0_2026_07_05",
-      "target": "changelog_added_498",
+      "target": "changelog_added_494",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L498",
+      "source_location": "L494",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_added_486",
+      "target": "changelog_added_482",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L486",
+      "source_location": "L482",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_fixed_491",
+      "target": "changelog_fixed_487",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L491",
+      "source_location": "L487",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_added_469",
+      "target": "changelog_added_465",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L469",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_changed_474",
+      "target": "changelog_changed_470",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L474",
+      "source_location": "L470",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_fixed_480",
+      "target": "changelog_fixed_476",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L480",
+      "source_location": "L476",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_added_453",
+      "target": "changelog_added_449",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L449",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_4_0_2026_07_13",
+      "target": "changelog_changed_453",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -41408,7 +41419,7 @@
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_changed_457",
+      "target": "changelog_fixed_457",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -41418,19 +41429,19 @@
       "weight": 1.0
     },
     {
-      "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_fixed_461",
+      "source": "changelog_0_5_0_2026_07_14",
+      "target": "changelog_added_436",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L461",
+      "source_location": "L436",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_added_440",
+      "target": "changelog_changed_440",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -41441,24 +41452,13 @@
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_changed_444",
+      "target": "changelog_fixed_444",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
       "source_location": "L444",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_fixed_448",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L448",
       "weight": 1.0
     },
     {
@@ -41469,7 +41469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L438",
+      "source_location": "L434",
       "weight": 1.0
     },
     {
@@ -41480,7 +41480,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L451",
+      "source_location": "L447",
       "weight": 1.0
     },
     {
@@ -41491,7 +41491,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L467",
+      "source_location": "L463",
       "weight": 1.0
     },
     {
@@ -41502,7 +41502,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L484",
+      "source_location": "L480",
       "weight": 1.0
     },
     {
@@ -41513,7 +41513,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L496",
+      "source_location": "L492",
       "weight": 1.0
     },
     {
@@ -41551,79 +41551,79 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_158",
+      "target": "changelog_added_154",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L158",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_removed_182",
+      "target": "changelog_removed_178",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L182",
+      "source_location": "L178",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_189",
+      "target": "changelog_changed_185",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L189",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_242",
+      "target": "changelog_added_238",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L242",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_295",
+      "target": "changelog_changed_291",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L295",
+      "source_location": "L291",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_412",
+      "target": "changelog_fixed_408",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L412",
+      "source_location": "L408",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_security_434",
+      "target": "changelog_security_430",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L434",
+      "source_location": "L430",
       "weight": 1.0
     },
     {
@@ -55678,5 +55678,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "34a3c3970695a8f85c785276d3bd58a7fc82ea62"
+  "built_at_commit": "635754eef5ab4a6a68db4b297eaafbca7f2d7848"
 }

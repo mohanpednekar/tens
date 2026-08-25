@@ -72,10 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Memory ×2 (Sacrifice) fires immediately, no confirm prompt** — clicking the button now drains
   Memory and doubles Capacity right away, the same as every other Byte Foundry action; the
   "Sacrifice Memory?" confirm dialog (with its Compute-token-wipe warning) is removed.
-- **Reset Byte Foundry now auto-replays Capacity/Sacrifice too** — the convenience auto-clicker that
-  already re-presses Combine/Invest/Disk Build up to their pre-reset highs after Settings → Reset
-  Byte Foundry now also re-Sacrifices Capacity up to its own prior high-water mark, instead of
-  requiring that one upgrade to be clicked back up manually.
 - **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
   readers announce only a button's own `aria-label`, not redundant icon content; the offline-
   progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
@@ -253,9 +249,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   preset/funding tier. Both paths require an explicit confirmation dialog.
 - **Reset Byte Foundry** (Settings → Danger zone): wipe Memory, Capacity, Disks / Storage, and all
   Compute on the active save — Tiers progress, Prestige Points / count / upgrades, and (if already
-  unlocked) main-game access this cycle stay. Combine, Invest / Bandwidth, and Disk Build
-  **restart from scratch**, then convenience-auto-press again up to your pre-reset highs as each
-  becomes affordable (Capacity stays manual — you still click Sacrifice). Separate from full Reset /
+  unlocked) main-game access this cycle stay. Combine, Invest / Bandwidth, Disk Build, and Capacity
+  (Sacrifice) **restart from scratch**, then all convenience-auto-press again up to your pre-reset
+  highs as each becomes affordable. Separate from full Reset /
   Erase all; still asks for confirmation and stays disabled while production is frozen at Prestige.
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
