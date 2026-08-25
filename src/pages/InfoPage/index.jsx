@@ -23,6 +23,8 @@ import {
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
+  DATA_LAKE_CAPACITY,
+  DATA_LAKE_SLOT_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
   INTRO_BYTE_COMBINE_COST,
@@ -246,8 +248,9 @@ const InfoPage = () => {
             Memory fills visibly between transfers rather than draining bit-by-bit.
           </li>
           <li>
-            Empty disks fill from Memory directly (smallest array first). Cache does not pour into
-            disks.
+            Empty disks fill from a full read cache when no tier claim blocks that size — the flush
+            takes as long as filling one cache block at your current Byte Foundry production rate
+            (not instant). Larger sizes can also fill via write-cache merges from the size below.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
@@ -280,21 +283,44 @@ const InfoPage = () => {
           nav’s Boosters item.
         </p>
 
+        <h3>Data Lakes</h3>
+        <ul>
+          <li>
+            Ten permanent lakes (one per storage denomination, KB … QB) hold deposited Disks and
+            fund Booster purchases at the matching Compute tier.
+          </li>
+          <li>
+            Depositing a size's disks requires that size's array to be completely built (all{' '}
+            {DISK_ARRAY_LADDER_CAP} disks ever built), not just one currently full — deposit from a
+            Foundry disk row once eligible.
+          </li>
+          <li>
+            Each lake's capacity stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
+            once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
+            built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too.
+          </li>
+          <li>
+            The nth Booster purchase from a lake costs n units of that lake's own current deposits —
+            spent capacity only returns by depositing more Disks.
+          </li>
+        </ul>
+
         <h3>Cores</h3>
         <ul>
           <li>
-            A full Memory converts into 1 Core — the cost is your entire current capacity, so bigger
-            capacity means fewer but pricier Cores.
-          </li>
-          <li>
-            Claim Core is manual on Byte Foundry by default. Sacrificing {COMPUTE_ENTITY_CAP} held
-            Nodes permanently unlocks auto-claim (manual button then disappears).
+            Bought with Boosters from the matching Data Lake — the buy button on the Cores row —
+            there is no other way to obtain a Core.
           </li>
           <li>
             Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge
             boundary).
           </li>
-          <li>Every compute entity caps at {COMPUTE_ENTITY_CAP} held.</li>
+          <li>
+            Every compute entity caps at {COMPUTE_ENTITY_CAP} held — except on the Data Lake
+            Booster purchase path itself (any of the ten tiers, not just Cores), which is
+            Data-Lake-limited rather than inventory-capped and can push a tier's held count past
+            {' '}{COMPUTE_ENTITY_CAP}.
+          </li>
         </ul>
 
         <h3>Merge chain</h3>

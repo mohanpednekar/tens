@@ -105,21 +105,12 @@ each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry s
 progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
-Compute lives on its own dedicated screen (`ComputePage` — see below), reached via AppNav once
-revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). One exception to "Compute lives entirely on its own screen":
-Core's own manual "Claim Core" button (`aria-label="claim a compute core"`, label `🧮 Claim Core`,
-calling `actions.claimComputeCore`, `$progress` reusing the same `fullProgress` the Memory tile
-above already computes) renders on THIS page once `computeCoreRevealed` AND
-`!intro.autoClaimCoreEnabled` — removed entirely (not merely disabled) once auto-claim is unlocked
-(see issue #316). `disabled={!canClaimComputeCore}` where `canClaimComputeCore =
-isComputeCoreClaimAvailable(state)` (Compute unlocked, Memory full, Cores under
-`COMPUTE_ENTITY_CAP`); its `title` explains either the flush amount when enabled, or that Memory
-needs to fill (or auto-claim be unlocked on `ComputePage` instead) when disabled. **After Boosts
-unlocks** (`computeCoreRevealed`), Claim Core and Memory ×10 **swap positions**: Claim Core takes
-Memory ×10's former milestones-row slot beside Bandwidth (while manual claim is still shown), and
-Memory ×10 moves below the disk section. Before Boosts unlocks, Memory ×10 stays beside Bandwidth
-and Claim Core is absent.
+Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
+once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by buying Boosters from
+the matching Data Lake (`purchaseBoosterFromDataLake`), not minted from Memory — the earlier manual
+"Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
+Memory ×10 (Sacrifice) always stays in the milestones row beside Bandwidth.
 
 Storage is continuous on this same page: **Build Disk** — its own core-loop action, alongside
 Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
@@ -267,7 +258,8 @@ render:
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
-  or new unlock (`tickDiskAutoFill`); Cache does not pour into disks. Each block shows its bit-scale
+  or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over one
+  cache-block production duration when no tier claim blocks. Each block shows its bit-scale
   size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
   (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and
   independently **releasable** (`$releasable`, accent border, clickable) once
@@ -303,9 +295,9 @@ gated per-size by whichever tier currently matches that size having its own unit
 active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
 already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
-tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then fills
-empty disks directly from Memory, smallest size first, whenever there's enough and that size isn't
-mid-build. This page used to show its own live progress row mirroring tier01's
+tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then flushes
+a full read cache into an empty disk over one cache-block production duration when no tier claim
+blocks that size, smallest size first, whenever that size isn't mid-build. This page used to show its own live progress row mirroring tier01's
 current purchase-block progress — removed as redundant once ByteFoundryPage's transfer-block row
 started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
 the only place this progress is shown.
@@ -374,19 +366,15 @@ not at the bottom"):
      (`aria-label="compute entities"`), driven off an `ENTITY_ROWS` array (10 entries, in the same
      Core-through-Megacomputer order `COMPUTE_BOOST_TIER_FIELDS` in `layers.js` uses, so a row's
      array index + 1 IS its Boost `tierIndex`).
-     - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`, kept
-       separate from Cores' sibling auto-claim button below to avoid nesting a `<button>` inside a
-       `<button>`) wrapping the tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label
-       (`TierLabel`, e.g. `"Clusters 3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label>
-       slots"`) of `COMPUTE_ENTITY_CAP` (10) `NormalSlot` squares, filled left-to-right up to the
-       current count — the same discrete-square convention `StoragePage`'s own `DiskSquare` uses,
-       just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
-       toggles `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the
-       Boost effects section above (issue #326 — "click any tier row"), highlighted
-       (`$selected`/`aria-pressed`) while armed. Cores' own row 1 additionally carries the separate,
-       unrelated Memory → Core auto-claim control at the end (an `AutoBadge` once
-       `autoClaimCoreEnabled`, otherwise an `IconButton` calling `enableAutoClaimCore`) — it doesn't
-       fit the row-2 merge-boundary shape every other tier uses.
+     - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
+       tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters
+       3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
+       (10) `NormalSlot` squares, filled left-to-right up to the current count — the same
+       discrete-square convention `StoragePage`'s own `DiskSquare` uses, just non-interactive (a
+       plain status square, not a button). Clicking `TierSelectButton` toggles
+       `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the Boost
+       effects section above (issue #326 — "click any tier row"), highlighted
+       (`$selected`/`aria-pressed`) while armed.
      - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
        a Megacomputer has any use at all):
