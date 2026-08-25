@@ -169,6 +169,13 @@ const buildSparklinePath = (samples, key) => {
 
 const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }) => {
   const frozen = isProductionFrozen(game.state)
+  // game.devModeActive can only ever be true in a dev build (Dev Mode's own toggle is itself
+  // gated behind import.meta.env.DEV — see DevModePage/AppMenu), so this condition is always
+  // false in production regardless of the extra `import.meta.env.DEV &&` check — but including it
+  // here too lets Terser/Rollup fold this whole branch (and its "Dev Mode" copy/title strings) away
+  // at build time instead of leaving inert-but-textually-present strings in the shipped bundle, the
+  // same "absent from yarn build" guarantee the rest of Dev Mode gets. See CLAUDE.md's "Dev Mode".
+  const devModeActive = import.meta.env.DEV && Boolean(game.devModeActive)
   const supporter = Boolean(game.savesMeta?.supporterUnlocked)
   const [code, setCode] = useState('')
   const [codeStatus, setCodeStatus] = useState(null)
@@ -218,13 +225,13 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
   }
 
   const handleClearSlot = slot => {
-    if (frozen && slot.isActive) return
+    if (devModeActive || (frozen && slot.isActive)) return
     if (!window.confirm(buildClearSlotConfirmMessage(slot))) return
     game.clearSlot(slot.id)
   }
 
   const handleEraseAll = () => {
-    if (frozen) return
+    if (frozen || devModeActive) return
     if (!window.confirm(buildEraseAllSavesConfirmMessage())) return
     game.eraseAllSaveProgress()
   }
@@ -298,6 +305,12 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           Independent runs on this device. Switching saves the current slot first. Reset / Clear
           wipe progress only — your Supporter unlock is never removed here.
         </p>
+        {devModeActive && (
+          <LockedNote>
+            Dev Mode is active — Play/Clear are disabled here so a dev-only session can't touch a
+            real save. Disable Dev Mode first.
+          </LockedNote>
+        )}
         {(game.saveSlots ?? []).map(slot => (
           <SlotRow $active={slot.isActive} key={slot.id}>
             <SlotLabel>
@@ -315,7 +328,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                 {!slot.isActive && (
                   <Button
                     aria-label={`switch to ${slot.name}`}
+                    disabled={devModeActive}
                     onClick={() => game.switchSaveSlot(slot.id)}
+                    title={devModeActive ? 'Disable Dev Mode first' : undefined}
                     type="button"
                     variant="primary"
                   >
@@ -332,12 +347,14 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
                 </Button>
                 <Button
                   aria-label={`clear ${slot.name}`}
-                  disabled={frozen && slot.isActive}
+                  disabled={devModeActive || (frozen && slot.isActive)}
                   onClick={() => handleClearSlot(slot)}
                   title={
-                    frozen && slot.isActive
-                      ? 'Prestige first — production is frozen at 1 Googol Bytes'
-                      : 'Erase this slot only (asks for confirmation)'
+                    devModeActive
+                      ? 'Disable Dev Mode first'
+                      : frozen && slot.isActive
+                        ? 'Prestige first — production is frozen at 1 Googol Bytes'
+                        : 'Erase this slot only (asks for confirmation)'
                   }
                   type="button"
                   variant="danger"
@@ -554,12 +571,14 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         <p>Wipe every slot’s progress on this device. Does not remove the Supporter unlock.</p>
         <Button
           aria-label="Erase all save progress"
-          disabled={frozen}
+          disabled={frozen || devModeActive}
           onClick={handleEraseAll}
           title={
-            frozen
-              ? 'Prestige first — production is frozen at 1 Googol Bytes'
-              : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
+            devModeActive
+              ? 'Disable Dev Mode first'
+              : frozen
+                ? 'Prestige first — production is frozen at 1 Googol Bytes'
+                : 'Erases all slots but keeps Supporter unlock (asks for confirmation)'
           }
           type="button"
           variant="danger"

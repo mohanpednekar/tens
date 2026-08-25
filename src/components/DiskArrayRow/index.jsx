@@ -1,6 +1,9 @@
 import {
+  canDepositDiskToDataLake,
   formatCacheSize,
   formatDiskSize,
+  getDataLakeTierIndex,
+  getDataLakeTierLabel,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushFill,
   getDiskRedeemTierName,
@@ -14,6 +17,7 @@ import {
   isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
 } from 'game/engine'
+import Button, { ButtonContent } from 'components/Button'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
 
@@ -55,6 +59,12 @@ const RebuildingText = styled.p`
   text-align: center;
   font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.accent};
+`
+
+const DepositRow = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
 `
 
 // Always one unbroken row of DISK_ARRAY_LADDER_CAP disks — never wraps on mobile. Circles
@@ -265,6 +275,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const displayCached = readFlushing
     ? size * readFlushRemainingFraction
     : cached
+  const dataLakeTierIndex = getDataLakeTierIndex(size)
+  const dataLakeLabel = dataLakeTierIndex ? getDataLakeTierLabel(dataLakeTierIndex) : null
+  const canDeposit = canDepositDiskToDataLake(state, size)
 
   return (
     <DiskSizeRow>
@@ -422,6 +435,24 @@ const DiskArrayRow = ({ actions, size, state }) => {
           )
         })}
       </SquaresRow>
+      {dataLakeTierIndex && full > 0 && (
+        <DepositRow>
+          <Button
+            aria-label={`deposit one ${sizeLabel} disk into the ${dataLakeLabel} Data Lake`}
+            disabled={!canDeposit}
+            onClick={() => actions.depositDiskToDataLake(size)}
+            title={
+              canDeposit
+                ? `Deposit 1 full ${sizeLabel} disk into the ${dataLakeLabel} Data Lake to fund ${dataLakeLabel} Booster purchases`
+                : `Need this array fully built (all ${DISK_ARRAY_LADDER_CAP} disks ever built), a full disk, an open lake slot (max 9 per size), and room under the 999-unit lake cap`
+            }
+            type="button"
+            variant="info"
+          >
+            <ButtonContent>{`→ ${dataLakeLabel} Lake`}</ButtonContent>
+          </Button>
+        </DepositRow>
+      )}
     </DiskSizeRow>
   )
 }

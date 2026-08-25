@@ -13,6 +13,10 @@ import {
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  DATA_LAKE_CAPACITY,
+  DATA_LAKE_SLOT_MAX,
+  DATA_LAKE_TIER_COUNT,
+  DATA_LAKE_TIER_LABELS,
   COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
   COMPUTE_MERGE_DURATION_UPGRADE_COUNT,
   COMPUTE_MERGE_STEP_MULTIPLIER,
@@ -288,10 +292,19 @@ describe('constants', () => {
     expect(DISK_CACHE_BLOCK_COUNT).toBe(8)
   })
 
-  it('COMPUTE_BOOST_PRESETS base (tier 1 / Core) values are 1 minute (Burst x32), 10 minutes (Standard x8), 1 hour (Sustain x2)', () => {
-    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 32, durationSeconds: 60 })
-    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 8, durationSeconds: 600 })
-    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 3600 })
+  it('COMPUTE_BOOST_PRESETS base (tier 1 / Core) values are 10 minutes (Burst x20), 1 hour (Standard x5), 10 hours (Sustain x2)', () => {
+    expect(COMPUTE_BOOST_PRESETS.burst).toEqual({ multiplier: 20, durationSeconds: 600 })
+    expect(COMPUTE_BOOST_PRESETS.standard).toEqual({ multiplier: 5, durationSeconds: 3600 })
+    expect(COMPUTE_BOOST_PRESETS.sustain).toEqual({ multiplier: 2, durationSeconds: 36000 })
+  })
+
+  it('total extra production ((multiplier - 1) * durationSeconds) increases Burst -> Standard -> Sustain', () => {
+    const extra = preset => (preset.multiplier - 1) * preset.durationSeconds
+    expect(extra(COMPUTE_BOOST_PRESETS.burst)).toBe(190 * 60) // 190 minutes, in seconds
+    expect(extra(COMPUTE_BOOST_PRESETS.standard)).toBe(240 * 60)
+    expect(extra(COMPUTE_BOOST_PRESETS.sustain)).toBe(600 * 60)
+    expect(extra(COMPUTE_BOOST_PRESETS.burst)).toBeLessThan(extra(COMPUTE_BOOST_PRESETS.standard))
+    expect(extra(COMPUTE_BOOST_PRESETS.standard)).toBeLessThan(extra(COMPUTE_BOOST_PRESETS.sustain))
   })
 
   it('COMPUTE_BOOST_TIER_POWER_STEP is 4 (each compute-ladder tier is 4x as powerful as the previous one)', () => {
@@ -307,5 +320,12 @@ describe('constants', () => {
       'computeCores', 'computeNodes', 'computeClusters', 'computeNetworks', 'computeGrids',
       'computeFabrics', 'computeClouds', 'computeDatacenters', 'computeSupercomputers', 'computeMegacomputers',
     ])
+  })
+
+  it('DATA_LAKE constants define 10 KB…QB lakes with 999 capacity and 9 slots per sub-size', () => {
+    expect(DATA_LAKE_TIER_COUNT).toBe(10)
+    expect(DATA_LAKE_CAPACITY).toBe(999)
+    expect(DATA_LAKE_SLOT_MAX).toBe(9)
+    expect(DATA_LAKE_TIER_LABELS).toEqual(['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB'])
   })
 })
