@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- Pin transitive `uuid` to **11.1.1** via Yarn `resolutions` (Dependabot alert #185 /
+  moderate: missing buffer bounds check in v3/v5/v6 when `buf` is provided). Pulled in by
+  `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
+
 ### Added
 - **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
   `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
