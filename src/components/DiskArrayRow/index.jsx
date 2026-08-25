@@ -444,7 +444,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
             title={
               canDeposit
                 ? `Deposit 1 full ${sizeLabel} disk into the ${dataLakeLabel} Data Lake to fund ${dataLakeLabel} Booster purchases`
-                : 'Need a full disk, an open lake slot (max 9 per size), and room under the 999-unit lake cap'
+                : `Need this array fully built (all ${DISK_ARRAY_LADDER_CAP} disks ever built), a full disk, an open lake slot (max 9 per size), and room under the 999-unit lake cap`
             }
             type="button"
             variant="info"

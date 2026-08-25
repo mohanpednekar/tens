@@ -398,7 +398,6 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
       computeCores: 6,
       computeCoresEverEarned: 12,
       computeMergePageUnlocked: true,
-      autoClaimCoreEnabled: true,
     },
   })
   render(<App />)
@@ -2466,7 +2465,7 @@ test('Sacrifice for 10x Capacity requires a full balance, drains it entirely, an
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
   expect(dialog).toBeInTheDocument()
   expect(dialog).toHaveTextContent(/empty Memory to multiply capacity/i)
-  expect(dialog).not.toHaveTextContent(/future Core/i)
+  expect(dialog).not.toHaveTextContent(/Compute token/i)
 
   await user.click(within(dialog).getByRole('button', { name: /^sacrifice$/i }))
 
@@ -2494,7 +2493,7 @@ test('cancelling the Sacrifice confirm dialog leaves Memory and capacity untouch
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
 })
 
-test('Sacrifice confirm warns that future Cores cost more only once Compute Cores are unlocked', () => {
+test('Sacrifice confirm warns that Compute tokens will be wiped only once Compute is unlocked', () => {
   // Fake timers (and fireEvent instead of userEvent — see other vi.useFakeTimers() tests in this
   // file) keep the live tick loop from ever firing between render and the assertions below: the
   // always-on Kilobyte auto-convert (tickIntroAutoInvest) runs every tick regardless of the forced
@@ -2519,7 +2518,7 @@ test('Sacrifice confirm warns that future Cores cost more only once Compute Core
   fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i }))
 
   const dialog = screen.getByRole('dialog', { name: /sacrifice memory/i })
-  expect(dialog).toHaveTextContent(/every future Core will cost more/i)
+  expect(dialog).toHaveTextContent(/wipes all held Compute tokens/i)
   fireEvent.click(within(dialog).getByRole('button', { name: /^cancel$/i }))
 
   unmount()
@@ -3627,7 +3626,7 @@ describe('ComputePage merge chain', () => {
     expect(saved.intro.computeClusters).toBe(2)
   })
 
-  test('Cores merges into Nodes exactly like every other boundary — the merge row that used to be exclusive to "Claim Core" (issue #321)', () => {
+  test('Cores merges into Nodes exactly like every other boundary (issue #321)', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeCores: 9, computeNodes: 1,
@@ -3745,65 +3744,7 @@ describe('ComputePage merge chain', () => {
   })
 })
 
-describe('Claim Core (ByteFoundryPage)', () => {
-  test('the Claim Core button appears once Compute is revealed, disabled until Memory is full', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true })
-    render(<App />)
-
-    expect(screen.getByRole('button', { name: /claim a compute core/i })).toBeDisabled()
-  })
-
-  test('after Boosts unlocks, Claim Core sits in Memory ×10\'s former milestones slot and Memory ×10 moves below disks', () => {
-    seedIntroState({
-      bits: 0,
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      byteCreated: true,
-      disksBuiltTotal: { [getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE]: 1 },
-    })
-    render(<App />)
-
-    const claim = screen.getByRole('button', { name: /claim a compute core/i })
-    const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
-    const bandwidth = screen.getByRole('button', { name: /invest bits for double production|sacrifice .* for double production/i })
-    const build = screen.getByRole('button', { name: /build disk/i })
-
-    // Claim Core + Bandwidth share the milestones row (Claim before Bandwidth); Memory ×10 is
-    // after the disk Build control — the swap that happens once Boosts / Compute unlocks.
-    expect(claim.compareDocumentPosition(bandwidth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(build.compareDocumentPosition(sacrifice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(claim.compareDocumentPosition(sacrifice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
-
-  test('before Boosts unlocks, Memory ×10 stays beside Bandwidth and Claim Core is absent', () => {
-    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
-    render(<App />)
-
-    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
-    const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 10x capacity/i })
-    const bandwidth = screen.getByRole('button', { name: /invest bits for double production|sacrifice .* for double production/i })
-    expect(sacrifice.compareDocumentPosition(bandwidth) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-  })
-
-  test('clicking Claim Core mints exactly 1 Core and flushes Memory', () => {
-    seedIntroState({ bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true })
-    render(<App />)
-
-    fireEvent.click(screen.getByRole('button', { name: /claim a compute core/i }))
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeCores).toBe(1)
-    expect(saved.intro.bits).toBe(0)
-  })
-
-  test('the Claim Core button is removed entirely once auto-claim is enabled', () => {
-    seedIntroState({ bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, autoClaimCoreEnabled: true })
-    render(<App />)
-
-    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
-  })
-})
-
-describe('Compute auto-merge / auto-claim automation', () => {
+describe('Compute auto-merge automation', () => {
   const openBoosters = () => fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
 
   test('an "enable auto-merge" control is always shown for Nodes into Clusters, disabled below 10 held Clusters', () => {
@@ -3863,31 +3804,6 @@ describe('Compute auto-merge / auto-claim automation', () => {
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
   })
 
-  test('an "enable auto-claim" control for Cores is always shown on ComputePage, disabled below 10 held Nodes', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: 9,
-    })
-    render(<App />)
-    openBoosters()
-
-    expect(screen.getByRole('button', { name: /enable auto-claim for cores/i })).toBeDisabled()
-  })
-
-  test('enabling auto-claim for Cores sacrifices ALL 10 held Nodes and removes the manual Claim Core button', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeNodes: COMPUTE_ENTITY_CAP,
-    })
-    render(<App />)
-    openBoosters()
-
-    fireEvent.click(screen.getByRole('button', { name: /enable auto-claim for cores/i }))
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeNodes).toBe(0)
-    expect(saved.intro.autoClaimCoreEnabled).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-    expect(screen.queryByRole('button', { name: /claim a compute core/i })).not.toBeInTheDocument()
-  })
 })
 
 // --- The Byte Foundry resets and reappears after every real Prestige ---
