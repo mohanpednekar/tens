@@ -70,8 +70,9 @@ src/
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Ladder → Guide → More) + More sheet
-    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
-                            styled components; see docs/COMPONENTS_REFERENCE.md
+    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/,
+    DataLakePanel/          ← shared styled components (DataLakePanel: the 10 Data Lake rows on
+                            ByteFoundryPage); see docs/COMPONENTS_REFERENCE.md
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory + Disks continuous sections; see
                                "Byte Foundry" below
