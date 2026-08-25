@@ -515,8 +515,14 @@ src/
                                is a no-op in practice today
 capacitor.config.json        ← Capacitor app id/name + `webDir: dist` (foundation for #70; no
                                android/ios platforms checked in yet)
-vite.config.js               ← path aliases + dev/test server config + the VitePWA plugin (skipped
-                               when `CAPACITOR=1`). Full PWA reference: `docs/PWA_REFERENCE.md`
+vite.config.js               ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
+viteConfigFactory.js          ← the real Vite config — path aliases, dev/test server config, and the
+                               VitePWA plugin (skipped when `CAPACITOR=1`, along with the GitHub
+                               Pages `/tens/` base — see "Repo layout"'s Capacitor note below).
+                               Extracted out of `vite.config.js` so `capacitorConfig.test.js` can pin
+                               the CAPACITOR=1 behavior without loading Vite's config entry point
+                               (whose `import.meta.url` isn't a `file:` URL under Vitest). Full PWA
+                               reference: `docs/PWA_REFERENCE.md`
 playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
                                "Testing" below) — separate from vite.config.js's own `test` block, which
                                only configures Vitest

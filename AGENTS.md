@@ -93,8 +93,9 @@ src/
   App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry
 capacitor.config.json      ← Capacitor app id/name + webDir dist (#70 foundation; no android/ios yet)
-vite.config.js             ← path aliases (below) + dev/test server config + VitePWA plugin
-                           (omitted when CAPACITOR=1)
+vite.config.js             ← thin wrapper delegating to viteConfigFactory.js
+viteConfigFactory.js       ← real Vite config: path aliases (below) + dev/test server config +
+                           VitePWA plugin (omitted when CAPACITOR=1)
 ```
 
 ## Architecture
