@@ -208,7 +208,7 @@ const FieldNode = ({ path, value, drafts, onDraftChange, onSetLeaf, onToggleLeaf
 const PRESETS = [
   {
     id: 'unlock-factory',
-    label: '🏭 Unlock Factory',
+    label: '🏭 Unlock Ladder',
     apply: state => ({ ...state, intro: { ...state.intro, mainGameUnlocked: true } }),
   },
   {

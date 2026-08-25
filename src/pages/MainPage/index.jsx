@@ -722,7 +722,7 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// Second-level tabs on Byte Factory: Data | Upgrades (peer tabs — no back chrome). Milestones lives
+// Second-level tabs on Ladder: Ladder | Upgrades (peer tabs — no back chrome). Milestones lives
 // under AppNav → More. Shown only after a first Prestige (!isFirstRun). Reset lives only under
 // Settings → Danger zone (AppNav → More → Settings), not on this page.
 const ViewNav = styled.div`
@@ -768,9 +768,9 @@ const CategoryHeading = styled.h2`
   text-transform: uppercase;
 `
 
-// One row per tier/upgrade within a category — a simpler flex layout than the Game view's
+// One row per tier/upgrade within a category — a simpler flex layout than the Ladder view's
 // TierLine grid. In the Tier Autobuyers category, a row's badge order (tickspeed-autobuyer cluster,
-// then unit-autobuyer cluster) mirrors the Game view's own TierName badge order (⚙ before 🤖), and
+// then unit-autobuyer cluster) mirrors the Ladder view's own TierName badge order (⚙ before 🤖), and
 // Smart is nested inside the same UpgradeRowControls as the unit-autobuyer badge/toggle since it
 // specifically modifies that autobuyer's behavior, rather than trailing as an unrelated fourth item.
 // No border/background of its own — the enclosing UpgradeCategory provides that — just a thin top
@@ -892,8 +892,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
     ? 'Prestige (optional — claim accumulated PP)'
     : 'Prestige (requires 1 Googol Bytes)'
   const prestigeAriaLabel = `${prestigeLabel} — awards +${formatAmount(prestigeAwardPreview)} Prestige Point${prestigeAwardPreview === 1 ? '' : 's'}`
-  // Data vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
-  // the ladder is the default Byte Factory screen, and Milestones lives under AppNav → More. Upgrades
+  // Ladder vs PP Upgrades — local toggle only (not AppNav). Game/Milestones tabs were removed:
+  // the ladder is the default Ladder screen, and Milestones lives under AppNav → More. Upgrades
   // stays here because it's the only PP-purchase surface and isn't elsewhere in AppNav/More.
   const [view, setView] = useState('game')
   useEffect(() => {
@@ -1124,7 +1124,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // frequency by another getGlobalTickspeedProductionMultiplier's own regular step (1% by default,
   // permanently raised by Overclock — see above), not the amount delivered (see
   // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier). Unlike every other
-  // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Game view instead
+  // automation upgrade on this page, it's Bytes-funded (not PP) and lives on the Ladder view instead
   // of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
@@ -1276,7 +1276,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       </PrestigeProgressTop>
 
       <Header>
-        <h1>Byte Factory</h1>
+        <h1>Ladder</h1>
       </Header>
 
       {state.intro?.computeBoostType && COMPUTE_BOOST_PRESETS[state.intro.computeBoostType] && (
@@ -1392,10 +1392,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         )}
       </StickyBalances>
 
-      {/* Second-level Byte Factory tabs: Data | Upgrades (no back button). Milestones is under More.
+      {/* Second-level Ladder tabs: Ladder | Upgrades (no back button). Milestones is under More.
           Upgrades gated on !isFirstRun — PP upgrades don't exist before a first Prestige. */}
       {!isFirstRun && (
-        <ViewNav role="tablist" aria-label="factory view">
+        <ViewNav role="tablist" aria-label="ladder view">
           <ViewTabButton
             aria-selected={view === 'game'}
             color={view === 'game' ? theme.color.text : theme.color.textMuted}
@@ -1403,7 +1403,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             role="tab"
             type="button"
           >
-            Data
+            Ladder
           </ViewTabButton>
           <ViewTabButton
             aria-label="open upgrades"

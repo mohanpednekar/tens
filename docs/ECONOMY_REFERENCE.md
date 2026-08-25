@@ -920,17 +920,17 @@ identical `computeOfflineCatchUp`/`applyOfflineProgress` path above:
 A separate top-level screen (nav **Compute**, page id `'compute'`, `ComputeFlopsPage`) from the
 Foundry **Boosters** screen (nav **Boosters**, page id `'boosters'`, `ComputePage` — Cores/merge/Boost).
 Ten PP-funded tiers **KFlops → QFlops** (`COMPUTE_FLOPS_TIER_DEFINITIONS` in `layers.js`, ids
-`flop01`…`flop10`), each 1:1 with a Factory tier via `boostsTierId`. Constants:
+`flop01`…`flop10`), each 1:1 with a Ladder tier via `boostsTierId`. Constants:
 
 - `COMPUTE_FLOPS_REVEAL_PP = 100` — nav item appears once spendable PP first reaches this (latched in
   `computeFlops.pageUnlocked` via `latchComputeFlopsPageUnlocked` / `isComputeFlopsPageRevealed`).
 - `COMPUTE_FLOPS_FIRST_TIER_COST_PP = 1E3` … `COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30` — same 10³
   triangular ladder as `TIER_DEFINITIONS` `baseCost`.
 - `COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001` — each owned unit adds 0.01%/real-second to
-  that tier's cumulative boost on the matching Factory tier (linear in owned count).
+  that tier's cumulative boost on the matching Ladder tier (linear in owned count).
 
 **Buying:** `buyComputeFlopsTier(flopId)` spends PP from `prestige.points` at the tier's current
-per-unit price. Unlike Factory tiers (same `getTierCost` / `getCostEpochExponent` formula but
+per-unit price. Unlike Ladder tiers (same `getTierCost` / `getCostEpochExponent` formula but
 level advances only after each 8-purchase block), Flops uses **one cost epoch per owned unit** —
 the price for the next purchase is `getComputeFlopsTierCost(flopTier, owned)` =
 `getTierCost({ baseCost: flopTier.baseCostPP }, owned + 1)`. No-op if unaffordable. Owned counts
@@ -947,7 +947,7 @@ production batch in `tickGame`.
 
 **Display:** `getComputeFlopsTotal(state)` computes the weighted hero total
 **E = k + 10M + 100G + 1000T + … + 10⁹Q** — each Flops tier's `cumulativeBoost` on its matching
-Factory tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
+Ladder tier multiplied by `10^tierIndex` (KFlops = 10⁰ … QFlops = 10⁹). `formatComputeFlopsTotal`
 renders the hero line; per-tier rows still use `formatComputeFlopsBoost` on the unweighted boost.
 Production multipliers remain `(1 + cumulativeBoost[tierId])` with no tier weighting.
 
@@ -986,7 +986,7 @@ save Reset only).
 (Eon Amplifier shop upgrade deferred to #414).
 
 **On `eraGame` — resets:** full Foundry (generator upgrades, Memory/gate, Disks, compute ladder
-entities, `intro.foundryResetCaps`), ordinary Factory cycle (same fields as `prestigeGame`),
+entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined.
 
@@ -1172,7 +1172,7 @@ toggle** — it's a batch-size behavior modifier for the unit autobuyer (buy sin
 completes, then in full blocks), not something that independently "acts" each tick, so "pausing" it
 has no clean meaning distinct from "temporarily not being smart." `mergeState` merges missing
 `autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
-but does not transform legacy save formats. See "Unit autobuyer status (Game view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
+but does not transform legacy save formats. See "Unit autobuyer status (Ladder view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
 view" above for where each toggle renders.
 
 XP (`prestige.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
@@ -1406,7 +1406,7 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   to a single-line default (60px, i.e. the old `3.75rem` constant) in environments without
   `ResizeObserver` (e.g. jsdom in tests).
 
-There used to also be a bottom `PrestigeCard` (Game view) mirroring the analogous informational
+There used to also be a bottom `PrestigeCard` (Ladder view) mirroring the analogous informational
 `SpeedUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
 see "Balances (top HUD)" above, already doubles as the Prestige button once `canPrestige`), so it was
 purely informational: prestige progress/award preview, prestiged count, unspent PP, and Auto-Prestige
@@ -1464,7 +1464,7 @@ player who already bought it doesn't need to re-buy it after a Prestige — it j
 re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
 Speed Up is bought.
 
-`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Game view only), rendered directly below
+`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Ladder view only), rendered directly below
 `TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, wrapping to
 stacked on narrow viewports) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
 view, since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
@@ -1554,9 +1554,9 @@ Overclock" automation (unlike Speed Up's `autoSpeedUp`) — Overclock is meant t
 occasional player decision given how much it costs the run (wiping Speed Up's bonus along with
 everything else).
 
-`MainPage` surfaces this as an `OverclockCard` (orange accent; Game view only), rendered directly below
+`MainPage` surfaces this as an `OverclockCard` (orange accent; Ladder view only), rendered directly below
 `TierList`, side by side with `SpeedUpCard` inside the shared `SpeedCardsRow` flex row (see "Speed Up"
-above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Game view.
+above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Ladder view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `speedUpEverRevealed`. The button (`OverclockButton`, sized to match
 `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
@@ -1807,7 +1807,7 @@ disabled while production is frozen at the Prestige threshold.
                                                           // starts false. Read by isTierUnlocked as an
                                                           // additional way to stay unlocked, so a tier that's
                                                           // ever been reached within the current run doesn't
-                                                          // disappear from the Game view just because a
+                                                          // disappear from the Ladder view just because a
                                                           // narrower reset than a full Prestige/Speed Up zeroed
                                                           // its `owned` count — specifically
                                                           // consumeXpForLastTierTickspeed (see "The last
@@ -1845,7 +1845,7 @@ disabled while production is frozen at the Prestige threshold.
   computeFlops: {                                         // PP Compute (Flops) screen — see "PP Compute (Flops)"
                                                           // above. pageUnlocked latches true once PP >= reveal;
                                                           // owned counts permanent across Prestige; cumulativeBoost
-                                                          // per Factory tierId resets each Prestige cycle
+                                                          // per Ladder tierId resets each Prestige cycle
     pageUnlocked: false,
     owned:      { flop01: 0, … flop10: 0 },
     cumulativeBoost: { tier01: 0, … tier10: 0 },

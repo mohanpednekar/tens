@@ -2,7 +2,7 @@
 
 Referenced from `CLAUDE.md`'s Architecture section. Read this before touching
 `src/pages/MainPage/index.jsx` or its styled sub-components/layout — it's the full field-by-field
-reference for the compact tier-row grid, the sticky HUD balances, the Game/PP-Upgrades view
+reference for the compact tier-row grid, the sticky HUD balances, the Ladder/Upgrades view
 toggle, and every disclosure/badge/accessibility convention `MainPage` follows. Also covers
 `ByteFoundryPage` and the two dedicated screens split out of it, `StoragePage`/`ComputePage` (see
 below), since all four pages are tightly coupled around the same `game` prop and Byte Foundry
@@ -11,7 +11,7 @@ deliberately purely game — live controls, numbers, and status text only. Every
 evergreen *explanation* (what used to live inline here as click-to-expand `InfoDetails` prose)
 now lives on the separate `src/pages/InfoPage/index.jsx` ("Guide"), reachable via AppNav's Guide
 item; see CLAUDE.md's Architecture section for the split. Top-level page switching lives in
-`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — pages
+`App.jsx`'s shared `components/AppNav` (Foundry → Boosters → Compute → Ladder → Guide → More) — pages
 themselves take `{ game }` only and carry no Back / open-* navigation props. Storage is not a
 top-level AppNav item (continuous Foundry sections). `MainPage` is only
 ever rendered while the Byte Foundry gate isn't active — i.e. `state.intro.mainGameUnlocked` is
@@ -23,7 +23,7 @@ simpler page from `MainPage`, sharing the same `game` prop shape (`{ state, acti
 `useIncrementalGame`, lifted into `App.jsx` — see CLAUDE.md's Architecture section) but with no
 view-tab system of its own. Unlike the old design, nothing here ever goes read-only — the page
 renders identically whether reached as the mandatory gate or voluntarily; AppNav
-omits Factory during the gate so there is still no escape hatch via the production screen
+omits Ladder during the gate so there is still no escape hatch via the production screen
 (Guide and More stay reachable).
 
 Sections, top to bottom: the shared `components/OfflineProgressNotice` (see
@@ -274,20 +274,23 @@ tallies stay visual on the strips. The row branches on whether that size's array
 that size (cache release, redeem) is disallowed for the build's duration; otherwise, two strips
 render:
 
-- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> disk array cache"`) of exactly
+- A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
   array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
   or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over one
   cache-block production duration when no tier claim blocks. Each block shows its bit-scale
   size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
-  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled, and
-  independently **releasable** (`$releasable`, accent border, clickable) once
-  `isDiskCacheBlockReleasable(state, size)` — full, that size isn't mid-build, **and** some tier's
-  current per-unit cost matches this size (`isDiskRedeemable`). `aria-label` is
-  `"transfer <size> cache block N to Factory Bits"` when releasable, else the plain
-  `"<size> cache block N"`; `title` names the manual-only Factory Bits transfer once releasable;
-  clicking a releasable block calls `actions.releaseDiskCacheBlock(size)`, crediting those bits into
-  `resources.base` (Bits) — Cache never auto-transfers.
+  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled. While full and
+  **no full redeemable disk** of that size exists, a block can be **manually released**
+  (`$manualRelease`, accent border, clickable) when `isDiskCacheBlockManualReleaseAvailable(state,
+  size)` — or **auto-released** (`$autoRelease`, info styling, disabled) when
+  `isDiskCacheBlockAutoReleaseEligible(state, size)` (matching tier's Smart autobuyer on). Disks
+  always take priority: when a full redeemable disk exists, cache blocks stay non-interactive with a
+  title explaining to use the disk first. `aria-label` is `"transfer <size> cache block N to Ladder
+  Bits"` when manually releasable, `"auto-release … to Ladder Bits"` when auto-eligible, else the
+  plain `"<size> cache block N"`; clicking a manually releasable block calls
+  `actions.releaseDiskCacheBlock(size)`, crediting those bits into `resources.base` (Bits). Smart
+  autobuyers also auto-release via `tickDiskAutoReleaseCache` when eligible.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
   strip that **always** keeps all ten circles on one unbroken row (circles flex-shrink; never wraps
@@ -579,8 +582,8 @@ not at the bottom"):
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
   never touches this handler at all. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
-- **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (full name; AppNav short label **Factory** — not the game name
-  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Guide → More) live in
+- **Page title.** The MainPage header is `<h1>Ladder</h1>` (screen name; AppNav short label **Ladder** — not the game name
+  “Tens”). Top-level destinations (Foundry → Boosters → Compute → Ladder → Guide → More) live in
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
@@ -600,32 +603,28 @@ not at the bottom"):
   carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
   to the icon rather than folded into the centered cost label.
 
-**Game view vs. PP Upgrades view vs. Milestones view.** `MainPage` renders one of three views, toggled
-by a local `useState('game' | 'upgrades' | 'milestones')` — still a single-page app with no router; the
-toggle is just which JSX block renders. The `ViewNav` tab bar (`role="tablist"`) itself is now always
-rendered (`MainPage` is only ever reached once the Byte Foundry's main-game gate is unlocked, see
-"Byte Foundry page" below) — but its **Upgrades** tab specifically stays gated on `!isFirstRun`, since PP upgrades
-genuinely don't exist before a first Prestige. **Game** and **Milestones** are both reachable before a
-first Prestige now (a change from the previous "the whole tab bar waits for `!isFirstRun`" rule) — see
-"Milestones view" below for why (the Chapters category needed this to be a real fix, not cosmetic). The
-Upgrades tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out
-of the tab bar to save space, since every purchase on that page already costs Prestige Points, so
-spelling that out on the tab itself is redundant); "PP Upgrades" remains the term used throughout this
-doc/the codebase's own comments for the view/page as a concept. That tab shows a `NavDot`
-(`aria-label="PP upgrade available"`) whenever `hasAffordablePpUpgrade` is true — since a tier's
-autobuyer unlock and its tier tickspeed autobuyer are both free milestone unlocks now (see "Tier
-Autobuyers" below), this only checks tier Smart purchases plus the global automations' PP costs, not
-the two free unlocks (the Money-funded global tickspeed multiplier *itself* doesn't factor in either,
-since it's not a PP purchase — only its automation toggle, Tickspeed Autobuyer, does). The Milestones
-tab carries no `NavDot` — it's a read-only status page, nothing on it is ever "affordable". Money/PP
-balances stay visible across all three views; `GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and
-`OverclockCard` are Game-view-only; every PP-spending control lives on the
-Upgrades view; the Milestones view is its own standalone read-only page (see "Milestones view" below).
+**Ladder view vs. Upgrades view.** `MainPage` renders one of two views, toggled by a local
+`useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
+block renders. The player-facing first tab is labeled **Ladder** (internal `view === 'game'`). The
+`ViewNav` tab bar (`role="tablist"`, `aria-label="ladder view"`) renders only once `!isFirstRun` — before
+a first Prestige the ladder view shows with no tab bar, since PP upgrades genuinely don't exist yet. The
+**Upgrades** tab's visible label is the shorter "Upgrades" (not "PP Upgrades" — kept out of the tab bar
+to save space, since every purchase on that page already costs Prestige Points, so spelling that out on
+the tab itself is redundant); "PP Upgrades" remains the term used throughout this doc/the codebase's own
+comments for the view/page as a concept. That tab shows a `NavDot` (`aria-label="PP upgrade available"`)
+whenever `hasAffordablePpUpgrade` is true — since a tier's autobuyer unlock and its tier tickspeed
+autobuyer are both free milestone unlocks now (see "Tier Autobuyers" below), this only checks tier Smart
+purchases plus the global automations' PP costs, not the two free unlocks (the Money-funded global
+tickspeed multiplier *itself* doesn't factor in either, since it's not a PP purchase — only its
+automation toggle, Tickspeed Autobuyer, does). Money/PP balances stay visible across both views;
+`GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and `OverclockCard` are Ladder-view-only; every
+PP-spending control lives on the Upgrades view. Milestones/Chapters status lives on
+`MilestonesPage` under AppNav → More (see "Milestones view" below) — not a MainPage tab anymore.
 Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
 
-**Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
-Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered
-alone at the very top of the Game view — above `TierList`/tier 1, before anything else — since it's
+**Global Tickspeed card (Ladder view).** Unlike every other automation upgrade, this one is
+Money-funded (not PP-funded) and lives on the Ladder view as its own `GlobalTickspeedCard`, rendered
+alone at the very top of the Ladder view — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Speed Up, Overclock, or Prestige are, or even the
 tier list itself. `SpeedUpCard` and `OverclockCard` (see below) render together instead, in their own
 row *below* `TierList` — the two soft-reset controls, which share the same last-tier prerequisite,
@@ -667,7 +666,7 @@ it's available (once tier02 is owned) even during a player's very first run. Cli
 multiplier" below), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
 level climbs on its own whenever Money allows — the manual button works identically either way.
 
-**Tickspeed multiplier (Game view, per tier).** Every unlocked tier's row carries a Money-funded
+**Tickspeed multiplier (Ladder view, per tier).** Every unlocked tier's row carries a Money-funded
 `UpgradeButton` in the grid slot the old Upgrade/Unlock button used to occupy — enabled by default from
 the moment the tier itself is unlocked, with **no** autobuyer-unlock or PP prerequisite at all (see
 "Prestige Points, autobuyer unlock, and the tickspeed multiplier" below). Clicking it spends
@@ -707,7 +706,7 @@ Prestige/Speed Up resets the last tier's owned count to 0 along with every other
 this slot back to the normal Money-funded button until the player buys back up to a full level — see
 "The last tier's XP-funded tickspeed" below for why.
 
-**No per-tier automation icon on the Game view row.** A tier row's `name` grid area (shared by
+**No per-tier automation icon on the Ladder view row.** A tier row's `name` grid area (shared by
 `TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
 same first line, right-aligned to the row center — no tickspeed-bonus badge (see "Tickspeed multiplier"
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
@@ -716,7 +715,7 @@ via the same icon-instead-of-text convention every other automation status badge
 uses — the tier tickspeed/global tickspeed/Auto Speed Up/Auto-Prestige Autobuyer badges on the PP
 Upgrades page, and the Auto-Prestige/Auto Speed Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
-prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Game view
+prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Ladder view
 row down to just the tier name plus live production/owned figures and the two action buttons —
 autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
 directly toggleable) on the PP Upgrades page's Tier Autobuyers category, via the same
@@ -745,7 +744,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    (needed for assistive tech, since the visible glyph alone doesn't name the tier) — rather than a
    Buy button, since there's nothing to click. Each row's controls are ordered tickspeed-autobuyer
    cluster before unit-buying-autobuyer cluster (an ordering that used to mirror the Game-view row's
-   own now-removed ⚙-before-🤖 badge order — see "No per-tier automation icon on the Game view row"
+   own now-removed ⚙-before-🤖 badge order — see "No per-tier automation icon on the Ladder view row"
    above — kept unchanged here since it's still a sensible reading order on its own): the
    **tier tickspeed autobuyer** cluster comes first (icon-only ⚙,
    dimmed while paused, same convention as the unit-buying autobuyer's below) with a secondary
@@ -769,7 +768,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    tracked in one place on the dedicated **Milestones** view (see below), independent of whether a tier
    is currently reachable in this run.
 2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
-   Money-funded *global* tickspeed multiplier, which itself lives on the Game view, not here — distinct
+   Money-funded *global* tickspeed multiplier, which itself lives on the Ladder view, not here — distinct
    from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⏩, an icon-only badge
    once bought, otherwise a button), both gated only on `!isFirstRun`; **Auto-Prestige Autobuyer** (🔁,
    only once `allTiersFullyAutomated && isAutoPrestigeActive` — i.e. Auto-Prestige must already be
@@ -849,7 +848,7 @@ Below Chapters, up to three more categories — tier autobuyer unlocks and tier 
 (revealed at 100 PP — nav **Compute**, the PP Flops tiers screen). The Compute autobuyer category lists every `COMPUTE_FLOPS_TIER_DEFINITIONS` entry via
 `getFlopsAutobuyerUnlockEra` / `state.computeFlopsAutobuyers` — green `✅ Era {N}` once unlocked,
 dimmed `🔒 Era {N}` otherwise, with the same `VisuallyHidden role="progressbar"` shape as the tier
-tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Factory tiers via `getAutobuyerUnlockMilestone`/
+tracks (`aria-valuenow = min(era.count, milestone)`). The two tier categories list all ten Ladder tiers via `getAutobuyerUnlockMilestone`/
 `getTierTickspeedAutobuyerMilestone` (docs/ECONOMY_REFERENCE.md) — these two (unlike Chapters) **do**
 stay gated on `!isFirstRun`, since both are keyed entirely off Prestige count, a meaningless concept
 before a first Prestige:
@@ -933,7 +932,7 @@ whose body renders once `overclockCount > 0`: collapsed by default, clicking "Ov
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 *before* the next Overclock claim (as opposed to `OverclockButton`'s own label, which always shows
 the *next* rate — see above); this is the one Overclock-specific number not otherwise visible
-anywhere on the Game view. Beyond that one figure, Overclock has no visible effect of its own to
+anywhere on the Ladder view. Beyond that one figure, Overclock has no visible effect of its own to
 display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
 `Lv.N — +N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
@@ -974,7 +973,7 @@ Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
 layout where the top line is the tier symbol on the left and the owned count on the same line
 right-aligned to the row center (`OwnedText` uses `margin-left: auto` at the end of the left half
-inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Game view
+inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Ladder view
 row" above for the two badges that used to also share this area) and the production figure on the
 right (`ProductionText`, `text-align: right`). Below that, the
 tickspeed multiplier button and Buy each take one equal half, then a `details`-area line spanning
@@ -1043,7 +1042,7 @@ and the minimum needed for the next `consumeXpForLastTierTickspeed` call (see "T
 XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This — plus the
 tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
 base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the
-cumulative bonus at a glance is gone (see "No per-tier automation icon on the Game view row" above).
+cumulative bonus at a glance is gone (see "No per-tier automation icon on the Ladder view row" above).
 
 **Percentages vs. multipliers.** Every bonus derived from a multiplier (the last tier's XP-funded
 tickspeed, the Global Tickspeed card/breakdown, the Prestige production
