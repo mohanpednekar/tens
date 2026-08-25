@@ -8202,7 +8202,7 @@
       "node_kind": "heading",
       "norm_label": "automation design principles",
       "source_file": "AGENTS.md",
-      "source_location": "L297"
+      "source_location": "L296"
     },
     {
       "id": "agents_automation_engines_claude_now_cursor_successor",
@@ -8214,7 +8214,7 @@
       "node_kind": "heading",
       "norm_label": "automation engines (claude now, cursor successor)",
       "source_file": "AGENTS.md",
-      "source_location": "L240"
+      "source_location": "L239"
     },
     {
       "id": "agents_budget_discipline",
@@ -8226,7 +8226,7 @@
       "node_kind": "heading",
       "norm_label": "budget discipline",
       "source_file": "AGENTS.md",
-      "source_location": "L207"
+      "source_location": "L206"
     },
     {
       "id": "agents_byte_foundry",
@@ -8262,7 +8262,7 @@
       "node_kind": "heading",
       "norm_label": "code review tooling",
       "source_file": "AGENTS.md",
-      "source_location": "L273"
+      "source_location": "L272"
     },
     {
       "id": "agents_commands",
@@ -8286,7 +8286,7 @@
       "node_kind": "heading",
       "norm_label": "cursor cloud github access",
       "source_file": "AGENTS.md",
-      "source_location": "L221"
+      "source_location": "L220"
     },
     {
       "id": "agents_funding",
@@ -8298,7 +8298,7 @@
       "node_kind": "heading",
       "norm_label": "funding",
       "source_file": "AGENTS.md",
-      "source_location": "L311"
+      "source_location": "L310"
     },
     {
       "id": "agents_issue_authoring_tooling",
@@ -8310,7 +8310,7 @@
       "node_kind": "heading",
       "norm_label": "issue-authoring tooling",
       "source_file": "AGENTS.md",
-      "source_location": "L290"
+      "source_location": "L289"
     },
     {
       "id": "agents_issue_tracking_conventions",
@@ -8334,7 +8334,7 @@
       "node_kind": "heading",
       "norm_label": "license",
       "source_file": "AGENTS.md",
-      "source_location": "L316"
+      "source_location": "L315"
     },
     {
       "id": "agents_path_aliases_vite_config_js",
@@ -8370,7 +8370,7 @@
       "node_kind": "heading",
       "norm_label": "reliability: concurrent runs",
       "source_file": "AGENTS.md",
-      "source_location": "L266"
+      "source_location": "L265"
     },
     {
       "id": "agents_reliability_cron_dormancy",
@@ -8382,7 +8382,7 @@
       "node_kind": "heading",
       "norm_label": "reliability: cron dormancy",
       "source_file": "AGENTS.md",
-      "source_location": "L258"
+      "source_location": "L257"
     },
     {
       "id": "agents_repo_layout",
@@ -8406,7 +8406,7 @@
       "node_kind": "heading",
       "norm_label": "security notes",
       "source_file": "AGENTS.md",
-      "source_location": "L322"
+      "source_location": "L321"
     },
     {
       "id": "agents_tech_stack",
@@ -41166,7 +41166,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L207",
+      "source_location": "L206",
       "weight": 1.0
     },
     {
@@ -41188,7 +41188,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L221",
+      "source_location": "L220",
       "weight": 1.0
     },
     {
@@ -41199,7 +41199,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L240",
+      "source_location": "L239",
       "weight": 1.0
     },
     {
@@ -41210,7 +41210,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L258",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -41221,7 +41221,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L266",
+      "source_location": "L265",
       "weight": 1.0
     },
     {
@@ -41232,7 +41232,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L273",
+      "source_location": "L272",
       "weight": 1.0
     },
     {
@@ -41243,7 +41243,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L290",
+      "source_location": "L289",
       "weight": 1.0
     },
     {
@@ -41254,7 +41254,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L297",
+      "source_location": "L296",
       "weight": 1.0
     },
     {
@@ -41265,7 +41265,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L311",
+      "source_location": "L310",
       "weight": 1.0
     },
     {
@@ -41276,7 +41276,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L316",
+      "source_location": "L315",
       "weight": 1.0
     },
     {
@@ -41298,7 +41298,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L322",
+      "source_location": "L321",
       "weight": 1.0
     },
     {
@@ -55683,5 +55683,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "2c15417680b6d6346f20834a3197672a9e6608a6"
+  "built_at_commit": "9ec8030a0ec32bf0f75bd136ead469717bb3c9b6"
 }

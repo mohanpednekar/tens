@@ -486,8 +486,8 @@ src/
     GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
                                and the token-driven page background/text (absorbs the removed index.css/App.css)
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
-                               imports `./fonts` as a side effect; `mode` defaults to dark and is the
-                               seam #140 will drive from system pref + toggle
+                               imports `./fonts` as a side effect; `mode` defaults to dark, driven from
+                               system pref + Settings → Appearance toggle (#140)
   App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between

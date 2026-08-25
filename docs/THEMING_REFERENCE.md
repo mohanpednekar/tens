@@ -9,8 +9,9 @@ the *why* behind the token/font choices (rejected alternatives, trade-off reason
 
 All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`, so
 the app's two themes — an evolved **dark** (default) and a **light** theme — fall out of swapping palette
-values rather than forking any component on mode. This is the foundation for the UI-revamp epic (#132);
-components migrate onto these tokens one at a time in later sub-issues.
+values rather than forking any component on mode. This was the foundation for the now-complete
+UI-revamp epic (#132, all 8 sub-issues shipped, including light mode's activation in #140); every
+component consumes these tokens.
 
 - **`tokens.js`** exports `buildTheme(mode)` (flattens the right palette for styled-components'
   `ThemeProvider`) and the two pre-built `themes.dark` / `themes.light`. A theme object exposes:
