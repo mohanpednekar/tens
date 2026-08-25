@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame } from './engine'
-import { ERA_ELIGIBILITY_PP, MONEY_ID, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
-import { clearAllSaveProgress, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
+import { ERA_ELIGIBILITY_PP, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
 
@@ -685,5 +685,172 @@ describe('theme preference', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadThemePreference()).toBe('dark')
+  })
+})
+
+describe('Dev Mode', () => {
+  it('defaults to inactive', () => {
+    expect(isDevModeActive()).toBe(false)
+    expect(getActiveSlotId()).toBe('0')
+  })
+
+  it('setDevModeActive redirects getActiveSlotId without touching saves meta', () => {
+    setDevModeActive(true)
+    expect(isDevModeActive()).toBe(true)
+    expect(getActiveSlotId()).toBe('dev')
+    expect(loadSavesMeta().activeSlotId).toBe('0')
+    setDevModeActive(false)
+    expect(isDevModeActive()).toBe(false)
+    expect(getActiveSlotId()).toBe('0')
+  })
+
+  it('isolates the dev save from the real active slot', () => {
+    const real = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } }
+    saveGameState(real)
+
+    setDevModeActive(true)
+    expect(loadGameState()).toBeNull()
+    const dev = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 222 } }
+    saveGameState(dev)
+    expect(loadGameState().resources[MONEY_ID]).toBe(222)
+
+    setDevModeActive(false)
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
+  })
+
+  it('clearDevGameState only wipes the dev save', () => {
+    saveGameState(createInitialGameState())
+    setDevModeActive(true)
+    saveGameState({ ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 999 } })
+    clearDevGameState()
+    expect(loadGameState()).toBeNull()
+    setDevModeActive(false)
+    expect(loadGameState().resources[MONEY_ID]).toBe(MONEY_STARTING_AMOUNT)
+  })
+
+  it('applyDevGameStateJson refuses to run outside Dev Mode', () => {
+    const result = applyDevGameStateJson(JSON.stringify({ resources: { [MONEY_ID]: 5 } }), createInitialGameState())
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('dev_mode_inactive')
+  })
+
+  it('applyDevGameStateJson rejects invalid JSON without touching the dev save', () => {
+    setDevModeActive(true)
+    const currentState = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 42 } }
+    saveGameState(currentState)
+    const result = applyDevGameStateJson('not-json!!!', currentState)
+    expect(result.ok).toBe(false)
+    expect(result.reason).toBe('invalid_json')
+    expect(loadGameState().resources[MONEY_ID]).toBe(42)
+  })
+
+  it('applyDevGameStateJson merges a partial object onto the current live state, not the parsed object alone', () => {
+    setDevModeActive(true)
+    const currentState = { ...createInitialGameState(), intro: { ...createInitialGameState().intro, mainGameUnlocked: true } }
+    const result = applyDevGameStateJson(
+      JSON.stringify({ resources: { [MONEY_ID]: 5e50 }, prestige: { points: 1000 } }),
+      currentState,
+    )
+    expect(result.ok).toBe(true)
+    expect(result.state.resources[MONEY_ID]).toBe(5e50)
+    expect(result.state.prestige.points).toBe(1000)
+    // A field the caller never mentioned (mainGameUnlocked) survives from currentState — a bare
+    // { resources, prestige } object alone (no intro at all) would otherwise trip
+    // getSaveIncompatibilityReason's 'missing_intro' legacy check and fail outright.
+    expect(result.state.intro.mainGameUnlocked).toBe(true)
+    // A sibling key inside the merged resources object (bytes) also survives, rather than being
+    // dropped by a wholesale replace of the whole `resources` field.
+    expect(result.state.resources.bytes).toBe(currentState.resources.bytes)
+    expect(loadGameState().resources[MONEY_ID]).toBe(5e50)
+  })
+
+  // Regression coverage for a real bug an adversarial review caught: editing one nested container
+  // two-or-more levels deep (e.g. a single Data Lake tier under intro.dataLakes) must not wipe its
+  // untouched siblings at that same depth back to fresh defaults — an earlier one-level-deep-only
+  // version of mergeStateForDevWrite got exactly this wrong.
+  it('applyDevGameStateJson deep-merges nested containers, preserving untouched siblings two levels down', () => {
+    setDevModeActive(true)
+    const currentState = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5 },
+          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 },
+        },
+      },
+    }
+    const result = applyDevGameStateJson(
+      JSON.stringify({ intro: { dataLakes: { 1: { purchased: 6 } } } }),
+      currentState,
+    )
+    expect(result.ok).toBe(true)
+    // The edited field applied...
+    expect(result.state.intro.dataLakes['1'].purchased).toBe(6)
+    // ...and every sibling at every depth survives untouched: tier 1's own deposits (a sibling of
+    // the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
+    expect(result.state.intro.dataLakes['1'].deposits).toEqual({ 1: 50, 10: 3, 100: 0 })
+    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 })
+  })
+
+  it('applyDevGameStateJson stamps the current save schema version on write', () => {
+    setDevModeActive(true)
+    const result = applyDevGameStateJson('{}', createInitialGameState())
+    expect(result.ok).toBe(true)
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).saveSchemaVersion).toBe(SAVE_SCHEMA_VERSION)
+  })
+
+  // Regression coverage for a real bug an adversarial review caught: these real-slot helpers
+  // iterate/target explicit numbered slot ids directly rather than going through
+  // getActiveSlotId()'s own dev-mode redirect, so without an explicit guard they could silently
+  // destroy or repoint a real player's save while Dev Mode is active and the screen is showing
+  // the (unrelated) dev save the whole time.
+  describe('refuses to touch real player slots while Dev Mode is active', () => {
+    it('clearAllSaveProgress', () => {
+      const real = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } }
+      saveGameState(real)
+      setDevModeActive(true)
+
+      const result = clearAllSaveProgress()
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe('dev_mode_active')
+
+      setDevModeActive(false)
+      expect(loadGameState().resources[MONEY_ID]).toBe(111)
+    })
+
+    it('clearSaveSlot', () => {
+      const real = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } }
+      saveGameState(real)
+      setDevModeActive(true)
+
+      const result = clearSaveSlot('0')
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe('dev_mode_active')
+
+      setDevModeActive(false)
+      expect(loadGameState().resources[MONEY_ID]).toBe(111)
+    })
+
+    it('setActiveSaveSlot', () => {
+      setDevModeActive(true)
+      const result = setActiveSaveSlot('0')
+      expect(result.ok).toBe(false)
+      expect(result.reason).toBe('dev_mode_active')
+      expect(loadSavesMeta().activeSlotId).toBe('0')
+    })
+  })
+
+  it('clearGameState routes to the dev slot (not a real one) while Dev Mode is active', () => {
+    saveGameState({ ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 } })
+    setDevModeActive(true)
+    saveGameState({ ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 999 } })
+
+    clearGameState()
+    expect(loadGameState()).toBeNull()
+
+    setDevModeActive(false)
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
   })
 })
