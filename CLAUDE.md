@@ -384,7 +384,8 @@ src/
     layers.js             ← TIER_DEFINITIONS array + all game constants (single source of truth)
     engine.js              ← pure state functions (no React, no side effects)
     navAttention.js         ← pure predicates for AppNav attention dots (high/normal levels;
-                               Storage cues fold into Foundry)
+                               Storage cues fold into Foundry; Compute Flops affordability →
+                               `compute`)
     useIncrementalGame.js  ← React hook; wires the engine to useState + localStorage + the tick timer
     storage.js              ← localStorage read/write; offloads every load to save-migration/, then
                                forward field merge (`mergeState`); multi-slot saves + Supporter
@@ -689,7 +690,7 @@ Strict three-layer separation:
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
    `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
    with PP on the same 10³ base ladder as Ladder tiers (1,000 – 10³⁰ PP). Per-unit price scales on
-   every purchase via `getCostEpochExponent` (not Factory's 8-buy blocks). First tier's first buy
+   every purchase via `getCostEpochExponent` (not Ladder's 8-buy blocks). First tier's first buy
    costs 1,000 PP so the screen is visible but unusable until then. Each owned unit adds 0.01%/s
    matching Ladder tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
    10⁹Q**. Owned counts permanent across Prestige; per-cycle boost resets on Prestige. Pure renderer — see `docs/ECONOMY_REFERENCE.md`
