@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-08-25)
 
 ## Corpus Check
-- 102 files · ~305,034 words
+- 102 files · ~305,096 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `635754ee`
+- Built from commit: `2254216a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -90,7 +90,7 @@
 - useIncrementalGame.js
 - Documentation
 - backlog-issue-hygiene.sh
-- getPurchaseBlockSize
+- tickGame
 - epic-407-issue-hygiene.sh
 - buyGlobalTickspeedMultiplier
 - package.json
@@ -105,7 +105,7 @@
 - pr-low-risk-eligible.sh
 - pr-low-risk-eligible.test.js
 - OfflineProgressNotice/index.jsx
-- getOverclockRequirement
+- isTierUnlocked
 - applyOfflineProgress
 - resetByteFoundry
 - eraEligibleState
@@ -386,9 +386,9 @@ Nodes (38): enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetw
 Cohesion: 0.49
 Nodes (9): add_label_if_missing(), close_if_open(), has_marker_comment(), issue_state(), post_comment_once(), remove_label_if_present(), run(), set_milestone_if_missing() (+1 more)
 
-### Community 82 - "getPurchaseBlockSize"
-Cohesion: 0.16
-Nodes (23): actMainBuys(), wouldAutobuyerStall(), buyTier(), buyTierQuantity(), getCostEpochExponent(), getPurchaseBlockSize(), getTierAffordableQuantity(), getTierBulkQuantity() (+15 more)
+### Community 82 - "tickGame"
+Cohesion: 0.14
+Nodes (24): actMainBuys(), wouldAutobuyerStall(), buyTier(), buyTierQuantity(), getAutoPrestigeAttemptRate(), getCostEpochExponent(), getPrestigeProductionMultiplier(), getPurchaseBlockSize() (+16 more)
 
 ### Community 83 - "epic-407-issue-hygiene.sh"
 Cohesion: 0.53
@@ -403,8 +403,8 @@ Cohesion: 0.18
 Nodes (10): name, packageManager, private, resolutions, **/fast-uri, **/filelist/minimatch/brace-expansion, **/glob/minimatch/brace-expansion, **/nanoid (+2 more)
 
 ### Community 86 - "MainPage"
-Cohesion: 0.14
-Nodes (26): actTickspeed(), buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), countGlobalTickspeedMilestones(), getAutoPrestigeAttemptRate(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierId() (+18 more)
+Cohesion: 0.18
+Nodes (19): actTickspeed(), buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), countGlobalTickspeedMilestones(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierId(), getLastTierXpTickspeedMinConsumption() (+11 more)
 
 ### Community 87 - "save-migration/index.js"
 Cohesion: 0.36
@@ -430,9 +430,9 @@ Nodes (3): Cursor Cloud GitHub access, GitHub Milestones (release grouping), Iss
 Cohesion: 0.33
 Nodes (6): VisuallyHidden, NoticeText, OfflineNoticeCard, OfflineNoticeOverlay, OfflineProgressNotice(), formatOfflineDuration()
 
-### Community 97 - "getOverclockRequirement"
-Cohesion: 0.60
-Nodes (5): actSoftResets(), getOverclockRequirement(), getSpeedUpRequirement(), overclockGame(), InfoPage()
+### Community 97 - "isTierUnlocked"
+Cohesion: 0.29
+Nodes (11): actSoftResets(), getOverclockRequirement(), getSpeedUpRequirement(), isTierUnlocked(), overclockGame(), hasAffordableFullLevel(), hasOverclockAvailable(), hasSpeedUpAvailable() (+3 more)
 
 ### Community 99 - "applyOfflineProgress"
 Cohesion: 1.00

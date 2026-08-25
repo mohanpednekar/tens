@@ -2061,10 +2061,12 @@ doubled the state/UI surface for a request that gave no signal such a choice was
 turns out wrong, the fix is additive: a `computeBoostTarget` field and a per-target multiplier
 check, rather than removing anything already shipped.
 
-Also implemented alongside this: a confirmation before Sacrifice for 10x Capacity actually fires
+Also implemented alongside this: a confirmation before Sacrifice for 10x Capacity actually fired
 (`window.confirm` originally — later replaced by an in-game `ConfirmDialog`, with the “future Cores
 cost more” warning shown only once Compute is unlocked). Same permanence caveat as Settings →
-Danger zone Reset; see `handleSacrificeClick` in `ByteFoundryPage`.
+Danger zone Reset. **Superseded 2026-08-25:** the confirm dialog was removed entirely — see this
+file's own top "Sacrifice confirm" entry and `handleSacrificeClick` in `ByteFoundryPage`, which now
+fires immediately.
 
 ### Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens
 

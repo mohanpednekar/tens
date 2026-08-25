@@ -4737,7 +4737,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "actmainbuys()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
@@ -4749,7 +4749,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "wouldautobuyerstall()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
@@ -4761,7 +4761,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "buytier()",
       "source_file": "src/game/engine.js",
@@ -4773,11 +4773,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "buytierquantity()",
       "source_file": "src/game/engine.js",
       "source_location": "L1883"
+    },
+    {
+      "id": "src_game_engine_getautoprestigeattemptrate",
+      "label": "getAutoPrestigeAttemptRate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "getautoprestigeattemptrate()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1276"
     },
     {
       "id": "src_game_engine_getcostepochexponent",
@@ -4785,11 +4797,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "getcostepochexponent()",
       "source_file": "src/game/engine.js",
       "source_location": "L629"
+    },
+    {
+      "id": "src_game_engine_getprestigeproductionmultiplier",
+      "label": "getPrestigeProductionMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "getprestigeproductionmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L897"
     },
     {
       "id": "src_game_engine_getpurchaseblocksize",
@@ -4797,11 +4821,35 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "getpurchaseblocksize()",
       "source_file": "src/game/engine.js",
       "source_location": "L652"
+    },
+    {
+      "id": "src_game_engine_getpurchasemilestonemultiplier",
+      "label": "getPurchaseMilestoneMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "getpurchasemilestonemultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1215"
+    },
+    {
+      "id": "src_game_engine_getspeedupmultiplier",
+      "label": "getSpeedUpMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "getspeedupmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1226"
     },
     {
       "id": "src_game_engine_gettieraffordablequantity",
@@ -4809,7 +4857,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettieraffordablequantity()",
       "source_file": "src/game/engine.js",
@@ -4821,7 +4869,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettierbulkquantity()",
       "source_file": "src/game/engine.js",
@@ -4833,7 +4881,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettiercost()",
       "source_file": "src/game/engine.js",
@@ -4845,7 +4893,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettierdiskredeemcost()",
       "source_file": "src/game/engine.js",
@@ -4857,7 +4905,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettierpurchasedcount()",
       "source_file": "src/game/engine.js",
@@ -4869,7 +4917,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettierquantitycost()",
       "source_file": "src/game/engine.js",
@@ -4881,7 +4929,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "gettierspendableamount()",
       "source_file": "src/game/engine.js",
@@ -4893,23 +4941,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "granttierunits()",
       "source_file": "src/game/engine.js",
       "source_location": "L1912"
-    },
-    {
-      "id": "src_game_engine_istierunlocked",
-      "label": "isTierUnlocked()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "getPurchaseBlockSize",
-      "file_type": "code",
-      "norm_label": "istierunlocked()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1306"
     },
     {
       "id": "src_game_engine_latcheverunlockedtiers",
@@ -4917,7 +4953,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "latcheverunlockedtiers()",
       "source_file": "src/game/engine.js",
@@ -4929,11 +4965,47 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "withlasttiertickspeedxpunlocked()",
       "source_file": "src/game/engine.test.js",
       "source_location": "L392"
+    },
+    {
+      "id": "src_game_engine_tickcomputeboost",
+      "label": "tickComputeBoost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "tickcomputeboost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3924"
+    },
+    {
+      "id": "src_game_engine_tickdiskbuild",
+      "label": "tickDiskBuild()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "tickdiskbuild()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2708"
+    },
+    {
+      "id": "src_game_engine_tickgame",
+      "label": "tickGame()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "tickgame()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1479"
     },
     {
       "id": "src_game_engine_tickintroautoinvest",
@@ -4941,71 +5013,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 82,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "file_type": "code",
       "norm_label": "tickintroautoinvest()",
       "source_file": "src/game/engine.js",
       "source_location": "L2533"
-    },
-    {
-      "id": "src_game_navattention_hasaffordablefulllevel",
-      "label": "hasAffordableFullLevel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "getPurchaseBlockSize",
-      "file_type": "code",
-      "norm_label": "hasaffordablefulllevel()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L122"
-    },
-    {
-      "id": "src_game_navattention_hasoverclockavailable",
-      "label": "hasOverclockAvailable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "getPurchaseBlockSize",
-      "file_type": "code",
-      "norm_label": "hasoverclockavailable()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L158"
-    },
-    {
-      "id": "src_game_navattention_hasspeedupavailable",
-      "label": "hasSpeedUpAvailable()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "getPurchaseBlockSize",
-      "file_type": "code",
-      "norm_label": "hasspeedupavailable()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L150"
-    },
-    {
-      "id": "src_game_navattention_hastiersgameattention",
-      "label": "hasTiersGameAttention()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "getPurchaseBlockSize",
-      "file_type": "code",
-      "norm_label": "hastiersgameattention()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L167"
-    },
-    {
-      "id": "src_game_navattention_lasttier",
-      "label": "lastTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 82,
-      "community_name": "getPurchaseBlockSize",
-      "file_type": "code",
-      "norm_label": "lasttier()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L68"
     },
     {
       "id": "src_game_engine_buyglobaltickspeedmultiplier",
@@ -5104,18 +5116,6 @@
       "source_location": "L819"
     },
     {
-      "id": "src_game_engine_getautoprestigeattemptrate",
-      "label": "getAutoPrestigeAttemptRate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "getautoprestigeattemptrate()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1276"
-    },
-    {
       "id": "src_game_engine_geteffectivetiertickspeedseconds",
       "label": "getEffectiveTierTickSpeedSeconds()",
       "_callable": true,
@@ -5200,42 +5200,6 @@
       "source_location": "L1260"
     },
     {
-      "id": "src_game_engine_getprestigeproductionmultiplier",
-      "label": "getPrestigeProductionMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "getprestigeproductionmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L897"
-    },
-    {
-      "id": "src_game_engine_getpurchasemilestonemultiplier",
-      "label": "getPurchaseMilestoneMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "getpurchasemilestonemultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1215"
-    },
-    {
-      "id": "src_game_engine_getspeedupmultiplier",
-      "label": "getSpeedUpMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "getspeedupmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1226"
-    },
-    {
       "id": "src_game_engine_gettickspeedmultiplierbasecost",
       "label": "getTickspeedMultiplierBaseCost()",
       "_callable": true,
@@ -5294,42 +5258,6 @@
       "norm_label": "islasttiertickspeedxpunlocked()",
       "source_file": "src/game/engine.js",
       "source_location": "L870"
-    },
-    {
-      "id": "src_game_engine_tickcomputeboost",
-      "label": "tickComputeBoost()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "tickcomputeboost()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3924"
-    },
-    {
-      "id": "src_game_engine_tickdiskbuild",
-      "label": "tickDiskBuild()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "tickdiskbuild()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2708"
-    },
-    {
-      "id": "src_game_engine_tickgame",
-      "label": "tickGame()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 86,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "tickgame()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1479"
     },
     {
       "id": "src_game_layers_gettierbasetickspeedseconds",
@@ -5589,7 +5517,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "getOverclockRequirement",
+      "community_name": "isTierUnlocked",
       "file_type": "code",
       "norm_label": "actsoftresets()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
@@ -5601,7 +5529,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "getOverclockRequirement",
+      "community_name": "isTierUnlocked",
       "file_type": "code",
       "norm_label": "getoverclockrequirement()",
       "source_file": "src/game/engine.js",
@@ -5613,11 +5541,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "getOverclockRequirement",
+      "community_name": "isTierUnlocked",
       "file_type": "code",
       "norm_label": "getspeeduprequirement()",
       "source_file": "src/game/engine.js",
       "source_location": "L1236"
+    },
+    {
+      "id": "src_game_engine_istierunlocked",
+      "label": "isTierUnlocked()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "isTierUnlocked",
+      "file_type": "code",
+      "norm_label": "istierunlocked()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1306"
     },
     {
       "id": "src_game_engine_overclockgame",
@@ -5625,11 +5565,71 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "getOverclockRequirement",
+      "community_name": "isTierUnlocked",
       "file_type": "code",
       "norm_label": "overclockgame()",
       "source_file": "src/game/engine.js",
       "source_location": "L4717"
+    },
+    {
+      "id": "src_game_navattention_hasaffordablefulllevel",
+      "label": "hasAffordableFullLevel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "isTierUnlocked",
+      "file_type": "code",
+      "norm_label": "hasaffordablefulllevel()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L122"
+    },
+    {
+      "id": "src_game_navattention_hasoverclockavailable",
+      "label": "hasOverclockAvailable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "isTierUnlocked",
+      "file_type": "code",
+      "norm_label": "hasoverclockavailable()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L158"
+    },
+    {
+      "id": "src_game_navattention_hasspeedupavailable",
+      "label": "hasSpeedUpAvailable()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "isTierUnlocked",
+      "file_type": "code",
+      "norm_label": "hasspeedupavailable()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L150"
+    },
+    {
+      "id": "src_game_navattention_hastiersgameattention",
+      "label": "hasTiersGameAttention()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "isTierUnlocked",
+      "file_type": "code",
+      "norm_label": "hastiersgameattention()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L167"
+    },
+    {
+      "id": "src_game_navattention_lasttier",
+      "label": "lastTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 97,
+      "community_name": "isTierUnlocked",
+      "file_type": "code",
+      "norm_label": "lasttier()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L68"
     },
     {
       "id": "src_pages_infopage_index_infopage",
@@ -5637,7 +5637,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 97,
-      "community_name": "getOverclockRequirement",
+      "community_name": "isTierUnlocked",
       "file_type": "code",
       "norm_label": "infopage()",
       "source_file": "src/pages/InfoPage/index.jsx",
@@ -7372,7 +7372,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.0] - 2026-07-05",
       "source_file": "CHANGELOG.md",
-      "source_location": "L492"
+      "source_location": "L493"
     },
     {
       "id": "changelog_0_2_0_2026_07_12",
@@ -7384,7 +7384,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2026-07-12",
       "source_file": "CHANGELOG.md",
-      "source_location": "L480"
+      "source_location": "L481"
     },
     {
       "id": "changelog_0_3_0_2026_07_13",
@@ -7396,7 +7396,7 @@
       "node_kind": "heading",
       "norm_label": "[0.3.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L463"
+      "source_location": "L464"
     },
     {
       "id": "changelog_0_4_0_2026_07_13",
@@ -7408,7 +7408,7 @@
       "node_kind": "heading",
       "norm_label": "[0.4.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L447"
+      "source_location": "L448"
     },
     {
       "id": "changelog_0_5_0_2026_07_14",
@@ -7420,7 +7420,7 @@
       "node_kind": "heading",
       "norm_label": "[0.5.0] - 2026-07-14",
       "source_file": "CHANGELOG.md",
-      "source_location": "L434"
+      "source_location": "L435"
     },
     {
       "id": "changelog_added",
@@ -7447,7 +7447,7 @@
       "source_location": "L154"
     },
     {
-      "id": "changelog_added_238",
+      "id": "changelog_added_239",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7456,10 +7456,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L238"
+      "source_location": "L239"
     },
     {
-      "id": "changelog_added_436",
+      "id": "changelog_added_437",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7468,10 +7468,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L436"
+      "source_location": "L437"
     },
     {
-      "id": "changelog_added_449",
+      "id": "changelog_added_450",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7480,10 +7480,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L449"
+      "source_location": "L450"
     },
     {
-      "id": "changelog_added_465",
+      "id": "changelog_added_466",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7492,10 +7492,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L465"
+      "source_location": "L466"
     },
     {
-      "id": "changelog_added_482",
+      "id": "changelog_added_483",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7504,10 +7504,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L482"
+      "source_location": "L483"
     },
     {
-      "id": "changelog_added_494",
+      "id": "changelog_added_495",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -7516,7 +7516,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L494"
+      "source_location": "L495"
     },
     {
       "id": "changelog_changed",
@@ -7543,7 +7543,7 @@
       "source_location": "L185"
     },
     {
-      "id": "changelog_changed_291",
+      "id": "changelog_changed_292",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7552,10 +7552,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L291"
+      "source_location": "L292"
     },
     {
-      "id": "changelog_changed_440",
+      "id": "changelog_changed_441",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7564,10 +7564,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L440"
+      "source_location": "L441"
     },
     {
-      "id": "changelog_changed_453",
+      "id": "changelog_changed_454",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7576,10 +7576,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L453"
+      "source_location": "L454"
     },
     {
-      "id": "changelog_changed_470",
+      "id": "changelog_changed_471",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -7588,7 +7588,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L470"
+      "source_location": "L471"
     },
     {
       "id": "changelog_changelog",
@@ -7615,7 +7615,7 @@
       "source_location": "L51"
     },
     {
-      "id": "changelog_fixed_408",
+      "id": "changelog_fixed_409",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7624,10 +7624,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L408"
+      "source_location": "L409"
     },
     {
-      "id": "changelog_fixed_444",
+      "id": "changelog_fixed_445",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7636,10 +7636,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L444"
+      "source_location": "L445"
     },
     {
-      "id": "changelog_fixed_457",
+      "id": "changelog_fixed_458",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7648,10 +7648,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L457"
+      "source_location": "L458"
     },
     {
-      "id": "changelog_fixed_476",
+      "id": "changelog_fixed_477",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7660,10 +7660,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L476"
+      "source_location": "L477"
     },
     {
-      "id": "changelog_fixed_487",
+      "id": "changelog_fixed_488",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -7672,7 +7672,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L487"
+      "source_location": "L488"
     },
     {
       "id": "changelog_removed",
@@ -7711,7 +7711,7 @@
       "source_location": "L10"
     },
     {
-      "id": "changelog_security_430",
+      "id": "changelog_security_431",
       "label": "Security",
       "_origin": "ast",
       "community": 22,
@@ -7720,7 +7720,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L430"
+      "source_location": "L431"
     },
     {
       "id": "changelog_unreleased",
@@ -11285,7 +11285,7 @@
       "node_kind": "heading",
       "norm_label": "distribution",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2554"
+      "source_location": "L2556"
     },
     {
       "id": "docs_design_history_documentation",
@@ -11297,7 +11297,7 @@
       "node_kind": "heading",
       "norm_label": "documentation",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2570"
+      "source_location": "L2572"
     },
     {
       "id": "docs_design_history_migration_in_src_save_migration_runs_on_every_load_2026_08_22",
@@ -11309,7 +11309,7 @@
       "node_kind": "heading",
       "norm_label": "migration in `src/save-migration/`, runs on every load \u2014 2026-08-22",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2519"
+      "source_location": "L2521"
     },
     {
       "id": "docs_design_history_sacrifice_confirm_in_game_dialog_core_warning_only_when_unlocked",
@@ -11333,7 +11333,7 @@
       "node_kind": "heading",
       "norm_label": "save persistence",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2517"
+      "source_location": "L2519"
     },
     {
       "id": "docs_design_history_why_a_pwa_instead_of_capacitor_native_app_store_distribution",
@@ -11345,7 +11345,7 @@
       "node_kind": "heading",
       "norm_label": "why a pwa instead of capacitor/native app-store distribution",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2556"
+      "source_location": "L2558"
     },
     {
       "id": "docs_design_history_why_semver_changelog_started_at_v0_5_0_not_v0_1_0_from_inception",
@@ -11357,7 +11357,7 @@
       "node_kind": "heading",
       "norm_label": "why semver/changelog started at v0.5.0, not v0.1.0-from-inception",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2572"
+      "source_location": "L2574"
     },
     {
       "id": "package_browserslist",
@@ -12928,7 +12928,7 @@
       "node_kind": "heading",
       "norm_label": "bytefoundrypage: hiding the disk detail row and the transfer-to-main-game row once they're no longer pulling their weight",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2262"
+      "source_location": "L2264"
     },
     {
       "id": "docs_design_history_compute_boost_the_first_mechanic_to_spend_compute_cores_and_a_sacrifice_confirmation",
@@ -13012,7 +13012,7 @@
       "node_kind": "heading",
       "norm_label": "era ascension and eons \u2014 meta-prestige above unbounded (#407 / #405)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2297"
+      "source_location": "L2299"
     },
     {
       "id": "docs_design_history_fibonacci_cost_curve_and_2_claims_for_the_first_three_invest_tiers_reinstated_this_time_deliberately",
@@ -13036,7 +13036,7 @@
       "node_kind": "heading",
       "norm_label": "forced priority order (storage bank fill > bandwidth > storage bank build > compute > memory), and splitting storage/compute into their own screens",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2069"
+      "source_location": "L2071"
     },
     {
       "id": "docs_design_history_foundry_memory_always_keeps_the_highest_disk_row_issue_389",
@@ -13048,7 +13048,7 @@
       "node_kind": "heading",
       "norm_label": "foundry memory always keeps the highest disk row (issue #389)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2254"
+      "source_location": "L2256"
     },
     {
       "id": "docs_design_history_gettiercost_s_division_based_split_was_replaced_by_a_fixed_price_times_blocksize_model",
@@ -13168,7 +13168,7 @@
       "node_kind": "heading",
       "norm_label": "pool 1 byte generator: binary memory units, doubling capacity cap, \u00d74 bandwidth ladder (#457, epic #456)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2361"
+      "source_location": "L2363"
     },
     {
       "id": "docs_design_history_prestige_history_why_pp_replaced_direct_production_doubling",
@@ -13312,7 +13312,7 @@
       "node_kind": "heading",
       "norm_label": "storage banks renamed to disks: timed builds, a per-array cache, redemption against any tier, and the kilobit/kilobyte bug fix",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2120"
+      "source_location": "L2122"
     },
     {
       "id": "docs_design_history_the_1000_byte_invest_tier_drops_from_two_claims_to_one",
@@ -13396,7 +13396,7 @@
       "node_kind": "heading",
       "norm_label": "`tickdiskautofill`: a fully-staged cache could get starved out by an unrelated smaller size",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2218"
+      "source_location": "L2220"
     },
     {
       "id": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
@@ -13944,7 +13944,7 @@
       "node_kind": "heading",
       "norm_label": "compute boost base presets: fixing a total-extra-production ordering bug",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2657"
+      "source_location": "L2659"
     },
     {
       "id": "docs_design_history_data_lake_boosters_spending_real_deposits_not_a_separate_used_ledger",
@@ -13956,7 +13956,7 @@
       "node_kind": "heading",
       "norm_label": "data lake boosters: spending real deposits, not a separate \"used\" ledger",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2678"
+      "source_location": "L2680"
     },
     {
       "id": "docs_design_history_data_lake_refill_gating_staged_9_99_999_capacity_from_disk_array_completion",
@@ -13968,7 +13968,7 @@
       "node_kind": "heading",
       "norm_label": "data lake refill gating: staged 9 \u2192 99 \u2192 999 capacity from disk-array completion",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2762"
+      "source_location": "L2764"
     },
     {
       "id": "docs_design_history_disk_cache_always_full_reserve_whole_block_memory_transfers_no_pour_into_disks_issue_382",
@@ -13980,7 +13980,7 @@
       "node_kind": "heading",
       "norm_label": "disk cache: always-full reserve, whole-block memory transfers, no pour into disks (issue #382)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2612"
+      "source_location": "L2614"
     },
     {
       "id": "docs_design_history_disk_ladder_offers_every_byte_power_of_ten_size_issue_368",
@@ -13992,7 +13992,7 @@
       "node_kind": "heading",
       "norm_label": "disk ladder offers every byte power-of-ten size (issue #368)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2600"
+      "source_location": "L2602"
     },
     {
       "id": "docs_design_history_factory_moneyhero_frozen_after_kilobytes_bytes_430_442",
@@ -14004,7 +14004,7 @@
       "node_kind": "heading",
       "norm_label": "factory moneyhero frozen after kilobytes \u2192 bytes (#430 / #442)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2630"
+      "source_location": "L2632"
     },
     {
       "id": "docs_design_history_removing_claim_core_superseded_by_data_lake_boosters",
@@ -14016,7 +14016,7 @@
       "node_kind": "heading",
       "norm_label": "removing claim core: superseded by data lake boosters",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2706"
+      "source_location": "L2708"
     },
     {
       "id": "docs_design_history_testing",
@@ -14028,7 +14028,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2584"
+      "source_location": "L2586"
     },
     {
       "id": "docs_design_history_timed_read_cache_disk_flush_445",
@@ -14040,7 +14040,7 @@
       "node_kind": "heading",
       "norm_label": "timed read-cache \u2192 disk flush (#445)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2645"
+      "source_location": "L2647"
     },
     {
       "id": "src_game_engine_computeflops_test",
@@ -41331,134 +41331,134 @@
     },
     {
       "source": "changelog_0_1_0_2026_07_05",
-      "target": "changelog_added_494",
+      "target": "changelog_added_495",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L494",
+      "source_location": "L495",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_added_482",
+      "target": "changelog_added_483",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L482",
+      "source_location": "L483",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_fixed_487",
+      "target": "changelog_fixed_488",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L487",
+      "source_location": "L488",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_added_465",
+      "target": "changelog_added_466",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L465",
+      "source_location": "L466",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_changed_470",
+      "target": "changelog_changed_471",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L470",
+      "source_location": "L471",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_fixed_476",
+      "target": "changelog_fixed_477",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L476",
+      "source_location": "L477",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_added_449",
+      "target": "changelog_added_450",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L449",
+      "source_location": "L450",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_changed_453",
+      "target": "changelog_changed_454",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L453",
+      "source_location": "L454",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_fixed_457",
+      "target": "changelog_fixed_458",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L457",
+      "source_location": "L458",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_added_436",
+      "target": "changelog_added_437",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L436",
+      "source_location": "L437",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_changed_440",
+      "target": "changelog_changed_441",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L440",
+      "source_location": "L441",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_fixed_444",
+      "target": "changelog_fixed_445",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L444",
+      "source_location": "L445",
       "weight": 1.0
     },
     {
@@ -41469,7 +41469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L434",
+      "source_location": "L435",
       "weight": 1.0
     },
     {
@@ -41480,7 +41480,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L447",
+      "source_location": "L448",
       "weight": 1.0
     },
     {
@@ -41491,7 +41491,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L463",
+      "source_location": "L464",
       "weight": 1.0
     },
     {
@@ -41502,7 +41502,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L480",
+      "source_location": "L481",
       "weight": 1.0
     },
     {
@@ -41513,7 +41513,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L492",
+      "source_location": "L493",
       "weight": 1.0
     },
     {
@@ -41584,46 +41584,46 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_238",
+      "target": "changelog_added_239",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L238",
+      "source_location": "L239",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_291",
+      "target": "changelog_changed_292",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L291",
+      "source_location": "L292",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_408",
+      "target": "changelog_fixed_409",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L408",
+      "source_location": "L409",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_security_430",
+      "target": "changelog_security_431",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L430",
+      "source_location": "L431",
       "weight": 1.0
     },
     {
@@ -43405,7 +43405,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2517",
+      "source_location": "L2519",
       "weight": 1.0
     },
     {
@@ -43416,7 +43416,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2554",
+      "source_location": "L2556",
       "weight": 1.0
     },
     {
@@ -43427,7 +43427,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2570",
+      "source_location": "L2572",
       "weight": 1.0
     },
     {
@@ -43438,7 +43438,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2584",
+      "source_location": "L2586",
       "weight": 1.0
     },
     {
@@ -43493,7 +43493,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2556",
+      "source_location": "L2558",
       "weight": 1.0
     },
     {
@@ -43504,7 +43504,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2572",
+      "source_location": "L2574",
       "weight": 1.0
     },
     {
@@ -43922,7 +43922,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2069",
+      "source_location": "L2071",
       "weight": 1.0
     },
     {
@@ -43933,7 +43933,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2120",
+      "source_location": "L2122",
       "weight": 1.0
     },
     {
@@ -43944,7 +43944,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2218",
+      "source_location": "L2220",
       "weight": 1.0
     },
     {
@@ -43955,7 +43955,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2254",
+      "source_location": "L2256",
       "weight": 1.0
     },
     {
@@ -43966,7 +43966,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2262",
+      "source_location": "L2264",
       "weight": 1.0
     },
     {
@@ -43977,7 +43977,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2297",
+      "source_location": "L2299",
       "weight": 1.0
     },
     {
@@ -43988,7 +43988,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2361",
+      "source_location": "L2363",
       "weight": 1.0
     },
     {
@@ -44120,7 +44120,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2519",
+      "source_location": "L2521",
       "weight": 1.0
     },
     {
@@ -44131,7 +44131,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2600",
+      "source_location": "L2602",
       "weight": 1.0
     },
     {
@@ -44142,7 +44142,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2612",
+      "source_location": "L2614",
       "weight": 1.0
     },
     {
@@ -44153,7 +44153,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2630",
+      "source_location": "L2632",
       "weight": 1.0
     },
     {
@@ -44164,7 +44164,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2645",
+      "source_location": "L2647",
       "weight": 1.0
     },
     {
@@ -44175,7 +44175,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2657",
+      "source_location": "L2659",
       "weight": 1.0
     },
     {
@@ -44186,7 +44186,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2678",
+      "source_location": "L2680",
       "weight": 1.0
     },
     {
@@ -44197,7 +44197,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2706",
+      "source_location": "L2708",
       "weight": 1.0
     },
     {
@@ -44208,7 +44208,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2762",
+      "source_location": "L2764",
       "weight": 1.0
     },
     {
@@ -55678,5 +55678,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "635754eef5ab4a6a68db4b297eaafbca7f2d7848"
+  "built_at_commit": "2254216a6fcc8bba05a7dd033188641b67c0fd71"
 }
