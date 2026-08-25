@@ -153,6 +153,7 @@ import {
   isComputeUpgradeAvailable,
   isComputeUpgradeTurnAvailable,
   isDiskBuildAvailable,
+  isDiskLadderExhaustedForActivePools,
   isDiskBuildTurnAvailable,
   isDiskCacheBlockReleasable,
   isDiskCacheBlockAutoReleaseEligible,
@@ -1392,6 +1393,16 @@ describe('isDiskBuildAvailable', () => {
     })
     expect(isDiskBuildAvailable(state)).toBe(false)
   })
+
+  it('is false once the disk ladder is exhausted for every currently-active pool, even with the (stale) build cost fully affordable', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(size100KB),
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(isDiskBuildAvailable(state)).toBe(false)
+  })
 })
 
 describe('isComputeUpgradeAvailable', () => {
@@ -1744,42 +1755,57 @@ describe('getDiskSize', () => {
     expect(getDiskSize(state)).toBe(FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER)
   })
 
-  it('advances through 100 KB then 1 MB — every Byte power-of-ten size is offered (issue #368)', () => {
+  it('advances through 10 KB then 100 KB — every size within pool 1\'s own funded ladder is offered (issue #368)', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
-    const size1MB = size100KB * DISK_LADDER_SIZE_MULTIPLIER
+    const after10KB = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(getDiskSize(after10KB)).toBe(size10KB)
+    expect(size10KB).toBe(80000)
+
     const after100KB = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(after100KB)).toBe(size100KB)
     expect(size100KB).toBe(800000)
-
-    const after1MB = withIntro(createInitialGameState(), {
-      disksBuiltTotal: {
-        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
-        [size10KB]: DISK_ARRAY_LADDER_CAP,
-        [size100KB]: DISK_ARRAY_LADDER_CAP,
-      },
-    })
-    expect(getDiskSize(after1MB)).toBe(size1MB)
-    expect(size1MB).toBe(8000000) // 1 MB — redeems into Tier02 at level 1
   })
 
-  it('keeps advancing indefinitely past 10 MB — the ladder is uncapped', () => {
+  it('never advances past 100 KB — stays at pool 1\'s own funded ceiling instead of reaching a size no currently-unlocked pool could ever afford', () => {
+    // 1 MB's own build cost (8,000,000 bits) would permanently exceed INTRO_CAPACITY_CAP_BITS with
+    // no pool 2 generator yet to fund it — see isDiskLadderExhaustedForActivePools and
+    // docs/DESIGN_HISTORY.md. Replaces an earlier "keeps advancing indefinitely — the ladder is
+    // uncapped" version of this test, from before that reachability gap was found and fixed.
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
-    const size1MB = size100KB * DISK_LADDER_SIZE_MULTIPLIER
-    const size10MB = size1MB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
         [size10KB]: DISK_ARRAY_LADDER_CAP,
         [size100KB]: DISK_ARRAY_LADDER_CAP,
-        [size1MB]: DISK_ARRAY_LADDER_CAP,
-        [size10MB]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(getDiskSize(state)).toBe(size10MB * DISK_LADDER_SIZE_MULTIPLIER) // 100 MB
+    expect(getDiskSize(state)).toBe(size100KB)
+  })
+})
+
+describe('isDiskLadderExhaustedForActivePools', () => {
+  it('is false before the 100 KB array is fully built', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
+  })
+
+  it('is true once the 100 KB array — pool 1\'s own last funded size — is fully built', () => {
+    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
+    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
   })
 })
 

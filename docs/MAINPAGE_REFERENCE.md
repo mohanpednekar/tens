@@ -142,24 +142,33 @@ seconds, a 10 KB array's 6th disk takes 60 seconds), ticked down every tick by `
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array rebuilding." The Build button renders two distinct states off
-`diskBuildInProgress = intro.diskBuild`: **idle** — `aria-label="build disk"`,
+disallowed, "the array rebuilding." The Build button renders three distinct states off
+`diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
+isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="build disk"`,
 `disabled={!canStartDiskBuild}` where `canStartDiskBuild = isDiskBuildTurnAvailable(state)` (below
-the build cost, no build already in progress, OR while a redeemable Disk Fill/an affordable
-Bandwidth claim — both higher priority, see "Forced priority order" in docs/ECONOMY_REFERENCE.md —
-is currently available), `variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build
-{size} Disk ({cost})"`, `title` either naming which higher-priority action to take first
-(`"Take Bandwidth (or redeem a full Disk) first"`, when `diskBuildBlockedByPriority`) or — depending
-on whether some tier currently matches this size (`diskRedeemTierName`, from
-`getDiskRedeemTierName(state, diskSize)`) — `"Costs {cost} and takes time to build — builds an empty
-{size} container; its cache auto-fills it, redeemable right away for a free {tierName} once full"` or
-the same sentence ending `"…but it won't be redeemable until some tier's level cost matches it"`; and
-**mid-build** — `aria-label="disk array rebuilding"`, always `disabled`, visible text `"🏦 Building
-{size} Disk — {ceil(remainingSeconds)}s"`, `title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`. `$progress` (`diskBuildProgress`) reads
-differently in each state: mid-build, `100 - (remainingSeconds / totalSeconds) * 100` (a genuine "%
-built" fill, using `totalSeconds` as the fixed denominator so the fill only ever climbs toward 100 as
-`remainingSeconds` counts down); idle, `(bits / diskCost) * 100` (progress toward affording the next
-build), paired with a hidden `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
+the build cost, no build already in progress, the ladder not yet exhausted for every currently-active
+pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both higher priority, see
+"Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
+`variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build {size} Disk ({cost})"`,
+`title` either naming which higher-priority action to take first (`"Take Bandwidth (or redeem a full
+Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether some tier currently
+matches this size (`diskRedeemTierName`, from `getDiskRedeemTierName(state, diskSize)`) — `"Costs
+{cost} and takes time to build — builds an empty {size} container; its cache auto-fills it,
+redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
+be redeemable until some tier's level cost matches it"`; **mid-build** — `aria-label="disk array
+rebuilding"`, always `disabled`, visible text `"🏦 Building {size} Disk — {ceil(remainingSeconds)}s"`,
+`title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`; and **pool complete**
+(`diskLadderExhausted`, checked before `diskBuildInProgress`'s idle-state alternatives) —
+`aria-label="disk ladder complete for this pool"`, always `disabled`, visible text `"🏦 Pool complete
+({size})"`, `title="Every Disk size this pool can fund (up to {size}) is fully built — more storage
+pools are coming in a future update"` — a distinct, permanent "nothing left to build until epic #456
+ships pool 2+" state rather than an ever-climbing but never-affordable idle button (see
+`isDiskLadderExhaustedForActivePools`/`MAX_ACTIVE_DISK_LADDER_STEP` in engine.js). `$progress`
+(`diskBuildProgress`) reads differently in each state: mid-build, `100 - (remainingSeconds /
+totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
+fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
+idle, `(bits / diskCost) * 100` (progress toward affording the next build), paired with a hidden
+`role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
 formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER`

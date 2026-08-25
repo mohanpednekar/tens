@@ -2053,9 +2053,14 @@ export const getComputeBandwidthSacrificeLabel = state => {
 // slot exists at a time, since only one size is ever buildable) and the current ladder size's
 // build cost is affordable (see getDiskSize/getDiskCost, defined further down this file) — matches
 // startDiskBuild's own actual gate, which (like every other Byte Foundry reducer) has never itself
-// required isStorageUnlocked; that threshold only governs the button's own UI reveal.
+// required isStorageUnlocked; that threshold only governs the button's own UI reveal. Also false
+// once isDiskLadderExhaustedForActivePools — nothing left pool 1's generator could ever fund, so
+// there's no cost to become newly affordable towards; that's a distinct, permanent state from
+// "not affordable yet" (see ByteFoundryPage, which renders the two differently).
 export const isDiskBuildAvailable = state =>
-  !state.intro.diskBuild && state.intro.bits >= getDiskCost(getDiskSize(state))
+  !state.intro.diskBuild &&
+  !isDiskLadderExhaustedForActivePools(state) &&
+  state.intro.bits >= getDiskCost(getDiskSize(state))
 
 // "Compute" — true once Compute Core conversion is unlocked and either a brand new boost is
 // mechanically activatable from some compute-ladder tier, or the currently active boost (if any)
@@ -2560,18 +2565,39 @@ export const getDiskLadderSizeBits = step => {
   return DISK_LADDER_BASE_SIZE_BITS * (DISK_LADDER_SIZE_MULTIPLIER ** (safeStep - 1))
 }
 
+// How many disk-ladder steps (sizes) pool 1's own generator can ever fund — 1/10/100 KB, the same
+// 3-step grouping DATA_LAKE_SUB_SIZES already uses to carve the ladder into per-pool tiers (see
+// getDataLakeTierIndex below). Only pool 1 has a Byte generator today (INTRO_CAPACITY_CAP_BITS is
+// sized specifically to afford this step's own build cost — see layers.js), so this is a flat
+// constant for now; a future per-pool generator (epic #456) will make it depend on how many pools
+// are unlocked instead of always stopping after the first.
+const MAX_ACTIVE_DISK_LADDER_STEP = DATA_LAKE_SUB_SIZES.length
+
+// Whether every disk size pool 1's generator can ever fund has already been fully built
+// (DISK_ARRAY_LADDER_CAP disks at MAX_ACTIVE_DISK_LADDER_STEP) — i.e. there is genuinely nothing
+// left for startDiskBuild to offer until a future pool's own generator arrives. Distinct from
+// "can't currently afford it": this is permanent until epic #456 ships pool 2+.
+export const isDiskLadderExhaustedForActivePools = state => {
+  const builtTotal = state.intro?.disksBuiltTotal ?? {}
+  const lastActiveSize = getDiskLadderSizeBits(MAX_ACTIVE_DISK_LADDER_STEP)
+  return (builtTotal[lastActiveSize] ?? 0) >= DISK_ARRAY_LADDER_CAP
+}
+
 // The size (in bits) startDiskBuild currently builds: walks the gapless Byte power-of-ten ladder
 // (see getDiskLadderSizeBits), advancing once DISK_ARRAY_LADDER_CAP disks have ever been built at
 // the current size (disksBuiltTotal — cumulative, never decremented by redeeming). Deliberately
 // decoupled from any tier's CURRENT purchase level — see layers.js / docs/DESIGN_HISTORY.md. A
 // freshly offered size isn't necessarily redeemable yet — isDiskRedeemable is the separate gate.
-// Uncapped. Replaced an earlier ladder that walked tier01's level-cost sequence and skipped sizes
-// whenever cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB — issue #368).
+// Never advances past MAX_ACTIVE_DISK_LADDER_STEP — once that size's array is fully built, this
+// keeps returning it rather than reaching a size no currently-unlocked pool could ever afford (see
+// isDiskLadderExhaustedForActivePools, the actual "nothing left to build" gate for startDiskBuild).
+// Replaced an earlier ladder that walked tier01's level-cost sequence and skipped sizes whenever
+// cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB — issue #368).
 export const getDiskSize = state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   let step = 1
   let size = getDiskLadderSizeBits(step)
-  while ((builtTotal[size] ?? 0) >= DISK_ARRAY_LADDER_CAP) {
+  while (step < MAX_ACTIVE_DISK_LADDER_STEP && (builtTotal[size] ?? 0) >= DISK_ARRAY_LADDER_CAP) {
     step += 1
     size = getDiskLadderSizeBits(step)
   }

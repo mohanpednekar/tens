@@ -178,7 +178,7 @@ const InfoPage = () => {
           <li>
             <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_DOUBLING_STEP} capacity
             (only when Memory is full and nothing higher-priority is available). Capacity is
-            measured in binary units (KiB, MiB, …) and hard-caps just below the next binary tier —
+            measured in binary units (KiB, MiB, …) and hard-caps at the next full binary tier —
             once at the cap, Sacrifice stops being offered for good.
           </li>
           <li>
@@ -240,8 +240,11 @@ const InfoPage = () => {
           </li>
           <li>
             Up to {DISK_ARRAY_LADDER_CAP} disks can be built at the current size before the ladder
-            advances. Sizes are every Byte power of ten (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …)
-            with no gaps.
+            advances, through every Byte power of ten (1 KB → 10 KB → 100 KB) with no gaps.
+          </li>
+          <li>
+            Building stops for good once the 100 KB array is fully built — a future update adds more
+            storage pools (1 MB and beyond) with their own generators to fund them.
           </li>
           <li>The Build button always stays on Byte Foundry; Storage shows every size you’ve reached.</li>
         </ul>

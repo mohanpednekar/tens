@@ -767,9 +767,15 @@ design — see `docs/DESIGN_HISTORY.md`.
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
-`DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → 100 KB → **1 MB** → 10 MB → …, so a "1 KB"
-disk needs 8000 bits, not a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the
-current size. Starting
+`DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → **100 KB**, so a "1 KB" disk needs 8000 bits, not
+a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the current size — but only up
+to the highest size any currently-unlocked storage pool's own generator can fund (`getDiskSize` never
+advances past `MAX_ACTIVE_DISK_LADDER_STEP`, today just pool 1's own 3 sizes — 1/10/100 KB — since
+only pool 1 has a Byte generator; an unfunded further size, like 1 MB, would cost more than
+`INTRO_CAPACITY_CAP_BITS` could ever hold). Once that last size's array is fully built,
+`isDiskLadderExhaustedForActivePools` goes permanently true and `isDiskBuildAvailable` follows it —
+ByteFoundryPage's Build button shows a distinct "Pool complete" state instead of an ever-unaffordable
+cost, until a future pool's own generator (epic #456) raises the ceiling. Starting
 a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
 size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size for the first disk,
@@ -930,7 +936,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1494 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1498 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

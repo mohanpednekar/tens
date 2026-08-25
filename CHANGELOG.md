@@ -52,7 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Cores after Megacomputers instead of permanently dead-ending once Sacrifice itself is capped. The
   "Build Disk" button/title now show its cost in the same SI scale as the Disk's own size (e.g.
   "10 KB") instead of Memory's binary scale, since the cost is a fixed multiple of the Disk's own SI
-  face value. First slice of a larger per-storage-pool generator epic (#456) — see
+  face value. The Disk ladder itself now stops advancing once it reaches the highest size any
+  currently-unlocked pool's generator could ever afford (100 KB for pool 1) instead of climbing into
+  permanently unfundable sizes — Build shows a distinct "🏦 Pool complete" state once that size is
+  fully built. First slice of a larger per-storage-pool generator epic (#456) — see
   `docs/DESIGN_HISTORY.md`.
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not

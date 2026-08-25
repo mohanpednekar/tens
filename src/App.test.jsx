@@ -3019,6 +3019,27 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).not.toHaveTextContent('80,000')
   })
 
+  test('Build Disk shows a distinct "pool complete" state once every size pool 1 can fund (up to 100 KB) is fully built, instead of an unaffordable cost', () => {
+    // 1 MB's own build cost (8,000,000 bits) would permanently exceed INTRO_CAPACITY_CAP_BITS with
+    // no pool 2 generator yet to fund it — getDiskSize stays at 100 KB forever once its own array is
+    // full, and the Build button reflects that as a distinct "nothing left to build" state rather
+    // than an ever-unaffordable cost line (see isDiskLadderExhaustedForActivePools in engine.js).
+    const size10kb = currentBankSize * 10
+    const size100kb = currentBankSize * 100
+    seedIntroState({
+      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP, [size10kb]: DISK_ARRAY_LADDER_CAP, [size100kb]: DISK_ARRAY_LADDER_CAP },
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /disk ladder complete for this pool/i })
+    expect(buildButton).toBeDisabled()
+    expect(buildButton).toHaveTextContent('Pool complete')
+    expect(buildButton).toHaveTextContent('100 KB')
+    expect(buildButton).not.toHaveTextContent('Build')
+    expect(buildButton).toHaveAttribute('title', expect.stringContaining('fully built'))
+  })
+
   test('Build Disk stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
     render(<App />)

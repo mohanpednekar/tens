@@ -2457,6 +2457,36 @@ Memory's own balance/capacity, Sacrifice's cost, and Invest's cost are unaffecte
 binary scale, since those are genuinely Memory-denominated (capacity-relative) amounts, not
 Disk-denominated ones.
 
+**Update: fixing the cap only moved the same reachability wall one rung further out — found by
+adversarial review, not by the maintainer.** The cap fix above made pool 1's 100 KB Disk buildable,
+but `getDiskSize` is a single, uncapped, global ladder — nothing in the code actually stops it at a
+"pool boundary"; that's purely a documentation/planning concept until pools 2-10 exist. So once a
+player builds all 10 disks at 100 KB (itself only reachable *because* of the cap fix),
+`getDiskSize` advanced to the next rung, 1 MB, whose own build cost (`getDiskCost` =
+`DISK_BUILD_COST_MULTIPLIER` × 8,000,000 face value = 80,000,000 bits) permanently exceeds
+`INTRO_CAPACITY_CAP_BITS` (8,388,608 bits) — with no pool 2 generator yet to fund it, and unlike
+Bandwidth's own compute-funded overflow valve (#323, fixed in round 2 of this same PR's review),
+Disk Build had no alternate-currency fallback at all. This reproduces, one rung later, the exact
+same "nothing here ever fully freezes" violation the 100 KB fix was meant to close — caught by the
+fifth adversarial review round on this PR, after four prior rounds (including the one that
+confirmed the 100 KB fix itself) all missed it.
+
+Rather than giving Disk Build an overflow valve (which would let pool 1 fund arbitrarily large
+disks with no real pool 2 behind them — semantically wrong, since a "1 MB disk" is supposed to
+belong to the MB pool's own future generator), the fix instead makes the pool boundary a REAL ladder
+limit: `getDiskSize` now stops advancing at `MAX_ACTIVE_DISK_LADDER_STEP` (`DATA_LAKE_SUB_SIZES.length`
+— 3, reusing the exact grouping the Data Lake system already uses to carve the disk ladder into
+per-pool tiers via `getDataLakeTierIndex`, rather than inventing a second, competing "3 sizes per
+pool" constant) — today, pool 1's own 1/10/100 KB sizes — and a new `isDiskLadderExhaustedForActivePools`
+predicate (true once the array at that boundary size is fully built) gates `isDiskBuildAvailable`
+permanently false from that point on. `ByteFoundryPage` shows a distinct "🏦 Pool complete" state
+(disabled, `$progress` pinned to 100, a title explaining more pools are coming) instead of an
+ever-climbing-but-never-affordable idle button. This is a genuine, if narrower, scope tightening:
+Disk-based tier redemption for Megabytes and beyond is not reachable via pool 1 alone until a
+future pool's own generator exists (epic #456) — the ordinary Buy button remains the primary path
+for every tier regardless, as it always has been; Disk redemption was always a bonus path, not the
+only one.
+
 **Deferred to #456's follow-up epic**: the actual per-storage-pool multi-generator system (pools
 2–10, each an independent instance of the mechanics above), the unlock cascade keyed off the
 previous pool's Disk arrays all being complete, and the full 10-pool compact UI. Rebuilding those
