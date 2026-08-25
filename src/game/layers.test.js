@@ -292,7 +292,7 @@ describe('constants', () => {
     expect(COMPUTE_AUTO_BOOST_UNLOCK_COST).toBe(30)
   })
 
-  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits (10 KB in Memory\'s own B/KB/MB display scale)', () => {
+  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits ("9.765 KiB" in Memory\'s own binary display scale)', () => {
     expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(80000)
     expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(10 * 1000 * BITS_PER_BYTE)
   })

@@ -2351,8 +2351,9 @@ export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >
 
 // Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Build button, disk
 // squares rows) should be shown at all — true once capacity has grown enough to ever hold
-// INTRO_DISK_UNLOCK_CAPACITY (10 KB in Memory's own scale, 80,000 bits) at once. A later, more
-// deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
+// INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory's own binary display scale) at
+// once. A later, more deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above —
+// see layers.js.
 export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_DISK_UNLOCK_CAPACITY
 
 // Byte-scale (SI) unit ladder — B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own
@@ -3404,9 +3405,9 @@ export const purchaseBoosterFromDataLake = tierIndex => state => {
 
 // Predicate, not a reducer: whether ByteFoundryPage's/ComputePage's "Compute" section should be
 // active at all. True once capacity has grown enough to ever hold INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
-// (800,000 bits, "100 KB" in Memory's own B/KB/MB scale) at once — the same "capacity-magnitude
-// reveal gate" convention isIntroConversionUnlocked/isStorageUnlocked already use, one Sacrifice
-// stage later than Storage's own reveal.
+// (2,097,152 bits, "256 KiB" in Memory's own binary display scale) at once — the same
+// "capacity-magnitude reveal gate" convention isIntroConversionUnlocked/isStorageUnlocked already
+// use, one Sacrifice stage later than Storage's own reveal.
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Shared shape for the 9-boundary Core → Node → Cluster → Network → Grid → Fabric → Cloud →

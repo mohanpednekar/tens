@@ -39,10 +39,10 @@ holding a single `FillableStatCard`
 directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
 visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
 = `bits / capacity`), has a "Memory" label above `{bits} / {capacity}` — both numbers scaled into
-the same unit, picked off `capacity` (raw bits before the Byte generator exists, since before that
-capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
-B/KB/MB/…/QB by 1000 each step once it does, reusing `TIER_DEFINITIONS`' own tier symbols — see
-"Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
+the same binary unit, picked off `capacity` (raw bits before the Byte generator exists, since before
+that capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
+B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own tier symbols with
+an "i" — see "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
 balance"`) — followed by the production-rate readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
 paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte foundry production
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;

@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-08-25)
 
 ## Corpus Check
-- 96 files · ~293,794 words
+- 96 files · ~293,810 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7bf79277`
+- Built from commit: `fa1bb50d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -49,7 +49,7 @@
 - graphify reference: incremental update and cluster-only
 - simulate-run-times/SKILL.md
 - pull_request_template.md
-- run-simulation.mjs
+- getOverclockRequirement
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - Copilot Instructions
@@ -76,7 +76,7 @@
 - App.test.jsx
 - package.json
 - clampNonNegative
-- tickGame
+- run-simulation.mjs
 - tickComputeMergeBoundary
 - ComputeFlopsPage/index.jsx
 - Tier production tickspeed
@@ -84,7 +84,7 @@
 - InfoPage/index.jsx
 - Testing
 - isComputeMergeReserveStartAvailable
-- buyTickspeedMultiplier
+- tickGame
 - applyOfflineProgress
 - navAttention.js
 - buyGlobalTickspeedMultiplier
@@ -249,13 +249,13 @@ Nodes (5): Strategy snapshots (orphan branch) — required after every run, Usag
 Cohesion: 0.50
 Nodes (3): Documentation, Summary, Test plan
 
-### Community 39 - "run-simulation.mjs"
-Cohesion: 0.14
-Nodes (19): actPlayer(), actSoftResets(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues, emit() (+11 more)
+### Community 39 - "getOverclockRequirement"
+Cohesion: 0.60
+Nodes (5): actSoftResets(), getOverclockRequirement(), getSpeedUpRequirement(), overclockGame(), speedUpGame()
 
 ### Community 48 - "MainPage"
-Cohesion: 0.17
-Nodes (20): countGlobalTickspeedMilestones(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierXpTickspeedMultiplier() (+12 more)
+Cohesion: 0.15
+Nodes (22): countGlobalTickspeedMilestones(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierXpTickspeedMultiplier() (+14 more)
 
 ### Community 49 - "dependencies"
 Cohesion: 0.13
@@ -325,9 +325,9 @@ Nodes (9): name, packageManager, private, resolutions, **/fast-uri, **/filelist/
 Cohesion: 0.23
 Nodes (20): buyAutoPrestige(), buyAutoPrestigeAutobuyer(), buyAutoSpeedUp(), buyComputeAutoBoost(), buyHyperscaler(), buyPrestigeDoublePp(), buyPrestigeSpeedBonus(), buySmartAutobuyer() (+12 more)
 
-### Community 67 - "tickGame"
-Cohesion: 0.14
-Nodes (27): actMainBuys(), wouldAutobuyerStall(), buyTier(), buyTierQuantity(), convertIntroBitsToKilobytes(), getAutoPrestigeAttemptRate(), getCostEpochExponent(), getPrestigeProductionMultiplier() (+19 more)
+### Community 67 - "run-simulation.mjs"
+Cohesion: 0.10
+Nodes (34): actMainBuys(), actPlayer(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues, emit() (+26 more)
 
 ### Community 68 - "tickComputeMergeBoundary"
 Cohesion: 0.12
@@ -357,9 +357,9 @@ Nodes (9): Compute Boost base presets: fixing a total-extra-production ordering 
 Cohesion: 0.20
 Nodes (10): isComputeCloudsMergeStartAvailable(), isComputeClustersMergeStartAvailable(), isComputeCoresMergeStartAvailable(), isComputeDatacentersMergeStartAvailable(), isComputeFabricsMergeStartAvailable(), isComputeGridsMergeStartAvailable(), isComputeMergeReserveStartAvailable(), isComputeNetworksMergeStartAvailable() (+2 more)
 
-### Community 76 - "buyTickspeedMultiplier"
-Cohesion: 0.39
-Nodes (8): actTickspeed(), buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), getLastTierId(), getLastTierXpTickspeedMinConsumption(), getTickspeedMultiplierBaseCost(), getTickspeedMultiplierCost(), isLastTierTickspeedXpUnlocked()
+### Community 76 - "tickGame"
+Cohesion: 0.24
+Nodes (13): actTickspeed(), buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), getAutoPrestigeAttemptRate(), getLastTierId(), getLastTierXpTickspeedMinConsumption(), getPrestigeProductionMultiplier(), getPurchaseMilestoneMultiplier() (+5 more)
 
 ### Community 77 - "applyOfflineProgress"
 Cohesion: 1.00

@@ -2431,7 +2431,7 @@ test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/
   await user.click(investButton)
 
   // Capacity is untouched by Invest — the balance bar's own max stays at the starting capacity,
-  // proving Sacrifice's 10x-capacity effect was never triggered as a side effect of claiming Invest.
+  // proving Sacrifice's 2x-capacity effect was never triggered as a side effect of claiming Invest.
   const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
   // Invest deducted its own cost (bits == capacity at this tier), so the balance is no longer full —
