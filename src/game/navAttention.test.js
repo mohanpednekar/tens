@@ -4,6 +4,7 @@ import {
   getIntroKilobyteConversionCost,
 } from 'game/engine'
 import {
+  BYTES_ID,
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
@@ -24,6 +25,7 @@ import {
   getNavAttention,
   hasAffordableComputeFlopsTier,
   hasAffordableFullLevel,
+  hasAffordableGlobalTickspeed,
   hasAffordablePpUpgrade,
   hasComputeAttention,
   hasFoundryAttention,
@@ -299,6 +301,40 @@ describe('navAttention', () => {
       autoGlobalTickspeed: false,
     }
     expect(hasAffordablePpUpgrade(state)).toBe(false)
+  })
+
+  it('lights Factory when Clock Speed is affordable from the Bytes pool', () => {
+    const tier02 = TIER_DEFINITIONS[1]
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      owned: { [tier02.id]: 1 },
+      resources: {
+        ...createInitialGameState().resources,
+        [MONEY_ID]: 0,
+        [BYTES_ID]: 10,
+      },
+      globalTickspeedMultiplier: null,
+    }
+    expect(hasAffordableGlobalTickspeed(state)).toBe(true)
+    expect(hasTiersGameAttention(state)).toBe(true)
+    expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
+  })
+
+  it('does not treat Clock Speed as affordable when only Bits cover the cost', () => {
+    const tier02 = TIER_DEFINITIONS[1]
+    const state = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      owned: { [tier02.id]: 1 },
+      resources: {
+        ...createInitialGameState().resources,
+        [MONEY_ID]: 1e12,
+        [BYTES_ID]: 0,
+      },
+      globalTickspeedMultiplier: null,
+    }
+    expect(hasAffordableGlobalTickspeed(state)).toBe(false)
   })
 
   it('does not light Compute (Flops) before the page reveals', () => {

@@ -49,8 +49,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Factory MoneyHero stuck after Kilobytes→Bytes** (#442) — Kilobyte production still fills the
   Factory Bytes pool (Clock Speed fuel) and now also mirrors each Byte into Bits at
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
+- **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
+  the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
+  readers announce only a button's own `aria-label`, not redundant icon content; the offline-
+  progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
+  appears dynamically.
 - **Pool 1 byte generator: binary units, doubling capacity cap, ×4 Bandwidth ladder** (#457) — Memory
   Capacity/balance now render in binary (IEC-style) units (B/KiB/MiB/…, 1 KiB = 1024 Bytes = 1.024
   KB) instead of SI; Disk sizes, Data Lake, and caches stay SI-denominated, unchanged. "Sacrifice"
