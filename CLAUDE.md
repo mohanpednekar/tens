@@ -629,7 +629,14 @@ Strict three-layer separation:
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
-   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Starting the next Disk's
+   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Memory, its
+   Combine/Sacrifice/Bandwidth actions, and Storage (Build Disk + every disk-array row + the Data
+   Lake panel) all render inside one `PoolCard` — a single card for the whole pool, rather than
+   Memory as its own boxed tile with bare buttons/rows and a separately-boxed Data Lake card below
+   it; `components/DataLakePanel` takes a `bare` prop to drop its own StatCard chrome for this
+   nested use (its standalone/boxed rendering is otherwise unchanged). Clicking Memory ×2
+   (Sacrifice) fires `pickIntroCapacityMilestone` immediately, with no confirm prompt — same as
+   every other Byte Foundry action. Starting the next Disk's
    build (its own core-loop action, alongside Sacrifice/Invest) and every shown size's full
    interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half →
    Ladder Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
@@ -1089,7 +1096,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1532 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1533 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

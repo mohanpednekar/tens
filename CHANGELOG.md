@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Byte Foundry pool renders as one card** — Memory, its Combine/Sacrifice/Bandwidth actions, and
+  Storage (Build Disk + every disk-array row + the Data Lake panel) now render inside a single
+  `PoolCard`, instead of Memory as its own boxed tile, bare buttons/rows in the middle, and a
+  separately-boxed "Data Lake" card at the bottom. `DataLakePanel` gained a `bare` prop (skips its
+  own card chrome) for this nested use; its standalone/boxed rendering is unchanged for any other
+  caller.
 - **Memory ×2 (Sacrifice) fires immediately, no confirm prompt** — clicking the button now drains
   Memory and doubles Capacity right away, the same as every other Byte Foundry action; the
   "Sacrifice Memory?" confirm dialog (with its Compute-token-wipe warning) is removed.
