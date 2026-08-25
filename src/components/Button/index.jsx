@@ -142,7 +142,9 @@ const Button = styled.button.withConfig({
 // ButtonLabel (flex: 1, centered) so the icon never drifts with the label's length while the
 // label itself still reads as centered in the remaining space, rather than the whole string
 // (icon included) sliding left/right together as one block.
-export const ButtonIcon = styled.span`
+export const ButtonIcon = styled.span.attrs({
+  'aria-hidden': true,
+})`
   flex: 0 0 auto;
 `
 

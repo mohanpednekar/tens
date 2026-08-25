@@ -32,7 +32,10 @@ const OfflineNoticeOverlay = styled.div`
 // Fades out (rather than disappearing abruptly) once the auto-dismiss countdown reaches zero.
 // $fading drives the opacity transition, not a remount, so the fade is visible before the notice
 // is actually removed from the DOM by dismissOfflineProgress.
-const OfflineNoticeCard = styled(StatCard)`
+const OfflineNoticeCard = styled(StatCard).attrs({
+  role: 'status',
+  'aria-live': 'polite',
+})`
   align-items: center;
   max-width: 26rem;
   opacity: ${props => (props.$fading ? 0 : 1)};
