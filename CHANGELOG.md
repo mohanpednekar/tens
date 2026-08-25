@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
+  `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
+  (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
+  future `android/` / `ios/` build artifacts. Native platform projects and
+  `mobile-build.yml` are deferred to a later slice of #70.
 - **Dev Mode** — a local, dev-build-only sandbox (More → Dev Mode, rendered only when
   `import.meta.env.DEV`; absent from the production build) for seeding and experimenting with game
   state on a save entirely separate from any real player slot. Toggle it on/off without touching
