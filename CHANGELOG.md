@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Accessibility Improvements** — Added screen-reader support to `OfflineProgressNotice` and hid decorative icons in `ButtonIcon` from assistive technology.
+
 ### Added
 - **Data Lakes + Booster purchases** — ten storage-tier lakes (KB … QB), each holding up to 999
   units deposited from Disks (9×1 + 9×10 + 9×100 of that denomination). Boosters are bought on
