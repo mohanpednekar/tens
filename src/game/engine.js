@@ -369,7 +369,7 @@ export const createInitialGameState = () => ({
     // longer reset it early. Resets to 0 when Sacrifice does roll back compute-funded Bandwidth.
     computeBandwidthSacrificeIndex: 0,
     // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Invest /
-    // Bandwidth, Disk Build) after a Foundry wipe. null when inactive. Capacity is never replayed.
+    // Bandwidth, Disk Build, and Capacity/Sacrifice) after a Foundry wipe. null when inactive.
     // Survives Prestige like other permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
@@ -1506,7 +1506,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
-  // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps.
+  // After a Foundry reset, auto-press Combine / Invest / Disk Build / Capacity (Sacrifice) up to
+  // foundryResetCaps.
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see

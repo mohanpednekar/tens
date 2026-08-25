@@ -2049,7 +2049,8 @@ Auto-Boost (30 PP) covers the stuck case where a reserve merge is already in fli
 tier's normal slots refill to cap — spend via preferred preset (default Standard) from the
 **biggest** such waiting tier. It never forfeits an active boost to switch presets (that would
 surprise). Switching presets while one is active requires an **explicit forfeit confirmation**
-(same `window.confirm` posture as Reset / Sacrifice) — Stack remains the non-destructive extend
+(same `window.confirm` posture as Reset — Sacrifice itself dropped its own confirm step later, see
+this file's "Sacrifice confirm" entry near the top) — Stack remains the non-destructive extend
 path for the same type+tier.
 
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was

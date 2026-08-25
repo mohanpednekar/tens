@@ -46,7 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
   buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
   will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
-  all held Compute tokens" warning, was later removed entirely (see Memory ×2 above).
+  all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
+  fires immediately" entry under Changed below).
 
 ### Fixed
 - **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
