@@ -430,8 +430,8 @@ src/
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage; Memory + every DiskArrayRow as continuous sections
-                               (no second-level tabs). After Boosts unlocks, Claim Core and Memory ×10
-                               swap positions (Claim Core beside Bandwidth; Memory ×10 below disks)
+                               (no second-level tabs). Memory ×10 (Sacrifice) always sits in the
+                               milestones row beside Bandwidth
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
@@ -595,10 +595,9 @@ Strict three-layer separation:
    every tier's current cost is a deliberate strategy — see "Economy model" below); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. After Boosts unlocks (`isComputeCoreConversionUnlocked`), Claim Core
-   and Memory ×10 swap: Claim Core sits beside Bandwidth in the milestones row (while manual claim
-   is still shown), and Memory ×10 moves below the disk section. Every action — here or on either
-   dedicated screen — stays gated by the forced priority order (see "Economy model" below).
+   slots in one unbroken row. Memory ×10 (Sacrifice) always sits in the milestones row beside
+   Bandwidth. Every action — here or on either dedicated screen — stays gated by the forced
+   priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests.
@@ -641,9 +640,9 @@ Strict three-layer separation:
    (8) reserve-slot squares themselves, clickable as the manual-start trigger with no separate
    button ("slots are the button"), showing a countdown while a merge is in flight. Megacomputer
    (the bottom of the chain) has no row 2, but its row 1 is still Boost-selectable — the only place
-   a Megacomputer has any use at all. Cores' own row 1 also carries a small badge for the separate,
-   unrelated Memory → Core auto-claim unlock control — its manual counterpart (Claim Core) still
-   lives on ByteFoundryPage instead — see "Economy model" below.
+   a Megacomputer has any use at all. Cores are obtained by buying Boosters from the matching Data
+   Lake (row 2 for Cores — see "Economy model" below), not minted from Memory — the earlier "Claim
+   Core"/auto-claim mechanic was removed once Data Lakes superseded it.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
    `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
@@ -783,16 +782,28 @@ a full, redeemable disk simply waits for a manual click. `disks`/`disksBuiltTota
 `diskAutoRedeemedSizes` (which sizes have already auto-redeemed this cycle) resets each cycle.
 
 **Data Lakes** (`intro.dataLakes` in `createInitialGameState`, `DATA_LAKE_*` constants in `layers.js`,
-`depositDiskToDataLake`/`purchaseBoosterFromDataLake`/`getDataLakeDepositedUnits`/`getBoosterPurchaseCost`
-in `engine.js`) — ten permanent lakes (KB … QB), one per storage denomination, each holding up to
+`depositDiskToDataLake`/`purchaseBoosterFromDataLake`/`getDataLakeDepositedUnits`/
+`getDataLakeAvailableUnits`/`getBoosterPurchaseCost`/`getMaxBoosterPurchasesForCapacity` in
+`engine.js`) — ten permanent lakes (KB … QB), one per storage denomination, each holding up to
 `DATA_LAKE_CAPACITY` (999) units deposited from Disks (`9×1 + 9×10 + 9×100` of that tier's
 denomination). Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to QB. A full disk
-deposits via `depositDiskToDataLake` (Foundry disk rows). Booster purchases on ComputePage spend
-lake capacity: the nth purchase at tier *t* costs *n* units of lake *t* and grants 1 of the
-matching compute-ladder entity (`COMPUTE_BOOST_TIER_FIELDS`); triangular total `n×(n+1)/2` naturally
-caps around 44 boosters per full lake — no separate inventory cap on the purchase path (merge/UI
-slots still use `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate
-paths. Boost preset multipliers/durations are unchanged.
+deposits via `depositDiskToDataLake` (Foundry disk rows) — but only once that SIZE's own disk array
+is completely built (all `DISK_ARRAY_LADDER_CAP` (10) disks ever built, `disksBuiltTotal[size] >=
+DISK_ARRAY_LADDER_CAP`), not merely holding one full disk. Since a lake's 3 sub-slots map to 3
+successive disk sizes, this naturally stages the lake's effective capacity: **9** once only the
+smallest (×1) size's array is complete, **99** once the ×10 size's array is also complete, the full
+**999** once the ×100 size's array is complete too — no separate staged-capacity field, the existing
+sub-slot structure already encodes it (see `isDiskArrayFullyBuilt` in `engine.js`). Booster purchases on ComputePage spend
+units genuinely OUT of the lake's own current deposits (no separate "used" ledger) — the nth
+purchase at tier *t* costs *n* units of lake *t* and grants 1 of the matching compute-ladder entity
+(`COMPUTE_BOOST_TIER_FIELDS`). Spent capacity only returns the same way it arrived — depositing more
+Disks, once that array rebuilds a replacement through the ordinary build/fill pipeline — so a full,
+undepleted lake can fund 44 purchases in one uninterrupted burst (triangular total `n×(n+1)/2` ≤
+999) before needing fresh deposits, but a patient player redepositing between purchases can reach
+the true lifetime cap of exactly `DATA_LAKE_CAPACITY` (999) Boosters per tier — the 1,000th would
+cost 1,000 units, impossible regardless of how much gets redeposited. No separate inventory cap on
+the purchase path itself (merge/UI slots still use `COMPUTE_ENTITY_CAP`). Memory→Core conversion and
+8:1 merging remain as alternate paths. Boost preset multipliers/durations are unchanged.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
 Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -896,7 +907,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1510 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1480 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
