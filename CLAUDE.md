@@ -441,7 +441,7 @@ src/
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
                                once `isComputeCoreConversionUnlocked`; page id `'boosters'`. Takes `{ game }`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen — KFlops→QFlops tiers bought with PP,
-                               boosting matching Factory tiers. Reached via AppNav once
+                               boosting matching Ladder tiers. Reached via AppNav once
                                `isComputeFlopsPageRevealed` (100 PP); page id `'compute'`. Takes `{ game }`
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
                                — the full `useIncrementalGame()` object, lifted up into App.jsx so
@@ -663,10 +663,10 @@ Strict three-layer separation:
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
    `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
-   with PP on the same 10³ base ladder as Factory tiers (1,000 – 10³⁰ PP). Per-unit price scales on
+   with PP on the same 10³ base ladder as Ladder tiers (1,000 – 10³⁰ PP). Per-unit price scales on
    every purchase via `getCostEpochExponent` (not Factory's 8-buy blocks). First tier's first buy
    costs 1,000 PP so the screen is visible but unusable until then. Each owned unit adds 0.01%/s
-   matching Factory tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
+   matching Ladder tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
    10⁹Q**. Owned counts permanent across Prestige; per-cycle boost resets on Prestige. Pure renderer — see `docs/ECONOMY_REFERENCE.md`
    "PP Compute (Flops)".
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
@@ -798,12 +798,12 @@ continues and Prestige is optional (see `isProductionFrozen`). **Era ascension**
 separate voluntary meta-prestige at **1 Googol unspent PP** (`ERA_ELIGIBILITY_PP`): it awards
 **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414), increments `era.count`,
 resets the full Foundry (generator upgrades, Disks, compute ladder entities, Memory/gate) plus the
-ordinary Factory cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
+ordinary Ladder cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
 `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
 museum, hyperscalers, Eon upgrade levels, Flops autobuyer unlock flags, and page latches. Era *N*
 free-unlocks the *N*th Flops tier's autobuyer (KFlops at Era 1, …). Hyperscalers (bought with
-Eons in #414) add permanent +0.01%/s each to every Factory tier's Flops multiplier via
+Eons in #414) add permanent +0.01%/s each to every Ladder tier's Flops multiplier via
 `getHyperscalerFlopsBoostRate`. Prestige Points are awarded by `getPrestigePointsAwarded`: 1 base PP at 1 Googol
 Bytes, then 1 PP per `PRESTIGE_POWERS_PER_PP_BASE` (64) additional money-exponent powers beyond
 Googol's own 10^100 exponent, scaled by permanent Double PP upgrades (`prestigeDoublePpLevel` — each
@@ -823,7 +823,7 @@ into a permanent, passively-producing Byte generator, then grows via Sacrifice (
 Invest (double production) on independent cost ladders, plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
-KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Factory tier;
+KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Ladder tier;
 owned counts persist across Prestige, cumulative boost resets each cycle. Five recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
 Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine

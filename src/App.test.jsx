@@ -228,11 +228,11 @@ test('AppNav Factory attention dot lights when a full purchase level is affordab
 
   const tiersButton = screen.getByRole('button', { name: /open ladder/i })
   expect(within(tiersButton).getByLabelText(/important action available/i)).toBeInTheDocument()
-  // Data tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
+  // Ladder tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
   expect(screen.queryByRole('tab', { name: /open upgrades/i })).not.toBeInTheDocument()
 })
 
-test('no redundant Game or Milestones tabs on the Factory screen', () => {
+test('no redundant Game or Milestones tabs on the Ladder screen', () => {
   seedMainGameState({ prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 } })
   render(<App />)
 
@@ -290,7 +290,7 @@ test('buying Kilobytes deducts cost and increases owned count', async () => {
   expect(screen.getByRole('button', { name: /buy for 1,000 b \(level 1, 1 of 8 purchased\)/i })).toBeDisabled()
 })
 
-test('Reset appears only in Settings → Danger zone, not on the Factory screen or in More', async () => {
+test('Reset appears only in Settings → Danger zone, not on the Ladder screen or in More', async () => {
   const user = userEvent.setup()
   seedMainGameState()
   render(<App />)

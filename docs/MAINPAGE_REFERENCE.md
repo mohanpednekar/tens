@@ -603,9 +603,9 @@ PP-spending control lives on the Upgrades view. Milestones/Chapters status lives
 `MilestonesPage` under AppNav → More (see "Milestones view" below) — not a MainPage tab anymore.
 Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
 
-**Global Tickspeed card (Game view).** Unlike every other automation upgrade, this one is
-Money-funded (not PP-funded) and lives on the Game view as its own `GlobalTickspeedCard`, rendered
-alone at the very top of the Game view — above `TierList`/tier 1, before anything else — since it's
+**Global Tickspeed card (Ladder view).** Unlike every other automation upgrade, this one is
+Money-funded (not PP-funded) and lives on the Ladder view as its own `GlobalTickspeedCard`, rendered
+alone at the very top of the Ladder view — above `TierList`/tier 1, before anything else — since it's
 relevant from the very start of a run, well before Speed Up, Overclock, or Prestige are, or even the
 tier list itself. `SpeedUpCard` and `OverclockCard` (see below) render together instead, in their own
 row *below* `TierList` — the two soft-reset controls, which share the same last-tier prerequisite,
@@ -647,7 +647,7 @@ it's available (once tier02 is owned) even during a player's very first run. Cli
 multiplier" below), `tickGame` calls `buyGlobalTickspeedMultiplier` automatically every tick, so the
 level climbs on its own whenever Money allows — the manual button works identically either way.
 
-**Tickspeed multiplier (Game view, per tier).** Every unlocked tier's row carries a Money-funded
+**Tickspeed multiplier (Ladder view, per tier).** Every unlocked tier's row carries a Money-funded
 `UpgradeButton` in the grid slot the old Upgrade/Unlock button used to occupy — enabled by default from
 the moment the tier itself is unlocked, with **no** autobuyer-unlock or PP prerequisite at all (see
 "Prestige Points, autobuyer unlock, and the tickspeed multiplier" below). Clicking it spends
@@ -687,7 +687,7 @@ Prestige/Speed Up resets the last tier's owned count to 0 along with every other
 this slot back to the normal Money-funded button until the player buys back up to a full level — see
 "The last tier's XP-funded tickspeed" below for why.
 
-**No per-tier automation icon on the Game view row.** A tier row's `name` grid area (shared by
+**No per-tier automation icon on the Ladder view row.** A tier row's `name` grid area (shared by
 `TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
 same first line, right-aligned to the row center — no tickspeed-bonus badge (see "Tickspeed multiplier"
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
@@ -696,7 +696,7 @@ via the same icon-instead-of-text convention every other automation status badge
 uses — the tier tickspeed/global tickspeed/Auto Speed Up/Auto-Prestige Autobuyer badges on the PP
 Upgrades page, and the Auto-Prestige/Auto Speed Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
-prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Game view
+prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Ladder view
 row down to just the tier name plus live production/owned figures and the two action buttons —
 autobuyer active/paused status is still visible (and, unlike the old read-only Game-view badge,
 directly toggleable) on the PP Upgrades page's Tier Autobuyers category, via the same
@@ -725,7 +725,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    (needed for assistive tech, since the visible glyph alone doesn't name the tier) — rather than a
    Buy button, since there's nothing to click. Each row's controls are ordered tickspeed-autobuyer
    cluster before unit-buying-autobuyer cluster (an ordering that used to mirror the Game-view row's
-   own now-removed ⚙-before-🤖 badge order — see "No per-tier automation icon on the Game view row"
+   own now-removed ⚙-before-🤖 badge order — see "No per-tier automation icon on the Ladder view row"
    above — kept unchanged here since it's still a sensible reading order on its own): the
    **tier tickspeed autobuyer** cluster comes first (icon-only ⚙,
    dimmed while paused, same convention as the unit-buying autobuyer's below) with a secondary
@@ -749,7 +749,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    tracked in one place on the dedicated **Milestones** view (see below), independent of whether a tier
    is currently reachable in this run.
 2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
-   Money-funded *global* tickspeed multiplier, which itself lives on the Game view, not here — distinct
+   Money-funded *global* tickspeed multiplier, which itself lives on the Ladder view, not here — distinct
    from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⏩, an icon-only badge
    once bought, otherwise a button), both gated only on `!isFirstRun`; **Auto-Prestige Autobuyer** (🔁,
    only once `allTiersFullyAutomated && isAutoPrestigeActive` — i.e. Auto-Prestige must already be
@@ -913,7 +913,7 @@ whose body renders once `overclockCount > 0`: collapsed by default, clicking "Ov
 `{currentStep}` is `formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)`, the rate
 *before* the next Overclock claim (as opposed to `OverclockButton`'s own label, which always shows
 the *next* rate — see above); this is the one Overclock-specific number not otherwise visible
-anywhere on the Game view. Beyond that one figure, Overclock has no visible effect of its own to
+anywhere on the Ladder view. Beyond that one figure, Overclock has no visible effect of its own to
 display separately from the Tickspeed card above it — raising the global tickspeed multiplier's own
 per-level step, rather than stacking a second multiplier alongside it, means the Tickspeed card's own
 `Lv.N — +N% faster ticks on every tier.` status line (see "Global Tickspeed card" above) already
@@ -954,7 +954,7 @@ Each row is a CSS
 Grid with fixed `grid-template-areas`/`grid-template-columns` at every viewport width: a two-column
 layout where the top line is the tier symbol on the left and the owned count on the same line
 right-aligned to the row center (`OwnedText` uses `margin-left: auto` at the end of the left half
-inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Game view
+inside `TierNameTrigger`'s full-width flex row — see "No per-tier automation icon on the Ladder view
 row" above for the two badges that used to also share this area) and the production figure on the
 right (`ProductionText`, `text-align: right`). Below that, the
 tickspeed multiplier button and Buy each take one equal half, then a `details`-area line spanning
@@ -1023,7 +1023,7 @@ and the minimum needed for the next `consumeXpForLastTierTickspeed` call (see "T
 XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This — plus the
 tickspeed button's own `title` tooltip — is now the only place `MainPage` surfaces a tier's
 base/effective tickspeed numbers at all, now that the compact per-tier badge that used to show the
-cumulative bonus at a glance is gone (see "No per-tier automation icon on the Game view row" above).
+cumulative bonus at a glance is gone (see "No per-tier automation icon on the Ladder view row" above).
 
 **Percentages vs. multipliers.** Every bonus derived from a multiplier (the last tier's XP-funded
 tickspeed, the Global Tickspeed card/breakdown, the Prestige production

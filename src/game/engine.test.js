@@ -7951,7 +7951,7 @@ describe('eraGame', () => {
     expect(eraGame(state)).toBe(state)
   })
 
-  it('resets Factory cycle fields and prestige PP/count/doublePpLevel', () => {
+  it('resets Ladder cycle fields and prestige PP/count/doublePpLevel', () => {
     const state = eraEligibleState()
     const after = eraGame(state)
     expect(after.resources[MONEY_ID]).toBe(1)
