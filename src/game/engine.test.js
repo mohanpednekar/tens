@@ -77,6 +77,8 @@ import {
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
+  getComputeBandwidthSacrificeField,
+  getComputeBandwidthSacrificeLabel,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
   getComputeBoostTierMultiplier,
@@ -1233,6 +1235,44 @@ describe('pickIntroProductionMilestone', () => {
     })
     expect(isComputeFundedBandwidthAvailable(state)).toBe(false)
     expect(pickIntroProductionMilestone(state)).toBe(state)
+  })
+
+  it('wraps the sacrifice index back to Cores after Megacomputers instead of permanently dead-ending once pool 1 is capacity-capped', () => {
+    // At INTRO_CAPACITY_CAP_BITS (pool 1's hard cap), Sacrifice can never fire again, so the
+    // compute-funded overflow's own historical "walk the list once, then wait for a Sacrifice
+    // reset" behavior would otherwise make Bandwidth a permanent no-op once every tier from
+    // Megacomputers onward has been used. Wrapping back to Cores keeps it alive indefinitely.
+    const atMegacomputers = withIntro(createInitialGameState(), {
+      capacity: INTRO_CAPACITY_CAP_BITS,
+      bits: 0,
+      productionMilestoneTier: 50,
+      tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
+      productionMultiplier: 128,
+      computeBandwidthSacrificeIndex: 9, // last index (Megacomputers)
+      computeMegacomputers: COMPUTE_ENTITY_CAP,
+    })
+    expect(isComputeFundedBandwidthAvailable(atMegacomputers)).toBe(true)
+    const afterMegacomputers = pickIntroProductionMilestone(atMegacomputers)
+    expect(afterMegacomputers.intro.computeMegacomputers).toBe(0)
+    // Wrapped, not terminated — back to index 0 (Cores), not 10.
+    expect(afterMegacomputers.intro.computeBandwidthSacrificeIndex).toBe(0)
+
+    // The wrapped state can immediately fund another claim off Cores — Bandwidth keeps
+    // progressing even though Sacrifice itself is permanently unavailable at the cap.
+    const withCores = withIntro(afterMegacomputers, { computeCores: COMPUTE_ENTITY_CAP })
+    expect(isComputeFundedBandwidthAvailable(withCores)).toBe(true)
+    const afterCores = pickIntroProductionMilestone(withCores)
+    expect(afterCores.intro.computeCores).toBe(0)
+    expect(afterCores.intro.computeBandwidthSacrificeIndex).toBe(1)
+  })
+
+  it('getComputeBandwidthSacrificeField/Label normalize an out-of-range persisted index instead of returning null forever', () => {
+    // A save written before this fix could have computeBandwidthSacrificeIndex sitting at exactly
+    // COMPUTE_BOOST_TIER_FIELDS.length (10) — the old terminal value. Reads should treat it the
+    // same as index 0 (Cores), not stay permanently out of range.
+    const state = withIntro(createInitialGameState(), { computeBandwidthSacrificeIndex: 10 })
+    expect(getComputeBandwidthSacrificeField(state)).toBe('computeCores')
+    expect(getComputeBandwidthSacrificeLabel(state)).toBe('Cores')
   })
 })
 

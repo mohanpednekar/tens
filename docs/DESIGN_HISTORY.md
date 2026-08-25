@@ -2388,8 +2388,30 @@ was already ×2 via `INTRO_PRODUCTION_MULTIPLIER_STEP`, unrelated to the old ×1
 offered for every power of 4 instead of 10." Read against the actual code, "offered" maps to the
 cost ladder's own step multiplier (`getIntroProductionMilestoneCost`), not a new gate layered on
 top of the existing bit-affordability check — so this shipped as a straight ×10 → ×4 swap for that
-one constant, keeping every other mechanic (claims-per-tier, the compute-funded overflow path for
-when the bit cost exceeds capacity) structurally unchanged.
+one constant, keeping claims-per-tier structurally unchanged. The pre-existing compute-funded
+overflow path for when the bit cost exceeds capacity (#323) did need one real change — see below.
+
+**The capacity cap turned a pre-existing overflow valve into a permanent dead-end — caught by
+adversarial review, not by the original design pass.** Issue #323's compute-funded Bandwidth path
+(sacrifice `COMPUTE_ENTITY_CAP` of a compute-ladder tier, Cores through Megacomputers in order, when
+the bit cost exceeds capacity) only ever reset its own walk-through-the-list index via a successful
+Sacrifice — fine when Sacrifice grew capacity unboundedly, since the player could always eventually
+Sacrifice their way back to affordability. Once Sacrifice terminates at `INTRO_CAPACITY_CAP_BITS`,
+that same design permanently dead-ends: once Bandwidth's ever-growing bit cost (×4/tier, unbounded)
+exceeds the now-fixed capacity ceiling **and** all 10 compute-ladder tiers have been spent once each,
+`pickIntroProductionMilestone` becomes a same-reference no-op forever — the only reset path
+(`rollbackComputeFundedBandwidth`, only ever called from a successful Sacrifice) is itself
+permanently blocked by the same cap. Violates this codebase's own "nothing here ever fully freezes"
+invariant. Fixed by wrapping `computeBandwidthSacrificeIndex` modulo `COMPUTE_BOOST_TIER_FIELDS.length`
+instead of letting it terminate at the end of the list (`getEffectiveComputeBandwidthSacrificeIndex`
+in `engine.js`) — Bandwidth can keep progressing indefinitely off compute-ladder tokens, which stay
+earnable forever via `purchaseBoosterFromDataLake` (spending deposited Disk stock, unrelated to
+Memory/capacity), even after Sacrifice itself is permanently exhausted. Also normalizes any
+out-of-range persisted index from a save written before this fix, rather than leaving it stuck at
+the old terminal value. This is the kind of interaction the mandatory adversarial `code-reviewer`
+pass exists to catch (see `CLAUDE.md`'s "Pull requests") — it wasn't visible from the diff of either
+change in isolation (the cap and the overflow valve were both pre-existing, unrelated designs; only
+their combination broke).
 
 **No save migration.** Existing saves' `intro.capacity` values, grown under the old ×10 ladder, can
 already exceed the new 512 KiB cap (e.g. a save that Sacrificed past 800,000 bits). Rather than

@@ -363,8 +363,10 @@ export const createInitialGameState = () => ({
     // exceeded Memory capacity). Sacrifice rewinds exactly this many Invest steps.
     computeFundedBandwidthClaims: 0,
     // PERMANENT until Sacrifice rolls it back: next COMPUTE_BOOST_TIER_FIELDS index (0 = Cores …
-    // 9 = Megacomputers) for the sequential Bandwidth-via-compute sacrifice. Resets to 0 when
-    // Sacrifice rolls back compute-funded Bandwidth.
+    // 9 = Megacomputers) for the sequential Bandwidth-via-compute sacrifice, wrapping back to 0
+    // after Megacomputers rather than terminating (see getEffectiveComputeBandwidthSacrificeIndex)
+    // — so this stays a renewable funding source even once Sacrifice itself is capped and can no
+    // longer reset it early. Resets to 0 when Sacrifice does roll back compute-funded Bandwidth.
     computeBandwidthSacrificeIndex: 0,
     // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Invest /
     // Bandwidth, Disk Build) after a Foundry wipe. null when inactive. Capacity is never replayed.
@@ -2002,12 +2004,32 @@ export const isBitFundedBandwidthAvailable = state => {
 }
 
 // Issue #323: Bandwidth ×2 funded by sacrificing COMPUTE_ENTITY_CAP of the next compute-ladder
-// tier (Cores → … → Megacomputers, once each in order) — only when the normal bit cost exceeds
-// Memory capacity (bit payment impossible). Separate from auto-merge / auto-claim 10-token sinks.
+// tier (Cores → … → Megacomputers, once each in order, then wrapping back to Cores — see below) —
+// only when the normal bit cost exceeds Memory capacity (bit payment impossible). Separate from
+// auto-merge's own 10-token sinks.
+//
+// The sacrifice index wraps modulo COMPUTE_BOOST_TIER_FIELDS.length rather than terminating once
+// it reaches the end of the list. Before pool 1's capacity cap (see INTRO_CAPACITY_CAP_BITS in
+// layers.js), this overflow valve only ever needed a full lap of the 10 compute tiers before a
+// Sacrifice was required to reset it — fine when Sacrifice was always eventually available again.
+// Once Sacrifice can permanently exhaust at the cap, that same "walk the list once, then wait for a
+// Sacrifice reset" behavior would make Bandwidth a permanent, unrecoverable no-op for any run that
+// reaches both limits — a real violation of "nothing here ever fully freezes." Wrapping keeps
+// Bandwidth progressing indefinitely off compute-ladder tokens, which stay earnable forever via
+// purchaseBoosterFromDataLake (spending deposited Disk stock from a Data Lake — entirely unrelated
+// to Memory/capacity), even after Sacrifice itself is capped.
+// getEffectiveComputeBandwidthSacrificeIndex also normalizes any out-of-range persisted index
+// (e.g. an old save saved mid-cycle before this fix existed) the same way, rather than leaving it
+// permanently stuck at the old terminal value. See docs/DESIGN_HISTORY.md.
+const getEffectiveComputeBandwidthSacrificeIndex = intro => {
+  const index = intro?.computeBandwidthSacrificeIndex ?? 0
+  const length = COMPUTE_BOOST_TIER_FIELDS.length
+  return ((index % length) + length) % length
+}
+
 export const isComputeFundedBandwidthAvailable = state => {
   const intro = state.intro ?? {}
-  const index = intro.computeBandwidthSacrificeIndex ?? 0
-  if (index < 0 || index >= COMPUTE_BOOST_TIER_FIELDS.length) return false
+  const index = getEffectiveComputeBandwidthSacrificeIndex(intro)
   const tier = intro.productionMilestoneTier ?? 0
   const claimsUsedUp = (intro.productionMilestoneTierClaims ?? 0) >= getIntroProductionMilestoneMaxClaims(tier)
   if (claimsUsedUp) return false
@@ -2018,12 +2040,12 @@ export const isComputeFundedBandwidthAvailable = state => {
 }
 
 export const getComputeBandwidthSacrificeField = state => {
-  const index = state.intro?.computeBandwidthSacrificeIndex ?? 0
+  const index = getEffectiveComputeBandwidthSacrificeIndex(state.intro)
   return COMPUTE_BOOST_TIER_FIELDS[index] ?? null
 }
 
 export const getComputeBandwidthSacrificeLabel = state => {
-  const index = state.intro?.computeBandwidthSacrificeIndex ?? 0
+  const index = getEffectiveComputeBandwidthSacrificeIndex(state.intro)
   return COMPUTE_TIER_LABELS[index] ?? null
 }
 
@@ -2306,14 +2328,14 @@ export const pickIntroProductionMilestone = state => {
   }
 
   if (isComputeFundedBandwidthAvailable(state)) {
-    const index = state.intro.computeBandwidthSacrificeIndex ?? 0
+    const index = getEffectiveComputeBandwidthSacrificeIndex(state.intro)
     const field = COMPUTE_BOOST_TIER_FIELDS[index]
     return {
       ...state,
       intro: {
         ...applyIntroProductionDoublingToIntro(state.intro),
         [field]: clampNonNegative((state.intro[field] ?? 0) - COMPUTE_ENTITY_CAP),
-        computeBandwidthSacrificeIndex: index + 1,
+        computeBandwidthSacrificeIndex: (index + 1) % COMPUTE_BOOST_TIER_FIELDS.length,
         computeFundedBandwidthClaims: (state.intro.computeFundedBandwidthClaims ?? 0) + 1,
       },
     }

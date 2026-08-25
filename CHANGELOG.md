@@ -47,8 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   1 MiB — after which Sacrifice becomes permanently unavailable. "Invest"/Bandwidth's own cost ladder
   now steps ×4 per tier (was ×10); its doubling effect on production is unchanged.
   `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` moved from 8,000,000 to 2,097,152 bits (half the new cap) so
-  it stays reachable. First slice of a larger per-storage-pool generator epic (#456) — see
-  `docs/DESIGN_HISTORY.md`.
+  it stays reachable. The pre-existing compute-funded Bandwidth overflow (#323) now wraps back to
+  Cores after Megacomputers instead of permanently dead-ending once Sacrifice itself is capped.
+  First slice of a larger per-storage-pool generator epic (#456) — see `docs/DESIGN_HISTORY.md`.
 - **Disk read cache flush** (#445) — emptying a full read cache into an empty disk is timed: duration
   equals one cache block at the current Byte Foundry production rate (`blockBits ÷ rate`), not
   instant. Flush pauses while a tier claim matches that size; UI drains the read-cache row during
