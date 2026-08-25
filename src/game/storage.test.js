@@ -754,6 +754,36 @@ describe('Dev Mode', () => {
     expect(loadGameState().resources[MONEY_ID]).toBe(5e50)
   })
 
+  // Regression coverage for a real bug an adversarial review caught: editing one nested container
+  // two-or-more levels deep (e.g. a single Data Lake tier under intro.dataLakes) must not wipe its
+  // untouched siblings at that same depth back to fresh defaults — an earlier one-level-deep-only
+  // version of mergeStateForDevWrite got exactly this wrong.
+  it('applyDevGameStateJson deep-merges nested containers, preserving untouched siblings two levels down', () => {
+    setDevModeActive(true)
+    const currentState = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5 },
+          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 },
+        },
+      },
+    }
+    const result = applyDevGameStateJson(
+      JSON.stringify({ intro: { dataLakes: { 1: { purchased: 6 } } } }),
+      currentState,
+    )
+    expect(result.ok).toBe(true)
+    // The edited field applied...
+    expect(result.state.intro.dataLakes['1'].purchased).toBe(6)
+    // ...and every sibling at every depth survives untouched: tier 1's own deposits (a sibling of
+    // the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
+    expect(result.state.intro.dataLakes['1'].deposits).toEqual({ 1: 50, 10: 3, 100: 0 })
+    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 })
+  })
+
   it('applyDevGameStateJson stamps the current save schema version on write', () => {
     setDevModeActive(true)
     const result = applyDevGameStateJson('{}', createInitialGameState())

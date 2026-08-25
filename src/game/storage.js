@@ -528,22 +528,32 @@ export const clearDevGameState = () => {
 
 const isPlainObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 
-// One-level-deep merge of `parsed` onto `base`: an object-valued top-level field (resources,
-// prestige, intro, owned, ...) is shallow-merged key-by-key rather than replaced wholesale, so a
-// caller specifying only `{ resources: { base: 1e50 } }` doesn't silently drop `resources.bytes`
-// (or, more importantly, an entirely untouched top-level field like `intro`) out of the written
-// payload. This also keeps every write shaped like a real save (every top-level field present),
-// which matters beyond tidiness: getSaveIncompatibilityReason (save-migration/detectLegacy.js)
-// treats a payload with tier-map data but no `intro` field at all as a legacy save missing a
-// migration step ('missing_intro') and refuses it outright — a bare `{ resources: {...} }` written
-// as-is would trip that exact check and always fail. Deeper merging (tier maps, disks, etc.) is
-// left to mergeState itself, which loadGameState already runs afterward.
+// Recursive deep merge of `parsed` onto `base`, at any depth: an object-valued field (resources,
+// prestige, intro, intro.dataLakes, intro.dataLakes['1'], ...) is merged key-by-key rather than
+// replaced wholesale, so a caller specifying only `{ resources: { base: 1e50 } }` doesn't silently
+// drop `resources.bytes` (or, more importantly, an entirely untouched top-level field like
+// `intro`) out of the written payload — and, at any deeper level, editing one nested container
+// (e.g. `intro.dataLakes.1`) doesn't wipe its untouched siblings (`intro.dataLakes.2`, `.3`, …)
+// back to fresh defaults. An earlier one-level-deep version of this function got exactly that
+// deeper case wrong — confirmed by adversarial review reproducing real data loss when seeding one
+// Data Lake tier via the raw JSON editor silently reset every other tier's deposits/purchased
+// counts to 0, since mergeState (see below) then read those now-absent keys as "never set" and
+// filled them from createInitialGameState() rather than the prior dev-save state. Recursing fixes
+// this at every depth the state shape happens to have, with no hardcoded knowledge of how deep
+// `intro.dataLakes` or any other nested field actually goes. This also keeps every write shaped
+// like a real save (every top-level field present), which matters beyond tidiness:
+// getSaveIncompatibilityReason (save-migration/detectLegacy.js) treats a payload with tier-map
+// data but no `intro` field at all as a legacy save missing a migration step ('missing_intro') and
+// refuses it outright — a bare `{ resources: {...} }` written as-is would trip that exact check
+// and always fail. Array-valued fields (prestigeMuseum.history, .pinnedIds) are still replaced
+// wholesale, not merged element-by-element — isPlainObject excludes arrays from the merge branch,
+// same as before.
 const mergeStateForDevWrite = (base, parsed) =>
   Object.keys(parsed).reduce((acc, key) => {
     const parsedValue = parsed[key]
     const baseValue = base[key]
     acc[key] = isPlainObject(parsedValue) && isPlainObject(baseValue)
-      ? { ...baseValue, ...parsedValue }
+      ? mergeStateForDevWrite(baseValue, parsedValue)
       : parsedValue
     return acc
   }, { ...base })

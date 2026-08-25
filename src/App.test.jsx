@@ -10,6 +10,7 @@ import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
@@ -4271,6 +4272,30 @@ describe('Dev Mode', () => {
 
     expect(await screen.findByText(/applied\./i)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).prestige.points).toBe(123)
+  })
+
+  // Round-4 adversarial review flagged that only the 'unlock-factory' preset (covered above) had
+  // direct coverage — the other six were only traced by reading code. One table covers the rest,
+  // each asserting the exact state change its own label promises, per CLAUDE.md's test.each
+  // convention for near-identical cases.
+  it.each([
+    [/^💰 Bits → 99% to Prestige$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD * 0.99)],
+    [/^💰 Bits → Prestige threshold$/, state => expect(state.resources.base).toBe(PRESTIGE_THRESHOLD)],
+    [/^🏆 \+1,000 PP$/, state => expect(state.prestige.points).toBe(1000)],
+    [/^🏆 PP → Era-ready \(1 Googol\)$/, state => expect(state.prestige.points).toBe(ERA_ELIGIBILITY_PP)],
+    [/^🖥️ Unlock Compute \(Flops\)$/, state => {
+      expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP)
+      expect(state.computeFlops.pageUnlocked).toBe(true)
+    }],
+    [/^🔧 Unlock Boosters \(Core\)$/, state => expect(state.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)],
+  ])('quick-seed preset %s applies its documented effect to the dev save', async (buttonName, assertState) => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: buttonName }))
+    assertState(JSON.parse(localStorage.getItem('tens_dev_state')))
   })
 
   it('Settings disables real-slot actions (Play/Clear/Erase all) while Dev Mode is active', async () => {

@@ -17,10 +17,10 @@ export const isEditableScalar = value =>
   typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string'
 
 // Immutable set-by-path: rebuilds only the objects along `path`, leaving every sibling key
-// (however deep) untouched — the same one-level-deep-per-hop spread mergeStateForDevWrite in
-// game/storage.js uses, just applied recursively so it works at any depth (e.g.
-// ['intro', 'dataLakes', '1', 'used']). Generic over the actual shape, so it never needs updating
-// when engine.js grows a new nested field.
+// (however deep) untouched — the same per-hop spread `mergeStateForDevWrite` in game/storage.js
+// uses for its own recursive deep merge, just walking a single explicit path array instead of an
+// arbitrary parsed object (e.g. ['intro', 'dataLakes', '1', 'purchased']). Generic over the actual
+// shape, so it never needs updating when engine.js grows a new nested field.
 export const setValueAtPath = (obj, path, value) => {
   const [head, ...rest] = path
   if (rest.length === 0) return { ...obj, [head]: value }

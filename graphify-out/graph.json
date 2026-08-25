@@ -1507,7 +1507,7 @@
       "label": "loadThemePreference()",
       "file_type": "code",
       "source_file": "src/game/storage.js",
-      "source_location": "L593",
+      "source_location": "L603",
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_loadthemepreference",
@@ -1960,42 +1960,6 @@
       "norm_label": "canpurchaseboosterfromdatalake()"
     },
     {
-      "label": "canReclaimComputeBoost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3910",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_canreclaimcomputeboost",
-      "community": 50,
-      "community_name": "ComputePage/index.jsx",
-      "norm_label": "canreclaimcomputeboost()"
-    },
-    {
-      "label": "getComputeBoostTierDurationSeconds()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3681",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getcomputeboosttierdurationseconds",
-      "community": 50,
-      "community_name": "ComputePage/index.jsx",
-      "norm_label": "getcomputeboosttierdurationseconds()"
-    },
-    {
-      "label": "getComputeBoostTierMultiplier()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3675",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getcomputeboosttiermultiplier",
-      "community": 50,
-      "community_name": "ComputePage/index.jsx",
-      "norm_label": "getcomputeboosttiermultiplier()"
-    },
-    {
       "label": "getComputeMergeDurationSeconds()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -2042,30 +2006,6 @@
       "community": 50,
       "community_name": "ComputePage/index.jsx",
       "norm_label": "isupgradecomputemergedurationavailable()"
-    },
-    {
-      "label": "isValidComputeBoostTier()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3670",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_isvalidcomputeboosttier",
-      "community": 50,
-      "community_name": "ComputePage/index.jsx",
-      "norm_label": "isvalidcomputeboosttier()"
-    },
-    {
-      "label": "reclaimComputeBoost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3920",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_reclaimcomputeboost",
-      "community": 50,
-      "community_name": "ComputePage/index.jsx",
-      "norm_label": "reclaimcomputeboost()"
     },
     {
       "label": "canMerge()",
@@ -2148,44 +2088,8 @@
       "_origin": "ast",
       "id": "src_game_engine_combineintrobyte",
       "community": 52,
-      "community_name": "startDiskBuild",
+      "community_name": "getDiskSizesToShow",
       "norm_label": "combineintrobyte()"
-    },
-    {
-      "label": "getDiskBuildBaseSeconds()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2536",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getdiskbuildbaseseconds",
-      "community": 52,
-      "community_name": "startDiskBuild",
-      "norm_label": "getdiskbuildbaseseconds()"
-    },
-    {
-      "label": "getDiskBuildSeconds()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2544",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getdiskbuildseconds",
-      "community": 52,
-      "community_name": "startDiskBuild",
-      "norm_label": "getdiskbuildseconds()"
-    },
-    {
-      "label": "getDiskCost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2529",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getdiskcost",
-      "community": 52,
-      "community_name": "startDiskBuild",
-      "norm_label": "getdiskcost()"
     },
     {
       "label": "getDiskLadderSizeBits()",
@@ -2196,7 +2100,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdiskladdersizebits",
       "community": 52,
-      "community_name": "startDiskBuild",
+      "community_name": "getDiskSizesToShow",
       "norm_label": "getdiskladdersizebits()"
     },
     {
@@ -2208,8 +2112,20 @@
       "_origin": "ast",
       "id": "src_game_engine_getdisksize",
       "community": 52,
-      "community_name": "startDiskBuild",
+      "community_name": "getDiskSizesToShow",
       "norm_label": "getdisksize()"
+    },
+    {
+      "label": "getDiskSizesToShow()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2567",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getdisksizestoshow",
+      "community": 52,
+      "community_name": "getDiskSizesToShow",
+      "norm_label": "getdisksizestoshow()"
     },
     {
       "label": "isDiskBuildBelowCap()",
@@ -2220,7 +2136,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdiskbuildbelowcap",
       "community": 52,
-      "community_name": "startDiskBuild",
+      "community_name": "getDiskSizesToShow",
       "norm_label": "isdiskbuildbelowcap()"
     },
     {
@@ -2232,20 +2148,8 @@
       "_origin": "ast",
       "id": "src_game_engine_isinvestprogressbelowcap",
       "community": 52,
-      "community_name": "startDiskBuild",
+      "community_name": "getDiskSizesToShow",
       "norm_label": "isinvestprogressbelowcap()"
-    },
-    {
-      "label": "startDiskBuild()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2600",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_startdiskbuild",
-      "community": 52,
-      "community_name": "startDiskBuild",
-      "norm_label": "startdiskbuild()"
     },
     {
       "label": "tickFoundryResetConvenience()",
@@ -2256,8 +2160,20 @@
       "_origin": "ast",
       "id": "src_game_engine_tickfoundryresetconvenience",
       "community": 52,
-      "community_name": "startDiskBuild",
+      "community_name": "getDiskSizesToShow",
       "norm_label": "tickfoundryresetconvenience()"
+    },
+    {
+      "label": "StoragePage()",
+      "file_type": "code",
+      "source_file": "src/pages/StoragePage/index.jsx",
+      "source_location": "L33",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_pages_storagepage_index_storagepage",
+      "community": 52,
+      "community_name": "getDiskSizesToShow",
+      "norm_label": "storagepage()"
     },
     {
       "label": "applyIntroProductionDoublingToIntro()",
@@ -2503,7 +2419,7 @@
       "label": "applyDevGameStateJson()",
       "file_type": "code",
       "source_file": "src/game/storage.js",
-      "source_location": "L562",
+      "source_location": "L572",
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_applydevgamestatejson",
@@ -2815,7 +2731,7 @@
       "label": "mergeStateForDevWrite()",
       "file_type": "code",
       "source_file": "src/game/storage.js",
-      "source_location": "L541",
+      "source_location": "L551",
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_mergestatefordevwrite",
@@ -2923,7 +2839,7 @@
       "label": "saveThemePreference()",
       "file_type": "code",
       "source_file": "src/game/storage.js",
-      "source_location": "L603",
+      "source_location": "L613",
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_savethemepreference",
@@ -3194,6 +3110,30 @@
       "community": 59,
       "community_name": "engine.js",
       "norm_label": "decrementfulldiskcount()"
+    },
+    {
+      "label": "getDiskBuildBaseSeconds()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2536",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getdiskbuildbaseseconds",
+      "community": 59,
+      "community_name": "engine.js",
+      "norm_label": "getdiskbuildbaseseconds()"
+    },
+    {
+      "label": "getDiskBuildSeconds()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2544",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getdiskbuildseconds",
+      "community": 59,
+      "community_name": "engine.js",
+      "norm_label": "getdiskbuildseconds()"
     },
     {
       "label": "getNextDiskLadderSize()",
@@ -3616,30 +3556,6 @@
       "norm_label": "getdiskreadcacheflushfill()"
     },
     {
-      "label": "getDiskRedeemTierName()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2986",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getdiskredeemtiername",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "getdiskredeemtiername()"
-    },
-    {
-      "label": "getDiskSizesToShow()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2567",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getdisksizestoshow",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "getdisksizestoshow()"
-    },
-    {
       "label": "getDiskWriteCacheFlushFill()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -3698,18 +3614,6 @@
       "community": 61,
       "community_name": "DiskArrayRow/index.jsx",
       "norm_label": "getmaxboosterpurchasesforcapacity()"
-    },
-    {
-      "label": "getRelevantDiskSizesForFoundry()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3070",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_getrelevantdisksizesforfoundry",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "getrelevantdisksizesforfoundry()"
     },
     {
       "label": "hasFullRedeemableDiskAtSize()",
@@ -3892,18 +3796,6 @@
       "norm_label": "tickdiskautoredeem()"
     },
     {
-      "label": "StoragePage()",
-      "file_type": "code",
-      "source_file": "src/pages/StoragePage/index.jsx",
-      "source_location": "L33",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_pages_storagepage_index_storagepage",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "storagepage()"
-    },
-    {
       "label": "coerceDraft()",
       "file_type": "code",
       "source_file": "src/pages/DevModePage/index.jsx",
@@ -3991,7 +3883,7 @@
       "label": "allTiersSmartSeed()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1565",
+      "source_location": "L1566",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_alltierssmartseed",
@@ -4003,7 +3895,7 @@
       "label": "derivePurchaseFieldsFromCounts()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L64",
+      "source_location": "L65",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_derivepurchasefieldsfromcounts",
@@ -4015,7 +3907,7 @@
       "label": "openDevMode()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L4189",
+      "source_location": "L4190",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_opendevmode",
@@ -4027,7 +3919,7 @@
       "label": "openSettings()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L95",
+      "source_location": "L96",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_opensettings",
@@ -4039,7 +3931,7 @@
       "label": "seedIntroState()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L2293",
+      "source_location": "L2294",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_seedintrostate",
@@ -4051,7 +3943,7 @@
       "label": "seedMainGameState()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L79",
+      "source_location": "L80",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_seedmaingamestate",
@@ -4816,18 +4708,6 @@
       "norm_label": "incompatiblesavenotice()"
     },
     {
-      "label": "actFoundry()",
-      "file_type": "code",
-      "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L126",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "claude_skills_simulate_run_times_run_simulation_actfoundry",
-      "community": 78,
-      "community_name": "actFoundry",
-      "norm_label": "actfoundry()"
-    },
-    {
       "label": "activateComputeBoost()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -4835,8 +4715,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_activatecomputeboost",
-      "community": 78,
-      "community_name": "actFoundry",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
       "norm_label": "activatecomputeboost()"
     },
     {
@@ -4847,9 +4727,21 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canactivatecomputeboost",
-      "community": 78,
-      "community_name": "actFoundry",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
       "norm_label": "canactivatecomputeboost()"
+    },
+    {
+      "label": "canReclaimComputeBoost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3910",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_canreclaimcomputeboost",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "canreclaimcomputeboost()"
     },
     {
       "label": "canStackComputeBoost()",
@@ -4859,9 +4751,129 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canstackcomputeboost",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "canstackcomputeboost()"
+    },
+    {
+      "label": "getComputeBoostTierDurationSeconds()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3681",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getcomputeboosttierdurationseconds",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "getcomputeboosttierdurationseconds()"
+    },
+    {
+      "label": "getComputeBoostTierField()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3672",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getcomputeboosttierfield",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "getcomputeboosttierfield()"
+    },
+    {
+      "label": "getComputeBoostTierMultiplier()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3675",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getcomputeboosttiermultiplier",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "getcomputeboosttiermultiplier()"
+    },
+    {
+      "label": "isComputeBoostTurnAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3724",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_iscomputeboostturnavailable",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "iscomputeboostturnavailable()"
+    },
+    {
+      "label": "isComputeUpgradeAvailable()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2042",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_iscomputeupgradeavailable",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "iscomputeupgradeavailable()"
+    },
+    {
+      "label": "isValidComputeBoostTier()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3670",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_isvalidcomputeboosttier",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "isvalidcomputeboosttier()"
+    },
+    {
+      "label": "reclaimComputeBoost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3920",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_reclaimcomputeboost",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "reclaimcomputeboost()"
+    },
+    {
+      "label": "stackComputeBoost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3811",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_stackcomputeboost",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "stackcomputeboost()"
+    },
+    {
+      "label": "tickAutoComputeBoost()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3886",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_tickautocomputeboost",
+      "community": 76,
+      "community_name": "isComputeBoostTurnAvailable",
+      "norm_label": "tickautocomputeboost()"
+    },
+    {
+      "label": "actFoundry()",
+      "file_type": "code",
+      "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
+      "source_location": "L126",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "claude_skills_simulate_run_times_run_simulation_actfoundry",
       "community": 78,
       "community_name": "actFoundry",
-      "norm_label": "canstackcomputeboost()"
+      "norm_label": "actfoundry()"
     },
     {
       "label": "eraseAllComputeTokens()",
@@ -4876,16 +4888,16 @@
       "norm_label": "eraseallcomputetokens()"
     },
     {
-      "label": "getComputeBoostTierField()",
+      "label": "getDiskCost()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L3672",
+      "source_location": "L2529",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_getcomputeboosttierfield",
+      "id": "src_game_engine_getdiskcost",
       "community": 78,
       "community_name": "actFoundry",
-      "norm_label": "getcomputeboosttierfield()"
+      "norm_label": "getdiskcost()"
     },
     {
       "label": "isBandwidthAvailable()",
@@ -4910,30 +4922,6 @@
       "community": 78,
       "community_name": "actFoundry",
       "norm_label": "isbandwidthturnavailable()"
-    },
-    {
-      "label": "isComputeBoostTurnAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3724",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_iscomputeboostturnavailable",
-      "community": 78,
-      "community_name": "actFoundry",
-      "norm_label": "iscomputeboostturnavailable()"
-    },
-    {
-      "label": "isComputeUpgradeAvailable()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2042",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_iscomputeupgradeavailable",
-      "community": 78,
-      "community_name": "actFoundry",
-      "norm_label": "iscomputeupgradeavailable()"
     },
     {
       "label": "isDiskBuildAvailable()",
@@ -5020,28 +5008,16 @@
       "norm_label": "rollbackcomputefundedbandwidth()"
     },
     {
-      "label": "stackComputeBoost()",
+      "label": "startDiskBuild()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
-      "source_location": "L3811",
+      "source_location": "L2600",
       "_callable": true,
       "_origin": "ast",
-      "id": "src_game_engine_stackcomputeboost",
+      "id": "src_game_engine_startdiskbuild",
       "community": 78,
       "community_name": "actFoundry",
-      "norm_label": "stackcomputeboost()"
-    },
-    {
-      "label": "tickAutoComputeBoost()",
-      "file_type": "code",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3886",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "src_game_engine_tickautocomputeboost",
-      "community": 78,
-      "community_name": "actFoundry",
-      "norm_label": "tickautocomputeboost()"
+      "norm_label": "startdiskbuild()"
     },
     {
       "label": "tickQueuedCapacityUpgrade()",
@@ -5128,6 +5104,18 @@
       "norm_label": "getcomputebandwidthsacrificelabel()"
     },
     {
+      "label": "getDiskRedeemTierName()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2986",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getdiskredeemtiername",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "norm_label": "getdiskredeemtiername()"
+    },
+    {
       "label": "getIntroKilobyteConversionCost()",
       "file_type": "code",
       "source_file": "src/game/engine.js",
@@ -5150,6 +5138,18 @@
       "community": 8,
       "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "getmemoryunit()"
+    },
+    {
+      "label": "getRelevantDiskSizesForFoundry()",
+      "file_type": "code",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3070",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "src_game_engine_getrelevantdisksizesforfoundry",
+      "community": 8,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "norm_label": "getrelevantdisksizesforfoundry()"
     },
     {
       "label": "isIntroConversionUnlocked()",
@@ -6954,6 +6954,17 @@
       "norm_label": "autobuyer_unlock_base_cost"
     },
     {
+      "label": "AUTOBUYER_UNLOCK_MILESTONE_START",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L455",
+      "_origin": "ast",
+      "id": "src_game_layers_autobuyer_unlock_milestone_start",
+      "community": 2,
+      "community_name": "layers.js",
+      "norm_label": "autobuyer_unlock_milestone_start"
+    },
+    {
       "label": "AUTOBUYER_UNLOCK_MILESTONE_STEP",
       "file_type": "code",
       "source_file": "src/game/layers.js",
@@ -7097,6 +7108,17 @@
       "norm_label": "flops_autobuyer_era_start"
     },
     {
+      "label": "FLOPS_AUTOBUYER_ERA_STEP",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L604",
+      "_origin": "ast",
+      "id": "src_game_layers_flops_autobuyer_era_step",
+      "community": 2,
+      "community_name": "layers.js",
+      "norm_label": "flops_autobuyer_era_step"
+    },
+    {
       "label": "GLOBAL_TICKSPEED_MILESTONE_STEP",
       "file_type": "code",
       "source_file": "src/game/layers.js",
@@ -7106,17 +7128,6 @@
       "community": 2,
       "community_name": "layers.js",
       "norm_label": "global_tickspeed_milestone_step"
-    },
-    {
-      "label": "GLOBAL_TICKSPEED_PRODUCTION_STEP",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L472",
-      "_origin": "ast",
-      "id": "src_game_layers_global_tickspeed_production_step",
-      "community": 2,
-      "community_name": "layers.js",
-      "norm_label": "global_tickspeed_production_step"
     },
     {
       "label": "GOOGOL",
@@ -7163,17 +7174,6 @@
       "norm_label": "last_tier_xp_tickspeed_min_consumption_floor"
     },
     {
-      "label": "LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L565",
-      "_origin": "ast",
-      "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_percent",
-      "community": 2,
-      "community_name": "layers.js",
-      "norm_label": "last_tier_xp_tickspeed_min_consumption_percent"
-    },
-    {
       "label": "LAST_TIER_XP_TICKSPEED_STEP",
       "file_type": "code",
       "source_file": "src/game/layers.js",
@@ -7196,17 +7196,6 @@
       "norm_label": "max_offline_seconds"
     },
     {
-      "label": "MONEY_STARTING_AMOUNT",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L59",
-      "_origin": "ast",
-      "id": "src_game_layers_money_starting_amount",
-      "community": 2,
-      "community_name": "layers.js",
-      "norm_label": "money_starting_amount"
-    },
-    {
       "label": "MUSEUM_HISTORY_CAP",
       "file_type": "code",
       "source_file": "src/game/layers.js",
@@ -7216,6 +7205,28 @@
       "community": 2,
       "community_name": "layers.js",
       "norm_label": "museum_history_cap"
+    },
+    {
+      "label": "MUSEUM_PIN_CAP",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L379",
+      "_origin": "ast",
+      "id": "src_game_layers_museum_pin_cap",
+      "community": 2,
+      "community_name": "layers.js",
+      "norm_label": "museum_pin_cap"
+    },
+    {
+      "label": "OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L371",
+      "_origin": "ast",
+      "id": "src_game_layers_offline_progress_full_speed_threshold_seconds",
+      "community": 2,
+      "community_name": "layers.js",
+      "norm_label": "offline_progress_full_speed_threshold_seconds"
     },
     {
       "label": "OFFLINE_PROGRESS_SPEED_MULTIPLIER",
@@ -7293,17 +7304,6 @@
       "community": 2,
       "community_name": "layers.js",
       "norm_label": "prestige_speed_bonus_unlock_cost"
-    },
-    {
-      "label": "PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L401",
-      "_origin": "ast",
-      "id": "src_game_layers_purchase_block_size_growth_interval_levels",
-      "community": 2,
-      "community_name": "layers.js",
-      "norm_label": "purchase_block_size_growth_interval_levels"
     },
     {
       "label": "PURCHASE_BLOCK_SIZE_GROWTH_STEP",
@@ -10969,6 +10969,50 @@
       "norm_label": "tiernamelabel"
     },
     {
+      "label": "StoragePage/index.jsx",
+      "file_type": "code",
+      "source_file": "src/pages/StoragePage/index.jsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "src_pages_storagepage_index",
+      "community": 52,
+      "community_name": "getDiskSizesToShow",
+      "norm_label": "storagepage/index.jsx"
+    },
+    {
+      "label": "Header",
+      "file_type": "code",
+      "source_file": "src/pages/StoragePage/index.jsx",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "src_pages_storagepage_index_header",
+      "community": 52,
+      "community_name": "getDiskSizesToShow",
+      "norm_label": "header"
+    },
+    {
+      "label": "RootDiv",
+      "file_type": "code",
+      "source_file": "src/pages/StoragePage/index.jsx",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "src_pages_storagepage_index_rootdiv",
+      "community": 52,
+      "community_name": "getDiskSizesToShow",
+      "norm_label": "rootdiv"
+    },
+    {
+      "label": "Title",
+      "file_type": "code",
+      "source_file": "src/pages/StoragePage/index.jsx",
+      "source_location": "L23",
+      "_origin": "ast",
+      "id": "src_pages_storagepage_index_title",
+      "community": 52,
+      "community_name": "getDiskSizesToShow",
+      "norm_label": "title"
+    },
+    {
       "label": "Architecture / MainPage UI decisions",
       "file_type": "document",
       "source_file": "docs/DESIGN_HISTORY.md",
@@ -11236,7 +11280,7 @@
       "label": "THEME_PREFERENCE_KEY",
       "file_type": "code",
       "source_file": "src/game/storage.js",
-      "source_location": "L591",
+      "source_location": "L601",
       "_origin": "ast",
       "id": "src_game_storage_theme_preference_key",
       "community": 57,
@@ -11541,26 +11585,15 @@
       "norm_label": "scientificnumberformatter"
     },
     {
-      "label": "AUTOBUYER_UNLOCK_MILESTONE_START",
+      "label": "GLOBAL_TICKSPEED_PRODUCTION_STEP",
       "file_type": "code",
       "source_file": "src/game/layers.js",
-      "source_location": "L455",
+      "source_location": "L472",
       "_origin": "ast",
-      "id": "src_game_layers_autobuyer_unlock_milestone_start",
+      "id": "src_game_layers_global_tickspeed_production_step",
       "community": 59,
       "community_name": "engine.js",
-      "norm_label": "autobuyer_unlock_milestone_start"
-    },
-    {
-      "label": "FLOPS_AUTOBUYER_ERA_STEP",
-      "file_type": "code",
-      "source_file": "src/game/layers.js",
-      "source_location": "L604",
-      "_origin": "ast",
-      "id": "src_game_layers_flops_autobuyer_era_step",
-      "community": 59,
-      "community_name": "engine.js",
-      "norm_label": "flops_autobuyer_era_step"
+      "norm_label": "global_tickspeed_production_step"
     },
     {
       "label": "HYPERSCALER_EON_COST_BASE",
@@ -11585,26 +11618,37 @@
       "norm_label": "intro_byte_base_rate"
     },
     {
-      "label": "MUSEUM_PIN_CAP",
+      "label": "LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT",
       "file_type": "code",
       "source_file": "src/game/layers.js",
-      "source_location": "L379",
+      "source_location": "L565",
       "_origin": "ast",
-      "id": "src_game_layers_museum_pin_cap",
+      "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_percent",
       "community": 59,
       "community_name": "engine.js",
-      "norm_label": "museum_pin_cap"
+      "norm_label": "last_tier_xp_tickspeed_min_consumption_percent"
     },
     {
-      "label": "OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS",
+      "label": "MONEY_STARTING_AMOUNT",
       "file_type": "code",
       "source_file": "src/game/layers.js",
-      "source_location": "L371",
+      "source_location": "L59",
       "_origin": "ast",
-      "id": "src_game_layers_offline_progress_full_speed_threshold_seconds",
+      "id": "src_game_layers_money_starting_amount",
       "community": 59,
       "community_name": "engine.js",
-      "norm_label": "offline_progress_full_speed_threshold_seconds"
+      "norm_label": "money_starting_amount"
+    },
+    {
+      "label": "PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS",
+      "file_type": "code",
+      "source_file": "src/game/layers.js",
+      "source_location": "L401",
+      "_origin": "ast",
+      "id": "src_game_layers_purchase_block_size_growth_interval_levels",
+      "community": 59,
+      "community_name": "engine.js",
+      "norm_label": "purchase_block_size_growth_interval_levels"
     },
     {
       "label": "TIER_TICKSPEED_AUTOBUYER_MILESTONE_START",
@@ -12179,50 +12223,6 @@
       "norm_label": "writecachesegment"
     },
     {
-      "label": "StoragePage/index.jsx",
-      "file_type": "code",
-      "source_file": "src/pages/StoragePage/index.jsx",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "src_pages_storagepage_index",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "storagepage/index.jsx"
-    },
-    {
-      "label": "Header",
-      "file_type": "code",
-      "source_file": "src/pages/StoragePage/index.jsx",
-      "source_location": "L16",
-      "_origin": "ast",
-      "id": "src_pages_storagepage_index_header",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "header"
-    },
-    {
-      "label": "RootDiv",
-      "file_type": "code",
-      "source_file": "src/pages/StoragePage/index.jsx",
-      "source_location": "L5",
-      "_origin": "ast",
-      "id": "src_pages_storagepage_index_rootdiv",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "rootdiv"
-    },
-    {
-      "label": "Title",
-      "file_type": "code",
-      "source_file": "src/pages/StoragePage/index.jsx",
-      "source_location": "L23",
-      "_origin": "ast",
-      "id": "src_pages_storagepage_index_title",
-      "community": 61,
-      "community_name": "DiskArrayRow/index.jsx",
-      "norm_label": "title"
-    },
-    {
       "label": "Era ascension and Eons (#407)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
@@ -12512,7 +12512,7 @@
       "label": "ALL_TIER_IDS",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1561",
+      "source_location": "L1562",
       "_origin": "ast",
       "id": "src_app_test_all_tier_ids",
       "community": 64,
@@ -16392,7 +16392,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L82",
+      "source_location": "L83",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test_seedmaingamestate",
@@ -16404,7 +16404,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L84",
+      "source_location": "L85",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test_seedmaingamestate",
@@ -22812,7 +22812,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L563",
+      "source_location": "L573",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage_applydevgamestatejson",
@@ -22824,7 +22824,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L570",
+      "source_location": "L580",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage_applydevgamestatejson",
@@ -22836,7 +22836,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L573",
+      "source_location": "L583",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage_applydevgamestatejson",
@@ -22848,7 +22848,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L585",
+      "source_location": "L595",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage_applydevgamestatejson",
@@ -23448,7 +23448,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L545",
+      "source_location": "L555",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage_mergestatefordevwrite",
@@ -27204,7 +27204,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -27216,7 +27216,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -27329,6 +27329,18 @@
       "_origin": "ast",
       "source": "src_app_test",
       "target": "src_game_layers_compute_entity_cap",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/App.test.jsx",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_app_test",
+      "target": "src_game_layers_compute_flops_reveal_pp",
       "confidence_score": 1.0
     },
     {
@@ -38544,7 +38556,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -38556,7 +38568,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L32",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -43951,7 +43963,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1561",
+      "source_location": "L1562",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -43962,7 +43974,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1565",
+      "source_location": "L1566",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -43973,7 +43985,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L2293",
+      "source_location": "L2294",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -43984,7 +43996,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L4189",
+      "source_location": "L4190",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -43995,7 +44007,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L64",
+      "source_location": "L65",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -44006,7 +44018,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L79",
+      "source_location": "L80",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -44017,7 +44029,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L95",
+      "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -50232,22 +50244,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L541",
+      "source_location": "L551",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage",
       "target": "src_game_storage_mergestatefordevwrite",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/game/storage.js",
-      "source_location": "L562",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_game_storage",
-      "target": "src_game_storage_applydevgamestatejson",
       "confidence_score": 1.0
     },
     {
@@ -50265,7 +50266,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L591",
+      "source_location": "L572",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_game_storage",
+      "target": "src_game_storage_applydevgamestatejson",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/game/storage.js",
+      "source_location": "L601",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage",
@@ -50276,7 +50288,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L593",
+      "source_location": "L603",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage",
@@ -50287,7 +50299,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/storage.js",
-      "source_location": "L603",
+      "source_location": "L613",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_storage",
@@ -53973,5 +53985,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "fb3640e1a1088b993d02835efe4588767f2475f8"
+  "built_at_commit": "e745275e14d581910c43765a04c00435bc1a0d26"
 }
