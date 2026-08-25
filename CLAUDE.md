@@ -1157,7 +1157,8 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
 - All purchases, autobuyer upgrades, and prestige are validated inside `engine.js`, not just via disabled UI
   buttons — the engine re-checks affordability/unlock state on every call.
 - `saveGameState`/`loadGameState`/`clearGameState`/`loadLastSaveTimestamp` wrap `localStorage` access in
-  try/catch and fail silently (quota errors, private-browsing restrictions).
+  try/catch and fail silently (quota errors, private-browsing restrictions). JSON loads use
+  `safeJsonParse` (drops `__proto__`/`constructor`) before merge.
 - Timer effects (`useIncrementalGame`'s `setInterval`) are cleaned up on unmount.
 
 ## graphify
