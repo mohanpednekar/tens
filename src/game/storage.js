@@ -2,6 +2,13 @@ import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameS
 import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
+// Drop __proto__/constructor at parse time so localStorage/Dev JSON cannot pollute merges.
+const safeJsonParse = jsonString =>
+  JSON.parse(jsonString, (key, value) => {
+    if (key === '__proto__' || key === 'constructor') return undefined
+    return value
+  })
+
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
 const STORAGE_KEY = 'tens_game_state'
@@ -58,7 +65,7 @@ const readRawMeta = () => {
   try {
     const raw = localStorage.getItem(SAVES_META_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    return safeJsonParse(raw)
   } catch {
     return null
   }
@@ -298,7 +305,7 @@ export const buildResetByteFoundryConfirmMessage = () => {
     `Reset Byte Foundry on "${name}"?\n\n` +
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
     `Erased: Memory, Capacity, Combine / Invest / Bandwidth progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
-    `Convenience: Combine, Invest / Bandwidth, and Disk Build auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity stays manual.\n\n` +
+    `Convenience: Combine, Invest / Bandwidth, Disk Build, and Capacity (Sacrifice) all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them.\n\n` +
     `Also kept: Ladder, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
@@ -375,7 +382,7 @@ const readActiveSavePayload = () => {
   try {
     const raw = localStorage.getItem(slotStateKey(slotId))
     if (!raw) return null
-    return JSON.parse(raw)
+    return safeJsonParse(raw)
   } catch {
     return null
   }
@@ -583,7 +590,7 @@ export const applyDevGameStateJson = (jsonText, currentState) => {
   if (!isDevModeActive()) return { ok: false, reason: 'dev_mode_inactive' }
   let parsed
   try {
-    parsed = JSON.parse(jsonText)
+    parsed = safeJsonParse(jsonText)
   } catch {
     return { ok: false, reason: 'invalid_json' }
   }

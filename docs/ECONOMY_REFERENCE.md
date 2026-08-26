@@ -173,14 +173,10 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    below, affordable and unclaimed), any currently-buildable Disk array (step 8 below), and an
    activatable Compute Boost (step 9 below, once unlocked) are all NOT currently possible — see
    "Forced priority order" below for the full five-item ranking this composes.
-   `ByteFoundryPage`'s own button asks for confirmation (in-game `ConfirmDialog`, not
-   `window.confirm`) before actually calling `pickIntroCapacityMilestone`, spelling out that it's
-   permanent; an extra line warning that it also wipes all held Compute tokens and rolls back
-   Bandwidth upgrades bought with Compute tokens is shown only once Compute is unlocked
-   (`isComputeCoreConversionUnlocked`) — Cores are no longer minted from Memory at all (that "every
-   future Core costs more" warning was retired along with Claim Core; see `docs/DESIGN_HISTORY.md`).
-   Cancelling leaves Memory/capacity untouched. The engine-level gate above is unaffected either
-   way — the confirm dialog is a UI-level checkpoint on top of it, not a replacement for it.
+   `ByteFoundryPage`'s own button fires `pickIntroCapacityMilestone` immediately on click — no
+   confirm prompt (see `docs/DESIGN_HISTORY.md`'s "Sacrifice confirm" section for why the earlier
+   `ConfirmDialog` step was removed). The engine-level gate above is what actually protects against
+   an accidental/premature Sacrifice; nothing UI-level sits on top of it any more.
    **Queued Capacity** (`queueIntroCapacityUpgrade` / `tickQueuedCapacityUpgrade`): Capacity may be
    queued before Memory is full — but not once already at the cap, since there's nothing left to
    commit to. Once queued, the next time Memory is full and Disk Fill / Bandwidth /
@@ -1606,10 +1602,10 @@ A second Danger-zone control, **"↺ Reset Byte Foundry…"**, calls `resetByteF
 Invest / Bandwidth multipliers and Disks/Storage and every Compute ladder entity / boost /
 auto-claim / auto-merge unlock / reveal latch wiped — so Foundry progress genuinely restarts from
 scratch. It records high-water marks in `intro.foundryResetCaps` (Combine, Invest ladder progress,
-per-size `disksBuiltTotal`). `tickFoundryResetConvenience` (from `tickGame`, after Disk auto-fill)
-then auto-presses Combine, bit-funded Invest / Bandwidth, and Disk Build whenever their normal
-turn gates allow, capped at those highs — a convenience so the player does not have to click every
-upgrade/build button again. Capacity / Sacrifice is never auto-pressed. `intro.mainGameUnlocked`
+per-size `disksBuiltTotal`, and Capacity itself). `tickFoundryResetConvenience` (from `tickGame`,
+after Disk auto-fill) then auto-presses Combine, bit-funded Invest / Bandwidth, Disk Build, and
+Capacity (Sacrifice) whenever their normal turn gates allow, capped at those highs — a convenience
+so the player does not have to click every upgrade/build/Sacrifice button again. `intro.mainGameUnlocked`
 is preserved when already true. Every non-`intro` field (Tiers, Prestige, automations, …) is left
 unchanged. Unlike full Reset, it does not clear the save slot. Both Danger-zone actions stay
 disabled while production is frozen at the Prestige threshold.
@@ -2087,7 +2083,7 @@ purchases were manual or automatic.
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears `capacityUpgradeQueued` without Sacrificing. Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
 | `resetByteFoundry` | `state → state` | Settings → Danger zone: fresh `intro` (Memory/Capacity/upgrades/Disks/Compute wiped to scratch), records `foundryResetCaps` high-water marks. Preserves `mainGameUnlocked` when already true. Leaves every non-`intro` field untouched |
-| `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, bit-funded Invest / Bandwidth, and Disk Build up to those caps when their normal turn gates allow. Never auto-Sacrifices Capacity. Same-reference no-op when inactive |
+| `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, bit-funded Invest / Bandwidth, Disk Build, and Capacity (Sacrifice) up to those caps when their normal turn gates allow. Same-reference no-op when inactive |
 | `tickQueuedCapacityUpgrade` | `state → state` | If queued, Memory full, not already at the cap (`!isMemoryCapacityAtCap(state)`), and Disk Fill/Bandwidth/Disk Build unavailable: `eraseAllComputeTokens` then Sacrifice ×2 (`INTRO_CAPACITY_DOUBLING_STEP`) and clear the queue (bypasses `isComputeUpgradeAvailable`). Called from `tickGame` after intro production / disk-build countdown, before Disk auto-fill. Same-reference no-op otherwise (including once at the cap) |
 | `getIntroProductionMilestoneCost` | `tier → number` | Byte Foundry: `INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER ** tier` — "Invest for Double Production"'s own independent cost ladder (8, 32, 128, 512, 2048, … bits), unrelated to `intro.capacity` |
 | `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/4/16 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |

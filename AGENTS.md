@@ -326,8 +326,8 @@ publicly visible but isn't legally reusable without written permission. No `CODE
   UI buttons — every action is re-checked server-side-equivalent (there is no server, but the engine
   is the single point of truth regardless of which UI control triggered it).
 - Timer effects are cleaned up on unmount.
-- Save/load wraps `localStorage` access in try/catch and fails silently on quota/private-browsing
-  errors.
+- Save/load wraps `localStorage` in try/catch (quota/private-browsing) and strips
+  `__proto__`/`constructor` from parsed JSON before merge.
 - `.github/workflows/**` changes require the repo owner's review, enforced two ways:
   `pr-auto-merge.yml`'s script-level exclusion, and (once branch protection enables "Require review
   from Code Owners") `.github/CODEOWNERS`.

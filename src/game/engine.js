@@ -369,7 +369,7 @@ export const createInitialGameState = () => ({
     // longer reset it early. Resets to 0 when Sacrifice does roll back compute-funded Bandwidth.
     computeBandwidthSacrificeIndex: 0,
     // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Invest /
-    // Bandwidth, Disk Build) after a Foundry wipe. null when inactive. Capacity is never replayed.
+    // Bandwidth, Disk Build, and Capacity/Sacrifice) after a Foundry wipe. null when inactive.
     // Survives Prestige like other permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
@@ -1506,7 +1506,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
-  // After a Foundry reset, auto-press Combine / Invest / Disk Build up to foundryResetCaps.
+  // After a Foundry reset, auto-press Combine / Invest / Disk Build / Capacity (Sacrifice) up to
+  // foundryResetCaps.
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
   // Every tier boundary (Core->Node through Supercomputer->Megacomputer) fires here, lowest tier
   // first so a single tick can cascade upward through every unlocked step in a row — see
@@ -4257,7 +4258,8 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tiers, not to change what Prestige/Speed Up themselves do.
 
 // Snapshot of Foundry upgrade progress used as a high-water cap for resetByteFoundry's
-// convenience auto-replay (see tickFoundryResetConvenience). Capacity is deliberately omitted.
+// convenience auto-replay (see tickFoundryResetConvenience) — Capacity/Sacrifice included, same
+// as every other tracked axis.
 export const captureFoundryUpgradeCaps = intro => {
   const disksBuiltTotal = intro?.disksBuiltTotal ?? {}
   const diskCaps = {}
@@ -4270,11 +4272,12 @@ export const captureFoundryUpgradeCaps = intro => {
     productionMilestoneTier: Math.max(0, Math.floor(clampNonNegative(intro?.productionMilestoneTier ?? 0))),
     productionMilestoneTierClaims: Math.max(0, Math.floor(clampNonNegative(intro?.productionMilestoneTierClaims ?? 0))),
     disksBuiltTotal: diskCaps,
+    capacity: Math.max(INTRO_STARTING_CAPACITY, clampNonNegative(intro?.capacity ?? INTRO_STARTING_CAPACITY)),
   }
 }
 
 // Merge two cap snapshots, taking the max progress on each axis (Invest lexicographic; per-size
-// disk build counts). null/undefined sides are treated as empty.
+// disk build counts; Capacity itself). null/undefined sides are treated as empty.
 export const mergeFoundryUpgradeCaps = (a, b) => {
   const left = a ?? captureFoundryUpgradeCaps(null)
   const right = b ?? captureFoundryUpgradeCaps(null)
@@ -4299,6 +4302,7 @@ export const mergeFoundryUpgradeCaps = (a, b) => {
     byteCreated: left.byteCreated || right.byteCreated,
     ...invest,
     disksBuiltTotal: diskCaps,
+    capacity: Math.max(left.capacity ?? INTRO_STARTING_CAPACITY, right.capacity ?? INTRO_STARTING_CAPACITY),
   }
 }
 
@@ -4319,13 +4323,20 @@ const isDiskBuildBelowCap = (state, caps) => {
   return built < cap
 }
 
+const isCapacityBelowCap = (intro, caps) =>
+  (intro?.capacity ?? INTRO_STARTING_CAPACITY) < (caps.capacity ?? INTRO_STARTING_CAPACITY)
+
 // Safety bound: one tick should not infinite-loop if a reducer keeps succeeding unexpectedly.
 const FOUNDRY_RESET_CONVENIENCE_MAX_STEPS = 64
 
 // Convenience auto-clicker after resetByteFoundry: while foundryResetCaps is set, press Combine,
-// bit-funded Invest / Bandwidth, and Disk Build whenever their normal turn gates allow — capped
-// at the pre-reset highs. Capacity / Sacrifice is never auto-pressed. Same-reference no-op when
-// caps are inactive or nothing is eligible. Called from tickGame after Disk auto-fill.
+// bit-funded Invest / Bandwidth, Disk Build, and Sacrifice (Capacity) whenever their normal turn
+// gates allow — capped at the pre-reset highs. Sacrifice fires through the same
+// isMemoryCapacityUpgradeAvailable gate a manual click uses (Memory full, nothing higher-ranked
+// available), so it only actually advances once Memory naturally refills to the current capacity,
+// same as the other steps above waiting on their own costs — this just presses the button instead
+// of requiring a manual click. Same-reference no-op when caps are inactive or nothing is eligible.
+// Called from tickGame after Disk auto-fill.
 export const tickFoundryResetConvenience = state => {
   const caps = state.intro?.foundryResetCaps
   if (!caps) return state
@@ -4357,6 +4368,14 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
+  if (isCapacityBelowCap(next.intro, caps)) {
+    const sacrificed = pickIntroCapacityMilestone(next)
+    if (sacrificed !== next) {
+      next = sacrificed
+      changed = true
+    }
+  }
+
   return changed ? next : state
 }
 
@@ -4364,8 +4383,8 @@ export const tickFoundryResetConvenience = state => {
 // came with it) was pushed too far. Wipes Memory, Capacity, Disks/Storage, Compute, and every
 // Foundry upgrade (Combine / Invest / Bandwidth multipliers restart from scratch). Records
 // high-water caps in intro.foundryResetCaps so tickFoundryResetConvenience can auto-press those
-// upgrade/build buttons again up to the prior highs — Capacity stays manual. Preserves
-// mainGameUnlocked when already true. Leaves every non-intro field untouched.
+// upgrade/build/Sacrifice buttons again up to the prior highs. Preserves mainGameUnlocked when
+// already true. Leaves every non-intro field untouched.
 export const resetByteFoundry = state => {
   const initialIntro = createInitialGameState().intro
   const prev = state.intro ?? {}
