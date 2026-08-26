@@ -3082,14 +3082,16 @@ describe('Byte Foundry Storage', () => {
         [size10kb]: 2,
       },
       disks: { [currentBankSize]: 1, [size10kb]: 1 },
-      diskCache: { [currentBankSize]: currentBankSize, [size10kb]: size10kb },
+      diskCache: { [currentBankSize]: currentBankSize },
     })
     render(<App />)
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('10 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
+    // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
+    expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
     expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
@@ -3130,7 +3132,9 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^10 kb read cache$/i })).toBeInTheDocument()
+    // 10 KB never gets a read cache, regardless of redeemability — only the pool's smallest size
+    // (1 KB) does (see isDiskReadCacheEligible in engine.js).
+    expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
   })
 
   test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {
@@ -3289,7 +3293,8 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryByRole('button', { name: /auto-redeem 1 kb disk/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
+    expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.diskAutoRedeemedSizes[String(currentBankSize)]).toBe(true)
 
     unmount()
@@ -3329,14 +3334,16 @@ describe('Byte Foundry Storage', () => {
     // convention as "the manual convert button appears..." above.
     expect(screen.queryByRole('button', { name: /redeem 10 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
+    // Completes tier01's whole level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
+    expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks[futureBankSize]).toBeUndefined()
 
-    // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
-    // visible on ByteFoundryPage's own transfer-block row (a live mirror of the same progress) once
-    // navigated back there via AppNav.
+    // Redeeming completes tier01's whole level 2 in one shot (see redeemDisk's own doc comment),
+    // rolling it straight into a fresh level 3 with no progress yet — visible on ByteFoundryPage's
+    // own transfer-block row (a live mirror of the same purchaseLevelProgress) as zero transferred
+    // blocks, not a partial 1/8, once navigated back there via AppNav.
     fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-    expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
+    expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   })
 
   test('Data Lake renders bare (no separate "Data Lakes" card) as part of the same pool card once a lake has any deposit', () => {
@@ -3373,9 +3380,10 @@ describe('Byte Foundry Storage', () => {
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Auto-redeemed without a manual click on the disk button itself.
+    // Auto-redeemed without a manual click on the disk button itself. Completes tier01's whole
+    // level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
+    expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks?.[futureBankSize] ?? 0).toBe(0)
 
     unmount()

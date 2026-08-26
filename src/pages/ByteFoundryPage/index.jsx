@@ -523,7 +523,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       ? 'Take Bandwidth (or redeem a full Disk) first'
                       : diskRedeemTierName
                         ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                        : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
+                        : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
               }
               type="button"
               variant={canStartDiskBuild ? 'info' : 'neutral'}
@@ -549,7 +549,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <DiskArrayRow key={size} actions={actions} size={size} state={state} />
             ))}
 
-            <DataLakePanel state={state} bare />
+            <DataLakePanel actions={actions} state={state} bare />
           </>
         )}
       </PoolCard>
