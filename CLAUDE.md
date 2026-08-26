@@ -978,20 +978,38 @@ reserve beyond its own deposits (below) — past that, it's a throughput pipe on
 inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to
 QB.
 
-*Deposits* — a prepaid convenience buffer, up to `DATA_LAKE_CAPACITY` (999) units per lake, filled
-by depositing Disks (`9×1 + 9×10 + 9×100` of that tier's denomination) via `depositDiskToDataLake` —
-fully automatic, no manual click: `tickDiskAutoDeposit` (called from `tickGame`'s `tickStorage`
-right after auto-redeem) deposits the smallest eligible size each tick, but only once that SIZE's
-own disk array is completely built (all `DISK_ARRAY_LADDER_CAP` (10) disks ever built,
-`disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, not merely holding one full disk) **and** the size
-is not currently redeemable for the main game (`!isDiskRedeemable`) — the same "disks always take
-priority for matching level costs" rule the read cache already follows, so a disk a tier could still
-redeem stays available for that instead of being swept into the lake. Since a lake's 3 sub-slots map
-to 3 successive disk sizes (all feeding the SAME lake, one per pool), this naturally stages the
-lake's deposit cap: **9** once only the smallest (×1) size's array is complete, **99** once the ×10
-size's array is also complete, the full **999** once the ×100 size's array is complete too — no
-separate staged-capacity field, the existing sub-slot structure already encodes it (see
-`isDiskArrayFullyBuilt` in `engine.js`).
+*Deposits* — a prepaid convenience buffer, up to `getDataLakeCapacity(state, tierIndex)` (999 to
+start — see "Capacity doubling" below) units per lake, filled by depositing Disks
+(`9×1 + 9×10 + 9×100` of that tier's denomination at the starting capacity) via
+`depositDiskToDataLake` — fully automatic, no manual click: `tickDiskAutoDeposit` (called from
+`tickGame`'s `tickStorage` right after auto-redeem) deposits the smallest eligible size each tick,
+but only once that SIZE's own disk array is completely built (all `DISK_ARRAY_LADDER_CAP` (10)
+disks ever built, `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, not merely holding one full
+disk) **and** the size is not currently redeemable for the main game (`!isDiskRedeemable`) — the
+same "disks always take priority for matching level costs" rule the read cache already follows, so
+a disk a tier could still redeem stays available for that instead of being swept into the lake.
+Since a lake's 3 sub-slots map to 3 successive disk sizes (all feeding the SAME lake, one per
+pool), this naturally stages the lake's deposit cap at the starting `getDataLakeSlotMax` (9): **9**
+once only the smallest (×1) size's array is complete, **99** once the ×10 size's array is also
+complete, the full **999** once the ×100 size's array is complete too — no separate staged-capacity
+field, the existing sub-slot structure already encodes it (see `isDiskArrayFullyBuilt` in
+`engine.js`).
+
+*Capacity doubling* (`doubleDataLakeCapacity(tierIndex)`) — a standing lever on top of the staged
+progression above, not a replacement for it (the array-completion gate on each sub-slot is
+unaffected): spends a lake's own current capacity (`getDataLakeCapacityDoublingCost`, in Memory
+Bits) to double its `slotMax` (`getDataLakeSlotMax`, `DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2× per
+purchase — same "spend the current value to double it" shape Memory's own Sacrifice uses), and
+therefore its capacity (`getDataLakeCapacity` = `slotMax × 111`, the sum of the three sub-sizes).
+Gated by the same forced priority order every other Byte Foundry milestone action follows —
+available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute) currently
+is, same rank as Memory's own Sacrifice (`isDataLakeCapacityDoublingTurnAvailable`). Raising
+`slotMax` past the base value also raises each sub-slot's own cap in `canDepositDiskToDataLake`
+and the digit-decomposition ceiling `decomposeDataLakeDeposits` caps each place at (generalizing
+what was previously a hardcoded base-10/`DATA_LAKE_SLOT_MAX` assumption) — deposits stay fungible,
+not tracked per physical disk, so spending re-decomposes the remaining total largest-denomination-
+first, same as before. Rendered as a compact "⚡ ×2 Capacity" button per lake row in
+`DataLakePanel`.
 
 *Starting a Booster* (`startBoosterTransfer(tierIndex)`, ComputePage) — the nth Booster ever
 started at tier *t* (completed or still in flight) costs *n* units of lake *t*
@@ -1127,7 +1145,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1544 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1550 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

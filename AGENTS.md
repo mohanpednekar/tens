@@ -144,7 +144,10 @@ Boosters, escalating cost (nth = n units, counting in-flight starts too): a full
 auto-deposits into its lake (no manual action — deferring to a still-redeemable disk first) as a
 prepaid buffer that spends first/instantly, any remaining cost live-transfers off built Disks over
 time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
-never itself banks a spendable reserve beyond its deposits. A separate PP **Compute (Flops)**
+never itself banks a spendable reserve beyond its deposits. A lake's own capacity can also be
+doubled directly (spend its current capacity in Bits to double it, same shape as Memory's own
+Sacrifice) — stacks on top of the staged array-completion progression rather than replacing it. A
+separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no

@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
   future `android/` / `ios/` build artifacts. Native platform projects and
   `mobile-build.yml` are deferred to a later slice of #70.
+- **Data Lake capacity doubling** — each lake's own capacity can now be doubled directly, at a cost
+  equal to its current capacity in Memory Bits (the same "spend the current value to double it"
+  shape Memory's own Sacrifice already uses). Stacks on top of the existing staged 9 → 99 → 999
+  array-completion progression rather than replacing it — a sub-slot still can't accept any deposit
+  until its own disk array is complete. Gated by the same forced priority order as every other Byte
+  Foundry milestone action. Rendered as a compact "⚡ ×2 Capacity" button per lake row.
 - **Dev Mode** — a local, dev-build-only sandbox (More → Dev Mode, rendered only when
   `import.meta.env.DEV`; absent from the production build) for seeding and experimenting with game
   state on a save entirely separate from any real player slot. Toggle it on/off without touching

@@ -412,9 +412,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
                     ? (autoRedeem
                       ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
                       : manualRedeem
-                        ? `Tap to redeem 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
+                        ? `Tap to redeem 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
                         : redeemable
-                          ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready for Memory to fill it again`
+                          ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
                           : `Redeemable once some tier's level cost matches ${sizeLabel}`)
                     : isEmpty
                       ? (hasReadCache ? 'Built, waiting to fill from read cache' : 'Built, waiting to fill from the size below')

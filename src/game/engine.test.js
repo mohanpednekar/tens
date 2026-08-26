@@ -220,6 +220,12 @@ import {
   getDiskReadCacheFlushSeconds,
   canDepositDiskToDataLake,
   depositDiskToDataLake,
+  doubleDataLakeCapacity,
+  getDataLakeCapacity,
+  getDataLakeCapacityDoublingCost,
+  getDataLakeSlotMax,
+  isDataLakeCapacityDoublingAvailable,
+  isDataLakeCapacityDoublingTurnAvailable,
   startBoosterTransfer,
   canStartBoosterTransfer,
   getDataLakeTierIndex,
@@ -2283,6 +2289,26 @@ describe('tickDiskAutoFill', () => {
     const after = tickDiskAutoFill(0)(state)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
     expect(after.intro.bits).toBe(level2Size)
+  })
+
+  it('self-heals a save carrying a stale in-flight read-cache flush for a now-ineligible size, dropping it without touching Memory', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      bits: 0,
+      disksBuiltTotal: { [level2Size]: 1 },
+      // A save from before only the smallest size kept a read cache could still carry a full cache
+      // mid-flush into an empty disk at this now-ineligible size.
+      diskCache: { [level2Size]: level2Size },
+      diskReadCacheFlush: { [level2Size]: { remainingSeconds: 5, totalSeconds: 10 } },
+    })
+    const after = tickDiskAutoFill(1)(state)
+    expect(after.intro.diskReadCacheFlush?.[level2Size]).toBeUndefined()
+    // The stale cache itself is still refunded to Memory (same as the sibling test above) — the
+    // flush entry is just the timer wrapped around it, dropped alongside.
+    expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
+    expect(after.intro.bits).toBe(level2Size)
+    // No disk was ever credited from this stale, now-abandoned flush.
+    expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
   })
 
   it('does not pour read cache into an empty disk while tier cost matches that size, even with surplus Memory', () => {
@@ -8377,6 +8403,82 @@ describe('Data Lakes', () => {
     expect(canDepositDiskToDataLake(state, kb100)).toBe(true)
     for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb100)(state)
     expect(getDataLakeDepositedUnits(1)(state)).toBe(999)
+  })
+
+  it('getDataLakeCapacity/getDataLakeSlotMax default to the base values for a fresh lake', () => {
+    const state = createInitialGameState()
+    expect(getDataLakeSlotMax(state, 1)).toBe(9)
+    expect(getDataLakeCapacity(state, 1)).toBe(999)
+    expect(getDataLakeCapacityDoublingCost(state, 1)).toBe(999)
+  })
+
+  it('isDataLakeCapacityDoublingAvailable/TurnAvailable gate on affordability and the forced priority order', () => {
+    // Not affordable — 998 bits, needs 999.
+    expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { bits: 998, ...noOtherUpgradesLeft }), 1)).toBe(false)
+    // Affordable, and nothing ranked above it (Disk Fill/Bandwidth/Disk Build/Compute) is available.
+    const affordable = withIntro(createInitialGameState(), { bits: 999, ...noOtherUpgradesLeft })
+    expect(isDataLakeCapacityDoublingAvailable(affordable, 1)).toBe(true)
+    expect(isDataLakeCapacityDoublingTurnAvailable(affordable, 1)).toBe(true)
+    // A redeemable full disk (Disk Fill) outranks it — same forced-priority chain Sacrifice uses.
+    const diskFillBlocks = withIntro(createInitialGameState(), { bits: 999, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    expect(isDiskFillAvailable(diskFillBlocks)).toBe(true)
+    expect(isDataLakeCapacityDoublingTurnAvailable(diskFillBlocks, 1)).toBe(false)
+  })
+
+  it('doubleDataLakeCapacity is a no-op below cost or while a higher-priority action is available', () => {
+    const tooPoor = withIntro(createInitialGameState(), { bits: 998, ...noOtherUpgradesLeft })
+    expect(doubleDataLakeCapacity(1)(tooPoor)).toBe(tooPoor)
+
+    const blockedByDiskFill = withIntro(createInitialGameState(), { bits: 999, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    expect(doubleDataLakeCapacity(1)(blockedByDiskFill)).toBe(blockedByDiskFill)
+  })
+
+  it('doubleDataLakeCapacity spends the lake\'s current capacity in bits and doubles its slotMax/capacity', () => {
+    const state = withIntro(createInitialGameState(), { bits: 999, ...noOtherUpgradesLeft })
+    const after = doubleDataLakeCapacity(1)(state)
+    expect(after.intro.bits).toBe(0)
+    expect(getDataLakeSlotMax(after, 1)).toBe(18)
+    expect(getDataLakeCapacity(after, 1)).toBe(1998)
+    expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(1998)
+    // Doesn't disturb other lakes.
+    expect(getDataLakeSlotMax(after, 2)).toBe(9)
+  })
+
+  it('after doubling, a lake\'s sub-slot can bank more than the base 9 units, and startBoosterTransfer decomposes past 999 correctly', () => {
+    // tier01 bumped past level 1 so kb1 disks aren't currently redeemable — otherwise Disk Fill
+    // would outrank doubleDataLakeCapacity in the forced priority order (same reasoning as the
+    // tickDiskAutoDeposit tests above).
+    let state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: 999,
+      disks: { [kb1]: 9 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      ...noOtherUpgradesLeft,
+    })
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb1)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(9)
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(false) // at the base slotMax (9)
+
+    state = doubleDataLakeCapacity(1)(state)
+    expect(getDataLakeSlotMax(state, 1)).toBe(18)
+
+    // Rebuild 9 more full kb1 disks (as if refilled/redeemed-and-refilled over time) and deposit
+    // them too, pushing this sub-slot's own count past the old hardcoded digit-place assumption —
+    // only possible now that slotMax has doubled past the base 9.
+    state = withIntro(state, { disks: { ...state.intro.disks, [kb1]: 9 } })
+    expect(canDepositDiskToDataLake(state, kb1)).toBe(true)
+    for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb1)(state)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(18)
+    expect(state.intro.dataLakes[1].deposits[1]).toBe(18)
+
+    // Spend 1 unit via a Booster purchase — decomposeDataLakeDeposits must correctly re-derive the
+    // post-spend breakdown using this lake's own (doubled) slotMax, not the old flat 9-digit cap.
+    // Deposits are fungible (not tracked per physical disk), so the 17 remaining re-decompose
+    // largest-denomination-first: 0×100 + 1×10 + 7×1 = 17 — not simply "18 minus 1 in the ones
+    // place," which would exceed the base slotMax (9) were it still in force.
+    state = startBoosterTransfer(1)(state)
+    expect(state.intro.computeCores).toBe(1)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(17)
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 7, 10: 1, 100: 0 })
   })
 
   it('tickDiskAutoDeposit auto-feeds the pool\'s Data Lake once a size is no longer redeemable — no manual click needed', () => {

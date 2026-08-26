@@ -497,11 +497,31 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
    ever built at that size, checked by the internal `isDiskArrayFullyBuilt` helper) — before ANY of
    that size's disks can be deposited. Each lake's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10, 100]`,
-   `DATA_LAKE_SLOT_MAX` = 9 each) map to 3 successive disk sizes — all 3 feeding the SAME lake, one
-   per pool — so this array-completion gate naturally STAGES a lake's deposit cap rather than needing
-   a separate field for it: **9** (`DATA_LAKE_SLOT_MAX`) once only the smallest (×1) size's array is
-   complete, **99** once the ×10 size's array is also complete, and the full **999**
-   (`DATA_LAKE_CAPACITY`) once the ×100 size's array is complete too — see `docs/DESIGN_HISTORY.md`.
+   each capped at that lake's own `getDataLakeSlotMax(state, tierIndex)` — `DATA_LAKE_SLOT_MAX` (9)
+   to start) map to 3 successive disk sizes — all 3 feeding the SAME lake, one per pool — so this
+   array-completion gate naturally STAGES a lake's deposit cap rather than needing a separate field
+   for it: **9** once only the smallest (×1) size's array is complete, **99** once the ×10 size's
+   array is also complete, and the full **999** (`getDataLakeCapacity`, at the starting slotMax) once
+   the ×100 size's array is complete too — see `docs/DESIGN_HISTORY.md`.
+
+   **Capacity doubling** (`doubleDataLakeCapacity(tierIndex)`) — a lake's own `slotMax` can also be
+   doubled directly (`DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2×), spending
+   `getDataLakeCapacityDoublingCost` (= the lake's own current `getDataLakeCapacity`) in Memory
+   Bits — the same "spend the current value to double it" shape `pickIntroCapacityMilestone`
+   (Memory Sacrifice) already uses. This stacks on top of the staged array-completion progression
+   above rather than replacing it: a sub-slot still can't accept ANY deposit until its own disk
+   array is complete, regardless of `slotMax` — doubling only raises how much that already-open
+   sub-slot can hold. Gated by the same forced priority chain as every other Byte Foundry milestone
+   action (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Bandwidth,
+   Disk Build, and Compute are all currently unavailable, same rank as Sacrifice). Raising
+   `slotMax` past its base value required generalizing `decomposeDataLakeDeposits` (previously a
+   hardcoded base-10/digit-place assumption tied to `DATA_LAKE_SLOT_MAX` = 9): it now caps each
+   sub-size's own place at the lake's live `slotMax` (`Math.min(slotMax, Math.floor(remainder /
+   subSize))`) rather than assuming a true decimal digit — this is provably correct for the same
+   reason `planLiveDiskFunding`'s own greedy pass is (each sub-size evenly divides the one above
+   it, so a remainder left over after capping a larger place always fits the smaller places'
+   combined capacity, provided the overall total never exceeds `getDataLakeCapacity`, which
+   `canDepositDiskToDataLake` already enforces as a hard ceiling).
 
    **Starting a Booster** (`startBoosterTransfer(tierIndex)`, `getBoosterTransferPlan` internally) —
    a lake never itself banks a spendable reserve beyond its own deposits above; past that, it's a

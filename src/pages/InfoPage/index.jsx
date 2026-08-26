@@ -254,15 +254,17 @@ const InfoPage = () => {
         <h3>Cache, fill, release, redeem</h3>
         <ul>
           <li>
-            Each array keeps a Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth
-            of bits (e.g. a 1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory
-            refills whole blocks when a block was just released or the size was just unlocked —
-            Memory fills visibly between transfers rather than draining bit-by-bit.
+            Only the pool's smallest array — the one that actually draws from Memory — keeps a
+            Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth of bits (e.g. a
+            1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
+            blocks when a block was just released or the size was just unlocked — Memory fills
+            visibly between transfers rather than draining bit-by-bit.
           </li>
           <li>
-            Empty disks fill from a full read cache when no tier claim blocks that size — the flush
-            takes as long as filling one cache block at your current Byte Foundry production rate
-            (not instant). Larger sizes can also fill via write-cache merges from the size below.
+            That smallest array's empty disks fill from its full read cache when no tier claim
+            blocks that size — the flush takes as long as filling one cache block at your current
+            Byte Foundry production rate (not instant). Every larger size fills exclusively via
+            write-cache merges from the size below — it has no read cache of its own.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
@@ -303,15 +305,20 @@ const InfoPage = () => {
             onto your built Disks, not a stockpile.
           </li>
           <li>
-            Depositing a size's disks (a prepaid buffer, spent first when starting a Booster)
-            requires that size's array to be completely built (all {DISK_ARRAY_LADDER_CAP} disks
-            ever built), not just one currently full — deposit from a Foundry disk row once
-            eligible.
+            A size's disks deposit into its lake automatically — no manual action — once that
+            size's array is completely built (all {DISK_ARRAY_LADDER_CAP} disks ever built, not
+            just one currently full) and the disk isn't currently redeemable for the main game
+            (redeeming always comes first).
           </li>
           <li>
             Each lake's deposit buffer stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
             once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
             built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too.
+          </li>
+          <li>
+            A lake's own capacity can also be doubled directly — spend its current capacity (in
+            Bits) to double it, the same "spend the current value to double it" shape Memory's own
+            Sacrifice uses — stacking on top of the staged progression above rather than replacing it.
           </li>
           <li>
             Starting the nth Booster ever started at a lake (whether already granted or still

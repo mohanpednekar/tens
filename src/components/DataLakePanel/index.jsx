@@ -1,14 +1,20 @@
+import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
   formatAmount,
+  formatBitsInNearestUnit,
   formatOfflineDuration,
   getBoosterPurchaseCost,
+  getDataLakeCapacity,
+  getDataLakeCapacityDoublingCost,
   getDataLakeDepositedUnits,
+  getDataLakeSlotMax,
   getDataLakeTier,
   getDataLakeTierLabel,
   getDataLakeTransferCapacity,
+  isDataLakeCapacityDoublingTurnAvailable,
 } from 'game/engine'
-import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY, DATA_LAKE_TIER_COUNT } from 'game/layers'
+import { COMPUTE_TIER_LABELS, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
 const LakeList = styled.div`
@@ -37,6 +43,14 @@ const LakeStats = styled.span`
   font-variant-numeric: tabular-nums;
 `
 
+// Compact — icon + multiplier only, cost tucked into the title/aria-label rather than a second
+// visible line, matching this panel's already-terse per-lake row (one LakeRow per lake, not a
+// whole card of its own).
+const DoubleCapacityButton = styled(Button)`
+  padding: 0.2rem 0.5rem;
+  font-size: ${props => props.theme.type.scale.xs.size};
+`
+
 // Only rendered in `bare` mode, and only once there's actually a list below it to separate from
 // whatever the host card rendered above (Storage's Build button/Disk rows) — mirrors the
 // StatCard-wrapped mode, where that same visual break is just the card's own outer border.
@@ -52,7 +66,10 @@ const getVisibleLakeTierIndexes = state => {
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     const deposited = getDataLakeDepositedUnits(tierIndex)(state)
     const lake = getDataLakeTier(state, tierIndex)
-    if (deposited > 0 || (lake?.purchased ?? 0) > 0 || (lake?.transfers?.length ?? 0) > 0) {
+    // A lake whose capacity was already doubled at least once (before ever holding a deposit) is
+    // just as worth showing as one with activity — its own slotMax has moved off the base value.
+    const capacityGrown = getDataLakeSlotMax(state, tierIndex) > DATA_LAKE_SLOT_MAX
+    if (deposited > 0 || (lake?.purchased ?? 0) > 0 || (lake?.transfers?.length ?? 0) > 0 || capacityGrown) {
       tiers.push(tierIndex)
     }
   }
@@ -61,8 +78,9 @@ const getVisibleLakeTierIndexes = state => {
 
 // `bare` skips the own StatCard wrapper (background/border/shadow/padding) and renders just the
 // LakeList — used when a caller (e.g. ByteFoundryPage's single pool card) already provides that
-// chrome and nesting a second card here would double-box the same content.
-const DataLakePanel = ({ state, bare = false }) => {
+// chrome and nesting a second card here would double-box the same content. `actions` is only
+// needed for the capacity-doubling button below.
+const DataLakePanel = ({ actions, state, bare = false }) => {
   const visibleTiers = getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
@@ -84,14 +102,27 @@ const DataLakePanel = ({ state, bare = false }) => {
           ? Math.min(...transfers.map(transfer => transfer.remainingSeconds ?? 0))
           : 0
         const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
+        const capacity = getDataLakeCapacity(state, tierIndex)
+        const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
+        const canDouble = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
 
         return (
           <LakeRow key={tierIndex}>
             <LakeName>{`${label} Data Lake → ${boosterLabel}`}</LakeName>
             <LakeStats>
-              {`${formatAmount(deposited)}/${formatAmount(DATA_LAKE_CAPACITY)} deposited · ${formatAmount(purchased)} bought · next ${formatAmount(nextCost)} ${label}`}
+              {`${formatAmount(deposited)}/${formatAmount(capacity)} deposited · ${formatAmount(purchased)} bought · next ${formatAmount(nextCost)} ${label}`}
               {transfers.length > 0 && ` · ${formatAmount(transfers.length)}/${formatAmount(transferCapacity)} transferring (${formatOfflineDuration(soonestTransferSeconds)} left)`}
             </LakeStats>
+            <DoubleCapacityButton
+              aria-label={`double the ${label} Data Lake's capacity`}
+              disabled={!canDouble}
+              onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
+              title={`Spend ${formatBitsInNearestUnit(doublingCost)} — this lake's own current capacity — to double it to ${formatAmount(capacity * 2)}`}
+              type="button"
+              variant={canDouble ? 'prestige' : 'neutral'}
+            >
+              <ButtonContent>⚡ ×2 Capacity</ButtonContent>
+            </DoubleCapacityButton>
           </LakeRow>
         )
       })}
