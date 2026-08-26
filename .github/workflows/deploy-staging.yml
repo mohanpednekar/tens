@@ -1,0 +1,81 @@
+name: Deploy Dev Mode staging site (Netlify)
+
+# Deploys a SEPARATE, dev-mode-enabled build to Netlify — never GitHub Pages, never the real game
+# at mohanpednekar.github.io/tens/, which this workflow does not touch at all. See CLAUDE.md's
+# "Dev Mode" section for the full picture: why this exists, and the one-time Netlify setup this
+# workflow depends on.
+#
+# Inert until NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID repo secrets are both set — same
+# gate-on-secrets convention this repo already uses for CURSOR_API_KEY (see
+# cursor-autonomous-maintenance.yml). Real HTTP Basic Auth credentials
+# (STAGING_AUTH_USER/STAGING_AUTH_PASS) are pushed into the Netlify site's own environment on every
+# run so netlify/edge-functions/basic-auth.js can enforce them — none of these four secrets are
+# ever committed to this (public) repo, and GitHub masks their values in Action logs automatically.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        id: guard
+        env:
+          HAS_NETLIFY: ${{ secrets.NETLIFY_AUTH_TOKEN != '' && secrets.NETLIFY_SITE_ID != '' && 'true' || 'false' }}
+        run: |
+          echo "ready=$HAS_NETLIFY" >> "$GITHUB_OUTPUT"
+          if [ "$HAS_NETLIFY" != "true" ]; then
+            echo "NETLIFY_AUTH_TOKEN and/or NETLIFY_SITE_ID not set — skipping (inert until both are added; see CLAUDE.md's \"Dev Mode\" section)."
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.guard.outputs.ready == 'true'
+
+      - name: Enable Corepack
+        if: steps.guard.outputs.ready == 'true'
+        run: corepack enable
+
+      - name: Set up Node
+        if: steps.guard.outputs.ready == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        if: steps.guard.outputs.ready == 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: Build (Dev Mode enabled)
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          VITE_ENABLE_DEV_MODE: 'true'
+        run: yarn build:staging
+
+      - name: Push Basic Auth credentials to the Netlify site
+        # Only if both secrets are provided — otherwise the site keeps whatever credentials were
+        # last set (e.g. by hand in the Netlify dashboard); the edge function fails closed (503)
+        # until credentials exist at all, so this is never a silent open-access gap.
+        if: steps.guard.outputs.ready == 'true' && secrets.STAGING_AUTH_USER != '' && secrets.STAGING_AUTH_PASS != ''
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          STAGING_AUTH_USER: ${{ secrets.STAGING_AUTH_USER }}
+          STAGING_AUTH_PASS: ${{ secrets.STAGING_AUTH_PASS }}
+        run: |
+          npx --yes netlify-cli@17 env:set STAGING_AUTH_USER "$STAGING_AUTH_USER" --context production --secret
+          npx --yes netlify-cli@17 env:set STAGING_AUTH_PASS "$STAGING_AUTH_PASS" --context production --secret
+
+      - name: Deploy to Netlify
+        if: steps.guard.outputs.ready == 'true'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: npx --yes netlify-cli@17 deploy --dir=dist-staging --prod --message "staging deploy from ${{ github.sha }}"

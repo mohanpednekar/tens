@@ -127,7 +127,14 @@ function App() {
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
   } else if (page === 'dev') {
-    content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage focusNonce={tiersFocusNonce} game={game} />
+    // import.meta.env.DEV alone reflects the Vite *command* (vite/vite dev → true, vite build →
+    // false always, regardless of --mode) — VITE_ENABLE_DEV_MODE is the separate build-time flag
+    // `yarn build:staging` sets so the dev-mode-enabled staging build (a `vite build`, not `vite
+    // dev`) also includes this branch; the real `yarn build` output sets neither, so it's
+    // unaffected. See CLAUDE.md's "Dev Mode" section.
+    content = (import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_MODE === 'true')
+      ? <DevModePage game={game} />
+      : <MainPage focusNonce={tiersFocusNonce} game={game} />
   } else if (page === 'settings') {
     content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} onThemePreferenceChange={handleThemePreferenceChange} themePreference={themePreference} />
   } else {

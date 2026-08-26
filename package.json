@@ -39,6 +39,7 @@
     "start": "vite --host 127.0.0.1",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
+    "build:staging": "vite build --mode development --outDir dist-staging",
     "build:capacitor": "CAPACITOR=1 vite build",
     "cap:sync": "cap sync",
     "test": "vitest run",

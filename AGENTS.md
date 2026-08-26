@@ -13,8 +13,10 @@ is under Foundry as continuous **Data Stream + Disk** sections on the same scree
 item, and no second-level Memory | Storage tabs). Ladder uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
-dev build (`import.meta.env.DEV`) — a local sandbox for seeding/experimenting with an isolated save,
-never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section. Reset (full save wipe) and
+dev build (`import.meta.env.DEV`) or the separate `VITE_ENABLE_DEV_MODE`-flagged staging build
+deployed to Netlify (`deploy-staging.yml`, inert until configured) — a local sandbox for
+seeding/experimenting with an isolated save, never a player-facing feature and never part of the
+real deployed game; see `CLAUDE.md`'s "Dev Mode" section. Reset (full save wipe) and
 Reset Byte Foundry live under Settings → Danger zone (see CLAUDE.md's SettingsPage entry for what
 each wipes/keeps). No backend — state lives in React and persists to `localStorage`.
 

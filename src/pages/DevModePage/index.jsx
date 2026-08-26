@@ -12,10 +12,11 @@ import { isEditableScalar, prettifySegment, setValueAtPath } from './stateFields
 import styled from 'styled-components'
 
 // Dev-only sandbox (see CLAUDE.md → "Dev Mode"). Reached only through App.jsx/AppMenu entry
-// points gated behind `import.meta.env.DEV`, so this page's own code is unreachable — and, once
-// minified/tree-shaken by `yarn build`, absent — from a production bundle. Everything here
-// operates on a save entirely separate from any real player slot (see game/storage.js's
-// DEV_SLOT_ID); toggling Dev Mode off always resumes the real save untouched.
+// points gated behind `import.meta.env.DEV` (a real dev build) or `VITE_ENABLE_DEV_MODE` (the
+// separate dev-mode-enabled staging build `yarn build:staging` produces), so this page's own code
+// is unreachable — and, once minified/tree-shaken, absent — from the real `yarn build` production
+// bundle. Everything here operates on a save entirely separate from any real player slot (see
+// game/storage.js's DEV_SLOT_ID); toggling Dev Mode off always resumes the real save untouched.
 //
 // The "Variables" section below is not a hand-maintained field list: it's a recursive walk of the
 // live `game.state` object itself (see FieldNode) — the same object engine.js/storage.js produce

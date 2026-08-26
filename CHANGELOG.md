@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
 
 ### Added
+- **Dev Mode staging deploy** — a separate, dev-mode-enabled build (`yarn build:staging`) deployed
+  to its own Netlify site by `.github/workflows/deploy-staging.yml`, gated end-to-end behind HTTP
+  Basic Auth (a Netlify Edge Function, credentials never committed), so Dev Mode is reachable from
+  a phone without running `yarn dev` locally. Entirely separate from the real deployed game
+  (`deploy.yml`/GitHub Pages), which this never touches; inert until Netlify secrets are
+  configured.
 - **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
   `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
   (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for

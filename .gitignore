@@ -8,6 +8,7 @@ package-lock.json
 # Build output
 /build
 /dist
+/dist-staging
 
 # Capacitor native build artifacts (android/ + ios/ project trees are committed once added;
 # only generated build output stays ignored — see #70)

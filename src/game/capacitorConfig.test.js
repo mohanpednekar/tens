@@ -35,3 +35,28 @@ describe('Capacitor foundation (#70)', () => {
     expect(html).not.toMatch(/href="\/tens\/apple-touch-icon\.png"/)
   })
 })
+
+describe('Dev Mode staging build (see CLAUDE.md "Dev Mode")', () => {
+  it('serves the staging build from root (Netlify\'s own domain), not the GitHub Pages /tens/ base', () => {
+    const plain = createViteConfig({ netlifyStaging: false })
+    const staging = createViteConfig({ netlifyStaging: true })
+
+    expect(plain.base).toBe('/tens/')
+    expect(staging.base).toBe('/')
+    // VitePWA still loads for the staging build (only capacitor builds skip it) — its manifest
+    // identity is verified by inspecting the actual built dist-staging/manifest.webmanifest
+    // (see docs/PWA_REFERENCE.md), not by reaching into vite-plugin-pwa's internal plugin state,
+    // which doesn't expose the raw options synchronously.
+    expect(pluginNames(staging)).toContain('vite-plugin-pwa')
+  })
+
+  it('defaults to the plain /tens/ base when the flag is unset', () => {
+    expect(createViteConfig({ netlifyStaging: false }).base).toBe('/tens/')
+    expect(createViteConfig({ netlifyStaging: undefined }).base).toBe('/tens/')
+  })
+
+  it('capacitor still wins over the staging flag (never combined in practice, but capacitor takes priority)', () => {
+    const config = createViteConfig({ capacitor: true, netlifyStaging: true })
+    expect(config.base).toBe('./')
+  })
+})

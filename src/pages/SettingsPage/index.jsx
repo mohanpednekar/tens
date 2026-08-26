@@ -169,13 +169,14 @@ const buildSparklinePath = (samples, key) => {
 
 const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }) => {
   const frozen = isProductionFrozen(game.state)
-  // game.devModeActive can only ever be true in a dev build (Dev Mode's own toggle is itself
-  // gated behind import.meta.env.DEV — see DevModePage/AppMenu), so this condition is always
-  // false in production regardless of the extra `import.meta.env.DEV &&` check — but including it
-  // here too lets Terser/Rollup fold this whole branch (and its "Dev Mode" copy/title strings) away
-  // at build time instead of leaving inert-but-textually-present strings in the shipped bundle, the
-  // same "absent from yarn build" guarantee the rest of Dev Mode gets. See CLAUDE.md's "Dev Mode".
-  const devModeActive = import.meta.env.DEV && Boolean(game.devModeActive)
+  // game.devModeActive can only ever be true when Dev Mode's own toggle is reachable at all —
+  // gated the same way here as DevModePage/AppMenu (a real dev build, or the separate
+  // VITE_ENABLE_DEV_MODE-flagged staging build — see CLAUDE.md's "Dev Mode" section) — so this
+  // condition is always false in the real production build regardless of the extra check, but
+  // including it here too lets Terser/Rollup fold this whole branch (and its "Dev Mode" copy/title
+  // strings) away at build time instead of leaving inert-but-textually-present strings in that
+  // shipped bundle, the same "absent from yarn build" guarantee the rest of Dev Mode gets.
+  const devModeActive = (import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_MODE === 'true') && Boolean(game.devModeActive)
   const supporter = Boolean(game.savesMeta?.supporterUnlocked)
   const [code, setCode] = useState('')
   const [codeStatus, setCodeStatus] = useState(null)

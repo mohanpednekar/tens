@@ -1,0 +1,21 @@
+# Config for the Dev Mode staging site only — the real game is deployed to GitHub Pages via
+# .github/workflows/deploy.yml and never touches Netlify. See CLAUDE.md's "Dev Mode" section and
+# .github/workflows/deploy-staging.yml for the full picture.
+#
+# `dist-staging/` is built and uploaded by deploy-staging.yml (via `netlify deploy`, not Netlify's
+# own git-connected build), so [build] here is a placeholder only — it's never actually invoked by
+# that flow, but keeps `netlify dev`/local CLI use sane if anyone runs it directly against this repo.
+[build]
+  command = "yarn build:staging"
+  publish = "dist-staging"
+
+[build.environment]
+  VITE_ENABLE_DEV_MODE = "true"
+
+# Gates every path behind HTTP Basic Auth (see netlify/edge-functions/basic-auth.js) so the
+# staging site requires real credentials, not just an unlisted URL. Credentials are Netlify site
+# environment variables (STAGING_AUTH_USER/STAGING_AUTH_PASS) set via `netlify env:set` in
+# deploy-staging.yml from GitHub secrets — never committed here.
+[[edge_functions]]
+  path = "/*"
+  function = "basic-auth"

@@ -5,7 +5,9 @@ import styled from 'styled-components'
 // on AppNav itself; this sheet holds everything else that shouldn't consume a nav slot. Reset
 // lives only under Settings → Danger zone (not duplicated here). Opened from AppNav's More item;
 // closes on backdrop click, Escape, or any action. A third Dev Mode entry (pages/DevModePage)
-// renders only when `import.meta.env.DEV` is true — absent from a production build.
+// renders only when `import.meta.env.DEV` is true (a real dev build) or `VITE_ENABLE_DEV_MODE`
+// is `'true'` (the separate dev-mode-enabled staging build — see CLAUDE.md's "Dev Mode" section)
+// — absent from the real production build either way.
 
 const Backdrop = styled.div`
   background: rgba(0, 0, 0, 0.55);
@@ -106,7 +108,7 @@ const AppMenu = ({ open, onClose, onNavigate }) => {
           <Icon aria-hidden="true">⚙️</Icon>
           Settings
         </MenuButton>
-        {import.meta.env.DEV && (
+        {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEV_MODE === 'true') && (
           <MenuButton aria-label="open dev mode" onClick={() => go('dev')} type="button">
             <Icon aria-hidden="true">🛠️</Icon>
             Dev Mode

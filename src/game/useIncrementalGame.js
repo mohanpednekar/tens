@@ -84,7 +84,9 @@ export const useIncrementalGame = () => {
   const [saveSlots, setSaveSlots] = useState(() => listSaveSlots())
   // Dev Mode (see pages/DevModePage) — whether the app is currently reading/writing the separate
   // dev save instead of the real active player slot. Its own entry point is gated behind
-  // import.meta.env.DEV, so this stays inert (and unreachable) in a production build.
+  // import.meta.env.DEV (or the separate dev-mode-enabled staging build's VITE_ENABLE_DEV_MODE
+  // flag — see CLAUDE.md's "Dev Mode" section), so this stays inert (and unreachable) in the real
+  // production build.
   const [devModeActive, setDevModeActiveState] = useState(() => isDevModeActive())
   // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
   const [opsSamples, setOpsSamples] = useState([])
