@@ -3571,7 +3571,10 @@ export const tickDataLakeTransfers = elapsedSeconds => state => {
     const remainingTransfers = []
     for (const transfer of transfers) {
       const nextRemaining = (transfer.remainingSeconds ?? 0) - elapsedSeconds
-      if (nextRemaining > 0) {
+      // Same TICK_ACCUMULATION_EPSILON tolerance tickDiskBuild's own countdown uses — absorbs
+      // floating-point drift from repeatedly summing a fractional elapsedSeconds so a transfer
+      // that should complete this tick doesn't linger one extra tick on a near-zero residual.
+      if (nextRemaining > TICK_ACCUMULATION_EPSILON) {
         remainingTransfers.push({ remainingSeconds: nextRemaining })
         continue
       }

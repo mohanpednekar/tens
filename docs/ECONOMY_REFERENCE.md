@@ -494,9 +494,16 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    (`getBoosterPurchaseCost` — counts in-flight transfers alongside `purchased` so starting several
    concurrently still escalates correctly, not just completed ones). That cost is spent out of the
    lake's own deposits FIRST — instant, since those Disks are already at the lake — and whatever
-   remains is sourced live from raw, undeposited built Disks (decomposed into a hundreds/tens/ones
-   Disk count the same greedy way deposits are, via the internal `decomposeDataLakeDeposits`) for a
-   timed transfer at `DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) the Byte Foundry's current
+   remains is sourced live from raw, undeposited built Disks via the internal
+   `planLiveDiskFunding`: a greedy pass from the largest sub-size (×100) down to the smallest (×1),
+   using as many of each sub-size as are actually held (never more than that — deliberately NOT the
+   same digit decomposition deposits use, since a held Disk count can reach `DISK_ARRAY_LADDER_CAP`
+   (10), past the deposited buffer's own `DATA_LAKE_SLOT_MAX` (9) cap), cascading any shortfall down
+   to the next sub-size — provably correct for feasibility here since each sub-size is an exact ×10
+   multiple of the next, so using fewer of a larger one than this greedy's own max can only ever
+   increase what's needed lower down. Returns null (nothing to fund) only when the total held Disks,
+   respecting each sub-size's own count, genuinely can't reach the needed total. That live-sourced
+   portion is transferred at `DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) the Byte Foundry's current
    bits/sec production rate (`getIntroProductionRate`, deliberately excluding an active Compute
    Boost, same posture as `getCoreEarnTimeSeconds`) — `(bits transferred) / (10 × rate)` seconds —
    tracked as `{ remainingSeconds }` entries in `intro.dataLakes[tierIndex].transfers`. When
