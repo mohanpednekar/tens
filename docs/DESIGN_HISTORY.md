@@ -12,6 +12,12 @@ itself was removed once Cores stopped being minted from a Memory flush at all �
 `isComputeCoreConversionUnlocked`-gated warning in the dialog now only covers the still-accurate
 "this wipes all held Compute tokens" line.
 
+**Superseded again — 2026-08-25:** the confirm dialog itself was removed at the maintainer's
+request. Clicking "Memory ×2" now fires `pickIntroCapacityMilestone` immediately, with no prompt —
+same as every other Byte Foundry action (Combine, Invest, Disk Build, Disk Fill/redeem all fire
+directly on click already). `components/ConfirmDialog` remains in use elsewhere (SettingsPage's Era
+ascension) — this only removed its one Sacrifice call site.
+
 This file holds the **why** behind decisions in `CLAUDE.md`: incident write-ups, empirical simulation
 results, superseded designs, and the reasoning for choices that aren't self-evident from current
 behavior alone. `CLAUDE.md` states what the system currently does and is what loads into every
@@ -625,6 +631,20 @@ The following records *why* specific MainPage/component behaviors were built the
      still wanted — only the rounding *direction* needed to change, not the precision.
 
 ## Economy model
+
+### Reset Byte Foundry convenience-auto now includes Capacity/Sacrifice — 2026-08-25
+
+`resetByteFoundry`'s convenience auto-replay (`tickFoundryResetConvenience`) originally covered
+Combine, bit-funded Invest, and Disk Build, but deliberately left Capacity/Sacrifice out —
+`captureFoundryUpgradeCaps`'s own comment used to read "Capacity is deliberately omitted," and
+`resetByteFoundry`'s doc comment said "Capacity stays manual." No historical incident forced that
+choice; it wasn't previously documented beyond the code comments themselves. Changed at the
+maintainer's request so Sacrifice auto-replays up to its own pre-reset high-water mark exactly like
+Combine/Invest/Disk Build already did — `captureFoundryUpgradeCaps`/`mergeFoundryUpgradeCaps` now
+also track/merge a `capacity` field, and `tickFoundryResetConvenience` presses Sacrifice
+(`pickIntroCapacityMilestone`) through its own normal `isMemoryCapacityUpgradeAvailable` gate once
+Memory naturally refills to the current capacity, same waiting behavior the other convenience steps
+already have.
 
 ### Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry intro
 
@@ -2029,7 +2049,8 @@ Auto-Boost (30 PP) covers the stuck case where a reserve merge is already in fli
 tier's normal slots refill to cap — spend via preferred preset (default Standard) from the
 **biggest** such waiting tier. It never forfeits an active boost to switch presets (that would
 surprise). Switching presets while one is active requires an **explicit forfeit confirmation**
-(same `window.confirm` posture as Reset / Sacrifice) — Stack remains the non-destructive extend
+(same `window.confirm` posture as Reset — Sacrifice itself dropped its own confirm step later, see
+this file's "Sacrifice confirm" entry near the top) — Stack remains the non-destructive extend
 path for the same type+tier.
 
 "The base production tier of each screen... memory for Foundry, tier01 for main game" was
@@ -2041,10 +2062,12 @@ doubled the state/UI surface for a request that gave no signal such a choice was
 turns out wrong, the fix is additive: a `computeBoostTarget` field and a per-target multiplier
 check, rather than removing anything already shipped.
 
-Also implemented alongside this: a confirmation before Sacrifice for 10x Capacity actually fires
+Also implemented alongside this: a confirmation before Sacrifice for 10x Capacity actually fired
 (`window.confirm` originally — later replaced by an in-game `ConfirmDialog`, with the “future Cores
 cost more” warning shown only once Compute is unlocked). Same permanence caveat as Settings →
-Danger zone Reset; see `handleSacrificeClick` in `ByteFoundryPage`.
+Danger zone Reset. **Superseded 2026-08-25:** the confirm dialog was removed entirely — see this
+file's own top "Sacrifice confirm" entry and `handleSacrificeClick` in `ByteFoundryPage`, which now
+fires immediately.
 
 ### Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens
 

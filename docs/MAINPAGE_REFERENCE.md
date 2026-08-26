@@ -32,12 +32,15 @@ non-null `offlineProgress` — the Byte generator's passive production and auto-
 catch up correctly during offline progress regardless of which page is active, so this page shows
 the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
 `Header` with the page title (top-level navigation lives in AppNav, not here); **no** second-level
-Memory | Storage tabs — Memory controls and every DiskArrayRow share one continuous scroll; a
-`TilesRow` (flex row)
-holding a single `FillableStatCard`
-— a `styled(StatCard)` wrapper that applies `components/Button`'s own `progressFill` gradient
-directly to the card via its `$progress` prop, so the tile fills toward its own capacity the same
-visual way every button on this page already does. `aria-label="byte foundry balance"` (`$progress`
+Memory | Storage tabs — Memory controls, every DiskArrayRow, and the Data Lake panel all render
+inside one continuous `PoolCard` (`styled(StatCard)`) rather than each getting its own separately-
+boxed card — a `Divider` (`hr`, `border-top` only) marks the transition from Memory/its actions to
+the Storage sub-section within that one card. `PoolCard` holds a single `FillableStatCard`
+— deliberately a plain `styled.div`, not `styled(StatCard)` (nesting a second card inside PoolCard
+would double-box the same region) — that applies `components/Button`'s own `progressFill` gradient
+directly via its `$progress` prop, so the tile fills toward its own capacity the same visual way
+every button on this page already does, while still picking up padding/border-radius/color inline
+rather than through `StatCard`. `aria-label="byte foundry balance"` (`$progress`
 = `bits / capacity`), has a "Memory" label above `{bits} / {capacity}` — both numbers scaled into
 the same binary unit, picked off `capacity` (raw bits before the Byte generator exists, since before
 that capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
@@ -177,6 +180,19 @@ next to it, not Memory's binary Sacrifice-ladder scale. Building only ever const
 container — Memory / read cache / write cache fill it afterward (see DiskArrayRow continuous
 sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
 split — every shown size's full interactive DiskArrayRow already lives on this page.
+
+Below the disk-array rows, `components/DataLakePanel` renders with `bare` set (`<DataLakePanel
+state={state} bare />`) — instead of its own default `StatCard` wrapper, `bare` mode renders a
+`BareDivider` (`hr`, same style as `PoolCard`'s own `Divider`) followed directly by the lake list,
+so it reads as the last sub-section of the same `PoolCard` rather than a second card stacked below
+it. Returns `null` entirely (skipping even the divider) once nothing is visible yet — see
+`getVisibleLakeTierIndexes` in `components/DataLakePanel/index.jsx` (a lake tier shows once it has
+either a nonzero deposit or at least one Booster already purchased). Each visible row reads
+`"{label} Data Lake → {boosterLabel}"` (`aria-label="Data Lakes"` only applies to the non-`bare`,
+standalone-card rendering some future caller might use — `bare` mode has no callers besides this
+page today) paired with a stats line — deposited/bought counts, next purchase cost, and how many
+more purchases the current deposit alone can fund in a row (see docs/ECONOMY_REFERENCE.md's "Data
+Lakes" section for the underlying mechanic).
 
 Below Build (and, after Boosts unlocks, below Memory ×2 when it has moved under the disk section),
 once `isIntroConversionUnlocked(state)`, a **transfer-block row**

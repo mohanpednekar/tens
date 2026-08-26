@@ -1,12 +1,10 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
-import ConfirmDialog from 'components/ConfirmDialog'
 import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeCoreConversionUnlocked, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
-import { useState } from 'react'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -140,31 +138,48 @@ const MilestoneCostLine = styled.span`
   white-space: nowrap;
 `
 
-// A row wrapper for the Memory tile — kept as a row container (rather than flattening Memory
-// straight into RootDiv's own column flex) so FillableStatCard's `flex: 1 1 160px` still behaves
-// as a row item (grow to fill available width) instead of a column item (which would instead try
-// to grow the tile's height).
-const TilesRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${props => props.theme.space.sm};
+// The whole pool — Memory, its Combine/Sacrifice/Bandwidth actions, and Storage (Build + Disk
+// arrays + Data Lake) — renders as one continuous card rather than Memory and Data Lake each
+// getting their own separate boxed StatCard with bare buttons/rows in between. Sub-elements that
+// used to carry their own StatCard chrome (FillableStatCard, DataLakePanel) drop it — see below —
+// so nothing double-boxes inside this outer card.
+const PoolCard = styled(StatCard)`
   width: 100%;
+  gap: ${props => props.theme.space.md};
+`
+
+// A thin visual break between this card's Memory/actions region and its Storage region, and again
+// before the Data Lake — cheaper than a second nested card for signaling "new sub-section" inside
+// one otherwise-continuous PoolCard.
+const Divider = styled.hr`
+  width: 100%;
+  border: none;
+  border-top: 1px solid ${props => props.theme.color.border};
+  margin: 0;
 `
 
 // Reuses Button's own progressFill gradient (see components/Button) so Memory's tile fills toward
 // its capacity the same visual way every actionable control on this page already does, rather
-// than introducing a second, differently-styled meter convention. `align-items: center` (StatCard's
-// own default is `stretch`) centers RateBlocksRow horizontally — its own `max-width` keeps it
-// narrower than the tile, so without this it would sit flush against the left edge instead of
-// centered under the balance text above it.
+// than introducing a second, differently-styled meter convention. `align-items: center` centers
+// RateBlocksRow horizontally — its own `max-width` keeps it narrower than the tile, so without
+// this it would sit flush against the left edge instead of centered under the balance text above
+// it. Deliberately a plain div, not `styled(StatCard)` — it renders inside PoolCard, which already
+// supplies the outer border/shadow/background; a second nested StatCard here would double-box the
+// same region, which is exactly what folding Memory into PoolCard was meant to avoid.
 // Once intro.mainGameUnlocked, this renders as a real <button> (via the `as` prop below) instead
 // of a plain <section> — Memory itself becomes the tap target, replacing the standalone TapArea
 // button below (which only renders pre-unlock). `$tappable` adds the same hover/active/disabled
 // affordance TapArea itself already has, scoped to this prop so the pre-unlock (non-interactive)
 // rendering keeps its plain, unclickable look.
-const FillableStatCard = styled(StatCard)`
-  flex: 1 1 160px;
+const FillableStatCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: ${props => props.theme.radius.sm};
+  color: ${props => props.theme.color.text};
   ${progressFill}
 
   ${props => props.$tappable && `
@@ -269,7 +284,6 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
-  const [sacrificeConfirmOpen, setSacrificeConfirmOpen] = useState(false)
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
@@ -279,27 +293,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const canSacrifice = isMemoryCapacityUpgradeAvailable(state)
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
-  const computeCoreRevealed = isComputeCoreConversionUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
-  // Sacrifice is permanent and irreversible (drains Memory to 0). Once Compute is unlocked, it also
-  // wipes all held Compute tokens and rolls back Compute-funded Bandwidth progress — that warning
-  // only belongs in the confirm once Compute actually exists. Uses the in-game ConfirmDialog, not
-  // window.confirm, so the prompt matches the rest of the UI.
-  const nextSacrificeCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  // Sacrifice is permanent and irreversible (drains Memory to 0), and fires immediately on click —
+  // no confirm prompt.
   const atCapacityCap = isMemoryCapacityAtCap(state)
   const handleSacrificeClick = () => {
     if (!canSacrifice) return
-    setSacrificeConfirmOpen(true)
-  }
-  const confirmSacrifice = () => {
-    setSacrificeConfirmOpen(false)
     actions.pickIntroCapacityMilestone()
   }
-  const cancelSacrifice = () => setSacrificeConfirmOpen(false)
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
   const computeBandwidthLabel = getComputeBandwidthSacrificeLabel(state)
   const computeFundedInvest = isComputeFundedBandwidthAvailable(state)
@@ -399,7 +404,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         <Title>🔥 Byte Foundry</Title>
       </Header>
 
-      <TilesRow>
+      <PoolCard aria-label="pool 1">
         <FillableStatCard
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
@@ -435,118 +440,119 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             )
           )}
         </FillableStatCard>
-      </TilesRow>
 
-      <ActionsRow>
-        {canCombine && (
-          <Button
-            aria-label="combine 8 bits into a Byte"
-            onClick={actions.combineIntroByte}
-            type="button"
-            variant="primary"
-            $progress={combineProgress}
-          >
-            <ButtonContent>🔗 Combine into a Byte</ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry combine progress"
-              aria-valuenow={intro.bits}
-              aria-valuemin={0}
-              aria-valuemax={INTRO_BYTE_COMBINE_COST}
-            />
-          </Button>
-        )}
-
-        {intro.byteCreated && (
-          <MilestonesRow>
-            {sacrificeButton}
-
+        <ActionsRow>
+          {canCombine && (
             <Button
-              aria-label={
-                computeFundedInvest
-                  ? `sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for double production`
-                  : 'invest bits for double production'
-              }
-              disabled={!canInvest}
-              onClick={actions.pickIntroProductionMilestone}
-              title={
-                investClaimsUsedUp
-                  ? 'Already claimed at this tier'
-                  : investBlockedByPriority
-                    ? 'Redeem a full Disk first'
-                    : computeFundedInvest
-                      ? `Bit cost exceeds Memory — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 production`
-                      : 'Doubles production rate'
-              }
+              aria-label="combine 8 bits into a Byte"
+              onClick={actions.combineIntroByte}
               type="button"
-              variant={canInvest ? 'info' : 'neutral'}
-              $progress={investProgress}
+              variant="primary"
+              $progress={combineProgress}
             >
-              <MilestoneButtonContent>
-                <span>⚡ Bandwidth ×2</span>
-                <MilestoneCostLine>{investCostDisplay}</MilestoneCostLine>
-              </MilestoneButtonContent>
+              <ButtonContent>🔗 Combine into a Byte</ButtonContent>
               <VisuallyHidden
                 role="progressbar"
-                aria-label="byte foundry invest progress"
-                aria-valuenow={
-                  computeFundedInvest && computeBandwidthField
-                    ? (intro[computeBandwidthField] ?? 0)
-                    : intro.bits
-                }
+                aria-label="byte foundry combine progress"
+                aria-valuenow={intro.bits}
                 aria-valuemin={0}
-                aria-valuemax={computeFundedInvest ? COMPUTE_ENTITY_CAP : investCost}
+                aria-valuemax={INTRO_BYTE_COMBINE_COST}
               />
             </Button>
-          </MilestonesRow>
+          )}
+
+          {intro.byteCreated && (
+            <MilestonesRow>
+              {sacrificeButton}
+
+              <Button
+                aria-label={
+                  computeFundedInvest
+                    ? `sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for double production`
+                    : 'invest bits for double production'
+                }
+                disabled={!canInvest}
+                onClick={actions.pickIntroProductionMilestone}
+                title={
+                  investClaimsUsedUp
+                    ? 'Already claimed at this tier'
+                    : investBlockedByPriority
+                      ? 'Redeem a full Disk first'
+                      : computeFundedInvest
+                        ? `Bit cost exceeds Memory — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 production`
+                        : 'Doubles production rate'
+                }
+                type="button"
+                variant={canInvest ? 'info' : 'neutral'}
+                $progress={investProgress}
+              >
+                <MilestoneButtonContent>
+                  <span>⚡ Bandwidth ×2</span>
+                  <MilestoneCostLine>{investCostDisplay}</MilestoneCostLine>
+                </MilestoneButtonContent>
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="byte foundry invest progress"
+                  aria-valuenow={
+                    computeFundedInvest && computeBandwidthField
+                      ? (intro[computeBandwidthField] ?? 0)
+                      : intro.bits
+                  }
+                  aria-valuemin={0}
+                  aria-valuemax={computeFundedInvest ? COMPUTE_ENTITY_CAP : investCost}
+                />
+              </Button>
+            </MilestonesRow>
+          )}
+
+        </ActionsRow>
+
+        {storageRevealed && (
+          <>
+            <Divider />
+            <Button
+              aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete for this pool' : 'build disk'}
+              disabled={!canStartDiskBuild || !!diskBuildInProgress}
+              onClick={actions.startDiskBuild}
+              title={
+                diskBuildInProgress
+                  ? `Rebuilding ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
+                  : diskLadderExhausted
+                    ? `Every Disk size this pool can fund (up to ${formatDiskSize(diskSize)}) is fully built — more storage pools are coming in a future update`
+                    : diskBuildBlockedByPriority
+                      ? 'Take Bandwidth (or redeem a full Disk) first'
+                      : diskRedeemTierName
+                        ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                        : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
+              }
+              type="button"
+              variant={canStartDiskBuild ? 'info' : 'neutral'}
+              $progress={diskBuildProgress}
+            >
+              <ButtonContent>
+                {diskBuildInProgress
+                  ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+                  : diskLadderExhausted
+                    ? `🏦 Pool complete (${formatDiskSize(diskSize)})`
+                    : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+              </ButtonContent>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label="byte foundry disk build progress"
+                aria-valuenow={Math.round(diskBuildProgress)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </Button>
+
+            {diskSizesToShow.map(size => (
+              <DiskArrayRow key={size} actions={actions} size={size} state={state} />
+            ))}
+
+            <DataLakePanel state={state} bare />
+          </>
         )}
-
-      </ActionsRow>
-
-      {storageRevealed && (
-        <>
-          <Button
-            aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete for this pool' : 'build disk'}
-            disabled={!canStartDiskBuild || !!diskBuildInProgress}
-            onClick={actions.startDiskBuild}
-            title={
-              diskBuildInProgress
-                ? `Rebuilding ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-                : diskLadderExhausted
-                  ? `Every Disk size this pool can fund (up to ${formatDiskSize(diskSize)}) is fully built — more storage pools are coming in a future update`
-                  : diskBuildBlockedByPriority
-                    ? 'Take Bandwidth (or redeem a full Disk) first'
-                    : diskRedeemTierName
-                      ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                      : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
-            }
-            type="button"
-            variant={canStartDiskBuild ? 'info' : 'neutral'}
-            $progress={diskBuildProgress}
-          >
-            <ButtonContent>
-              {diskBuildInProgress
-                ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-                : diskLadderExhausted
-                  ? `🏦 Pool complete (${formatDiskSize(diskSize)})`
-                  : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-            </ButtonContent>
-            <VisuallyHidden
-              role="progressbar"
-              aria-label="byte foundry disk build progress"
-              aria-valuenow={Math.round(diskBuildProgress)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </Button>
-
-          {diskSizesToShow.map(size => (
-            <DiskArrayRow key={size} actions={actions} size={size} state={state} />
-          ))}
-
-          <DataLakePanel state={state} />
-        </>
-      )}
+      </PoolCard>
 
       {showTransferSection && (<>
         <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
@@ -603,28 +609,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           👆 Tap
         </TapArea>
       )}
-
-      <ConfirmDialog
-        open={sacrificeConfirmOpen}
-        title="Sacrifice Memory?"
-        confirmLabel="Sacrifice"
-        cancelLabel="Cancel"
-        confirmVariant="prestige"
-        onConfirm={confirmSacrifice}
-        onCancel={cancelSacrifice}
-      >
-        <p>
-          Empty Memory to multiply capacity ×2, from{' '}
-          {formatBitsInNearestUnit(intro.capacity)} to{' '}
-          {formatBitsInNearestUnit(nextSacrificeCapacity)}. This is permanent.
-        </p>
-        {computeCoreRevealed && (
-          <p>
-            This also wipes all held Compute tokens and rolls back Bandwidth upgrades bought with
-            Compute tokens.
-          </p>
-        )}
-      </ConfirmDialog>
     </RootDiv>
   )
 }
