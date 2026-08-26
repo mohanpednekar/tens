@@ -541,10 +541,17 @@ not at the bottom"):
   Bytes via `getNextBytePowerProgressFraction` (Bits toward `nextPowerBytes × BITS_PER_BYTE`; each
   segment is 12.5% and fills progressively within that band — e.g. 5e7 Bytes → 4/8 filled). Paired
   with a `VisuallyHidden role="progressbar"` (`aria-label="progress toward the next power of ten
-  Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressTop` block
-  sits above the page `Header` (top of the MainPage screen) with `PrestigeProgressTrack`/
-  `PrestigeProgressFill`, the `"N% to Prestige"` label only, and its own `VisuallyHidden
-  role="progressbar"` reusing `getPrestigeProgressPercent`.
+  Bytes"`). Prestige progress no longer lives in this card: a separate `PrestigeProgressBar` is
+  pinned via `position: fixed` just above `AppNav` (`bottom: APP_NAV_BOTTOM_PAD`, imported from
+  `components/AppNav`), always visible regardless of scroll position — `RootDiv`'s own bottom
+  padding reserves a fixed `PRESTIGE_PROGRESS_BAR_HEIGHT` (2.5rem, single-line, never wraps) so
+  page content never scrolls out from underneath it. Its `PrestigeProgressTrack` renders the
+  `"N% to Prestige"` label (`PrestigeProgressLabel`) INSIDE the bar itself, centered over a
+  `progressFill` gradient (imported from `components/Button`, `$progressColor:
+  theme.color.accent`) — the same low-alpha progress-fill convention the Buy/Upgrade buttons use
+  for their own cost-progress fills, already contrast-validated for `theme.color.text` on top of
+  it (see `tokens.contrast.test.js`) — rather than a separate label rendered below a solid fill
+  bar. Its own `VisuallyHidden role="progressbar"` reuses `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
   `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`) — token-driven

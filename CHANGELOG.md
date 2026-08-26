@@ -84,6 +84,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (8,000 bits for the KB lake), matching what a Disk of that size is actually worth.
 
 ### Changed
+- **Prestige progress bar repositioned to just above the bottom tab bar** — it's now pinned via
+  `position: fixed` directly above `AppNav` so it stays visible regardless of scroll position,
+  instead of scrolling away near the top of the Ladder screen. Its `"N% to Prestige"` label now
+  renders inside the bar itself (centered over the fill), rather than as a separate line below it.
 - **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or
   unbounded rates** — a fresh disk build now takes exactly the time to fill it at 1x Memory
   bandwidth (was a flat "1 second per real KB," decoupled from Invest/Compute Boost); a disk filling
