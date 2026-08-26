@@ -45,6 +45,7 @@
     "test:watch": "vitest --host 127.0.0.1",
     "test:e2e": "playwright test",
     "audit": "yarn audit",
+    "bump-version": "node scripts/bump-version.mjs",
     "gen-pwa-icons": "node scripts/generate-pwa-icons.mjs"
   },
   "browserslist": {
