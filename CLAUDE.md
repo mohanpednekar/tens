@@ -1128,7 +1128,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1551 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1557 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
@@ -1143,8 +1143,10 @@ already cover the genuinely useful items on that checklist.
   `tokens.contrast.test.js` add two more files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
   `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics;
-  `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path. Together with
-  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 10 of the 13 files; the
+  `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
+  `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
+  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). Together with
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 14 files; the
   remaining three are `scripts/adversarialReviewMarker.test.js`,
   `scripts/pr-low-risk-eligible.test.js`, and `scripts/bump-version.test.js` — Vitest's default glob
   picks these up alongside `src/` since `vite.config.js`'s `test` block sets no custom `include`.
