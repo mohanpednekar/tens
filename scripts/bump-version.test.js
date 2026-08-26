@@ -149,4 +149,50 @@ describe('bump-version', () => {
       currentVersion: '0.5.1',
     });
   });
+
+  it('refuses to create a duplicate ## [version] section', () => {
+    // package at 0.4.0 + existing 0.5.0 section + Added → would bump to 0.5.0 again
+    const text = makeChangelog(
+      `### Added
+- Feature.
+`,
+      '## [0.5.0] - 2026-07-14\n\n### Fixed\n- old fix.\n',
+    );
+    expect(() => planChangelogBump(text, '0.4.0', '2026-08-26')).toThrow(/already has/);
+  });
+
+  it('rejects Unreleased text before the first ### subheading', () => {
+    const text = makeChangelog(`IMPORTANT note
+
+### Added
+- Feature.
+`);
+    expect(() => planChangelogBump(text, '0.5.0', '2026-08-26')).toThrow(
+      /before the first ###/,
+    );
+  });
+
+  it('throws on noop when CHANGELOG latest release disagrees with package.json', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bump-version-desync-'));
+    // Simulate interrupted bump: changelog already cut to 0.5.1, package still 0.5.0
+    const changelog = `${PREAMBLE}
+## [Unreleased]
+
+### Added
+
+### Fixed
+
+## [0.5.1] - 2026-08-26
+
+### Fixed
+- Only a fix.
+`;
+    fs.writeFileSync(path.join(dir, 'CHANGELOG.md'), changelog, 'utf8');
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      `${JSON.stringify({ name: 'tens', version: '0.5.0' }, null, 2)}\n`,
+      'utf8',
+    );
+    expect(() => runBumpVersion({ rootDir: dir })).toThrow(/interrupted bump|set package\.json/);
+  });
 });

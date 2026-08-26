@@ -230,14 +230,45 @@ export function formatChangelogDate(date = new Date()) {
 }
 
 /**
+ * Lines in an Unreleased body that appear before the first ### subheading.
+ * Non-empty preamble is rejected so a bump cannot silently drop notes/bullets.
+ * @param {string} body
+ * @returns {string}
+ */
+export function unreleasedPreamble(body) {
+  const lines = body.split('\n');
+  const preamble = [];
+  for (const line of lines) {
+    if (SUBHEADING_RE.test(line)) break;
+    preamble.push(line);
+  }
+  return preamble.join('\n').trim();
+}
+
+/**
+ * @param {string} unreleasedBody
+ * @throws {Error} when Unreleased has non-empty text before the first ### heading
+ */
+export function assertUnreleasedWellFormed(unreleasedBody) {
+  const preamble = unreleasedPreamble(unreleasedBody);
+  if (preamble) {
+    throw new Error(
+      'CHANGELOG ## [Unreleased] has text before the first ### subheading; ' +
+        'move it under a ### heading (or remove it) before running bump-version',
+    );
+  }
+}
+
+/**
  * Apply a bump to changelog text: move Unreleased → ## [next] - date, reset Unreleased.
- * @returns {{ nextText: string, bumpType: 'minor' | 'patch', nextVersion: string } | { noop: true }}
+ * @returns {{ nextText: string, bumpType: 'minor' | 'patch', nextVersion: string, dateStr: string } | { noop: true }}
  */
 export function planChangelogBump(changelogText, currentVersion, date = new Date()) {
   const unreleased = extractVersionSection(changelogText, 'Unreleased');
   if (!unreleased) {
     throw new Error('CHANGELOG.md has no ## [Unreleased] section');
   }
+  assertUnreleasedWellFormed(unreleased.body);
   const bumpType = determineBumpType(unreleased.body);
   if (!bumpType) return { noop: true };
 
@@ -247,6 +278,13 @@ export function planChangelogBump(changelogText, currentVersion, date = new Date
   const { preamble, sections } = splitChangelog(changelogText);
 
   const rest = sections.filter((s) => s.id !== 'Unreleased');
+  if (rest.some((s) => s.id === nextVersion)) {
+    throw new Error(
+      `CHANGELOG.md already has a ## [${nextVersion}] section; ` +
+        `refusing to create a duplicate (package.json is ${currentVersion}, bump would be ${bumpType})`,
+    );
+  }
+
   const newUnreleased = {
     id: 'Unreleased',
     date: null,
@@ -266,6 +304,17 @@ export function planChangelogBump(changelogText, currentVersion, date = new Date
 }
 
 /**
+ * Latest dated (non-Unreleased) section id, or null.
+ * @param {string} changelogText
+ * @returns {string | null}
+ */
+export function latestReleasedVersionId(changelogText) {
+  const { sections } = splitChangelog(changelogText);
+  const released = sections.find((s) => s.id !== 'Unreleased');
+  return released ? released.id : null;
+}
+
+/**
  * @param {string} preamble
  * @param {Array<{ rawHeader: string, body: string }>} sections
  */
@@ -281,6 +330,10 @@ export function joinChangelog(preamble, sections) {
 
 /**
  * Run the bump against paths. Returns a result object; does not process.exit.
+ *
+ * Write order: CHANGELOG.md first, then package.json. If a crash leaves them
+ * desynced (Unreleased empty but versions disagree), the next run throws
+ * instead of silently no-op-ing so the operator can finish the package bump.
  *
  * @param {{ rootDir?: string, changelogPath?: string, packagePath?: string, date?: Date | string, dryRun?: boolean }} [opts]
  */
@@ -301,6 +354,13 @@ export function runBumpVersion(opts = {}) {
   const changelogText = fs.readFileSync(changelogPath, 'utf8');
   const plan = planChangelogBump(changelogText, currentVersion, date);
   if (plan.noop) {
+    const latest = latestReleasedVersionId(changelogText);
+    if (latest && latest !== currentVersion) {
+      throw new Error(
+        `CHANGELOG.md latest release is ${latest} but package.json is ${currentVersion}; ` +
+          `Unreleased is empty — set package.json "version" to "${latest}" (likely a prior interrupted bump) before continuing`,
+      );
+    }
     return { noop: true, currentVersion };
   }
 
@@ -309,6 +369,8 @@ export function runBumpVersion(opts = {}) {
   const pkgOut = `${JSON.stringify(nextPkg, null, 2)}\n`;
 
   if (!dryRun) {
+    // Changelog first so an interrupted run leaves a detectable desync
+    // (empty Unreleased + version mismatch) rather than a duplicate bump.
     fs.writeFileSync(changelogPath, plan.nextText, 'utf8');
     fs.writeFileSync(packagePath, pkgOut, 'utf8');
   }
