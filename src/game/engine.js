@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_DOUBLING_STEP, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_DOUBLING_STEP, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -2637,22 +2637,26 @@ export const getDiskSize = state => {
 // (see tickDiskAutoFill).
 export const getDiskCost = capacityBits => capacityBits * DISK_BUILD_COST_MULTIPLIER
 
-// The base build TIME, in seconds, for the FIRST disk ever built at a given size — 1 second per
-// real "KB" of size (the smallest disk size, level 1, always takes exactly 1 second; "10 KB disks
-// start at 10 seconds, 100 KB at 100 seconds," and so on), derived from the level-1 disk size
-// (8000 bits = "1 KB" = the base unit) rather than a separate constant, so it always tracks
-// getDiskSize's own real-Kilobyte scale.
-const getDiskBuildBaseSeconds = capacityBits => capacityBits / DISK_LADDER_BASE_SIZE_BITS
+// The base build TIME, in seconds, for the FIRST disk ever built at a given size — exactly the
+// time to fill an empty container that size at 1x Memory bandwidth (getIntroProductionRate), i.e.
+// the same rate Memory itself is currently produced at — snapshotted once when the build starts
+// (see startDiskBuild; totalSeconds itself is fixed thereafter, only remainingSeconds ticks down).
+// An earlier version used a flat, hardcoded "1 second per real KB of size" rate instead — see
+// docs/DESIGN_HISTORY.md.
+const getDiskBuildBaseSeconds = (state, capacityBits) => {
+  const rate = getIntroProductionRate(state.intro ?? {})
+  return capacityBits / Math.max(rate, Number.MIN_VALUE)
+}
 
 // Building the Nth disk of a given size (N = 1 for the array's very first disk, 2 for its second,
 // …) takes N × that size's own base build time — "adding another disk to the array takes [the]
-// same additional time" again, so a 1 KB array's 6th disk (its 5 predecessors already built) takes
-// 6 × 1s = 6 seconds, a 10 KB array's 6th disk takes 6 × 10s = 60 seconds, and so on. N is read
-// from disksBuiltTotal (the permanent, cumulative count) at the moment the build STARTS, not the
-// ladder's own current level.
+// same additional time" again, so at a given production rate a 1 KB array's 6th disk (its 5
+// predecessors already built) takes 6× as long as its 1st, a 10 KB array's 6th disk also takes 6×
+// its own base time, and so on. N is read from disksBuiltTotal (the permanent, cumulative count) at
+// the moment the build STARTS, not the ladder's own current level.
 const getDiskBuildSeconds = (state, capacityBits) => {
   const ordinal = (state.intro.disksBuiltTotal?.[capacityBits] ?? 0) + 1
-  return getDiskBuildBaseSeconds(capacityBits) * ordinal
+  return getDiskBuildBaseSeconds(state, capacityBits) * ordinal
 }
 
 // Disk sizes are real, Byte-accurate bit counts (see getDiskSize above), rendered in the SI B/KB/
@@ -2791,9 +2795,32 @@ const decrementFullDiskCount = (disks, size) => {
   return { ...disks, [size]: full - 1 }
 }
 
+// The write-cache flush into the target's own empty container is a DISK filling FROM a cache — the
+// same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the
+// target's own full capacity. Unlike a fresh build (getDiskBuildSeconds), this isn't scaled by
+// ordinal: refilling an already-built empty container from cache is a pure bandwidth-limited
+// transfer, not a build.
+const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
+  const rate = getIntroProductionRate(state.intro ?? {}) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
+  return targetSize / Math.max(rate, Number.MIN_VALUE)
+}
+
+// Each of the 10 collect segments is a CACHE filling FROM Disks — one full source disk's worth of
+// bits, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER times the current production rate. 10 segments
+// of one source disk each sum to exactly one target disk's own size (source × DISK_LADDER_SIZE_MULTIPLIER
+// = target), so with DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER and CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER
+// currently equal, the full collect phase happens to take the same total time as the flush phase
+// below — coincidental, not structural: the two phases pace conceptually distinct fills (cache-from-
+// disk vs. disk-from-cache) and would diverge if either multiplier changed independently.
+const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
+  const rate = getIntroProductionRate(state.intro ?? {}) * CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER
+  return sourceSize / Math.max(rate, Number.MIN_VALUE)
+}
+
 // Upward ladder merges via per-target write cache — collect 10 segments from the source size
 // (timed; pauses while that source size has an active tier claim), then flush into one target
-// disk (one target build duration; never pauses). Empty at rest. Smallest source sizes first.
+// disk (timed independently — see getDiskWriteCacheFlushSeconds/getDiskWriteCacheSegmentSeconds
+// above; never pauses). Empty at rest. Smallest source sizes first.
 export const tickDiskWriteCache = elapsedSeconds => state => {
   let intro = state.intro
   let disks = intro.disks ?? {}
@@ -2809,8 +2836,9 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     if (!canStartDiskWriteCacheMerge({ ...state, intro: { ...intro, disks, diskWriteCache } }, sourceSize, targetSize)) {
       continue
     }
-    const flushTotalSeconds = getDiskBuildSeconds({ ...state, intro: { ...intro, disks, diskWriteCache } }, targetSize)
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const mergeState = { ...state, intro: { ...intro, disks, diskWriteCache } }
+    const flushTotalSeconds = getDiskWriteCacheFlushSeconds(mergeState, targetSize)
+    const segmentTotalSeconds = getDiskWriteCacheSegmentSeconds(mergeState, sourceSize)
     diskWriteCache[targetSize] = {
       sourceSize,
       segmentsCollected: 0,
@@ -2887,7 +2915,8 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 
 // Memory claim for read caches, then timed read-cache → disk flush when no tier claim blocks
 // ladder use (tier match keeps first claim on disks/cache for Factory funding). Flush duration is
-// the time to fill one read-cache block at the current Byte Foundry production rate (see
+// the time to fill one read-cache block — a DISK filling FROM a cache — at
+// DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER times the current Byte Foundry production rate (see
 // getDiskReadCacheFlushSeconds). Disks above the smallest ladder size also fill via write-cache
 // flush from the size below — see tickDiskWriteCache. Unconditional, bypasses isProductionFrozen.
 // Same-reference no-op when nothing changed. `elapsedSeconds` advances in-flight flushes (0 is
@@ -2897,7 +2926,7 @@ export const getDiskReadCacheFlush = (state, size) =>
 
 export const getDiskReadCacheFlushSeconds = (state, size) => {
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
-  const rate = getIntroProductionRate(state.intro ?? {})
+  const rate = getIntroProductionRate(state.intro ?? {}) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
   // Rate is >= 1 by construction once intro fields are valid; guard corrupted/partial saves.
   return blockBits / Math.max(rate, Number.MIN_VALUE)
 }
@@ -2968,29 +2997,36 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     }
   }
 
-  // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible).
-  // Skip sizes mid-flush: their cache is locked full until the pour completes or cancels.
+  // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible),
+  // capped at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER times the current Byte Foundry production
+  // rate — a CACHE filling FROM Memory can drain a big banked balance faster than live production,
+  // but never instantly, no matter how much has piled up while blocked. One shared budget across
+  // every eligible size this call, since it's all drawn from the same Memory bandwidth. Skip sizes
+  // mid-flush: their cache is locked full until the pour completes or cancels.
+  let memoryToCacheBudget = CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER * getIntroProductionRate(state.intro ?? {}) * elapsedSeconds
   for (const size of sizes) {
     if (diskReadCacheFlush[size]) continue
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
     for (;;) {
       const cached = diskCache[size] ?? 0
-      if (cached >= size || bits <= 0) break
+      if (cached >= size || bits <= 0 || memoryToCacheBudget <= 0) break
 
       const need = size - cached
-      const transferUnit = Math.min(blockBits, need)
+      const transferUnit = Math.min(blockBits, need, memoryToCacheBudget)
       if (bits >= transferUnit) {
         bits -= transferUnit
         diskCache = { ...diskCache, [size]: cached + transferUnit }
+        memoryToCacheBudget -= transferUnit
         changed = true
         continue
       }
       // Memory is full but capacity itself is smaller than one block on this size — dump the
       // full balance rather than stalling the refill forever on a large array.
       if (capacity > 0 && capacity < transferUnit && bits >= capacity) {
-        const add = Math.min(need, bits)
+        const add = Math.min(need, bits, memoryToCacheBudget)
         bits -= add
         diskCache = { ...diskCache, [size]: cached + add }
+        memoryToCacheBudget -= add
         changed = true
         continue
       }

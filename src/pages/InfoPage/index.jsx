@@ -23,6 +23,8 @@ import {
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
+  CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
+  CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY,
   DATA_LAKE_SLOT_MAX,
   DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
@@ -36,6 +38,7 @@ import {
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
+  DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
@@ -233,8 +236,9 @@ const InfoPage = () => {
             Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).
           </li>
           <li>
-            Build time is real: the first disk of a size takes 1s per “KB” of that size; the Nth
-            disk of the same array takes N× that base time.
+            Build time is real: the first disk of a size takes exactly as long as filling it would
+            at your current Byte Foundry production rate (Memory bandwidth); the Nth disk of the
+            same array takes N× that base time.
           </li>
           <li>
             While an array rebuilds, every disk in it is offline — no fill, release, or redeem —
@@ -258,13 +262,18 @@ const InfoPage = () => {
             Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth of bits (e.g. a
             1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
             blocks when a block was just released or the size was just unlocked — Memory fills
-            visibly between transfers rather than draining bit-by-bit.
+            visibly between transfers rather than draining bit-by-bit, at up to
+            {' '}{CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× your current production rate, so
+            even a large banked balance can't refill it instantly.
           </li>
           <li>
             That smallest array's empty disks fill from its full read cache when no tier claim
-            blocks that size — the flush takes as long as filling one cache block at your current
-            Byte Foundry production rate (not instant). Every larger size fills exclusively via
-            write-cache merges from the size below — it has no read cache of its own.
+            blocks that size — the flush takes as long as filling one cache block at
+            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your current Byte Foundry production
+            rate (not instant). Every larger size fills exclusively via write-cache merges from the
+            size below — collecting from those built Disks at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}×
+            your rate, then flushing into the next size's own empty disk at
+            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× — it has no read cache of its own.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back

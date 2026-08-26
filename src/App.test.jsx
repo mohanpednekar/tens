@@ -3198,12 +3198,13 @@ describe('Byte Foundry Storage', () => {
     // finishes — the button itself reflects the in-progress rebuild.
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
-    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: 1, totalSeconds: 1 })
+    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: currentBankSize, totalSeconds: currentBankSize })
     expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
     expect(screen.getByRole('button', { name: /disk array rebuilding/i })).toBeDisabled()
 
-    // The smallest size's very first build takes exactly 1 second (1 second per real "KB" of size).
-    act(() => { vi.advanceTimersByTime(1000) })
+    // The smallest size's very first build takes exactly the time to fill it at 1x Memory
+    // bandwidth — the default 1 bit/sec production rate, so currentBankSize (8000) seconds.
+    act(() => { vi.advanceTimersByTime(currentBankSize * 1000) })
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.diskBuild).toBeNull()
@@ -3225,7 +3226,11 @@ describe('Byte Foundry Storage', () => {
 
     // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
     // level 1 so read cache may flush into the empty disk without an active tier claim at this size.
-    // High production rate makes the one-block flush finish within a single tick.
+    // High production rate makes the one-block flush finish within a single tick — but a cache
+    // refill FROM Memory is itself bandwidth-capped (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER ×
+    // the current rate × elapsed REAL seconds), so refilling the cache a second time after the
+    // first tick's flush empties it needs a second real tick's worth of elapsed time, not the same
+    // 0-elapsed intra-tick pass the old unbounded refill relied on.
     seedIntroState(
       {
         bits: currentBankSize * 2,
@@ -3244,9 +3249,20 @@ describe('Byte Foundry Storage', () => {
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
     // Read cache topped up and flushed into the empty disk in the same tick. At tier level 2 the
-    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance.
+    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance. The cache
+    // itself is empty again immediately after flushing into the disk — it only refills on a later
+    // tick's own bandwidth budget.
     expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.bits).toBe(currentBankSize)
+    expect(saved.intro.diskCache?.[currentBankSize] ?? 0).toBe(0)
+    expect(saved.intro.disks[currentBankSize]).toBe(1)
+    expect(saved.owned.tier01).toBe(0)
+
+    // A second tick's worth of (ample) bandwidth refills the cache from the remaining balance.
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
