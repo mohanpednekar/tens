@@ -2568,9 +2568,10 @@ describe('isDiskCacheBlockReleasable / releaseDiskCacheBlock', () => {
     expect(releaseDiskCacheBlock(FIRST_DISK_SIZE)(state)).toBe(state)
   })
 
-  it('is false — and releaseDiskCacheBlock is a same-reference no-op — once no tier\'s current cost matches this size any more', () => {
-    // tier01 leveled past FIRST_DISK_SIZE — same "no longer redeemable" case isDiskRedeemable's own
-    // tests exercise, but for the cache's manual release instead of a full disk's redeem.
+  it('is false — and releaseDiskCacheBlock is a same-reference no-op — once this size\'s fixed corresponding tier is no longer at its required level', () => {
+    // tier01 leveled past FIRST_DISK_SIZE's required level — same "no longer redeemable" case
+    // isDiskRedeemable's own tests exercise, but for the cache's manual release instead of a full
+    // disk's redeem.
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
       diskCache: { [FIRST_DISK_SIZE]: blockBits },
     })

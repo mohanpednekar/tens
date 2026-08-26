@@ -268,9 +268,9 @@ const InfoPage = () => {
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
-            into Memory) — but only while some tier’s current per-unit cost matches that array’s
-            size <strong>and no full redeemable disk of that size exists</strong>. Disks always
-            take priority; cache is fallback only.
+            into Memory) — but only while that size’s own fixed corresponding tier currently sits
+            at its required level <strong>and no full redeemable disk of that size exists</strong>.
+            Disks always take priority; cache is fallback only.
           </li>
           <li>
             With <strong>Smart</strong> on, the matching tier’s autobuyer auto-releases cache

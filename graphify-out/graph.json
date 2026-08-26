@@ -181,7 +181,7 @@
       "file_type": "code",
       "norm_label": "consumexpforlasttiertickspeed()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5203"
+      "source_location": "L5204"
     },
     {
       "id": "src_game_engine_getlasttierxptickspeedminconsumption",
@@ -229,7 +229,7 @@
       "file_type": "code",
       "norm_label": "overclockgame()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5063"
+      "source_location": "L5064"
     },
     {
       "id": "src_pages_infopage_index_infopage",
@@ -661,7 +661,7 @@
       "file_type": "code",
       "norm_label": "eraeligiblestate()",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8093"
+      "source_location": "L8094"
     },
     {
       "id": "src_game_engine_test_omit",
@@ -685,7 +685,7 @@
       "file_type": "code",
       "norm_label": "unlockedlasttierstate()",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6297"
+      "source_location": "L6298"
     },
     {
       "id": "src_game_engine_test_withautobuyer",
@@ -1909,7 +1909,7 @@
       "file_type": "code",
       "norm_label": "speedupgame()",
       "source_file": "src/game/engine.js",
-      "source_location": "L4988"
+      "source_location": "L4989"
     },
     {
       "id": "src_game_navattention_test_withintro",
@@ -3769,7 +3769,7 @@
       "file_type": "code",
       "norm_label": "buyautospeedup()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5120"
+      "source_location": "L5121"
     },
     {
       "id": "src_game_engine_buycomputeautoboost",
@@ -3781,7 +3781,7 @@
       "file_type": "code",
       "norm_label": "buycomputeautoboost()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5137"
+      "source_location": "L5138"
     },
     {
       "id": "src_game_engine_buyprestigedoublepp",
@@ -3829,7 +3829,7 @@
       "file_type": "code",
       "norm_label": "buytickspeedautobuyer()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5164"
+      "source_location": "L5165"
     },
     {
       "id": "src_game_engine_checkmilestones",
@@ -5197,7 +5197,7 @@
       "file_type": "code",
       "norm_label": "pinmuseumentry()",
       "source_file": "src/game/engine.js",
-      "source_location": "L4930"
+      "source_location": "L4931"
     },
     {
       "id": "src_game_engine_resetbytefoundry",
@@ -5233,7 +5233,7 @@
       "file_type": "code",
       "norm_label": "setautoglobaltickspeedenabled()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5180"
+      "source_location": "L5181"
     },
     {
       "id": "src_game_engine_setautoprestigeautobuyerenabled",
@@ -5269,7 +5269,7 @@
       "file_type": "code",
       "norm_label": "setautospeedupenabled()",
       "source_file": "src/game/engine.js",
-      "source_location": "L5153"
+      "source_location": "L5154"
     },
     {
       "id": "src_game_engine_setcomputeautoboosttype",
@@ -5317,7 +5317,7 @@
       "file_type": "code",
       "norm_label": "unpinmuseumentry()",
       "source_file": "src/game/engine.js",
-      "source_location": "L4944"
+      "source_location": "L4945"
     },
     {
       "id": "src_game_engine_upgradecomputemergeduration",
@@ -7837,7 +7837,7 @@
       "node_kind": "heading",
       "norm_label": "constants (`src/game/layers.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2304"
+      "source_location": "L2305"
     },
     {
       "id": "docs_economy_reference_economy_model_reference",
@@ -7861,7 +7861,7 @@
       "node_kind": "heading",
       "norm_label": "era ascension and eons (#407)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1069"
+      "source_location": "L1070"
     },
     {
       "id": "docs_economy_reference_game_state_shape",
@@ -7873,7 +7873,7 @@
       "node_kind": "heading",
       "norm_label": "game state shape",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1709"
+      "source_location": "L1710"
     },
     {
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
@@ -7885,7 +7885,7 @@
       "node_kind": "heading",
       "norm_label": "key engine functions (`src/game/engine.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2148"
+      "source_location": "L2149"
     },
     {
       "id": "docs_economy_reference_multiplier_outcomes_are_floored",
@@ -7897,7 +7897,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier outcomes are floored",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L911"
+      "source_location": "L912"
     },
     {
       "id": "docs_economy_reference_multiplier_overflow_safety",
@@ -7909,7 +7909,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier overflow safety",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1452"
+      "source_location": "L1453"
     },
     {
       "id": "docs_economy_reference_offline_progress",
@@ -7921,7 +7921,7 @@
       "node_kind": "heading",
       "norm_label": "offline progress",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L948"
+      "source_location": "L949"
     },
     {
       "id": "docs_economy_reference_overclock",
@@ -7933,7 +7933,7 @@
       "node_kind": "heading",
       "norm_label": "overclock",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1584"
+      "source_location": "L1585"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_per_tier_automations",
@@ -7945,7 +7945,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for per-tier automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1242"
+      "source_location": "L1243"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_the_global_automations",
@@ -7957,7 +7957,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for the global automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1217"
+      "source_location": "L1218"
     },
     {
       "id": "docs_economy_reference_pp_compute_flops",
@@ -7969,7 +7969,7 @@
       "node_kind": "heading",
       "norm_label": "pp compute (flops)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1010"
+      "source_location": "L1011"
     },
     {
       "id": "docs_economy_reference_prestige_and_the_googol_freeze",
@@ -7981,7 +7981,7 @@
       "node_kind": "heading",
       "norm_label": "prestige and the googol freeze",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1469"
+      "source_location": "L1470"
     },
     {
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
@@ -7993,7 +7993,7 @@
       "node_kind": "heading",
       "norm_label": "prestige info is hidden until first prestige",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1668"
+      "source_location": "L1669"
     },
     {
       "id": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -8005,7 +8005,7 @@
       "node_kind": "heading",
       "norm_label": "prestige points, autobuyer unlock, and the tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1051"
+      "source_location": "L1052"
     },
     {
       "id": "docs_economy_reference_production_figure_tick_progress_ring_removed",
@@ -8017,7 +8017,7 @@
       "node_kind": "heading",
       "norm_label": "production figure (tick-progress ring removed)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L934"
+      "source_location": "L935"
     },
     {
       "id": "docs_economy_reference_reset",
@@ -8029,7 +8029,7 @@
       "node_kind": "heading",
       "norm_label": "reset",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1687"
+      "source_location": "L1688"
     },
     {
       "id": "docs_economy_reference_speed_up",
@@ -8041,7 +8041,7 @@
       "node_kind": "heading",
       "norm_label": "speed up",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1513"
+      "source_location": "L1514"
     },
     {
       "id": "docs_economy_reference_the_configurable_purchase_block_size_and_tier_levels",
@@ -8065,7 +8065,7 @@
       "node_kind": "heading",
       "norm_label": "the global tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1304"
+      "source_location": "L1305"
     },
     {
       "id": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
@@ -8077,7 +8077,7 @@
       "node_kind": "heading",
       "norm_label": "the last tier's xp-funded tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1369"
+      "source_location": "L1370"
     },
     {
       "id": "docs_economy_reference_tickspeed_multiplier",
@@ -8089,7 +8089,7 @@
       "node_kind": "heading",
       "norm_label": "tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1274"
+      "source_location": "L1275"
     },
     {
       "id": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
@@ -8101,7 +8101,7 @@
       "node_kind": "heading",
       "norm_label": "tier autobuyer/tier-tickspeed-autobuyer milestones",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1181"
+      "source_location": "L1182"
     },
     {
       "id": "docs_economy_reference_tier_production_tickspeed",
@@ -8113,7 +8113,7 @@
       "node_kind": "heading",
       "norm_label": "tier production tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L867"
+      "source_location": "L868"
     },
     {
       "id": "claude_architecture",
@@ -14663,7 +14663,7 @@
       "node_kind": "heading",
       "norm_label": "data lake capacity-doubling cost: fixing a unit-count/real-bits conflation found while wiring up the byte-scale display",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2975"
+      "source_location": "L2988"
     },
     {
       "id": "docs_design_history_data_lake_refill_gating_staged_9_99_999_capacity_from_disk_array_completion",
@@ -18124,7 +18124,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5121",
+      "source_location": "L5122",
       "weight": 1.0
     },
     {
@@ -18136,7 +18136,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5123",
+      "source_location": "L5124",
       "weight": 1.0
     },
     {
@@ -18148,7 +18148,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5125",
+      "source_location": "L5126",
       "weight": 1.0
     },
     {
@@ -18160,7 +18160,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5138",
+      "source_location": "L5139",
       "weight": 1.0
     },
     {
@@ -18172,7 +18172,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5140",
+      "source_location": "L5141",
       "weight": 1.0
     },
     {
@@ -18184,7 +18184,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5142",
+      "source_location": "L5143",
       "weight": 1.0
     },
     {
@@ -18436,7 +18436,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5165",
+      "source_location": "L5166",
       "weight": 1.0
     },
     {
@@ -18448,7 +18448,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5167",
+      "source_location": "L5168",
       "weight": 1.0
     },
     {
@@ -18460,7 +18460,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5169",
+      "source_location": "L5170",
       "weight": 1.0
     },
     {
@@ -18892,7 +18892,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5204",
+      "source_location": "L5205",
       "weight": 1.0
     },
     {
@@ -18904,7 +18904,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5205",
+      "source_location": "L5206",
       "weight": 1.0
     },
     {
@@ -18916,7 +18916,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5207",
+      "source_location": "L5208",
       "weight": 1.0
     },
     {
@@ -18928,7 +18928,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5211",
+      "source_location": "L5212",
       "weight": 1.0
     },
     {
@@ -18940,7 +18940,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5216",
+      "source_location": "L5217",
       "weight": 1.0
     },
     {
@@ -21844,7 +21844,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5064",
+      "source_location": "L5065",
       "weight": 1.0
     },
     {
@@ -21856,7 +21856,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5067",
+      "source_location": "L5068",
       "weight": 1.0
     },
     {
@@ -21868,7 +21868,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L5069",
+      "source_location": "L5070",
       "weight": 1.0
     },
     {
@@ -22240,7 +22240,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L4989",
+      "source_location": "L4990",
       "weight": 1.0
     },
     {
@@ -22252,7 +22252,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L4992",
+      "source_location": "L4993",
       "weight": 1.0
     },
     {
@@ -22264,7 +22264,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.js",
-      "source_location": "L4994",
+      "source_location": "L4995",
       "weight": 1.0
     },
     {
@@ -22504,7 +22504,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8094",
+      "source_location": "L8095",
       "weight": 1.0
     },
     {
@@ -22516,7 +22516,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8094",
+      "source_location": "L8095",
       "weight": 1.0
     },
     {
@@ -22528,7 +22528,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8095",
+      "source_location": "L8096",
       "weight": 1.0
     },
     {
@@ -22540,7 +22540,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6297",
+      "source_location": "L6298",
       "weight": 1.0
     },
     {
@@ -22552,7 +22552,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6297",
+      "source_location": "L6298",
       "weight": 1.0
     },
     {
@@ -45446,7 +45446,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2975",
+      "source_location": "L2988",
       "weight": 1.0
     },
     {
@@ -45468,7 +45468,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1010",
+      "source_location": "L1011",
       "weight": 1.0
     },
     {
@@ -45479,18 +45479,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1051",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_economy_reference_economy_model_reference",
-      "target": "docs_economy_reference_era_ascension_and_eons_407",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1069",
+      "source_location": "L1052",
       "weight": 1.0
     },
     {
@@ -45506,13 +45495,24 @@
     },
     {
       "source": "docs_economy_reference_economy_model_reference",
+      "target": "docs_economy_reference_era_ascension_and_eons_407",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/ECONOMY_REFERENCE.md",
+      "source_location": "L1070",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_economy_reference_economy_model_reference",
       "target": "docs_economy_reference_prestige_and_the_googol_freeze",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1469",
+      "source_location": "L1470",
       "weight": 1.0
     },
     {
@@ -45523,7 +45523,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1513",
+      "source_location": "L1514",
       "weight": 1.0
     },
     {
@@ -45534,7 +45534,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1584",
+      "source_location": "L1585",
       "weight": 1.0
     },
     {
@@ -45545,7 +45545,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1668",
+      "source_location": "L1669",
       "weight": 1.0
     },
     {
@@ -45556,7 +45556,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1687",
+      "source_location": "L1688",
       "weight": 1.0
     },
     {
@@ -45567,7 +45567,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1709",
+      "source_location": "L1710",
       "weight": 1.0
     },
     {
@@ -45578,7 +45578,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2148",
+      "source_location": "L2149",
       "weight": 1.0
     },
     {
@@ -45589,7 +45589,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2304",
+      "source_location": "L2305",
       "weight": 1.0
     },
     {
@@ -45611,7 +45611,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L867",
+      "source_location": "L868",
       "weight": 1.0
     },
     {
@@ -45622,7 +45622,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L948",
+      "source_location": "L949",
       "weight": 1.0
     },
     {
@@ -45644,7 +45644,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1181",
+      "source_location": "L1182",
       "weight": 1.0
     },
     {
@@ -45655,7 +45655,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1217",
+      "source_location": "L1218",
       "weight": 1.0
     },
     {
@@ -45666,7 +45666,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1242",
+      "source_location": "L1243",
       "weight": 1.0
     },
     {
@@ -45677,7 +45677,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1274",
+      "source_location": "L1275",
       "weight": 1.0
     },
     {
@@ -45688,7 +45688,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1304",
+      "source_location": "L1305",
       "weight": 1.0
     },
     {
@@ -45699,7 +45699,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1369",
+      "source_location": "L1370",
       "weight": 1.0
     },
     {
@@ -45710,7 +45710,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1452",
+      "source_location": "L1453",
       "weight": 1.0
     },
     {
@@ -45721,7 +45721,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L911",
+      "source_location": "L912",
       "weight": 1.0
     },
     {
@@ -45732,7 +45732,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L934",
+      "source_location": "L935",
       "weight": 1.0
     },
     {
@@ -50396,7 +50396,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L4930",
+      "source_location": "L4931",
       "weight": 1.0
     },
     {
@@ -50407,7 +50407,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L4944",
+      "source_location": "L4945",
       "weight": 1.0
     },
     {
@@ -50418,7 +50418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L4988",
+      "source_location": "L4989",
       "weight": 1.0
     },
     {
@@ -50429,7 +50429,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5063",
+      "source_location": "L5064",
       "weight": 1.0
     },
     {
@@ -50440,7 +50440,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5120",
+      "source_location": "L5121",
       "weight": 1.0
     },
     {
@@ -50451,7 +50451,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5137",
+      "source_location": "L5138",
       "weight": 1.0
     },
     {
@@ -50462,7 +50462,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5153",
+      "source_location": "L5154",
       "weight": 1.0
     },
     {
@@ -50473,7 +50473,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5164",
+      "source_location": "L5165",
       "weight": 1.0
     },
     {
@@ -50484,7 +50484,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5180",
+      "source_location": "L5181",
       "weight": 1.0
     },
     {
@@ -50495,7 +50495,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.js",
-      "source_location": "L5203",
+      "source_location": "L5204",
       "weight": 1.0
     },
     {
@@ -51353,7 +51353,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6297",
+      "source_location": "L6298",
       "weight": 1.0
     },
     {
@@ -51375,7 +51375,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8093",
+      "source_location": "L8094",
       "weight": 1.0
     },
     {
@@ -56592,7 +56592,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2988",
+      "source_location": "L2989",
       "weight": 1.0
     },
     {
@@ -56604,7 +56604,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2988",
+      "source_location": "L2989",
       "weight": 1.0
     },
     {
@@ -56616,7 +56616,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2988",
+      "source_location": "L2989",
       "weight": 1.0
     },
     {
@@ -56628,7 +56628,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2989",
+      "source_location": "L2990",
       "weight": 1.0
     },
     {
@@ -56640,7 +56640,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2989",
+      "source_location": "L2990",
       "weight": 1.0
     },
     {
@@ -56652,7 +56652,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2989",
+      "source_location": "L2990",
       "weight": 1.0
     },
     {
@@ -56664,7 +56664,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2990",
+      "source_location": "L2991",
       "weight": 1.0
     },
     {
@@ -56676,7 +56676,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2990",
+      "source_location": "L2991",
       "weight": 1.0
     },
     {
@@ -56688,7 +56688,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2990",
+      "source_location": "L2991",
       "weight": 1.0
     },
     {
@@ -56700,7 +56700,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2991",
+      "source_location": "L2992",
       "weight": 1.0
     },
     {
@@ -56712,7 +56712,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2991",
+      "source_location": "L2992",
       "weight": 1.0
     },
     {
@@ -56724,7 +56724,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2991",
+      "source_location": "L2992",
       "weight": 1.0
     },
     {
@@ -56736,7 +56736,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2992",
+      "source_location": "L2993",
       "weight": 1.0
     },
     {
@@ -56748,7 +56748,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2992",
+      "source_location": "L2993",
       "weight": 1.0
     },
     {
@@ -56760,7 +56760,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2992",
+      "source_location": "L2993",
       "weight": 1.0
     },
     {
@@ -56772,7 +56772,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2993",
+      "source_location": "L2994",
       "weight": 1.0
     },
     {
@@ -56784,7 +56784,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2993",
+      "source_location": "L2994",
       "weight": 1.0
     },
     {
@@ -56796,7 +56796,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2993",
+      "source_location": "L2994",
       "weight": 1.0
     },
     {
@@ -56808,7 +56808,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2994",
+      "source_location": "L2995",
       "weight": 1.0
     },
     {
@@ -56820,7 +56820,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2994",
+      "source_location": "L2995",
       "weight": 1.0
     },
     {
@@ -56832,7 +56832,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2994",
+      "source_location": "L2995",
       "weight": 1.0
     },
     {
@@ -56844,7 +56844,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2995",
+      "source_location": "L2996",
       "weight": 1.0
     },
     {
@@ -56856,7 +56856,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2995",
+      "source_location": "L2996",
       "weight": 1.0
     },
     {
@@ -56868,7 +56868,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2995",
+      "source_location": "L2996",
       "weight": 1.0
     },
     {
@@ -56880,7 +56880,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2996",
+      "source_location": "L2997",
       "weight": 1.0
     },
     {
@@ -56892,7 +56892,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2996",
+      "source_location": "L2997",
       "weight": 1.0
     },
     {
@@ -56904,7 +56904,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L2996",
+      "source_location": "L2997",
       "weight": 1.0
     },
     {
@@ -57125,5 +57125,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "1b4118d20e3235fe2a84459007e543416ce89ca9"
+  "built_at_commit": "96d80deef2dd3db5740852302684be596bcc251b"
 }

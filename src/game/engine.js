@@ -1549,10 +1549,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // neither accumulates the attempt budget nor fires prestigeGame automatically while paused.
   const autoPrestigeActive = autoPrestigeLevel !== null && (stateAfterFlops.autoPrestigeEnabled ?? true)
 
-  // Storage's own auto-redeem (full disks -> whichever tier currently matches each one's size —
-  // see getMatchingTierForDiskSize) runs last, through every branch below, against this tick's
-  // FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on them, so a disk
-  // whose size only just became redeemable once some tier leveled up THIS tick still redeems the
+  // Storage's own auto-redeem (full disks -> each one's own fixed corresponding tier, once it's at
+  // the required level — see getMatchingTierForDiskSize) runs last, through every branch below,
+  // against this tick's FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on
+  // them, so a disk whose size only just became redeemable once its tier leveled up THIS tick still redeems the
   // same tick. Auto-fill already ran above (see stateAfterStorage / the storage pipeline), ahead of
   // tickIntroAutoInvest, since it has no such dependency on any tier's level. A same-reference
   // no-op when nothing qualifies (including whenever the matching tier's own autobuyer isn't
@@ -3170,7 +3170,7 @@ export const redeemDisk = capacityBits => state => {
   // getPurchaseBlockSize(state) is read once here, from the state BEFORE any units are granted, then
   // passed as a fixed quantity into grantTierUnits' own loop below — which recomputes
   // getPurchaseBlockSize fresh on every iteration off its own mutating state. That's only safe
-  // because the disk-ladder currently never reaches tier.id === getLastTierId(state) (disks are
+  // because the disk-ladder currently never reaches tier.id === getLastTierId() (disks are
   // capped at MAX_ACTIVE_DISK_LADDER_STEP, tier01's own first 3 levels — see DISK_ARRAY_LADDER_CAP
   // above), so the loop can never cross a PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS boundary of
   // THIS tier mid-grant and have the block size grow out from under remainingInLevel. Once a future
@@ -3233,10 +3233,10 @@ export const isDiskCacheBlockManualReleaseAvailable = (state, capacityBits) =>
   !isDiskCacheBlockAutoReleaseEligible(state, capacityBits)
 
 // Every Disk size currently "relevant" for a matching-tier Foundry subset: any size from
-// getDiskSizesToShow whose current per-unit tier cost matches right now (cache releasable / disk
-// redeemable toward that tier), PLUS always the highest size in that list — even when it does not
-// currently match (usually the ladder's current / incomplete array). Ascending. The live Foundry
-// UI lists every getDiskSizesToShow size as continuous sections instead; this helper remains for
+// getDiskSizesToShow whose own fixed corresponding tier is currently at that size's required level
+// right now (cache releasable / disk redeemable toward that tier), PLUS always the highest size in
+// that list — even when it does not currently match (usually the ladder's current / incomplete
+// array). Ascending. The live Foundry UI lists every getDiskSizesToShow size as continuous sections instead; this helper remains for
 // the narrower matching subset (issue #389).
 export const getRelevantDiskSizesForFoundry = state => {
   const shown = getDiskSizesToShow(state)
@@ -4805,8 +4805,9 @@ export const prestigeGame = state => {
       // build ladder are just as permanent as the Byte generator itself above — "never lost," not
       // part of this cycle's Memory reset. A disk already FULL when Prestige fires stays full, its
       // contents intact even though Memory itself resets to 0 — this is what lets banked-up
-      // Storage give a new cycle a head start, redeemable immediately once tier01's fresh level 1
-      // cost matches. diskAutoRedeemedSizes is deliberately NOT carried over here — it falls
+      // Storage give a new cycle a head start: the smallest size's own fixed corresponding tier is
+      // tier01, whose fresh post-Prestige level 1 is exactly that size's required level, so it's
+      // immediately redeemable again. diskAutoRedeemedSizes is deliberately NOT carried over here — it falls
       // through to initial.intro's fresh {} default below, since "once per run" resets every real
       // Prestige (see tickDiskAutoRedeem).
       disks: state.intro?.disks ?? initial.intro.disks,
