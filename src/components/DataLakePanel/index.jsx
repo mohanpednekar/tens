@@ -1,11 +1,12 @@
 import StatCard from 'components/StatCard'
 import {
   formatAmount,
+  formatOfflineDuration,
   getBoosterPurchaseCost,
   getDataLakeDepositedUnits,
   getDataLakeTier,
   getDataLakeTierLabel,
-  getMaxBoosterPurchasesForCapacity,
+  getDataLakeTransferCapacity,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -51,7 +52,7 @@ const getVisibleLakeTierIndexes = state => {
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     const deposited = getDataLakeDepositedUnits(tierIndex)(state)
     const lake = getDataLakeTier(state, tierIndex)
-    if (deposited > 0 || (lake?.purchased ?? 0) > 0) {
+    if (deposited > 0 || (lake?.purchased ?? 0) > 0 || (lake?.transfers?.length ?? 0) > 0) {
       tiers.push(tierIndex)
     }
   }
@@ -69,25 +70,27 @@ const DataLakePanel = ({ state, bare = false }) => {
     <LakeList>
       {visibleTiers.map(tierIndex => {
         const label = getDataLakeTierLabel(tierIndex)
-        // A Booster purchase spends real deposited capacity — there's no separate "available vs.
-        // deposited" distinction any more (see getDataLakeAvailableUnits in engine.js); spent
-        // capacity only returns once more Disks get deposited to replace it.
+        // Deposited stock is a prepaid convenience buffer, spent FIRST (instantly) toward a
+        // Booster's cost — any remainder is sourced live from built Disks over a timed transfer
+        // instead (see startBoosterTransfer/tickDataLakeTransfers in engine.js); the lake itself
+        // never banks a second spendable reserve beyond this deposited amount.
         const deposited = getDataLakeDepositedUnits(tierIndex)(state)
         const lake = getDataLakeTier(state, tierIndex)
         const purchased = lake?.purchased ?? 0
         const nextCost = getBoosterPurchaseCost(tierIndex)(state)
-        // How many MORE purchases the currently-deposited stock alone can fund in a row, before
-        // needing fresh deposits — NOT the tier's lifetime cap (that's DATA_LAKE_CAPACITY itself,
-        // 999, shown against `purchased` below — a patient player redepositing between purchases
-        // can reach it even though no single deposit-load can burst past ~44).
-        const maxPurchasable = getMaxBoosterPurchasesForCapacity(deposited)
+        const transfers = lake?.transfers ?? []
+        const transferCapacity = getDataLakeTransferCapacity(state, tierIndex)
+        const soonestTransferSeconds = transfers.length > 0
+          ? Math.min(...transfers.map(transfer => transfer.remainingSeconds ?? 0))
+          : 0
         const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
 
         return (
           <LakeRow key={tierIndex}>
             <LakeName>{`${label} Data Lake → ${boosterLabel}`}</LakeName>
             <LakeStats>
-              {`${formatAmount(deposited)} deposited · ${formatAmount(purchased)}/${formatAmount(DATA_LAKE_CAPACITY)} bought · next ${formatAmount(nextCost)} ${label} · ${formatAmount(maxPurchasable)} more before next deposit`}
+              {`${formatAmount(deposited)}/${formatAmount(DATA_LAKE_CAPACITY)} deposited · ${formatAmount(purchased)} bought · next ${formatAmount(nextCost)} ${label}`}
+              {transfers.length > 0 && ` · ${formatAmount(transfers.length)}/${formatAmount(transferCapacity)} transferring (${formatOfflineDuration(soonestTransferSeconds)} left)`}
             </LakeStats>
           </LakeRow>
         )
