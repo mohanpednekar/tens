@@ -155,11 +155,12 @@ pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both hig
 "Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
 `variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build {size} Disk ({cost})"`,
 `title` either naming which higher-priority action to take first (`"Take Bandwidth (or redeem a full
-Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether some tier currently
-matches this size (`diskRedeemTierName`, from `getDiskRedeemTierName(state, diskSize)`) — `"Costs
+Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
+corresponding tier is currently at its required level (`diskRedeemTierName`, from
+`getDiskRedeemTierName(state, diskSize)`) — `"Costs
 {cost} and takes time to build — builds an empty {size} container; its cache auto-fills it,
 redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
-be redeemable until some tier's level cost matches it"`; **mid-build** — `aria-label="disk array
+be redeemable until its own fixed corresponding tier reaches its matching level"`; **mid-build** — `aria-label="disk array
 rebuilding"`, always `disabled`, visible text `"🏦 Building {size} Disk — {ceil(remainingSeconds)}s"`,
 `title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`; and **pool complete**
 (`diskLadderExhausted`, checked before `diskBuildInProgress`'s idle-state alternatives) —
@@ -320,7 +321,8 @@ render:
   yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always disabled) —
   **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
   always disabled). A full square's `title` names auto vs manual redeem into the matching tier, or
-  `"Redeemable once some tier's level cost matches <size>"` when not yet matching; an empty square's
+  `"Redeemable once <size>'s own fixed corresponding tier reaches its matching level"` when not yet
+  matching; an empty square's
   `title` is `"Built, waiting for Memory to fill it"`; a not-yet-built square's is
   `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
@@ -330,7 +332,7 @@ render:
 
 There is no pause/resume control for auto-redeem on this page, and no
 `storageAutoRedeemEnabled`-style toggle exists in state at all any more — `tickDiskAutoRedeem` is
-gated per-size by whichever tier currently matches that size having its own unit-buying autobuyer
+gated per-size by that size's own fixed corresponding tier having its own unit-buying autobuyer
 active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
 already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
