@@ -2953,10 +2953,37 @@ whose downstream assertion (the ByteFoundryPage transfer-block row showing "1 tr
 also had to flip to "0 transferred blocks," since completing a level resets `purchaseLevelProgress`
 back to 0 in a fresh level rather than leaving a partial 1-of-8 behind.
 
+**A latent, currently-unreachable edge case in the block-size snapshot** (caught by a 4th
+adversarial review pass): `redeemDisk` computes `remainingInLevel = getPurchaseBlockSize(state) -
+progress` ONCE, from the state before any units are granted, then hands that fixed number to
+`grantTierUnits`' own loop — which recomputes `getPurchaseBlockSize` fresh on every iteration off
+its own mutating state. If a disk's fixed corresponding tier were ever `getLastTierId()` (the tier
+whose purchase-block size keeps growing every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`), and a
+grant loop happened to cross that growth boundary mid-loop, the recomputed (larger) block size could
+leave `purchaseLevelProgress` short of the new threshold even after granting the originally-intended
+"whole level," silently failing to reset progress to 0. This can't happen today —
+`MAX_ACTIVE_DISK_LADDER_STEP` caps every buildable disk at tier01's own first 3 levels, and tier01 is
+never the last tier — so no fix shipped with this change; a code comment at the `remainingInLevel`
+call site flags the invariant so a future storage pool (epic #456, which would let disks reach later
+tiers) doesn't resurrect this silently.
+
 **The Data Lake's own currency/threshold display** (a third request in the same message: "Data lake
 uses the same currency as disks. It replaces 9,99,999") was scoped separately — see the maintainer's
 own answer that the deposited/capacity numbers should keep their current internal values but display in the
 same Byte-scale (KB/MB/GB) formatting disks themselves use, rather than bare unitless numbers.
+
+**`simulate-run-times` re-publish blocked by a pre-existing, already-tracked bug.** `redeemDisk`
+granting a whole purchase level per disk (instead of 1 unit) is exactly the kind of change
+CLAUDE.md's "Also re-run and publish [simulate-run-times]" rule exists for, but running
+`node .claude/skills/simulate-run-times/simulate.mjs` fails immediately with `SyntaxError: The
+requested module '.../src/game/engine.js' does not provide an export named 'claimComputeCore'` —
+`run-simulation.mjs`'s bot strategy still imports the "Claim Core" mechanic removed by an earlier,
+unrelated PR (superseded by Data Lake Boosters). This exact breakage is already tracked in issue
+#471 ("simulate-run-times tool broken: run-simulation.mjs imports removed claimComputeCore"), filed
+before this round of changes and unrelated to the disk-redemption/Data-Lake-currency work here —
+fixing the bot's whole Compute-acquisition strategy is out of this PR's scope. The pacing impact of
+granting a full level per redemption (rather than 1 unit) is real and worth capturing once #471
+lands, but couldn't be measured in this PR.
 
 ### Data Lake capacity-doubling cost: fixing a unit-count/real-bits conflation found while wiring up the Byte-scale display
 

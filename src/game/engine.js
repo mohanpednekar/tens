@@ -2471,8 +2471,8 @@ export const formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemor
 const formatBitsInNearestSiUnit = bits => formatMemoryAmount(bits, getSiByteUnit(bits))
 
 // The cost, in bits, of converting Memory into 1 Kilobyte unit right now — tier01's own CURRENT
-// per-unit level cost, the exact same value getDiskSize/isDiskRedeemable already key
-// off (see the Storage section below) — not a fixed rate. At a fresh cycle's starting level this is
+// per-unit level cost (see the Storage section below for how a disk's SIZE maps to a fixed tier and
+// level instead — a positional match, not a price one) — not a fixed rate. At a fresh cycle's starting level this is
 // exactly INTRO_BITS_PER_KILOBYTE_CONVERSION (8000 bits, BITS_PER_BYTE × tier01's own baseCost), but it grows in
 // lockstep with tier01's own price from then on (10,000 once tier01 reaches level 2, and so on), so
 // a transfer block's real value never falls behind what tier01 itself currently costs. An earlier
@@ -3060,10 +3060,10 @@ const hasFullRedeemableDiskAtSize = (state, capacityBits) =>
 
 // Whether a size's cache currently has at least one full, releasable block (see
 // DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
-// — see tickDiskBuild), while no tier's current per-unit cost matches capacityBits at all (see
-// isDiskRedeemable below — a released block is only ever spendable toward an eligible tier's own
-// level, so with none eligible there's nothing for it to fund), OR while a full redeemable disk of
-// that same size exists (disks always take priority — cache is fallback only).
+// — see tickDiskBuild), while capacityBits' own fixed corresponding tier isn't currently at the
+// required level (see isDiskRedeemable below — a released block is only ever spendable toward an
+// eligible tier's own level, so with none eligible there's nothing for it to fund), OR while a full
+// redeemable disk of that same size exists (disks always take priority — cache is fallback only).
 export const isDiskCacheBlockReleasable = (state, capacityBits) =>
   state.intro.diskBuild?.size !== capacityBits &&
   !getDiskReadCacheFlush(state, capacityBits) &&
@@ -3167,6 +3167,15 @@ export const redeemDisk = capacityBits => state => {
   const { [capacityBits]: _removed, ...remainingDisks } = state.intro.disks
   const nextDisks = full > 1 ? { ...state.intro.disks, [capacityBits]: full - 1 } : remainingDisks
 
+  // getPurchaseBlockSize(state) is read once here, from the state BEFORE any units are granted, then
+  // passed as a fixed quantity into grantTierUnits' own loop below — which recomputes
+  // getPurchaseBlockSize fresh on every iteration off its own mutating state. That's only safe
+  // because the disk-ladder currently never reaches tier.id === getLastTierId(state) (disks are
+  // capped at MAX_ACTIVE_DISK_LADDER_STEP, tier01's own first 3 levels — see DISK_ARRAY_LADDER_CAP
+  // above), so the loop can never cross a PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS boundary of
+  // THIS tier mid-grant and have the block size grow out from under remainingInLevel. Once a future
+  // storage pool (epic #456) lets disks reach the last tier, this fixed snapshot would need
+  // recomputing inside the loop instead — see docs/DESIGN_HISTORY.md.
   const remainingInLevel = getPurchaseBlockSize(state) - (state.purchaseLevelProgress?.[tier.id] ?? 0)
 
   return grantTierUnits(tier.id, remainingInLevel)({
@@ -3247,9 +3256,10 @@ export const getRelevantDiskSizesForFoundry = state => {
 // auto-redeems at most ONCE per real Prestige cycle (see diskAutoRedeemedSizes, which resets fresh
 // every real Prestige — prestigeGame) — a disk that refills later the same cycle (see
 // tickDiskAutoFill) needs a manual click for the rest of it. Redeems only the smallest eligible
-// size per call — redeeming can itself grant a unit and advance that tier's level/cost (via
-// grantTierUnits), which can in turn change which tier OTHER sizes now match, so redeeming more
-// than one size correctly needs everything recomputed in between; rather than looping that here,
+// size per call — redeeming can itself grant a whole level's worth of units and advance that
+// tier's level (via grantTierUnits), which can in turn change whether OTHER sizes' own fixed tier
+// is now sitting at ITS required level, so redeeming more than one size correctly needs everything
+// recomputed in between; rather than looping that here,
 // this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
 // eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
 // branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
@@ -3467,10 +3477,10 @@ export const depositDiskToDataLake = sizeBits => state => {
 // depositDiskToDataLake (array fully built, a full disk on hand, an open sub-slot, room under the
 // lake cap), PLUS deferring entirely to a disk that's currently redeemable for the main game
 // (isDiskRedeemable): same "disks always take priority for matching level costs" rule read cache
-// release already follows (see isDiskCacheBlockReleasable) — a disk whose size matches some tier's
-// current cost stays available for a manual/auto redeem instead of being swept into the lake out
-// from under it. Deposits the smallest eligible size per call — same cadence as
-// tickDiskAutoReleaseCache/tickDiskAutoRedeem.
+// release already follows (see isDiskCacheBlockReleasable) — a disk whose own fixed corresponding
+// tier is currently at the required level stays available for a manual/auto redeem instead of being
+// swept into the lake out from under it. Deposits the smallest eligible size per call — same cadence
+// as tickDiskAutoReleaseCache/tickDiskAutoRedeem.
 export const tickDiskAutoDeposit = state => {
   const buildingSize = state.intro?.diskBuild?.size
   const eligibleSize = Object.keys(state.intro.disks ?? {})
