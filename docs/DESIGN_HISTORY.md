@@ -3019,3 +3019,84 @@ that previously relied on a tiny 999-bit balance being too small for anything el
 needed to explicitly exhaust the Disk ladder (`disksBuiltTotal` maxed at every active pool size) to
 keep isolating the behavior actually under test, rather than incidentally relying on being too poor
 to afford a Disk Build.
+
+### Disk/Cache fill speeds tied to Memory bandwidth, not flat/hardcoded rates
+
+Requested directly: "Disk fills work at twice the memory bandwidth when filling from cache. Cache
+fills work at 10x the memory bandwidth when filling from memory and 2x when filling from Disks...
+Building a disk takes the same time as time to fill it at memory bandwidth speed." This replaced
+two previously-independent, rate-*unaware* timing formulas with a single unifying framework: every
+timed Byte Foundry storage transfer now paces itself as an explicit multiple of
+`getIntroProductionRate` ("Memory bandwidth") — new `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2),
+`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10), and `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`
+(2) constants in `layers.js` — rather than a flat "1 second per KB" build rate and an unbounded,
+effectively-instant read-cache refill from Memory.
+
+**Fresh disk builds went from a flat rate to a Memory-bandwidth-relative one.**
+`getDiskBuildBaseSeconds` previously divided a disk's size by the hard-coded
+`DISK_LADDER_BASE_SIZE_BITS` (8000, "1 second per real KB of size") — completely decoupled from the
+player's actual production rate, so Invest/Compute Boost never sped up a fresh build at all. It now
+divides by `getIntroProductionRate(state.intro)` instead (still snapshotted once at build start, per
+the existing `totalSeconds`-is-fixed convention — see `startDiskBuild`), making a build exactly "the
+time to fill this size at 1x bandwidth." At the DEFAULT starting rate (1 bit/sec) this is a much
+*slower* first build than before (8000 seconds for a fresh 1 KB disk, vs. the old flat 1 second) —
+a deliberate, explicit trade for tying every Byte Foundry mechanic to the same bandwidth concept,
+not an oversight; a player who has grown their rate via Invest before reaching Storage sees a
+correspondingly faster build, same as every other rate-relative mechanic here (Boosters, read-cache
+flush, Compute merge timers).
+
+**Read-cache → disk flush** (`getDiskReadCacheFlushSeconds`) already divided by
+`getIntroProductionRate` before this change (see the "Timed read-cache → disk flush" entry above) —
+this round only added the `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2x) factor, since a DISK
+filling FROM a pre-staged cache buffer is faster than Memory's own live trickle, per the explicit
+"twice the memory bandwidth" instruction.
+
+**Read-cache refill FROM Memory gained an explicit bandwidth cap it never had.** Before this change,
+`tickDiskAutoFill`'s Pass 1 transferred whole blocks out of `intro.bits` with no time cost
+whatsoever, limited only by how many bits happened to be banked at the moment it ran — a stalled
+refill (blocked by an active tier claim, or simply because the cache is scoped to the pool's
+smallest size only) could unblock and drain an arbitrarily large banked balance into the cache in a
+single tick, in effect at infinite bandwidth for that one call. The new
+`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10x) cap bounds this explicitly: at most
+`10 × rate × elapsedSeconds` bits move per call, shared across every eligible size (today, always at
+most one). Because `tickDiskAutoFill` runs a real-elapsed pass and then a **0-elapsed** pass later in
+the same `tickGame` tick (to start newly-eligible flushes without double-counting time — see its own
+doc comment), the 0-elapsed pass now contributes exactly zero additional refill, whereas previously
+it could drain an entire freshly-emptied cache a second time in the same tick if enough Memory
+happened to be sitting banked. This is why the transfer had to become a genuinely *continuous*
+per-tick amount (`Math.min(blockBits, need, budget)`) rather than only-ever-whole-block, unlike
+Pass 1's original design: a budget smaller than one block must still visibly progress bit-by-bit
+across many ticks rather than stalling until a whole block's worth of budget accumulates, the same
+way Memory's own production already progresses continuously rather than in discrete jumps.
+
+**Write-cache collect/flush stopped reusing `getDiskBuildSeconds`.** The write cache's own collect
+(10 segments from the source size) and flush (into the target's fresh container) phases previously
+borrowed a fresh-BUILD's own duration formula wholesale (`flushTotalSeconds =
+getDiskBuildSeconds(state, targetSize)`, `segmentTotalSeconds = flushTotalSeconds / 10`) — which
+meant a write-cache flush was scaled by build `ordinal` (N× for the Nth container ever built),
+despite refilling an *already-built* empty container rather than constructing a new one. New,
+dedicated `getDiskWriteCacheFlushSeconds` (target size ÷ (rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`))
+and `getDiskWriteCacheSegmentSeconds` (source size ÷ (rate × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`))
+replace it — collect is a CACHE filling FROM Disks (2x), flush is a DISK filling FROM a cache (2x,
+same rate class the read-cache flush uses), and neither is ordinal-scaled any more. Because 10
+source-disk segments always sum to exactly one target's own size (the disk ladder's own ×10 step),
+and both multipliers currently happen to equal 2, the collect phase's total duration still coincides
+numerically with the flush phase's — documented explicitly in both the code comments and
+`docs/ECONOMY_REFERENCE.md` as coincidental (a shared multiplier *value*, not a shared *constant* or
+formula), so a future change to either multiplier alone won't silently break an assumption that they
+must match.
+
+**Test fallout.** Every test asserting an exact `startDiskBuild`/`getDiskReadCacheFlushSeconds`
+duration needed updating to the new formulas (straightforward substitution, since
+`createInitialGameState()`'s default 1 bit/sec rate makes the new numbers numerically equal to the
+disk's own raw size in bits). Two `App.test.jsx` integration tests needed a real behavioral update,
+not just a number swap: one seeded a huge `productionMultiplier` specifically so an empty disk's
+read-cache flush would complete "within a single tick," and additionally (under the OLD unbounded
+Pass 1) relied on the cache refilling to FULL a second time in the very same tick once the flush
+emptied it — that second refill no longer happens within a single tick under the new bandwidth cap
+(a 0-elapsed pass contributes no budget), so the test now asserts the disk fills but the cache stays
+empty after tick 1, then advances a second real tick to see the cache refill to full. New dedicated
+tests cover the bandwidth cap itself (a huge banked balance still only moves the per-call budget
+amount, and exactly one block moves once elapsed time covers that block's own bandwidth-capped
+duration) and the write-cache formula's rate-scaling, mirroring the existing read-cache-flush
+rate-scaling test's own style.

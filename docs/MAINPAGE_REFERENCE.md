@@ -139,10 +139,12 @@ not behind a Storage tab. Each disk strip always shows all 10 slots in one unbro
 
 Building a disk is no longer instant — `startDiskBuild` (`actions.startDiskBuild`) spends the cost
 immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
-(`totalSeconds` fixed at the build's own starting duration — 1 second per real "KB" of size, times
+(`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
+Memory bandwidth (the current Byte Foundry production rate, snapshotted at build start), times
 the disk's own 1-indexed position in the array at the moment the build started, see
-`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so a 1 KB array's 6th disk takes 6
-seconds, a 10 KB array's 6th disk takes 60 seconds), ticked down every tick by `tickDiskBuild`
+`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so at the default starting rate
+(1 bit/sec) a 1 KB array's first disk takes 8000 seconds, its 6th disk 48,000 seconds, a 10 KB
+array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickDiskBuild`
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is

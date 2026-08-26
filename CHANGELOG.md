@@ -84,6 +84,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (8,000 bits for the KB lake), matching what a Disk of that size is actually worth.
 
 ### Changed
+- **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or
+  unbounded rates** — a fresh disk build now takes exactly the time to fill it at 1x Memory
+  bandwidth (was a flat "1 second per real KB," decoupled from Invest/Compute Boost); a disk filling
+  FROM a cache (read-cache or write-cache flush) runs at 2x bandwidth; a cache filling FROM Memory
+  (read-cache refill) is capped at 10x bandwidth, so even a large banked balance can no longer drain
+  into the cache instantly; a cache filling FROM Disks (write-cache collect) runs at 2x bandwidth.
+  All four now scale with Invest/Compute Boost the same way every other timed Byte Foundry mechanic
+  already does.
 - **Disk redemption is now a fixed one-to-one (tier, level) mapping, not a price coincidence** — a
   disk of a given size now always corresponds to one specific tier and level (1st/2nd/3rd
   disk-ladder step → that tier's level 1/2/3, sharing the same KB/MB/GB/… grouping Data Lakes
