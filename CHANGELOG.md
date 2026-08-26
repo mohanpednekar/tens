@@ -29,19 +29,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   game state (so it always matches whatever `engine.js` currently defines — no hand-maintained
   field list to keep in sync), and a raw state-JSON editor that merges a partial object (only the
   fields you're changing) onto the current dev save.
-- **Data Lakes + Booster purchases** — ten storage-tier lakes (KB … QB), each holding up to 999
-  units deposited from Disks (9×1 + 9×10 + 9×100 of that denomination). Depositing a size's disks
+- **Data Lakes + Booster transfers** — ten storage-tier lakes (KB … QB). A lake never itself banks a
+  spendable reserve — past a small prepaid deposit buffer (below), it's a throughput pipe onto the
+  live Disk inventory. Depositing Disks (`9×1 + 9×10 + 9×100` of that denomination) into the buffer
   requires that size's disk array to be COMPLETELY built (all 10 disks ever built), which naturally
-  stages each lake's effective capacity: 9 once only the smallest sub-size's array is complete, 99
-  once the next size up is also complete, the full 999 once the largest of the three is complete
-  too. Boosters are bought on the Boosters screen for escalating lake cost (nth purchase costs n
-  units), spent genuinely out of the lake's own current deposits rather than a separate ledger —
-  spent capacity only returns once more Disks get deposited to replace it. A full, undepleted lake
-  funds 44 purchases in one uninterrupted burst before needing fresh deposits, but redepositing
-  between purchases lets a patient player reach the true lifetime cap of exactly 999 Boosters per
-  tier (the 1,000th would cost 1,000 units, impossible regardless of how much gets redeposited) —
-  no separate inventory limit beyond that. Foundry disk rows expose deposit-to-lake actions; a Data
-  Lake summary appears once any lake has content.
+  stages the buffer's cap: 9 once only the smallest sub-size's array is complete, 99 once the next
+  size up is also complete, the full 999 once the largest of the three is complete too. Starting a
+  Booster on the Boosters screen costs escalating lake units (the nth Booster ever started, counting
+  ones still in flight, costs n) — spent out of the deposit buffer FIRST (instant), then any
+  remaining cost is sourced live from built Disks and transferred into the lake over time, at 10×
+  the Byte Foundry's current production rate, only granting the Booster once that transfer
+  completes. Each lake can run up to 3 of these live transfers at once, one concurrency slot
+  unlocked per completed sub-size Disk array (the same staged gate the deposit buffer uses). Foundry
+  disk rows expose deposit-to-lake actions; a Data Lake summary shows deposited stock, next cost,
+  and any in-flight transfers.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both

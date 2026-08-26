@@ -2800,3 +2800,63 @@ Implementation: `isDiskArrayFullyBuilt(state, sizeBits)` (a private helper in `e
 `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP`; `canDepositDiskToDataLake` calls it first,
 before the existing full-disk/slot-max/lake-cap checks. See `engine.test.js`'s "staged Data Lake
 capacity" test for the full 9 → 99 → 999 walkthrough.
+
+### Data Lake Boosters, take two: from a spendable balance to a live transfer pipe
+
+The request: "Data Lake does not hold anything. Its capacity is upgraded to allow Booster
+conversion only. When boosters is to be created, the corresponding amount of disks are transferred
+to it at 10x the pool bandwidth and then converted into Booster." Read literally, this asks to
+remove the standing deposited balance the two entries above this one built — a real reversal, not
+an extension — so before implementing it, four clarifying questions nailed down the parts the
+one-liner left ambiguous:
+
+1. **Does depositing (`depositDiskToDataLake`) go away entirely**, or stay as a lesser mechanic?
+   Answer: keep it, but it should no longer be the thing a Booster purchase is REQUIRED to draw
+   from — i.e. it stops being the only source of Booster funding.
+2. **What does "capacity" mean now** that the lake isn't a spendable balance? Answer: a throughput
+   cap — max concurrent/in-flight transfers — not a lifetime purchase total.
+3. **"10x the pool bandwidth"** — 10× what, precisely? Answer: 10× the Byte Foundry's own current
+   bits/sec production rate (`getIntroProductionRate`), the same rate `getCoreEarnTimeSeconds`/merge
+   pacing already use elsewhere.
+4. Implement now, end-to-end, rather than filing a spec issue first.
+
+Taking answers 1 and the literal request at face value looked contradictory at first: "keep
+depositing" vs. "the lake holds nothing." The reconciliation implemented here treats deposits as a
+**prepaid convenience buffer** rather than the lake's only funding source: `depositDiskToDataLake`
+is completely unchanged (same staged 9 → 99 → 999 cap from the entry above), but a lake never again
+holds a *second*, larger reserve beyond that buffer. Starting a Booster
+(`startBoosterTransfer`, replacing the old instant `purchaseBoosterFromDataLake`) spends whatever
+of the next cost the deposited buffer can cover FIRST — instantly, since those Disks are already
+"at the lake," which is also why a deposit-covered purchase still grants immediately, unchanged from
+before this entry — and sources any cost still remaining live, straight off the raw built Disk
+inventory (`intro.disks`, decomposed into a Disk count the same greedy hundreds/tens/ones way
+deposits already are), over a timed transfer at `DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) the
+Byte Foundry's production rate. Only once that transfer's countdown reaches 0
+(`tickDataLakeTransfers`, wired into `tickGame` right before `AUTO_MERGE_TICKERS` so a Core earned
+this tick can still cascade upward the same tick) does the Booster actually grant. This is the sense
+in which "the Data Lake does not hold anything": past the prepaid buffer, nothing sits idle waiting
+to be spent — a transfer either hasn't started, or is actively counting down toward becoming exactly
+one Booster, never a larger banked stockpile.
+
+Answer 2's throughput-cap reading became `getDataLakeTransferCapacity`: unlike the *deposit* cap
+(9 → 99 → 999, a magnitude), the *transfer* cap is a small concurrency number (0 → 1 → 2 → 3,
+`DATA_LAKE_TRANSFER_CAPACITY_MAX`), unlocked one slot at a time by the exact same staged gate
+(`isDiskArrayFullyBuilt` per sub-size, smallest first) the deposit progression already uses — no new
+unlock mechanic, just a second thing that gate now controls. A lake's `transfers` field (an array of
+`{ remainingSeconds }`, capped at that concurrency) tracks in-flight live transfers; a
+`startBoosterTransfer` call that would need a live transfer but finds the concurrency already full
+is a same-reference no-op, same posture as every other capacity-gated action in this file.
+
+One balance detail that had to be preserved deliberately: with concurrent transfers now possible,
+`getBoosterPurchaseCost` (the nth-ever-started Booster at a tier costs n units) had to start
+counting **in-flight transfers alongside completed purchases** (`purchased + transfers.length + 1`),
+not just `purchased + 1` as before — otherwise starting several transfers back-to-back before any of
+them completed would charge them all the same cost, letting concurrency dodge the escalating curve
+the two Data Lake entries above this one specifically built.
+
+`getMaxBoosterPurchasesForCapacity` (the old "how many purchases can one full 999-unit deposit fund
+in a single uninterrupted burst" helper from the first Data Lake Boosters entry above) was removed
+rather than adapted: its whole premise — that a lake's only funding source was its deposited balance
+— no longer holds once live transfers can also fund a Booster regardless of deposits, so the number
+it computed stopped meaning anything a player could act on. `DataLakePanel` and `ComputePage` were
+updated to show deposited stock, next cost, and in-flight-transfer count/soonest-completion instead.

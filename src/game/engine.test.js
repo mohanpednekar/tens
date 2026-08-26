@@ -219,15 +219,16 @@ import {
   getDiskReadCacheFlushSeconds,
   canDepositDiskToDataLake,
   depositDiskToDataLake,
-  purchaseBoosterFromDataLake,
-  canPurchaseBoosterFromDataLake,
+  startBoosterTransfer,
+  canStartBoosterTransfer,
   getDataLakeTierIndex,
   getDataLakeSubSize,
   getBoosterPurchaseTotalCost,
-  getMaxBoosterPurchasesForCapacity,
+  getDataLakeTransferCapacity,
   getDataLakeAvailableUnits,
   getDataLakeDepositedUnits,
   getBoosterPurchaseCost,
+  tickDataLakeTransfers,
   getDiskLadderStep,
   getDiskWriteCacheMerge,
   isDiskReadCacheFlushPaused,
@@ -236,7 +237,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -8315,42 +8316,20 @@ describe('Data Lakes', () => {
     expect(getDataLakeSubSize(mb1)).toBe(1)
   })
 
-  it('getMaxBoosterPurchasesForCapacity funds 44 CONSECUTIVE purchases from one full 999-unit lake in a single burst (not the tier\'s lifetime cap — see below)', () => {
+  it('getBoosterPurchaseTotalCost is the triangular sum of the first n Booster costs', () => {
     expect(getBoosterPurchaseTotalCost(44)).toBe(990)
     expect(getBoosterPurchaseTotalCost(45)).toBe(1035)
-    expect(getMaxBoosterPurchasesForCapacity(DATA_LAKE_CAPACITY)).toBe(44)
   })
 
-  it('a tier\'s true lifetime cap is 999 Boosters, not 44 — redepositing between purchases lets cost climb past the single-burst ceiling', () => {
-    // The 999th purchase costs exactly 999 — a fully-deposited lake can just barely fund it.
-    expect(getBoosterPurchaseCost(1)({
-      intro: { dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 998 } } },
-    })).toBe(999)
-    let state = withIntro(createInitialGameState(), {
+  it('getBoosterPurchaseCost counts in-flight transfers as well as completed purchases, so starting several concurrently still escalates correctly', () => {
+    const state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 998 },
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 2, transfers: [{ remainingSeconds: 10 }] },
       },
     })
-    expect(getDataLakeAvailableUnits(1)(state)).toBe(900)
-    // Not enough deposited yet for the 999-cost purchase — redeposit up to the full 999 first.
-    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
-    state = withIntro(state, {
-      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
-    })
-    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(true)
-    state = purchaseBoosterFromDataLake(1)(state)
-    expect(state.intro.dataLakes[1].purchased).toBe(999)
-    expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
-
-    // The 1,000th would cost 1,000 — impossible no matter how much gets redeposited, since a lake
-    // can never hold more than DATA_LAKE_CAPACITY (999) at once.
-    expect(getBoosterPurchaseCost(1)(state)).toBe(1000)
-    state = withIntro(state, {
-      dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], deposits: { 1: 9, 10: 9, 100: 9 } } },
-    })
-    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
-    expect(purchaseBoosterFromDataLake(1)(state)).toBe(state)
+    // 2 completed + 1 in flight => the NEXT one to start would be the 4th.
+    expect(getBoosterPurchaseCost(1)(state)).toBe(4)
   })
 
   it('depositDiskToDataLake consumes one full disk and credits the matching lake slot, once the array is fully built', () => {
@@ -8417,68 +8396,132 @@ describe('Data Lakes', () => {
     expect(getDataLakeDepositedUnits(1)(state)).toBe(999)
   })
 
-  it('purchaseBoosterFromDataLake costs n units for the nth purchase, spends real deposited capacity (not a separate ledger), and grants the matching booster', () => {
+  it('startBoosterTransfer fully covered by deposits spends them instantly and grants the Booster with no transfer', () => {
     let state = withIntro(createInitialGameState(), {
-      disks: { [kb1]: 3 },
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0 },
+        1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0, transfers: [] },
       },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(1)
-    state = purchaseBoosterFromDataLake(1)(state)
+    state = startBoosterTransfer(1)(state)
     expect(state.intro.computeCores).toBe(1)
     expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 2, 10: 0, 100: 0 })
     expect(state.intro.dataLakes[1].purchased).toBe(1)
+    expect(state.intro.dataLakes[1].transfers).toEqual([])
     expect(getDataLakeAvailableUnits(1)(state)).toBe(2)
 
-    state = purchaseBoosterFromDataLake(1)(state)
+    state = startBoosterTransfer(1)(state)
     expect(state.intro.computeCores).toBe(2)
-    // 2 - 2 (2nd purchase's cost) = 0 deposited left.
+    // 2 - 2 (2nd Booster's cost) = 0 deposited left.
     expect(getDataLakeAvailableUnits(1)(state)).toBe(0)
     expect(getBoosterPurchaseCost(1)(state)).toBe(3)
   })
 
-  it('purchaseBoosterFromDataLake is a no-op when the lake lacks free capacity for the next cost', () => {
+  it('getDataLakeTransferCapacity is staged 0 -> 1 -> 2 -> 3 as the ×1/×10/×100 arrays complete, same gate as the deposited-capacity progression', () => {
+    let state = withIntro(createInitialGameState(), { disksBuiltTotal: {} })
+    expect(getDataLakeTransferCapacity(state, 1)).toBe(0)
+
+    state = withIntro(state, { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP } })
+    expect(getDataLakeTransferCapacity(state, 1)).toBe(1)
+
+    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb10]: DISK_ARRAY_LADDER_CAP } })
+    expect(getDataLakeTransferCapacity(state, 1)).toBe(2)
+
+    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb100]: DISK_ARRAY_LADDER_CAP } })
+    expect(getDataLakeTransferCapacity(state, 1)).toBe(DATA_LAKE_TRANSFER_CAPACITY_MAX)
+    expect(getDataLakeTransferCapacity(state, 1)).toBe(3)
+  })
+
+  it('startBoosterTransfer sources any cost beyond deposits live from held Disks, queues a timed transfer at 10x bandwidth, and does not grant the Booster yet', () => {
+    let state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 1 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [] },
+      },
+    })
+    expect(getDataLakeTransferCapacity(state, 1)).toBe(1)
+    expect(canStartBoosterTransfer(state, 1)).toBe(true)
+
+    state = startBoosterTransfer(1)(state)
+    // The 1 kb1 disk was consumed live, not deposited.
+    expect(state.intro.disks[kb1] ?? 0).toBe(0)
+    expect(state.intro.computeCores).toBe(0)
+    expect(state.intro.dataLakes[1].purchased).toBe(0)
+    expect(state.intro.dataLakes[1].transfers).toHaveLength(1)
+    // 1 unit = 1 kb1-disk's worth of bits, at 10x the default 1 bit/sec production rate.
+    const expectedSeconds = kb1 / (DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER * 1)
+    expect(state.intro.dataLakes[1].transfers[0].remainingSeconds).toBeCloseTo(expectedSeconds)
+
+    // A 2nd concurrent start needs a 2nd free transfer slot — capacity is only 1 here.
+    expect(canStartBoosterTransfer(state, 1)).toBe(false)
+  })
+
+  it('canStartBoosterTransfer is false when neither deposits nor held Disks can cover the cost', () => {
     const state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 1 },
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [] },
       },
     })
-    expect(getBoosterPurchaseCost(1)(state)).toBe(2)
-    expect(canPurchaseBoosterFromDataLake(state, 1)).toBe(false)
-    expect(purchaseBoosterFromDataLake(1)(state)).toBe(state)
+    expect(canStartBoosterTransfer(state, 1)).toBe(false)
+    expect(startBoosterTransfer(1)(state)).toBe(state)
   })
 
-  it('purchaseBoosterFromDataLake can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped', () => {
+  it('tickDataLakeTransfers counts an in-flight transfer down and, on completion, grants the Booster and frees the slot', () => {
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [{ remainingSeconds: 10 }] },
+      },
+    })
+    state = tickDataLakeTransfers(4)(state)
+    expect(state.intro.dataLakes[1].transfers).toEqual([{ remainingSeconds: 6 }])
+    expect(state.intro.computeCores).toBe(0)
+
+    state = tickDataLakeTransfers(6)(state)
+    expect(state.intro.dataLakes[1].transfers).toEqual([])
+    expect(state.intro.dataLakes[1].purchased).toBe(1)
+    expect(state.intro.computeCores).toBe(1)
+  })
+
+  it('tickDataLakeTransfers is a same-reference no-op while nothing is in flight', () => {
+    const state = createInitialGameState()
+    expect(tickDataLakeTransfers(5)(state)).toBe(state)
+  })
+
+  it('startBoosterTransfer can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped', () => {
     let state = withIntro(createInitialGameState(), {
       computeCores: COMPUTE_ENTITY_CAP,
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0, transfers: [] },
       },
     })
-    state = purchaseBoosterFromDataLake(1)(state)
+    state = startBoosterTransfer(1)(state)
     expect(state.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 1)
   })
 
-  it('tier-1 purchases latch computeMergePageUnlocked via computeCoresEverEarned', () => {
+  it('tier-1 Boosters latch computeMergePageUnlocked via computeCoresEverEarned, whether granted instantly or via a completed transfer', () => {
     let state = withIntro(createInitialGameState(), {
       dataLakes: {
         ...createInitialGameState().intro.dataLakes,
-        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0 },
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 0, transfers: [] },
       },
     })
     for (let i = 0; i < COMPUTE_CORES_PER_NODE; i += 1) {
-      state = purchaseBoosterFromDataLake(1)(state)
+      state = startBoosterTransfer(1)(state)
     }
     expect(state.intro.computeMergePageUnlocked).toBe(true)
     expect(state.intro.computeCoresEverEarned).toBe(COMPUTE_CORES_PER_NODE)
   })
 
-  it('createInitialGameState seeds all DATA_LAKE_TIER_COUNT lakes', () => {
-    expect(Object.keys(createInitialGameState().intro.dataLakes)).toHaveLength(DATA_LAKE_TIER_COUNT)
+  it('createInitialGameState seeds all DATA_LAKE_TIER_COUNT lakes with empty transfers', () => {
+    const lakes = createInitialGameState().intro.dataLakes
+    expect(Object.keys(lakes)).toHaveLength(DATA_LAKE_TIER_COUNT)
+    expect(lakes[1].transfers).toEqual([])
   })
 })
 
