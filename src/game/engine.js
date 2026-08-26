@@ -3324,8 +3324,6 @@ export const getBoosterPurchaseCost = tierIndex => state => {
   return (lake.purchased ?? 0) + (lake.transfers?.length ?? 0) + 1
 }
 
-export const getBoosterPurchaseTotalCost = n => (n * (n + 1)) / 2
-
 // A size's disk array must be COMPLETELY built out — every DISK_ARRAY_LADDER_CAP (10) disk ever
 // built at that size — before any of its disks can be deposited to a Data Lake at all. Since a
 // lake's 3 sub-slots (1/10/100 — see DATA_LAKE_SUB_SIZES) map to 3 successive disk sizes, this
@@ -3432,12 +3430,36 @@ const getDataLakeTransferDurationSeconds = (state, tierIndex, units) => {
   return (units * unitBits) / (DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER * rate)
 }
 
+// Works out which held, undeposited Disks (by sub-size) can fund `unitsNeeded` units of live
+// transfer for `tierIndex`, or returns null if the held Disks can't reach that total exactly.
+// Deliberately NOT the same digit-decomposition `decomposeDataLakeDeposits` uses for deposits —
+// that assumes each sub-size's count tops out at DATA_LAKE_SLOT_MAX (9), which only holds for the
+// deposited buffer's own cap, not for raw held Disks (a size's array holds up to
+// DISK_ARRAY_LADDER_CAP, 10, and nothing stops a player from holding all 10 undeposited at once).
+// Instead this greedily uses as many of the largest sub-size as are actually held (capped at what
+// the remaining need can use), then cascades whatever's left to the next sub-size down, ending at
+// the finest (×1) — since each sub-size is an exact ×10 multiple of the next, using fewer of a
+// larger sub-size than this greedy pass does can only ever increase what's needed lower down, never
+// help, so this is a correct feasibility check, not just a heuristic.
+const planLiveDiskFunding = (state, tierIndex, unitsNeeded) => {
+  if (!(unitsNeeded > 0)) return {}
+  let remaining = unitsNeeded
+  const disksToConsume = {}
+  for (const subSize of [...DATA_LAKE_SUB_SIZES].sort((a, b) => b - a)) {
+    const sizeBits = getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, subSize))
+    const held = state.intro.disks?.[sizeBits] ?? 0
+    const used = Math.min(held, Math.floor(remaining / subSize))
+    disksToConsume[subSize] = used
+    remaining -= used * subSize
+  }
+  return remaining === 0 ? disksToConsume : null
+}
+
 // Plans (but does not apply) how the next Booster at `tierIndex` would be funded: its cost is
 // spent out of the lake's own deposits FIRST — those Disks are already at the lake, so that
 // portion is instant — and whatever remains is sourced live from raw, undeposited built Disks
-// (decomposed into a hundreds/tens/ones Disk count the same way deposits are, via
-// decomposeDataLakeDeposits) for a timed transfer. Returns null when the cost can't be funded at
-// all right now — not enough deposited + held Disks combined, or (when a live transfer would be
+// (see planLiveDiskFunding above) for a timed transfer. Returns null when the cost can't be funded
+// at all right now — not enough deposited + held Disks combined, or (when a live transfer would be
 // needed) the tier's transfer concurrency is already full. Only the OVERALL held count per sub-size
 // is checked here, not whether that specific sub-size's own array is completely built (unlike
 // canDepositDiskToDataLake) — getDataLakeTransferCapacity already gates the coarse "can this lake
@@ -3461,13 +3483,8 @@ const getBoosterTransferPlan = (state, tierIndex) => {
 
   if ((lake.transfers?.length ?? 0) >= getDataLakeTransferCapacity(state, tierIndex)) return null
 
-  const disksToConsume = decomposeDataLakeDeposits(fromDisksNeeded)
-  for (const subSize of DATA_LAKE_SUB_SIZES) {
-    const needed = disksToConsume[subSize] ?? 0
-    if (needed === 0) continue
-    const sizeBits = getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, subSize))
-    if ((state.intro.disks?.[sizeBits] ?? 0) < needed) return null
-  }
+  const disksToConsume = planLiveDiskFunding(state, tierIndex, fromDisksNeeded)
+  if (!disksToConsume) return null
 
   return { cost, fromDeposits, fromDisksNeeded, disksToConsume }
 }

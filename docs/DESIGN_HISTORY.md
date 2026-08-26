@@ -2860,3 +2860,29 @@ rather than adapted: its whole premise — that a lake's only funding source was
 — no longer holds once live transfers can also fund a Booster regardless of deposits, so the number
 it computed stopped meaning anything a player could act on. `DataLakePanel` and `ComputePage` were
 updated to show deposited stock, next cost, and in-flight-transfer count/soonest-completion instead.
+Once that helper's own only caller was gone, its sibling `getBoosterPurchaseTotalCost` (the
+triangular-sum helper) also lost its last production use and was deleted alongside it, one review
+pass later — see below.
+
+**Adversarial review caught a real funding bug before merge.** The first implementation reused
+`decomposeDataLakeDeposits` — the deposited buffer's own digit-decomposition helper, which assumes
+each sub-size's count tops out at `DATA_LAKE_SLOT_MAX` (9, the deposited buffer's cap) — to work out
+which held, undeposited Disks a live transfer should consume. That assumption doesn't hold for raw
+held Disks: a size's array holds up to `DISK_ARRAY_LADDER_CAP` (10) slots, and nothing stops a
+player from holding all 10 of a size undeposited at once (e.g. having fully built the ×1 array
+without ever clicking Deposit). Concretely: holding 10 ×1 Disks and needing exactly 10 live-transfer
+units, the old logic decomposed 10 as "1 ×10-size Disk" and rejected the transfer for lacking one —
+even though the player's 10 held ×1 Disks are worth the identical 10 units. Fixed by replacing the
+fixed decomposition with `planLiveDiskFunding`: a greedy pass from the largest sub-size down, capped
+at what's actually held at each step (not a fixed digit range), cascading any shortfall to the next
+sub-size down. Because each sub-size is an exact ×10 multiple of the next, using fewer of a larger
+sub-size than this greedy's own max can only ever increase what's needed lower down — never help —
+so greedy-then-cascade is a correct feasibility check here, not just a heuristic; it returns null
+(genuinely unfundable) only when the total held value, respecting each sub-size's own held count,
+truly can't reach the needed total. The same review also flagged the in-game Guide
+(`InfoPage`) as the one doc surface this feature missed updating — every other reference doc had
+been updated, but `InfoPage` deliberately reads no live game state specifically so its numbers can't
+drift (see CLAUDE.md's Architecture item 5), and this mechanic's bullets there still described the
+old instant-purchase-from-deposits-only behavior. Both were fixed, along with adding the mixed
+deposits+live-transfer funding and same-tick multi-transfer-completion test coverage the review
+noted was missing, before this PR left draft.

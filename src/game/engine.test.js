@@ -223,7 +223,6 @@ import {
   canStartBoosterTransfer,
   getDataLakeTierIndex,
   getDataLakeSubSize,
-  getBoosterPurchaseTotalCost,
   getDataLakeTransferCapacity,
   getDataLakeAvailableUnits,
   getDataLakeDepositedUnits,
@@ -8316,11 +8315,6 @@ describe('Data Lakes', () => {
     expect(getDataLakeSubSize(mb1)).toBe(1)
   })
 
-  it('getBoosterPurchaseTotalCost is the triangular sum of the first n Booster costs', () => {
-    expect(getBoosterPurchaseTotalCost(44)).toBe(990)
-    expect(getBoosterPurchaseTotalCost(45)).toBe(1035)
-  })
-
   it('getBoosterPurchaseCost counts in-flight transfers as well as completed purchases, so starting several concurrently still escalates correctly', () => {
     const state = withIntro(createInitialGameState(), {
       dataLakes: {
@@ -8468,6 +8462,70 @@ describe('Data Lakes', () => {
     })
     expect(canStartBoosterTransfer(state, 1)).toBe(false)
     expect(startBoosterTransfer(1)(state)).toBe(state)
+  })
+
+  it('startBoosterTransfer funds a live transfer from many small held Disks even when no single larger sub-size Disk is held — held counts are NOT capped at the deposited buffer\'s own DATA_LAKE_SLOT_MAX (9)', () => {
+    // 10 held kb1 disks (a size's array holds up to DISK_ARRAY_LADDER_CAP = 10) is a completely
+    // valid state once that array is fully built and none have been deposited/redeemed yet. A cost
+    // of exactly 10 units decomposes, deposit-buffer-style, as "1 kb10 disk" — which isn't held —
+    // but the 10 kb1 disks are worth the identical 10 units and must fund it just as well.
+    const state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 10 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 9, transfers: [] },
+      },
+    })
+    expect(getBoosterPurchaseCost(1)(state)).toBe(10)
+    expect(canStartBoosterTransfer(state, 1)).toBe(true)
+
+    const after = startBoosterTransfer(1)(state)
+    expect(after.intro.disks[kb1] ?? 0).toBe(0)
+    expect(after.intro.dataLakes[1].transfers).toHaveLength(1)
+  })
+
+  it('startBoosterTransfer splits one Booster\'s cost across deposits AND a live Disk transfer in the same call', () => {
+    const state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 1 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        // purchased: 1 => next cost is 2; 1 unit already deposited covers half of it.
+        1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 1, transfers: [] },
+      },
+    })
+    expect(getBoosterPurchaseCost(1)(state)).toBe(2)
+
+    const after = startBoosterTransfer(1)(state)
+    // The 1 deposited unit is spent instantly...
+    expect(after.intro.dataLakes[1].deposits).toEqual({ 1: 0, 10: 0, 100: 0 })
+    // ...and the other 1 unit is sourced live from the held kb1 disk, as a transfer still in flight.
+    expect(after.intro.disks[kb1] ?? 0).toBe(0)
+    expect(after.intro.dataLakes[1].transfers).toHaveLength(1)
+    expect(after.intro.dataLakes[1].purchased).toBe(1) // not yet granted — the live half is still pending
+    expect(after.intro.computeCores).toBe(0)
+  })
+
+  it('tickDataLakeTransfers resolves multiple transfers completing in the same tick, both within one tier and across different tiers', () => {
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        // Tier 1: 2 concurrent transfers, both due to complete this tick.
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [{ remainingSeconds: 3 }, { remainingSeconds: 5 }] },
+        // Tier 2: 1 transfer, also due to complete this tick.
+        2: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [{ remainingSeconds: 5 }] },
+      },
+    })
+    state = tickDataLakeTransfers(5)(state)
+    expect(state.intro.dataLakes[1].transfers).toEqual([])
+    expect(state.intro.dataLakes[1].purchased).toBe(2)
+    expect(state.intro.dataLakes[2].transfers).toEqual([])
+    expect(state.intro.dataLakes[2].purchased).toBe(1)
+    // Tier 1 grants computeCores (COMPUTE_BOOST_TIER_FIELDS[0]), tier 2 grants computeNodes
+    // (COMPUTE_BOOST_TIER_FIELDS[1]) — both this tick, from separate lakes' transfers.
+    expect(state.intro.computeCores).toBe(2)
+    expect(state.intro.computeNodes).toBe(1)
   })
 
   it('tickDataLakeTransfers counts an in-flight transfer down and, on completion, grants the Booster and frees the slot', () => {
