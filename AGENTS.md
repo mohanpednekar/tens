@@ -140,8 +140,10 @@ tier allows; flush duration = one cache block at production rate; write-cache up
 the size below) as fallback tier funding when no matching disk exists;
 Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund
-Booster purchases: deposit full Disks on Foundry, buy on Boosters for escalating lake cost (nth = n
-units; ~44 max per full lake). A separate PP **Compute (Flops)**
+Boosters, escalating cost (nth = n units, counting in-flight starts too): deposited Disks (a prepaid
+buffer) spend first/instantly, any remaining cost live-transfers off built Disks over time (10x the
+Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake never itself
+banks a spendable reserve beyond its deposits. A separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no

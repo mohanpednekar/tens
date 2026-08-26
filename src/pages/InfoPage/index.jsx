@@ -25,6 +25,8 @@ import {
   COMPUTE_FLOPS_REVEAL_PP,
   DATA_LAKE_CAPACITY,
   DATA_LAKE_SLOT_MAX,
+  DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
+  DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
@@ -296,30 +298,40 @@ const InfoPage = () => {
         <h3>Data Lakes</h3>
         <ul>
           <li>
-            Ten permanent lakes (one per storage denomination, KB … QB) hold deposited Disks and
-            fund Booster purchases at the matching Compute tier.
+            Ten permanent lakes (one per storage denomination, KB … QB). A lake never itself holds a
+            big spendable balance — past a small prepaid deposit buffer (below), it's a live pipe
+            onto your built Disks, not a stockpile.
           </li>
           <li>
-            Depositing a size's disks requires that size's array to be completely built (all{' '}
-            {DISK_ARRAY_LADDER_CAP} disks ever built), not just one currently full — deposit from a
-            Foundry disk row once eligible.
+            Depositing a size's disks (a prepaid buffer, spent first when starting a Booster)
+            requires that size's array to be completely built (all {DISK_ARRAY_LADDER_CAP} disks
+            ever built), not just one currently full — deposit from a Foundry disk row once
+            eligible.
           </li>
           <li>
-            Each lake's capacity stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
+            Each lake's deposit buffer stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
             once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
             built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too.
           </li>
           <li>
-            The nth Booster purchase from a lake costs n units of that lake's own current deposits —
-            spent capacity only returns by depositing more Disks.
+            Starting the nth Booster ever started at a lake (whether already granted or still
+            transferring) costs n units. Deposits pay first, instantly; any cost still remaining is
+            transferred live from your held Disks over time, at {DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER}×
+            the Byte Foundry's current production rate, only granting the Booster once that transfer
+            finishes.
+          </li>
+          <li>
+            Each lake can run up to {DATA_LAKE_TRANSFER_CAPACITY_MAX} of these live transfers at
+            once — one slot unlocks per completed sub-size array, the same staged progression the
+            deposit buffer uses.
           </li>
         </ul>
 
         <h3>Cores</h3>
         <ul>
           <li>
-            Bought with Boosters from the matching Data Lake — the buy button on the Cores row —
-            there is no other way to obtain a Core.
+            Started from the matching Data Lake — the Booster button on the Cores row — there is no
+            other way to obtain a Core.
           </li>
           <li>
             Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge
@@ -327,7 +339,7 @@ const InfoPage = () => {
           </li>
           <li>
             Every compute entity caps at {COMPUTE_ENTITY_CAP} held — except on the Data Lake
-            Booster purchase path itself (any of the ten tiers, not just Cores), which is
+            Booster path itself (any of the ten tiers, not just Cores), which is
             Data-Lake-limited rather than inventory-capped and can push a tier's held count past
             {' '}{COMPUTE_ENTITY_CAP}.
           </li>

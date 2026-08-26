@@ -237,9 +237,10 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic
 // costed a Compute Core at a fixed 10 MB of Memory (gated on every Disk size being built and full),
 // then at a dynamic, capacity-tied Memory flush ("Claim Core") — both superseded by
-// purchaseBoosterFromDataLake in engine.js, which spends deposited Disk stock from the matching
-// Data Lake instead and has no relationship to Memory/Storage at all; see docs/DESIGN_HISTORY.md
-// for why.
+// startBoosterTransfer in engine.js, which spends the matching Data Lake's deposited Disk stock
+// first, then a live timed transfer off the raw Disk inventory for any remaining cost (see
+// "Data Lake Booster transfers" below), and has no relationship to Memory/Storage at all; see
+// docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Compute Cores/the Compute screen reveal — a later, more
 // advanced-game gate than Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching
@@ -378,25 +379,38 @@ export const COMPUTE_BOOST_TIER_FIELDS = [
 export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
-// purchaseBoosterFromDataLake in engine.js. Each of the 10 storage denominations (KB … QB) has a
-// Data Lake holding up to DATA_LAKE_CAPACITY units, filled by depositing Disks (9×1 + 9×10 + 9×100
-// of that tier's denomination = 999). Booster purchases at tier N spend units genuinely OUT of lake
-// N's own current deposits (not against a separate ledger) — real capacity that only returns once
-// more Disks get deposited, the same way it arrived, once that array rebuilds a replacement disk
-// through the ordinary build/fill pipeline. The nth purchase costs n units; since no single
-// purchase can ever cost more than a fully-deposited lake could hold at once, the true lifetime cap
-// per tier is exactly DATA_LAKE_CAPACITY (999) Boosters — the 1,000th would need 1,000 units, which
-// no amount of redepositing can ever fund. A full, undepleted lake can only fund 44 of those
-// purchases in one uninterrupted burst (cumulative triangular cost n×(n+1)/2 ≤ 999) before needing
-// fresh deposits — see getMaxBoosterPurchasesForCapacity in engine.js for that distinct "burst"
-// number — but a patient player redepositing between purchases can reach the full 999. No separate
-// inventory limit beyond this.
+// startBoosterTransfer in engine.js. Each of the 10 storage denominations (KB … QB) has a Data
+// Lake that can hold up to DATA_LAKE_CAPACITY units of PREPAID deposits, filled by manually
+// depositing built Disks (9×1 + 9×10 + 9×100 of that tier's denomination = 999) — a convenience
+// stockpile, not the lake's only source of Boosters (see "Data Lake Booster transfers" below).
+// Starting a Booster at tier N spends units genuinely OUT of lake N's own current deposits FIRST
+// (not against a separate ledger, real capacity that only returns once more Disks get deposited),
+// then sources any remaining cost live from the raw built Disk inventory via a timed transfer. The
+// nth Booster ever started (completed or still in flight) at a tier costs n units — see
+// getBoosterPurchaseCost in engine.js, which now also counts in-flight transfers so starting
+// several concurrently (see DATA_LAKE_TRANSFER_CAPACITY_MAX below) still charges the correct
+// escalating cost rather than letting concurrency dodge it.
 export const DATA_LAKE_CAPACITY = 999
 export const DATA_LAKE_SLOT_MAX = 9
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+
+// --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
+// tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and
+// instantly when a Booster is started — it's already "at the lake." Any cost still remaining
+// beyond what's deposited is instead sourced live from built, undeposited Disks and transferred
+// into the lake over time, at DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER (10x) the Byte Foundry's
+// current bits/sec production rate (getIntroProductionRate) — (bits transferred) / (10 x rate)
+// seconds — only converting into 1 Booster once that transfer completes. The Data Lake itself
+// never banks a second spendable reserve beyond what's already deposited; past that, it's a
+// throughput pipe onto the live disk inventory, not a stockpile. A lake can run up to
+// DATA_LAKE_TRANSFER_CAPACITY_MAX (3) of these live transfers at once, one concurrency slot
+// unlocked per completed sub-size disk array (×1/×10/×100 — the same staged gate the deposited-
+// capacity progression above already uses).
+export const DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER = 10
+export const DATA_LAKE_TRANSFER_CAPACITY_MAX = DATA_LAKE_SUB_SIZES.length
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
