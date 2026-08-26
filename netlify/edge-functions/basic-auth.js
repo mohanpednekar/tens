@@ -21,13 +21,21 @@ export default async (request, context) => {
   }
 
   const authHeader = request.headers.get('authorization')
-  if (authHeader?.startsWith('Basic ')) {
-    const decoded = atob(authHeader.slice('Basic '.length))
-    const separatorIndex = decoded.indexOf(':')
-    const user = separatorIndex === -1 ? decoded : decoded.slice(0, separatorIndex)
-    const pass = separatorIndex === -1 ? '' : decoded.slice(separatorIndex + 1)
-    if (user === expectedUser && pass === expectedPass) {
-      return context.next()
+  // Scheme token is case-insensitive per RFC 7235; real browsers always send "Basic", but a
+  // strict exact-case match would otherwise reject a technically-valid non-browser client.
+  if (/^basic /i.test(authHeader ?? '')) {
+    try {
+      const decoded = atob(authHeader.slice('Basic '.length))
+      const separatorIndex = decoded.indexOf(':')
+      const user = separatorIndex === -1 ? decoded : decoded.slice(0, separatorIndex)
+      const pass = separatorIndex === -1 ? '' : decoded.slice(separatorIndex + 1)
+      if (user === expectedUser && pass === expectedPass) {
+        return context.next()
+      }
+    } catch {
+      // Malformed base64 in the Authorization header — atob throws rather than returning a
+      // sentinel. Fall through to the 401 below instead of letting that exception surface as an
+      // uncaught error response.
     }
   }
 

@@ -4244,6 +4244,37 @@ describe('Dev Mode', () => {
     expect(isDevModeActive()).toBe(false)
   })
 
+  it('is also reachable when VITE_ENABLE_DEV_MODE is set, even with DEV false (the staging build)', async () => {
+    // Simulates the dev-mode-enabled Netlify staging build (yarn build:staging): a real
+    // `vite build` always has import.meta.env.DEV === false regardless of --mode (see CLAUDE.md's
+    // "Dev Mode" section), so VITE_ENABLE_DEV_MODE is the flag that actually gates this — stubbing
+    // DEV to false here proves the entry point doesn't silently depend on DEV alone.
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_ENABLE_DEV_MODE', 'true')
+    try {
+      const user = userEvent.setup()
+      seedMainGameState()
+      render(<App />)
+      await openDevMode(user)
+      expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('is NOT reachable with DEV false and VITE_ENABLE_DEV_MODE unset (the real production build)', async () => {
+    vi.stubEnv('DEV', false)
+    try {
+      const user = userEvent.setup()
+      seedMainGameState()
+      render(<App />)
+      await user.click(screen.getByRole('button', { name: /^open more menu$/i }))
+      expect(screen.queryByRole('button', { name: /^open dev mode$/i })).not.toBeInTheDocument()
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('enabling switches to an isolated save and disabling resumes the real one untouched', async () => {
     const user = userEvent.setup()
     seedMainGameState({ resources: { base: 4242 } })

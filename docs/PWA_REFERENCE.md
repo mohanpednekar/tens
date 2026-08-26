@@ -24,7 +24,11 @@ icon, standalone display with no browser chrome, offline-capable after a first v
 - **Manifest fields:** `name`/`short_name: 'Tens'`, `display: 'standalone'`, and `theme_color`/
   `background_color` both set to `#0c0d11` — the dark theme's `color.page` token value (see
   `docs/THEMING_REFERENCE.md`) — so the OS install/splash chrome matches the app's own dark ground
-  rather than introducing an unrelated color.
+  rather than introducing an unrelated color. The separate dev-mode-enabled staging build
+  (`yarn build:staging`, see `CLAUDE.md`'s "Dev Mode" section) overrides `name`/`short_name` to
+  `"Tens (Dev)"`/`"Tens Dev"` and `theme_color` to `#7c2d12` — `viteConfigFactory.js`'s
+  `netlifyStaging` param — so an installed home-screen icon for that build never looks identical to
+  the real app's.
 - **Icons:** `public/pwa-192x192.png`, `public/pwa-512x512.png` (both `purpose` unset, i.e. `any`), and
   `public/pwa-maskable-512x512.png` (`purpose: 'maskable'`, with extra interior padding so the glyph
   survives an OS's own icon-mask cropping), plus `public/apple-touch-icon.png` (180×180, iOS's own
