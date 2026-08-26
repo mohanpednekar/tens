@@ -138,15 +138,20 @@ builds; only the pool's smallest size gets an always-full **read cache** (Memory
 timed flush to disk when tier allows; flush duration = one cache block at production rate) — every
 larger size fills exclusively via write-cache upward merges from the size below, never its own read
 cache (running both was redundant); as fallback tier funding when no matching disk exists,
-Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
+Smart autobuyers auto-release read cache; disks always take priority) — each disk size has a fixed,
+permanent one-to-one mapping to one tier+level (KB sizes → Kilobytes, MB sizes → Megabytes, etc.,
+1st/2nd/3rd size → that tier's level 1/2/3); redeeming only fires while the tier is currently at
+exactly that level, and completes the whole level in one shot rather than granting 1 unit)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund
 Boosters, escalating cost (nth = n units, counting in-flight starts too): a fully-built disk array
 auto-deposits into its lake (no manual action — deferring to a still-redeemable disk first) as a
 prepaid buffer that spends first/instantly, any remaining cost live-transfers off built Disks over
 time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
 never itself banks a spendable reserve beyond its deposits. A lake's own capacity can also be
-doubled directly (spend its current capacity in Bits to double it, same shape as Memory's own
-Sacrifice) — stacks on top of the staged array-completion progression rather than replacing it. A
+doubled directly (spend its current capacity — converted into real Memory Bits via the same
+currency Disks are priced in — to double it, same shape as Memory's own Sacrifice) — stacks on top
+of the staged array-completion progression rather than replacing it; deposited/capacity/next-cost
+all display in Byte-scale (KB/MB/GB), matching Disks, not a bare unit count. A
 separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on

@@ -415,7 +415,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
                         ? `Tap to redeem 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
                         : redeemable
                           ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
-                          : `Redeemable once some tier's level cost matches ${sizeLabel}`)
+                          : `Redeemable once ${sizeLabel}'s own fixed corresponding tier reaches its matching level`)
                     : isEmpty
                       ? (hasReadCache ? 'Built, waiting to fill from read cache' : 'Built, waiting to fill from the size below')
                       : 'Not yet built'

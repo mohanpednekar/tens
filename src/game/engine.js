@@ -3097,34 +3097,40 @@ export const releaseDiskCacheBlock = capacityBits => state => {
   }
 }
 
-// A Disk's face value is a Byte Foundry currency amount, not a tier-specific one — ANY main-game
-// tier (not just tier01/Kilobytes) can be fulfilled by a disk whose size happens to match that
-// tier's own CURRENT per-unit cost right now, since every tier shares the same costResourceId
-// ('base'/Bits — see TIER_DEFINITIONS in layers.js) and the same Byte-Foundry-bits exchange rate
-// getIntroKilobyteConversionCost already applies for tier01 specifically (×BITS_PER_BYTE).
-const getTierDiskRedeemCost = (state, tier) =>
-  getTierCost(tier, state.purchaseLevels?.[tier.id] ?? 1) * BITS_PER_BYTE
+// A Disk's size fixes, once and for all, exactly ONE (tier, level) pair it can ever redeem into —
+// a permanent "nice one to one mapping" rather than a dynamic price coincidence. The tier is
+// whichever main-game tier shares this size's Data Lake grouping (getDataLakeTierIndex — disk
+// steps 1-3/1 KB-100 KB → tier01/Kilobytes, steps 4-6/1 MB-100 MB → tier02/Megabytes, and so on,
+// the same KB/MB/GB/… naming both TIER_DEFINITIONS and DATA_LAKE_TIER_LABELS already share); the
+// level is this size's own POSITION within that tier's 3-step group (getDataLakeSubSize's
+// position — 1st/2nd/3rd, i.e. level 1/2/3) — so every tier's own first three levels each get
+// exactly one corresponding disk size, permanently, regardless of how that tier's price ever
+// moves. This replaced an earlier design where a disk redeemed into "whichever tier's CURRENT
+// per-unit cost happens to exactly match its size right now" — a coincidence that could
+// permanently strand a disk if a tier's autobuyer jumped its price straight past that exact value
+// in one tick (a banked attempt budget catching up after a broke/paused stretch), needed a
+// tie-break rule for when more than one tier's price coincided, and made "is this disk useful
+// right now" unpredictable from the player's own perspective. See docs/DESIGN_HISTORY.md.
+const getDiskRequiredTierLevel = capacityBits => {
+  const subSize = getDataLakeSubSize(capacityBits)
+  if (!subSize) return null
+  return DATA_LAKE_SUB_SIZES.indexOf(subSize) + 1
+}
 
-// Which tier, if any, a Disk of `capacityBits` can redeem into right now — the FIRST tier (in
-// TIER_DEFINITIONS' own array order, i.e. the main game's own tier ordering/priority — see
-// CLAUDE.md's "Economy model") whose current per-unit cost EXACTLY matches `capacityBits` (an
-// earlier, tier01-only version of this used `<=`, letting an old, smaller disk redeem for a full
-// unit long after that tier's real price had grown past it — see docs/DESIGN_HISTORY.md; `===`
-// avoids that here too). Reading TIER_DEFINITIONS directly rather than a hardcoded tier index
-// means BOTH the "any tier, not just the first" behavior AND its own tie-break order (when more
-// than one tier's current cost happens to coincide) automatically follow any future reordering of
-// that array, with no code change here. Because a matching tier's own cost only ever grows with
-// level within a cycle, that tier's autobuyer completing more than one level in a single tick (a
-// banked attempt budget catching up after a broke/paused stretch — see tickGame's autobuyer loop)
-// can jump its price straight past a disk's size without it ever exactly matching mid-tick; such a
-// disk stays full and isn't lost, but no longer necessarily WAITS for a future
-// Speed Up/Overclock/Prestige to cycle that tier's price back through its exact value — if that
-// size's own array is already completely built, tickDiskAutoDeposit claims it into the pool's Data
-// Lake on the very next tick instead (see its own doc comment: disks always defer to a currently
-// redeemable match first, but this one no longer is one).
-// undefined when no tier's current cost matches `capacityBits` at all.
-const getMatchingTierForDiskSize = (state, capacityBits) =>
-  TIER_DEFINITIONS.find(tier => getTierDiskRedeemCost(state, tier) === capacityBits)
+// Which tier, if any, a Disk of `capacityBits` can redeem into RIGHT NOW — its one fixed
+// corresponding tier (see getDiskRequiredTierLevel above), but only while that tier is CURRENTLY
+// sitting at EXACTLY its required level (not yet there, or already past it, both mean this size is
+// not redeemable this cycle — the past-it case is what tickDiskAutoDeposit picks up instead, see
+// its own doc comment). undefined when no corresponding tier exists (a size beyond
+// DATA_LAKE_MAX_DISK_LADDER_STEP) or the current level doesn't match.
+const getMatchingTierForDiskSize = (state, capacityBits) => {
+  const tierIndex = getDataLakeTierIndex(capacityBits)
+  const requiredLevel = getDiskRequiredTierLevel(capacityBits)
+  if (!tierIndex || !requiredLevel) return undefined
+  const tier = TIER_DEFINITIONS[tierIndex - 1]
+  if (!tier) return undefined
+  return (state.purchaseLevels?.[tier.id] ?? 1) === requiredLevel ? tier : undefined
+}
 
 export const isDiskRedeemable = (state, capacityBits) =>
   getMatchingTierForDiskSize(state, capacityBits) !== undefined
@@ -3135,17 +3141,22 @@ export const isDiskRedeemable = (state, capacityBits) =>
 export const getDiskRedeemTierName = (state, capacityBits) =>
   getMatchingTierForDiskSize(state, capacityBits)?.name ?? null
 
-// Redeems one currently-FULL disk of `capacityBits`, granting 1 free unit of whichever tier
-// currently matches its size (see getMatchingTierForDiskSize above) via grantTierUnits — same
-// "pays from a separate currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely"
-// rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
-// tickDiskAutoFill already, not from a further transfer. The disk itself is NOT lost — it becomes
+// Redeems one currently-FULL disk of `capacityBits`, completing its corresponding tier's CURRENT
+// level in one shot — grants exactly enough free units to finish out the level's own purchase
+// block (getPurchaseBlockSize minus whatever progress already exists, manually bought or not),
+// rolling that tier straight into its next level, via grantTierUnits — same "pays from a separate
+// currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely" rationale as
+// convertIntroBitsToKilobytes — a disk's contents came from Memory via tickDiskAutoFill already,
+// not from a further transfer. "Fills one level" is deliberately a full level-completion, not a
+// single unit like a manual/autobuyer purchase — a disk's fixed one-to-one level correspondence
+// (see getMatchingTierForDiskSize) would otherwise take many redemptions of a size the ladder has
+// already moved past to finish that one level. The disk itself is NOT lost — it becomes
 // empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
 // fill again later (next tick, or same tick via tickGame's post-auto-redeem ASAP pass — never
 // sync-filled here, so clearing the last full disk can hand Memory to Bandwidth under Forced
 // Priority). No-op if no disk of that size is currently full, if that size's array is
-// currently mid-build (IO disallowed — see tickDiskBuild), or if no tier currently matches its size
-// (see isDiskRedeemable).
+// currently mid-build (IO disallowed — see tickDiskBuild), or if its corresponding tier isn't
+// currently at exactly this size's required level (see isDiskRedeemable).
 export const redeemDisk = capacityBits => state => {
   const full = state.intro.disks?.[capacityBits] ?? 0
   if (full <= 0) return state
@@ -3156,7 +3167,9 @@ export const redeemDisk = capacityBits => state => {
   const { [capacityBits]: _removed, ...remainingDisks } = state.intro.disks
   const nextDisks = full > 1 ? { ...state.intro.disks, [capacityBits]: full - 1 } : remainingDisks
 
-  return grantTierUnits(tier.id, 1)({
+  const remainingInLevel = getPurchaseBlockSize(state) - (state.purchaseLevelProgress?.[tier.id] ?? 0)
+
+  return grantTierUnits(tier.id, remainingInLevel)({
     ...state,
     intro: { ...state.intro, disks: nextDisks },
   })
@@ -3347,11 +3360,15 @@ export const getDataLakeCapacity = (state, tierIndex) =>
 // tens/ones digit decomposition of its own deposited total, since the total is always
 // 0..getDataLakeCapacity(state, tierIndex) and each digit place caps at slotMax. Capping each
 // place at `slotMax` (rather than assuming true base-10 digits, which only held while slotMax was
-// hardcoded at 9) is what keeps this correct after doubleDataLakeCapacity raises it — each
-// subsequent (smaller) sub-size evenly divides the one before it, so a remainder left over after
-// capping a larger place always fits within the smaller places' own combined capacity, provided
-// the overall total never exceeds getDataLakeCapacity — the same invariant `canDepositDiskToDataLake`
-// already enforces. Starting a Booster spends however much of `cost` deposits can cover by
+// hardcoded at 9) is what keeps this correct after doubleDataLakeCapacity raises it — but only
+// because slotMax only ever DOUBLES from its starting value (DATA_LAKE_SLOT_MAX, 9), never shrinks:
+// the greedy top-down cap-at-slotMax decomposition is exact once slotMax is at least
+// DATA_LAKE_SUB_SIZE_TOTAL / DATA_LAKE_SUB_SIZES[1] (111 / 10 = 11.1, i.e. slotMax >= 9 already
+// clears it) — below that threshold a capped-off remainder at a larger place isn't always
+// absorbable by the smaller places' own combined capacity. Every reachable slotMax (9, 18, 36, …)
+// stays comfortably above that floor, so this holds for the whole game, but it is not "correct for
+// any slotMax" in the abstract — it depends on 9 being a large enough starting point relative to
+// the ×10 gap between sub-sizes. Starting a Booster spends however much of `cost` deposits can cover by
 // re-deriving this decomposition from (deposited - fromDeposits) — see startBoosterTransfer below,
 // which also reuses this same decomposition to work out which raw Disks fund any remaining cost —
 // rather than tracking spend against a separate ledger, so
@@ -3466,16 +3483,25 @@ export const tickDiskAutoDeposit = state => {
   return depositDiskToDataLake(eligibleSize)(state)
 }
 
-// Doubling a lake's capacity costs exactly its own current capacity, in Memory bits — the same
-// "spend the current value to double it" shape Memory's own Sacrifice already uses (see
-// pickIntroCapacityMilestone), just funded from the same shared Memory pool rather than a
-// per-lake one (no per-pool generator beyond pool 1 exists yet — see layers.js).
-export const getDataLakeCapacityDoublingCost = (state, tierIndex) => getDataLakeCapacity(state, tierIndex)
+// Doubling a lake's capacity costs exactly its own current capacity, converted from the lake's
+// abstract unit-count scale into real Memory bits via getDataLakeUnitBits (one deposit-unit's own
+// bit face value) — the same currency Disks themselves are priced/sized in, per the explicit "Data
+// lake uses the same currency as disks" requirement. This is the same "spend the current value to
+// double it" shape Memory's own Sacrifice already uses (see pickIntroCapacityMilestone), just
+// funded from the same shared Memory pool rather than a per-lake one (no per-pool generator beyond
+// pool 1 exists yet — see layers.js).
+export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
+  getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
 
 // Bottom of the forced priority order, same rank as Memory's own Sacrifice (isMemoryCapacityUpgradeAvailable)
 // — available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute) is
 // currently possible, so it never competes with them for the same Memory bits.
 export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) =>
+  // Matches isMemoryCapacityUpgradeAvailable's own "Memory must be FULL" gate — without it, this
+  // could fire mid-fill any time accumulated bits happened to cross the lake's cost threshold,
+  // rather than only once Memory is genuinely idle with nothing else to spend it on (the same
+  // "same rank as Sacrifice" parity this action is meant to have).
+  state.intro.bits >= state.intro.capacity &&
   state.intro.bits >= getDataLakeCapacityDoublingCost(state, tierIndex)
 
 export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) => {
@@ -3525,6 +3551,15 @@ const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {
 const getDataLakeSubSizeStep = (tierIndex, subSize) =>
   (tierIndex - 1) * DATA_LAKE_SUB_SIZES.length + DATA_LAKE_SUB_SIZES.indexOf(subSize) + 1
 
+// The bit size of ONE deposit-unit for lake `tierIndex` — exactly its own ×1 sub-size Disk's real
+// face value (getDiskLadderSizeBits at that tier's first step). Since sub-sizes 1/10/100 scale
+// linearly with disk-ladder steps, `unitCount * getDataLakeUnitBits(tierIndex)` always equals the
+// real bit total those units represent, regardless of which sub-sizes they came from — used to
+// display deposited/capacity/cost figures in the same Byte-scale currency Disks themselves use
+// (formatDiskSize) rather than a bare unitless number.
+export const getDataLakeUnitBits = tierIndex =>
+  getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[0]))
+
 // How many live Booster transfers (see startBoosterTransfer/tickDataLakeTransfers) tier
 // `tierIndex`'s lake can run at once — one concurrency slot per completed sub-size Disk array
 // (×1/×10/×100, checked smallest first), the same staged gate depositDiskToDataLake's own
@@ -3552,8 +3587,7 @@ const getDataLakeTransferDurationSeconds = (state, tierIndex, units) => {
   if (!(units > 0)) return 0
   const rate = getIntroProductionRate(state.intro ?? {})
   if (!(rate > 0) || !Number.isFinite(rate)) return 0
-  const unitBits = getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[0]))
-  return (units * unitBits) / (DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER * rate)
+  return (units * getDataLakeUnitBits(tierIndex)) / (DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER * rate)
 }
 
 // Works out which held, undeposited Disks (by sub-size) can fund `unitsNeeded` units of live

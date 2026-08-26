@@ -21,11 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   future `android/` / `ios/` build artifacts. Native platform projects and
   `mobile-build.yml` are deferred to a later slice of #70.
 - **Data Lake capacity doubling** — each lake's own capacity can now be doubled directly, at a cost
-  equal to its current capacity in Memory Bits (the same "spend the current value to double it"
-  shape Memory's own Sacrifice already uses). Stacks on top of the existing staged 9 → 99 → 999
-  array-completion progression rather than replacing it — a sub-slot still can't accept any deposit
-  until its own disk array is complete. Gated by the same forced priority order as every other Byte
-  Foundry milestone action. Rendered as a compact "⚡ ×2 Capacity" button per lake row.
+  in Memory Bits equal to its current capacity converted into the same currency Disks are priced in
+  (the same "spend the current value to double it" shape Memory's own Sacrifice already uses).
+  Stacks on top of the existing staged 9 → 99 → 999 array-completion progression rather than
+  replacing it — a sub-slot still can't accept any deposit until its own disk array is complete.
+  Gated by the same forced priority order as every other Byte Foundry milestone action. Rendered as
+  a compact "⚡ ×2 Capacity" button per lake row.
 - **Dev Mode** — a local, dev-build-only sandbox (More → Dev Mode, rendered only when
   `import.meta.env.DEV`; absent from the production build) for seeding and experimenting with game
   state on a save entirely separate from any real player slot. Toggle it on/off without touching
@@ -76,8 +77,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
 - **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
   the **Bytes** pool (matching the buy button), not Bits.
+- **Data Lake capacity-doubling cost was ~8,000× too cheap** — it spent the lake's abstract unit
+  count (e.g. 999) directly out of Memory Bits instead of converting it into real bits first,
+  making the action trivially affordable rather than sitting at the same cost weight as Memory's
+  own Sacrifice. The cost is now the unit count multiplied by that lake's own per-unit bit value
+  (8,000 bits for the KB lake), matching what a Disk of that size is actually worth.
 
 ### Changed
+- **Disk redemption is now a fixed one-to-one (tier, level) mapping, not a price coincidence** — a
+  disk of a given size now always corresponds to one specific tier and level (1st/2nd/3rd
+  disk-ladder step → that tier's level 1/2/3, sharing the same KB/MB/GB/… grouping Data Lakes
+  already use), and is redeemable only while that tier currently sits at exactly that level.
+  Redeeming completes the tier's WHOLE current level in one shot (its entire purchase block)
+  instead of granting a single unit. Replaces the old "redeems into whichever tier's current
+  per-unit cost happens to match its size right now" design, which could drift or skip a disk
+  entirely if a tier's price jumped past it mid-run.
+- **Data Lake figures now display in the same Byte-scale currency as Disks** — deposited amount,
+  capacity, and the next Booster's cost on the Data Lake panel now render as KB/MB/GB/… (matching
+  Disk sizing) instead of a bare unit count (previously shown as raw numbers like 9/99/999).
 - **Storage Pool: read cache trimmed to one array, Data Lake deposits now automatic** — only the
   pool's smallest disk size (the one that actually touches Memory) keeps a read cache; every larger
   size fills exclusively via the write-cache ripple from the size below, which already existed and

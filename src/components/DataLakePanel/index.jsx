@@ -2,7 +2,7 @@ import Button, { ButtonContent } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
   formatAmount,
-  formatBitsInNearestUnit,
+  formatDiskSize,
   formatOfflineDuration,
   getBoosterPurchaseCost,
   getDataLakeCapacity,
@@ -12,6 +12,7 @@ import {
   getDataLakeTier,
   getDataLakeTierLabel,
   getDataLakeTransferCapacity,
+  getDataLakeUnitBits,
   isDataLakeCapacityDoublingTurnAvailable,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_SLOT_MAX, DATA_LAKE_TIER_COUNT } from 'game/layers'
@@ -102,22 +103,30 @@ const DataLakePanel = ({ actions, state, bare = false }) => {
           ? Math.min(...transfers.map(transfer => transfer.remainingSeconds ?? 0))
           : 0
         const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
+        const unitBits = getDataLakeUnitBits(tierIndex)
         const capacity = getDataLakeCapacity(state, tierIndex)
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
         const canDouble = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
+        // Deposited/capacity/next-cost are all abstract unit counts internally, but every figure
+        // shown here converts through unitBits into the same Byte-scale currency Disks themselves
+        // display (formatDiskSize) — per the explicit "Data lake uses the same currency as disks"
+        // requirement, replacing what used to be a bare 9/99/999 unit count.
+        const depositedSize = formatDiskSize(deposited * unitBits)
+        const capacitySize = formatDiskSize(capacity * unitBits)
+        const nextCostSize = formatDiskSize(nextCost * unitBits)
 
         return (
           <LakeRow key={tierIndex}>
             <LakeName>{`${label} Data Lake → ${boosterLabel}`}</LakeName>
             <LakeStats>
-              {`${formatAmount(deposited)}/${formatAmount(capacity)} deposited · ${formatAmount(purchased)} bought · next ${formatAmount(nextCost)} ${label}`}
+              {`${depositedSize}/${capacitySize} deposited · ${formatAmount(purchased)} bought · next ${nextCostSize}`}
               {transfers.length > 0 && ` · ${formatAmount(transfers.length)}/${formatAmount(transferCapacity)} transferring (${formatOfflineDuration(soonestTransferSeconds)} left)`}
             </LakeStats>
             <DoubleCapacityButton
               aria-label={`double the ${label} Data Lake's capacity`}
               disabled={!canDouble}
               onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-              title={`Spend ${formatBitsInNearestUnit(doublingCost)} — this lake's own current capacity — to double it to ${formatAmount(capacity * 2)}`}
+              title={`Spend ${formatDiskSize(doublingCost)} — this lake's own current capacity — to double it to ${formatDiskSize(capacity * 2 * unitBits)}`}
               type="button"
               variant={canDouble ? 'prestige' : 'neutral'}
             >

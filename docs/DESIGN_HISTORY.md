@@ -2886,3 +2886,109 @@ drift (see CLAUDE.md's Architecture item 5), and this mechanic's bullets there s
 old instant-purchase-from-deposits-only behavior. Both were fixed, along with adding the mixed
 deposits+live-transfer funding and same-tick multi-transfer-completion test coverage the review
 noted was missing, before this PR left draft.
+
+### Disk redemption: from price coincidence to a fixed one-to-one tier+level mapping
+
+Requested directly, in the same terse shorthand the maintainer's other Storage Pool requests in
+this chain used: "Every size disk only fills one level of the corresponding Tier in the ladder.
+There is a nice one to one mapping." Read together with two follow-up clarifying rounds (see
+below), this replaced the entire "a disk redeems into whichever tier's current per-unit cost
+happens to exactly match its size right now" design — itself the subject of an earlier
+`getMatchingTierForDiskSize` entry in this file establishing the `<=`→`===` fix and the "any tier,
+not just tier01" generalization — with a fixed, permanent mapping that needs no price coincidence,
+no tie-break rule, and can't be permanently stranded by an autobuyer burst jumping a tier's price
+past a disk's exact value mid-tick.
+
+**Why a clarifying round before touching the code.** The request's own wording ("nice one to one
+mapping," "fills one level") was genuinely compatible with several different concrete designs — did
+it mean the tier itself becomes fixed (not price-matched), or only the level-completion behavior
+changes? Did "fills one level" mean granting exactly one unit at a fixed level, or completing the
+whole level's purchase block in one redemption? This touches `isDiskRedeemable`,
+`getMatchingTierForDiskSize`, `redeemDisk`, every cache-release/auto-redeem eligibility predicate
+built on top of them, `tickDiskAutoDeposit`'s own redeemability gate, and dozens of existing tests —
+getting the exact semantics wrong would have meant redoing all of it. Two rounds of
+`AskUserQuestion` confirmed: (1) disk-ladder step N maps permanently to level N of its one
+corresponding tier — the tier sharing that step's existing Data Lake grouping
+(`getDataLakeTierIndex`, already using the same KB/MB/GB/… naming `TIER_DEFINITIONS` does) — 
+redeemable only while that tier sits at exactly that level; (2) redeeming completes the WHOLE
+current level in one shot (the tier's entire purchase block), not a single unit.
+
+**The mapping was already implicit in existing constants.** `getDataLakeTierIndex` groups every 3
+disk-ladder steps into one Data Lake tier (`DATA_LAKE_SUB_SIZES.length` = 3), and those 10 Data Lake
+tiers already share the exact same KB/MB/GB/…/QB naming as the 10 main-game tiers
+(`DATA_LAKE_TIER_LABELS` vs. `TIER_DEFINITIONS`' own `symbol`s) — not a coincidence, but infrastructure
+already built for a different feature (Data Lake Boosters) that turned out to define this mapping
+for free. A disk step's own position within its tier's 3-step group (1st/2nd/3rd,
+`getDataLakeSubSize`'s index) became the new `getDiskRequiredTierLevel` — the fixed level that
+step corresponds to. `getMatchingTierForDiskSize` (kept as the same internal name/signature so
+every downstream caller — `isDiskRedeemable`, `isDiskAutoRedeemEligible`,
+`isDiskCacheBlockAutoReleaseEligible`, `tickDiskAutoRedeem`, `tickDiskAutoDeposit`'s own
+redeemability gate — needed zero changes of their own) now does a direct index lookup into
+`TIER_DEFINITIONS` plus one equality check against the tier's current `purchaseLevels` entry,
+replacing a `TIER_DEFINITIONS.find(...)` price-coincidence search and its own tie-break-toward-
+earliest-tier logic entirely — a net simplification, not just a behavior change.
+
+**A subtle test-construction trap: tier costs and disk sizes only coincide through level 3.**
+Because tier01's own cost-epoch formula (`getCostEpochExponent`, a Fibonacci-like sequence: exponent
+1, 2, 3, 5, 8, 13, … per level) matches a flat ×10-per-level growth only through epoch 2 (level 3) —
+diverging sharply from level 4 onward (level 4's exponent is 5, not 4, an extra 10× jump) — several
+existing tests that constructed a disk size via `getTierCost(tensTier, N) * BITS_PER_BYTE` for N > 3
+to simulate a "tied price" scenario silently broke: the resulting size no longer matched the real
+disk ladder's step-N face value (`getDiskLadderSizeBits(N)`) at all once N exceeded 3. This is
+exactly why `MAX_ACTIVE_DISK_LADDER_STEP` (3) and `DATA_LAKE_SUB_SIZES.length` (3) were already the
+right bound for pool 1's disks: the "nice one to one mapping" was only ever going to hold for a
+tier's first 3 levels in the first place, matching the disk ladder's own real ceiling — the
+position-based `getDiskRequiredTierLevel` mapping this entry adds is unaffected by this divergence
+(it never reads any tier's cost at all), but a test asserting a manufactured "tie" between two
+tiers' costs at level 4+ needs the real `getDiskLadderSizeBits` value, not a cost-derived one, once
+the divergence kicks in.
+
+**Redeeming a disk now completes a whole level, not one unit** — `redeemDisk` grants
+`getPurchaseBlockSize(state) - purchaseLevelProgress[tier.id]` free units via the existing
+`grantTierUnits` loop (unchanged itself) rather than a flat `1`, rolling the tier straight into its
+next level regardless of how much manual/autobuyer progress already existed toward the current one.
+Every existing test asserting `owned[tier.id] === 1` after a redeem needed updating to the real
+default block size (`DEFAULT_PURCHASE_BLOCK_SIZE`, 8) instead — including one integration test
+whose downstream assertion (the ByteFoundryPage transfer-block row showing "1 transferred block")
+also had to flip to "0 transferred blocks," since completing a level resets `purchaseLevelProgress`
+back to 0 in a fresh level rather than leaving a partial 1-of-8 behind.
+
+**The Data Lake's own currency/threshold display** (a third request in the same message: "Data lake
+uses the same currency as disks. It replaces 9,99,999") was scoped separately — see the maintainer's
+own answer that the deposited/capacity numbers should keep their current internal values but display in the
+same Byte-scale (KB/MB/GB) formatting disks themselves use, rather than bare unitless numbers.
+
+### Data Lake capacity-doubling cost: fixing a unit-count/real-bits conflation found while wiring up the Byte-scale display
+
+Implementing the Byte-scale display change above (`DataLakePanel` converting every lake figure
+through a new `getDataLakeUnitBits(tierIndex)` helper before formatting with `formatDiskSize`,
+rather than the bare `formatAmount` it used before) surfaced a real economy bug in
+`getDataLakeCapacityDoublingCost`, not just a display gap: it returned the lake's own
+`getDataLakeCapacity` value directly — an abstract unit count (999 at the starting `slotMax`) — and
+`doubleDataLakeCapacity` spent that number straight out of `state.intro.bits`. Real Memory bits and
+the lake's internal unit count are wildly different scales (one deposit-unit is worth 8,000 bits at
+the KB lake), so this made doubling a lake's capacity cost roughly 8,000× cheaper than intended —
+effectively free relative to every other Byte Foundry milestone action it's supposed to sit at the
+same forced-priority rank as (Memory's own Sacrifice). None of the three prior adversarial reviews
+of this PR caught it, because none of them specifically checked whether the "abstract unit count"
+and "real bits" scales were being conflated at this call site — the fix only became visible once the
+UI work required converting between the two scales explicitly.
+
+The fix: `getDataLakeCapacityDoublingCost` now multiplies the unit-count capacity by
+`getDataLakeUnitBits(tierIndex)` before returning it, so the cost is expressed in the same real-bit
+currency `doubleDataLakeCapacity` actually spends from — for the base-`slotMax` KB lake, this moves
+the cost from 999 (bits) to 999 × 8,000 = 7,992,000 bits. `getDataLakeUnitBits` itself (`= getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex,
+DATA_LAKE_SUB_SIZES[0]))`) reuses the same disk-ladder sizing function the display conversion needs
+anyway, so both the cost and the on-screen numbers derive from one shared source of truth rather
+than two independently-computed scale factors that could drift apart again.
+
+Fixing the cost had a knock-on effect on every capacity-doubling test in `engine.test.js`: seeding
+`bits: 999` to exactly afford one doubling under the old (buggy) cost now left the state 7,991,001
+bits short. Bumping those seeds to the real cost (`999 * 8000`) surfaced a second, unrelated issue
+in the *test* fixtures themselves — a Memory balance large enough to afford the real cost is also
+easily large enough to afford building the pool's next Disk array (`isDiskBuildAvailable`'s own bit
+cost is far smaller), which outranks Data Lake capacity doubling in the forced priority order. Tests
+that previously relied on a tiny 999-bit balance being too small for anything else to compete now
+needed to explicitly exhaust the Disk ladder (`disksBuiltTotal` maxed at every active pool size) to
+keep isolating the behavior actually under test, rather than incidentally relying on being too poor
+to afford a Disk Build.

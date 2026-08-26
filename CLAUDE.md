@@ -959,12 +959,20 @@ slots same tick. **Disks always take priority over read cache** for matching lev
 full redeemable disk exists, cache is neither clickable nor auto-used. A full block can be released
 (`releaseDiskCacheBlock`) only when no full redeemable disk of that size exists — crediting the
 block's bits into `resources.base` (Bits). Smart autobuyers also auto-release cache via
-`tickDiskAutoReleaseCache` when no matching disk is available. A full disk redeems
-(`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
-**any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
-tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in
-`TIER_DEFINITIONS` itself (read live, not a hardcoded index — a future reordering of that array
-changes the tie-break automatically, with no code change). Auto-redeem (`tickDiskAutoRedeem`) fires
+`tickDiskAutoReleaseCache` when no matching disk is available. Each disk size has a permanent, fixed
+**one-to-one correspondence** to exactly one (tier, level) pair — the tier sharing its Data Lake
+grouping (`getDataLakeTierIndex`; steps 1–3/1 KB–100 KB → tier01/Kilobytes, steps 4–6/1 MB–100 MB →
+tier02/Megabytes, and so on — the same KB/MB/GB/… naming `TIER_DEFINITIONS` and
+`DATA_LAKE_TIER_LABELS` already share) and that size's own position (1st/2nd/3rd) within that
+tier's 3-step group as the required LEVEL. A full disk redeems (`redeemDisk`) via
+`isDiskRedeemable`/`getDiskRedeemTierName` only while its corresponding tier is CURRENTLY sitting
+at exactly that required level — not yet there, or already past it, and it isn't redeemable this
+cycle (the "already past it" case is exactly what `tickDiskAutoDeposit` claims into the pool's Data
+Lake instead, see below). Redeeming **completes that whole level in one shot** — grants the tier's
+entire current purchase block, not a single unit, rolling it straight into the next level — replacing
+an earlier design where a disk redeemed into "whichever tier's current per-unit cost happened to
+coincidentally match its size," which needed its own tie-break rule and could permanently strand a
+disk mid-cycle; see `docs/DESIGN_HISTORY.md`. Auto-redeem (`tickDiskAutoRedeem`) fires
 only when the matching tier's own unit-buying autobuyer is currently unlocked and unpaused; otherwise
 a full, redeemable disk simply waits for a manual click. `disks`/`disksBuiltTotal`/`diskCache`/
 `diskBuild` are all PERMANENT across every real Prestige, like the Byte generator itself; only
@@ -997,19 +1005,26 @@ field, the existing sub-slot structure already encodes it (see `isDiskArrayFully
 
 *Capacity doubling* (`doubleDataLakeCapacity(tierIndex)`) — a standing lever on top of the staged
 progression above, not a replacement for it (the array-completion gate on each sub-slot is
-unaffected): spends a lake's own current capacity (`getDataLakeCapacityDoublingCost`, in Memory
-Bits) to double its `slotMax` (`getDataLakeSlotMax`, `DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2× per
-purchase — same "spend the current value to double it" shape Memory's own Sacrifice uses), and
-therefore its capacity (`getDataLakeCapacity` = `slotMax × 111`, the sum of the three sub-sizes).
-Gated by the same forced priority order every other Byte Foundry milestone action follows —
-available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute) currently
-is, same rank as Memory's own Sacrifice (`isDataLakeCapacityDoublingTurnAvailable`). Raising
-`slotMax` past the base value also raises each sub-slot's own cap in `canDepositDiskToDataLake`
-and the digit-decomposition ceiling `decomposeDataLakeDeposits` caps each place at (generalizing
-what was previously a hardcoded base-10/`DATA_LAKE_SLOT_MAX` assumption) — deposits stay fungible,
-not tracked per physical disk, so spending re-decomposes the remaining total largest-denomination-
-first, same as before. Rendered as a compact "⚡ ×2 Capacity" button per lake row in
-`DataLakePanel`.
+unaffected): spends a lake's own current capacity, converted into real Memory Bits, to double its
+`slotMax` (`getDataLakeSlotMax`, `DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2× per purchase — same "spend
+the current value to double it" shape Memory's own Sacrifice uses), and therefore its capacity
+(`getDataLakeCapacity` = `slotMax × 111`, the sum of the three sub-sizes — still an abstract unit
+count internally). `getDataLakeCapacityDoublingCost` is that unit count multiplied by
+`getDataLakeUnitBits(tierIndex)` (one deposit-unit's own real bit face value — exactly its lake's
+×1 sub-size Disk's size, e.g. 8,000 bits for the KB lake), so the amount actually spent from Memory
+is the lake's capacity expressed in the same currency Disks themselves are priced in, not a bare
+unit count. Gated by the same forced priority order every other Byte Foundry milestone action
+follows — available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute)
+currently is, same rank as Memory's own Sacrifice (`isDataLakeCapacityDoublingTurnAvailable`).
+Raising `slotMax` past the base value also raises each sub-slot's own cap in
+`canDepositDiskToDataLake` and the digit-decomposition ceiling `decomposeDataLakeDeposits` caps
+each place at (generalizing what was previously a hardcoded base-10/`DATA_LAKE_SLOT_MAX`
+assumption) — deposits stay fungible, not tracked per physical disk, so spending re-decomposes the
+remaining total largest-denomination-first, same as before. Rendered as a compact "⚡ ×2 Capacity"
+button per lake row in `DataLakePanel`, which also displays deposited/capacity/next-Booster-cost
+figures in Byte-scale (`formatDiskSize`, KB/MB/GB/…) rather than a bare unit count — each abstract
+unit converted through the same `getDataLakeUnitBits` helper — since "Data lake uses the same
+currency as disks" (see `docs/DESIGN_HISTORY.md`).
 
 *Starting a Booster* (`startBoosterTransfer(tierIndex)`, ComputePage) — the nth Booster ever
 started at tier *t* (completed or still in flight) costs *n* units of lake *t*

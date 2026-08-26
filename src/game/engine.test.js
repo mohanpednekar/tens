@@ -2659,59 +2659,64 @@ describe('isDiskCacheBlockAutoReleaseEligible / isDiskCacheBlockManualReleaseAva
 })
 
 describe('isDiskRedeemable / getDiskRedeemTierName', () => {
-  it('is true only when capacityBits EXACTLY matches tier01\'s current per-unit level cost', () => {
-    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // per-unit cost 10,000 Bits
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    expect(isDiskRedeemable(state, level2Size)).toBe(true) // exact match
-    expect(isDiskRedeemable(state, FIRST_DISK_SIZE)).toBe(false) // below — no longer redeemable
-    expect(isDiskRedeemable(state, getTierCost(tensTier, 3) * BITS_PER_BYTE)).toBe(false) // above — not yet
+  it('is true only when tier01 is CURRENTLY at exactly the level this disk size fixedly corresponds to', () => {
+    const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 2) // now sitting at level 2
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE // disk step 2 — tier01's own level 2
+    expect(isDiskRedeemable(state, level2Size)).toBe(true) // level matches exactly
+    expect(isDiskRedeemable(state, FIRST_DISK_SIZE)).toBe(false) // step 1/level 1 — already past it
+    expect(isDiskRedeemable(state, getTierCost(tensTier, 3) * BITS_PER_BYTE)).toBe(false) // step 3/level 3 — not there yet
     expect(getDiskRedeemTierName(state, level2Size)).toBe(tensTier.name)
     expect(getDiskRedeemTierName(state, FIRST_DISK_SIZE)).toBeNull()
   })
 
-  it('is not redeemable once tier01\'s level jumps straight past the level a disk was sized for', () => {
+  it('is not redeemable once tier01\'s level jumps straight past the level a disk was fixedly sized for', () => {
     // An autobuyer burst can complete more than one level in a single tick (see tickGame's
-    // autobuyer loop), skipping level 2 (the disk's own target) entirely on the way to level 5 —
-    // the disk stays full and held, not lost, but won't redeem again until a Speed Up/Overclock/
-    // Prestige resets tier01's level back down and it regrows through that exact cost.
+    // autobuyer loop), skipping level 2 (this disk's own fixed corresponding level) entirely on
+    // the way to level 5 — the disk stays full and held, not lost, but won't redeem again until a
+    // Speed Up/Overclock/Prestige resets tier01's level back down through exactly level 2 again.
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(createInitialGameState(), tensTier.id, 5)
     expect(isDiskRedeemable(state, level2Size)).toBe(false)
   })
 
-  it('matches ANY tier, not just tier01 — a disk sized for tier02\'s current cost redeems into tier02', () => {
+  it('each tier owns its own disk-ladder range — a step-4 disk (tier02\'s own first level) never involves tier01', () => {
     const secondTier = TIER_DEFINITIONS[1]
-    const secondTierSize = getTierCost(secondTier, 1) * BITS_PER_BYTE
+    const secondTierSize = getTierCost(secondTier, 1) * BITS_PER_BYTE // disk step 4 — tier02's own level 1
     const state = createInitialGameState()
     expect(isDiskRedeemable(state, secondTierSize)).toBe(true)
     expect(getDiskRedeemTierName(state, secondTierSize)).toBe(secondTier.name)
   })
 
-  it('a genuine tie between two tiers redeems into whichever appears EARLIER in TIER_DEFINITIONS', () => {
+  it('a disk\'s tier is fixed by its own size alone — a different tier\'s level has no bearing on it', () => {
+    // Disk ladder step 4 (1 MB) is tier02's (Megabytes') own first local level — purely by
+    // position (getDataLakeTierIndex/getDataLakeSubSize), never by any tier's current cost. Under
+    // the OLD price-coincidence design, whichever tier's price happened to match a size could shift
+    // with level; under the fixed mapping, tier01's level is simply irrelevant to this size,
+    // however far it's progressed.
     const secondTier = TIER_DEFINITIONS[1]
-    // tier01 level 4 (1000 * 10^(5-1)) and tier02 level 2 (1e6 * 10^(2-1)) both cost exactly
-    // 10,000,000 Bits per unit right now — a genuine, naturally-occurring tie.
-    const tiedCost = getTierCost(tensTier, 4)
-    expect(tiedCost).toBe(getTierCost(secondTier, 2))
-    const tiedSize = tiedCost * BITS_PER_BYTE
+    const step4Size = getDiskLadderSizeBits(4)
 
-    const state = withPurchaseLevel(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), secondTier.id, 2)
-    expect(getDiskRedeemTierName(state, tiedSize)).toBe(tensTier.name) // tier01 wins — earlier in TIER_DEFINITIONS
+    const state = withPurchaseLevel(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), secondTier.id, 1)
+    expect(getDiskRedeemTierName(state, step4Size)).toBe(secondTier.name)
 
-    const withDisk = withIntro(state, { disks: { [tiedSize]: 1 } })
-    const after = redeemDisk(tiedSize)(withDisk)
-    expect(after.owned[tensTier.id]).toBe(1)
-    expect(after.owned[secondTier.id]).toBe(0) // tier02 untouched despite the tie
+    const withDisk = withIntro(state, { disks: { [step4Size]: 1 } })
+    const after = redeemDisk(step4Size)(withDisk)
+    expect(after.owned[tensTier.id]).toBe(0) // tier01 untouched — this size was never its to redeem
+    expect(after.owned[secondTier.id]).toBeGreaterThan(0)
   })
 })
 
 describe('redeemDisk', () => {
-  it('consumes one matching disk and grants 1 free tier01 unit', () => {
+  it('consumes one matching disk and completes tier01\'s current level in one shot', () => {
     const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 2 } })
 
     const after = redeemDisk(FIRST_DISK_SIZE)(state)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
-    expect(after.owned[tensTier.id]).toBe(1)
+    // Grants the whole level-1 block (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit —
+    // "fills one level" is a full level completion (see redeemDisk's own doc comment).
+    expect(after.owned[tensTier.id]).toBe(8)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
   })
 
   it('removes the denomination key entirely once its count reaches 0, rather than leaving a 0 entry', () => {
@@ -2726,7 +2731,7 @@ describe('redeemDisk', () => {
     expect(redeemDisk(FIRST_DISK_SIZE)(state)).toBe(state)
   })
 
-  it('is a no-op if a held disk matches no tier\'s current cost', () => {
+  it('is a no-op while its corresponding tier isn\'t currently at this disk\'s required level', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), { disks: { [level2Size]: 1 } })
     expect(redeemDisk(level2Size)(state)).toBe(state)
@@ -2750,7 +2755,8 @@ describe('redeemDisk', () => {
       diskCache: {},
     })
     const after = redeemDisk(FIRST_DISK_SIZE)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(after.owned[tensTier.id]).toBe(8)
     // Emptied, but Memory is left intact for Bandwidth/Invest rather than pulled into cache here.
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
@@ -2762,7 +2768,8 @@ describe('redeemDisk', () => {
     expect(isProductionFrozen(state)).toBe(true)
 
     const after = redeemDisk(FIRST_DISK_SIZE)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(after.owned[tensTier.id]).toBe(8)
   })
 
   it('is a no-op while the disk\'s own size is currently mid-build, even though it is otherwise full and redeemable', () => {
@@ -2824,12 +2831,13 @@ describe('tickDiskAutoRedeem', () => {
     const state = withAutobuyer(withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } }), tensTier.id, 1)
 
     const after = tickDiskAutoRedeem(state)
-    expect(after.owned[tensTier.id]).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(after.owned[tensTier.id]).toBe(8)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
   })
 
-  it('is a no-op when no held disk matches any tier\'s current cost', () => {
+  it('is a no-op while the held disk\'s corresponding tier isn\'t currently at its required level', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withAutobuyer(withIntro(createInitialGameState(), { disks: { [level2Size]: 1 } }), tensTier.id, 1)
     expect(tickDiskAutoRedeem(state)).toBe(state)
@@ -3753,7 +3761,8 @@ describe('tickGame Disk auto-redeem integration', () => {
     )
     const afterRedeem = tickDiskAutoRedeem(state)
     expect(afterRedeem).not.toBe(state)
-    expect(afterRedeem.owned[tensTier.id]).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(afterRedeem.owned[tensTier.id]).toBe(8)
     expect(afterRedeem.intro.diskAutoRedeemedSizes[FIRST_DISK_SIZE]).toBe(true)
     expect(afterRedeem.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
 
@@ -3774,7 +3783,8 @@ describe('tickGame Disk auto-redeem integration', () => {
     expect(isProductionFrozen(state)).toBe(true)
 
     const after = tickGame(1)(state)
-    expect(after.owned[tensTier.id]).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(after.owned[tensTier.id]).toBe(8)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
   })
 
@@ -3790,7 +3800,8 @@ describe('tickGame Disk auto-redeem integration', () => {
     expect(isProductionFrozen(frozenState)).toBe(true)
 
     const after = tickGame(0.001)(frozenState) // tiny elapsed time — attempt budget stays well below 1
-    expect(after.owned[tensTier.id]).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(after.owned[tensTier.id]).toBe(8)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.resources[MONEY_ID]).toBe(PRESTIGE_THRESHOLD) // still frozen — no Prestige fired yet
   })
@@ -3805,8 +3816,9 @@ describe('tickGame Disk auto-redeem integration', () => {
 
     const after = tickGame(1)(frozenState)
     expect(after.resources[MONEY_ID]).toBeLessThan(PRESTIGE_THRESHOLD) // Prestige fired, resources reset
-    // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized disk is still redeemable.
-    expect(after.owned[tensTier.id]).toBe(1)
+    // tier01 resets to level 1 (cost 1000) on Prestige — the level-1-sized disk is still redeemable,
+    // completing that whole level (DEFAULT_PURCHASE_BLOCK_SIZE, 8), not just 1 unit.
+    expect(after.owned[tensTier.id]).toBe(8)
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
   })
 })
@@ -8409,37 +8421,55 @@ describe('Data Lakes', () => {
     const state = createInitialGameState()
     expect(getDataLakeSlotMax(state, 1)).toBe(9)
     expect(getDataLakeCapacity(state, 1)).toBe(999)
-    expect(getDataLakeCapacityDoublingCost(state, 1)).toBe(999)
+    // Cost is the lake's abstract unit-count capacity converted into real bits via its own
+    // per-unit face value (getDataLakeUnitBits(1) = the ×1/1 KB disk's own size, 8000 bits) — the
+    // same currency Disks themselves are priced in, not a bare 999-unit count.
+    expect(getDataLakeCapacityDoublingCost(state, 1)).toBe(999 * 8000)
   })
 
   it('isDataLakeCapacityDoublingAvailable/TurnAvailable gate on affordability and the forced priority order', () => {
-    // Not affordable — 998 bits, needs 999.
-    expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { bits: 998, ...noOtherUpgradesLeft }), 1)).toBe(false)
+    // Not affordable — 1 bit short of the 999 * 8000 = 7,992,000 bit cost.
+    expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { bits: 7_991_999, ...noOtherUpgradesLeft }), 1)).toBe(false)
     // Affordable, and nothing ranked above it (Disk Fill/Bandwidth/Disk Build/Compute) is available.
-    const affordable = withIntro(createInitialGameState(), { bits: 999, ...noOtherUpgradesLeft })
+    // Disk Build is exhausted (every active pool size already at its array cap) so this much larger
+    // real-bit balance — big enough to also cover a Disk Build — doesn't accidentally outrank it.
+    const diskLadderExhausted = { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP } }
+    const affordable = withIntro(createInitialGameState(), { bits: 7_992_000, ...noOtherUpgradesLeft, ...diskLadderExhausted })
     expect(isDataLakeCapacityDoublingAvailable(affordable, 1)).toBe(true)
     expect(isDataLakeCapacityDoublingTurnAvailable(affordable, 1)).toBe(true)
     // A redeemable full disk (Disk Fill) outranks it — same forced-priority chain Sacrifice uses.
-    const diskFillBlocks = withIntro(createInitialGameState(), { bits: 999, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    const diskFillBlocks = withIntro(createInitialGameState(), { bits: 7_992_000, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
     expect(isDiskFillAvailable(diskFillBlocks)).toBe(true)
     expect(isDataLakeCapacityDoublingTurnAvailable(diskFillBlocks, 1)).toBe(false)
+    // Matches isMemoryCapacityUpgradeAvailable's own gate: Memory must be genuinely FULL, not just
+    // holding enough bits — a save with a large capacity and bits sitting mid-fill (well below that
+    // capacity) must not offer this action, even though that balance alone would cover the cost.
+    const midFill = withIntro(createInitialGameState(), { bits: 7_992_000, capacity: 10_000_000, ...noOtherUpgradesLeft })
+    expect(isDataLakeCapacityDoublingAvailable(midFill, 1)).toBe(false)
+    expect(isDataLakeCapacityDoublingTurnAvailable(midFill, 1)).toBe(false)
   })
 
   it('doubleDataLakeCapacity is a no-op below cost or while a higher-priority action is available', () => {
-    const tooPoor = withIntro(createInitialGameState(), { bits: 998, ...noOtherUpgradesLeft })
+    const tooPoor = withIntro(createInitialGameState(), { bits: 7_991_999, ...noOtherUpgradesLeft })
     expect(doubleDataLakeCapacity(1)(tooPoor)).toBe(tooPoor)
 
-    const blockedByDiskFill = withIntro(createInitialGameState(), { bits: 999, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    const blockedByDiskFill = withIntro(createInitialGameState(), { bits: 7_992_000, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
     expect(doubleDataLakeCapacity(1)(blockedByDiskFill)).toBe(blockedByDiskFill)
   })
 
   it('doubleDataLakeCapacity spends the lake\'s current capacity in bits and doubles its slotMax/capacity', () => {
-    const state = withIntro(createInitialGameState(), { bits: 999, ...noOtherUpgradesLeft })
+    // Disk Build exhausted (see the affordability test above) so the much larger real-bit cost
+    // doesn't accidentally make a Disk Build outrank this action too.
+    const state = withIntro(createInitialGameState(), {
+      bits: 7_992_000,
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      ...noOtherUpgradesLeft,
+    })
     const after = doubleDataLakeCapacity(1)(state)
     expect(after.intro.bits).toBe(0)
     expect(getDataLakeSlotMax(after, 1)).toBe(18)
     expect(getDataLakeCapacity(after, 1)).toBe(1998)
-    expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(1998)
+    expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(1998 * 8000)
     // Doesn't disturb other lakes.
     expect(getDataLakeSlotMax(after, 2)).toBe(9)
   })
@@ -8448,10 +8478,13 @@ describe('Data Lakes', () => {
     // tier01 bumped past level 1 so kb1 disks aren't currently redeemable — otherwise Disk Fill
     // would outrank doubleDataLakeCapacity in the forced priority order (same reasoning as the
     // tickDiskAutoDeposit tests above).
+    // kb10/kb100 also maxed so Disk Build is fully exhausted, not just kb1 — otherwise the much
+    // larger real-bit balance below would also cover building the next (kb10) array and outrank
+    // doubleDataLakeCapacity.
     let state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
-      bits: 999,
+      bits: 7_992_000,
       disks: { [kb1]: 9 },
-      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       ...noOtherUpgradesLeft,
     })
     for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb1)(state)
