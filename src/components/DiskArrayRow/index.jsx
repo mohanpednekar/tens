@@ -209,7 +209,11 @@ const WriteCacheRow = styled.div`
 const WriteCacheSegment = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
-  aspect-ratio: 1;
+  /* The single full-width flush bar ($flushBar) spans roughly DISK_ARRAY_LADDER_CAP collecting
+     segments' combined width — aspect-ratio: 1 there would square that whole width into a giant
+     block instead of a thin bar, so it uses that same ratio instead to land back near one
+     segment's own height. */
+  aspect-ratio: ${props => (props.$flushBar ? DISK_ARRAY_LADDER_CAP : 1)};
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
     props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken};
@@ -379,7 +383,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
               )
             })
           ) : (
-            <WriteCacheSegment $filled $active style={{ flex: '1 1 100%' }}>
+            <WriteCacheSegment $filled $active $flushBar style={{ flex: '1 1 100%' }}>
               <WriteCacheFlushFill $fill={writeFlushFill} />
             </WriteCacheSegment>
           )}
