@@ -66,10 +66,12 @@ jobs:
               ;;
           esac
 
-          # Prefer the event's path when present; fall back to the mapped file.
-          if [ -n "${RUN_PATH:-}" ]; then
-            file="$RUN_PATH"
+          # Prefer the event's path only when it matches the trusted case-map (do not let an
+          # unexpected workflow_run.path steer Edit/Write at a non-healable file).
+          if [ -n "${RUN_PATH:-}" ] && [ "$RUN_PATH" != "$file" ]; then
+            echo "workflow_run.path='$RUN_PATH' != mapped '$file'; using mapped path."
           fi
+          # `$file` stays the case-mapped path from above.
 
           # Hard-cap: at most 3 open claude/self-heal-* PRs across all watched workflows.
           open_self_heal=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
@@ -148,7 +150,7 @@ jobs:
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
           claude_args: |
             --max-turns 25
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh run view:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue create:*),Bash(gh issue list:*),Bash(gh label create:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh run view:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue create:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label create:*)"
           settings: |
             {
               "permissions": {
