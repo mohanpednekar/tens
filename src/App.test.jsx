@@ -3118,7 +3118,7 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('Foundry keeps every previously-built Disk size plus the highest offer even when no shown size is redeemable', () => {
-    // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
+    // Ladder offers futureBankSize; tier01 is past both FIRST's and level-2's required levels, so neither is redeemable.
     // Previously-built 1 KB and the incomplete 10 KB offer both stay on the continuous Foundry screen.
     seedIntroState(
       {
@@ -3315,8 +3315,8 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /redeem 10 kb disk/i })).toBeDisabled()
     unmount()
 
-    // tier01 now at level 2 — its current per-unit cost (10,000 Bits = 80,000 bits) matches the
-    // held disk.
+    // tier01 now at level 2 — exactly the required level for the held disk's own fixed size (10 KB,
+    // disk-ladder step 2).
     seedIntroState(
       { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [futureBankSize]: 1 } },
       { purchaseLevels: { [tier01.id]: 2 } }

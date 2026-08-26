@@ -1395,12 +1395,12 @@ describe('isDiskFillAvailable', () => {
     expect(isDiskFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)
   })
 
-  it('is true with a FULL disk whose size matches tier01\'s current per-unit level cost', () => {
+  it('is true with a FULL disk whose own fixed corresponding tier is at its required level', () => {
     const state = withIntro(createInitialGameState(), { disks: { [FIRST_DISK_SIZE]: 1 } })
     expect(isDiskFillAvailable(state)).toBe(true)
   })
 
-  it('is false with a FULL disk not yet redeemable (size doesn\'t match any tier\'s current cost)', () => {
+  it('is false with a FULL disk not yet redeemable (size isn\'t a real disk-ladder step)', () => {
     const futureDiskSize = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), { disks: { [futureDiskSize]: 1 } })
     expect(isDiskFillAvailable(state)).toBe(false)
@@ -1946,22 +1946,22 @@ describe('getDiskSizesToShow', () => {
 })
 
 describe('getRelevantDiskSizesForFoundry', () => {
-  it('includes the currently-offered size when tier01\'s level-1 cost matches it', () => {
+  it('includes the currently-offered size when tier01 is at its required level 1', () => {
     const state = createInitialGameState()
     expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE])
   })
 
-  it('keeps an older built size while it still matches a tier cost, even after the ladder advances', () => {
+  it('keeps an older built size while its own fixed tier is still at the right level, even after the ladder advances', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
     })
     expect(getDiskSize(state)).toBe(level2Size)
-    // 1 KB still matches Kilobytes; highest (10 KB offer) is also kept even though it does not match.
+    // 1 KB still maps to Kilobytes' level 1; highest (10 KB offer) is also kept even though it does not match.
     expect(getRelevantDiskSizesForFoundry(state)).toEqual([FIRST_DISK_SIZE, level2Size])
   })
 
-  it('still keeps the highest shown size once no shown size matches any tier\'s current cost', () => {
+  it('still keeps the highest shown size once no shown size\'s own fixed corresponding tier is at the required level', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withPurchaseLevel(
       withIntro(createInitialGameState(), {
@@ -2221,7 +2221,7 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
-  it('keeps an already-full read cache full and does not pour into an empty disk while tier cost matches that size', () => {
+  it('keeps an already-full read cache full and does not pour into an empty disk while that size\'s own fixed tier is at its required level', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 0,
       capacity: storageCapacity,
@@ -2311,7 +2311,7 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
   })
 
-  it('does not pour read cache into an empty disk while tier cost matches that size, even with surplus Memory', () => {
+  it('does not pour read cache into an empty disk while that size\'s own fixed tier is at its required level, even with surplus Memory', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 1_000_000,
       capacity: 1_000_000,
@@ -2386,7 +2386,7 @@ describe('tickDiskAutoFill', () => {
     expect(done.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
   })
 
-  it('pauses an in-flight read-cache flush while a tier claim matches that size', () => {
+  it('pauses an in-flight read-cache flush while that size\'s own fixed tier is at its required level', () => {
     const unlocked = withPurchaseLevel(createInitialGameState(), tensTier.id, 2)
     const state = withIntro(unlocked, {
       bits: 0,
@@ -2856,8 +2856,8 @@ describe('tickDiskAutoRedeem', () => {
     )
 
     const after = tickDiskAutoRedeem(state)
-    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1) // below current cost — no longer eligible
-    expect(after.intro.disks[level2Size]).toBeUndefined() // exact match — redeemed
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1) // tier past its required level — no longer eligible
+    expect(after.intro.disks[level2Size]).toBeUndefined() // tier at its required level — redeemed
   })
 
   it('auto-redeems a given size at most once per real Prestige cycle, leaving a further eligible disk of that size for a manual redeem', () => {
