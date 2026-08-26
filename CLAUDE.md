@@ -419,8 +419,9 @@ src/
                                alone owning it and ByteFoundryPage settling for a text summary.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
-                               Booster purchase cost/buy) rendered at the bottom of ByteFoundryPage's
-                               Foundry sections, taking `{ state }`. See "Economy model" below for
+                               Booster purchase cost/buy) rendered inside ByteFoundryPage's `PoolCard`
+                               (see Architecture 4 below), taking `{ state, bare }` — `bare` drops its
+                               own StatCard chrome for that nested use. See "Economy model" below for
                                the Data Lake mechanic itself.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
