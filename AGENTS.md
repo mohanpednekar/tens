@@ -134,15 +134,17 @@ passively-producing Byte generator, then grows it via Sacrifice (2x capacity, ha
 large enough to afford building the pool's own largest Disk)
 and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
 far enough along — Disks (`StoragePage`, timed
-builds with a per-array always-full **read cache** (Memory → read cache → timed flush to disk when
-tier allows; flush duration = one cache block at production rate; write-cache upward merges from
-the size below) as fallback tier funding when no matching disk exists;
+builds; only the pool's smallest size gets an always-full **read cache** (Memory → read cache →
+timed flush to disk when tier allows; flush duration = one cache block at production rate) — every
+larger size fills exclusively via write-cache upward merges from the size below, never its own read
+cache (running both was redundant); as fallback tier funding when no matching disk exists,
 Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund
-Boosters, escalating cost (nth = n units, counting in-flight starts too): deposited Disks (a prepaid
-buffer) spend first/instantly, any remaining cost live-transfers off built Disks over time (10x the
-Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake never itself
-banks a spendable reserve beyond its deposits. A separate PP **Compute (Flops)**
+Boosters, escalating cost (nth = n units, counting in-flight starts too): a fully-built disk array
+auto-deposits into its lake (no manual action — deferring to a still-redeemable disk first) as a
+prepaid buffer that spends first/instantly, any remaining cost live-transfers off built Disks over
+time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
+never itself banks a spendable reserve beyond its deposits. A separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no

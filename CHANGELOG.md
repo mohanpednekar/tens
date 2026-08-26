@@ -72,6 +72,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Storage Pool: read cache trimmed to one array, Data Lake deposits now automatic** — only the
+  pool's smallest disk size (the one that actually touches Memory) keeps a read cache; every larger
+  size fills exclusively via the write-cache ripple from the size below, which already existed and
+  never used the read cache anyway — running both was pure redundancy. Depositing a fully-built
+  array's disks into its Data Lake no longer needs a manual click: `tickDiskAutoDeposit` deposits
+  the smallest eligible size automatically every tick, deferring to a disk that's still redeemable
+  for the main game first (disks always take priority). `DiskArrayRow`'s manual "→ Lake" button and
+  the `depositDiskToDataLake` action are removed from the UI (the underlying engine function is
+  unchanged, now called automatically). A save carrying a stale read cache for a size that's no
+  longer eligible self-heals on its next tick, refunding the cached bits back into Memory.
 - **Byte Foundry pool renders as one card** — Memory, its Combine/Sacrifice/Bandwidth actions, and
   Storage (Build Disk + every disk-array row + the Data Lake panel) now render inside a single
   `PoolCard`, instead of Memory as its own boxed tile, bare buttons/rows in the middle, and a

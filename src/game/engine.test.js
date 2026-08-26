@@ -210,6 +210,7 @@ import {
   tickAutoMergeNodesIntoCluster,
   tickAutoMergeSupercomputersIntoMegacomputer,
   tickComputeBoost,
+  tickDiskAutoDeposit,
   tickDiskAutoFill,
   tickDiskAutoRedeem,
   tickDiskAutoReleaseCache,
@@ -2102,22 +2103,26 @@ describe('tickGame Disk Build integration', () => {
 // While intro.diskBuild?.size === X, every operation against size-X disks is a no-op — even a full
 // disk/full cache block that would otherwise qualify — resuming the instant the build completes.
 describe('Disk array IO lockout during a build', () => {
-  it('tickDiskAutoFill skips the mid-build size entirely, while other sizes still fill normally', () => {
+  it('tickDiskAutoFill skips the mid-build size entirely, while another size still fills normally', () => {
+    // Only the pool's own smallest size (FIRST_DISK_SIZE) ever keeps a read cache (see
+    // isDiskReadCacheEligible) — level2Size is a good "unrelated size" stand-in here precisely
+    // because it has no read-cache path of its own to disturb either way.
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const state = withIntro(createInitialGameState(), {
-      bits: level2Size,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
-      diskCache: { [level2Size]: level2Size }, // already full — read cache pours into the empty disk
-      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      bits: FIRST_DISK_SIZE,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE }, // already full — read cache pours into the empty disk
+      diskBuild: { size: level2Size, remainingSeconds: 1, totalSeconds: 1 },
     })
     const after = tickDiskAutoFill(1e12)(state)
-    // The mid-build size's cache/disks are untouched...
-    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
-    expect(after.intro.disks?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
-    // ...but the other size still fills its empty disk from its full read cache (Memory untouched).
-    expect(after.intro.disks[level2Size]).toBe(1)
+    // The mid-build size stays untouched (it never had a read cache to begin with)...
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    expect(after.intro.bits).toBe(level2Size)
+    expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
+    // ...while the smallest size's read cache still pours into its own empty disk normally,
+    // proving the lockout is scoped to the building size and doesn't block an unrelated one.
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
+    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
   })
 
   it('tickDiskAutoRedeem skips a full, otherwise-redeemable disk of the mid-build size', () => {
@@ -2249,7 +2254,7 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
   })
 
-  it('refills every size\'s read cache before pouring any read cache into empty disks', () => {
+  it('only the pool\'s smallest size ever accumulates a read cache — a second built size never does, however much Memory is available', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
       bits: FIRST_DISK_SIZE * 2 + level2Size,
@@ -2257,27 +2262,27 @@ describe('tickDiskAutoFill', () => {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
     })
     const after = tickDiskAutoFill(1e12)(state)
+    // The smallest size fills its own read cache and pours it into its empty disk as usual...
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
-    expect(after.intro.disks[level2Size]).toBe(1)
     expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    // ...but level2Size never gets a read cache or an auto-filled disk at all — only a write-cache
+    // ripple from FIRST_DISK_SIZE (a separate mechanism, see tickDiskWriteCache) can fill it.
+    expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    expect(after.intro.bits).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.bits).toBe(FIRST_DISK_SIZE + level2Size)
   })
 
-  it('pours read cache into empty disks smallest to largest when tier does not block, leaving surplus in Memory', () => {
+  it('self-heals a save carrying a stale read cache for a size that is no longer read-cache-eligible, refunding it to Memory', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
-      bits: FIRST_DISK_SIZE + level2Size + 500,
-      capacity: FIRST_DISK_SIZE + level2Size + 500,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2, [level2Size]: 1 },
-      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE, [level2Size]: level2Size },
+    const state = withIntro(createInitialGameState(), {
+      bits: 0,
+      disksBuiltTotal: { [level2Size]: 1 },
+      // A save from before only the smallest size kept a read cache could still carry one here.
+      diskCache: { [level2Size]: level2Size },
     })
-    const after = tickDiskAutoFill(1e12)(state)
-    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
-    expect(after.intro.disks[level2Size]).toBe(1)
-    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    const after = tickDiskAutoFill(0)(state)
     expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    expect(after.intro.bits).toBe(FIRST_DISK_SIZE + level2Size + 500)
+    expect(after.intro.bits).toBe(level2Size)
   })
 
   it('does not pour read cache into an empty disk while tier cost matches that size, even with surplus Memory', () => {
@@ -2308,31 +2313,15 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(1)
   })
 
-  it('pours a full read cache into an empty disk even when Memory cannot yet refill a smaller size\'s cache', () => {
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const state = withIntro(createInitialGameState(), {
-      bits: 100, // below one FIRST_DISK_SIZE cache block
-      capacity: storageCapacity,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1, [level2Size]: 1 },
-      diskCache: { [level2Size]: level2Size },
-    })
-    const after = tickDiskAutoFill(1e12)(state)
-    expect(after.intro.disks[level2Size]).toBe(1)
-    expect(after.intro.diskCache?.[level2Size] ?? 0).toBe(0)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE] ?? 0).toBe(0)
-    expect(after.intro.bits).toBe(100)
-  })
-
   it('dumps a full-but-sub-block Memory balance into cache when capacity cannot hold one block', () => {
-    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE // 80_000; block = 10_000
     const state = withIntro(createInitialGameState(), {
-      bits: 5000,
-      capacity: 5000, // full Memory, but below one level-2 cache block
-      disksBuiltTotal: { [level2Size]: 1 },
-      disks: { [level2Size]: 1 },
+      bits: 500,
+      capacity: 500, // full Memory, but below one FIRST_DISK_SIZE cache block (blockBits = 1000)
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      disks: { [FIRST_DISK_SIZE]: 1 },
     })
     const after = tickDiskAutoFill(1e12)(state)
-    expect(after.intro.diskCache[level2Size]).toBe(5000)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(500)
     expect(after.intro.bits).toBe(0)
   })
 
@@ -8388,6 +8377,35 @@ describe('Data Lakes', () => {
     expect(canDepositDiskToDataLake(state, kb100)).toBe(true)
     for (let i = 0; i < 9; i += 1) state = depositDiskToDataLake(kb100)(state)
     expect(getDataLakeDepositedUnits(1)(state)).toBe(999)
+  })
+
+  it('tickDiskAutoDeposit auto-feeds the pool\'s Data Lake once a size is no longer redeemable — no manual click needed', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      disks: { [kb1]: 2 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+    })
+    const after = tickDiskAutoDeposit(state)
+    expect(after.intro.disks[kb1]).toBe(1)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+  })
+
+  it('tickDiskAutoDeposit defers to a currently-redeemable disk — disks always take priority over the Data Lake', () => {
+    // kb1's default (level 1) per-unit cost is exactly kb1 bits, so it's currently redeemable.
+    const state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 2 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(tickDiskAutoDeposit(state)).toBe(state)
+  })
+
+  it('tickGame drives tickDiskAutoDeposit on every tick, so a full disk auto-deposits with no manual action', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
+      disks: { [kb1]: 1 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+    })
+    const after = tickGame(0.1)(state)
+    expect(after.intro.disks?.[kb1] ?? 0).toBe(0)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
   })
 
   it('startBoosterTransfer fully covered by deposits spends them instantly and grants the Booster with no transfer', () => {

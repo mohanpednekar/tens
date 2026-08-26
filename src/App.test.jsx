@@ -3082,14 +3082,16 @@ describe('Byte Foundry Storage', () => {
         [size10kb]: 2,
       },
       disks: { [currentBankSize]: 1, [size10kb]: 1 },
-      diskCache: { [currentBankSize]: currentBankSize, [size10kb]: size10kb },
+      diskCache: { [currentBankSize]: currentBankSize },
     })
     render(<App />)
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('10 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
+    // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
+    expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
     expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
@@ -3130,7 +3132,9 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^10 kb read cache$/i })).toBeInTheDocument()
+    // 10 KB never gets a read cache, regardless of redeemability — only the pool's smallest size
+    // (1 KB) does (see isDiskReadCacheEligible in engine.js).
+    expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
   })
 
   test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {

@@ -1556,14 +1556,18 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
   // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
   // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
-  // tickDiskAutoReleaseCache runs after auto-redeem: a Smart tier's autobuyer may release cache
+  // tickDiskAutoDeposit runs right after auto-redeem: a full disk auto-feeds its pool's Data Lake
+  // only once it's no longer redeemable for the main game (disks always win — see
+  // tickDiskAutoDeposit's own doc comment), so redemption always gets first claim on it.
+  // tickDiskAutoReleaseCache runs after that: a Smart tier's autobuyer may release cache
   // blocks into Bits only when no full redeemable disk of that size exists (disks always win).
   // Manual redeemDisk deliberately does NOT sync-fill: Forced Priority expects clearing the last
   // full disk to free Memory for Bandwidth before any further Disk Fill claim (see
   // docs/DESIGN_HISTORY.md).
   const tickStorage = state => {
     const afterRedeem = tickDiskAutoRedeem(state)
-    const afterCache = tickDiskAutoReleaseCache(afterRedeem)
+    const afterDeposit = tickDiskAutoDeposit(afterRedeem)
+    const afterCache = tickDiskAutoReleaseCache(afterDeposit)
     // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
     // countdown continues on the next ordinary tickGame pass.
     return afterCache === state ? state : tickDiskAutoFill(0)(afterCache)
@@ -2904,6 +2908,15 @@ export const isDiskReadCacheFlushPaused = (state, size) => {
   return isDiskRedeemable(state, size)
 }
 
+// Only the pool's own smallest disk size — the one whose sub-slot is DATA_LAKE_SUB_SIZES[0] — ever
+// keeps a read cache drawing straight from Memory; every larger size in the same pool fills
+// exclusively via write-cache ripple from the size below (see tickDiskWriteCache, which never
+// touches diskCache/diskReadCacheFlush at all). Running both fill paths on every size was pure
+// redundancy — two mechanisms pouring into the same container. A size with no Data Lake tier
+// mapping at all (getDataLakeSubSize returns null — no pool exists yet past DATA_LAKE_MAX_DISK_LADDER_STEP)
+// is excluded by construction, same as everything else keyed off that helper.
+export const isDiskReadCacheEligible = size => getDataLakeSubSize(size) === DATA_LAKE_SUB_SIZES[0]
+
 export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
@@ -2914,9 +2927,30 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
   let changed = false
 
+  // Self-heal a save carrying leftover diskCache/diskReadCacheFlush for a size that no longer
+  // keeps a read cache (see isDiskReadCacheEligible above) — refund whatever's cached back into
+  // Memory rather than stranding it where nothing will ever fill or flush it again. A
+  // same-reference no-op (aside from the loop itself) once nothing is stranded.
+  for (const sizeStr in diskCache) {
+    const size = Number(sizeStr)
+    if (isDiskReadCacheEligible(size)) continue
+    bits += diskCache[size]
+    const { [size]: _removedCache, ...restCache } = diskCache
+    diskCache = restCache
+    changed = true
+  }
+  for (const sizeStr in diskReadCacheFlush) {
+    const size = Number(sizeStr)
+    if (isDiskReadCacheEligible(size)) continue
+    const { [size]: _removedFlush, ...restFlush } = diskReadCacheFlush
+    diskReadCacheFlush = restFlush
+    changed = true
+  }
+
   const sizes = Object.keys(builtTotal)
     .map(Number)
     .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
+    .filter(isDiskReadCacheEligible)
     .sort((a, b) => a - b)
 
   // Drop flushes for sizes that can no longer complete (mid-build, or no empty container left).
@@ -3381,6 +3415,26 @@ export const depositDiskToDataLake = sizeBits => state => {
       },
     },
   }
+}
+
+// Auto-feeds a pool's single Data Lake — no manual click needed. Same eligibility as a manual
+// depositDiskToDataLake (array fully built, a full disk on hand, an open sub-slot, room under the
+// lake cap), PLUS deferring entirely to a disk that's currently redeemable for the main game
+// (isDiskRedeemable): same "disks always take priority for matching level costs" rule read cache
+// release already follows (see isDiskCacheBlockReleasable) — a disk whose size matches some tier's
+// current cost stays available for a manual/auto redeem instead of being swept into the lake out
+// from under it. Deposits the smallest eligible size per call — same cadence as
+// tickDiskAutoReleaseCache/tickDiskAutoRedeem.
+export const tickDiskAutoDeposit = state => {
+  const buildingSize = state.intro?.diskBuild?.size
+  const eligibleSize = Object.keys(state.intro.disks ?? {})
+    .map(Number)
+    .filter(size => size !== buildingSize)
+    .filter(size => !isDiskRedeemable(state, size))
+    .filter(size => canDepositDiskToDataLake(state, size))
+    .sort((a, b) => a - b)[0]
+  if (eligibleSize === undefined) return state
+  return depositDiskToDataLake(eligibleSize)(state)
 }
 
 const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {

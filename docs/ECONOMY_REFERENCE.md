@@ -354,11 +354,19 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    — so `isDiskBuildAvailable` (the base predicate, ignoring priority) checks only `!diskBuild &&
    affordable`.
 
-   **The read cache.** Each array's own `diskCache[size]` (0..size bits) is a permanent always-full
+   **The read cache.** Only the pool's own smallest disk size — the one whose `getDataLakeSubSize`
+   sub-slot is `DATA_LAKE_SUB_SIZES[0]` (×1), the rung that actually touches Memory directly — ever
+   keeps a `diskCache[size]` (0..size bits) at all (see `isDiskReadCacheEligible`); every larger size
+   in the same pool fills exclusively via the write cache below, which never reads or writes
+   `diskCache`/`diskReadCacheFlush`. Running both mechanisms on every size used to be pure
+   redundancy — two fill paths pouring into the same container — so `tickDiskAutoFill` now scopes
+   its own three passes (below) to eligible sizes only, and self-heals a save still carrying a stale
+   `diskCache`/`diskReadCacheFlush` entry for a now-ineligible size by refunding it straight back
+   into `intro.bits` the next time it runs. Where it applies, the cache is a permanent always-full
    reserve — split into `DISK_CACHE_BLOCK_COUNT` (8) equal blocks, each holding
    `size / DISK_CACHE_BLOCK_COUNT` bits (e.g. a 1 MB array → 8 × 1 Mb), totaling one disk's own
    capacity. Steady state is full; gaps appear only right after a manual block release, a completed
-   read-cache→disk flush, or when a size is newly unlocked/built. When all 8 blocks are full and no
+   read-cache→disk flush, or when the size is newly unlocked/built. When all 8 blocks are full and no
    tier claim blocks ladder use at that size (`isDiskRedeemable` is false), `tickDiskAutoFill`
    starts a timed flush into one empty disk — duration
    `getDiskReadCacheFlushSeconds` = one block ÷ `getIntroProductionRate` (fixed for that flush in
@@ -366,13 +374,14 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    array goes mid-build or no empty container remains. On completion the full cache empties into
    the disk. Its player-facing funding use (when no full redeemable disk exists and not mid-flush)
    is manual tier block funding via `releaseDiskCacheBlock` / Smart auto-release.
-   `tickDiskAutoFill(elapsedSeconds)(state)` runs three ascending passes every tick (unconditional,
-   no toggle, skipping mid-build sizes): (1) refill every known size's read cache toward full in
+   `tickDiskAutoFill(elapsedSeconds)(state)` runs three ascending passes every tick over
+   read-cache-eligible sizes only (unconditional, no toggle, skipping mid-build sizes): (1) refill
+   the eligible size's read cache toward full in
    **whole-block** transfers only when Memory holds at least one block (so Memory visibly fills
    between transfers; if capacity itself is smaller than one block and Memory is full, dump the
-   balance so large arrays can still progress) — skips sizes mid-flush; (2) start a flush when
+   balance so large arrays can still progress) — skips it while mid-flush; (2) start a flush when
    `diskCache[size] >= size`, an empty container exists, no write-cache merge is active, and
-   `isDiskRedeemable` is false; (3) count down in-flight flushes (pause on tier match) and complete
+   `isDiskRedeemable` is false; (3) count down an in-flight flush (pause on tier match) and complete
    into one disk. Leftover Memory stays as its ordinary balance. `isDiskCacheBlockReleasable(state,
    capacityBits)` is true once that size's cache holds at least one full block
    (`diskCache[capacityBits] >= capacityBits / DISK_CACHE_BLOCK_COUNT`), that size isn't mid-build
@@ -475,17 +484,24 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    default, or automated by sacrificing 10 Nodes); both superseded (see `docs/DESIGN_HISTORY.md`) by
    `startBoosterTransfer`, which spends a matching Data Lake's own deposited Disk stock first
    (instantly), then live-transfers any remaining cost off the raw Disk inventory over time (see
-   "Starting a Booster" further down), unrelated to Memory/capacity entirely. Depositing into a Data Lake
-   (`depositDiskToDataLake`, gated by `canDepositDiskToDataLake`) requires not just a currently-full
-   disk but that size's disk array to be COMPLETELY built —
-   `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks ever built at that size,
-   checked by the internal `isDiskArrayFullyBuilt` helper) — before ANY of that size's disks can be
-   deposited. Each lake's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10, 100]`, `DATA_LAKE_SLOT_MAX` = 9
-   each) map to 3 successive disk sizes, so this array-completion gate naturally STAGES a lake's
-   deposit cap rather than needing a separate field for it: **9** (`DATA_LAKE_SLOT_MAX`) once
-   only the smallest (×1) size's array is complete, **99** once the ×10 size's array is also
-   complete, and the full **999** (`DATA_LAKE_CAPACITY`) once the ×100 size's array is complete too
-   — see `docs/DESIGN_HISTORY.md`.
+   "Starting a Booster" further down), unrelated to Memory/capacity entirely. Depositing into a Data
+   Lake (`depositDiskToDataLake`, gated by `canDepositDiskToDataLake`) is fully automatic — there is
+   no player-facing deposit action any more. `tickDiskAutoDeposit`, called from `tickGame`'s own
+   `tickStorage` right after `tickDiskAutoRedeem`, deposits the smallest eligible size each tick
+   (same one-per-call cadence as `tickDiskAutoRedeem`/`tickDiskAutoReleaseCache`) whenever
+   `canDepositDiskToDataLake` holds **and** the size is currently NOT redeemable
+   (`!isDiskRedeemable`) — the same "disks always take priority for matching level costs" rule the
+   read cache already follows, so a disk whose size still matches some tier's cost stays available
+   for a manual/auto redeem instead of being swept into the lake out from under it.
+   `canDepositDiskToDataLake` itself requires not just a currently-full disk but that size's disk
+   array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
+   ever built at that size, checked by the internal `isDiskArrayFullyBuilt` helper) — before ANY of
+   that size's disks can be deposited. Each lake's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10, 100]`,
+   `DATA_LAKE_SLOT_MAX` = 9 each) map to 3 successive disk sizes — all 3 feeding the SAME lake, one
+   per pool — so this array-completion gate naturally STAGES a lake's deposit cap rather than needing
+   a separate field for it: **9** (`DATA_LAKE_SLOT_MAX`) once only the smallest (×1) size's array is
+   complete, **99** once the ×10 size's array is also complete, and the full **999**
+   (`DATA_LAKE_CAPACITY`) once the ×100 size's array is complete too — see `docs/DESIGN_HISTORY.md`.
 
    **Starting a Booster** (`startBoosterTransfer(tierIndex)`, `getBoosterTransferPlan` internally) —
    a lake never itself banks a spendable reserve beyond its own deposits above; past that, it's a

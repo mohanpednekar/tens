@@ -411,8 +411,10 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (cache blocks, disk squares,
-                               releasing, redeeming) for a single size, taking `{ actions, size,
+    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (read cache blocks — only on
+                               the pool's smallest size, see `isDiskReadCacheEligible` — disk
+                               squares, releasing, redeeming; no deposit control, Data Lake feeding
+                               is fully automatic) for a single size, taking `{ actions, size,
                                state }`; extracted so both ByteFoundryPage (the single currently-
                                active/buildable size only) and StoragePage (every size ever reached)
                                render identical, fully interactive detail rather than StoragePage
@@ -538,7 +540,8 @@ e2e/
   autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
   prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
-  data-lake.e2e.js            ← depositing a built disk array into its Data Lake, then starting a
+  data-lake.e2e.js            ← a fully-built disk array auto-depositing into its Data Lake (no
+                               manual action — see `tickDiskAutoDeposit`), then starting a
                                Core Booster (deposits-funded, instant grant) from that lake on
                                ComputePage
 scripts/
@@ -642,7 +645,8 @@ Strict three-layer separation:
    (Sacrifice) fires `pickIntroCapacityMilestone` immediately, with no confirm prompt — same as
    every other Byte Foundry action. Starting the next Disk's
    build (its own core-loop action, alongside Sacrifice/Invest) and every shown size's full
-   interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half →
+   interactive detail — read cache blocks (only on the pool's smallest size — see
+   "Economy model" below), disk squares, releasing (Disk Fill's manual-release half →
    Ladder Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
    on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
    layout" above), ascending smallest→largest with Cache of a row immediately above that row's
@@ -934,14 +938,18 @@ size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size f
 scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
 which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
-array has its own always-full **read cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
-`size / 8` bits each, totaling one disk's worth — e.g. a 1 MB array → 8 × 1 Mb; displayed in the
-bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits, distinct from a
-Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
-full; Memory refills whole blocks when a block was just released or the size was just unlocked
-(so Memory visibly fills between transfers). Read cache flushes into an empty disk over the time to
-fill one cache block at the current Byte Foundry production rate when all 8 blocks are full and no
-tier claim blocks that size (pauses while a tier matches). Disks above the smallest built size also fill
+array's smallest size — the one whose `getDataLakeSubSize` sub-slot is ×1, the rung that actually
+touches Memory directly — has its own always-full **read cache** (`diskCache[size]`,
+`DISK_CACHE_BLOCK_COUNT` (8) blocks of `size / 8` bits each, totaling one disk's worth — e.g. a
+1 MB array → 8 × 1 Mb; displayed in the bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`,
+lowercase `b` for bits, distinct from a Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`,
+uppercase `B` for Bytes) — see `isDiskReadCacheEligible` in `engine.js`; every larger size in the
+same pool fills exclusively via write cache (below), never getting a read cache of its own (running
+both was pure redundancy). Steady state is full; Memory refills whole blocks when a block was just
+released or the size was just unlocked (so Memory visibly fills between transfers). Read cache
+flushes into an empty disk over the time to fill one cache block at the current Byte Foundry
+production rate when all 8 blocks are full and no tier claim blocks that size (pauses while a tier
+matches). Every size above the pool's smallest fills exclusively
 via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when 10 full disks exist at size
 N and size N+1 has an empty container, `tickDiskWriteCache` collects 10 timed segments (one source
 disk emptied per segment; collect pauses while the source size has an active tier match), then
@@ -971,14 +979,19 @@ inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4
 QB.
 
 *Deposits* — a prepaid convenience buffer, up to `DATA_LAKE_CAPACITY` (999) units per lake, filled
-by depositing Disks (`9×1 + 9×10 + 9×100` of that tier's denomination) via `depositDiskToDataLake`
-(Foundry disk rows) — but only once that SIZE's own disk array is completely built (all
-`DISK_ARRAY_LADDER_CAP` (10) disks ever built, `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`),
-not merely holding one full disk. Since a lake's 3 sub-slots map to 3 successive disk sizes, this
-naturally stages the lake's deposit cap: **9** once only the smallest (×1) size's array is complete,
-**99** once the ×10 size's array is also complete, the full **999** once the ×100 size's array is
-complete too — no separate staged-capacity field, the existing sub-slot structure already encodes
-it (see `isDiskArrayFullyBuilt` in `engine.js`).
+by depositing Disks (`9×1 + 9×10 + 9×100` of that tier's denomination) via `depositDiskToDataLake` —
+fully automatic, no manual click: `tickDiskAutoDeposit` (called from `tickGame`'s `tickStorage`
+right after auto-redeem) deposits the smallest eligible size each tick, but only once that SIZE's
+own disk array is completely built (all `DISK_ARRAY_LADDER_CAP` (10) disks ever built,
+`disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, not merely holding one full disk) **and** the size
+is not currently redeemable for the main game (`!isDiskRedeemable`) — the same "disks always take
+priority for matching level costs" rule the read cache already follows, so a disk a tier could still
+redeem stays available for that instead of being swept into the lake. Since a lake's 3 sub-slots map
+to 3 successive disk sizes (all feeding the SAME lake, one per pool), this naturally stages the
+lake's deposit cap: **9** once only the smallest (×1) size's array is complete, **99** once the ×10
+size's array is also complete, the full **999** once the ×100 size's array is complete too — no
+separate staged-capacity field, the existing sub-slot structure already encodes it (see
+`isDiskArrayFullyBuilt` in `engine.js`).
 
 *Starting a Booster* (`startBoosterTransfer(tierIndex)`, ComputePage) — the nth Booster ever
 started at tier *t* (completed or still in flight) costs *n* units of lake *t*
@@ -1114,7 +1127,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1542 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1544 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
