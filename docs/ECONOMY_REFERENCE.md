@@ -395,8 +395,8 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    into one disk. Leftover Memory stays as its ordinary balance. `isDiskCacheBlockReleasable(state,
    capacityBits)` is true once that size's cache holds at least one full block
    (`diskCache[capacityBits] >= capacityBits / DISK_CACHE_BLOCK_COUNT`), that size isn't mid-build
-   or mid-flush, no full redeemable disk exists at that size, **and** some tier's current per-unit
-   cost exactly matches `capacityBits` right now (`isDiskRedeemable`);
+   or mid-flush, no full redeemable disk exists at that size, **and** that size's own fixed
+   corresponding tier currently sits at exactly the required level (`isDiskRedeemable`);
    `releaseDiskCacheBlock(capacityBits)` manually moves exactly one block's worth of bits into
    `resources.base` (the shared Bits currency any unlocked tier is bought with) — **not** back into
    Memory. `tickDiskAutoFill` refills the gap in whole-block transfers once Memory has enough again.

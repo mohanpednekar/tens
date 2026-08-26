@@ -334,8 +334,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
-  // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
-  // size), or convertIntroBitsToKilobytes/
+  // from the main game's Buy button/autobuyer, redeemDisk (once tier01 is at one of its own fixed
+  // disk sizes' required level), or convertIntroBitsToKilobytes/
   // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
   // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
   // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
