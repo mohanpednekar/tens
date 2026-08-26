@@ -305,7 +305,7 @@ export const buildResetByteFoundryConfirmMessage = () => {
     `Reset Byte Foundry on "${name}"?\n\n` +
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
     `Erased: Memory, Capacity, Combine / Invest / Bandwidth progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
-    `Convenience: Combine, Invest / Bandwidth, and Disk Build auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity stays manual.\n\n` +
+    `Convenience: Combine, Invest / Bandwidth, Disk Build, and Capacity (Sacrifice) all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them.\n\n` +
     `Also kept: Ladder, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
