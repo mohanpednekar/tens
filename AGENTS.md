@@ -133,11 +133,13 @@ player taps to accumulate bits into "Memory" (capacity-capped, displayed in bina
 passively-producing Byte generator, then grows it via Sacrifice (2x capacity, hard-capped at 1 MiB —
 large enough to afford building the pool's own largest Disk)
 and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
-far enough along — Disks (`StoragePage`, timed
-builds; only the pool's smallest size gets an always-full **read cache** (Memory → read cache →
-timed flush to disk when tier allows; flush duration = one cache block at production rate) — every
-larger size fills exclusively via write-cache upward merges from the size below, never its own read
-cache (running both was redundant); as fallback tier funding when no matching disk exists,
+far enough along — Disks (`StoragePage`, timed builds — a fresh disk takes exactly the time to fill
+it at 1x Memory bandwidth (current production rate), ×N for the array's Nth disk; only the pool's
+smallest size gets an always-full **read cache** (Memory → read cache → timed flush to disk when
+tier allows; the Memory→cache refill is itself bandwidth-capped at 10x rate, and the cache→disk
+flush duration is one cache block at 2x rate) — every larger size fills exclusively via write-cache
+upward merges from the size below (collect from Disks at 2x rate, flush into the disk at 2x rate),
+never its own read cache (running both was redundant); as fallback tier funding when no matching disk exists,
 Smart autobuyers auto-release read cache; disks always take priority) — each disk size has a fixed,
 permanent one-to-one mapping to one tier+level (KB sizes → Kilobytes, MB sizes → Megabytes, etc.,
 1st/2nd/3rd size → that tier's level 1/2/3); redeeming only fires while the tier is currently at

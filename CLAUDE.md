@@ -934,9 +934,13 @@ ByteFoundryPage's Build button shows a distinct "Pool complete" state instead of
 cost, until a future pool's own generator (epic #456) raises the ceiling. Starting
 a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
-size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size for the first disk,
-scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
-which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
+size, 1-indexed) takes `N ×` that size's own base build time, where the base time is exactly how
+long filling that size takes at **1x Memory bandwidth** (the Byte Foundry's current
+`getIntroProductionRate`, snapshotted when the build starts) — at the default starting rate (1
+bit/sec) a fresh 1 KB (8000-bit) array's first disk takes 8000 seconds, its 6th disk 48,000 seconds,
+and a 10 KB array's first disk 80,000 seconds; all three shrink in lockstep as Invest/Compute Boost
+grow the rate. An earlier version used a flat, rate-independent "1 second per real KB of size"
+instead — see `docs/DESIGN_HISTORY.md`. During the build, every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
 array's smallest size — the one whose `getDataLakeSubSize` sub-slot is ×1, the rung that actually
 touches Memory directly — has its own always-full **read cache** (`diskCache[size]`,
@@ -946,14 +950,22 @@ lowercase `b` for bits, distinct from a Disk's own Byte-scale `B`/`KB`/… via `
 uppercase `B` for Bytes) — see `isDiskReadCacheEligible` in `engine.js`; every larger size in the
 same pool fills exclusively via write cache (below), never getting a read cache of its own (running
 both was pure redundancy). Steady state is full; Memory refills whole blocks when a block was just
-released or the size was just unlocked (so Memory visibly fills between transfers). Read cache
-flushes into an empty disk over the time to fill one cache block at the current Byte Foundry
-production rate when all 8 blocks are full and no tier claim blocks that size (pauses while a tier
-matches). Every size above the pool's smallest fills exclusively
-via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when 10 full disks exist at size
-N and size N+1 has an empty container, `tickDiskWriteCache` collects 10 timed segments (one source
-disk emptied per segment; collect pauses while the source size has an active tier match), then
-flushes for one target build duration into one disk at N+1. `tickGame` runs
+released or the size was just unlocked (so Memory visibly fills between transfers) — this refill
+itself is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) times the current
+production rate (a CACHE filling FROM Memory), so even a large banked balance sitting behind a
+block/tier claim drains into the cache at a real, continuous, bounded rate once unblocked — not
+instantly — rather than the fixed rate/tier check alone gating it. Read cache flushes into an empty
+disk over the time to fill one cache block at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) times
+the current Byte Foundry production rate (a DISK filling FROM a cache) when all 8 blocks are full
+and no tier claim blocks that size (pauses while a tier matches). Every size above the pool's
+smallest fills exclusively via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when
+10 full disks exist at size N and size N+1 has an empty container, `tickDiskWriteCache` collects 10
+timed segments (one source disk emptied per segment, each segment's own duration = that source
+disk's size ÷ `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` (2) × rate — a CACHE filling FROM Disks;
+collect pauses while the source size has an active tier match), then flushes for the target's own
+size ÷ `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) × rate into one disk at N+1 (a DISK filling
+FROM a cache — the same rate class the read-cache flush above uses, timed independently of a fresh
+disk BUILD's own 1x-bandwidth duration). `tickGame` runs
 `tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so write-cache ripple refills source
 slots same tick. **Disks always take priority over read cache** for matching level costs: while a
 full redeemable disk exists, cache is neither clickable nor auto-used. A full block can be released
@@ -1160,7 +1172,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1568 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1572 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

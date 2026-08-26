@@ -233,6 +233,26 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // a release, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
+// --- Disk/Cache fill bandwidth --- every timed Byte Foundry storage transfer (disk build,
+// read-cache refill/flush, write-cache collect/flush) is paced as a multiple of the Byte Foundry's
+// own current production rate (getIntroProductionRate in engine.js — "Memory bandwidth"), not a
+// flat/hardcoded rate, so it always tracks Invest/Compute Boost like every other timed mechanic
+// here. Building a fresh disk (an empty container, not yet fed by any cache) takes exactly the
+// time to fill it at 1x Memory bandwidth — no multiplier constant of its own, since 1x is bandwidth
+// itself.
+//
+// A DISK filling FROM a cache (read-cache → disk, write-cache → disk) moves faster than Memory's
+// own live production, since the cache itself is a pre-staged buffer, not a live trickle.
+export const DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2
+// A CACHE filling FROM Memory (read-cache refill) can drain a banked Memory balance faster still —
+// even a large surplus balance still only drains into the cache at this multiple of the CURRENT
+// production rate, not instantly.
+export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10
+// A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — slower
+// than filling from Memory directly, since it's moving already-built Disk contents rather than the
+// live generator output.
+export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
+
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked in engine.js and
 // intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic
 // costed a Compute Core at a fixed 10 MB of Memory (gated on every Disk size being built and full),
