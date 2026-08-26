@@ -443,7 +443,7 @@ const DiskArrayRow = ({ actions, size, state }) => {
             onClick={() => actions.depositDiskToDataLake(size)}
             title={
               canDeposit
-                ? `Deposit 1 full ${sizeLabel} disk into the ${dataLakeLabel} Data Lake to fund ${dataLakeLabel} Booster purchases`
+                ? `Deposit 1 full ${sizeLabel} disk into the ${dataLakeLabel} Data Lake — a prepaid buffer spent first (instantly) toward ${dataLakeLabel} Booster costs, skipping the live transfer for that portion`
                 : `Need this array fully built (all ${DISK_ARRAY_LADDER_CAP} disks ever built), a full disk, an open lake slot (max 9 per size), and room under the 999-unit lake cap`
             }
             type="button"

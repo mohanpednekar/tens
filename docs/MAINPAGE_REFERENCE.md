@@ -111,8 +111,9 @@ progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest 
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by buying Boosters from
-the matching Data Lake (`purchaseBoosterFromDataLake`), not minted from Memory — the earlier manual
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by starting Boosters from
+the matching Data Lake (`startBoosterTransfer` — deposits spend instantly, any remaining cost
+live-transfers off built Disks over time), not minted from Memory — the earlier manual
 "Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
 Memory ×2 (Sacrifice) always stays in the milestones row beside Bandwidth.
 
