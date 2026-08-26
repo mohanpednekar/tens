@@ -1400,7 +1400,7 @@ describe('isDiskFillAvailable', () => {
     expect(isDiskFillAvailable(state)).toBe(true)
   })
 
-  it('is false with a FULL disk not yet redeemable (size isn\'t a real disk-ladder step)', () => {
+  it('is false with a FULL disk whose own fixed corresponding tier hasn\'t reached the required level yet', () => {
     const futureDiskSize = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), { disks: { [futureDiskSize]: 1 } })
     expect(isDiskFillAvailable(state)).toBe(false)
@@ -2231,7 +2231,7 @@ describe('tickDiskAutoFill', () => {
     expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
-  it('fills read cache from Memory, then pours into an empty disk when tier cost no longer matches', () => {
+  it('fills read cache from Memory, then pours into an empty disk once its own fixed tier moves past the required level', () => {
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
       bits: FIRST_DISK_SIZE * 2,
       capacity: storageCapacity,
@@ -2247,7 +2247,7 @@ describe('tickDiskAutoFill', () => {
     expect(afterRefill.intro.bits).toBe(0)
   })
 
-  it('pours a full read cache into an empty disk when tier cost no longer matches, leaving Memory for the next cache refill', () => {
+  it('pours a full read cache into an empty disk once its own fixed tier moves past the required level, leaving Memory for the next cache refill', () => {
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
       bits: FIRST_DISK_SIZE,
       capacity: storageCapacity,
@@ -2398,7 +2398,7 @@ describe('tickDiskAutoFill', () => {
     const started = tickDiskAutoFill(0)(state)
     expect(getDiskReadCacheFlush(started, FIRST_DISK_SIZE)).toBeTruthy()
 
-    // Drop back to level 1 so FIRST_DISK_SIZE matches again — flush must pause.
+    // Drop back to level 1 — FIRST_DISK_SIZE's own fixed tier is at its required level again — flush must pause.
     const pausedState = withPurchaseLevel(started, tensTier.id, 1)
     expect(isDiskReadCacheFlushPaused(pausedState, FIRST_DISK_SIZE)).toBe(true)
     const afterPauseTick = tickDiskAutoFill(flushSeconds)(pausedState)
