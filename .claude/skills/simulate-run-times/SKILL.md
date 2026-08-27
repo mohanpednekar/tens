@@ -45,8 +45,9 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → **queue Capacity** when
   Invest can't take the next spend (or while climbing to conversion unlock) →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
-  → convert → **Data Lake Booster buys** (`startBoosterTransfer`; deposits via
-  `tickDiskAutoDeposit` in `tickGame`) → Boosts. Does **not** enable permanent auto-merge.
+  → convert → redeem again if convert unlocked a waiting disk → **Data Lake Booster buys**
+  (`startBoosterTransfer`; deposits via `tickDiskAutoDeposit` in `tickGame`; skipped while Disk
+  Fill is available) → Boosts. Does **not** enable permanent auto-merge.
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
   arrays → more Data Lake deposits → more Booster purchases (and typically faster prestige). Early
