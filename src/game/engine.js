@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -339,59 +339,54 @@ export const createInitialGameState = () => ({
   // Field naming ('intro') is deliberately decoupled from the page's own themed name ("Byte
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
-  // Three distinct groups, per prestigeGame (see there): "Memory" (bits/productionAccumulator/
-  // mainGameUnlocked) reset to fresh every real Prestige — a new cycle always starts this screen's
-  // balance from 0 and re-shows it before MainPage. The Byte generator itself and every upgrade to
-  // it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/productionMilestoneTier/
-  // productionMilestoneTierClaims) are PERMANENT, carried over unchanged exactly like an unlocked
-  // autobuyer — so each cycle's gate reopens with whatever production strength was already built,
-  // not from scratch. speedUpGame/overclockGame carry the whole object through untouched either
-  // way (see there) — they're intra-cycle soft resets, not new cycles.
+  // Three distinct groups, per prestigeGame (see there): Data Stream balance (bits/
+  // productionAccumulator/mainGameUnlocked) reset to fresh every real Prestige — a new cycle
+  // always starts this screen's balance from 0 and re-shows it before MainPage. The Byte generator
+  // itself and every upgrade to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
+  // productionMilestoneTier/productionMilestoneTierClaims) are PERMANENT, carried over unchanged
+  // exactly like an unlocked autobuyer — so each cycle's gate reopens with whatever production
+  // strength was already built, not from scratch. speedUpGame/overclockGame carry the whole object
+  // through untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
   //
-  // Nothing here ever fully "freezes" (there is no completed-style flag, and converting bits into
-  // Kilobytes has no cap or budget of its own either — see convertIntroBitsToKilobytes/
-  // tickIntroAutoInvest below) — Tap/Combine/Sacrifice/Invest/Convert all keep working
-  // indefinitely, every cycle, for as long as Memory covers the cost.
+  // Naming (#506): the fillable intake is the Data Stream (bits vs Buffer = capacity). Each
+  // storage pool owns Memory with Capacity start/end (getStoragePoolMemoryBounds) and Speed (the
+  // Invest/Bandwidth ×2 ladder). Nothing here ever fully "freezes" — Tap/Combine/Speed/Convert
+  // keep working indefinitely, every cycle, for as long as the Data Stream Buffer covers the cost.
   intro: {
-    bits: 0,                   // "Memory" — always an integer, the tappable/producible balance. Resets on Prestige.
+    bits: 0,                   // Data Stream balance — always an integer. Resets on Prestige.
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
-    capacity: INTRO_STARTING_CAPACITY,        // PERMANENT — Memory's ceiling, grown by "Sacrifice for 2x Capacity"
+    // PERMANENT — Data Stream Buffer / pool Memory Capacity. Starts at INTRO_STARTING_CAPACITY;
+    // snaps to the active pool's end bound on Combine (no Sacrifice ladder — #506).
+    capacity: INTRO_STARTING_CAPACITY,
     byteCreated: false,        // PERMANENT — one persistent Byte generator, a flag not a counter
     tickSpeedSeconds: INTRO_STARTING_TICK_SPEED_SECONDS, // PERMANENT — the delivery period a batch lands every, see getIntroProductionRate
     productionMultiplier: 1,   // PERMANENT — see getIntroProductionRate/pickIntroProductionMilestone
-    // PERMANENT — 0-based index into "Invest for Double Production"'s own independent cost ladder
-    // (see getIntroProductionMilestoneCost below) — entirely decoupled from `capacity` above; it
-    // only ever advances (via pickIntroProductionMilestone), never tied to Sacrifice.
+    // PERMANENT — 0-based index into pool Speed (was Bandwidth / Invest) cost ladder
+    // (see getIntroProductionMilestoneCost below) — entirely decoupled from `capacity` above.
     productionMilestoneTier: 0,
     // PERMANENT — claims made at the current productionMilestoneTier (0 up to but not including
     // getIntroProductionMilestoneMaxClaims(productionMilestoneTier)); resets to 0 whenever the tier
     // advances — see pickIntroProductionMilestone.
     productionMilestoneTierClaims: 0,
-    // PERMANENT until Sacrifice rolls it back (#323/#324): how many Bandwidth ×2 claims were
-    // funded by sacrificing COMPUTE_ENTITY_CAP tokens of a compute tier (when the bit cost
-    // exceeded Memory capacity). Sacrifice rewinds exactly this many Invest steps.
+    // PERMANENT: how many Speed ×2 claims were funded by sacrificing COMPUTE_ENTITY_CAP tokens of
+    // a compute tier (when the bit cost exceeded Buffer). Legacy Sacrifice used to rewind these;
+    // Capacity doubling is gone (#506), so this counter only advances via compute-funded Speed.
     computeFundedBandwidthClaims: 0,
-    // PERMANENT until Sacrifice rolls it back: next COMPUTE_BOOST_TIER_FIELDS index (0 = Cores …
-    // 9 = Megacomputers) for the sequential Bandwidth-via-compute sacrifice, wrapping back to 0
-    // after Megacomputers rather than terminating (see getEffectiveComputeBandwidthSacrificeIndex)
-    // — so this stays a renewable funding source even once Sacrifice itself is capped and can no
-    // longer reset it early. Resets to 0 when Sacrifice does roll back compute-funded Bandwidth.
+    // PERMANENT: next COMPUTE_BOOST_TIER_FIELDS index (0 = Cores … 9 = Megacomputers) for the
+    // sequential Speed-via-compute sacrifice, wrapping back to 0 after Megacomputers (see
+    // getEffectiveComputeBandwidthSacrificeIndex).
     computeBandwidthSacrificeIndex: 0,
-    // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Invest /
-    // Bandwidth, Disk Build, and Capacity/Sacrifice) after a Foundry wipe. null when inactive.
-    // Survives Prestige like other permanent intro fields; cleared only by a full save Reset.
+    // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Speed /
+    // Invest, Disk Build) after a Foundry wipe. null when inactive. Survives Prestige like other
+    // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
     // Kilobytes this cycle (manual or auto — see convertIntroBitsToKilobytes/tickIntroAutoInvest);
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
     // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
-    // Resets every real Prestige. When true, the next time Memory is full (and Disk Fill /
-    // Bandwidth / Disk Build are not available), tickQueuedCapacityUpgrade / the queued fire path
-    // erases all held Compute tokens (ladder balances + active boost + in-flight merge timers)
-    // and performs Sacrifice for 2x Capacity — bypassing the normal "Compute blocks Capacity"
-    // forced-priority gate so Capacity can be committed before the bar is full and not starved
-    // by Core claims / Boosts. See queueIntroCapacityUpgrade/eraseAllComputeTokens.
+    // Legacy queue flag from the removed Sacrifice ladder (#506). Cleared on load/normalize; kept
+    // in the shape so old saves merge cleanly. No longer fires a Capacity doubling.
     capacityUpgradeQueued: false,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
@@ -1987,22 +1982,47 @@ export const tapIntroBit = state => {
 export const combineIntroByte = state => {
   if (state.intro.byteCreated) return state
   if (state.intro.bits < INTRO_BYTE_COMBINE_COST) return state
+  // Pool Memory Capacity snaps to the pool's end bound on Combine — no Sacrifice doubling ladder
+  // (#506). Buffer (intro.capacity) and pool Memory Capacity share this field for pool 1.
+  const { endBits } = getStoragePoolMemoryBounds(1)
   return {
     ...state,
-    intro: { ...state.intro, bits: state.intro.bits - INTRO_BYTE_COMBINE_COST, byteCreated: true },
+    intro: {
+      ...state.intro,
+      bits: state.intro.bits - INTRO_BYTE_COMBINE_COST,
+      byteCreated: true,
+      capacity: endBits,
+      capacityUpgradeQueued: false,
+    },
   }
 }
 
-// Predicate, not a reducer: whether "Sacrifice for 2x Capacity" can actually fire right now.
-// Forced priority order for the Byte Foundry's five recurring "upgrade" actions — Disk Fill >
-// Bandwidth > Disk Build > Compute > Memory (see CLAUDE.md's "Byte Foundry" section). Each base
-// predicate below is that action's own plain availability check; whenever a higher-ranked one is
-// currently available, every lower-ranked action is disabled regardless of its own cost, forcing
-// the player to take the higher-priority upgrade first rather than letting several compete for the
-// same Memory balance at once — the "turn"-suffixed composites further down this file (colocated
-// with each action's own reducer) fold that ordering in. Combine into a Byte (a one-off bootstrap
-// step) sits outside this forced order entirely and keeps its own simple gate, checked directly
-// below.
+// Ensure pool-1 Memory Capacity sits at its end bound once the Byte generator exists. Used on
+// save load so mid-Sacrifice-ladder saves from before #506 match the start/end model.
+export const normalizePoolMemoryCapacity = state => {
+  if (!state?.intro?.byteCreated) {
+    if (!(state?.intro?.capacityUpgradeQueued ?? false)) return state
+    return { ...state, intro: { ...state.intro, capacityUpgradeQueued: false } }
+  }
+  const { endBits } = getStoragePoolMemoryBounds(1)
+  const capacity = state.intro.capacity ?? 0
+  const queued = state.intro.capacityUpgradeQueued ?? false
+  if (capacity >= endBits && !queued) return state
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      capacity: Math.max(capacity, endBits),
+      capacityUpgradeQueued: false,
+    },
+  }
+}
+
+// Forced priority order for the Byte Foundry's recurring upgrade actions — Disk Fill > Speed
+// (Bandwidth) > Disk Build > Compute (see CLAUDE.md). Capacity/Sacrifice was removed (#506);
+// pool Memory Capacity is delimited by getStoragePoolMemoryBounds start/end instead. Combine into
+// a Byte sits outside this forced order. Each base predicate below is that action's own plain
+// availability check; the "turn"-suffixed composites fold the ordering in.
 
 // "Disk Fill" (highest priority) — true whenever ANY built disk, of any size, is both currently
 // FULL and redeemable right now (see isDiskRedeemable, defined further down this file — safe, not
@@ -2095,33 +2115,18 @@ export const isComputeUpgradeAvailable = state =>
       Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
     ))
 
-// "Memory" (lowest priority) — Memory must be full (bits === capacity) AND every action ranked
-// above it — Combine into a Byte, Disk Fill, Bandwidth, Disk Build, Compute — must currently be
-// unavailable. Capacity growth is offered only once nothing else productive can be done with a
-// full balance, so a player never skips past a cheaper, immediately available upgrade just because
-// Memory happens to be full at the same moment. Used by pickIntroCapacityMilestone's own guard
-// below and directly by ByteFoundryPage to disable/hide the button the same way — the same "engine
-// re-validates, UI just mirrors it" convention every other action in this file already follows
-// (see "Security notes" in CLAUDE.md).
-// Pool 1's generator can never grow past its own hard ceiling (INTRO_CAPACITY_CAP_BITS — see
-// layers.js) — Sacrifice halts for good once the NEXT doubling would meet or exceed it, rather than
-// clamping to a partial step. Exported so ByteFoundryPage can show the cap as a distinct disabled
-// state instead of inferring it from isMemoryCapacityUpgradeAvailable alone.
-export const isMemoryCapacityAtCap = state => (state.intro?.capacity ?? 0) * INTRO_CAPACITY_DOUBLING_STEP > INTRO_CAPACITY_CAP_BITS
-
-export const isMemoryCapacityUpgradeAvailable = state => {
-  if (state.intro.bits < state.intro.capacity) return false
-  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
-  if (isMemoryCapacityAtCap(state)) return false
-  if (isDiskFillAvailable(state)) return false
-  if (isBandwidthAvailable(state)) return false
-  if (isDiskBuildAvailable(state)) return false
-  if (isComputeUpgradeAvailable(state)) return false
-  return true
+// Pool Memory Capacity is at its end bound (no further growth — Sacrifice removed in #506).
+export const isMemoryCapacityAtCap = state => {
+  const { endBits } = getStoragePoolMemoryBounds(1)
+  return (state.intro?.capacity ?? 0) >= endBits
 }
 
-// Rewind one Bandwidth ×2 claim (inverse of applyIntroProductionDoublingToIntro) — used when
-// Sacrifice rolls back compute-funded Invest steps (#324).
+// Always false — Capacity doubling (Sacrifice) was removed (#506). Kept as an exported predicate
+// so callers (navAttention, Reset convenience, tests) stay stable without a broader rename.
+export const isMemoryCapacityUpgradeAvailable = () => false
+
+// Rewind one Speed ×2 claim (inverse of applyIntroProductionDoublingToIntro) — used when
+// rollbackComputeFundedBandwidth undoes compute-funded Invest steps (#324).
 const rewindOneIntroProductionClaim = intro => {
   let tier = intro.productionMilestoneTier ?? 0
   let claims = intro.productionMilestoneTierClaims ?? 0
@@ -2165,35 +2170,20 @@ export const rollbackComputeFundedBandwidth = state => {
   return { ...state, intro }
 }
 
-// "Sacrifice for 2x Capacity" — see isMemoryCapacityUpgradeAvailable above for the full
-// availability gate (Memory full AND no other currently-possible action left to take first).
-// Drains the ENTIRE balance to 0 and multiplies capacity by INTRO_CAPACITY_DOUBLING_STEP. Once
-// Compute is unlocked, also erases all compute tokens/timers and rolls back compute-funded
-// Bandwidth progress (#324). Clears capacityUpgradeQueued on success.
+// Legacy no-op — Capacity Sacrifice removed (#506). Callers may still invoke this; always
+// same-reference when unavailable. Prefer normalizePoolMemoryCapacity / combineIntroByte.
 export const pickIntroCapacityMilestone = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
-  const afterWipe = isComputeCoreConversionUnlocked(state)
-    ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
-    : state
-  return {
-    ...afterWipe,
-    intro: {
-      ...afterWipe.intro,
-      bits: 0,
-      capacity: afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
-      capacityUpgradeQueued: false,
-    },
-  }
+  return state
 }
 
-// Commit to the next Sacrifice before Memory is full — prevents Compute (Core claim / Boosts)
-// from starving Capacity once the bar fills. Idempotent while already queued. Cleared on Prestige
-// (fresh intro default), on a successful Sacrifice (manual or queued), or via
-// clearIntroCapacityUpgradeQueue.
+// Commit queue for the removed Sacrifice ladder — now only clears/rejects. Kept so old UI/tests
+// and save fields merge without crashing.
 export const queueIntroCapacityUpgrade = state => {
   if (state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return state
-  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true } }
+  // No longer queues a real upgrade; leave state unchanged (do not set the flag).
+  return state
 }
 
 export const clearIntroCapacityUpgradeQueue = state => {
@@ -2248,32 +2238,14 @@ export const eraseAllComputeTokens = state => {
   return { ...state, intro: next }
 }
 
-// Fires a queued Capacity upgrade the instant Memory is full and nothing ranked above Capacity
-// except Compute is available (Disk Fill / Bandwidth / Disk Build still win). Erases all Compute
-// tokens and rolls back compute-funded Bandwidth (#324), then Sacrifices — bypassing
-// isComputeUpgradeAvailable so Boost eligibility cannot starve a committed Capacity upgrade.
-// Called from tickGame after intro production. Same-reference no-op otherwise.
+// Legacy queued Sacrifice path — clears the flag and normalizes Capacity to the pool end bound
+// instead of doubling (#506). Same-reference no-op when nothing is queued.
 export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
-  if ((state.intro?.bits ?? 0) < (state.intro?.capacity ?? 0)) return state
-  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return state
-  if (isMemoryCapacityAtCap(state)) return state
-  if (isDiskFillAvailable(state)) return state
-  if (isBandwidthAvailable(state)) return state
-  if (isDiskBuildAvailable(state)) return state
-
-  const wiped = isComputeCoreConversionUnlocked(state)
-    ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
-    : eraseAllComputeTokens(state)
-  return {
-    ...wiped,
-    intro: {
-      ...wiped.intro,
-      bits: 0,
-      capacity: wiped.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
-      capacityUpgradeQueued: false,
-    },
-  }
+  return normalizePoolMemoryCapacity({
+    ...state,
+    intro: { ...state.intro, capacityUpgradeQueued: false },
+  })
 }
 
 // "Invest for Double Production"'s own cost ladder — entirely independent of `capacity`/Sacrifice
@@ -4630,8 +4602,9 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tiers, not to change what Prestige/Speed Up themselves do.
 
 // Snapshot of Foundry upgrade progress used as a high-water cap for resetByteFoundry's
-// convenience auto-replay (see tickFoundryResetConvenience) — Capacity/Sacrifice included, same
-// as every other tracked axis.
+// convenience auto-replay (see tickFoundryResetConvenience) — Speed/Invest + Disk Build + Combine.
+// `capacity` is retained for merge compatibility with older cap snapshots but is no longer
+// auto-pressed (Sacrifice removed — #506).
 export const captureFoundryUpgradeCaps = intro => {
   const disksBuiltTotal = intro?.disksBuiltTotal ?? {}
   const diskCaps = {}
@@ -4695,20 +4668,14 @@ const isDiskBuildBelowCap = (state, caps) => {
   return built < cap
 }
 
-const isCapacityBelowCap = (intro, caps) =>
-  (intro?.capacity ?? INTRO_STARTING_CAPACITY) < (caps.capacity ?? INTRO_STARTING_CAPACITY)
-
 // Safety bound: one tick should not infinite-loop if a reducer keeps succeeding unexpectedly.
 const FOUNDRY_RESET_CONVENIENCE_MAX_STEPS = 64
 
 // Convenience auto-clicker after resetByteFoundry: while foundryResetCaps is set, press Combine,
-// bit-funded Invest / Bandwidth, Disk Build, and Sacrifice (Capacity) whenever their normal turn
-// gates allow — capped at the pre-reset highs. Sacrifice fires through the same
-// isMemoryCapacityUpgradeAvailable gate a manual click uses (Memory full, nothing higher-ranked
-// available), so it only actually advances once Memory naturally refills to the current capacity,
-// same as the other steps above waiting on their own costs — this just presses the button instead
-// of requiring a manual click. Same-reference no-op when caps are inactive or nothing is eligible.
-// Called from tickGame after Disk auto-fill.
+// bit-funded Speed / Invest, and Disk Build whenever their normal turn gates allow — capped at the
+// pre-reset highs. Capacity/Sacrifice is no longer auto-pressed (#506); combineIntroByte itself
+// snaps Buffer to the pool end bound. Same-reference no-op when caps are inactive or nothing is
+// eligible. Called from tickGame after Disk auto-fill.
 export const tickFoundryResetConvenience = state => {
   const caps = state.intro?.foundryResetCaps
   if (!caps) return state
@@ -4740,23 +4707,15 @@ export const tickFoundryResetConvenience = state => {
     }
   }
 
-  if (isCapacityBelowCap(next.intro, caps)) {
-    const sacrificed = pickIntroCapacityMilestone(next)
-    if (sacrificed !== next) {
-      next = sacrificed
-      changed = true
-    }
-  }
-
   return changed ? next : state
 }
 
 // Settings → Danger zone "Reset Byte Foundry" — for when Capacity (and the Storage/Compute that
-// came with it) was pushed too far. Wipes Memory, Capacity, Disks/Storage, Compute, and every
-// Foundry upgrade (Combine / Invest / Bandwidth multipliers restart from scratch). Records
-// high-water caps in intro.foundryResetCaps so tickFoundryResetConvenience can auto-press those
-// upgrade/build/Sacrifice buttons again up to the prior highs. Preserves mainGameUnlocked when
-// already true. Leaves every non-intro field untouched.
+// came with it) was pushed too far. Wipes Data Stream Buffer, pool Memory, Disks/Storage, Compute,
+// and every Foundry upgrade (Combine / Speed restart from scratch). Records high-water caps in
+// intro.foundryResetCaps so tickFoundryResetConvenience can auto-press Combine / Speed / Disk
+// Build again up to the prior highs. Preserves mainGameUnlocked when already true. Leaves every
+// non-intro field untouched.
 export const resetByteFoundry = state => {
   const initialIntro = createInitialGameState().intro
   const prev = state.intro ?? {}

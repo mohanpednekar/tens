@@ -19,10 +19,9 @@ import {
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
-  INTRO_CAPACITY_CAP_BITS,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
-  INTRO_CAPACITY_DOUBLING_STEP,
+  INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
@@ -209,13 +208,15 @@ test('More menu reaches Milestones and Settings from any screen without progress
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 })
 
-// Attention dots on AppNav — Memory full on Foundry; affordable full purchase level on Tiers.
-test('AppNav Foundry attention dot lights when Memory is full while on Factory', () => {
+// Attention dots on AppNav — Data Stream full on Foundry; affordable full purchase level on Tiers.
+test('AppNav Foundry attention dot lights when Data Stream is full while on Factory', () => {
+  // After Combine, Buffer snaps to INTRO_CAPACITY_CAP_BITS on load — seed bits at the cap so
+  // the stream is actually full (a low seeded capacity is normalized upward).
   seedMainGameState({
     intro: {
       mainGameUnlocked: true,
-      bits: INTRO_STARTING_CAPACITY,
-      capacity: INTRO_STARTING_CAPACITY,
+      bits: INTRO_CAPACITY_CAP_BITS,
+      capacity: INTRO_CAPACITY_CAP_BITS,
       byteCreated: true,
     },
   })
@@ -260,7 +261,7 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
 
   await user.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
-  // Guide sections covering the Byte Foundry pre-game (Memory/tapping/Sacrifice/Invest, Storage,
+  // Guide sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
   // and Compute — including the full merge chain) render alongside the pre-existing main-game
   // sections (Tickspeed, Speed Up, …) plus Prestige.
   expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
@@ -462,7 +463,8 @@ test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async ()
   expect(window.confirm).toHaveBeenCalled()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.intro.byteCreated).toBe(true)
-  expect(saved.intro.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
+  // byteCreated saves normalize Buffer to the pool end (INTRO_CAPACITY_CAP_BITS) on load.
+  expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   expect(saved.intro.disks).toEqual({ 8000: 1 })
   expect(saved.intro.computeCores).toBe(3)
 })
@@ -2328,7 +2330,7 @@ test('tapping increments the bit balance and stops once capacity is reached', as
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
 
@@ -2344,16 +2346,16 @@ test('tapping increments the bit balance and stops once capacity is reached', as
   expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
 })
 
-test('once mainGameUnlocked, the standalone Tap button is gone and Memory itself is the tap target', async () => {
+test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream itself is the tap target', async () => {
   const user = userEvent.setup()
 
-  seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_STARTING_CAPACITY, byteCreated: true } })
+  seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true } })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
-  // There is exactly one "tap to generate a bit" control — Memory's own tile, not a separate button.
+  // There is exactly one "tap to generate a bit" control — Data Stream's own tile, not a separate button.
   const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
 
   await user.click(tapTarget)
@@ -2361,36 +2363,40 @@ test('once mainGameUnlocked, the standalone Tap button is gone and Memory itself
   expect(balanceBar).toHaveAttribute('aria-valuenow', '1')
 })
 
-test('the Memory tile stops accepting taps once capacity is reached, same as the old standalone button', async () => {
-  const user = userEvent.setup()
+test('the Data Stream tile stops accepting taps once Buffer is full, same as the old standalone button', () => {
+  // Fake timers so auto-convert can't drain a full Buffer between mount and the assertion.
+  vi.useFakeTimers()
 
-  seedMainGameState({ intro: { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true } })
-  render(<App />)
-  await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
+  seedMainGameState({ intro: { mainGameUnlocked: true, bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true } })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
   expect(tapTarget).toBeDisabled()
 
-  await user.click(tapTarget)
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_STARTING_CAPACITY))
+  fireEvent.click(tapTarget)
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_CAPACITY_CAP_BITS))
+
+  unmount()
+  vi.useRealTimers()
 })
 
-test('before mainGameUnlocked, Memory\'s tile is not itself a tap target — the standalone Tap button is the only one', () => {
-  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, mainGameUnlocked: false })
+test('before mainGameUnlocked, Data Stream\'s tile is not itself a tap target — the standalone Tap button is the only one', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, mainGameUnlocked: false })
   render(<App />)
 
   expect(screen.getAllByRole('button', { name: /tap to generate a bit/i })).toHaveLength(1)
-  expect(screen.getByLabelText(/^byte foundry balance$/i)).toBeInTheDocument()
+  expect(screen.getByLabelText(/^data stream balance$/i)).toBeInTheDocument()
 })
 
-test('combining 8 bits into a Byte resets the balance and starts passive production', async () => {
+test('combining 8 bits into a Byte resets the balance, snaps Buffer to the pool end, and starts passive production', async () => {
   const user = userEvent.setup()
 
   seedIntroState({ bits: INTRO_BYTE_COMBINE_COST })
   render(<App />)
 
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_BYTE_COMBINE_COST))
   const combineButton = screen.getByRole('button', { name: /combine 8 bits into a Byte/i })
 
@@ -2398,148 +2404,67 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
 
   // The combine action is one-time — its own button is gone once byteCreated flips true.
   expect(screen.queryByRole('button', { name: /combine 8 bits into a Byte/i })).not.toBeInTheDocument()
-  // Consumes the full cost (8), leaving the balance at 0, and reveals the passive-production status line.
+  // Consumes the full cost (8), leaving the balance at 0; Buffer snaps to INTRO_CAPACITY_CAP_BITS.
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
 })
 
-test('the milestone offers stay disabled while the bit balance is below capacity', () => {
-  seedIntroState({ bits: 5, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+test('the Speed ×2 offer stays disabled while the bit balance is below its cost', () => {
+  seedIntroState({ bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })).toBeDisabled()
+  // Sacrifice / Memory ×2 is gone — only Speed ×2 remains among the milestone actions.
+  expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toHaveTextContent('⚡ Speed ×2')
 })
 
-// The single most important behavioral regression to cover per the milestone-offer asymmetry
-// correction (see docs/DESIGN_HISTORY.md): "Invest for Double Production" is an ordinary
-// cost-gated purchase (requires bits >= capacity), unaffected by clicking "Sacrifice for 2x
-// Capacity" itself (which alone requires a full balance and drains it to 0) — the coupling between
-// the two now runs only the other way: Sacrifice is gated on Invest's current tier already being
-// claimed (see isMemoryCapacityUpgradeAvailable in engine.js), not the reverse.
-test('Invest for Double Production does not trigger Sacrifice\'s own full-drain/×2-capacity effect as a side effect', async () => {
+// Invest (Speed ×2) is an ordinary cost-gated purchase — independent of the removed Sacrifice
+// ladder. Claiming it must not invent a capacity change (Buffer is already at the pool end after
+// Combine / normalizePoolMemoryCapacity).
+test('Invest for Double Production spends its own cost and doubles production without changing Buffer', async () => {
   const user = userEvent.setup()
 
-  // Invest's own current-tier claim is deliberately left unused here — Sacrifice requires every
-  // OTHER currently-possible action (including this one) to be already taken first, so with an
-  // unclaimed Invest tier still affordable at this same full balance, Sacrifice starts disabled.
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0 })
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, productionMilestoneTierClaims: 0 })
   render(<App />)
 
-  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
+  expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(sacrificeButton).toBeDisabled()
   expect(investButton).toBeEnabled()
+  expect(investButton).toHaveTextContent('⚡ Speed ×2')
 
   await user.click(investButton)
 
-  // Capacity is untouched by Invest — the balance bar's own max stays at the starting capacity,
-  // proving Sacrifice's 2x-capacity effect was never triggered as a side effect of claiming Invest.
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
-  // Invest deducted its own cost (bits == capacity at this tier), so the balance is no longer full —
-  // Sacrifice (which requires bits === capacity) is still disabled, now simply because the balance
-  // isn't full, rather than because of the unclaimed-Invest gate above (which claiming just cleared).
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(sacrificeButton).toBeDisabled()
-  // The production rate doubled (1 × 2 = 2 bits/sec), confirming Invest's own effect landed.
   expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
 })
 
-test('Sacrifice for 2x Capacity shows what it will drain — the current capacity — on its own line below the label', () => {
-  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
-  render(<App />)
-
-  // INTRO_STARTING_CAPACITY * 100 = 800 bits = 100 Bytes, in the nearest fitting binary unit
-  // (below the 1024 KiB threshold, so still raw Bytes).
-  const sacrificeButton = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
-  expect(sacrificeButton).toHaveTextContent('💥 Memory ×2')
-  expect(sacrificeButton).toHaveTextContent('100 B')
-})
-
-test('Sacrifice for 2x Capacity requires a full balance, fires immediately with no confirm prompt, and leaves production untouched', async () => {
-  const user = userEvent.setup()
-
-  // Invest's current-tier claims must already be used up — tier 0 grants 2, not 1 — Sacrifice is
-  // only offered once every other currently-possible action (Combine, Invest, a Disk
-  // build) is no longer possible.
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 2 })
-  render(<App />)
-
-  await user.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
-
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP))
-  // productionMultiplier is untouched by Sacrifice — still the base 1x rate.
-  expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
-})
-
-test('Sacrifice is disabled with a cap-specific title once pool 1\'s capacity is already at INTRO_CAPACITY_CAP_BITS', () => {
+test('Sacrifice / Memory ×2 is absent after Combine — Buffer is already at the pool end', () => {
   seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  const sacrifice = screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })
-  expect(sacrifice).toBeDisabled()
-  expect(sacrifice).toHaveAttribute('title', 'This pool’s Memory Capacity is already at its cap')
+  expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Memory ×2/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toHaveTextContent('⚡ Speed ×2')
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
 })
 
-test('Sacrifice wipes held Compute tokens immediately on click, with no confirm prompt, once Compute is unlocked', () => {
-  // Fake timers (and fireEvent instead of userEvent — see other vi.useFakeTimers() tests in this
-  // file) keep the live tick loop from ever firing between render and the assertions below: the
-  // always-on Kilobyte auto-convert (tickIntroAutoInvest) runs every tick regardless of the forced
-  // priority order gating Sacrifice, and a real tick landing here would drain Memory below full and
-  // — on its first successful conversion — flip intro.mainGameUnlocked, navigating away from
-  // ByteFoundryPage entirely before the test can observe it.
-  vi.useFakeTimers()
-
-  // Capacity at the Core-reveal threshold. Block higher-priority Disk Build with an in-flight
-  // build, and push Invest's cost ladder past this capacity so Bandwidth isn't available either
-  // (tier 10 costs 8 * 4^10 = 8,388,608 bits, past the 4,194,304-bit capacity here).
-  // No Compute tokens held (computeCores: 0) — holding any would itself make a Boost activatable,
-  // which ranks above Sacrifice in the forced priority order and would disable the button
-  // entirely; computeFundedBandwidthClaims/computeBandwidthSacrificeIndex exercise the rollback
-  // path (rollbackComputeFundedBandwidth) without needing held tokens.
-  seedIntroState({
-    bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-    capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-    byteCreated: true,
-    productionMilestoneTier: 10,
-    productionMilestoneTierClaims: 0,
-    diskBuild: { size: 8000, remainingSeconds: 10, totalSeconds: 10 },
-    computeCores: 0,
-    computeFundedBandwidthClaims: 1,
-    computeBandwidthSacrificeIndex: 2,
-  })
-  const { unmount } = render(<App />)
-
-  fireEvent.click(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i }))
-
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP))
-  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.intro.computeFundedBandwidthClaims).toBe(0)
-  expect(saved.intro.computeBandwidthSacrificeIndex).toBe(0)
-
-  unmount()
-  vi.useRealTimers()
-})
-
-test('the manual convert button appears once capacity reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
+test('the manual convert button appears once Buffer reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
   const user = userEvent.setup()
 
+  // After Combine, Buffer is always at INTRO_CAPACITY_CAP_BITS — conversion is unlocked immediately.
   seedIntroState({
-    bits: INTRO_CONVERSION_UNLOCK_CAPACITY,
-    capacity: INTRO_CONVERSION_UNLOCK_CAPACITY,
+    bits: INTRO_BITS_PER_KILOBYTE_CONVERSION,
+    capacity: INTRO_CAPACITY_CAP_BITS,
     byteCreated: true,
   })
   render(<App />)
 
-  // 8000 bits = 1000 Bytes, below the 1024-Byte KiB threshold — still raw Bytes under the new
-  // binary-unit Memory formatting.
+  // 8000 bits = 1000 Bytes, below the 1024-Byte KiB threshold — still raw Bytes under binary-unit formatting.
   const convertButton = screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })
   expect(convertButton).toBeEnabled()
 
@@ -2554,11 +2479,20 @@ test('the manual convert button appears once capacity reaches the conversion-unl
   expect(saved.intro.mainGameUnlocked).toBe(true)
 })
 
-test('the convert button stays hidden below the conversion-unlock capacity', () => {
-  seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
+test('the convert button stays hidden before Combine (Buffer still at starting capacity)', () => {
+  seedIntroState({ capacity: INTRO_STARTING_CAPACITY, byteCreated: false })
   render(<App />)
 
   expect(screen.queryByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).not.toBeInTheDocument()
+})
+
+test('after Combine, conversion unlock is available even if a low capacity was seeded (normalize bumps Buffer to the pool end)', () => {
+  seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
+  render(<App />)
+
+  expect(screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).toBeInTheDocument()
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
 })
 
 test('the transfer section hides once Storage unlocks, once the main game is already unlocked', () => {
@@ -2573,58 +2507,47 @@ test('the transfer section hides once Storage unlocks, once the main game is alr
 })
 
 test('the transfer section stays visible through the mandatory gate even past Storage\'s own reveal threshold, since it\'s still the only way to ever unlock the main game', () => {
-  // mainGameUnlocked defaults to false (the mandatory gate) via seedIntroState — capacity alone
-  // (grown via repeated Sacrifice, independent of ever transferring) can reach Storage's own
-  // reveal threshold without the main game ever having been unlocked, since redeemDisk never sets
-  // mainGameUnlocked — only convertIntroBitsToKilobytes/tickIntroAutoInvest do.
-  seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+  // mainGameUnlocked defaults to false (the mandatory gate) via seedIntroState — after Combine,
+  // Buffer is at the pool end so Storage is revealed, but redeemDisk never sets mainGameUnlocked
+  // — only convertIntroBitsToKilobytes/tickIntroAutoInvest do — so this row stays visible
+  // through the gate.
+  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
   expect(screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).toBeInTheDocument()
 })
 
 test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit level cost, not a flat rate', () => {
-  // capacity stays below INTRO_DISK_UNLOCK_CAPACITY (80,000 bits) so the Transfer section itself
-  // stays visible — see "the transfer section hides once Storage unlocks" below for that gate.
-  seedMainGameState({
-    intro: { mainGameUnlocked: true, bits: 0, capacity: 20000, byteCreated: true },
-    purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
-  })
+  // After Combine, Buffer is always at the pool end → Storage unlocked. Transfer stays visible
+  // only while still gated (mainGameUnlocked false).
+  seedIntroState(
+    { bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, mainGameUnlocked: false },
+    { purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 } },
+  )
   render(<App />)
-  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   // tier01 is at level 2 — its own current per-unit cost is 10,000 bits; the transfer block
-  // spends BITS_PER_BYTE × that (80,000 bits, "9.765 KiB" in Memory's own binary-unit scale — 80000
-  // / 8192, the KiB divisor), not the level-1 rate (8,000 bits/"1,000 B") it used to be pinned to.
+  // spends BITS_PER_BYTE × that (80,000 bits, "9.765 KiB" in Data Stream's binary-unit scale).
   const activeBlock = screen.getByRole('button', { name: /convert 9\.765 KiB into 1 Kilobyte/i })
   expect(activeBlock).toBeDisabled()
   const progressbar = within(activeBlock).getByRole('progressbar', { name: /byte foundry convert progress/i })
   expect(progressbar).toHaveAttribute('aria-valuemax', '80000')
 })
 
-test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it reveals the next as active', () => {
-  // Fake timers (not userEvent's real ones) so the live tick loop can't fire — and, now that
-  // tickIntroAutoInvest converts a unit the instant one is affordable (see docs/DESIGN_HISTORY.md),
-  // silently drain the pre-seeded balance — between mount and this test's own manual clicks below.
+test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it unlocks the main game', () => {
+  // Fake timers so the live tick loop can't fire — and silently drain the pre-seeded balance —
+  // between mount and this test's own manual click below. After Combine, Buffer is at the pool
+  // end so Storage is revealed; transfer stays visible only while still gated. The first convert
+  // unlocks the main game (and then hides the transfer row once Storage + unlocked).
   vi.useFakeTimers()
 
-  // mainGameUnlocked seeded true (and reached via the voluntary nav link, like the "always-
-  // interactive" tests above) so a click here doesn't also navigate away to MainPage — isolating
-  // the block-sequencing behavior itself from the separate first-transfer-unlocks-the-game behavior
-  // already covered by the "manual convert button... unlocks the main game" test above.
-  // 2000 bits banked — exactly enough for two 1000-bit transfers — so clicking through the first
-  // block leaves 1000 bits behind, revealing the next block as already-active from that carried-
-  // over surplus rather than needing to wait for more production.
-  seedMainGameState({
-    intro: {
-      mainGameUnlocked: true,
-      bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 2,
-      capacity: FRESH_CYCLE_BLOCK_BITS,
-      byteCreated: true,
-    },
+  seedIntroState({
+    mainGameUnlocked: false,
+    bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 2,
+    capacity: INTRO_CAPACITY_CAP_BITS,
+    byteCreated: true,
   })
   const { unmount } = render(<App />)
-  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const transferGroup = screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })
   const activeBlock = screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })
@@ -2632,44 +2555,37 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
   expect(activeBlock).toBeEnabled()
   expect(lockedBlocks).toHaveLength(7)
   lockedBlocks.forEach(block => expect(block).toBeDisabled())
-  // All 8 blocks render for the whole cycle — none consumed yet.
   expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
   expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
 
   fireEvent.click(activeBlock)
 
-  // The block that was locked #2 is now the sole active block — already enabled from the 1000-bit
-  // surplus left over after the first transfer — and only 6 locked blocks remain. The block just
-  // spent stays on screen too, greyed out as consumed, instead of disappearing — the group still
-  // holds all 8 blocks total.
-  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).toBeEnabled()
-  expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(6)
-  expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
-  expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
+  // First transfer unlocks the main game and navigates to Ladder.
+  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
+  expect(saved.intro.mainGameUnlocked).toBe(true)
   expect(saved.purchaseLevelProgress.tier01).toBe(1)
 
   unmount()
   vi.useRealTimers()
 })
 
-test('auto-transfers a full block once the threshold is reached, then rolls the row over to a fresh block for the next tier01 level rather than staying consumed', () => {
+test('auto-transfers a full block once the threshold is reached, then hides the transfer row once unlocked with Storage revealed', () => {
   vi.useFakeTimers()
 
   // A big jump — passive production or a large offline-progress catch-up — that skips straight
   // past every individual block boundary in one go, rather than the player clicking through them.
   seedIntroState({
     bits: FRESH_CYCLE_BLOCK_BITS - 1,
-    capacity: FRESH_CYCLE_BLOCK_BITS,
+    capacity: INTRO_CAPACITY_CAP_BITS,
     byteCreated: true,
     tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
     productionMultiplier: 1,
   })
   const { unmount } = render(<App />)
 
-  expect(screen.getAllByRole('button', { name: /transfer block|convert 1 KB/i }).length).toBeGreaterThan(0)
+  expect(screen.getAllByRole('button', { name: /transfer block|convert 1,000 B|convert 1 KB/i }).length).toBeGreaterThan(0)
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
@@ -2678,29 +2594,24 @@ test('auto-transfers a full block once the threshold is reached, then rolls the 
   expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
-  // Navigating back to the Byte Foundry shows a fresh, empty row for the next level rather than the
-  // blocks staying permanently "consumed" — there is no per-cycle transfer cap any more, so the row
-  // just keeps mirroring tier01's own live purchase-block progress, which reset to 0 once the level
-  // completed. tier01 is now at level 2, so each block's own cost has stepped up to 80,000 bits
-  // ("9.765 KiB" in Memory's binary-unit scale — getIntroKilobyteConversionCost), not the level-1
-  // 8,000-bit ("1,000 B") rate.
+  // Navigating back to the Byte Foundry: Storage is revealed (Buffer at pool end) and the main
+  // game is unlocked, so the manual transfer row hides — Disk redemption is the alternate path.
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-  expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
-  expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(7)
-  expect(screen.getByRole('button', { name: /convert 9\.765 KiB into 1 Kilobyte/i })).toBeDisabled()
+  expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
 })
 
-test('tapping still increments Memory (still tappable) after the Byte generator exists', async () => {
+test('tapping still increments Data Stream (still tappable) after the Byte generator exists', async () => {
   const user = userEvent.setup()
 
-  seedIntroState({ bits: 0, capacity: 1000, byteCreated: true })
+  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
   const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
 
   await user.click(tapButton)
@@ -2724,24 +2635,24 @@ test('shows the offline-progress notice on the Byte Foundry screen too, not just
   expect(screen.getByLabelText(/^offline progress notice$/i)).toBeInTheDocument()
 })
 
-test('the "Memory" label is shown on the balance card', () => {
+test('the "Data Stream" label is shown on the balance card', () => {
   render(<App />)
-  expect(screen.getByText('Memory')).toBeInTheDocument()
+  expect(screen.getByText('Data Stream')).toBeInTheDocument()
 })
 
 test('the production rate shows a segmented block bar below 1 Byte/sec, and switches to a Byte/sec label at/above it', () => {
-  seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
+  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
   const { unmount } = render(<App />)
 
-  const rateBar = screen.getByRole('progressbar', { name: /byte foundry production rate/i })
+  const rateBar = screen.getByRole('progressbar', { name: /data stream production rate/i })
   expect(rateBar).toHaveAttribute('aria-valuenow', '4')
   expect(rateBar).toHaveAttribute('aria-valuemax', '8')
   expect(screen.getByText(/\+4 bits\/sec/i)).toBeInTheDocument()
   unmount()
 
-  seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
+  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
   render(<App />)
-  expect(screen.queryByRole('progressbar', { name: /byte foundry production rate/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('progressbar', { name: /data stream production rate/i })).not.toBeInTheDocument()
   expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
 })
 
@@ -2755,33 +2666,33 @@ test('Invest for Double Production shows its cost on its own line below the labe
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
+  expect(investButton).toHaveTextContent('⚡ Speed ×2')
   expect(investButton).toHaveTextContent('1 B')
   expect(investButton.textContent).not.toContain(',')
 })
 
 test('Invest for Double Production shows its cost in the nearest fitting binary unit', () => {
   // Tier 3's cost is 8 * 4^3 = 512 bits = 64 Bytes — below the 1024-Byte KiB threshold, so it
-  // still renders in raw Bytes under Memory's own binary-unit scale.
+  // still renders in raw Bytes under Data Stream's binary-unit scale.
   seedIntroState({ productionMilestoneTier: 3, bits: 0, byteCreated: true })
   render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
-  expect(investButton).toHaveTextContent('⚡ Bandwidth ×2')
+  expect(investButton).toHaveTextContent('⚡ Speed ×2')
   expect(investButton).toHaveTextContent('64 B')
 })
 
-test('Invest for Double Production grants 2 claims at tier 0\'s cost before advancing to the 10x-higher tier-1 cost — independent of capacity', async () => {
-  const user = userEvent.setup()
+test('Invest for Double Production grants 2 claims at tier 0\'s cost before advancing to the 10x-higher tier-1 cost — independent of capacity', () => {
+  // Fake timers so auto-convert / production ticks can't race the remounts below. Buffer is at
+  // the pool end after Combine; Invest's ladder is still independent of it.
+  vi.useFakeTimers()
 
-  // capacity is deliberately way above tier 0's cost (INTRO_STARTING_CAPACITY) — Invest's own
-  // ladder is decoupled from it, so the claims below don't require the balance to be full.
-  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY * 100, byteCreated: true })
+  seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   let mounted = render(<App />)
 
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toBeEnabled()
-  await user.click(investButton)
+  fireEvent.click(investButton)
 
   // The first claim at tier 0's cost stays at tier 0 (tier 0 grants 2 claims, not 1) — Invest is
   // disabled again only because the balance was spent to 0, not because the tier advanced.
@@ -2797,7 +2708,7 @@ test('Invest for Double Production grants 2 claims at tier 0\'s cost before adva
   mounted = render(<App />)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
 
-  await user.click(screen.getByRole('button', { name: /invest bits for double production/i }))
+  fireEvent.click(screen.getByRole('button', { name: /invest bits for double production/i }))
 
   // The second claim at tier 0 uses up its last claim and advances to tier 1, whose cost (10x
   // higher) the current balance can't cover yet, so Invest is disabled again.
@@ -2806,29 +2717,32 @@ test('Invest for Double Production grants 2 claims at tier 0\'s cost before adva
   expect(saved.intro.productionMilestoneTierClaims).toBe(0)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeDisabled()
 
-  // Seeding enough bits to cover tier 1's (10x) cost re-enables it.
-  saved.intro.bits = INTRO_STARTING_CAPACITY * 10
+  // Seeding enough bits to cover tier 1's (×4) cost re-enables it.
+  // Note: INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (not the older ×10).
+  saved.intro.bits = INTRO_STARTING_CAPACITY * INTRO_BANDWIDTH_COST_MULTIPLIER
   localStorage.setItem('tens_game_state', JSON.stringify(saved))
   mounted.unmount()
-  render(<App />)
+  mounted = render(<App />)
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeEnabled()
+
+  mounted.unmount()
+  vi.useRealTimers()
 })
 
-test('action buttons show fill progress toward their own threshold, matching the main game\'s button convention', () => {
-  seedIntroState({ bits: 4, capacity: 8, byteCreated: true })
+test('Speed ×2 shows fill progress toward its own threshold, matching the main game\'s button convention', () => {
+  seedIntroState({ bits: 4, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  const sacrificeProgress = screen.getByRole('progressbar', { name: /byte foundry sacrifice progress/i })
-  expect(sacrificeProgress).toHaveAttribute('aria-valuenow', '4')
-  expect(sacrificeProgress).toHaveAttribute('aria-valuemax', '8')
+  // Sacrifice progress is gone with the button itself.
+  expect(screen.queryByRole('progressbar', { name: /byte foundry sacrifice progress/i })).not.toBeInTheDocument()
 
-  const investProgress = screen.getByRole('progressbar', { name: /byte foundry invest progress/i })
+  const investProgress = screen.getByRole('progressbar', { name: /byte foundry speed progress/i })
   expect(investProgress).toHaveAttribute('aria-valuenow', '4')
   expect(investProgress).toHaveAttribute('aria-valuemax', '8')
 
-  // The Tap button deliberately carries no progress fill/hidden progressbar of its own — Memory's
-  // own tile already shows the same bits/capacity fill, so a second meter on the tap button itself
-  // would be redundant.
+  // The Tap button deliberately carries no progress fill/hidden progressbar of its own — Data
+  // Stream's own tile already shows the same bits/Buffer fill, so a second meter on the tap
+  // button itself would be redundant.
   expect(screen.queryByRole('progressbar', { name: /byte foundry tap progress/i })).not.toBeInTheDocument()
 })
 
@@ -2885,42 +2799,42 @@ test('the intro auto-transitions into the main game once the bit balance crosses
   vi.useRealTimers()
 })
 
-test('Memory still renders raw bits (not a fractional Byte) before the Byte generator exists', () => {
-  // Before byteCreated, capacity is always exactly INTRO_STARTING_CAPACITY (8 bits/1 Byte) — with
-  // nothing yet to meaningfully denominate in, this should read "5 bits / 8 bits", not "0.625 B / 1 B".
+test('Data Stream still renders raw bits (not a fractional Byte) before the Byte generator exists', () => {
+  // Before byteCreated, Buffer is always exactly INTRO_STARTING_CAPACITY (8 bits/1 Byte) — with
+  // nothing yet to meaningfully denominate in, the balance line should read "5 bits / 8 bits",
+  // not "0.625 B / 1 B". (The separate Buffer caption may still say "1 B" for capacity.)
   seedIntroState({ bits: 5, capacity: INTRO_STARTING_CAPACITY, byteCreated: false })
   render(<App />)
 
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar.closest('section')).toHaveTextContent('5 bits / 8 bits')
-  expect(balanceBar.closest('section')).not.toHaveTextContent(/\bB\b/)
+  expect(balanceBar.closest('section')).not.toHaveTextContent(/\d+(?:\.\d+)? B\s*\/\s*/)
 })
 
-test('Memory renders bits/capacity scaled into the same appropriate binary unit (KiB), not raw bits, once capacity grows past the Byte range', () => {
-  // capacity 8192 bits = 1024 Bytes = 1 KiB; bits 4096 = 512 Bytes = 0.5 KiB — both share the unit
-  // picked off capacity (getMemoryUnit), never a mismatched pairing like "500 B / 1 KiB". 1024, not
-  // 1000 (the old SI threshold), since Memory Capacity is now binary-unit-denominated.
-  seedIntroState({ bits: 4096, capacity: 8192, byteCreated: true })
+test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit (MiB) once at the pool end', () => {
+  // After Combine, Buffer snaps to INTRO_CAPACITY_CAP_BITS (1 MiB). Half-full reads as 0.5 MiB /
+  // 1 MiB — both share the unit picked off Buffer (getMemoryUnit), never a mismatched pairing.
+  seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS / 2, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('0.5 KiB / 1 KiB')
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('0.5 MiB / 1 MiB')
 })
 
-test('Memory balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
-  // 8191/8192 bits *rounds* to "1 KiB" at formatAmount's default 3-decimal precision but should
-  // *floor* to "0.999 KiB" — the same never-overstate rationale as formatCurrency in engine.js,
-  // applied to the Byte Foundry's own binary-unit display.
-  seedIntroState({ bits: 8191, capacity: 8192, byteCreated: true })
+test('Data Stream balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
+  // CAP-1 / CAP *floors* to "0.999 MiB" rather than rounding up to a full "1 MiB / 1 MiB".
+  seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS - 1, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('0.999 KiB / 1 KiB')
-  expect(balanceBar.closest('section')).not.toHaveTextContent('1 KiB / 1 KiB')
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('0.999 MiB / 1 MiB')
+  expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_CAPACITY_CAP_BITS - 1))
+  // Flooring: must not round the nearly-full balance up to a complete "1 MiB" amount line.
+  expect(balanceBar.closest('section').textContent).not.toMatch(/(?:^|[^\d.])1 MiB \/ 1 MiB/)
 })
 
-test('Memory tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
-  seedIntroState({ bits: 4500, capacity: 8000, byteCreated: true })
+test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
+  seedIntroState({ bits: 4500, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
@@ -2966,20 +2880,16 @@ describe('Byte Foundry Storage', () => {
   const openStorage = openFoundry
   const openDisks = openFoundry
 
-  test('Build Disk stays hidden on ByteFoundryPage until Memory capacity reaches 10 KB (INTRO_DISK_UNLOCK_CAPACITY), even with the Byte generator built', () => {
+  test('Build Disk is visible on ByteFoundryPage once the Byte generator exists (Buffer snaps to the pool end)', () => {
+    // After Combine / normalizePoolMemoryCapacity, Buffer is INTRO_CAPACITY_CAP_BITS — well past
+    // INTRO_DISK_UNLOCK_CAPACITY — so Storage (including Build Disk) is revealed immediately.
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY - 1, byteCreated: true })
-    const { unmount } = render(<App />)
-    expect(screen.queryByRole('button', { name: /build disk/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /open storage/i })).not.toBeInTheDocument()
-    unmount()
-
-    seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
     render(<App />)
-    // Building the next disk stays on ByteFoundryPage itself — Memory + Storage are continuous.
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /open storage/i })).not.toBeInTheDocument()
+    // Building the next disk stays on ByteFoundryPage itself — Data Stream + Storage are continuous.
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: /foundry view/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /open storage/i })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   })
 
@@ -3932,7 +3842,7 @@ describe('Compute auto-merge automation', () => {
 // PERMANENT — only Memory (bits/productionAccumulator) and the completion gate reset. Speed
 // Up/Overclock remain unaffected (covered at the engine.test.js level, not here).
 
-test('a real Prestige from MainPage navigates back to the Byte Foundry, resetting Memory but keeping the generator permanent', async () => {
+test('a real Prestige from MainPage navigates back to the Byte Foundry, resetting Data Stream but keeping the generator permanent', async () => {
   const user = userEvent.setup()
 
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
@@ -3940,7 +3850,7 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   seedMainGameState({
     resources: { base: PRESTIGE_THRESHOLD },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
-    intro: { mainGameUnlocked: true, bits: 500, capacity: 8000, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4 },
+    intro: { mainGameUnlocked: true, bits: 500, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 4 },
   })
   render(<App />)
 
@@ -3951,11 +3861,11 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Memory + the gate reset to fresh.
+  // Data Stream balance + the gate reset to fresh; Buffer stays at the pool end with the generator.
   expect(saved.intro.mainGameUnlocked).toBe(false)
   expect(saved.intro.bits).toBe(0)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
-  expect(saved.intro.capacity).toBe(8000)
+  expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   expect(saved.intro.byteCreated).toBe(true)
   expect(saved.intro.tickSpeedSeconds).toBe(0.125)
   expect(saved.intro.productionMultiplier).toBe(4)
@@ -4025,16 +3935,17 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
 // --- The Byte Foundry persists as a voluntarily-revisitable, always-interactive screen ---
 // Once intro.mainGameUnlocked is true, the Byte Foundry no longer disappears — AppNav's Foundry
 // item reopens it at any time. Unlike the old completed-gated design, nothing here ever goes
-// read-only: Tap/Sacrifice/Invest stay live indefinitely, and Convert stays live too as long as
-// this cycle's shared transfer budget isn't exhausted. Before mainGameUnlocked, it's still the
-// same mandatory gate as always — AppNav omits Factory, so there's no way onto MainPage.
+// read-only: Tap/Speed stay live indefinitely. Convert stays visible only while still gated or
+// before Storage unlocks — after Combine, Buffer is at the pool end so Storage is revealed and
+// the transfer row hides once unlocked. Before mainGameUnlocked, it's still the same mandatory
+// gate as always — AppNav omits Factory, so there's no way onto MainPage.
 
 test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory returns to MainPage', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     intro: {
-      mainGameUnlocked: true, bits: 0, productionAccumulator: 0, capacity: 8000, byteCreated: true,
+      mainGameUnlocked: true, bits: 0, productionAccumulator: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true,
       productionMultiplier: 4,
     },
     purchaseLevelProgress: { tier01: 3 },
@@ -4044,18 +3955,16 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  const balanceBar = screen.getByRole('progressbar', { name: /byte foundry bit balance/i })
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(balanceBar).toHaveAttribute('aria-valuemax', '8000')
-  // Tap/Sacrifice/Invest all stay fully interactive — nothing here ever goes read-only.
+  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
+  // Tap + Speed stay fully interactive — Sacrifice is gone; nothing here ever goes read-only.
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /sacrifice all bits for 2x capacity/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toBeInTheDocument()
-  // The transfer row mirrors tier01's own live purchase-block progress — no per-cycle cap, so it
-  // keeps offering an active (if currently unaffordable) block rather than ever going fully consumed.
-  expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(3)
-  expect(screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).toBeDisabled()
-  expect(screen.getAllByRole('button', { name: /^locked transfer block/i })).toHaveLength(4)
+  expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /invest bits for double production/i })).toHaveTextContent('⚡ Speed ×2')
+  // Storage revealed + main game unlocked → manual transfer row is hidden.
+  expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open ladder/i }))
   expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()

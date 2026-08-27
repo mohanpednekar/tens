@@ -889,34 +889,35 @@ Prestige-threshold overlay) keeps reading in Bits, its actual priced/spent denom
 Bytes are no longer a purchasable tier — they're produced entirely by the **Byte Foundry**
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
-onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
-into a permanent, passively-producing Byte generator, then grows via Sacrifice (2x capacity — binary
-KiB/MiB/… display, hard-capped at 1 MiB, large enough to afford building the pool's own largest Disk
-— see below) and
-Invest (double production, own cost ladder now stepped ×4 per tier) on independent cost ladders,
-plus — once far enough along — Disks
+onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
+that combines into a permanent, passively-producing Byte generator. On Combine (and on save load via
+`normalizePoolMemoryCapacity` when `byteCreated`), Buffer snaps to `INTRO_CAPACITY_CAP_BITS` (1 MiB
+— large enough to afford building the pool's own largest Disk). Grow production via **Speed ×2**
+(Invest — own cost ladder stepped ×4 per tier); the old Sacrifice / "Memory ×2" capacity ladder is
+removed. Plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
-Architecture 4c above for its full tier/cost/persistence spec. Five recurring "upgrade"
-actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
-Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine
+Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
+actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Disk Build >
+Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
-always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost;
-the first successful transfer unlocks the main game, and there's no per-cycle cap on further ones.
-ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the main game is
-already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point Disk
-redemption offers an alternative path to tier units, making the manual row redundant; the
+always-on auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current
+per-unit cost; the first successful transfer unlocks the main game, and there's no per-cycle cap
+on further ones. ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the
+main game is already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point
+Disk redemption offers an alternative path to tier units, making the manual row redundant; the
 always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
-through the mandatory pre-unlock gate even past Storage's own reveal threshold, since capacity
-alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
+through the mandatory pre-unlock gate even past Storage's own reveal threshold, since Buffer
+(snapped to the pool end after Combine) can reach that threshold without the main game ever having
 been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
 never hidden while it's still the only way out of the gate.
 The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
 `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
-permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
-own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
+permanent across every real Prestige; only Data Stream balance itself, the main-game-unlock gate,
+and tier01's own purchase-block progress reset each cycle. Nothing here ever fully freezes — every
+action stays
 live indefinitely, every cycle.
 
 **Memory's binary units and capacity cap** (`getMemoryUnit`/`formatBitsInNearestUnit`/

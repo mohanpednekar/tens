@@ -130,14 +130,14 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 `ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
 cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
-player taps to accumulate bits into "Memory" (capacity-capped, displayed in binary units — B/KiB/MiB/…,
-1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a permanent,
-passively-producing Byte generator, then grows it via Sacrifice (2x capacity, hard-capped at 1 MiB —
-large enough to afford building the pool's own largest Disk)
-and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
+player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
+B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
+permanent, passively-producing Byte generator (on Combine / save-load with `byteCreated`, Buffer snaps
+to 1 MiB / `INTRO_CAPACITY_CAP_BITS`), then grows production via **Speed ×2** (Invest — own cost ladder
+now ×4/tier; the old Sacrifice / "Memory ×2" capacity ladder is removed), plus — once
 far enough along — Disks (`StoragePage`, timed builds — a fresh disk takes exactly the time to fill
 it at 1x Memory bandwidth (current production rate), ×N for the array's Nth disk; only the pool's
-smallest size gets an always-full **read cache** (Memory → read cache → timed flush to disk when
+smallest size gets an always-full **read cache** (Data Stream → read cache → timed flush to disk when
 tier allows; the Memory→cache refill is itself bandwidth-capped at 10x rate, and the cache→disk
 flush duration is one cache block at 2x rate) — every larger size fills exclusively via write-cache
 upward merges from the size below (collect from Disks at 2x rate, flush into the disk at 2x rate),
@@ -153,7 +153,7 @@ prepaid buffer that spends first/instantly, any remaining cost live-transfers of
 time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
 never itself banks a spendable reserve beyond its deposits. A lake's own deposit capacity is a
 purchasable doubling ladder: starts at 1 unit, doubles per purchase (spending the lake's current
-capacity in Bits, same shape as Sacrifice), hard-capped at 1,024 units
+capacity in Bits, same shape the removed Sacrifice once used), hard-capped at 1,024 units
 (`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the intentional limit a player actually experiences.
 Each sub-slot's own deposit count is separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since
 only 10 disks of a given size can ever exist) purely so the counter can't exceed what's physically
@@ -163,10 +163,10 @@ next-cost/doubling-cost all display in Byte-scale (KB/MB/GB), matching Disks, no
 separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
-auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
+auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
-Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
-main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
+Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Data Stream balance
+and the main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
 freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
 beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
 

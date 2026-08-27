@@ -32,6 +32,7 @@ import {
   canReclaimComputeBoost,
   canStackComputeBoost,
   combineIntroByte,
+  normalizePoolMemoryCapacity,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
   createInitialGameState,
@@ -610,11 +611,12 @@ describe('tapIntroBit', () => {
 })
 
 describe('combineIntroByte', () => {
-  it('consumes INTRO_BYTE_COMBINE_COST bits and sets byteCreated', () => {
+  it('consumes INTRO_BYTE_COMBINE_COST bits, sets byteCreated, and snaps Buffer to pool Memory end', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST })
     const after = combineIntroByte(state)
     expect(after.intro.byteCreated).toBe(true)
     expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 
   it('is a no-op below the combine cost', () => {
@@ -628,15 +630,8 @@ describe('combineIntroByte', () => {
   })
 })
 
-// Every test below that expects Sacrifice to actually FIRE must also clear the other gates
-// isMemoryCapacityUpgradeAvailable checks: byteCreated (Combine no longer possible) and the
-// current Invest tier's claims already used up (Invest's cost ladder starts at the exact same
-// INTRO_STARTING_CAPACITY value Sacrifice's own capacity does, so at a fresh cycle's starting
-// capacity both are simultaneously affordable unless Invest's claims are explicitly marked used —
-// tier 0 needs both of its 2 claims used up, not just 1, see getIntroProductionMilestoneMaxClaims).
-// Disk Fill and Compute (the other two ranked above Memory in the forced priority order —
-// see isMemoryCapacityUpgradeAvailable) don't need clearing here since they default to unavailable
-// (no disks, 0 computeCores) unless a test explicitly seeds them.
+// Capacity Sacrifice was removed (#506). Pool Memory Capacity is delimited by
+// getStoragePoolMemoryBounds start/end; Combine snaps Buffer to the end bound.
 const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 2 }
 
 // getDiskSize's own real-Byte-accurate ladder — a fresh cycle's smallest disk is 8000 bits (1 KB),
@@ -644,235 +639,92 @@ const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 
 const FIRST_DISK_SIZE = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE
 
 describe('isMemoryCapacityUpgradeAvailable', () => {
-  it('is false below a full balance, regardless of other upgrades', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-  })
-
-  it('is false while Combine into a Byte is still possible (byteCreated false, bits covers the combine cost)', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, capacity: INTRO_BYTE_COMBINE_COST, byteCreated: false })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-  })
-
-  it('is false while the current Invest tier is still affordable and unclaimed', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0,
-    })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-  })
-
-  it('is false while a Disk is currently buildable, once Storage is revealed', () => {
-    // INTRO_DISK_UNLOCK_CAPACITY (80,000 bits) exactly matches the freshly-offered 1 KB disk's
-    // own build cost too, so a full balance at exactly this capacity can also afford it.
-    const capacity = INTRO_DISK_UNLOCK_CAPACITY
-    const state = withIntro(createInitialGameState(), { bits: capacity, capacity, byteCreated: true, productionMilestoneTierClaims: 99 })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-  })
-
-  it('is true once Storage is revealed but the currently-offered disk size is unaffordable at this balance', () => {
-    const capacity = INTRO_DISK_UNLOCK_CAPACITY
-    const state = withIntro(createInitialGameState(), {
-      bits: capacity, capacity, byteCreated: true, productionMilestoneTierClaims: 99,
-      // Pushes the offered Disk size up to tier01's level-2 cost (800,000-bit build cost) —
-      // unaffordable at this balance, unlike the freshly-offered 1 KB size the previous test used.
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
-    })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
-  })
-
-  it('is false while a Disk Fill (higher priority) is currently available', () => {
+  it('is always false — Capacity Sacrifice was removed (#506)', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
-      disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
 
-  it('is false while a Compute Boost (higher priority) is currently available', () => {
-    // Fully build 1/10/100 KB so the Disk ladder is permanently exhausted
-    // (isDiskLadderExhaustedForActivePools) — isolating the Compute check itself from Disk Build's
-    // own higher-priority claim.
-    const capacity = INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
-    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
-    const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
-    const state = withIntro(createInitialGameState(), {
-      bits: capacity, capacity, ...noOtherUpgradesLeft,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
-      computeCores: 1,
-    })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-  })
-
-  it('is true once Memory is full and neither Combine, Disk Fill, Invest, Disk Build, nor Compute is currently possible', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
-  })
-
-  it('is false once pool 1\'s capacity is already at its hard cap (INTRO_CAPACITY_CAP_BITS), even with a full balance and nothing else available', () => {
+  it('stays false at the pool end bound with a full balance', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
     })
     expect(isMemoryCapacityAtCap(state)).toBe(true)
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
+})
 
-  it('is false one doubling-step short of the cap when the NEXT doubling would meet it exactly (no partial step)', () => {
-    // Half the cap — the next doubling lands exactly on INTRO_CAPACITY_CAP_BITS, which is still
-    // allowed (only crossing PAST the cap is blocked).
-    const oneStepShort = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
-    const state = withIntro(createInitialGameState(), { capacity: oneStepShort })
-    expect(isMemoryCapacityAtCap(state)).toBe(false)
-
-    // Push the Disk ladder past what this capacity can afford (100 KB disks cost 8,000,000 bits,
-    // above oneStepShort) so Sacrifice is actually the highest-ranked action left to take.
-    const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
-    const readyToSacrifice = withIntro(createInitialGameState(), {
-      bits: oneStepShort, capacity: oneStepShort, ...noOtherUpgradesLeft,
-      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP },
-    })
-    expect(isMemoryCapacityUpgradeAvailable(readyToSacrifice)).toBe(true)
-    expect(pickIntroCapacityMilestone(readyToSacrifice).intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
+  it('is false below the pool end bound and true at/above it', () => {
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_STARTING_CAPACITY }))).toBe(false)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS }))).toBe(true)
   })
 
-  it('does not crash on a save whose capacity already exceeds the new cap (a value only reachable under the old ×10 ladder) — it just can\'t Sacrifice further', () => {
-    const pastTheNewCap = INTRO_CAPACITY_CAP_BITS * 10
-    const state = withIntro(createInitialGameState(), { bits: pastTheNewCap, capacity: pastTheNewCap, ...noOtherUpgradesLeft })
-    expect(isMemoryCapacityAtCap(state)).toBe(true)
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  it('normalizePoolMemoryCapacity snaps capacity to the end bound once byteCreated', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true, capacity: INTRO_STARTING_CAPACITY, capacityUpgradeQueued: true,
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+  })
+
+  it('normalizePoolMemoryCapacity is a no-op before Combine', () => {
+    const state = withIntro(createInitialGameState(), { byteCreated: false, capacity: INTRO_STARTING_CAPACITY })
+    expect(normalizePoolMemoryCapacity(state)).toBe(state)
   })
 })
 
 describe('pickIntroCapacityMilestone', () => {
-  it('requires a full balance, drains it, and multiplies capacity by INTRO_CAPACITY_DOUBLING_STEP', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
-    const after = pickIntroCapacityMilestone(state)
-    expect(after.intro.bits).toBe(0)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-  })
-
-  it('is a no-op below a full balance', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY - 1, capacity: INTRO_STARTING_CAPACITY })
-    expect(pickIntroCapacityMilestone(state)).toBe(state)
-  })
-
-  it('is a no-op while Combine into a Byte is still possible', () => {
-    const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST, capacity: INTRO_BYTE_COMBINE_COST, byteCreated: false })
-    expect(pickIntroCapacityMilestone(state)).toBe(state)
-  })
-
-  it('is a no-op while the current Invest tier is still affordable and unclaimed', () => {
+  it('is always a no-op — Capacity Sacrifice was removed (#506)', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, byteCreated: true, productionMilestoneTierClaims: 0,
+      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
     })
     expect(pickIntroCapacityMilestone(state)).toBe(state)
   })
 
-  it('keeps working after mainGameUnlocked — nothing about Sacrifice ever freezes', () => {
-    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft })
-    const after = pickIntroCapacityMilestone(state)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-  })
-
-  it('does not touch tickSpeedSeconds/productionMultiplier', () => {
+  it('does not drain bits or grow capacity even when Memory is full', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, tickSpeedSeconds: 0.25, productionMultiplier: 2, ...noOtherUpgradesLeft,
+      bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
     })
     const after = pickIntroCapacityMilestone(state)
-    expect(after.intro.tickSpeedSeconds).toBe(0.25)
-    expect(after.intro.productionMultiplier).toBe(2)
-  })
-
-  it('bypasses isProductionFrozen, same posture as every other Byte Foundry mechanic', () => {
-    const state = withMoney(
-      withIntro(createInitialGameState(), { bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft }),
-      PRESTIGE_THRESHOLD
-    )
-    expect(isProductionFrozen(state)).toBe(true)
-    expect(pickIntroCapacityMilestone(state).intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-  })
-
-  it('clears capacityUpgradeQueued on a successful manual Sacrifice', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, capacityUpgradeQueued: true, ...noOtherUpgradesLeft,
-    })
-    expect(pickIntroCapacityMilestone(state).intro.capacityUpgradeQueued).toBe(false)
+    expect(after).toBe(state)
+    expect(after.intro.bits).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 })
 
 describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
-  it('queues before Memory is full and is idempotent while already queued', () => {
+  it('no longer queues a Capacity upgrade — Sacrifice was removed (#506)', () => {
     const state = withIntro(createInitialGameState(), { bits: 1, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
-    const queued = queueIntroCapacityUpgrade(state)
-    expect(queued.intro.capacityUpgradeQueued).toBe(true)
-    expect(queueIntroCapacityUpgrade(queued)).toBe(queued)
+    expect(queueIntroCapacityUpgrade(state)).toBe(state)
+    expect(state.intro.capacityUpgradeQueued).toBe(false)
   })
 
-  it('clearIntroCapacityUpgradeQueue clears the flag', () => {
-    const queued = queueIntroCapacityUpgrade(createInitialGameState())
+  it('clearIntroCapacityUpgradeQueue clears a legacy queued flag', () => {
+    const queued = withIntro(createInitialGameState(), { capacityUpgradeQueued: true })
     const cleared = clearIntroCapacityUpgradeQueue(queued)
     expect(cleared.intro.capacityUpgradeQueued).toBe(false)
     expect(clearIntroCapacityUpgradeQueue(cleared)).toBe(cleared)
   })
 
-  it('fires when full: erases Compute tokens, Sacrifices, and clears the queue — even if Boosts are available', () => {
+  it('tickQueuedCapacityUpgrade clears the legacy flag and normalizes Capacity to the pool end', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      byteCreated: true,
-      capacityUpgradeQueued: true,
-      productionMilestoneTier: 99,
-      productionMilestoneTierClaims: 0,
-      // Mid-build so Disk Build is unavailable while Memory stays full.
-      diskBuild: { size: 8000, remainingSeconds: 1, totalSeconds: 1 },
-      computeCores: 5,
-      computeNodes: 3,
-      computeBoostType: null,
-    })
-    // Holding Cores makes Burst activatable → normal Sacrifice would be blocked.
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
-    const after = tickQueuedCapacityUpgrade(state)
-    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-    expect(after.intro.bits).toBe(0)
-    expect(after.intro.capacityUpgradeQueued).toBe(false)
-    expect(after.intro.computeCores).toBe(0)
-    expect(after.intro.computeNodes).toBe(0)
-  })
-
-  it('is a no-op while Memory is not yet full', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY - 1,
-      capacity: INTRO_STARTING_CAPACITY,
-      capacityUpgradeQueued: true,
-      byteCreated: true,
-    })
-    expect(tickQueuedCapacityUpgrade(state)).toBe(state)
-  })
-
-  it('still yields to Disk Fill / Bandwidth / Disk Build while queued', () => {
-    const investable = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
-      capacityUpgradeQueued: true,
       byteCreated: true,
-      productionMilestoneTierClaims: 0,
+      capacityUpgradeQueued: true,
     })
-    expect(tickQueuedCapacityUpgrade(investable)).toBe(investable)
+    const after = tickQueuedCapacityUpgrade(state)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.bits).toBe(INTRO_STARTING_CAPACITY)
   })
 
-  it('refuses to queue once pool 1 is already at its capacity cap — nothing to commit to', () => {
+  it('refuses to queue once pool 1 is already at its capacity end bound', () => {
     const state = withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
     expect(queueIntroCapacityUpgrade(state)).toBe(state)
-  })
-
-  it('a queued upgrade stays a no-op once Memory fills at the cap, rather than crossing it', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_CAPACITY_CAP_BITS,
-      capacity: INTRO_CAPACITY_CAP_BITS,
-      capacityUpgradeQueued: true,
-      ...noOtherUpgradesLeft,
-    })
-    expect(tickQueuedCapacityUpgrade(state)).toBe(state)
   })
 })
 
@@ -1030,7 +882,8 @@ describe('tickFoundryResetConvenience', () => {
       || state.intro.productionMultiplier > 1
       || state.intro.tickSpeedSeconds < INTRO_STARTING_TICK_SPEED_SECONDS,
     ).toBe(true)
-    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
+    // Combine snaps Buffer to the pool Memory end bound (#506).
+    expect(state.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
 
     // Keep auto-Investing while Memory can cover the bit-funded path.
     for (let i = 0; i < 20; i += 1) {
@@ -1045,7 +898,7 @@ describe('tickFoundryResetConvenience', () => {
     }
     expect(state.intro.productionMilestoneTier).toBe(1)
     expect(state.intro.productionMilestoneTierClaims).toBe(0)
-    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
+    expect(state.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 
   it('auto-starts Disk Build when under the per-size cap', () => {
@@ -1095,7 +948,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.capacityUpgradeQueued).toBe(false)
   })
 
-  it('auto-Sacrifices Capacity up to the pre-reset high once Memory is full', () => {
+  it('does not auto-Sacrifice Capacity — Combine already snaps Buffer to the pool end (#506)', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
@@ -1107,19 +960,19 @@ describe('tickFoundryResetConvenience', () => {
         productionMilestoneTier: 0,
         productionMilestoneTierClaims: 0,
         disksBuiltTotal: {},
-        capacity: INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP,
+        capacity: INTRO_CAPACITY_CAP_BITS,
       },
     })
     const after = tickFoundryResetConvenience(state)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-    expect(after.intro.bits).toBe(0)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.bits).toBe(INTRO_STARTING_CAPACITY)
   })
 
-  it('stops auto-Sacrificing once Capacity reaches its cap, even if Memory refills again', () => {
-    let state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY,
+  it('auto-Combine during convenience snaps Capacity to the pool end bound', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_BYTE_COMBINE_COST,
       capacity: INTRO_STARTING_CAPACITY,
-      byteCreated: true,
+      byteCreated: false,
       productionMilestoneTier: 99,
       productionMilestoneTierClaims: 0,
       foundryResetCaps: {
@@ -1127,16 +980,12 @@ describe('tickFoundryResetConvenience', () => {
         productionMilestoneTier: 0,
         productionMilestoneTierClaims: 0,
         disksBuiltTotal: {},
-        capacity: INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP,
+        capacity: INTRO_CAPACITY_CAP_BITS,
       },
     })
-    state = tickFoundryResetConvenience(state)
-    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-
-    // Memory refills to the new capacity — convenience should not Sacrifice again past the cap.
-    state = { ...state, intro: { ...state.intro, bits: state.intro.capacity } }
-    state = tickFoundryResetConvenience(state)
-    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.byteCreated).toBe(true)
+    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 })
 
@@ -1352,38 +1201,30 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
     expect(after.intro.productionMilestoneTier).toBe(7)
   })
 
-  it('pickIntroCapacityMilestone once Compute is unlocked wipes tokens and rolls back compute-funded Bandwidth', () => {
+  it('pickIntroCapacityMilestone no longer wipes Compute — Capacity Sacrifice was removed (#506)', () => {
     const state = withIntro(createInitialGameState(), {
-      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      capacity: INTRO_CAPACITY_CAP_BITS,
+      bits: INTRO_CAPACITY_CAP_BITS,
       byteCreated: true,
       tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS,
       productionMultiplier: 256,
       productionMilestoneTier: 8,
-      // Already at tier 8's own claim limit (getIntroProductionMilestoneMaxClaims(8) === 1) so
-      // bit-funded Bandwidth stays unavailable regardless of affordability — isolating the
-      // Disk-Build/Compute gating this test actually targets.
       productionMilestoneTierClaims: 1,
       computeCores: 5,
       computeNodes: 3,
       computeFundedBandwidthClaims: 1,
       computeBandwidthSacrificeIndex: 1,
       diskBuild: { size: 8000, remainingSeconds: 1, totalSeconds: 1 },
-      // Active boost at max stacks with no spare tokens to stack → Compute unavailable.
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
       computeBoostStacks: COMPUTE_BOOST_MAX_STACKS,
       computeBoostRemainingSeconds: 30,
     })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
     const after = pickIntroCapacityMilestone(state)
-    expect(after.intro.computeCores).toBe(0)
-    expect(after.intro.computeNodes).toBe(0)
-    expect(after.intro.computeBoostType).toBe(null)
-    expect(after.intro.capacity).toBe(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-    expect(after.intro.computeFundedBandwidthClaims).toBe(0)
-    expect(after.intro.computeBandwidthSacrificeIndex).toBe(0)
-    expect(after.intro.productionMultiplier).toBe(128)
+    expect(after).toBe(state)
+    expect(after.intro.computeCores).toBe(5)
+    expect(after.intro.computeFundedBandwidthClaims).toBe(1)
   })
 })
 
