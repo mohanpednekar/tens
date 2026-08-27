@@ -163,7 +163,7 @@ screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFl
 Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
-and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
+Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
 main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
 freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
 beyond Googol, improvable via Double PP upgrades on the Upgrades tab.

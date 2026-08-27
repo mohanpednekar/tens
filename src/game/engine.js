@@ -4843,6 +4843,11 @@ export const prestigeGame = state => {
       diskBuild: state.intro?.diskBuild ?? initial.intro.diskBuild,
       diskReadCacheFlush: initial.intro.diskReadCacheFlush,
       diskWriteCache: initial.intro.diskWriteCache,
+      // Data Lakes (deposits / purchased Boosters / in-flight transfers / capacityLevel) are just
+      // as permanent as Disks above — prepaid lake stock and capacity doublings survive a real
+      // Prestige so a new cycle keeps its Booster funding path. Era ascension still resets them
+      // with the rest of the Foundry (see buildEraIntroReset).
+      dataLakes: state.intro?.dataLakes ?? initial.intro.dataLakes,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
       // wiped by a real Prestige along with Memory itself.
