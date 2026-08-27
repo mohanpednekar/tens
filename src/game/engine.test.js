@@ -8844,6 +8844,48 @@ describe('Data Lakes', () => {
     expect(Object.keys(lakes)).toHaveLength(DATA_LAKE_TIER_COUNT)
     expect(lakes[1].transfers).toEqual([])
   })
+
+  it('prestigeGame carries dataLakes (deposits/purchased/transfers/capacityLevel) through a real Prestige unchanged', () => {
+    const seededLake = {
+      deposits: { 1: 3, 10: 1, 100: 0 },
+      purchased: 4,
+      transfers: [{ remainingSeconds: 12 }],
+      capacityLevel: 4,
+    }
+    const state = withMoney(
+      withIntro(createInitialGameState(), {
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          1: seededLake,
+        },
+      }),
+      PRESTIGE_THRESHOLD,
+    )
+    const after = prestigeGame(state)
+    expect(after.intro.dataLakes[1]).toEqual(seededLake)
+    expect(after.intro.dataLakes[2]).toEqual(createInitialGameState().intro.dataLakes[2])
+  })
+
+  it('eraGame resets dataLakes with the rest of the Foundry on Era ascension', () => {
+    const seededLake = {
+      deposits: { 1: 3, 10: 1, 100: 0 },
+      purchased: 4,
+      transfers: [{ remainingSeconds: 12 }],
+      capacityLevel: 4,
+    }
+    const state = eraEligibleState({
+      intro: {
+        ...eraEligibleState().intro,
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          1: seededLake,
+        },
+      },
+    })
+    const after = eraGame(state)
+    expect(after.intro.dataLakes).toEqual(createInitialGameState().intro.dataLakes)
+    expect(after.intro.dataLakes[1]).not.toEqual(seededLake)
+  })
 })
 
 describe('prestigeGame unboundedUnlocked latch', () => {

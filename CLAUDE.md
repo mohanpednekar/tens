@@ -252,9 +252,9 @@ keeps both milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 
-Four Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
+Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
 unattended, opening, fixing up, and merging PRs with no human in the loop — except a narrow,
-conservative class of low-risk bot-authored PRs that merge on green checks alone. All four
+conservative class of low-risk bot-authored PRs that merge on green checks alone. All five
 authenticate via the `GH_AUTOMATION_PAT` repo secret rather than the default `GITHUB_TOKEN`
 (whose commits/pushes/merges can't trigger other workflows). That PAT is deliberately
 narrowly-scoped and includes `Workflows: write`, so autonomous runs can push commits that touch
@@ -277,7 +277,10 @@ workflow self-improvement, gap analysis).
 itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
 `main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
 or on green checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the
-diff meets a conservative low-risk bar.
+diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
+workflows (Claude + Cursor maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
+runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
+issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
 
 **Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
 `cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones
@@ -858,7 +861,7 @@ the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` 
 continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a
 separate voluntary meta-prestige at **1 Googol unspent PP** (`ERA_ELIGIBILITY_PP`): it awards
 **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414), increments `era.count`,
-resets the full Foundry (generator upgrades, Disks, compute ladder entities, Memory/gate) plus the
+resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder entities, Memory/gate) plus the
 ordinary Ladder cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
 `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
@@ -905,7 +908,8 @@ through the mandatory pre-unlock gate even past Storage's own reveal threshold, 
 alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
 been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
 never hidden while it's still the only way out of the gate.
-The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
+The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
+`capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
 permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
@@ -1183,7 +1187,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1587 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1589 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

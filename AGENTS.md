@@ -164,7 +164,7 @@ screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFl
 Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
-and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
+Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
 main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
 freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
 beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
@@ -259,19 +259,21 @@ Without `GH_TOKEN`, land issue-only changes via a housekeeping GHA run (determin
 ## Automation engines (Claude now, Cursor successor)
 
 The unattended pipeline currently runs the **Claude** engine (`autonomous-maintenance.yml` +
-`autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml`, via
-`anthropics/claude-code-action` where an agent is involved). Two twin workflows —
-`cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same orchestration on the
-**Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the Claude engine, but not
-immediately: both coexist for now. The Cursor twins share the `claude-task` backlog and the same
-`CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches, authenticate with a
-`CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert until that secret is
-added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
-double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor runs five IST
-slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures, conflicts,
-spec drift, backlog, process) and the same housekeeping sweep on every push to `main`;
+`autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml` +
+`automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved). Two
+twin workflows — `cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same
+orchestration on the **Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the
+Claude engine, but not immediately: both coexist for now. The Cursor twins share the `claude-task`
+backlog and the same `CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches,
+authenticate with a `CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert
+until that secret is added**. While both are live, the Cursor guard counts both engines' `*/auto-*`
+PRs so they never double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor
+runs five IST slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures,
+conflicts, spec drift, backlog, process) and the same housekeeping sweep on every push to `main`;
 Claude runs twice daily at 9:00am/9:00pm IST. All Cursor sessions share the ~1% Cursor Pro soft
-quota guidance (see Budget discipline).
+quota guidance (see Budget discipline). `automation-self-heal.yml` watches orchestration-workflow
+failures and opens draft `claude/self-heal-*` fixes or `automation-failure` issues (see
+`docs/AUTOMATION.md`).
 Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section
 (authoritative: `CLAUDE.md`).
 

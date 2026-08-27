@@ -54,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
+- **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
+  (deposits, purchased Boosters, in-flight transfers, and capacity level) unchanged, matching
+  Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
+  with the rest of the Foundry.
 - **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
   cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
   so stretching it to the full row width also stretched it to that same width in height. It now
