@@ -3561,6 +3561,7 @@ export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
 
 export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
+  if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return false
   if (isDataLakeCapacityMaxed(state, tierIndex)) return false
   return (state.intro?.bits ?? 0) >= getDataLakeCapacityDoublingCost(state, tierIndex)
 }

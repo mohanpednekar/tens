@@ -8546,6 +8546,14 @@ describe('Data Lakes', () => {
     expect(doubleDataLakeCapacity(1)(state)).toBe(state) // no-op once maxed
   })
 
+  it('doubleDataLakeCapacity/isDataLakeCapacityDoublingAvailable are same-reference no-ops for an out-of-range tierIndex', () => {
+    const state = withIntro(createInitialGameState(), { bits: Number.MAX_SAFE_INTEGER, ...noOtherUpgradesLeft })
+    expect(isDataLakeCapacityDoublingAvailable(state, 0)).toBe(false)
+    expect(isDataLakeCapacityDoublingAvailable(state, DATA_LAKE_TIER_COUNT + 1)).toBe(false)
+    expect(doubleDataLakeCapacity(0)(state)).toBe(state)
+    expect(doubleDataLakeCapacity(DATA_LAKE_TIER_COUNT + 1)(state)).toBe(state)
+  })
+
   it('a lake\'s own capacity level (1,024 at max) hard-caps the total below what a fully-built pool could incidentally hold (1,110)', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 10, [kb10]: 10, [kb100]: 10 },
