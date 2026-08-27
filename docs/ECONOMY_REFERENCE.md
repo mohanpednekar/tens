@@ -1098,8 +1098,8 @@ save Reset only).
 **Award:** `getEonsAwarded(state)` returns `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL`
 (Eon Amplifier shop upgrade deferred to #414).
 
-**On `eraGame` — resets:** full Foundry (generator upgrades, Memory/gate, Disks, compute ladder
-entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
+**On `eraGame` — resets:** full Foundry (generator upgrades, Memory/gate, Disks, Data Lakes,
+compute ladder entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined.
 
