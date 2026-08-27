@@ -4111,7 +4111,7 @@ test('Settings Era ascension confirms, resets Foundry assets, and keeps automati
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.autobuyers[tier0]).toBe(1)
-  expect(saved.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+  expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   expect(saved.intro.disks).toEqual({})
   expect(saved.era.count).toBe(1)
 
