@@ -334,8 +334,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
 
   // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
-  // from the main game's Buy button/autobuyer, redeemDisk (once a disk currently matches tier01's
-  // size), or convertIntroBitsToKilobytes/
+  // from the main game's Buy button/autobuyer, redeemDisk (once tier01 is at one of its own fixed
+  // disk sizes' required level), or convertIntroBitsToKilobytes/
   // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
   // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
   // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
@@ -523,7 +523,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       ? 'Take Bandwidth (or redeem a full Disk) first'
                       : diskRedeemTierName
                         ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                        : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until some tier's level cost matches it`
+                        : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
               }
               type="button"
               variant={canStartDiskBuild ? 'info' : 'neutral'}
@@ -549,7 +549,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <DiskArrayRow key={size} actions={actions} size={size} state={state} />
             ))}
 
-            <DataLakePanel state={state} bare />
+            <DataLakePanel actions={actions} state={state} bare />
           </>
         )}
       </PoolCard>

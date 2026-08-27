@@ -2800,3 +2800,403 @@ Implementation: `isDiskArrayFullyBuilt(state, sizeBits)` (a private helper in `e
 `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP`; `canDepositDiskToDataLake` calls it first,
 before the existing full-disk/slot-max/lake-cap checks. See `engine.test.js`'s "staged Data Lake
 capacity" test for the full 9 → 99 → 999 walkthrough.
+
+### Data Lake Boosters, take two: from a spendable balance to a live transfer pipe
+
+The request: "Data Lake does not hold anything. Its capacity is upgraded to allow Booster
+conversion only. When boosters is to be created, the corresponding amount of disks are transferred
+to it at 10x the pool bandwidth and then converted into Booster." Read literally, this asks to
+remove the standing deposited balance the two entries above this one built — a real reversal, not
+an extension — so before implementing it, four clarifying questions nailed down the parts the
+one-liner left ambiguous:
+
+1. **Does depositing (`depositDiskToDataLake`) go away entirely**, or stay as a lesser mechanic?
+   Answer: keep it, but it should no longer be the thing a Booster purchase is REQUIRED to draw
+   from — i.e. it stops being the only source of Booster funding.
+2. **What does "capacity" mean now** that the lake isn't a spendable balance? Answer: a throughput
+   cap — max concurrent/in-flight transfers — not a lifetime purchase total.
+3. **"10x the pool bandwidth"** — 10× what, precisely? Answer: 10× the Byte Foundry's own current
+   bits/sec production rate (`getIntroProductionRate`), the same rate `getCoreEarnTimeSeconds`/merge
+   pacing already use elsewhere.
+4. Implement now, end-to-end, rather than filing a spec issue first.
+
+Taking answers 1 and the literal request at face value looked contradictory at first: "keep
+depositing" vs. "the lake holds nothing." The reconciliation implemented here treats deposits as a
+**prepaid convenience buffer** rather than the lake's only funding source: `depositDiskToDataLake`
+is completely unchanged (same staged 9 → 99 → 999 cap from the entry above), but a lake never again
+holds a *second*, larger reserve beyond that buffer. Starting a Booster
+(`startBoosterTransfer`, replacing the old instant `purchaseBoosterFromDataLake`) spends whatever
+of the next cost the deposited buffer can cover FIRST — instantly, since those Disks are already
+"at the lake," which is also why a deposit-covered purchase still grants immediately, unchanged from
+before this entry — and sources any cost still remaining live, straight off the raw built Disk
+inventory (`intro.disks`, decomposed into a Disk count the same greedy hundreds/tens/ones way
+deposits already are), over a timed transfer at `DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) the
+Byte Foundry's production rate. Only once that transfer's countdown reaches 0
+(`tickDataLakeTransfers`, wired into `tickGame` right before `AUTO_MERGE_TICKERS` so a Core earned
+this tick can still cascade upward the same tick) does the Booster actually grant. This is the sense
+in which "the Data Lake does not hold anything": past the prepaid buffer, nothing sits idle waiting
+to be spent — a transfer either hasn't started, or is actively counting down toward becoming exactly
+one Booster, never a larger banked stockpile.
+
+Answer 2's throughput-cap reading became `getDataLakeTransferCapacity`: unlike the *deposit* cap
+(9 → 99 → 999, a magnitude), the *transfer* cap is a small concurrency number (0 → 1 → 2 → 3,
+`DATA_LAKE_TRANSFER_CAPACITY_MAX`), unlocked one slot at a time by the exact same staged gate
+(`isDiskArrayFullyBuilt` per sub-size, smallest first) the deposit progression already uses — no new
+unlock mechanic, just a second thing that gate now controls. A lake's `transfers` field (an array of
+`{ remainingSeconds }`, capped at that concurrency) tracks in-flight live transfers; a
+`startBoosterTransfer` call that would need a live transfer but finds the concurrency already full
+is a same-reference no-op, same posture as every other capacity-gated action in this file.
+
+One balance detail that had to be preserved deliberately: with concurrent transfers now possible,
+`getBoosterPurchaseCost` (the nth-ever-started Booster at a tier costs n units) had to start
+counting **in-flight transfers alongside completed purchases** (`purchased + transfers.length + 1`),
+not just `purchased + 1` as before — otherwise starting several transfers back-to-back before any of
+them completed would charge them all the same cost, letting concurrency dodge the escalating curve
+the two Data Lake entries above this one specifically built.
+
+`getMaxBoosterPurchasesForCapacity` (the old "how many purchases can one full 999-unit deposit fund
+in a single uninterrupted burst" helper from the first Data Lake Boosters entry above) was removed
+rather than adapted: its whole premise — that a lake's only funding source was its deposited balance
+— no longer holds once live transfers can also fund a Booster regardless of deposits, so the number
+it computed stopped meaning anything a player could act on. `DataLakePanel` and `ComputePage` were
+updated to show deposited stock, next cost, and in-flight-transfer count/soonest-completion instead.
+Once that helper's own only caller was gone, its sibling `getBoosterPurchaseTotalCost` (the
+triangular-sum helper) also lost its last production use and was deleted alongside it, one review
+pass later — see below.
+
+**Adversarial review caught a real funding bug before merge.** The first implementation reused
+`decomposeDataLakeDeposits` — the deposited buffer's own digit-decomposition helper, which assumes
+each sub-size's count tops out at `DATA_LAKE_SLOT_MAX` (9, the deposited buffer's cap) — to work out
+which held, undeposited Disks a live transfer should consume. That assumption doesn't hold for raw
+held Disks: a size's array holds up to `DISK_ARRAY_LADDER_CAP` (10) slots, and nothing stops a
+player from holding all 10 of a size undeposited at once (e.g. having fully built the ×1 array
+without ever clicking Deposit). Concretely: holding 10 ×1 Disks and needing exactly 10 live-transfer
+units, the old logic decomposed 10 as "1 ×10-size Disk" and rejected the transfer for lacking one —
+even though the player's 10 held ×1 Disks are worth the identical 10 units. Fixed by replacing the
+fixed decomposition with `planLiveDiskFunding`: a greedy pass from the largest sub-size down, capped
+at what's actually held at each step (not a fixed digit range), cascading any shortfall to the next
+sub-size down. Because each sub-size is an exact ×10 multiple of the next, using fewer of a larger
+sub-size than this greedy's own max can only ever increase what's needed lower down — never help —
+so greedy-then-cascade is a correct feasibility check here, not just a heuristic; it returns null
+(genuinely unfundable) only when the total held value, respecting each sub-size's own held count,
+truly can't reach the needed total. The same review also flagged the in-game Guide
+(`InfoPage`) as the one doc surface this feature missed updating — every other reference doc had
+been updated, but `InfoPage` deliberately reads no live game state specifically so its numbers can't
+drift (see CLAUDE.md's Architecture item 5), and this mechanic's bullets there still described the
+old instant-purchase-from-deposits-only behavior. Both were fixed, along with adding the mixed
+deposits+live-transfer funding and same-tick multi-transfer-completion test coverage the review
+noted was missing, before this PR left draft.
+
+### Disk redemption: from price coincidence to a fixed one-to-one tier+level mapping
+
+Requested directly, in the same terse shorthand the maintainer's other Storage Pool requests in
+this chain used: "Every size disk only fills one level of the corresponding Tier in the ladder.
+There is a nice one to one mapping." Read together with two follow-up clarifying rounds (see
+below), this replaced the entire "a disk redeems into whichever tier's current per-unit cost
+happens to exactly match its size right now" design — itself the subject of an earlier
+`getMatchingTierForDiskSize` entry in this file establishing the `<=`→`===` fix and the "any tier,
+not just tier01" generalization — with a fixed, permanent mapping that needs no price coincidence,
+no tie-break rule, and can't be permanently stranded by an autobuyer burst jumping a tier's price
+past a disk's exact value mid-tick.
+
+**Why a clarifying round before touching the code.** The request's own wording ("nice one to one
+mapping," "fills one level") was genuinely compatible with several different concrete designs — did
+it mean the tier itself becomes fixed (not price-matched), or only the level-completion behavior
+changes? Did "fills one level" mean granting exactly one unit at a fixed level, or completing the
+whole level's purchase block in one redemption? This touches `isDiskRedeemable`,
+`getMatchingTierForDiskSize`, `redeemDisk`, every cache-release/auto-redeem eligibility predicate
+built on top of them, `tickDiskAutoDeposit`'s own redeemability gate, and dozens of existing tests —
+getting the exact semantics wrong would have meant redoing all of it. Two rounds of
+`AskUserQuestion` confirmed: (1) disk-ladder step N maps permanently to level N of its one
+corresponding tier — the tier sharing that step's existing Data Lake grouping
+(`getDataLakeTierIndex`, already using the same KB/MB/GB/… naming `TIER_DEFINITIONS` does) — 
+redeemable only while that tier sits at exactly that level; (2) redeeming completes the WHOLE
+current level in one shot (the tier's entire purchase block), not a single unit.
+
+**The mapping was already implicit in existing constants.** `getDataLakeTierIndex` groups every 3
+disk-ladder steps into one Data Lake tier (`DATA_LAKE_SUB_SIZES.length` = 3), and those 10 Data Lake
+tiers already share the exact same KB/MB/GB/…/QB naming as the 10 main-game tiers
+(`DATA_LAKE_TIER_LABELS` vs. `TIER_DEFINITIONS`' own `symbol`s) — not a coincidence, but infrastructure
+already built for a different feature (Data Lake Boosters) that turned out to define this mapping
+for free. A disk step's own position within its tier's 3-step group (1st/2nd/3rd,
+`getDataLakeSubSize`'s index) became the new `getDiskRequiredTierLevel` — the fixed level that
+step corresponds to. `getMatchingTierForDiskSize` (kept as the same internal name/signature so
+every downstream caller — `isDiskRedeemable`, `isDiskAutoRedeemEligible`,
+`isDiskCacheBlockAutoReleaseEligible`, `tickDiskAutoRedeem`, `tickDiskAutoDeposit`'s own
+redeemability gate — needed zero changes of their own) now does a direct index lookup into
+`TIER_DEFINITIONS` plus one equality check against the tier's current `purchaseLevels` entry,
+replacing a `TIER_DEFINITIONS.find(...)` price-coincidence search and its own tie-break-toward-
+earliest-tier logic entirely — a net simplification, not just a behavior change.
+
+**A subtle test-construction trap: tier costs and disk sizes only coincide through level 3.**
+Because tier01's own cost-epoch formula (`getCostEpochExponent`, a Fibonacci-like sequence: exponent
+1, 2, 3, 5, 8, 13, … per level) matches a flat ×10-per-level growth only through epoch 2 (level 3) —
+diverging sharply from level 4 onward (level 4's exponent is 5, not 4, an extra 10× jump) — several
+existing tests that constructed a disk size via `getTierCost(tensTier, N) * BITS_PER_BYTE` for N > 3
+to simulate a "tied price" scenario silently broke: the resulting size no longer matched the real
+disk ladder's step-N face value (`getDiskLadderSizeBits(N)`) at all once N exceeded 3. This is
+exactly why `MAX_ACTIVE_DISK_LADDER_STEP` (3) and `DATA_LAKE_SUB_SIZES.length` (3) were already the
+right bound for pool 1's disks: the "nice one to one mapping" was only ever going to hold for a
+tier's first 3 levels in the first place, matching the disk ladder's own real ceiling — the
+position-based `getDiskRequiredTierLevel` mapping this entry adds is unaffected by this divergence
+(it never reads any tier's cost at all), but a test asserting a manufactured "tie" between two
+tiers' costs at level 4+ needs the real `getDiskLadderSizeBits` value, not a cost-derived one, once
+the divergence kicks in.
+
+**Redeeming a disk now completes a whole level, not one unit** — `redeemDisk` grants
+`getPurchaseBlockSize(state) - purchaseLevelProgress[tier.id]` free units via the existing
+`grantTierUnits` loop (unchanged itself) rather than a flat `1`, rolling the tier straight into its
+next level regardless of how much manual/autobuyer progress already existed toward the current one.
+Every existing test asserting `owned[tier.id] === 1` after a redeem needed updating to the real
+default block size (`DEFAULT_PURCHASE_BLOCK_SIZE`, 8) instead — including one integration test
+whose downstream assertion (the ByteFoundryPage transfer-block row showing "1 transferred block")
+also had to flip to "0 transferred blocks," since completing a level resets `purchaseLevelProgress`
+back to 0 in a fresh level rather than leaving a partial 1-of-8 behind.
+
+**A latent, currently-unreachable edge case in the block-size snapshot** (caught by a 4th
+adversarial review pass): `redeemDisk` computes `remainingInLevel = getPurchaseBlockSize(state) -
+progress` ONCE, from the state before any units are granted, then hands that fixed number to
+`grantTierUnits`' own loop — which recomputes `getPurchaseBlockSize` fresh on every iteration off
+its own mutating state. If a disk's fixed corresponding tier were ever `getLastTierId()` (the tier
+whose purchase-block size keeps growing every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`), and a
+grant loop happened to cross that growth boundary mid-loop, the recomputed (larger) block size could
+leave `purchaseLevelProgress` short of the new threshold even after granting the originally-intended
+"whole level," silently failing to reset progress to 0. This can't happen today —
+`MAX_ACTIVE_DISK_LADDER_STEP` caps every buildable disk at tier01's own first 3 levels, and tier01 is
+never the last tier — so no fix shipped with this change; a code comment at the `remainingInLevel`
+call site flags the invariant so a future storage pool (epic #456, which would let disks reach later
+tiers) doesn't resurrect this silently.
+
+**The Data Lake's own currency/threshold display** (a third request in the same message: "Data lake
+uses the same currency as disks. It replaces 9,99,999") was scoped separately — see the maintainer's
+own answer that the deposited/capacity numbers should keep their current internal values but display in the
+same Byte-scale (KB/MB/GB) formatting disks themselves use, rather than bare unitless numbers.
+
+**`simulate-run-times` re-publish blocked by a pre-existing, already-tracked bug.** `redeemDisk`
+granting a whole purchase level per disk (instead of 1 unit) is exactly the kind of change
+CLAUDE.md's "Also re-run and publish [simulate-run-times]" rule exists for, but running
+`node .claude/skills/simulate-run-times/simulate.mjs` fails immediately with `SyntaxError: The
+requested module '.../src/game/engine.js' does not provide an export named 'claimComputeCore'` —
+`run-simulation.mjs`'s bot strategy still imports the "Claim Core" mechanic removed by an earlier,
+unrelated PR (superseded by Data Lake Boosters). This exact breakage is already tracked in issue
+#471 ("simulate-run-times tool broken: run-simulation.mjs imports removed claimComputeCore"), filed
+before this round of changes and unrelated to the disk-redemption/Data-Lake-currency work here —
+fixing the bot's whole Compute-acquisition strategy is out of this PR's scope. The pacing impact of
+granting a full level per redemption (rather than 1 unit) is real and worth capturing once #471
+lands, but couldn't be measured in this PR.
+
+### Data Lake capacity-doubling cost: fixing a unit-count/real-bits conflation found while wiring up the Byte-scale display
+
+Implementing the Byte-scale display change above (`DataLakePanel` converting every lake figure
+through a new `getDataLakeUnitBits(tierIndex)` helper before formatting with `formatDiskSize`,
+rather than the bare `formatAmount` it used before) surfaced a real economy bug in
+`getDataLakeCapacityDoublingCost`, not just a display gap: it returned the lake's own
+`getDataLakeCapacity` value directly — an abstract unit count (999 at the starting `slotMax`) — and
+`doubleDataLakeCapacity` spent that number straight out of `state.intro.bits`. Real Memory bits and
+the lake's internal unit count are wildly different scales (one deposit-unit is worth 8,000 bits at
+the KB lake), so this made doubling a lake's capacity cost roughly 8,000× cheaper than intended —
+effectively free relative to every other Byte Foundry milestone action it's supposed to sit at the
+same forced-priority rank as (Memory's own Sacrifice). None of the three prior adversarial reviews
+of this PR caught it, because none of them specifically checked whether the "abstract unit count"
+and "real bits" scales were being conflated at this call site — the fix only became visible once the
+UI work required converting between the two scales explicitly.
+
+The fix: `getDataLakeCapacityDoublingCost` now multiplies the unit-count capacity by
+`getDataLakeUnitBits(tierIndex)` before returning it, so the cost is expressed in the same real-bit
+currency `doubleDataLakeCapacity` actually spends from — for the base-`slotMax` KB lake, this moves
+the cost from 999 (bits) to 999 × 8,000 = 7,992,000 bits. `getDataLakeUnitBits` itself (`= getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex,
+DATA_LAKE_SUB_SIZES[0]))`) reuses the same disk-ladder sizing function the display conversion needs
+anyway, so both the cost and the on-screen numbers derive from one shared source of truth rather
+than two independently-computed scale factors that could drift apart again.
+
+Fixing the cost had a knock-on effect on every capacity-doubling test in `engine.test.js`: seeding
+`bits: 999` to exactly afford one doubling under the old (buggy) cost now left the state 7,991,001
+bits short. Bumping those seeds to the real cost (`999 * 8000`) surfaced a second, unrelated issue
+in the *test* fixtures themselves — a Memory balance large enough to afford the real cost is also
+easily large enough to afford building the pool's next Disk array (`isDiskBuildAvailable`'s own bit
+cost is far smaller), which outranks Data Lake capacity doubling in the forced priority order. Tests
+that previously relied on a tiny 999-bit balance being too small for anything else to compete now
+needed to explicitly exhaust the Disk ladder (`disksBuiltTotal` maxed at every active pool size) to
+keep isolating the behavior actually under test, rather than incidentally relying on being too poor
+to afford a Disk Build.
+
+### Data Lake capacity doubling removed: the cap was always a fixed physical ceiling, not a lever
+
+The capacity-doubling mechanic above (`doubleDataLakeCapacity`, `DATA_LAKE_SLOT_MAX` = 9,
+`DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2×) was removed at the maintainer's explicit request: "Data
+lake can only accept what is in Disk array so automatically the cap becomes 10 disks of each size
+instead of artificially mentioning a specific cap like we tried 9 before." The observation is
+correct and, in hindsight, was already implied by the mechanic's own array-completion gate: a lake's
+sub-slot can never hold more of a denomination than the corresponding Disk array has ever produced,
+and that array permanently stops growing at exactly `DISK_ARRAY_LADDER_CAP` (10) disks
+(`isDiskArrayFullyBuilt`). Introducing a *separate*, smaller, purchasable cap (`DATA_LAKE_SLOT_MAX` =
+9) on top of that physical ceiling added a whole standalone economy lever — its own cost formula, its
+own forced-priority-order rank (tied with Memory's Sacrifice), its own UI button, its own doubling
+sequence (9, 18, 36, …) — to defend against a limit that the Disk array itself already enforced more
+tightly. Note this genuinely lowers the achievable deposit ceiling relative to the doubling design it
+replaces — doubling let a lake's *banked balance* (built up over time via repeated redeposits into
+the same physical array, not a single snapshot of it) grow arbitrarily far past 10 per sub-slot, so
+removing it isn't simply deleting a no-op lever. That headroom was never released to players (the
+doubling mechanic was added and removed within the same still-`Unreleased` `CHANGELOG.md` window),
+and the maintainer's request above explicitly asks for exactly this ceiling, so this is an intentional
+economy change, not an oversight: raising the deposit cap past what a single completed array can
+physically hold no longer has any purpose once the array itself, not an independent purchasable
+lever, is what actually gates a sub-slot's contents.
+
+The fix deletes the entire mechanic rather than reworking it: `doubleDataLakeCapacity`,
+`getDataLakeCapacityDoublingCost`, `isDataLakeCapacityDoublingAvailable`,
+`isDataLakeCapacityDoublingTurnAvailable`, `DATA_LAKE_SLOT_MAX`, and
+`DATA_LAKE_CAPACITY_DOUBLING_STEP` are all gone; `getDataLakeSlotMax(state, tierIndex)` (a per-lake,
+possibly-doubled value) is replaced by `getDataLakeCapacity()` taking **no arguments at all** — every
+lake's cap is now the same fixed `DISK_ARRAY_LADDER_CAP × DATA_LAKE_SUB_SIZE_TOTAL` (10 × 111 =
+1,110), since there is no more per-lake state to vary it. The staged 9 → 99 → 999 progression as each
+sub-size array completes becomes 10 → 110 → 1,110 — same shape, values simply reflect the real
+per-array cap instead of an arbitrary smaller one. `decomposeDataLakeDeposits`'s greedy
+largest-denomination-first digit decomposition (used to re-derive a lake's per-sub-size breakdown
+after a spend) still needs its cap to be `>= 9` to stay exact for every total, per the correctness
+argument in the prior entry ("Data Lake refill gating") — 10 clears that floor as comfortably as 9
+did, verified by brute-force testing every reconstructable total in `[0, 1110]` before landing this
+change, so no new decomposition bug was introduced by simply raising the constant.
+
+**The `DataLakePanel` UI was rewritten in the same change**, prompted by separate but related
+feedback: "nicely do the formatting and alignment for Data lake related component. Looks like an
+afterthought." The prior layout was one flex row per lake concatenating every stat into a single
+string, wrapping unpredictably as the lake count and figures grew. The rewrite uses a CSS Grid
+(`grid-template-columns: minmax(0,1fr) auto auto auto`) with an explicit header row (Lake /
+Deposited / Bought / Next) so columns align across every lake row — the same `display: grid`
+convention `MainPage`'s `TierLine` already established elsewhere in the codebase. Each lake's cells
+are wrapped in a `styled.div\`display: contents;\`` row component so they become direct children of
+the grid (and therefore share its column tracks) without adding an extra wrapping box of their own —
+the same relationship a `<tr>` has to a `<table>`, reimplemented in CSS Grid since this isn't a real
+`<table>`. This also dropped the panel's `actions` prop (now unused, since the doubling button it
+existed for is gone) — `DataLakePanel` takes just `{ state, bare }`. The long "`${label} Data Lake →
+${boosterLabel}`" phrase moved from the row's visible text (now the terser "`${label} →
+${boosterLabel}`", e.g. "KB → Cores") into a `title` attribute on the lake name, so a screen-reader
+user or anyone hovering still gets the full sentence without it crowding the compact grid row.
+
+### Data Lake capacity doubling reinstated, redesigned as a level-based ladder with a hard cap
+
+The removal above lasted one PR cycle. The maintainer's follow-up request, verbatim: "Capacity
+still doubles starting from 1KB to 1024 KB for kb lake" — i.e. bring the doubling lever back, but
+not in its original shape (start at a smaller, round `999`-unit-adjacent value, uncapped doubling).
+Instead: **level 0 = 1 unit** ("1 KB" for the KB lake, in that lake's own Byte-scale denomination),
+doubling per purchase, **permanently hard-capped at level 10 = 1,024 units** ("1024 KB"). This
+mirrors an even earlier proposal from the same session (superseded at the time in favor of the
+now-also-superseded fixed-cap design) — "Data Lake Lvl 0 is 1 KB for KB Lake... Highest level would
+be 1024 KB" — which had itself been set aside pending the "auto-derive the cap from the Disk array"
+simplification; that simplification is what got reverted here, restoring the level-based design that
+predated it.
+
+The key clarification this reversal settled: the `DISK_ARRAY_LADDER_CAP`-derived 10 → 110 → 1,110
+figure the previous PR's removal had leaned on was never itself an explicit design cap the
+maintainer asked for — it's just the incidental sum of how many disks of each size can ever exist
+(`isDiskArrayFullyBuilt`'s own per-sub-slot backstop, DISK_ARRAY_LADDER_CAP = 10, applied at 3
+different weights). The ONE explicit, intentional cap a player actually experiences is the doubling
+ladder (1 unit → 1,024 units). The two aren't competing designs to choose between, since they answer
+different questions — "how many disks of that size could physically ever exist" (a backstop with no
+design intent behind its resulting sum) vs. "how much has the player actually paid to bank" (the
+real cap) — so `canDepositDiskToDataLake` enforces both, and since 1,024 sits below the incidental
+1,110 backstop, the doubling ladder is always what actually binds in practice. A fully built pool
+(all three sub-arrays complete) at max level can still never deposit a 10th ×100 disk — 10 (×1) +
+100 (×10) + 900 (9×100) = 1,010 already leaves only 14 units of headroom under the 1,024 cap, one
+short of the 100 a 10th ×100 disk would need. This is not a bug: 1,024 is a deliberate, round,
+binary ceiling the maintainer explicitly asked for, independent of wherever the backstop's own
+incidental sum happens to land — the same instinct Memory's own capacity cap
+(`INTRO_CAPACITY_CAP_BITS`, exactly 1 MiB) already follows elsewhere in this codebase, a clean
+power-of-two rather than whatever number falls out of an unrelated mechanic's own math.
+
+The cost formula keeps the same shape as the original (now-removed) `doubleDataLakeCapacity`: spend
+the lake's own CURRENT capacity, converted from an abstract unit count into real bits via
+`getDataLakeUnitBits`, to double it — the "spend the current value to double it" pattern Memory's
+own Sacrifice also uses. Because the starting capacity is now much smaller (1 unit vs. the old
+design's much larger starting value), the first doubling purchase is proportionately cheap (8,000
+bits for the KB lake, vs. what would previously have been a much larger number) — intentional, since
+a level-0 lake would otherwise be nearly useless (a single deposited disk already fills it).
+
+`DataLakePanel`'s CSS Grid (introduced in the removal PR two cycles ago, kept here) gained a 5th
+column, "Capacity," stacking the current capacity figure over a compact "⚡ ×2"
+`DoubleCapacityButton` — hidden entirely once `isDataLakeCapacityMaxed` (rather than shown-but-
+disabled), matching how Memory's own Sacrifice control disappears at its hard cap rather than
+sitting permanently greyed out. The panel's `actions` prop, dropped in the removal PR as unused,
+came back for this same reason — it wires the button's `doubleDataLakeCapacity(tierIndex)` call.
+
+### Disk/Cache fill speeds tied to Memory bandwidth, not flat/hardcoded rates
+
+Requested directly: "Disk fills work at twice the memory bandwidth when filling from cache. Cache
+fills work at 10x the memory bandwidth when filling from memory and 2x when filling from Disks...
+Building a disk takes the same time as time to fill it at memory bandwidth speed." This replaced
+two previously-independent, rate-*unaware* timing formulas with a single unifying framework: every
+timed Byte Foundry storage transfer now paces itself as an explicit multiple of
+`getIntroProductionRate` ("Memory bandwidth") — new `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2),
+`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10), and `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`
+(2) constants in `layers.js` — rather than a flat "1 second per KB" build rate and an unbounded,
+effectively-instant read-cache refill from Memory.
+
+**Fresh disk builds went from a flat rate to a Memory-bandwidth-relative one.**
+`getDiskBuildBaseSeconds` previously divided a disk's size by the hard-coded
+`DISK_LADDER_BASE_SIZE_BITS` (8000, "1 second per real KB of size") — completely decoupled from the
+player's actual production rate, so Invest/Compute Boost never sped up a fresh build at all. It now
+divides by `getIntroProductionRate(state.intro)` instead (still snapshotted once at build start, per
+the existing `totalSeconds`-is-fixed convention — see `startDiskBuild`), making a build exactly "the
+time to fill this size at 1x bandwidth." At the DEFAULT starting rate (1 bit/sec) this is a much
+*slower* first build than before (8000 seconds for a fresh 1 KB disk, vs. the old flat 1 second) —
+a deliberate, explicit trade for tying every Byte Foundry mechanic to the same bandwidth concept,
+not an oversight; a player who has grown their rate via Invest before reaching Storage sees a
+correspondingly faster build, same as every other rate-relative mechanic here (Boosters, read-cache
+flush, Compute merge timers).
+
+**Read-cache → disk flush** (`getDiskReadCacheFlushSeconds`) already divided by
+`getIntroProductionRate` before this change (see the "Timed read-cache → disk flush" entry above) —
+this round only added the `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2x) factor, since a DISK
+filling FROM a pre-staged cache buffer is faster than Memory's own live trickle, per the explicit
+"twice the memory bandwidth" instruction.
+
+**Read-cache refill FROM Memory gained an explicit bandwidth cap it never had.** Before this change,
+`tickDiskAutoFill`'s Pass 1 transferred whole blocks out of `intro.bits` with no time cost
+whatsoever, limited only by how many bits happened to be banked at the moment it ran — a stalled
+refill (blocked by an active tier claim, or simply because the cache is scoped to the pool's
+smallest size only) could unblock and drain an arbitrarily large banked balance into the cache in a
+single tick, in effect at infinite bandwidth for that one call. The new
+`CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10x) cap bounds this explicitly: at most
+`10 × rate × elapsedSeconds` bits move per call, shared across every eligible size (today, always at
+most one). Because `tickDiskAutoFill` runs a real-elapsed pass and then a **0-elapsed** pass later in
+the same `tickGame` tick (to start newly-eligible flushes without double-counting time — see its own
+doc comment), the 0-elapsed pass now contributes exactly zero additional refill, whereas previously
+it could drain an entire freshly-emptied cache a second time in the same tick if enough Memory
+happened to be sitting banked. This is why the transfer had to become a genuinely *continuous*
+per-tick amount (`Math.min(blockBits, need, budget)`) rather than only-ever-whole-block, unlike
+Pass 1's original design: a budget smaller than one block must still visibly progress bit-by-bit
+across many ticks rather than stalling until a whole block's worth of budget accumulates, the same
+way Memory's own production already progresses continuously rather than in discrete jumps.
+
+**Write-cache collect/flush stopped reusing `getDiskBuildSeconds`.** The write cache's own collect
+(10 segments from the source size) and flush (into the target's fresh container) phases previously
+borrowed a fresh-BUILD's own duration formula wholesale (`flushTotalSeconds =
+getDiskBuildSeconds(state, targetSize)`, `segmentTotalSeconds = flushTotalSeconds / 10`) — which
+meant a write-cache flush was scaled by build `ordinal` (N× for the Nth container ever built),
+despite refilling an *already-built* empty container rather than constructing a new one. New,
+dedicated `getDiskWriteCacheFlushSeconds` (target size ÷ (rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`))
+and `getDiskWriteCacheSegmentSeconds` (source size ÷ (rate × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`))
+replace it — collect is a CACHE filling FROM Disks (2x), flush is a DISK filling FROM a cache (2x,
+same rate class the read-cache flush uses), and neither is ordinal-scaled any more. Because 10
+source-disk segments always sum to exactly one target's own size (the disk ladder's own ×10 step),
+and both multipliers currently happen to equal 2, the collect phase's total duration still coincides
+numerically with the flush phase's — documented explicitly in both the code comments and
+`docs/ECONOMY_REFERENCE.md` as coincidental (a shared multiplier *value*, not a shared *constant* or
+formula), so a future change to either multiplier alone won't silently break an assumption that they
+must match.
+
+**Test fallout.** Every test asserting an exact `startDiskBuild`/`getDiskReadCacheFlushSeconds`
+duration needed updating to the new formulas (straightforward substitution, since
+`createInitialGameState()`'s default 1 bit/sec rate makes the new numbers numerically equal to the
+disk's own raw size in bits). Two `App.test.jsx` integration tests needed a real behavioral update,
+not just a number swap: one seeded a huge `productionMultiplier` specifically so an empty disk's
+read-cache flush would complete "within a single tick," and additionally (under the OLD unbounded
+Pass 1) relied on the cache refilling to FULL a second time in the very same tick once the flush
+emptied it — that second refill no longer happens within a single tick under the new bandwidth cap
+(a 0-elapsed pass contributes no budget), so the test now asserts the disk fills but the cache stays
+empty after tick 1, then advances a second real tick to see the cache refill to full. New dedicated
+tests cover the bandwidth cap itself (a huge banked balance still only moves the per-call budget
+amount, and exactly one block moves once elapsed time covers that block's own bandwidth-capped
+duration) and the write-cache formula's rate-scaling, mirroring the existing read-cache-flush
+rate-scaling test's own style.

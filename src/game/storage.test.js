@@ -802,8 +802,8 @@ describe('Dev Mode', () => {
         ...createInitialGameState().intro,
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
-          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5 },
-          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 },
+          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5, transfers: [], capacityLevel: 0 },
+          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 },
         },
       },
     }
@@ -817,7 +817,7 @@ describe('Dev Mode', () => {
     // ...and every sibling at every depth survives untouched: tier 1's own deposits (a sibling of
     // the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
     expect(result.state.intro.dataLakes['1'].deposits).toEqual({ 1: 50, 10: 3, 100: 0 })
-    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 })
+    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

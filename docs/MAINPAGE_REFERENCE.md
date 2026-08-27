@@ -111,8 +111,9 @@ progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest 
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by buying Boosters from
-the matching Data Lake (`purchaseBoosterFromDataLake`), not minted from Memory — the earlier manual
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by starting Boosters from
+the matching Data Lake (`startBoosterTransfer` — deposits spend instantly, any remaining cost
+live-transfers off built Disks over time), not minted from Memory — the earlier manual
 "Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
 Memory ×2 (Sacrifice) always stays in the milestones row beside Bandwidth.
 
@@ -138,10 +139,12 @@ not behind a Storage tab. Each disk strip always shows all 10 slots in one unbro
 
 Building a disk is no longer instant — `startDiskBuild` (`actions.startDiskBuild`) spends the cost
 immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
-(`totalSeconds` fixed at the build's own starting duration — 1 second per real "KB" of size, times
+(`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
+Memory bandwidth (the current Byte Foundry production rate, snapshotted at build start), times
 the disk's own 1-indexed position in the array at the moment the build started, see
-`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so a 1 KB array's 6th disk takes 6
-seconds, a 10 KB array's 6th disk takes 60 seconds), ticked down every tick by `tickDiskBuild`
+`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so at the default starting rate
+(1 bit/sec) a 1 KB array's first disk takes 8000 seconds, its 6th disk 48,000 seconds, a 10 KB
+array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickDiskBuild`
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
@@ -154,11 +157,12 @@ pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both hig
 "Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
 `variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build {size} Disk ({cost})"`,
 `title` either naming which higher-priority action to take first (`"Take Bandwidth (or redeem a full
-Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether some tier currently
-matches this size (`diskRedeemTierName`, from `getDiskRedeemTierName(state, diskSize)`) — `"Costs
+Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
+corresponding tier is currently at its required level (`diskRedeemTierName`, from
+`getDiskRedeemTierName(state, diskSize)`) — `"Costs
 {cost} and takes time to build — builds an empty {size} container; its cache auto-fills it,
 redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
-be redeemable until some tier's level cost matches it"`; **mid-build** — `aria-label="disk array
+be redeemable until its own fixed corresponding tier reaches its matching level"`; **mid-build** — `aria-label="disk array
 rebuilding"`, always `disabled`, visible text `"🏦 Building {size} Disk — {ceil(remainingSeconds)}s"`,
 `title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`; and **pool complete**
 (`diskLadderExhausted`, checked before `diskBuildInProgress`'s idle-state alternatives) —
@@ -182,17 +186,25 @@ sections above). There is no separate StorageSummary chip row and no Foundry Mem
 split — every shown size's full interactive DiskArrayRow already lives on this page.
 
 Below the disk-array rows, `components/DataLakePanel` renders with `bare` set (`<DataLakePanel
-state={state} bare />`) — instead of its own default `StatCard` wrapper, `bare` mode renders a
-`BareDivider` (`hr`, same style as `PoolCard`'s own `Divider`) followed directly by the lake list,
+actions={actions} state={state} bare />` — `actions` is needed for the per-lake capacity-doubling
+button, see below) — instead of its own default `StatCard` wrapper, `bare` mode renders a
+`BareDivider` (`hr`, same style as `PoolCard`'s own `Divider`) followed directly by the lake grid,
 so it reads as the last sub-section of the same `PoolCard` rather than a second card stacked below
 it. Returns `null` entirely (skipping even the divider) once nothing is visible yet — see
 `getVisibleLakeTierIndexes` in `components/DataLakePanel/index.jsx` (a lake tier shows once it has
-either a nonzero deposit or at least one Booster already purchased). Each visible row reads
-`"{label} Data Lake → {boosterLabel}"` (`aria-label="Data Lakes"` only applies to the non-`bare`,
-standalone-card rendering some future caller might use — `bare` mode has no callers besides this
-page today) paired with a stats line — deposited/bought counts, next purchase cost, and how many
-more purchases the current deposit alone can fund in a row (see docs/ECONOMY_REFERENCE.md's "Data
-Lakes" section for the underlying mechanic).
+a nonzero deposit, at least one Booster already purchased, or its own capacity already doubled past
+the starting level). The lake list is a CSS Grid (`LakeGrid`,
+`grid-template-columns: minmax(0,1fr) auto auto auto auto`) with an explicit
+Lake/Deposited/Capacity/Bought/Next header row, so figures align across every lake row rather than
+each wrapping independently as a concatenated string; each lake's cells are wrapped in a
+`display: contents` `LakeRow` so they become direct grid children (the same relationship a `<tr>`
+has to a `<table>`). Each row's visible name is the terser `"{label} → {boosterLabel}"` (e.g. "KB →
+Cores"), with the fuller `"{label} Data Lake → {boosterLabel}"` phrase moved into a `title`
+attribute instead of crowding the compact grid cell; the Capacity column stacks that lake's current
+capacity figure over a compact "⚡ ×2" `DoubleCapacityButton` (hidden once the lake's own
+1,024-unit hard cap is reached — `isDataLakeCapacityMaxed`), and the remaining two columns show
+Boosters bought and the next purchase's cost (see
+docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic).
 
 Below Build (and, after Boosts unlocks, below Memory ×2 when it has moved under the disk section),
 once `isIntroConversionUnlocked(state)`, a **transfer-block row**
@@ -319,7 +331,8 @@ render:
   yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always disabled) —
   **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
   always disabled). A full square's `title` names auto vs manual redeem into the matching tier, or
-  `"Redeemable once some tier's level cost matches <size>"` when not yet matching; an empty square's
+  `"Redeemable once <size>'s own fixed corresponding tier reaches its matching level"` when not yet
+  matching; an empty square's
   `title` is `"Built, waiting for Memory to fill it"`; a not-yet-built square's is
   `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
@@ -329,7 +342,7 @@ render:
 
 There is no pause/resume control for auto-redeem on this page, and no
 `storageAutoRedeemEnabled`-style toggle exists in state at all any more — `tickDiskAutoRedeem` is
-gated per-size by whichever tier currently matches that size having its own unit-buying autobuyer
+gated per-size by that size's own fixed corresponding tier having its own unit-buying autobuyer
 active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
 already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
