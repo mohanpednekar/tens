@@ -88,7 +88,7 @@ node .claude/skills/simulate-run-times/simulate.mjs --career 0 1 5 10
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 100 10000
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 --career 0 1
 node .claude/skills/simulate-run-times/simulate.mjs 0 100 10000      # bare numbers = PP sweep (legacy)
-node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # Compute floor/hard cap/unlimited
+node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # early-stop floor/hard cap/unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap 4194304 8388608 unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --strategy-out /tmp/run.md
 ```

@@ -10,8 +10,9 @@
 //       as gated, and convert Memory → Kilobytes until the gate opens. Redeeming permanent full
 //       Disks before that convert advances purchase levels without flipping mainGameUnlocked and
 //       softlocks once conversion cost exceeds capacity.
-//     - After unlock: restore autobuyers; Disk Fill → Invest → Disk Build → convert → redeem
-//       again if convert unlocked a waiting disk → optional Capacity/Sacrifice → Data Lake
+//     - After unlock: restore autobuyers; Disk Fill → Invest → Disk Build → queue Capacity when
+//       Invest can't take the next spend (fires on full Memory, erases Compute tokens, then
+//       Sacrifices) → convert → redeem again if convert unlocked a waiting disk → Data Lake
 //       Booster buys (startBoosterTransfer; deposits via tickDiskAutoDeposit; skipped while Disk
 //       Fill is available) → Boosts. Never enable permanent auto-merge.
 //   Main ladder (every tick):
@@ -37,7 +38,7 @@
 //   node run-simulation.mjs                         # career table (prestiges 0..10) + PP sweep
 //   node run-simulation.mjs --pp 0 100 10000         # PP sweep only (fresh prestige.count = 0)
 //   node run-simulation.mjs --career 0 5 10          # career cycles at those prestige counts
-//   node run-simulation.mjs --capacity-cap           # default Compute floor/hard cap/unlimited sweep
+//   node run-simulation.mjs --capacity-cap           # default early-stop floor/hard cap/unlimited sweep
 //   node run-simulation.mjs --capacity-cap 4194304 8388608 unlimited
 //   node run-simulation.mjs --strategy-out /tmp/run.md
 //   node run-simulation.mjs --pp 0 --strategy-out ./runs/2026-03-21T120000Z-abc1234.md
