@@ -77,6 +77,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Prestige progress bar repositioned to just above the bottom tab bar** — it's now pinned via
+  `position: fixed` directly above `AppNav` so it stays visible regardless of scroll position,
+  instead of scrolling away near the top of the Ladder screen. Its `"N% to Prestige"` label now
+  renders inside the bar itself (centered over the fill), rather than as a separate line below it.
 - **Data Lake panel redesigned; capacity is now a doubling ladder hard-capped at 1,024 units** —
   `DataLakePanel` is a proper CSS Grid with an explicit Lake/Deposited/Capacity/Bought/Next header
   row instead of an unaligned, single-flex-row-per-lake layout. A lake's own deposit capacity is

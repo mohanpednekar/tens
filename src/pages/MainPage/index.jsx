@@ -1,4 +1,5 @@
-import Button, { ButtonContent, ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
+import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
+import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
@@ -12,13 +13,18 @@ import styled, { css, keyframes, useTheme } from 'styled-components'
 // status bar, see docs/PWA_REFERENCE.md) draws edge-to-edge; without this padding the bottom-most
 // tier row's Buy button ends up under the home-indicator safe area, where iOS won't let the page
 // scroll far enough for it to become reachable at all (not just visually clipped).
+// Fixed height of the pinned prestige-progress bar (see PrestigeProgressBar below) — single-line,
+// never wraps, so unlike TopPrestigeBarSpacer this doesn't need a live ResizeObserver measurement.
+// Reused by RootDiv's own bottom padding so page content never scrolls out from under the bar.
+const PRESTIGE_PROGRESS_BAR_HEIGHT = '2.5rem'
+
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding: calc(1.25rem + env(safe-area-inset-top)) 0 calc(1.25rem + env(safe-area-inset-bottom));
+  padding: calc(1.25rem + env(safe-area-inset-top)) 0 calc(1.25rem + env(safe-area-inset-bottom) + ${PRESTIGE_PROGRESS_BAR_HEIGHT});
   font-variant-numeric: tabular-nums;
 `
 
@@ -281,35 +287,41 @@ const BytePowerSegmentFill = styled.span`
   }
 `
 
-// Prestige progress as its own top-of-screen element (moved out of the money hero card).
-const PrestigeProgressTop = styled.div`
-  margin: 0 0 0.75rem;
-  width: 100%;
+// Prestige progress, pinned just above AppNav (position: fixed, bottom: APP_NAV_BOTTOM_PAD) so
+// it's always visible regardless of scroll position, rather than scrolling away with the rest of
+// the page content near the top. RootDiv's own bottom padding reserves PRESTIGE_PROGRESS_BAR_HEIGHT
+// so page content never ends up hidden underneath it.
+const PrestigeProgressBar = styled.div`
+  background: ${props => props.theme.color.surfaceRaised};
+  border-top: 1px solid ${props => props.theme.color.border};
+  bottom: ${APP_NAV_BOTTOM_PAD};
+  left: 0;
+  padding: 0.5rem calc(0.75rem + env(safe-area-inset-left)) 0.5rem calc(0.75rem + env(safe-area-inset-right));
+  position: fixed;
+  right: 0;
+  z-index: 39;
 `
 
+// The "N% to Prestige" label renders INSIDE this track (PrestigeProgressLabel below), via the
+// same low-alpha progressFill gradient the Buy/Upgrade buttons use for their own cost-progress
+// fills (see components/Button) — already contrast-validated for `theme.color.text` on top of it
+// (see tokens.contrast.test.js), rather than a separate label rendered below a solid fill bar.
 const PrestigeProgressTrack = styled.div`
-  background: ${props => props.theme.color.surfaceSunken};
+  ${props => progressFill({ $progress: props.$percent, $progressColor: props.theme.color.accent, theme: props.theme })}
+  align-items: center;
   border-radius: ${props => props.theme.radius.pill};
-  height: 0.4rem;
-  overflow: hidden;
+  display: flex;
+  height: 1.5rem;
+  justify-content: center;
+  margin: 0 auto;
+  max-width: min(880px, calc(100vw - 2rem));
   width: 100%;
 `
 
-const PrestigeProgressFill = styled.div`
-  background: ${props => props.theme.color.accent};
-  height: 100%;
-  transition: width ${props => props.theme.motion.duration.slow} ${props => props.theme.motion.easing.out};
-  width: ${props => props.$percent}%;
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
-`
-
-const PrestigeProgressLabel = styled(HudMutedText)`
+const PrestigeProgressLabel = styled.span`
+  color: ${props => props.theme.color.text};
   font-size: ${props => props.theme.type.scale.xs.size};
-  margin-top: 0.3rem;
-  text-align: center;
+  font-weight: 600;
 `
 
 
@@ -1259,21 +1271,20 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         </>
       )}
 
-      <PrestigeProgressTop aria-label="prestige progress">
-        <PrestigeProgressTrack aria-hidden="true">
-          <PrestigeProgressFill $percent={prestigeProgressPercent} />
+      <PrestigeProgressBar aria-label="prestige progress">
+        <PrestigeProgressTrack $percent={prestigeProgressPercent}>
+          <VisuallyHidden
+            role="progressbar"
+            aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
+            aria-valuenow={prestigeProgressPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          />
+          <PrestigeProgressLabel>
+            {`${prestigeProgressPercent}% to Prestige`}
+          </PrestigeProgressLabel>
         </PrestigeProgressTrack>
-        <VisuallyHidden
-          role="progressbar"
-          aria-label="progress toward 1 Googol Bytes, when Prestige becomes available"
-          aria-valuenow={prestigeProgressPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
-        <PrestigeProgressLabel>
-          {`${prestigeProgressPercent}% to Prestige`}
-        </PrestigeProgressLabel>
-      </PrestigeProgressTop>
+      </PrestigeProgressBar>
 
       <Header>
         <h1>Ladder</h1>
