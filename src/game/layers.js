@@ -400,12 +400,11 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
 // startBoosterTransfer in engine.js. Each of the 10 storage denominations (KB … QB) has a Data
-// Lake that can hold up to getDataLakeCapacity(state, tierIndex) units of PREPAID deposits, filled
-// automatically (`tickDiskAutoDeposit`, no manual action) by depositing built Disks (up to
-// getDataLakeSlotMax(state, tierIndex) each of that tier's ×1/×10/×100 denominations — 9 each,
-// 999 total, at the STARTING slotMax below) — a convenience stockpile, not the lake's only source
-// of Boosters (see "Data Lake Booster transfers" below). Starting a Booster at tier N spends units
-// genuinely OUT of lake N's own current deposits FIRST
+// Lake that can hold up to getDataLakeCapacity() units of PREPAID deposits, filled automatically
+// (`tickDiskAutoDeposit`, no manual action) by depositing built Disks (up to DISK_ARRAY_LADDER_CAP
+// (10) each of that tier's ×1/×10/×100 denominations — 10 each, 1110 total) — a convenience
+// stockpile, not the lake's only source of Boosters (see "Data Lake Booster transfers" below).
+// Starting a Booster at tier N spends units genuinely OUT of lake N's own current deposits FIRST
 // (not against a separate ledger, real capacity that only returns once more Disks get deposited),
 // then sources any remaining cost live from the raw built Disk inventory via a timed transfer. The
 // nth Booster ever started (completed or still in flight) at a tier costs n units — see
@@ -413,22 +412,19 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // several concurrently (see DATA_LAKE_TRANSFER_CAPACITY_MAX below) still charges the correct
 // escalating cost rather than letting concurrency dodge it.
 //
-// A lake's own slotMax (see getDataLakeSlotMax in engine.js) starts at DATA_LAKE_SLOT_MAX and can
-// be doubled directly, at a cost equal to the lake's own current capacity in Memory bits — the
-// same "spend the current value to double it" shape Memory's own Sacrifice already uses (see
-// doubleDataLakeCapacity/getDataLakeCapacityDoublingCost in engine.js) — a standing lever on top
-// of the staged 9 → 99 → 999 progression built-array completion already unlocks, rather than a
-// one-time replacement for it.
-export const DATA_LAKE_CAPACITY = 999
-export const DATA_LAKE_SLOT_MAX = 9
-// Each doubleDataLakeCapacity purchase multiplies a lake's own slotMax by this — same value as
-// Memory's own INTRO_CAPACITY_DOUBLING_STEP, kept as a separate constant since the two ladders are
-// independent progressions that only coincidentally share a multiplier.
-export const DATA_LAKE_CAPACITY_DOUBLING_STEP = 2
+// Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP — a lake can never be asked to hold
+// more of a denomination than a single array of that size could ever physically produce. On top of
+// that physical ceiling, a lake's own actual capacity is a smaller, purchasable, doubling ladder
+// (see getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB"
+// for the KB lake) and doubling per purchase, permanently hard-capped at
+// DATA_LAKE_CAPACITY_MAX_LEVEL (level 10, 1,024 units — "1024 KB" for the KB lake). An earlier
+// version instead made the cap fixed at the physical ceiling with no purchasable lever at all —
+// see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder replaced that.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+export const DATA_LAKE_CAPACITY_MAX_LEVEL = 10
 
 // --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
 // tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and

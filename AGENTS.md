@@ -150,11 +150,15 @@ Boosters, escalating cost (nth = n units, counting in-flight starts too): a full
 auto-deposits into its lake (no manual action — deferring to a still-redeemable disk first) as a
 prepaid buffer that spends first/instantly, any remaining cost live-transfers off built Disks over
 time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
-never itself banks a spendable reserve beyond its deposits. A lake's own capacity can also be
-doubled directly (spend its current capacity — converted into real Memory Bits via the same
-currency Disks are priced in — to double it, same shape as Memory's own Sacrifice) — stacks on top
-of the staged array-completion progression rather than replacing it; deposited/capacity/next-cost
-all display in Byte-scale (KB/MB/GB), matching Disks, not a bare unit count. A
+never itself banks a spendable reserve beyond its deposits. A lake's own deposit capacity is a
+purchasable doubling ladder: starts at 1 unit, doubles per purchase (spending the lake's current
+capacity in Bits, same shape as Sacrifice), hard-capped at 1,024 units
+(`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the intentional limit a player actually experiences.
+Each sub-slot's own deposit count is separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since
+only 10 disks of a given size can ever exist) purely so the counter can't exceed what's physically
+possible — not a second design cap, just incidental headroom (1,110 if ever fully filled) that sits
+well above the 1,024 ladder which is what actually gates deposits. Deposited/capacity/
+next-cost/doubling-cost all display in Byte-scale (KB/MB/GB), matching Disks, not a bare unit count. A
 separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
