@@ -1524,8 +1524,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
-  // After a Foundry reset, auto-press Combine / Invest / Disk Build / Capacity (Sacrifice) up to
-  // foundryResetCaps.
+  // After a Foundry reset, auto-press Combine / Speed (Invest) / Disk Build up to
+  // foundryResetCaps (Capacity Sacrifice removed in #506 — Combine snaps Buffer to pool end).
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
   // Counts down any in-flight Data Lake Booster transfers (see startBoosterTransfer/
   // tickDataLakeTransfers), granting Compute Cores/Nodes/… as they complete — ahead of
@@ -2412,9 +2412,10 @@ const MEMORY_BINARY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.sy
 // The single unit a bits/capacity pair should both render in, sized off `capacityBits` (always the
 // larger of the two, when comparing a balance against its own capacity) so a balance never shows
 // in a coarser unit than its own capacity — e.g. never "512 B / 1 KiB". `byteCreated` gates whether
-// there's anything to denominate in yet at all: before the Byte generator exists, capacity is
-// always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte — capacity can only grow via Sacrifice,
-// itself only reachable once byteCreated), so a capacity-magnitude check alone can never catch
+// there's anything to denominate in yet at all: before the Byte generator exists, Buffer is
+// always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte — Capacity only snaps to the pool Memory
+// end on Combine / normalize / Era, #506; the old Sacrifice growth path is gone), so a
+// capacity-magnitude check alone can never catch
 // this phase. Without this gate, tapping through that very first 0-8 bit range would render as
 // fractional Bytes ("0.125 B", "0.25 B", …) — a less readable unit than the raw bit count for a
 // range this small.

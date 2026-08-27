@@ -1228,10 +1228,9 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
   })
 })
 
-// Base and forced-priority-turn predicates for the Byte Foundry's five recurring "upgrade"
-// actions — Disk Fill > Bandwidth > Disk Build > Compute > Memory (see CLAUDE.md's "Byte Foundry"
-// section and isMemoryCapacityUpgradeAvailable above, which composes these same base predicates
-// for Sacrifice's own gate).
+// Base and forced-priority-turn predicates for the Byte Foundry's recurring "upgrade"
+// actions — Disk Fill > Speed > Disk Build > Compute (#506 dropped Memory / Sacrifice rank;
+// see CLAUDE.md's "Byte Foundry" section).
 describe('isDiskFillAvailable', () => {
   it('is false with no built disks', () => {
     expect(isDiskFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)

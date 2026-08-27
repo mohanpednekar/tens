@@ -99,11 +99,10 @@ const ActionsRow = styled.div`
   width: 100%;
 `
 
-// Sacrifice and Invest are two independent, frequently-compared milestone actions — placing them
-// side by side (each taking an equal share via `flex: 1`) reads as one paired choice rather than a
-// stacked list, unlike Combine above (a one-time, mutually-exclusive action with nothing to pair
-// against). `min-width: 0` lets each button's own label ellipsis-truncate (see ButtonLabel in
-// components/Button) instead of forcing the row wider than its container at narrow viewports.
+// Speed ×2 is the recurring rate milestone — placing it in MilestonesRow keeps the same flex
+// layout the old Sacrifice+Invest pair used. `min-width: 0` lets each button's own label
+// ellipsis-truncate (see ButtonLabel in components/Button) instead of forcing the row wider than
+// its container at narrow viewports.
 const MilestonesRow = styled.div`
   display: flex;
   gap: ${props => props.theme.space.sm};
@@ -115,8 +114,8 @@ const MilestonesRow = styled.div`
   }
 `
 
-// Sacrifice/Invest's own two-line content: the symbol/label/multiplier on top, its cost — what
-// each one actually spends — on its own line below, in smaller/muted text, rather than crammed
+// Speed ×2's two-line content: the symbol/label/multiplier on top, its cost — what it actually
+// spends — on its own line below, in smaller/muted text, rather than crammed
 // inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
 // which only ever lays out a single icon+label row) so `Button`'s own `display: flex; align-items:
 // center; justify-content: center` still centers this whole block as one flex child.
@@ -138,8 +137,8 @@ const MilestoneCostLine = styled.span`
   white-space: nowrap;
 `
 
-// The whole pool — Memory, its Combine/Sacrifice/Bandwidth actions, and Storage (Build + Disk
-// arrays + Data Lake) — renders as one continuous card rather than Memory and Data Lake each
+// The whole pool — Data Stream, Combine / Speed actions, and Storage (Build + Disk
+// arrays + Data Lake) — renders as one continuous card rather than Data Stream and Data Lake each
 // getting their own separate boxed StatCard with bare buttons/rows in between. Sub-elements that
 // used to carry their own StatCard chrome (FillableStatCard, DataLakePanel) drop it — see below —
 // so nothing double-boxes inside this outer card.

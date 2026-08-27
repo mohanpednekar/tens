@@ -164,36 +164,37 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // BITS_PER_BYTE multiplication in engine.js), so this starting rate lines up with tier01's actual
 // starting per-unit cost once expressed in bits.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
-// Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
-// the intro page can start showing a "next phase" reveal indicator (see
-// isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
-// bits at once (capacity must reach 8000, given the 8/80/800/8000… ladder above, which is also
-// exactly the balance needed for a first conversion at this starting rate).
+// Buffer / pool Memory Capacity threshold at which the manual "convert bits to a Kilobyte" action
+// becomes available (see isIntroConversionUnlocked in engine.js). After #506, Buffer snaps from
+// INTRO_STARTING_CAPACITY to the pool Memory end on Combine / normalize / Era-with-byteCreated,
+// so this threshold (and Storage / Boosters below) is crossed immediately then — not via the old
+// discrete Sacrifice ladder stages (8/80/800/8000/…). Historically also equal to the first
+// conversion's starting balance cost at INTRO_BITS_PER_KILOBYTE_CONVERSION.
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 // --- Byte Foundry Storage (Disks) --- see startDiskBuild/tickDiskBuild/tickDiskAutoFill/
 // redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
-// container (after a real build TIME — see below); Memory (intro.bits) then keeps each array's
+// container (after a real build TIME — see below); Data Stream (intro.bits) then keeps each array's
 // Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and flushes a full
 // read cache into an empty disk over one cache-block production duration when no tier claim
-// blocks that size — leftover Memory stays as its own balance. Redeeming a
+// blocks that size — leftover Data Stream stays as its own balance. Redeeming a
 // FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
 // reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
 // bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
-// disk's contents came from Memory via the read-cache flush, not a further transfer out of it at redeem time.
+// disk's contents came from Data Stream via the read-cache flush, not a further transfer out of it at redeem time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
-// even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
+// even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
-// until Memory's own capacity reaches this many bits — 80,000 bits, "9.765 KiB" in Memory's own
-// binary display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
+// until Buffer / pool Memory Capacity reaches this many bits — 80,000 bits, "9.765 KiB" in binary
+// display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
 // (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
-// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS ceiling, reachable via repeated Sacrifice
-// doublings from INTRO_STARTING_CAPACITY. A deliberate pacing gate: Storage is a later-game
-// mechanic, revealed only once the player has grown capacity a bit past the Kilobyte-transfer
-// row's own, earlier 1000-bit reveal.
+// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS end bound. After #506, Buffer snaps to that
+// end bound on Combine, so Storage reveals as soon as the Byte generator exists (intentional —
+// Capacity is start–end delimited; no Sacrifice pacing ladder). Historically this was a later-game
+// reveal once the player had grown capacity past the Kilobyte-transfer row via Sacrifice doublings.
 export const INTRO_DISK_UNLOCK_CAPACITY = 80000
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000

@@ -184,17 +184,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `isBandwidthTurnAvailable(state)` is `pickIntroProductionMilestone`'s own actual gate, a no-op
    whenever a redeemable Disk Fill is currently available even if this tier's own cost is
    affordable.
-6. Once `capacity` reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (8000 bits — first true at the
-   `capacity = 8000` stage, since capacity only ever takes the discrete 8/80/800/8000/… values;
-   8000 bits = 1000 Bytes in Memory's own display scale),
-   `isIntroConversionUnlocked(state)` goes true: `ByteFoundryPage` shows a row of **transfer
+6. Once Buffer (`intro.capacity`) reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (8000 bits),
+   `isIntroConversionUnlocked(state)` goes true. After #506, Buffer is `INTRO_STARTING_CAPACITY`
+   (8) pre-Combine and snaps to the pool Memory end (`INTRO_CAPACITY_CAP_BITS`) on Combine /
+   load-normalize / Era-with-`byteCreated` — so conversion (and Storage / Boosters capacity gates)
+   unlock as soon as that snap lands, not via intermediate Sacrifice ladder stages.
+   `ByteFoundryPage` shows a row of **transfer
    blocks** at the bottom of the screen — always all `getPurchaseBlockSize(state)` of them (see
    step 7), for the whole cycle; blocks never disappear once transferred, they just show as
    consumed. Only the leftmost not-yet-transferred (active) block is ever clickable; clicking it
    calls `convertIntroBitsToKilobytes` (spending `getIntroKilobyteConversionCost(state)` bits — tier01's
-   own CURRENT per-unit level cost, not a flat rate (see step 7) — from Memory for 1 free Kilobyte unit —
+   own CURRENT per-unit level cost, not a flat rate (see step 7) — from Data Stream for 1 free Kilobyte unit —
    bypassing `isTierUnlocked`/`isProductionFrozen` entirely, since this pays from the separate intro
-   pool, not `resources.base`) and reveals the next block as active (any Memory surplus left over
+   pool, not `resources.base`) and reveals the next block as active (any Data Stream surplus left over
    after the transfer carries straight into it, so a large enough balance lets a player click
    through several blocks in a row without waiting for more production) — the block just spent
    stays rendered too, now permanently disabled and shown filled/greyed to mark it consumed.

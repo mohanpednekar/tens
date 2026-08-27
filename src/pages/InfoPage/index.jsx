@@ -320,8 +320,9 @@ const InfoPage = () => {
           </li>
           <li>
             A lake's own deposit capacity is purchasable: it starts at 1 unit and doubles each
-            purchase (spending the lake's own current capacity, converted into Memory Bits — the
-            same "spend the current value to double it" shape Sacrifice uses), permanently
+            purchase (spending the lake's own current capacity, converted into Data Stream Bits —
+            the same "spend the current value to double it" shape the removed Memory Sacrifice once
+            used), permanently
             hard-capped at {2 ** DATA_LAKE_CAPACITY_MAX_LEVEL} units once fully doubled — shown on
             the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
             these raw unit counts.
