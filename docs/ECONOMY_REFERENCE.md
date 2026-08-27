@@ -2353,14 +2353,14 @@ purchases were manual or automatic.
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
 
 **Byte Foundry** (see its own section below for the full mechanic):
-- `INTRO_STARTING_CAPACITY = 8` — starting/current cap on the intro's "Memory" bit balance (1 Byte)
-- `INTRO_CAPACITY_DOUBLING_STEP = 2` — "Sacrifice for 2x Capacity" multiplies capacity by this each pick (8 → 16 → 32 → 64 → …), hard-capped at `INTRO_CAPACITY_CAP_BITS`
-- `INTRO_CAPACITY_CAP_BITS = 8,388,608` (exactly 1 MiB) — pool 1's generator capacity ceiling, large enough to afford `getDiskCost` for the pool's own largest (100 KB) buildable Disk (8,000,000 bits); `isMemoryCapacityUpgradeAvailable` returns `false` from here on
-- `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — "Invest for Double Production"'s own cost ladder steps by this per tier (was 10 before this and `INTRO_CAPACITY_DOUBLING_STEP` split into independent multipliers)
-- `MEMORY_BINARY_UNIT_STEP = 1024` — Memory Capacity's own binary (IEC-style) display-unit ladder step (`getMemoryUnit`) — `1 KiB = 1024 Bytes`; Disks/Data Lake/caches stay on the unchanged SI (1000-based) scale
+- `INTRO_STARTING_CAPACITY = 8` — starting Buffer / pool Memory Capacity start bound (1 Byte)
+- `INTRO_CAPACITY_DOUBLING_STEP = 2` — shared binary Capacity ladder spacing (legacy Sacrifice multiplier; Capacity doubling removed in #506)
+- `INTRO_CAPACITY_CAP_BITS = 8,388,608` (exactly 1 MiB) — pool 1 Memory Capacity end bound; Buffer snaps here on Combine / load / Era when `byteCreated`
+- `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — Speed ×2 (Invest) cost ladder steps by this per tier
+- `MEMORY_BINARY_UNIT_STEP = 1024` — Data Stream Buffer / pool Memory Capacity binary display-unit ladder step (`getMemoryUnit`) — `1 KiB = 1024 Bytes`; Disks/Data Lake/caches stay on the unchanged SI (1000-based) scale
 - `INTRO_STARTING_TICK_SPEED_SECONDS = 1` — the Byte generator's starting delivery period, in seconds — matches `TIER_DEFINITIONS`' own per-tier `baseTickSpeedSeconds` convention (a fixed period, not a continuous rate)
-- `INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000` (0.1) — floor for `tickSpeedSeconds`: the live tick loop's own real-time resolution. Once "Invest for Double Production" would halve `tickSpeedSeconds` below this, it multiplies `productionMultiplier` instead — see `pickIntroProductionMilestone`
-- `INTRO_PRODUCTION_MULTIPLIER_STEP = 2` — "Invest for Double Production" multiplies by this each pick — either dividing `tickSpeedSeconds` or multiplying `productionMultiplier`, whichever `INTRO_MIN_TICK_SPEED_SECONDS` currently allows; net effect is the same either way, bits/sec doubles
+- `INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000` (0.1) — floor for `tickSpeedSeconds`: the live tick loop's own real-time resolution. Once Speed ×2 would halve `tickSpeedSeconds` below this, it multiplies `productionMultiplier` instead — see `pickIntroProductionMilestone`
+- `INTRO_PRODUCTION_MULTIPLIER_STEP = 2` — Speed ×2 multiplies by this each pick — either dividing `tickSpeedSeconds` or multiplying `productionMultiplier`, whichever `INTRO_MIN_TICK_SPEED_SECONDS` currently allows; net effect is the same either way, bits/sec doubles
 - `INTRO_BYTE_BASE_RATE = 1` — the Byte generator's base batch size, in bits, delivered once every `tickSpeedSeconds`, before `productionMultiplier`
 - `INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY` (8) — one-time cost, in bits, to combine the first 8 tapped bits into the Byte generator
 - `INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000` — `BITS_PER_BYTE` times Kilobytes' own real `baseCost` (1E3 Bits) in `TIER_DEFINITIONS`; the actual live conversion cost is `getIntroKilobyteConversionCost(state)` (`BITS_PER_BYTE` times tier01's CURRENT per-unit level cost, which equals this constant only at a fresh cycle's level 1 and grows from there) — this constant itself is now only used as the (fixed) `INTRO_CONVERSION_UNLOCK_CAPACITY` threshold below and as a test fixture
