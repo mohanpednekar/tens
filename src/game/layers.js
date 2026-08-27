@@ -412,16 +412,19 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // several concurrently (see DATA_LAKE_TRANSFER_CAPACITY_MAX below) still charges the correct
 // escalating cost rather than letting concurrency dodge it.
 //
-// Each sub-slot's own ceiling is simply DISK_ARRAY_LADDER_CAP — a lake can never be asked to hold
-// more of a denomination than a single array of that size could ever physically produce, so the
-// cap is derived from that existing constant rather than tracked/purchased separately. An earlier
-// version tried a standalone, independently-doubled DATA_LAKE_SLOT_MAX constant (starting at 9,
-// grown via a dedicated purchase) — dropped in favor of this auto-derived cap; see
-// docs/DESIGN_HISTORY.md.
+// Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP — a lake can never be asked to hold
+// more of a denomination than a single array of that size could ever physically produce. On top of
+// that physical ceiling, a lake's own actual capacity is a smaller, purchasable, doubling ladder
+// (see getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB"
+// for the KB lake) and doubling per purchase, permanently hard-capped at
+// DATA_LAKE_CAPACITY_MAX_LEVEL (level 10, 1,024 units — "1024 KB" for the KB lake). An earlier
+// version instead made the cap fixed at the physical ceiling with no purchasable lever at all —
+// see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder replaced that.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+export const DATA_LAKE_CAPACITY_MAX_LEVEL = 10
 
 // --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
 // tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and

@@ -527,26 +527,49 @@ Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
    array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
    ever built at that size, checked by the internal `isDiskArrayFullyBuilt` helper) — before ANY of
    that size's disks can be deposited. Each lake's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10, 100]`)
-   are each capped at a fixed `DISK_ARRAY_LADDER_CAP` (10) — no separate constant, since a lake can
+   are each capped at a fixed PHYSICAL ceiling of `DISK_ARRAY_LADDER_CAP` (10) — since a lake can
    never be asked to hold more of a denomination than a single completed array of that size could
    ever physically produce (an array permanently stops growing at exactly `DISK_ARRAY_LADDER_CAP`
    disks). These 3 sub-slots map to 3 successive disk sizes — all 3 feeding the SAME lake, one per
-   pool — so the array-completion gate naturally STAGES a lake's deposit cap rather than needing a
+   pool — so the array-completion gate naturally STAGES that physical ceiling rather than needing a
    separate field for it: **10** once only the smallest (×1) size's array is complete, **110** once
-   the ×10 size's array is also complete, and the full **1,110** (`getDataLakeCapacity()` —
-   `DISK_ARRAY_LADDER_CAP × DATA_LAKE_SUB_SIZE_TOTAL`, 10 × 111) once the ×100 size's array is
-   complete too. `getDataLakeCapacity()` takes no arguments — the value is identical for every
-   lake — and `decomposeDataLakeDeposits` caps each sub-size's own place at this same fixed value
+   the ×10 size's array is also complete, and the full **1,110** (`DISK_ARRAY_LADDER_CAP ×
+   DATA_LAKE_SUB_SIZE_TOTAL`, 10 × 111) once the ×100 size's array is complete too.
+   `decomposeDataLakeDeposits` caps each sub-size's own place at this same fixed physical value
    (`Math.min(DISK_ARRAY_LADDER_CAP, Math.floor(remainder / subSize))`), so the greedy
    largest-denomination-first re-decomposition after a spend is always exact (proven correct for any
-   total in `[0, getDataLakeCapacity()]` once the per-slot cap is `>= 9`, comfortably true at 10) —
-   see `docs/DESIGN_HISTORY.md` for why an earlier version instead made this cap a separate,
-   purchasable "capacity doubling" lever (`DATA_LAKE_SLOT_MAX` = 9, doublable via the since-removed
-   `doubleDataLakeCapacity`) and why that was dropped in favor of this auto-derived cap.
-   `DataLakePanel` displays every lake figure — deposited, capacity, and the next Booster's own unit
-   cost (`getBoosterPurchaseCost`) — converted through `getDataLakeUnitBits` and formatted with
-   `formatDiskSize` (Byte-scale, KB/MB/GB/…) instead of a bare number, so the on-screen currency
-   always matches Disks'.
+   total in `[0, 1110]` once the per-slot cap is `>= 9`, comfortably true at 10) — this correctness
+   argument is independent of whichever total the lake's own capacity currently permits (below).
+
+   **Capacity doubling** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
+   `doubleDataLakeCapacity(tierIndex)`) — the physical per-sub-slot ceiling above is the array's own
+   maximum, but a lake's own ACTUAL capacity is a separate, smaller, purchasable ladder:
+   `getDataLakeCapacity` returns `2 ** getDataLakeCapacityLevel(state, tierIndex)`, starting at level
+   0 (1 unit — "1 KB" for the KB lake, in that lake's own Byte-scale denomination) and permanently
+   hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake)
+   via `isDataLakeCapacityMaxed`, defensively also clamped at the 1,110-unit physical ceiling via
+   `Math.min` (never actually binding, since 1,024 < 1,110). `getDataLakeCapacityDoublingCost` is
+   that current capacity converted into real bits via `getDataLakeUnitBits(tierIndex)` — one
+   deposit-unit's own bit face value, exactly its lake's ×1 sub-size Disk's size (e.g. 8,000 bits for
+   the KB lake) — so the amount actually spent from Memory Bits is the lake's capacity expressed in
+   the same currency Disks themselves are priced/sized in, per "Data lake uses the same currency as
+   disks" (see `docs/DESIGN_HISTORY.md`), not a bare unit count — the same "spend the current value
+   to double it" shape `pickIntroCapacityMilestone` (Memory Sacrifice) already uses. Gated by the
+   same forced priority chain as every other Byte Foundry milestone action
+   (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Bandwidth, Disk
+   Build, and Compute are all currently unavailable, same rank as Sacrifice, not competing with it).
+   `canDepositDiskToDataLake` enforces BOTH ceilings together — the physical per-sub-slot cap above
+   AND this smaller capacity-level cap on the lake-wide total — so until a lake is doubled all the
+   way to its 1,024-unit hard cap, its largest (×100) sub-slot can never actually reach its own
+   10-disk physical maximum (1,024 leaves room for only 9 full ×100 deposits once the ×1/×10
+   sub-slots are also full: 10 + 100 + 9×100 = 1,010, one shy of the 1,110 physical ceiling). An
+   earlier version fixed this cap at the 1,110-unit physical ceiling directly, with no purchasable
+   lever at all — see `docs/DESIGN_HISTORY.md` for why a smaller, doublable, explicitly-capped
+   ladder replaced that.
+   `DataLakePanel` displays every lake figure — deposited, capacity, doubling cost, and the next
+   Booster's own unit cost (`getBoosterPurchaseCost`) — converted through `getDataLakeUnitBits` and
+   formatted with `formatDiskSize` (Byte-scale, KB/MB/GB/…) instead of a bare number, so the
+   on-screen currency always matches Disks'.
 
    **Starting a Booster** (`startBoosterTransfer(tierIndex)`, `getBoosterTransferPlan` internally) —
    a lake never itself banks a spendable reserve beyond its own deposits above; past that, it's a

@@ -3,7 +3,6 @@ import {
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
-  getDataLakeCapacity,
   getOverclockRequirement,
   getSpeedUpRequirement,
   getTierTickspeedAutobuyerMilestone,
@@ -321,13 +320,19 @@ const InfoPage = () => {
             (redeeming always comes first).
           </li>
           <li>
-            Each lake's deposit buffer stages as its three sub-size arrays complete:{' '}
+            Each denomination's own physical ceiling stages as its three sub-size arrays complete:{' '}
             {DISK_ARRAY_LADDER_CAP} once only the smallest is built, {DISK_ARRAY_LADDER_CAP * 11}{' '}
-            once the next size up is also built, the full {getDataLakeCapacity()} once the largest
-            of the three is built too — shown on the Data Lake panel itself in the same Byte-scale
-            (KB/MB/GB) figures Disks use, not these raw unit counts. Each sub-size's own cap is
-            simply {DISK_ARRAY_LADDER_CAP} — a lake can never need to hold more of a denomination
-            than a single array of that size can ever physically produce.
+            once the next size up is also built, {DISK_ARRAY_LADDER_CAP * 111} once the largest of
+            the three is built too — a lake can never need to hold more of a denomination than a
+            single array of that size can ever physically produce.
+          </li>
+          <li>
+            A lake's own actual capacity is smaller than that physical ceiling and purchasable: it
+            starts at 1 unit and doubles each purchase (spending the lake's own current capacity,
+            converted into Memory Bits — the same "spend the current value to double it" shape
+            Sacrifice uses), permanently hard-capped at 1,024 units once fully doubled — shown on
+            the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
+            these raw unit counts.
           </li>
           <li>
             Starting the nth Booster ever started at a lake (whether already granted or still

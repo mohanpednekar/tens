@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -49,6 +49,9 @@ const createEmptyDataLakeTier = () => ({
   // `deposits` above — just a countdown until the already-consumed Disks finish arriving and
   // convert into a Booster.
   transfers: [],
+  // How many times this lake's own deposit capacity has been doubled — see getDataLakeCapacity
+  // below. 0 = the starting 1-unit capacity; DATA_LAKE_CAPACITY_MAX_LEVEL is a permanent hard cap.
+  capacityLevel: 0,
 })
 
 export const createEmptyDataLakes = () => {
@@ -3381,39 +3384,48 @@ export const getDataLakeDepositedUnits = tierIndex => state => {
   )
 }
 
-// Each sub-slot's own ceiling is simply DISK_ARRAY_LADDER_CAP (10) — a lake can never be asked to
+// Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP (10) — a lake can never be asked to
 // hold more of a denomination than a single array of that size could ever physically produce (once
 // DISK_ARRAY_LADDER_CAP disks exist, that size's ladder position is permanently full — see
-// isDiskArrayFullyBuilt), so the cap falls straight out of an existing constant rather than a
-// separate, independently-tuned number (an earlier version tried a smaller standalone constant,
-// DATA_LAKE_SLOT_MAX, doubled via a dedicated purchase — see docs/DESIGN_HISTORY.md for why that
-// was dropped in favor of this auto-derived cap).
-//
-// Sum of one unit at each sub-size (1 + 10 + 100 = 111) — a lake's total capacity is exactly
-// DISK_ARRAY_LADDER_CAP times this.
+// isDiskArrayFullyBuilt). Sum of one unit at each sub-size (1 + 10 + 100 = 111) — the absolute
+// physical maximum a lake could ever bank is exactly DISK_ARRAY_LADDER_CAP times this (1,110).
 const DATA_LAKE_SUB_SIZE_TOTAL = DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize, 0)
 
-// A lake's own total deposit capacity — fixed at DISK_ARRAY_LADDER_CAP (10) of each denomination,
-// see the comment above.
-export const getDataLakeCapacity = () => DISK_ARRAY_LADDER_CAP * DATA_LAKE_SUB_SIZE_TOTAL
+// A lake's own current deposit capacity is a purchasable, doubling ladder — see
+// getDataLakeCapacityLevel/doubleDataLakeCapacity below — starting at 1 unit (level 0) and
+// permanently hard-capped at DATA_LAKE_CAPACITY_MAX_LEVEL (1,024 units at level 10). This is
+// independent of, and always well under, the 1,110-unit physical ceiling the Disk arrays
+// themselves impose (see DATA_LAKE_SUB_SIZE_TOTAL above) — the Math.min is a defensive clamp, not
+// a normally-binding one, so a future change to either ladder can't silently let one exceed the
+// other. An earlier iteration made this cap fixed at the physical ceiling with no purchasable lever
+// at all — see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder
+// replaced that.
+export const getDataLakeCapacityLevel = (state, tierIndex) =>
+  getDataLakeTier(state, tierIndex)?.capacityLevel ?? 0
+
+export const isDataLakeCapacityMaxed = (state, tierIndex) =>
+  getDataLakeCapacityLevel(state, tierIndex) >= DATA_LAKE_CAPACITY_MAX_LEVEL
+
+export const getDataLakeCapacity = (state, tierIndex) =>
+  Math.min(DISK_ARRAY_LADDER_CAP * DATA_LAKE_SUB_SIZE_TOTAL, 2 ** getDataLakeCapacityLevel(state, tierIndex))
 
 // A lake's `deposits` (sub-slot counts, each 0..DISK_ARRAY_LADDER_CAP) are exactly the
 // base-(DISK_ARRAY_LADDER_CAP+1) hundreds/tens/ones digit decomposition of its own deposited
-// total, since the total is always 0..getDataLakeCapacity() and each digit place caps at
-// DISK_ARRAY_LADDER_CAP. The greedy top-down cap-at-DISK_ARRAY_LADDER_CAP decomposition is exact
-// because DISK_ARRAY_LADDER_CAP (10) is at least DATA_LAKE_SUB_SIZE_TOTAL / DATA_LAKE_SUB_SIZES[1]
-// (111 / 10 = 11.1 rounded down to the nearest whole unit each place can actually hold) — below
-// that threshold a capped-off remainder at a larger place isn't always absorbable by the smaller
-// places' own combined capacity; DISK_ARRAY_LADDER_CAP is a fixed constant, so this holds for the
-// whole game with no further reasoning needed about it ever changing at runtime. Starting a
-// Booster spends however much of `cost` deposits can cover by re-deriving this decomposition from
-// (deposited - fromDeposits) — see startBoosterTransfer below, which also reuses this same
-// decomposition to work out which raw Disks fund any remaining cost — rather than tracking spend
-// against a separate ledger, so "available" is always just however much is CURRENTLY deposited
-// (see getDataLakeAvailableUnits): spent capacity is genuinely gone, not merely earmarked, and only
-// comes back the same way it got there in the first place — depositDiskToDataLake, once that array
-// rebuilds a replacement disk through the ordinary build/fill pipeline (see
-// docs/DESIGN_HISTORY.md).
+// total, since the total is always 0..1,110 (bounded well under that by getDataLakeCapacity above)
+// and each digit place caps at DISK_ARRAY_LADDER_CAP. The greedy top-down
+// cap-at-DISK_ARRAY_LADDER_CAP decomposition is exact because DISK_ARRAY_LADDER_CAP (10) is at
+// least DATA_LAKE_SUB_SIZE_TOTAL / DATA_LAKE_SUB_SIZES[1] (111 / 10 = 11.1 rounded down to the
+// nearest whole unit each place can actually hold) — below that threshold a capped-off remainder at
+// a larger place isn't always absorbable by the smaller places' own combined capacity;
+// DISK_ARRAY_LADDER_CAP is a fixed constant, so this holds for the whole game with no further
+// reasoning needed about it ever changing at runtime. Starting a Booster spends however much of
+// `cost` deposits can cover by re-deriving this decomposition from (deposited - fromDeposits) — see
+// startBoosterTransfer below, which also reuses this same decomposition to work out which raw Disks
+// fund any remaining cost — rather than tracking spend against a separate ledger, so "available" is
+// always just however much is CURRENTLY deposited (see getDataLakeAvailableUnits): spent capacity
+// is genuinely gone, not merely earmarked, and only comes back the same way it got there in the
+// first place — depositDiskToDataLake, once that array rebuilds a replacement disk through the
+// ordinary build/fill pipeline (see docs/DESIGN_HISTORY.md).
 const decomposeDataLakeDeposits = total => {
   const deposits = {}
   let remainder = Math.max(0, total)
@@ -3445,13 +3457,13 @@ export const getBoosterPurchaseCost = tierIndex => state => {
 // A size's disk array must be COMPLETELY built out — every DISK_ARRAY_LADDER_CAP (10) disk ever
 // built at that size — before any of its disks can be deposited to a Data Lake at all. Since a
 // lake's 3 sub-slots (1/10/100 — see DATA_LAKE_SUB_SIZES) map to 3 successive disk sizes, this
-// gate is what actually produces the staged 10 -> 110 -> 1110 capacity progression the Data Lake
-// design calls for: depositing the smallest (×1) size unlocks up to DISK_ARRAY_LADDER_CAP (10)
-// units once that array is complete; the ×10 size then unlocks the next 100 (110 total) once IT
-// completes; the ×100 size unlocks the final 1000 (1110 total, getDataLakeCapacity()) once it
-// completes too — no separate staged-capacity field needed, since the sub-slot structure already
-// encodes it. This check is permanent/monotonic (disksBuiltTotal never decreases), unlike the "at
-// least one currently full disk" check below, which fluctuates as disks are deposited and rebuilt.
+// gate stages the PHYSICAL per-place ceiling as each array completes — up to DISK_ARRAY_LADDER_CAP
+// (10) units once the ×1 array is complete, 110 once the ×10 array is also complete, the full 1,110
+// once the ×100 array is complete too — independently of, and on top of, the lake's own smaller
+// purchasable capacity (getDataLakeCapacity above), which gates the actual total regardless of how
+// much of this physical ceiling is unlocked. This check is permanent/monotonic (disksBuiltTotal
+// never decreases), unlike the "at least one currently full disk" check below, which fluctuates as
+// disks are deposited and rebuilt.
 const isDiskArrayFullyBuilt = (state, sizeBits) =>
   (state.intro?.disksBuiltTotal?.[sizeBits] ?? 0) >= DISK_ARRAY_LADDER_CAP
 
@@ -3465,7 +3477,7 @@ export const canDepositDiskToDataLake = (state, sizeBits) => {
   const lake = getDataLakeTier(state, tierIndex)
   if ((lake.deposits[subSize] ?? 0) >= DISK_ARRAY_LADDER_CAP) return false
   const nextDeposited = getDataLakeDepositedUnits(tierIndex)(state) + subSize
-  return nextDeposited <= getDataLakeCapacity()
+  return nextDeposited <= getDataLakeCapacity(state, tierIndex)
 }
 
 export const depositDiskToDataLake = sizeBits => state => {
@@ -3545,6 +3557,49 @@ const getDataLakeSubSizeStep = (tierIndex, subSize) =>
 // (formatDiskSize) rather than a bare unitless number.
 export const getDataLakeUnitBits = tierIndex =>
   getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[0]))
+
+// Doubling a lake's own capacity (see getDataLakeCapacity above) costs its CURRENT capacity,
+// converted from an abstract unit count into real bits via getDataLakeUnitBits — the same "spend
+// the current value to double it" shape Memory's own Sacrifice uses, and the same currency Disks
+// themselves are priced/sized in (see docs/DESIGN_HISTORY.md), not a bare unit count.
+export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
+  getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
+
+export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
+  if (isDataLakeCapacityMaxed(state, tierIndex)) return false
+  return (state.intro?.bits ?? 0) >= getDataLakeCapacityDoublingCost(state, tierIndex)
+}
+
+// Gated by the same forced priority order every other Byte Foundry milestone action follows —
+// available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute)
+// currently is, same rank as Memory's own Sacrifice (isMemoryCapacityUpgradeAvailable) — the two
+// sit at the same bottom rank rather than competing with each other.
+export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
+  isDataLakeCapacityDoublingAvailable(state, tierIndex) &&
+  !isDiskFillAvailable(state) &&
+  !isBandwidthAvailable(state) &&
+  !isDiskBuildAvailable(state) &&
+  !isComputeUpgradeAvailable(state)
+
+export const doubleDataLakeCapacity = tierIndex => state => {
+  if (!isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)) return state
+  const cost = getDataLakeCapacityDoublingCost(state, tierIndex)
+  const lake = getDataLakeTier(state, tierIndex)
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      bits: state.intro.bits - cost,
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [tierIndex]: {
+          ...lake,
+          capacityLevel: getDataLakeCapacityLevel(state, tierIndex) + 1,
+        },
+      },
+    },
+  }
+}
 
 // How many live Booster transfers (see startBoosterTransfer/tickDataLakeTransfers) tier
 // `tierIndex`'s lake can run at once — one concurrency slot per completed sub-size Disk array

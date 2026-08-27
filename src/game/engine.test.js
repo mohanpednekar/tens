@@ -220,7 +220,13 @@ import {
   getDiskReadCacheFlushSeconds,
   canDepositDiskToDataLake,
   depositDiskToDataLake,
+  doubleDataLakeCapacity,
   getDataLakeCapacity,
+  getDataLakeCapacityDoublingCost,
+  getDataLakeCapacityLevel,
+  isDataLakeCapacityDoublingAvailable,
+  isDataLakeCapacityDoublingTurnAvailable,
+  isDataLakeCapacityMaxed,
   startBoosterTransfer,
   canStartBoosterTransfer,
   getDataLakeTierIndex,
@@ -238,7 +244,7 @@ import {
   tickIntroAutoInvest,
   tickIntroProduction,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_TIER_COUNT, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_TIER_COUNT, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -8451,12 +8457,16 @@ describe('Data Lakes', () => {
     expect(depositDiskToDataLake(kb1)(state)).toBe(state)
   })
 
-  it('staged Data Lake capacity: a lake\'s effective cap is DISK_ARRAY_LADDER_CAP once only the ×1 array is complete, 11× that once the ×10 array is also complete, 111× that (the full cap) once the ×100 array is also complete', () => {
-    // Only the ×1 (kb1) array complete — depositing kb10/kb100 disks stays blocked, capping this
-    // lake's deposited total at DISK_ARRAY_LADDER_CAP regardless of how many kb10/kb100 disks exist.
+  it('staged Data Lake capacity: the array-completion gate opens each sub-size independently of the lake\'s own capacity level', () => {
+    // capacityLevel maxed so the level-based purchasable cap (see below) never binds here —
+    // isolates the PHYSICAL array-completion gate from that separate ladder.
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 10, [kb10]: 10, [kb100]: 10 },
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL },
+      },
     })
     expect(canDepositDiskToDataLake(state, kb1)).toBe(true)
     expect(canDepositDiskToDataLake(state, kb10)).toBe(false)
@@ -8465,31 +8475,111 @@ describe('Data Lakes', () => {
     expect(getDataLakeDepositedUnits(1)(state)).toBe(10)
     expect(canDepositDiskToDataLake(state, kb1)).toBe(false) // sub-slot at DISK_ARRAY_LADDER_CAP
 
-    // The ×10 array also completes — its sub-slot opens up, raising the effective cap to 110.
+    // The ×10 array also completes — its sub-slot opens up.
     state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb10]: DISK_ARRAY_LADDER_CAP } })
     expect(canDepositDiskToDataLake(state, kb10)).toBe(true)
     expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
     for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb10)(state)
     expect(getDataLakeDepositedUnits(1)(state)).toBe(110)
-
-    // The ×100 array also completes — the lake reaches its full 1110 cap.
-    state = withIntro(state, { disksBuiltTotal: { ...state.intro.disksBuiltTotal, [kb100]: DISK_ARRAY_LADDER_CAP } })
-    expect(canDepositDiskToDataLake(state, kb100)).toBe(true)
-    for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb100)(state)
-    expect(getDataLakeDepositedUnits(1)(state)).toBe(1110)
   })
 
-  it('getDataLakeCapacity is fixed at DISK_ARRAY_LADDER_CAP × 111 regardless of tier', () => {
-    expect(getDataLakeCapacity()).toBe(1110)
+  it('getDataLakeCapacityLevel/getDataLakeCapacity default to level 0 (1 unit) for a fresh lake', () => {
+    const state = createInitialGameState()
+    expect(getDataLakeCapacityLevel(state, 1)).toBe(0)
+    expect(getDataLakeCapacity(state, 1)).toBe(1)
+    // Cost is the lake's abstract unit-count capacity converted into real bits via its own
+    // per-unit face value (getDataLakeUnitBits(1) = the ×1/1 KB disk's own size, 8000 bits) — the
+    // same currency Disks themselves are priced in, not a bare unit count.
+    expect(getDataLakeCapacityDoublingCost(state, 1)).toBe(1 * 8000)
+  })
+
+  it('isDataLakeCapacityDoublingAvailable/TurnAvailable gate on affordability and the forced priority order', () => {
+    // Not affordable — 1 bit short of the starting 1 * 8000 = 8000 bit cost.
+    expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { bits: 7_999, ...noOtherUpgradesLeft }), 1)).toBe(false)
+    // Affordable, and nothing ranked above it (Disk Fill/Bandwidth/Disk Build/Compute) is available.
+    const diskLadderExhausted = { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP } }
+    const affordable = withIntro(createInitialGameState(), { bits: 8_000, ...noOtherUpgradesLeft, ...diskLadderExhausted })
+    expect(isDataLakeCapacityDoublingAvailable(affordable, 1)).toBe(true)
+    expect(isDataLakeCapacityDoublingTurnAvailable(affordable, 1)).toBe(true)
+    // A redeemable full disk (Disk Fill) outranks it — same forced-priority chain Sacrifice uses.
+    const diskFillBlocks = withIntro(createInitialGameState(), { bits: 8_000, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    expect(isDiskFillAvailable(diskFillBlocks)).toBe(true)
+    expect(isDataLakeCapacityDoublingTurnAvailable(diskFillBlocks, 1)).toBe(false)
+  })
+
+  it('doubleDataLakeCapacity is a no-op below cost or while a higher-priority action is available', () => {
+    const tooPoor = withIntro(createInitialGameState(), { bits: 7_999, ...noOtherUpgradesLeft })
+    expect(doubleDataLakeCapacity(1)(tooPoor)).toBe(tooPoor)
+
+    const blockedByDiskFill = withIntro(createInitialGameState(), { bits: 8_000, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    expect(doubleDataLakeCapacity(1)(blockedByDiskFill)).toBe(blockedByDiskFill)
+  })
+
+  it('doubleDataLakeCapacity spends the lake\'s current capacity in bits and doubles its level/capacity', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 8_000,
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      ...noOtherUpgradesLeft,
+    })
+    const after = doubleDataLakeCapacity(1)(state)
+    expect(after.intro.bits).toBe(0)
+    expect(getDataLakeCapacityLevel(after, 1)).toBe(1)
+    expect(getDataLakeCapacity(after, 1)).toBe(2)
+    expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(2 * 8000)
+    // Doesn't disturb other lakes.
+    expect(getDataLakeCapacityLevel(after, 2)).toBe(0)
+  })
+
+  it('doubleDataLakeCapacity hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — capacity never exceeds 1,024 units', () => {
+    let state = withIntro(createInitialGameState(), {
+      bits: Number.MAX_SAFE_INTEGER,
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      ...noOtherUpgradesLeft,
+    })
+    for (let i = 0; i < DATA_LAKE_CAPACITY_MAX_LEVEL; i += 1) {
+      state = doubleDataLakeCapacity(1)(state)
+    }
+    expect(getDataLakeCapacityLevel(state, 1)).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)
+    expect(getDataLakeCapacity(state, 1)).toBe(1024)
+    expect(isDataLakeCapacityMaxed(state, 1)).toBe(true)
+    expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false)
+    expect(doubleDataLakeCapacity(1)(state)).toBe(state) // no-op once maxed
+  })
+
+  it('a lake\'s own capacity level hard-caps the total below the Disk arrays\' own 1,110 physical maximum', () => {
+    let state = withIntro(createInitialGameState(), {
+      disks: { [kb1]: 10, [kb10]: 10, [kb100]: 10 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL },
+      },
+    })
+    expect(getDataLakeCapacity(state, 1)).toBe(1024)
+    for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb1)(state)
+    for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb10)(state)
+    for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb100)(state)
+    // 10×1 + 10×10 + 10×100 would total 1,110 if unrestricted, but the 1,024 level cap stops the
+    // ×100 place one disk short: 110 + 9×100 = 1,010, then the 10th ×100 deposit would push the
+    // total to 1,110 > 1,024, so it's blocked and that disk stays undeposited.
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 10, 10: 10, 100: 9 })
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(1010)
+    expect(state.intro.disks[kb100]).toBe(1)
+    expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
   })
 
   it('startBoosterTransfer decomposes deposits correctly after a partial spend, largest-denomination-first', () => {
-    // tier01 bumped past level 1 so kb1 disks aren't currently redeemable — otherwise Disk Fill
-    // would outrank the Data Lake deposit path (same reasoning as the tickDiskAutoDeposit tests
-    // above).
+    // capacityLevel maxed so a full 10-unit ×1 sub-slot deposit isn't blocked by the much smaller
+    // starting capacity (1 unit at level 0); tier01 bumped past level 1 so kb1 disks aren't
+    // currently redeemable — otherwise Disk Fill would outrank the Data Lake deposit path (same
+    // reasoning as the tickDiskAutoDeposit tests above).
     let state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
       disks: { [kb1]: 10 },
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL },
+      },
     })
     for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb1)(state)
     expect(getDataLakeDepositedUnits(1)(state)).toBe(10)

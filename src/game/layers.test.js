@@ -13,6 +13,7 @@ import {
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  DATA_LAKE_CAPACITY_MAX_LEVEL,
   DATA_LAKE_TIER_COUNT,
   DATA_LAKE_TIER_LABELS,
   COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
@@ -342,8 +343,9 @@ describe('constants', () => {
     ])
   })
 
-  it('DATA_LAKE constants define 10 KB…QB lakes', () => {
+  it('DATA_LAKE constants define 10 KB…QB lakes with a level-10 hard cap on doubling capacity', () => {
     expect(DATA_LAKE_TIER_COUNT).toBe(10)
     expect(DATA_LAKE_TIER_LABELS).toEqual(['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB'])
+    expect(DATA_LAKE_CAPACITY_MAX_LEVEL).toBe(10)
   })
 })

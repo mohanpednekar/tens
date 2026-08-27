@@ -3074,6 +3074,49 @@ ${boosterLabel}`" phrase moved from the row's visible text (now the terser "`${l
 ${boosterLabel}`", e.g. "KB → Cores") into a `title` attribute on the lake name, so a screen-reader
 user or anyone hovering still gets the full sentence without it crowding the compact grid row.
 
+### Data Lake capacity doubling reinstated, redesigned as a level-based ladder with a hard cap
+
+The removal above lasted one PR cycle. The maintainer's follow-up request, verbatim: "Capacity
+still doubles starting from 1KB to 1024 KB for kb lake" — i.e. bring the doubling lever back, but
+not in its original shape (start at a smaller, round `999`-unit-adjacent value, uncapped doubling).
+Instead: **level 0 = 1 unit** ("1 KB" for the KB lake, in that lake's own Byte-scale denomination),
+doubling per purchase, **permanently hard-capped at level 10 = 1,024 units** ("1024 KB"). This
+mirrors an even earlier proposal from the same session (superseded at the time in favor of the
+now-also-superseded fixed-cap design) — "Data Lake Lvl 0 is 1 KB for KB Lake... Highest level would
+be 1024 KB" — which had itself been set aside pending the "auto-derive the cap from the Disk array"
+simplification; that simplification is what got reverted here, restoring the level-based design that
+predated it.
+
+The key design question this reversal raised: does the new level cap *replace* the physical
+per-sub-slot ceiling the previous PR introduced (`DISK_ARRAY_LADDER_CAP`, staging a lake's ceiling
+at 10 → 110 → 1,110 as each of the 3 sub-size Disk arrays completes), or *layer on top of* it? The
+two are answering different questions — "how much can a completed Disk array ever physically
+produce" vs. "how much of that has the player actually paid to be able to bank" — so they coexist:
+`canDepositDiskToDataLake` now enforces BOTH, and since the new hard cap (1,024) sits below the
+physical ceiling (1,110), the level cap is always the one that actually binds in practice. A fully
+built pool (all three sub-arrays complete) at max level can still never deposit a 10th ×100 disk —
+10 (×1) + 100 (×10) + 900 (9×100) = 1,010 already leaves only 14 units of headroom under the 1,024
+cap, one short of the 100 a 10th ×100 disk would need. This is not a bug: 1,024 is a deliberately
+*tighter*, round, binary ceiling the maintainer explicitly chose over the array's own looser physical
+maximum — the same instinct Memory's own capacity cap (`INTRO_CAPACITY_CAP_BITS`, exactly 1 MiB)
+already follows elsewhere in this codebase, a clean power-of-two rather than whatever number falls
+out of an unrelated mechanic's own math.
+
+The cost formula keeps the same shape as the original (now-removed) `doubleDataLakeCapacity`: spend
+the lake's own CURRENT capacity, converted from an abstract unit count into real bits via
+`getDataLakeUnitBits`, to double it — the "spend the current value to double it" pattern Memory's
+own Sacrifice also uses. Because the starting capacity is now much smaller (1 unit vs. the old
+design's much larger starting value), the first doubling purchase is proportionately cheap (8,000
+bits for the KB lake, vs. what would previously have been a much larger number) — intentional, since
+a level-0 lake would otherwise be nearly useless (a single deposited disk already fills it).
+
+`DataLakePanel`'s CSS Grid (introduced in the removal PR two cycles ago, kept here) gained a 5th
+column, "Capacity," stacking the current capacity figure over a compact "⚡ ×2"
+`DoubleCapacityButton` — hidden entirely once `isDataLakeCapacityMaxed` (rather than shown-but-
+disabled), matching how Memory's own Sacrifice control disappears at its hard cap rather than
+sitting permanently greyed out. The panel's `actions` prop, dropped in the removal PR as unused,
+came back for this same reason — it wires the button's `doubleDataLakeCapacity(tierIndex)` call.
+
 ### Disk/Cache fill speeds tied to Memory bandwidth, not flat/hardcoded rates
 
 Requested directly: "Disk fills work at twice the memory bandwidth when filling from cache. Cache
