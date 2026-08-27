@@ -102,15 +102,14 @@ const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
 // Memory display uses BITS_PER_BYTE × 1000^n (B/KB/MB/…) — same as formatBitsInNearestUnit.
 // Default capacity-cap sweep: freeze Sacrifice at these bit values (plus unlimited growth). Pool 1's
-// generator now has its own hard ceiling (INTRO_CAPACITY_CAP_BITS, layers.js) that real Sacrifice can
-// never grow past regardless of this flag — so a sweep point at or above that hard cap behaves
-// identically to `unlimited`, and only points strictly below it (stopping earlier, to trade Storage
-// growth for more Compute farming time) are actually distinct strategies. Only two such points exist
-// for pool 1: the Compute-unlock floor itself, and the hard cap.
+// generator has a hard ceiling (INTRO_CAPACITY_CAP_BITS) that real Sacrifice can never grow past —
+// so a sweep point at or above that hard cap behaves identically to `unlimited`. Under Data Lakes,
+// higher capacity unlocks larger Disk arrays → more lake deposits → more Booster purchases; early
+// stop at the Compute-unlock floor is Storage-poor (fewer disks/cores), not "Compute-favoring".
 const DEFAULT_CAPACITY_CAPS_BITS = [
-  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, // stop early at the Compute-unlock floor (Compute-favoring)
-  INTRO_CAPACITY_CAP_BITS, // grow all the way to pool 1's hard cap (Storage-favoring, == unlimited)
-  null, // unlimited — current grow-forever bot; same result as the hard cap above under real Sacrifice
+  INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, // stop early at the Compute-unlock floor (Storage-poor)
+  INTRO_CAPACITY_CAP_BITS, // grow to pool 1's hard cap (Storage-rich, == unlimited)
+  null, // unlimited — same result as the hard cap under real Sacrifice
 ]
 
 function formatCapacityLabel(capacityBits) {
@@ -192,8 +191,8 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   // Queue Capacity before the bar is full when Invest can't take the next Memory spend (or while
   // still climbing to the conversion unlock) — tickQueuedCapacityUpgrade / tickGame then fires it
   // on full Memory, erasing all Compute tokens as the queued-Sacrifice penalty.
-  // Under a capacity cap, stop queueing/Sacrificing once the cap is reached so Core cost stays
-  // fixed (Storage vs Compute tradeoff sweep — see --capacity-cap).
+  // Under a capacity cap, stop queueing/Sacrificing once the cap is reached so Disk ladder size
+  // (and thus Data Lake deposit throughput) stays fixed for the Storage vs Compute tradeoff sweep.
   if (
     canGrowCapacity &&
     !(s.intro.capacityUpgradeQueued ?? false) &&
@@ -520,9 +519,11 @@ if (runCapacitySweep || onlyCapacity) {
     'Freeze Sacrifice once Memory capacity reaches each listed bit value (climb normally until then).',
   )
   emit(
-    'Higher caps allow larger Disks (faster early tiers) but each Core costs a full Memory fill —',
+    'Higher caps unlock larger Disk arrays → more Data Lake deposits → more Booster purchases',
   )
-  emit('worse Core farming / Boost uptime. `unlimited` is the grow-forever baseline bot.')
+  emit(
+    '(Cores/Nodes/…). Early stop is Storage-poor under Data Lakes. `unlimited` matches the hard-cap baseline.',
+  )
   emit('')
   emit(
     '| Capacity cap | End capacity | Foundry | Main → Googol | Total | Cores ever | Disks built | Speed Ups | Overclock Δ | Money at Googol |',
