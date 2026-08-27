@@ -3,6 +3,7 @@ import {
   formatBitsInNearestUnit,
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
+  getDataLakeCapacity,
   getOverclockRequirement,
   getSpeedUpRequirement,
   getTierTickspeedAutobuyerMilestone,
@@ -25,8 +26,6 @@ import {
   COMPUTE_FLOPS_REVEAL_PP,
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
   CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
-  DATA_LAKE_CAPACITY,
-  DATA_LAKE_SLOT_MAX,
   DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
@@ -322,18 +321,13 @@ const InfoPage = () => {
             (redeeming always comes first).
           </li>
           <li>
-            Each lake's deposit buffer stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
-            once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
-            built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too — shown
-            on the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
-            these raw unit counts.
-          </li>
-          <li>
-            A lake's own capacity can also be doubled directly — spend its current capacity,
-            converted into the same currency Disks are priced in and drawn from Memory Bits (only
-            once Memory is full, same as Sacrifice), to double it — the same "spend the current
-            value to double it" shape Memory's own Sacrifice uses — stacking on top of the staged
-            progression above rather than replacing it.
+            Each lake's deposit buffer stages as its three sub-size arrays complete:{' '}
+            {DISK_ARRAY_LADDER_CAP} once only the smallest is built, {DISK_ARRAY_LADDER_CAP * 11}{' '}
+            once the next size up is also built, the full {getDataLakeCapacity()} once the largest
+            of the three is built too — shown on the Data Lake panel itself in the same Byte-scale
+            (KB/MB/GB) figures Disks use, not these raw unit counts. Each sub-size's own cap is
+            simply {DISK_ARRAY_LADDER_CAP} — a lake can never need to hold more of a denomination
+            than a single array of that size can ever physically produce.
           </li>
           <li>
             Starting the nth Booster ever started at a lake (whether already granted or still

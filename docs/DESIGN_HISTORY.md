@@ -3020,6 +3020,54 @@ needed to explicitly exhaust the Disk ladder (`disksBuiltTotal` maxed at every a
 keep isolating the behavior actually under test, rather than incidentally relying on being too poor
 to afford a Disk Build.
 
+### Data Lake capacity doubling removed: the cap was always a fixed physical ceiling, not a lever
+
+The capacity-doubling mechanic above (`doubleDataLakeCapacity`, `DATA_LAKE_SLOT_MAX` = 9,
+`DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2×) was removed at the maintainer's explicit request: "Data
+lake can only accept what is in Disk array so automatically the cap becomes 10 disks of each size
+instead of artificially mentioning a specific cap like we tried 9 before." The observation is
+correct and, in hindsight, was already implied by the mechanic's own array-completion gate: a lake's
+sub-slot can never hold more of a denomination than the corresponding Disk array has ever produced,
+and that array permanently stops growing at exactly `DISK_ARRAY_LADDER_CAP` (10) disks
+(`isDiskArrayFullyBuilt`). Introducing a *separate*, smaller, purchasable cap (`DATA_LAKE_SLOT_MAX` =
+9) on top of that physical ceiling added a whole standalone economy lever — its own cost formula, its
+own forced-priority-order rank (tied with Memory's Sacrifice), its own UI button, its own doubling
+sequence (9, 18, 36, …) — to defend against a limit that the Disk array itself already enforced more
+tightly. Once a lake's sub-slot capacity was raised to match the Disk array's own cap (10) directly,
+there was nothing left for a doubling purchase to do: raising the cap any further than 10 could never
+matter, since a sub-slot can never hold an 11th disk's worth of that denomination in the first place.
+
+The fix deletes the entire mechanic rather than reworking it: `doubleDataLakeCapacity`,
+`getDataLakeCapacityDoublingCost`, `isDataLakeCapacityDoublingAvailable`,
+`isDataLakeCapacityDoublingTurnAvailable`, `DATA_LAKE_SLOT_MAX`, and
+`DATA_LAKE_CAPACITY_DOUBLING_STEP` are all gone; `getDataLakeSlotMax(state, tierIndex)` (a per-lake,
+possibly-doubled value) is replaced by `getDataLakeCapacity()` taking **no arguments at all** — every
+lake's cap is now the same fixed `DISK_ARRAY_LADDER_CAP × DATA_LAKE_SUB_SIZE_TOTAL` (10 × 111 =
+1,110), since there is no more per-lake state to vary it. The staged 9 → 99 → 999 progression as each
+sub-size array completes becomes 10 → 110 → 1,110 — same shape, values simply reflect the real
+per-array cap instead of an arbitrary smaller one. `decomposeDataLakeDeposits`'s greedy
+largest-denomination-first digit decomposition (used to re-derive a lake's per-sub-size breakdown
+after a spend) still needs its cap to be `>= 9` to stay exact for every total, per the correctness
+argument in the prior entry ("Data Lake refill gating") — 10 clears that floor as comfortably as 9
+did, verified by brute-force testing every reconstructable total in `[0, 1110]` before landing this
+change, so no new decomposition bug was introduced by simply raising the constant.
+
+**The `DataLakePanel` UI was rewritten in the same change**, prompted by separate but related
+feedback: "nicely do the formatting and alignment for Data lake related component. Looks like an
+afterthought." The prior layout was one flex row per lake concatenating every stat into a single
+string, wrapping unpredictably as the lake count and figures grew. The rewrite uses a CSS Grid
+(`grid-template-columns: minmax(0,1fr) auto auto auto`) with an explicit header row (Lake /
+Deposited / Bought / Next) so columns align across every lake row — the same `display: grid`
+convention `MainPage`'s `TierLine` already established elsewhere in the codebase. Each lake's cells
+are wrapped in a `styled.div\`display: contents;\`` row component so they become direct children of
+the grid (and therefore share its column tracks) without adding an extra wrapping box of their own —
+the same relationship a `<tr>` has to a `<table>`, reimplemented in CSS Grid since this isn't a real
+`<table>`. This also dropped the panel's `actions` prop (now unused, since the doubling button it
+existed for is gone) — `DataLakePanel` takes just `{ state, bare }`. The long "`${label} Data Lake →
+${boosterLabel}`" phrase moved from the row's visible text (now the terser "`${label} →
+${boosterLabel}`", e.g. "KB → Cores") into a `title` attribute on the lake name, so a screen-reader
+user or anyone hovering still gets the full sentence without it crowding the compact grid row.
+
 ### Disk/Cache fill speeds tied to Memory bandwidth, not flat/hardcoded rates
 
 Requested directly: "Disk fills work at twice the memory bandwidth when filling from cache. Cache

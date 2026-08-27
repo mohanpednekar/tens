@@ -3372,7 +3372,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    expect(screen.getByText(/KB Data Lake.*Cores/i)).toBeInTheDocument()
+    expect(screen.getByText(/^KB.*Cores$/i)).toBeInTheDocument()
     // `bare` mode (see components/DataLakePanel) skips its own StatCard wrapper — there is no
     // separately-labeled "Data Lakes" region; it renders as the last sub-section of the same
     // PoolCard as Memory/Storage above it.

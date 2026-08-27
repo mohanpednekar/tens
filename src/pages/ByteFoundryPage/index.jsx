@@ -549,7 +549,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <DiskArrayRow key={size} actions={actions} size={size} state={state} />
             ))}
 
-            <DataLakePanel actions={actions} state={state} bare />
+            <DataLakePanel state={state} bare />
           </>
         )}
       </PoolCard>

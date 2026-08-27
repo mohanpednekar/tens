@@ -186,17 +186,21 @@ sections above). There is no separate StorageSummary chip row and no Foundry Mem
 split — every shown size's full interactive DiskArrayRow already lives on this page.
 
 Below the disk-array rows, `components/DataLakePanel` renders with `bare` set (`<DataLakePanel
-state={state} bare />`) — instead of its own default `StatCard` wrapper, `bare` mode renders a
-`BareDivider` (`hr`, same style as `PoolCard`'s own `Divider`) followed directly by the lake list,
-so it reads as the last sub-section of the same `PoolCard` rather than a second card stacked below
-it. Returns `null` entirely (skipping even the divider) once nothing is visible yet — see
-`getVisibleLakeTierIndexes` in `components/DataLakePanel/index.jsx` (a lake tier shows once it has
-either a nonzero deposit or at least one Booster already purchased). Each visible row reads
-`"{label} Data Lake → {boosterLabel}"` (`aria-label="Data Lakes"` only applies to the non-`bare`,
-standalone-card rendering some future caller might use — `bare` mode has no callers besides this
-page today) paired with a stats line — deposited/bought counts, next purchase cost, and how many
-more purchases the current deposit alone can fund in a row (see docs/ECONOMY_REFERENCE.md's "Data
-Lakes" section for the underlying mechanic).
+state={state} bare />` — no `actions` prop, since the panel has no purchasable action of its own any
+more) — instead of its own default `StatCard` wrapper, `bare` mode renders a `BareDivider` (`hr`,
+same style as `PoolCard`'s own `Divider`) followed directly by the lake grid, so it reads as the last
+sub-section of the same `PoolCard` rather than a second card stacked below it. Returns `null`
+entirely (skipping even the divider) once nothing is visible yet — see `getVisibleLakeTierIndexes`
+in `components/DataLakePanel/index.jsx` (a lake tier shows once it has either a nonzero deposit or
+at least one Booster already purchased). The lake list is a CSS Grid (`LakeGrid`,
+`grid-template-columns: minmax(0,1fr) auto auto auto`) with an explicit Lake/Deposited/Bought/Next
+header row, so figures align across every lake row rather than each wrapping independently as a
+concatenated string; each lake's cells are wrapped in a `display: contents` `LakeRow` so they become
+direct grid children (the same relationship a `<tr>` has to a `<table>`). Each row's visible name is
+the terser `"{label} → {boosterLabel}"` (e.g. "KB → Cores"), with the fuller `"{label} Data Lake →
+{boosterLabel}"` phrase moved into a `title` attribute instead of crowding the compact grid cell; the
+other three columns show deposited/capacity, Boosters bought, and the next purchase's cost (see
+docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic).
 
 Below Build (and, after Boosts unlocks, below Memory ×2 when it has moved under the disk section),
 once `isIntroConversionUnlocked(state)`, a **transfer-block row**

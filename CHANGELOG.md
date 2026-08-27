@@ -20,13 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
   future `android/` / `ios/` build artifacts. Native platform projects and
   `mobile-build.yml` are deferred to a later slice of #70.
-- **Data Lake capacity doubling** — each lake's own capacity can now be doubled directly, at a cost
-  in Memory Bits equal to its current capacity converted into the same currency Disks are priced in
-  (the same "spend the current value to double it" shape Memory's own Sacrifice already uses).
-  Stacks on top of the existing staged 9 → 99 → 999 array-completion progression rather than
-  replacing it — a sub-slot still can't accept any deposit until its own disk array is complete.
-  Gated by the same forced priority order as every other Byte Foundry milestone action. Rendered as
-  a compact "⚡ ×2 Capacity" button per lake row.
 - **Dev Mode** — a local, dev-build-only sandbox (More → Dev Mode, rendered only when
   `import.meta.env.DEV`; absent from the production build) for seeding and experimenting with game
   state on a save entirely separate from any real player slot. Toggle it on/off without touching
@@ -38,10 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fields you're changing) onto the current dev save.
 - **Data Lakes + Booster transfers** — ten storage-tier lakes (KB … QB). A lake never itself banks a
   spendable reserve — past a small prepaid deposit buffer (below), it's a throughput pipe onto the
-  live Disk inventory. Depositing Disks (`9×1 + 9×10 + 9×100` of that denomination) into the buffer
+  live Disk inventory. Depositing Disks (`10×1 + 10×10 + 10×100` of that denomination) into the buffer
   requires that size's disk array to be COMPLETELY built (all 10 disks ever built), which naturally
-  stages the buffer's cap: 9 once only the smallest sub-size's array is complete, 99 once the next
-  size up is also complete, the full 999 once the largest of the three is complete too. Starting a
+  stages the buffer's cap: 10 once only the smallest sub-size's array is complete, 110 once the next
+  size up is also complete, the full 1,110 once the largest of the three is complete too — the same
+  fixed per-array cap a Disk array itself can never exceed, so the buffer needs no separate limit of
+  its own. Starting a
   Booster on the Boosters screen costs escalating lake units (the nth Booster ever started, counting
   ones still in flight, costs n) — spent out of the deposit buffer FIRST (instant), then any
   remaining cost is sourced live from built Disks and transferred into the lake over time, at 10×
@@ -77,13 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
 - **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
   the **Bytes** pool (matching the buy button), not Bits.
-- **Data Lake capacity-doubling cost was ~8,000× too cheap** — it spent the lake's abstract unit
-  count (e.g. 999) directly out of Memory Bits instead of converting it into real bits first,
-  making the action trivially affordable rather than sitting at the same cost weight as Memory's
-  own Sacrifice. The cost is now the unit count multiplied by that lake's own per-unit bit value
-  (8,000 bits for the KB lake), matching what a Disk of that size is actually worth.
 
 ### Changed
+- **Data Lake panel redesigned; per-lake deposit cap simplified to the Disk array's own limit** —
+  `DataLakePanel` is now a proper CSS Grid with an explicit Lake/Deposited/Bought/Next header row
+  instead of an unaligned, single-flex-row-per-lake layout. Each sub-slot's deposit cap is now a
+  fixed `DISK_ARRAY_LADDER_CAP` (10) rather than a separate, smaller, purchasable value (9,
+  doublable via a "capacity doubling" action) — a lake can never need to hold more of a
+  denomination than one completed Disk array of that size could ever produce, so the earlier
+  doubling mechanic is removed entirely as unneeded complexity.
 - **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or
   unbounded rates** — a fresh disk build now takes exactly the time to fill it at 1x Memory
   bandwidth (was a flat "1 second per real KB," decoupled from Invest/Compute Boost); a disk filling
