@@ -49,14 +49,12 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   `tickDiskAutoDeposit` in `tickGame`) → Boosts. Does **not** enable permanent auto-merge.
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
-  sizes (faster early-tier redemption) but each Compute Core is bought from Data Lake deposits
-  (escalating lake cost), so Core farming and Boost uptime get worse at higher capacity. Pool 1's
-  generator now has its own hard ceiling
-  (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never grow past regardless of this
-  flag, so a requested cap at or above that value behaves identically to `unlimited`. Default sweep:
-  `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (stop early, Compute-favoring) / `INTRO_CAPACITY_CAP_BITS`
-  (grow to the hard cap, Storage-favoring) / `unlimited` (same result as the hard cap in practice).
-  Reports end capacity, cores ever earned, and disks built alongside Foundry / Main / total times.
+  arrays → more Data Lake deposits → more Booster purchases (and typically faster prestige). Early
+  stop at `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` is Storage-poor under Data Lakes. Pool 1's generator
+  has its own hard ceiling (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never
+  grow past regardless of this flag, so a requested cap at or above that value behaves identically
+  to `unlimited`. Default sweep: early-stop floor / hard cap / `unlimited`. Reports end capacity,
+  cores ever earned, and disks built alongside Foundry / Main / total times.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
   `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
