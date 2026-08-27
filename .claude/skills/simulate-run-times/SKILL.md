@@ -45,17 +45,16 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → **queue Capacity** when
   Invest can't take the next spend (or while climbing to conversion unlock) →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
-  → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Does **not** enable
-  permanent auto-claim / auto-merge.
+  → convert → **Data Lake Booster buys** (`startBoosterTransfer`; deposits via
+  `tickDiskAutoDeposit` in `tickGame`) → Boosts. Does **not** enable permanent auto-merge.
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
-  sizes (faster early-tier redemption) but each Compute Core costs a full Memory fill, so Core
-  farming and Boost uptime get worse. Pool 1's generator now has its own hard ceiling
-  (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never grow past regardless of this
-  flag, so a requested cap at or above that value behaves identically to `unlimited`. Default sweep:
-  `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (stop early, Compute-favoring) / `INTRO_CAPACITY_CAP_BITS`
-  (grow to the hard cap, Storage-favoring) / `unlimited` (same result as the hard cap in practice).
-  Reports end capacity, cores ever earned, and disks built alongside Foundry / Main / total times.
+  arrays → more Data Lake deposits → more Booster purchases (and typically faster prestige). Early
+  stop at `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` is Storage-poor under Data Lakes. Pool 1's generator
+  has its own hard ceiling (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never
+  grow past regardless of this flag, so a requested cap at or above that value behaves identically
+  to `unlimited`. Default sweep: early-stop floor / hard cap / `unlimited`. Reports end capacity,
+  cores ever earned, and disks built alongside Foundry / Main / total times.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
   `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
@@ -88,7 +87,7 @@ node .claude/skills/simulate-run-times/simulate.mjs --career 0 1 5 10
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 100 10000
 node .claude/skills/simulate-run-times/simulate.mjs --pp 0 --career 0 1
 node .claude/skills/simulate-run-times/simulate.mjs 0 100 10000      # bare numbers = PP sweep (legacy)
-node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # Compute floor/hard cap/unlimited
+node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap   # early-stop floor/hard cap/unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --capacity-cap 4194304 8388608 unlimited
 node .claude/skills/simulate-run-times/simulate.mjs --strategy-out /tmp/run.md
 ```
