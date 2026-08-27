@@ -160,18 +160,6 @@
       "source_location": "L771"
     },
     {
-      "id": "src_game_engine_buyglobaltickspeedmultiplier",
-      "label": "buyGlobalTickspeedMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "run-simulation.mjs",
-      "file_type": "code",
-      "norm_label": "buyglobaltickspeedmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L4532"
-    },
-    {
       "id": "src_game_engine_getoverclockrequirement",
       "label": "getOverclockRequirement()",
       "_callable": true,
@@ -242,54 +230,6 @@
       "norm_label": "collapsedisclosure()",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L624"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatbonusormultiplier",
-      "label": "formatBonusOrMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatbonusormultiplier()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L859"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatbonuspercent",
-      "label": "formatBonusPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatbonuspercent()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L843"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
-      "label": "formatGlobalTickspeedBonusPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatglobaltickspeedbonuspercent()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L851"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatrate",
-      "label": "formatRate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatrate()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L839"
     },
     {
       "id": "e2e_data_lake_e2e_seeddatalakesave",
@@ -1252,6 +1192,18 @@
       "source_location": "L291"
     },
     {
+      "id": "src_game_engine_buyglobaltickspeedmultiplier",
+      "label": "buyGlobalTickspeedMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "tickGame",
+      "file_type": "code",
+      "norm_label": "buyglobaltickspeedmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L4532"
+    },
+    {
       "id": "src_game_engine_buytickspeedmultiplier",
       "label": "buyTickspeedMultiplier()",
       "_callable": true,
@@ -1288,18 +1240,6 @@
       "source_location": "L5180"
     },
     {
-      "id": "src_game_engine_countglobaltickspeedmilestones",
-      "label": "countGlobalTickspeedMilestones()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "countglobaltickspeedmilestones()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L827"
-    },
-    {
       "id": "src_game_engine_getautoprestigeattemptrate",
       "label": "getAutoPrestigeAttemptRate()",
       "_callable": true,
@@ -1310,30 +1250,6 @@
       "norm_label": "getautoprestigeattemptrate()",
       "source_file": "src/game/engine.js",
       "source_location": "L1284"
-    },
-    {
-      "id": "src_game_engine_geteffectivetiertickspeedseconds",
-      "label": "getEffectiveTierTickSpeedSeconds()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "geteffectivetiertickspeedseconds()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1380"
-    },
-    {
-      "id": "src_game_engine_getglobaltickspeedproductionmultiplier",
-      "label": "getGlobalTickspeedProductionMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getglobaltickspeedproductionmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L857"
     },
     {
       "id": "src_game_engine_getlasttierid",
@@ -1358,42 +1274,6 @@
       "norm_label": "getlasttierxptickspeedminconsumption()",
       "source_file": "src/game/engine.js",
       "source_location": "L893"
-    },
-    {
-      "id": "src_game_engine_getlasttierxptickspeedmultiplier",
-      "label": "getLastTierXpTickspeedMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getlasttierxptickspeedmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L885"
-    },
-    {
-      "id": "src_game_engine_getnextbytepowerprogressfraction",
-      "label": "getNextBytePowerProgressFraction()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getnextbytepowerprogressfraction()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1362"
-    },
-    {
-      "id": "src_game_engine_getoverclockmultiplier",
-      "label": "getOverclockMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getoverclockmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1268"
     },
     {
       "id": "src_game_engine_getprestigeproductionmultiplier",
@@ -1432,54 +1312,6 @@
       "source_location": "L1223"
     },
     {
-      "id": "src_game_engine_getspeedupmultiplier",
-      "label": "getSpeedUpMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getspeedupmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1234"
-    },
-    {
-      "id": "src_game_engine_gettickspeedmultiplierbasecost",
-      "label": "getTickspeedMultiplierBaseCost()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "gettickspeedmultiplierbasecost()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L721"
-    },
-    {
-      "id": "src_game_engine_gettickspeedmultipliercost",
-      "label": "getTickspeedMultiplierCost()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "gettickspeedmultipliercost()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L732"
-    },
-    {
-      "id": "src_game_engine_gettickspeedproductionmultiplier",
-      "label": "getTickspeedProductionMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "gettickspeedproductionmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L800"
-    },
-    {
       "id": "src_game_engine_gettierbulkquantity",
       "label": "getTierBulkQuantity()",
       "_callable": true,
@@ -1490,18 +1322,6 @@
       "norm_label": "gettierbulkquantity()",
       "source_file": "src/game/engine.js",
       "source_location": "L694"
-    },
-    {
-      "id": "src_game_engine_gettierproductionprogresspercent",
-      "label": "getTierProductionProgressPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "gettierproductionprogresspercent()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1404"
     },
     {
       "id": "src_game_engine_gettierquantitycost",
@@ -1586,42 +1406,6 @@
       "norm_label": "tickintroautoinvest()",
       "source_file": "src/game/engine.js",
       "source_location": "L2552"
-    },
-    {
-      "id": "src_game_layers_gettierbasetickspeedseconds",
-      "label": "getTierBaseTickSpeedSeconds()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "gettierbasetickspeedseconds()",
-      "source_file": "src/game/layers.js",
-      "source_location": "L62"
-    },
-    {
-      "id": "src_pages_mainpage_index_mainpage",
-      "label": "MainPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "mainpage()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L864"
-    },
-    {
-      "id": "src_pages_mainpage_index_progresspercent",
-      "label": "progressPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "progresspercent()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L832"
     },
     {
       "id": "src_game_engine_getautobuyerunlockmilestone",
@@ -5656,12 +5440,24 @@
       "source_location": "L482"
     },
     {
+      "id": "src_game_engine_countglobaltickspeedmilestones",
+      "label": "countGlobalTickspeedMilestones()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "countglobaltickspeedmilestones()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L827"
+    },
+    {
       "id": "src_game_engine_formatbytes",
       "label": "formatBytes()",
       "_callable": true,
       "_origin": "ast",
       "community": 85,
-      "community_name": "formatCurrency",
+      "community_name": "MainPage",
       "file_type": "code",
       "norm_label": "formatbytes()",
       "source_file": "src/game/engine.js",
@@ -5673,7 +5469,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 85,
-      "community_name": "formatCurrency",
+      "community_name": "MainPage",
       "file_type": "code",
       "norm_label": "formatcurrency()",
       "source_file": "src/game/engine.js",
@@ -5685,7 +5481,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 85,
-      "community_name": "formatCurrency",
+      "community_name": "MainPage",
       "file_type": "code",
       "norm_label": "formatmoneybalance()",
       "source_file": "src/game/engine.js",
@@ -5697,11 +5493,143 @@
       "_callable": true,
       "_origin": "ast",
       "community": 85,
-      "community_name": "formatCurrency",
+      "community_name": "MainPage",
       "file_type": "code",
       "norm_label": "formatscientific()",
       "source_file": "src/game/engine.js",
       "source_location": "L575"
+    },
+    {
+      "id": "src_game_engine_geteffectivetiertickspeedseconds",
+      "label": "getEffectiveTierTickSpeedSeconds()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "geteffectivetiertickspeedseconds()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1380"
+    },
+    {
+      "id": "src_game_engine_getglobaltickspeedproductionmultiplier",
+      "label": "getGlobalTickspeedProductionMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getglobaltickspeedproductionmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L857"
+    },
+    {
+      "id": "src_game_engine_getlasttierxptickspeedmultiplier",
+      "label": "getLastTierXpTickspeedMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getlasttierxptickspeedmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L885"
+    },
+    {
+      "id": "src_game_engine_getnextbytepowerprogressfraction",
+      "label": "getNextBytePowerProgressFraction()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getnextbytepowerprogressfraction()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1362"
+    },
+    {
+      "id": "src_game_engine_getoverclockmultiplier",
+      "label": "getOverclockMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getoverclockmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1268"
+    },
+    {
+      "id": "src_game_engine_getspeedupmultiplier",
+      "label": "getSpeedUpMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "getspeedupmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1234"
+    },
+    {
+      "id": "src_game_engine_gettickspeedmultiplierbasecost",
+      "label": "getTickspeedMultiplierBaseCost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "gettickspeedmultiplierbasecost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L721"
+    },
+    {
+      "id": "src_game_engine_gettickspeedmultipliercost",
+      "label": "getTickspeedMultiplierCost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "gettickspeedmultipliercost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L732"
+    },
+    {
+      "id": "src_game_engine_gettickspeedproductionmultiplier",
+      "label": "getTickspeedProductionMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "gettickspeedproductionmultiplier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L800"
+    },
+    {
+      "id": "src_game_engine_gettierproductionprogresspercent",
+      "label": "getTierProductionProgressPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "gettierproductionprogresspercent()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1404"
+    },
+    {
+      "id": "src_game_layers_gettierbasetickspeedseconds",
+      "label": "getTierBaseTickSpeedSeconds()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "gettierbasetickspeedseconds()",
+      "source_file": "src/game/layers.js",
+      "source_location": "L62"
     },
     {
       "id": "src_game_layers_resource_symbol",
@@ -5709,11 +5637,35 @@
       "_callable": true,
       "_origin": "ast",
       "community": 85,
-      "community_name": "formatCurrency",
+      "community_name": "MainPage",
       "file_type": "code",
       "norm_label": "resource_symbol()",
       "source_file": "src/game/layers.js",
       "source_location": "L50"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatbonusormultiplier",
+      "label": "formatBonusOrMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatbonusormultiplier()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L859"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatbonuspercent",
+      "label": "formatBonusPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatbonuspercent()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L843"
     },
     {
       "id": "src_pages_mainpage_index_formatcost",
@@ -5721,11 +5673,59 @@
       "_callable": true,
       "_origin": "ast",
       "community": 85,
-      "community_name": "formatCurrency",
+      "community_name": "MainPage",
       "file_type": "code",
       "norm_label": "formatcost()",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L823"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
+      "label": "formatGlobalTickspeedBonusPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatglobaltickspeedbonuspercent()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L851"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatrate",
+      "label": "formatRate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatrate()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L839"
+    },
+    {
+      "id": "src_pages_mainpage_index_mainpage",
+      "label": "MainPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "mainpage()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L864"
+    },
+    {
+      "id": "src_pages_mainpage_index_progresspercent",
+      "label": "progressPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 85,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "progresspercent()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L832"
     },
     {
       "id": "src_game_engine_getdisksize",
@@ -14493,7 +14493,7 @@
       "node_kind": "heading",
       "norm_label": "disk/cache fill speeds tied to memory bandwidth, not flat/hardcoded rates",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3071"
+      "source_location": "L3077"
     },
     {
       "id": "docs_design_history_disk_ladder_offers_every_byte_power_of_ten_size_issue_368",
@@ -45179,7 +45179,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3071",
+      "source_location": "L3077",
       "weight": 1.0
     },
     {
@@ -56836,5 +56836,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "59ea3739e98c30d69a0e7507a521d34f287a9260"
+  "built_at_commit": "bb4bbcb1c3b76924efe12e7b725ca76c5dfb1c62"
 }

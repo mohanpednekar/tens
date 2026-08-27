@@ -1,7 +1,7 @@
 # Graph Report - tens  (2026-08-27)
 
 ## Corpus Check
-- 103 files · ~320,499 words
+- 103 files · ~320,716 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `59ea3739`
+- Built from commit: `bb4bbcb1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -94,7 +94,7 @@
 - getPrestigePointsAwarded
 - epic-407-issue-hygiene.sh
 - ComputePage
-- formatCurrency
+- MainPage
 - getDiskSizesToShow
 - sync-release-milestones.sh
 - adversarialReviewMarker.js
@@ -138,11 +138,11 @@
 
 ### Community 0 - "run-simulation.mjs"
 Cohesion: 0.10
-Nodes (27): actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues (+19 more)
+Nodes (26): actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues (+18 more)
 
 ### Community 1 - "MainPage/index.jsx"
 Cohesion: 0.03
-Nodes (60): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill, BytePowerSegments, CategoryHeading (+52 more)
+Nodes (56): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill, BytePowerSegments, CategoryHeading (+48 more)
 
 ### Community 2 - "layers.js"
 Cohesion: 0.06
@@ -265,8 +265,8 @@ Cohesion: 0.18
 Nodes (10): BareDivider, LakeGrid, LakeHeaderRow, LakeName, LakeRow, LakeStat, LakeTransferNote, formatDiskSize (+2 more)
 
 ### Community 48 - "tickGame"
-Cohesion: 0.12
-Nodes (32): actTickspeed(), buyTickspeedMultiplier(), buyTierQuantity(), consumeXpForLastTierTickspeed(), countGlobalTickspeedMilestones(), getAutoPrestigeAttemptRate(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier() (+24 more)
+Cohesion: 0.19
+Nodes (19): actTickspeed(), buyGlobalTickspeedMultiplier(), buyTickspeedMultiplier(), buyTierQuantity(), consumeXpForLastTierTickspeed(), getAutoPrestigeAttemptRate(), getLastTierId(), getLastTierXpTickspeedMinConsumption() (+11 more)
 
 ### Community 49 - "dependencies"
 Cohesion: 0.12
@@ -404,9 +404,9 @@ Nodes (8): add_label_if_missing(), close_if_open(), has_marker_comment(), issue_
 Cohesion: 0.29
 Nodes (7): canStartBoosterTransfer(), getDataLakeAvailableUnits(), getDataLakeTierLabel(), getNextComputeMergeDurationUpgradeIndex(), canMerge(), ComputePage(), singularize()
 
-### Community 85 - "formatCurrency"
-Cohesion: 0.60
-Nodes (6): formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), RESOURCE_SYMBOL(), formatCost()
+### Community 85 - "MainPage"
+Cohesion: 0.14
+Nodes (24): countGlobalTickspeedMilestones(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierXpTickspeedMultiplier() (+16 more)
 
 ### Community 86 - "getDiskSizesToShow"
 Cohesion: 0.33
@@ -451,6 +451,6 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `session-start.sh script`, `publish-strategy.sh script`, `DEFAULT_CAPACITY_CAPS_BITS` to the rest of the system?**
   _561 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `run-simulation.mjs` be split into smaller, more focused modules?**
-  _Cohesion score 0.0967741935483871 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.10114942528735632 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.033844526705446853 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.034482758620689655 - nodes in this community are weakly interconnected._

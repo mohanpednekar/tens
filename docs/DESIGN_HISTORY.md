@@ -3033,9 +3033,15 @@ and that array permanently stops growing at exactly `DISK_ARRAY_LADDER_CAP` (10)
 9) on top of that physical ceiling added a whole standalone economy lever — its own cost formula, its
 own forced-priority-order rank (tied with Memory's Sacrifice), its own UI button, its own doubling
 sequence (9, 18, 36, …) — to defend against a limit that the Disk array itself already enforced more
-tightly. Once a lake's sub-slot capacity was raised to match the Disk array's own cap (10) directly,
-there was nothing left for a doubling purchase to do: raising the cap any further than 10 could never
-matter, since a sub-slot can never hold an 11th disk's worth of that denomination in the first place.
+tightly. Note this genuinely lowers the achievable deposit ceiling relative to the doubling design it
+replaces — doubling let a lake's *banked balance* (built up over time via repeated redeposits into
+the same physical array, not a single snapshot of it) grow arbitrarily far past 10 per sub-slot, so
+removing it isn't simply deleting a no-op lever. That headroom was never released to players (the
+doubling mechanic was added and removed within the same still-`Unreleased` `CHANGELOG.md` window),
+and the maintainer's request above explicitly asks for exactly this ceiling, so this is an intentional
+economy change, not an oversight: raising the deposit cap past what a single completed array can
+physically hold no longer has any purpose once the array itself, not an independent purchasable
+lever, is what actually gates a sub-slot's contents.
 
 The fix deletes the entire mechanic rather than reworking it: `doubleDataLakeCapacity`,
 `getDataLakeCapacityDoublingCost`, `isDataLakeCapacityDoublingAvailable`,

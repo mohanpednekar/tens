@@ -8498,11 +8498,32 @@ describe('Data Lakes', () => {
     // Spend 1 unit via a Booster purchase — decomposeDataLakeDeposits must correctly re-derive the
     // post-spend breakdown from the raw total, largest-denomination-first: 0×100 + 0×10 + 9×1 = 9,
     // not simply "10 minus 1 in the ones place" (which happens to be the same result here, but only
-    // because the total re-decomposes cleanly — see the ×10/×100 case below).
+    // because the total re-decomposes cleanly — see the cross-boundary case below).
     state = startBoosterTransfer(1)(state)
     expect(state.intro.computeCores).toBe(1)
     expect(getDataLakeDepositedUnits(1)(state)).toBe(9)
     expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 9, 10: 0, 100: 0 })
+  })
+
+  it('startBoosterTransfer decomposes deposits correctly after a spend that borrows across sub-size boundaries', () => {
+    // All 900 units banked in the ×100 place only — spending 3 leaves 897, which does NOT
+    // decompose as "900 minus 3 in the hundreds place" (that would be invalid, since a sub-slot
+    // caps at DISK_ARRAY_LADDER_CAP (10) — 8.97×100 isn't a valid bucket count). The greedy
+    // largest-denomination-first pass must instead re-derive 8×100 + 9×10 + 7×1 = 897 from the raw
+    // total, borrowing down into the ×10 and ×1 places that started at zero.
+    let state = withIntro(createInitialGameState(), {
+      dataLakes: {
+        ...createInitialGameState().intro.dataLakes,
+        1: { deposits: { 1: 0, 10: 0, 100: 9 }, purchased: 2, transfers: [] },
+      },
+    })
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(900)
+    expect(getBoosterPurchaseCost(1)(state)).toBe(3) // purchased: 2 => the 3rd purchase costs 3.
+
+    state = startBoosterTransfer(1)(state)
+    expect(state.intro.computeCores).toBe(1)
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(897)
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 7, 10: 9, 100: 8 })
   })
 
   it('tickDiskAutoDeposit auto-feeds the pool\'s Data Lake once a size is no longer redeemable — no manual click needed', () => {
