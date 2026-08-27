@@ -760,7 +760,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Reclaim row appears right below the presets ("Stack and reclaim buttons shall be shown on the next
    row"). THEN, below the whole effects section, come the tier rows themselves — clicking one arms
    the presets above it. Ranked fourth in the forced priority order
-   (below Disk Fill/Bandwidth/Disk Build, above Memory — see "Forced priority order" below):
+   (below Disk Fill/Speed/Disk Build — see "Forced priority order" below):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
    are `activateComputeBoost`/`stackComputeBoost`'s own actual gates, a no-op whenever something
    ranked above Compute is currently available even if the mechanical (`canActivateComputeBoost`/
@@ -768,7 +768,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 11. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
-   Tap/Sacrifice/Invest/Storage stay just as interactive as on the mandatory gate, and the
+   Tap/Speed/Storage stay just as interactive as on the mandatory gate, and the
    transfer-block row keeps working too — there's no per-cycle cap to exhaust (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
 
@@ -1956,21 +1956,21 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // (createInitialGameState called directly, nothing
                                                           // carried over). Nothing here ever fully "freezes" —
                                                           // there is no completed-style flag, and no cap either.
-    bits: 0,                                              // "Memory" — tappable/producible balance, always an
-                                                          // integer, capped at capacity. Resets on Prestige.
+    bits: 0,                                              // Data Stream balance — tappable/producible,
+                                                          // always an integer, capped at Buffer. Resets on Prestige.
     productionAccumulator: 0,                             // fractional sub-bit accumulator, same
                                                           // epsilon-tolerant whole-unit-crossing pattern as
                                                           // tierProductionAccumulators above. Resets on Prestige.
-    capacity: 8,                                          // PERMANENT. INTRO_STARTING_CAPACITY default (1
-                                                          // Byte); ×= 2 (INTRO_CAPACITY_DOUBLING_STEP) each
-                                                          // "Sacrifice for 2x Capacity" pick, hard-capped at
-                                                          // INTRO_CAPACITY_CAP_BITS (1 MiB). Displayed in
-                                                          // binary units (B/KiB/MiB/…), not SI
+    capacity: 8,                                          // PERMANENT. Data Stream Buffer / pool Memory
+                                                          // Capacity. Starts at INTRO_STARTING_CAPACITY;
+                                                          // snaps to getStoragePoolMemoryBounds(1).endBits
+                                                          // on Combine / load / Era when byteCreated (#506).
+                                                          // Displayed in binary units (B/KiB/MiB/…), not SI
     byteCreated: false,                                   // PERMANENT. One persistent Byte generator — a
                                                           // flag, not a counter (only ever one)
     tickSpeedSeconds: 1,                                  // PERMANENT. INTRO_STARTING_TICK_SPEED_SECONDS
                                                           // default; ÷= 2 (INTRO_PRODUCTION_MULTIPLIER_STEP)
-                                                          // each "Invest for Double Production" pick, until
+                                                          // each Speed ×2 pick, until
                                                           // that would breach INTRO_MIN_TICK_SPEED_SECONDS —
                                                           // see getIntroProductionRate
     productionMultiplier: 1,                              // PERMANENT. ×= 2 (INTRO_PRODUCTION_MULTIPLIER_STEP)

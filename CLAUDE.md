@@ -440,7 +440,7 @@ src/
                                below for the Data Lake mechanic itself.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-                               ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
                                SettingsPage's Era ascension action. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
@@ -1018,11 +1018,11 @@ the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
 `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
 `isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
 into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
-it" shape Memory's own Sacrifice uses, and the same currency Disks themselves are priced in, not a
-bare unit count. Gated by the same forced priority order every other Byte Foundry milestone action
-follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Bandwidth, Disk
-Build, and Compute are all currently unavailable, same rank as Memory's own Sacrifice, not
-competing with it). An earlier version fixed this cap at a value derived from the Disk arrays
+it" shape the removed Memory Sacrifice once used, and the same currency Disks themselves are priced
+in, not a bare unit count. Gated by the same forced priority order every other Byte Foundry
+milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
+Speed, Disk Build, and Compute are all currently unavailable; sits at the former Sacrifice rank,
+not competing with Speed). An earlier version fixed this cap at a value derived from the Disk arrays
 themselves with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
 explicitly-capped ladder replaced that.
 
@@ -1067,8 +1067,8 @@ indefinitely). No separate inventory cap on the Booster path itself (merge/UI sl
 `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate paths. Boost
 preset multipliers/durations are unchanged.
 
-**The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
-Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
+**The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
+loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
 Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock,
