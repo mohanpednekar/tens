@@ -3540,7 +3540,7 @@ export const getDataLakeUnitBits = tierIndex =>
 
 // Doubling a lake's own capacity (see getDataLakeCapacity above) costs its CURRENT capacity,
 // converted from an abstract unit count into real bits via getDataLakeUnitBits — the same "spend
-// the current value to double it" shape the removed Memory Sacrifice once used, and the same
+// the current value to double it" shape the removed Memory / Capacity Sacrifice once used, and the same
 // currency Disks themselves are priced/sized in (see docs/DESIGN_HISTORY.md), not a bare unit count.
 export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
@@ -3552,9 +3552,8 @@ export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
 }
 
 // Gated by the same forced priority order every other Byte Foundry milestone action follows —
-// available only once nothing ranked above it (Disk Fill, Speed, Disk Build, Compute)
-// currently is; sits at the former Sacrifice / Memory rank (#506 removed Capacity doubling) —
-// does not compete with Speed.
+// available only once nothing ranked above it (Disk Fill, Speed, Disk Build, Compute) currently
+// is. Capacity Sacrifice is gone (#506), so lake doubling sits alone at that bottom rank.
 export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
   isDataLakeCapacityDoublingAvailable(state, tierIndex) &&
   !isDiskFillAvailable(state) &&

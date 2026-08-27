@@ -558,7 +558,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           title={
             frozen
               ? 'Prestige first — production is frozen at 1 Googol Bytes'
-              : 'Resets Foundry to scratch; auto-replays upgrades (including Capacity) up to prior highs'
+              : 'Resets Foundry to scratch; auto-replays Combine / Speed / Disk Build up to prior highs'
           }
           type="button"
           variant="danger"

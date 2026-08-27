@@ -411,12 +411,17 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 5\b/i)
 
   await openSettings(user)
-  await user.click(screen.getByRole('button', { name: /reset byte foundry/i }))
+  const resetFoundry = screen.getByRole('button', { name: /reset byte foundry/i })
+  expect(resetFoundry.title).toMatch(/speed/i)
+  expect(resetFoundry.title).not.toMatch(/including Capacity/)
+  await user.click(resetFoundry)
 
   expect(window.confirm).toHaveBeenCalled()
   expect(window.confirm.mock.calls[0][0]).toMatch(/byte foundry/i)
   expect(window.confirm.mock.calls[0][0]).toMatch(/capacity/i)
   expect(window.confirm.mock.calls[0][0]).toMatch(/convenience|auto/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/data stream/i)
+  expect(window.confirm.mock.calls[0][0]).toMatch(/speed/i)
 
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /open ladder/i }))
