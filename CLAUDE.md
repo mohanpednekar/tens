@@ -49,6 +49,8 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
+yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
+                  # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
 ```
 
@@ -349,8 +351,16 @@ fixes (`### Removed`/`### Security`/`### Deprecated` as needed). Purely internal
 CI/workflow tweaks with no user-visible effect) don't need an entry. `package.json`'s `"version"`
 field (currently `0.5.0`) and future git tags (`v0.1.0`–`v0.5.0` retroactively, then onward) mirror
 this file's version sections — see `docs/DESIGN_HISTORY.md` for why versioning/tagging started here
-rather than at project inception. Bumping the version and pushing/tagging a release is handled by
-separate follow-up tooling, not by every individual PR.
+rather than at project inception.
+
+**Version bump before release:** when a PR is ready to cut the accumulated `## [Unreleased]`
+entries into a dated release section, run `yarn bump-version` (`scripts/bump-version.mjs`) as a
+final step on that PR's own branch — it reads Unreleased, chooses **minor** if `### Added` or
+`### Removed` has entries (otherwise **patch**; major is never auto-selected), writes the new
+`package.json` version, moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to
+empty subheadings. No-op (exit 0) when Unreleased has no bullet entries. The bump lands in the PR
+diff like any other change (never a direct commit to `main`). Post-merge tag push + GitHub Release
+creation is the remaining half of #52 (`release.yml`), blocked on historical tags from #51.
 
 ## Repo layout
 
@@ -552,6 +562,10 @@ e2e/
                                Core Booster (deposits-funded, instant grant) from that lake on
                                ComputePage
 scripts/
+  bump-version.mjs (+ `.test.js`) ← `yarn bump-version`: cut CHANGELOG ## [Unreleased] into a
+                               dated ## [x.y.z] section and bump package.json (minor if
+                               Added/Removed entries, else patch; no-op if empty) — Part of #52;
+                               post-merge tag/Release workflow still deferred
   generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
                                PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
                                not part of the build — only re-run it if the icon design/palette changes
@@ -1177,7 +1191,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1580 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1589 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
@@ -1195,10 +1209,10 @@ already cover the genuinely useful items on that checklist.
   `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). Together with
-  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 13 files; the
-  remaining two are `scripts/adversarialReviewMarker.test.js` and
-  `scripts/pr-low-risk-eligible.test.js` — Vitest's default glob picks these up alongside `src/`
-  since `vite.config.js`'s `test` block sets no custom `include`.
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 14 files; the
+  remaining three are `scripts/adversarialReviewMarker.test.js`,
+  `scripts/pr-low-risk-eligible.test.js`, and `scripts/bump-version.test.js` — Vitest's default glob
+  picks these up alongside `src/` since `vite.config.js`'s `test` block sets no custom `include`.
 
 ### End-to-end testing
 

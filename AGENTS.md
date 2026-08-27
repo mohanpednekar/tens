@@ -41,6 +41,7 @@ yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
 yarn audit        # dependency audit
+yarn bump-version # cut CHANGELOG Unreleased → dated release + bump package.json
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png
 ```
 
@@ -200,7 +201,8 @@ resolve to that dir's `index.jsx`/`index.js`.
 `CHANGELOG.md` (repo root, Keep a Changelog format) tracks user-facing/behaviorally-relevant changes
 from `v0.5.0` onward — add an entry under `## [Unreleased]`'s matching subheading for any such PR;
 skip it for docs-only/internal CI changes. `package.json`'s `"version"` mirrors this file's released
-sections.
+sections. To cut Unreleased into a dated release on a PR branch, run `yarn bump-version` (see
+`CLAUDE.md`'s Changelog convention; major bumps stay manual).
 
 ## Issue tracking conventions
 
