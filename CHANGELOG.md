@@ -81,8 +81,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   player-facing "Memory" is now **Data Stream** (balance) with capacity labeled **Buffer**;
   "Bandwidth ×2" is **Speed ×2**. The Sacrifice / "Memory ×2" capacity ladder is removed —
   Combine (and save-load via `normalizePoolMemoryCapacity`) snaps Buffer to the pool end
-  (`INTRO_CAPACITY_CAP_BITS`, 1 MiB). Forced priority is Disk Fill → Speed/Invest → Disk Build →
-  Compute Boost (no Sacrifice rank). Guide copy updated to match.
+  (`INTRO_CAPACITY_CAP_BITS`, 1 MiB). Era ascension also snaps Buffer to the pool end when the
+  permanent Byte generator is kept, so the Foundry gate cannot softlock. Forced priority is Disk
+  Fill → Speed/Invest → Disk Build → Compute Boost (no Sacrifice rank). Guide copy updated to match.
 - **Prestige progress bar repositioned to just above the bottom tab bar** — it's now pinned via
   `position: fixed` directly above `AppNav` so it stays visible regardless of scroll position,
   instead of scrolling away near the top of the Ladder screen. Its `"N% to Prestige"` label now

@@ -8076,13 +8076,15 @@ describe('eraGame', () => {
     expect(after.prestigeDoublePpLevel).toBe(0)
   })
 
-  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and automation unlock prefs', () => {
+  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and snaps Buffer to pool end', () => {
     const state = eraEligibleState()
     const after = eraGame(state)
     expect(after.intro.byteCreated).toBe(true)
     expect(after.intro.mainGameUnlocked).toBe(false)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    // Without Sacrifice (#506), Buffer must sit at the pool end so the Foundry gate is escapable.
+    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(isIntroConversionUnlocked(after)).toBe(true)
     expect(after.intro.computeCores).toBe(0)
     expect(after.intro.disks).toEqual({})
     expect(after.intro.foundryResetCaps).toEqual({})

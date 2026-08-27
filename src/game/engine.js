@@ -1111,26 +1111,37 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
   return result
 }
 
-const buildEraIntroReset = (state, initial) => ({
-  ...initial.intro,
-  byteCreated: Boolean(state.intro?.byteCreated),
-  bits: 0,
-  productionAccumulator: 0,
-  mainGameUnlocked: false,
-  foundryResetCaps: {},
-  autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
-  autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
-  autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
-  autoMergeNetworksIntoGrid: state.intro?.autoMergeNetworksIntoGrid ?? initial.intro.autoMergeNetworksIntoGrid,
-  autoMergeGridsIntoFabric: state.intro?.autoMergeGridsIntoFabric ?? initial.intro.autoMergeGridsIntoFabric,
-  autoMergeFabricsIntoCloud: state.intro?.autoMergeFabricsIntoCloud ?? initial.intro.autoMergeFabricsIntoCloud,
-  autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
-  autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
-  autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
-  computeMergeDurationUpgrades: state.intro?.computeMergeDurationUpgrades ?? initial.intro.computeMergeDurationUpgrades,
-  computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
-  computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
-})
+const buildEraIntroReset = (state, initial) => {
+  const byteCreated = Boolean(state.intro?.byteCreated)
+  // Permanent Byte generator survives Era, but Foundry Buffer/capacity otherwise resets with
+  // initial.intro. Without Sacrifice (#506), Capacity cannot be re-grown — snap Buffer to the
+  // pool Memory end bound whenever the generator is kept, or the mandatory Foundry gate softlocks
+  // (conversion cost exceeds an 8-bit Buffer).
+  const capacity = byteCreated
+    ? getStoragePoolMemoryBounds(1).endBits
+    : initial.intro.capacity
+  return {
+    ...initial.intro,
+    byteCreated,
+    capacity,
+    bits: 0,
+    productionAccumulator: 0,
+    mainGameUnlocked: false,
+    foundryResetCaps: {},
+    autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
+    autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
+    autoMergeClustersIntoNetwork: state.intro?.autoMergeClustersIntoNetwork ?? initial.intro.autoMergeClustersIntoNetwork,
+    autoMergeNetworksIntoGrid: state.intro?.autoMergeNetworksIntoGrid ?? initial.intro.autoMergeNetworksIntoGrid,
+    autoMergeGridsIntoFabric: state.intro?.autoMergeGridsIntoFabric ?? initial.intro.autoMergeGridsIntoFabric,
+    autoMergeFabricsIntoCloud: state.intro?.autoMergeFabricsIntoCloud ?? initial.intro.autoMergeFabricsIntoCloud,
+    autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
+    autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
+    autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
+    computeMergeDurationUpgrades: state.intro?.computeMergeDurationUpgrades ?? initial.intro.computeMergeDurationUpgrades,
+    computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
+    computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
+  }
+}
 
 export const eraGame = state => {
   if (!isEraEligible(state)) return state
