@@ -245,10 +245,10 @@ replace) the Project's `Track` field from #53. A `Track` answers "what's related
 possibly multiple releases; a Milestone answers "what's targeted for this release" and gives a
 native due-date plus automatic X/Y-closed progress. Interactive sessions and Planning (#53) should
 assign player-facing feature/economy issues to a milestone for the next planned release; process
-and infrastructure `claude-task` issues typically stay off a versioned milestone. The current
-next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140); Era ascension
-(`#407` / `#411–#414`) targets `v0.7.0`. `scripts/sync-release-milestones.sh`
-keeps both milestones and assignments idempotent on housekeeping runs.
+and infrastructure `claude-task` issues typically stay off a versioned milestone. `v0.6.0`
+(UI-revamp chain #138/#139/#140) has fully shipped; the current next-release milestone is `v0.7.0`,
+targeting Era ascension (`#407` / `#411–#414`, in progress). `scripts/sync-release-milestones.sh`
+keeps milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 
@@ -433,6 +433,11 @@ src/
                                render identical, fully interactive detail rather than StoragePage
                                alone owning it and ByteFoundryPage settling for a text summary.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
+                               next Booster cost, in-flight transfers) rendered inside ByteFoundryPage's
+                               `PoolCard` (see Architecture 4 below), taking `{ state, bare }` — `bare`
+                               drops its own StatCard chrome for that nested use. See "Economy model"
+                               below for the Data Lake mechanic itself.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -462,9 +467,8 @@ src/
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
                                once `isComputeCoreConversionUnlocked`; page id `'boosters'`. Takes `{ game }`
-    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen — KFlops→QFlops tiers bought with PP,
-                               boosting matching Ladder tiers. Reached via AppNav once
-                               `isComputeFlopsPageRevealed` (100 PP); page id `'compute'`. Takes `{ game }`
+    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`.
+                               See Architecture 4c / Economy model below for the full mechanic.
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
                                — the full `useIncrementalGame()` object, lifted up into App.jsx so
                                ByteFoundryPage and MainPage can share one save/tick loop. Second-
@@ -502,8 +506,8 @@ src/
     GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
                                and the token-driven page background/text (absorbs the removed index.css/App.css)
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
-                               imports `./fonts` as a side effect; `mode` defaults to dark and is the
-                               seam #140 will drive from system pref + toggle
+                               imports `./fonts` as a side effect; `mode` defaults to dark, driven from
+                               system pref + Settings → Appearance toggle (#140)
   App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between
@@ -892,9 +896,8 @@ KiB/MiB/… display, hard-capped at 1 MiB, large enough to afford building the p
 Invest (double production, own cost ladder now stepped ×4 per tier) on independent cost ladders,
 plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
-**PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
-KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Ladder tier;
-owned counts persist across Prestige, cumulative boost resets each cycle. Five recurring "upgrade"
+**PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
+Architecture 4c above for its full tier/cost/persistence spec. Five recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
 Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
@@ -1107,8 +1110,9 @@ into `main`, and do not rename it with an agent/session suffix.
 All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`
 (`buildTheme(mode)` + `themes.dark`/`themes.light`), so the app's two themes — an evolved **dark**
 (default) and a **light** theme — fall out of swapping palette values rather than forking any component
-on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
-at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
+on mode. This was the foundation for the now-complete UI-revamp epic (#132, all 8 sub-issues shipped,
+including light mode's activation in #140); every component consumes these tokens. Fonts
+(`font.display` = Space Grotesk, `font.body` = Inter) are locally
 bundled via `theme/fonts.js` — no runtime CDN fetch. Settings → Appearance drives
 `<ThemeProvider mode>` from `tens_theme_preference` (`system` default, or `light`/`dark`); System
 follows `prefers-color-scheme`. Reset / `clearGameState` do not clear the theme preference.

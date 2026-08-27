@@ -9,8 +9,9 @@ the *why* behind the token/font choices (rejected alternatives, trade-off reason
 
 All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`, so
 the app's two themes — an evolved **dark** (default) and a **light** theme — fall out of swapping palette
-values rather than forking any component on mode. This is the foundation for the UI-revamp epic (#132);
-components migrate onto these tokens one at a time in later sub-issues.
+values rather than forking any component on mode. This was the foundation for the now-complete
+UI-revamp epic (#132, all 8 sub-issues shipped, including light mode's activation in #140); every
+component consumes these tokens.
 
 - **`tokens.js`** exports `buildTheme(mode)` (flattens the right palette for styled-components'
   `ThemeProvider`) and the two pre-built `themes.dark` / `themes.light`. A theme object exposes:
@@ -24,9 +25,11 @@ components migrate onto these tokens one at a time in later sub-issues.
   the star of an incremental game); both are locally bundled (see `fonts.js` below), each with
   the prior system-stack values kept as a fallback. `font.mono` stays a system stack — no bundled mono
   face was needed. `type.scale` pairs each step (`xs`/`sm`/`md`/`lg`/`xl`/`hero`) with a `{ size,
-  lineHeight }` rem pair; `type.numeric` is `'tabular-nums'`. The scale isn't applied per-component
-  beyond the base body size and the wordmark heading yet — later per-surface redesign sub-issues (HUD
-  #137/tier-row #138/prestige #139) apply the rest of it to their own text.
+  lineHeight }` rem pair; `type.numeric` is `'tabular-nums'`. Now applied across every page/component
+  (`MainPage`, `ByteFoundryPage`, `ComputePage`, `SettingsPage`, `DevModePage`, `StoragePage`,
+  `InfoPage`, `AppMenu`, `DataLakePanel`, `ConfirmDialog`, `DiskArrayRow`, `IncompatibleSaveNotice`,
+  …) via the per-surface redesign sub-issues (HUD #137/tier-row #138/prestige #139), not just the
+  base body size and wordmark heading.
 - **`fonts.js`** locally bundles the two faces above via `@fontsource/inter`/`@fontsource/space-grotesk`
   side-effect imports (`import '@fontsource/inter/latin-400.css'`, etc.) — no runtime CDN fetch, so the
   game stays fully self-contained after the GH Pages deploy (confirmed via `yarn build`: `dist/assets/`
