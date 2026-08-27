@@ -45,12 +45,13 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → **queue Capacity** when
   Invest can't take the next spend (or while climbing to conversion unlock) →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
-  → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Does **not** enable
-  permanent auto-claim / auto-merge.
+  → convert → **Data Lake Booster buys** (`startBoosterTransfer`; deposits via
+  `tickDiskAutoDeposit` in `tickGame`) → Boosts. Does **not** enable permanent auto-merge.
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
-  sizes (faster early-tier redemption) but each Compute Core costs a full Memory fill, so Core
-  farming and Boost uptime get worse. Pool 1's generator now has its own hard ceiling
+  sizes (faster early-tier redemption) but each Compute Core is bought from Data Lake deposits
+  (escalating lake cost), so Core farming and Boost uptime get worse at higher capacity. Pool 1's
+  generator now has its own hard ceiling
   (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never grow past regardless of this
   flag, so a requested cap at or above that value behaves identically to `unlimited`. Default sweep:
   `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (stop early, Compute-favoring) / `INTRO_CAPACITY_CAP_BITS`

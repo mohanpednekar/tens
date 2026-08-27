@@ -11,8 +11,8 @@
 //       Disks before that convert advances purchase levels without flipping mainGameUnlocked and
 //       softlocks once conversion cost exceeds capacity.
 //     - After unlock: restore autobuyers; Disk Fill → Invest → Disk Build → convert → optional
-//       Capacity/Sacrifice → Boosts → Core claim LAST (only if isComputeCoreClaimAvailable and
-//       Fill/Invest/Build are all unavailable). Never enable permanent auto-claim / auto-merge.
+//       Capacity/Sacrifice → Data Lake Booster buys (startBoosterTransfer; deposits arrive via
+//       tickDiskAutoDeposit inside tickGame) → Boosts. Never enable permanent auto-merge.
 //   Main ladder (every tick):
 //     - Autobuyers wherever applicable: unlocked tiers (autobuyers[tierId] non-null from
 //       applyAutobuyerMilestones / prestige.count) are left to tickGame's autobuyer loop with the
@@ -51,7 +51,7 @@ import {
   buyTierQuantity,
   buyTickspeedMultiplier,
   canActivateComputeBoost,
-  claimComputeCore,
+  canStartBoosterTransfer,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -65,9 +65,6 @@ import {
   getTierBulkQuantity,
   getTierSpendableAmount,
   isBandwidthAvailable,
-  isComputeCoreClaimAvailable,
-  isDiskBuildAvailable,
-  isDiskFillAvailable,
   isDiskRedeemable,
   isProductionFrozen,
   isTierUnlocked,
@@ -80,6 +77,7 @@ import {
   setAutobuyerEnabled,
   speedUpGame,
   stackComputeBoost,
+  startBoosterTransfer,
   startDiskBuild,
   tapIntroBit,
   tickGame,
@@ -88,6 +86,7 @@ import {
 import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
+  DATA_LAKE_TIER_COUNT,
   INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_CONVERSION_UNLOCK_CAPACITY,
@@ -216,7 +215,25 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     s = pickIntroCapacityMilestone(s)
   }
 
-  // Compute Boosts spend held tokens, not Memory — fine before Core claim.
+  // Data Lake → Booster buys (replaces the removed Memory→Core claim). Deposits land via
+  // tickDiskAutoDeposit inside tickGame; buy before activating Boosts so an instant
+  // deposit-funded Core can fund a Boost the same tick. Prefer lower tiers first (Cores).
+  for (let i = 0; i < 16; i += 1) {
+    let bought = false
+    for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
+      if (canStartBoosterTransfer(s, tierIndex)) {
+        const next = startBoosterTransfer(tierIndex)(s)
+        if (next !== s) {
+          s = next
+          bought = true
+          break
+        }
+      }
+    }
+    if (!bought) break
+  }
+
+  // Compute Boosts spend held tokens, not Memory.
   if ((s.intro.computeBoostType ?? null) !== null) {
     s = stackComputeBoost(s)
   } else {
@@ -237,18 +254,6 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
         if ((s.intro.computeBoostType ?? null) !== null) break
       }
     }
-  }
-
-  // Core claim is LAST: only when Memory is full, Capacity is not queued, and nothing else
-  // Memory-affordable is available (Disk Fill / Invest / Disk Build).
-  if (
-    isComputeCoreClaimAvailable(s) &&
-    !(s.intro.capacityUpgradeQueued ?? false) &&
-    !isDiskFillAvailable(s) &&
-    !isBandwidthAvailable(s) &&
-    !isDiskBuildAvailable(s)
-  ) {
-    s = claimComputeCore(s)
   }
 
   return s
@@ -640,7 +645,7 @@ Published by \`publish-strategy.sh\` — **do not merge** that branch into \`mai
 Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-times/SKILL.md\` on the code branches):
 
 1. **Foundry gate:** Tap / Combine; pause tier autobuyers while gated; convert Memory → Kilobytes before redeeming permanent Disks (avoids softlock).
-2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → Boosts → **Core claim last** (skipped while Capacity is queued). Never enable permanent auto-claim / auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
+2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → **Data Lake Booster buys** (\`startBoosterTransfer\`; deposits via \`tickDiskAutoDeposit\` in \`tickGame\`) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
 3. **Ladder:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).
