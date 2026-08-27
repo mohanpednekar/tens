@@ -223,8 +223,10 @@ const InfoPage = () => {
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
-          Disk arrays live under Foundry as continuous sections (not a separate top-level nav item).
+          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}
+          {' '}(after Combine, Buffer snaps to the pool Memory end, so this is true as soon as the
+          Byte generator exists). Disk arrays live under Foundry as continuous sections (not a
+          separate top-level nav item).
         </p>
 
         <h3>Building Disks</h3>

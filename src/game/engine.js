@@ -1928,7 +1928,7 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // --- Byte Foundry (pre-game intro) --- state lives in state.intro (see createInitialGameState
 // above); INTRO_* constants live in layers.js. A currency pool entirely separate from Money
 // (resources.base) until the manual/auto conversions into owned Kilobytes below. Nothing here ever
-// fully freezes — Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle,
+// fully freezes — Tap/Combine/Speed/Convert all stay live indefinitely, every cycle,
 // with no cap or per-cycle budget on converting bits into Kilobytes.
 
 // Grants `quantity` free units of a tier, mirroring buyTier's owned/resources/purchased/
@@ -2275,13 +2275,14 @@ export const getIntroProductionMilestoneCost = tier =>
 // a flat 1 across the board; see docs/DESIGN_HISTORY.md for both that change and this reinstatement.
 export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 
-// "Invest for Double Production" — an ordinary cost-gated purchase: costs
-// getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current `capacity` at
-// all, so a claim never requires a full Memory balance — only enough bits to cover this tier's
-// cost, which is frequently far below capacity once Sacrifice has grown it ahead of this ladder.
+// "Speed ×2" / Invest for Double Production — an ordinary cost-gated purchase: costs
+// getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current Buffer
+// (`capacity`) at all, so a claim never requires a full Data Stream balance — only enough bits to
+// cover this tier's cost, which (after Buffer snaps to the pool Memory end on Combine, #506) sits
+// well below capacity for early Speed tiers.
 // Deducts exactly that cost and doubles the Byte generator's overall bits/sec rate (see
 // getIntroProductionRate) by INTRO_PRODUCTION_MULTIPLIER_STEP. Independently callable — no
-// coupling to pickIntroCapacityMilestone's own state. No-op below cost or once
+// coupling to the removed pickIntroCapacityMilestone Capacity path. No-op below cost or once
 // getIntroProductionMilestoneMaxClaims(productionMilestoneTier) claims have already been made at
 // the current tier; a successful claim either stays at the same tier (incrementing
 // productionMilestoneTierClaims) or, once the tier's claim limit is reached, advances to the next
@@ -3539,8 +3540,8 @@ export const getDataLakeUnitBits = tierIndex =>
 
 // Doubling a lake's own capacity (see getDataLakeCapacity above) costs its CURRENT capacity,
 // converted from an abstract unit count into real bits via getDataLakeUnitBits — the same "spend
-// the current value to double it" shape Memory's own Sacrifice uses, and the same currency Disks
-// themselves are priced/sized in (see docs/DESIGN_HISTORY.md), not a bare unit count.
+// the current value to double it" shape the removed Memory Sacrifice once used, and the same
+// currency Disks themselves are priced/sized in (see docs/DESIGN_HISTORY.md), not a bare unit count.
 export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
 
@@ -3551,9 +3552,9 @@ export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
 }
 
 // Gated by the same forced priority order every other Byte Foundry milestone action follows —
-// available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute)
-// currently is, same rank as Memory's own Sacrifice (isMemoryCapacityUpgradeAvailable) — the two
-// sit at the same bottom rank rather than competing with each other.
+// available only once nothing ranked above it (Disk Fill, Speed, Disk Build, Compute)
+// currently is; sits at the former Sacrifice / Memory rank (#506 removed Capacity doubling) —
+// does not compete with Speed.
 export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
   isDataLakeCapacityDoublingAvailable(state, tierIndex) &&
   !isDiskFillAvailable(state) &&
@@ -3793,11 +3794,12 @@ export const tickDataLakeTransfers = elapsedSeconds => state => {
 // live-transferred Disk stock from the matching Data Lake instead and is unrelated to
 // Memory/capacity entirely.
 
-// Predicate, not a reducer: whether ByteFoundryPage's/ComputePage's "Compute" section should be
-// active at all. True once capacity has grown enough to ever hold INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
-// (4,194,304 bits, "512 KiB" in Memory's own binary display scale) at once — the same
-// "capacity-magnitude reveal gate" convention isIntroConversionUnlocked/isStorageUnlocked already
-// use, one Sacrifice stage later than Storage's own reveal.
+// Predicate, not a reducer: whether Boosters / ComputePage should be active at all. True once
+// Buffer / pool Memory Capacity reaches INTRO_COMPUTE_CORE_UNLOCK_CAPACITY (4,194,304 bits,
+// "512 KiB" binary). After #506, Buffer snaps to the pool end on Combine, so this unlocks with
+// Storage / conversion as soon as the Byte generator exists (intentional — Capacity is
+// start–end delimited). Same capacity-magnitude reveal convention as isIntroConversionUnlocked /
+// isStorageUnlocked; historically one Sacrifice stage later than Storage.
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Shared shape for the 9-boundary Core → Node → Cluster → Network → Grid → Fabric → Cloud →

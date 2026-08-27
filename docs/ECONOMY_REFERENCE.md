@@ -570,9 +570,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    lifetime Booster total (deposits plus repeated live transfers can fund a lake indefinitely).
 
    `ComputePage` (page
-   id `'boosters'`) reveals once `capacity` reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,194,304
-   bits, "512 KiB" in Memory's own binary display scale — half of `INTRO_CAPACITY_CAP_BITS`, one
-   Sacrifice doubling short of pool 1's hard cap — `isComputeCoreConversionUnlocked`). Every
+   id `'boosters'`) reveals once Buffer reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,194,304
+   bits, "512 KiB" binary — half of pool 1's Memory Capacity end bound
+   `INTRO_CAPACITY_CAP_BITS`; historically one Sacrifice doubling short of that hard cap —
+   `isComputeCoreConversionUnlocked`). After #506, Buffer snaps to the pool end on Combine, so
+   Boosters unlock with conversion/Storage as soon as the Byte generator exists. Every
    successful tier-1 Booster (instant or completed transfer) also increments
    `intro.computeCoresEverEarned`, a lifetime
    counter tracked alongside `computeCores` but never decremented by spending

@@ -261,14 +261,16 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // "Data Lake Booster transfers" below), and has no relationship to Memory/Storage at all; see
 // docs/DESIGN_HISTORY.md for why.
 //
-// Capacity threshold at which Compute Cores/the Compute screen reveal — a later, more
-// advanced-game gate than Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching
-// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
-// 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's new
-// hard cap (INTRO_CAPACITY_CAP_BITS, 1 MiB) — one Sacrifice doubling-step short of it, i.e.
-// 4,194,304 bits (512 KiB) — since the old value no longer lines up with any capacity the doubling
-// ladder actually passes through. Preserves the original's "last/highest of the two
-// capacity-gated reveals" relative ordering (conversion < storage < compute); see
+// Capacity threshold at which Boosters / ComputePage reveal — historically a later gate than
+// Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching the same
+// "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
+// 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
+// Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, 1 MiB) — i.e. 4,194,304 bits (512 KiB);
+// historically one Sacrifice doubling-step short of that hard cap. After #506, Buffer snaps to
+// the pool end on Combine, so this unlocks together with conversion/Storage once the Byte
+// generator exists. Preserves the original's "last/highest of the two
+// capacity-gated reveals" relative ordering of the threshold constants themselves (conversion <
+// storage < compute); see
 // docs/DESIGN_HISTORY.md.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
 // How many Compute Cores the separate, unrelated lifetime-counter latch
