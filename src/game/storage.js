@@ -1,4 +1,4 @@
-import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState } from './engine'
+import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
 import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
@@ -304,8 +304,8 @@ export const buildResetByteFoundryConfirmMessage = () => {
   return (
     `Reset Byte Foundry on "${name}"?\n\n` +
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
-    `Erased: Memory, Capacity, Combine / Invest / Bandwidth progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
-    `Convenience: Combine, Invest / Bandwidth, Disk Build, and Capacity (Sacrifice) all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them.\n\n` +
+    `Erased: Data Stream Buffer, pool Memory Capacity, Combine / Speed (Invest) progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
+    `Convenience: Combine, Speed (Invest), and Disk Build all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Combine snaps Buffer to the pool Memory end bound.\n\n` +
     `Also kept: Ladder, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
@@ -421,7 +421,7 @@ const mergeState = saved => {
   const fresh = createInitialGameState()
   const { lastTierTickspeedXpUnlocked: _removed, ...savedClean } = saved
 
-  return applyFlopsAutobuyerMilestones({
+  return normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
     resources: mergeTierMap(fresh.resources, saved.resources),
@@ -469,7 +469,7 @@ const mergeState = saved => {
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
-  })
+  }))
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't

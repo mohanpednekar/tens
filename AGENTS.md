@@ -9,7 +9,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Ladder → Guide → More**. Storage
-is under Foundry as continuous **Memory + Disk** sections on the same screen (not its own AppNav
+is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Memory | Storage tabs). Ladder uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
@@ -75,7 +75,7 @@ src/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← the 10 Data Lake rows on ByteFoundryPage; see "Byte Foundry" below
   pages/
-    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory + Disks continuous sections; see
+    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
     StoragePage/index.jsx  ← thin Disks list wrapper (primary UI is Foundry; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
@@ -111,7 +111,7 @@ switches pages via a local `page` `useState` and a shared bottom `AppNav` (Found
 Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is continuous Foundry sections (Memory + Disks), not gate-exempt on its own. Ladder
+below). Storage is continuous Foundry sections (Data Stream + Disks), not gate-exempt on its own. Ladder
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 
@@ -130,14 +130,14 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 `ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
 cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
-player taps to accumulate bits into "Memory" (capacity-capped, displayed in binary units — B/KiB/MiB/…,
-1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a permanent,
-passively-producing Byte generator, then grows it via Sacrifice (2x capacity, hard-capped at 1 MiB —
-large enough to afford building the pool's own largest Disk)
-and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
+player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
+B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
+permanent, passively-producing Byte generator (on Combine / save-load with `byteCreated`, Buffer snaps
+to 1 MiB / `INTRO_CAPACITY_CAP_BITS`), then grows production via **Speed ×2** (Invest — own cost ladder
+now ×4/tier; the old Sacrifice / "Memory ×2" capacity ladder is removed), plus — once
 far enough along — Disks (`StoragePage`, timed builds — a fresh disk takes exactly the time to fill
 it at 1x Memory bandwidth (current production rate), ×N for the array's Nth disk; only the pool's
-smallest size gets an always-full **read cache** (Memory → read cache → timed flush to disk when
+smallest size gets an always-full **read cache** (Data Stream → read cache → timed flush to disk when
 tier allows; the Memory→cache refill is itself bandwidth-capped at 10x rate, and the cache→disk
 flush duration is one cache block at 2x rate) — every larger size fills exclusively via write-cache
 upward merges from the size below (collect from Disks at 2x rate, flush into the disk at 2x rate),
@@ -153,7 +153,7 @@ prepaid buffer that spends first/instantly, any remaining cost live-transfers of
 time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
 never itself banks a spendable reserve beyond its deposits. A lake's own deposit capacity is a
 purchasable doubling ladder: starts at 1 unit, doubles per purchase (spending the lake's current
-capacity in Bits, same shape as Sacrifice), hard-capped at 1,024 units
+capacity in Bits, same shape the removed Sacrifice once used), hard-capped at 1,024 units
 (`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the intentional limit a player actually experiences.
 Each sub-slot's own deposit count is separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since
 only 10 disks of a given size can ever exist) purely so the counter can't exceed what's physically
@@ -163,10 +163,10 @@ next-cost/doubling-cost all display in Byte-scale (KB/MB/GB), matching Disks, no
 separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
-auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
+auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
-Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
-main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
+Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Data Stream balance
+and the main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
 freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
 beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
 

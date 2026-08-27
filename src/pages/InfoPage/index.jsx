@@ -32,7 +32,7 @@ import {
   ERA_ELIGIBILITY_PP,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
-  INTRO_CAPACITY_DOUBLING_STEP,
+  INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
@@ -40,9 +40,11 @@ import {
   DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
+  INTRO_STARTING_CAPACITY,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
+  getStoragePoolMemoryBounds,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -163,40 +165,36 @@ const InfoPage = () => {
         <h2>Byte Foundry</h2>
         <p>
           Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from the bottom nav’s Foundry item. Memory Capacity reads in binary units
-          (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes, Data Lake, caches) stays SI
-          (KB, MB, …, 1 KB = 1000 Bytes) throughout.
+          Reopen any time from the bottom nav’s Foundry item. Data Stream Buffer / pool Memory
+          Capacity reads in binary units (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes,
+          Data Lake, caches) stays SI (KB, MB, …, 1 KB = 1000 Bytes) throughout.
         </p>
 
         <h3>The loop</h3>
         <ul>
           <li>
-            <strong>Tap</strong> fills Memory with bits (one second of production per tap at the
-            current rate). After the main game unlocks, Memory’s own tile is the tap target —
-            the standalone Tap button goes away.
+            <strong>Tap</strong> fills the Data Stream with bits (one second of production per tap
+            at the current rate). After the main game unlocks, the Data Stream tile is the tap
+            target — the standalone Tap button goes away.
           </li>
           <li>
             Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
-            produces passively forever after.
+            produces passively forever after. On Combine, Buffer snaps from{' '}
+            {formatBitsInNearestUnit(INTRO_STARTING_CAPACITY)} to the pool end (
+            {formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)}). Capacity for this pool runs{' '}
+            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} –{' '}
+            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).endBits)}.
           </li>
           <li>
-            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_DOUBLING_STEP} capacity
-            (only when Memory is full and nothing higher-priority is available). Capacity is
-            measured in binary units (KiB, MiB, …) and hard-caps at the next full binary tier —
-            once at the cap, Sacrifice stops being offered for good.
-          </li>
-          <li>
-            <strong>Invest</strong> spends Memory on an independent cost ladder, stepped
-            ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
-            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance). When
-            that bit cost exceeds Memory capacity, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
+            <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost
+            ladder, stepped ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
+            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} pool Memory Speed (doesn’t require a full Buffer).
+            When that bit cost exceeds Buffer, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
             the next Compute tier (Cores → … → Megacomputers, then wrapping back to Cores) for the
-            same ×2 — separate from auto-merge sacrifices, and still usable even once Sacrifice
-            itself is permanently capped. Memory Sacrifice rolls those compute-funded Bandwidth
-            claims back.
+            same ×2 — separate from auto-merge sacrifices.
           </li>
           <li>
-            <strong>Transfer blocks</strong> convert Memory into free {firstTierName} at
+            <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at
             {firstTierName}’ current per-unit cost. The first transfer unlocks the main game;
             there’s no per-cycle cap after that. Auto-convert keeps running even when the manual
             row is hidden.
@@ -206,10 +204,10 @@ const InfoPage = () => {
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Prestige:</strong> Memory balance and the main-game unlock gate.
+            <strong>Resets each Prestige:</strong> Data Stream balance and the main-game unlock gate.
           </li>
           <li>
-            <strong>Permanent:</strong> the Byte generator, capacity/production upgrades, Disks,
+            <strong>Permanent:</strong> the Byte generator, Buffer/production upgrades, Disks,
             and every Compute entity.
           </li>
           <li>Later cycles are a fast pit-stop, not a full replay.</li>
@@ -218,15 +216,17 @@ const InfoPage = () => {
         <h3>Forced priority</h3>
         <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
         <ul>
-          <li>Disk Fill → Bandwidth/Invest → Disk Build → Compute Boost → Memory/Sacrifice</li>
+          <li>Disk Fill → Speed/Invest → Disk Build → Compute Boost</li>
         </ul>
       </Section>
 
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Unlocks once Memory capacity reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
-          Open it from the bottom nav’s Storage item.
+          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}
+          {' '}(after Combine, Buffer snaps to the pool Memory end, so this is true as soon as the
+          Byte generator exists). Disk arrays live under Foundry as continuous sections (not a
+          separate top-level nav item).
         </p>
 
         <h3>Building Disks</h3>
@@ -322,8 +322,9 @@ const InfoPage = () => {
           </li>
           <li>
             A lake's own deposit capacity is purchasable: it starts at 1 unit and doubles each
-            purchase (spending the lake's own current capacity, converted into Memory Bits — the
-            same "spend the current value to double it" shape Sacrifice uses), permanently
+            purchase (spending the lake's own current capacity, converted into Data Stream Bits —
+            the same "spend the current value to double it" shape the removed Memory Sacrifice once
+            used), permanently
             hard-capped at {2 ** DATA_LAKE_CAPACITY_MAX_LEVEL} units once fully doubled — shown on
             the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
             these raw unit counts.

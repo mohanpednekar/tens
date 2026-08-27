@@ -3,8 +3,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityAtCap, isMemoryCapacityUpgradeAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPurchaseBlockSize, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskBuildTurnAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS, getStoragePoolMemoryBounds } from 'game/layers'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -99,11 +99,10 @@ const ActionsRow = styled.div`
   width: 100%;
 `
 
-// Sacrifice and Invest are two independent, frequently-compared milestone actions — placing them
-// side by side (each taking an equal share via `flex: 1`) reads as one paired choice rather than a
-// stacked list, unlike Combine above (a one-time, mutually-exclusive action with nothing to pair
-// against). `min-width: 0` lets each button's own label ellipsis-truncate (see ButtonLabel in
-// components/Button) instead of forcing the row wider than its container at narrow viewports.
+// Speed ×2 is the recurring rate milestone — placing it in MilestonesRow keeps the same flex
+// layout the old Sacrifice+Invest pair used. `min-width: 0` lets each button's own label
+// ellipsis-truncate (see ButtonLabel in components/Button) instead of forcing the row wider than
+// its container at narrow viewports.
 const MilestonesRow = styled.div`
   display: flex;
   gap: ${props => props.theme.space.sm};
@@ -115,8 +114,8 @@ const MilestonesRow = styled.div`
   }
 `
 
-// Sacrifice/Invest's own two-line content: the symbol/label/multiplier on top, its cost — what
-// each one actually spends — on its own line below, in smaller/muted text, rather than crammed
+// Speed ×2's two-line content: the symbol/label/multiplier on top, its cost — what it actually
+// spends — on its own line below, in smaller/muted text, rather than crammed
 // inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
 // which only ever lays out a single icon+label row) so `Button`'s own `display: flex; align-items:
 // center; justify-content: center` still centers this whole block as one flex child.
@@ -138,8 +137,8 @@ const MilestoneCostLine = styled.span`
   white-space: nowrap;
 `
 
-// The whole pool — Memory, its Combine/Sacrifice/Bandwidth actions, and Storage (Build + Disk
-// arrays + Data Lake) — renders as one continuous card rather than Memory and Data Lake each
+// The whole pool — Data Stream, Combine / Speed actions, and Storage (Build + Disk
+// arrays + Data Lake) — renders as one continuous card rather than Data Stream and Data Lake each
 // getting their own separate boxed StatCard with bare buttons/rows in between. Sub-elements that
 // used to carry their own StatCard chrome (FillableStatCard, DataLakePanel) drop it — see below —
 // so nothing double-boxes inside this outer card.
@@ -278,8 +277,8 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
 // still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
-// here is read-only. Memory and Storage are continuous sections on this one screen (no
-// second-level tabs). Forced priority: Disk Fill > Bandwidth > Disk Build > Compute > Memory.
+// here is read-only. Data Stream + per-pool Memory/Storage are continuous sections on this one
+// screen (no second-level tabs). Forced priority: Disk Fill > Speed > Disk Build > Compute.
 // focusNonce is accepted for App.jsx parity with MainPage; Foundry no longer has a tab to reset.
 const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
@@ -287,10 +286,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
-  // Sacrifice is offered only once Memory is full AND no other currently-possible action ranked
-  // above it in the forced priority order (Disk Fill, Bandwidth, Disk Build,
-  // Compute) is left to take first — see isMemoryCapacityUpgradeAvailable in engine.js.
-  const canSacrifice = isMemoryCapacityUpgradeAvailable(state)
+  const poolMemoryBounds = getStoragePoolMemoryBounds(1)
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
   const productionRate = getIntroProductionRate(intro)
@@ -298,13 +294,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
 
-  // Sacrifice is permanent and irreversible (drains Memory to 0), and fires immediately on click —
-  // no confirm prompt.
-  const atCapacityCap = isMemoryCapacityAtCap(state)
-  const handleSacrificeClick = () => {
-    if (!canSacrifice) return
-    actions.pickIntroCapacityMilestone()
-  }
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
   const computeBandwidthLabel = getComputeBandwidthSacrificeLabel(state)
   const computeFundedInvest = isComputeFundedBandwidthAvailable(state)
@@ -352,9 +341,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Once Storage unlocks, Disk redemption offers an alternative path to tier units, making this
   // block-row redundant for a player who's already past the mandatory gate — hidden from then on.
   // The `|| !intro.mainGameUnlocked` fallback exists only for a narrow edge case: Storage's own
-  // reveal threshold (capacity, grown via repeated Sacrifice) is independent of ever having
-  // transferred at all, so a player could in principle reach it without ever unlocking the main
-  // game — redeemDisk never flips mainGameUnlocked, only this section's own convert action does
+  // reveal threshold (Buffer / pool Memory Capacity) is independent of ever having transferred at
+  // all, so a player could in principle reach it without ever unlocking the main game —
+  // redeemDisk never flips mainGameUnlocked, only this section's own convert action does
   // (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js), so this stays visible
   // through the mandatory gate regardless of Storage's own reveal state.
   const showTransferSection = revealed && (!storageRevealed || !intro.mainGameUnlocked)
@@ -367,35 +356,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
-  const sacrificeButton = (
-    <Button
-      aria-label="sacrifice all bits for 2x capacity"
-      disabled={!canSacrifice}
-      onClick={handleSacrificeClick}
-      title={
-        atCapacityCap
-          ? 'This pool’s Memory Capacity is already at its cap'
-          : isFull && !canSacrifice
-            ? 'Take every higher-priority upgrade first (Disk Fill, Bandwidth, Disk Build, or Compute)'
-            : 'Empty Memory for 2x capacity'
-      }
-      type="button"
-      variant={canSacrifice ? 'prestige' : 'neutral'}
-      $progress={fullProgress}
-    >
-      <MilestoneButtonContent>
-        <span>💥 Memory ×2</span>
-        <MilestoneCostLine>{formatBitsInNearestUnit(intro.capacity)}</MilestoneCostLine>
-      </MilestoneButtonContent>
-      <VisuallyHidden
-        role="progressbar"
-        aria-label="byte foundry sacrifice progress"
-        aria-valuenow={intro.bits}
-        aria-valuemin={0}
-        aria-valuemax={intro.capacity}
-      />
-    </Button>
-  )
+  const poolCapacityRangeLabel = `${formatBitsInNearestUnit(poolMemoryBounds.startBits)} – ${formatBitsInNearestUnit(poolMemoryBounds.endBits)}`
 
   return (
     <RootDiv>
@@ -410,15 +371,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           type={intro.mainGameUnlocked ? 'button' : undefined}
           onClick={intro.mainGameUnlocked ? actions.tapIntroBit : undefined}
           disabled={intro.mainGameUnlocked ? isFull : undefined}
-          aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'byte foundry balance'}
+          aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
-          <SectionLabel>Memory</SectionLabel>
+          <SectionLabel>Data Stream</SectionLabel>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
+          <StatusText>
+            Buffer {formatBitsInNearestUnit(intro.capacity)}
+            {intro.byteCreated ? ` · Memory Capacity ${poolCapacityRangeLabel}` : ''}
+          </StatusText>
           <VisuallyHidden
             role="progressbar"
-            aria-label="byte foundry bit balance"
+            aria-label="data stream bit balance"
             aria-valuenow={intro.bits}
             aria-valuemin={0}
             aria-valuemax={intro.capacity}
@@ -427,7 +392,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             productionRate < BITS_PER_BYTE ? (
               <>
                 <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
-                <RateBlocksRow role="progressbar" aria-label="byte foundry production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
+                <RateBlocksRow role="progressbar" aria-label="data stream production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
                   {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
                     <RateBlock key={index} $filled={index < productionRate} />
                   ))}
@@ -463,8 +428,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
           {intro.byteCreated && (
             <MilestonesRow>
-              {sacrificeButton}
-
               <Button
                 aria-label={
                   computeFundedInvest
@@ -479,20 +442,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     : investBlockedByPriority
                       ? 'Redeem a full Disk first'
                       : computeFundedInvest
-                        ? `Bit cost exceeds Memory — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 production`
-                        : 'Doubles production rate'
+                        ? `Bit cost exceeds Buffer — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 Speed`
+                        : 'Doubles pool Memory Speed'
                 }
                 type="button"
                 variant={canInvest ? 'info' : 'neutral'}
                 $progress={investProgress}
               >
                 <MilestoneButtonContent>
-                  <span>⚡ Bandwidth ×2</span>
+                  <span>⚡ Speed ×2</span>
                   <MilestoneCostLine>{investCostDisplay}</MilestoneCostLine>
                 </MilestoneButtonContent>
                 <VisuallyHidden
                   role="progressbar"
-                  aria-label="byte foundry invest progress"
+                  aria-label="byte foundry speed progress"
                   aria-valuenow={
                     computeFundedInvest && computeBandwidthField
                       ? (intro[computeBandwidthField] ?? 0)
@@ -520,7 +483,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   : diskLadderExhausted
                     ? `Every Disk size this pool can fund (up to ${formatDiskSize(diskSize)}) is fully built — more storage pools are coming in a future update`
                     : diskBuildBlockedByPriority
-                      ? 'Take Bandwidth (or redeem a full Disk) first'
+                      ? 'Take Speed (or redeem a full Disk) first'
                       : diskRedeemTierName
                         ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
                         : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
@@ -576,7 +539,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   isConsumed
                     ? 'Already transferred'
                     : isActive
-                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Memory to ${formatBitsInNearestUnit(transferBlockCost)} first`)
+                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Data Stream to ${formatBitsInNearestUnit(transferBlockCost)} first`)
                       : 'Transfer the block to your left first'
                 }
                 type="button"

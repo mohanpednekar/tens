@@ -32,6 +32,7 @@ import {
   INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
+  INTRO_STARTING_CAPACITY,
   MEMORY_BINARY_UNIT_STEP,
   MONEY_ID,
   OVERCLOCK_MULTIPLIER_STEP,
@@ -49,6 +50,7 @@ import {
   TICKSPEED_PRODUCTION_STEP,
   TIER_DEFINITIONS,
   TICK_RATE_MS,
+  getStoragePoolMemoryBounds,
 } from './layers'
 
 describe('TIER_DEFINITIONS', () => {
@@ -260,12 +262,20 @@ describe('constants', () => {
     expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * 1024 * 1024)
   })
 
-  it('INTRO_CAPACITY_DOUBLING_STEP is 2 ("Sacrifice for 2x Capacity")', () => {
+  it('INTRO_CAPACITY_DOUBLING_STEP is 2 (shared binary Capacity ladder spacing)', () => {
     expect(INTRO_CAPACITY_DOUBLING_STEP).toBe(2)
   })
 
-  it('INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (Bandwidth\'s own cost ladder steps ×4 per tier)', () => {
+  it('INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (Speed\'s own cost ladder steps ×4 per tier)', () => {
     expect(INTRO_BANDWIDTH_COST_MULTIPLIER).toBe(4)
+  })
+
+  it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared ladder', () => {
+    expect(getStoragePoolMemoryBounds(1)).toEqual({
+      startBits: INTRO_STARTING_CAPACITY,
+      endBits: INTRO_CAPACITY_CAP_BITS,
+    })
+    expect(getStoragePoolMemoryBounds(2).endBits).toBe(BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 3)
   })
 
   it('MEMORY_BINARY_UNIT_STEP is 1024 (Memory Capacity\'s binary unit ladder — 1 KiB = 1024 Bytes)', () => {

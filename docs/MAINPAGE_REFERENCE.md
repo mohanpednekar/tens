@@ -41,17 +41,19 @@ would double-box the same region) — that applies `components/Button`'s own `pr
 directly via its `$progress` prop, so the tile fills toward its own capacity the same visual way
 every button on this page already does, while still picking up padding/border-radius/color inline
 rather than through `StatCard`. `aria-label="byte foundry balance"` (`$progress`
-= `bits / capacity`), has a "Memory" label above `{bits} / {capacity}` — both numbers scaled into
+= `bits / capacity`), has a "Data Stream" label above `{bits} / {capacity}` — both numbers scaled into
 the same binary unit, picked off `capacity` (raw bits before the Byte generator exists, since before
-that capacity is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
+that Buffer is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
 B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own tier symbols with
-an "i" — see "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="byte foundry bit
+an "i" — see "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="data stream bit
 balance"`) — followed by the production-rate readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
-paired with a visible 8-block segmented `role="progressbar"` (`aria-label="byte foundry production
+paired with a visible 8-block segmented `role="progressbar"` (`aria-label="data stream production
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
-(`getIntroProductionRate(intro) / BITS_PER_BYTE`). There is no separate Cache tile — the same
-progress the old Cache tile showed (progress toward the next convertible Memory→Kilobyte unit) is now
+(`getIntroProductionRate(intro) / BITS_PER_BYTE`). A StatusText line under the balance reads
+**Buffer** `{formatBitsInNearestUnit(intro.capacity)}`, and once `byteCreated` also **Memory Capacity**
+as the pool's start–end window (`getStoragePoolMemoryBounds`). There is no separate Cache tile — the same
+progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is now
 read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
 `FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
 element-swap prop) instead of `as="section"`, with `onClick={actions.tapIntroBit}`,
@@ -61,65 +63,50 @@ tap button below has. Before `mainGameUnlocked` the tile stays a plain, non-inte
 
 A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
 capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
-(Actions/Storage/transfer blocks), rather than up near the Memory tile, since once `byteCreated`
+(Actions/Storage/transfer blocks), rather than up near the Data Stream tile, since once `byteCreated`
 passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
 as clickable either way, and never shrinks or changes size — but is removed entirely, not merely
-hidden, once `intro.mainGameUnlocked` (Memory's own tile above takes over as the tap target
+hidden, once `intro.mainGameUnlocked` (the Data Stream tile above takes over as the tap target
 instead, see above), rather than the two controls coexisting once tapping is no longer the primary
 loop at all. Deliberately carries no `$progress` fill
-or hidden progressbar of its own — Memory's own tile above already shows the identical bits/capacity
+or hidden progressbar of its own — Data Stream's own tile above already shows the identical bits/Buffer
 fill, so a second meter on the tap button would just duplicate it; its `background` is set explicitly
 (`theme.color.surfaceSunken`) since it doesn't get that from `progressFill`'s own gradient (which
 used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`; once `byteCreated`, the two independently-gated milestone buttons — placed
-side by side in their own `MilestonesRow` (`display: flex`, each button `flex: 1`) rather than
-stacked, since they're a paired choice, not a list. Each renders its own two-line
+INTRO_BYTE_COMBINE_COST`; Combine also snaps Buffer to the pool Memory end bound
+(`INTRO_CAPACITY_CAP_BITS` for pool 1 — there is no Sacrifice / Memory ×2 button, #506). Once
+`byteCreated`, a single milestone button sits in `MilestonesRow` (`display: flex`, the button
+`flex: 1`) rather than a paired Sacrifice+Invest row. It renders its own two-line
 `MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
 `components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
 of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
 activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
-than crammed inline in parentheses. "Sacrifice for 2x Capacity" (top line `💥 Memory ×2` — "Memory"
-matching the same term the balance tile above already uses for `capacity`, so the button's purpose
-reads at a glance even compressed; cost line `formatBitsInNearestUnit(intro.capacity)` — a binary
-KiB/MiB/… reading, not SI, since Memory Capacity moved off the Disk-size scale — since a
-Sacrifice always drains the full current capacity — `aria-label="sacrifice all bits for 2x
-capacity"` still carries the full description for assistive tech, `disabled={!canSacrifice}` where
-`canSacrifice = isMemoryCapacityUpgradeAvailable(state)` (see docs/ECONOMY_REFERENCE.md's "Byte
-Foundry" step 4 — Memory full is necessary but no longer sufficient: Combine, a redeemable Disk
-Fill, Invest, a buildable Disk, and an activatable Compute Boost must all be currently
-impossible too — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a `title` that
-names what to do first (`"Take every higher-priority upgrade first (Disk Fill, Bandwidth,
-Disk Build, or Compute)"`) when the balance is full but the button is still disabled for
-that reason, calling `actions.pickIntroCapacityMilestone`, `$progress` toward
-`capacity`) and "Invest
-for Double Production" (top line `⚡ Bandwidth ×2` — "Bandwidth" naming the bits/sec production rate
-this multiplies; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
+than crammed inline in parentheses. "Speed ×2" (was Bandwidth / Invest for Double Production; top
+line `⚡ Speed ×2`; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
 keeping visible even in the shortened label; `aria-label="invest bits for double production"`
 carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
 — `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `bits >=` the
 (bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
 getIntroProductionMilestoneMaxClaims(tier)` **and** no currently-redeemable Disk Fill
 outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md); this cost is entirely
-independent of `capacity`, so the button is frequently enabled well before Memory is full — see
+independent of `capacity`, so the button is frequently enabled well before Buffer is full — see
 docs/ECONOMY_REFERENCE.md's "Byte
-Foundry") — rendered as ordinary, independent buttons with no coupling between their enabled states;
-each pairs with its own hidden `role="progressbar"` (`aria-label="byte foundry sacrifice
-progress"`/`"byte foundry invest progress"`, the latter's max set to the Invest cost in bits, not
+Foundry") — rendered as an ordinary button paired with a hidden `role="progressbar"`
+(`aria-label="byte foundry speed progress"`, max set to the Speed cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
 INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by starting Boosters from
 the matching Data Lake (`startBoosterTransfer` — deposits spend instantly, any remaining cost
-live-transfers off built Disks over time), not minted from Memory — the earlier manual
+live-transfers off built Disks over time), not minted from Data Stream — the earlier manual
 "Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
-Memory ×2 (Sacrifice) always stays in the milestones row beside Bandwidth.
+Speed ×2 is the only milestone action in that row (Capacity Sacrifice was removed).
 
 Storage is continuous on this same page: **Build Disk** — its own core-loop action, alongside
-Sacrifice/Invest above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Memory's own
-capacity has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
+Speed above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
 scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above). Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
@@ -206,7 +193,7 @@ capacity figure over a compact "⚡ ×2" `DoubleCapacityButton` (hidden once the
 Boosters bought and the next purchase's cost (see
 docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic).
 
-Below Build (and, after Boosts unlocks, below Memory ×2 when it has moved under the disk section),
+Below Build (and, after Boosts unlocks, below Speed ×2),
 once `isIntroConversionUnlocked(state)`, a **transfer-block row**
 (`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
 `SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly

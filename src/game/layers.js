@@ -102,34 +102,32 @@ export const TICK_RATE_MS = 100
 // Starting/current cap on the intro's bit balance — both tapping and passive production stop
 // crediting bits once the balance reaches this (see tapIntroBit/tickIntroProduction in engine.js).
 export const INTRO_STARTING_CAPACITY = 8
-// "Sacrifice for 2x Capacity" multiplies capacity by this each time it's taken: 8 → 16 → 32 → 64 →
-// … (see pickIntroCapacityMilestone in engine.js). Replaced the old flat ×10-forever ladder — see
-// INTRO_CAPACITY_CAP_BITS below for why growth now also stops at a per-pool ceiling instead of
-// continuing indefinitely; see docs/DESIGN_HISTORY.md.
+// Step between adjacent levels on the shared binary Capacity ladder (1 Byte → 2 → 4 → …). Used to
+// describe the common level table pools draw start/end bounds from — not a player-facing Sacrifice
+// multiplier anymore (#506 / Revision 2 of #456). Kept so docs/tests can name the ladder spacing.
 export const INTRO_CAPACITY_DOUBLING_STEP = 2
-// Byte Foundry Memory Capacity's own binary-unit ladder step — 1 KiB = 1024 Bytes (vs. a Disk's own
-// SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/getMemoryUnit in engine.js). Distinct
-// from DISK_LADDER_SIZE_MULTIPLIER/SI_BYTE_UNIT_SCALE (both still 1000/SI) — Storage stays SI-scaled
-// throughout; only Memory Capacity's own display and growth math switched to binary.
+// Shared binary-unit ladder step for Data Stream Buffer / pool Memory Capacity display —
+// 1 KiB = 1024 Bytes (vs. a Disk's own SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/
+// getMemoryUnit in engine.js). Storage stays SI-scaled throughout.
 export const MEMORY_BINARY_UNIT_STEP = 1024
-// Pool 1 (the Kilobyte pool, i.e. today's only Byte generator)'s hard capacity ceiling, in bits —
-// exactly 1 MiB (1024^2 Bytes), the same binary-tier boundary the next pool up would start at. Set
-// this high on purpose: the pool's own largest buildable Disk (the 100 KB rung, the third and last
-// size before getDiskSize would advance into the next pool — DISK_LADDER_BASE_SIZE_BITS *
-// DISK_LADDER_SIZE_MULTIPLIER ** 2) costs DISK_BUILD_COST_MULTIPLIER times its own face value to
-// build — 8,000,000 bits — spent from Memory in one shot via startDiskBuild, so the cap must be
-// able to hold at least that much at once or the array's last Disk size could never be built. An
-// earlier version capped at half this (the largest power of two strictly BELOW 1 MiB) purely by
-// binary-tier convention, without checking against the pool's own largest Disk's build cost — which
-// left the 100 KB Disk permanently unbuildable, since its 8,000,000-bit cost exceeds that lower cap;
-// see docs/DESIGN_HISTORY.md. Derived, not a bare literal, so a future per-pool generator (pool N's
-// own ceiling sits one binary tier higher per pool, matching that pool's own largest Disk the same
-// way) can reuse the same formula.
+// Pool 1 (Kilobyte pool) Memory Capacity end bound, in bits — exactly 1 MiB (1024^2 Bytes). Must
+// hold at least the pool's largest Disk build cost (100 KB × DISK_BUILD_COST_MULTIPLIER =
+// 8,000,000 bits). See getStoragePoolMemoryBounds / docs/DESIGN_HISTORY.md. Alias of pool 1's
+// endBits so existing call sites stay stable.
 export const INTRO_CAPACITY_CAP_BITS = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 2
-// "Invest for Double Production"'s own cost ladder now steps ×4 per tier instead of ×10 — see
-// getIntroProductionMilestoneCost in engine.js. Deliberately a separate constant from
-// INTRO_CAPACITY_DOUBLING_STEP above even though both ladders once shared the same ×10 multiplier —
-// they're independent progressions that only coincidentally matched before this change.
+// Per-pool Memory Capacity window on the shared binary ladder (#506). startBits is always the
+// common 1-Byte floor; endBits is exactly 1024^(poolIndex+1) Bytes (pool 1 → 1 MiB, pool 2 → 1 GiB,
+// …). Pools do not use Sacrifice doubling — Capacity is delimited by these bounds directly.
+// poolIndex is 1-based.
+export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
+  const index = Math.max(1, Math.floor(Number(poolIndex) || 1))
+  return {
+    startBits: INTRO_STARTING_CAPACITY,
+    endBits: BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** (index + 1)),
+  }
+}
+// "Speed ×2" (was Bandwidth / Invest) cost ladder steps ×4 per tier — see
+// getIntroProductionMilestoneCost in engine.js. Independent of the Capacity level ladder above.
 export const INTRO_BANDWIDTH_COST_MULTIPLIER = 4
 // The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
 // per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
@@ -166,36 +164,37 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // BITS_PER_BYTE multiplication in engine.js), so this starting rate lines up with tier01's actual
 // starting per-unit cost once expressed in bits.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
-// Capacity threshold at which the manual "convert bits to a Kilobyte" action becomes available and
-// the intro page can start showing a "next phase" reveal indicator (see
-// isIntroConversionUnlocked in engine.js) — the first capacity stage that can ever hold this many
-// bits at once (capacity must reach 8000, given the 8/80/800/8000… ladder above, which is also
-// exactly the balance needed for a first conversion at this starting rate).
+// Buffer / pool Memory Capacity threshold at which the manual "convert bits to a Kilobyte" action
+// becomes available (see isIntroConversionUnlocked in engine.js). After #506, Buffer snaps from
+// INTRO_STARTING_CAPACITY to the pool Memory end on Combine / normalize / Era-with-byteCreated,
+// so this threshold (and Storage / Boosters below) is crossed immediately then — not via the old
+// discrete Sacrifice ladder stages (8/80/800/8000/…). Historically also equal to the first
+// conversion's starting balance cost at INTRO_BITS_PER_KILOBYTE_CONVERSION.
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
 // --- Byte Foundry Storage (Disks) --- see startDiskBuild/tickDiskBuild/tickDiskAutoFill/
 // redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
-// container (after a real build TIME — see below); Memory (intro.bits) then keeps each array's
+// container (after a real build TIME — see below); Data Stream (intro.bits) then keeps each array's
 // Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and flushes a full
 // read cache into an empty disk over one cache-block production duration when no tier claim
-// blocks that size — leftover Memory stays as its own balance. Redeeming a
+// blocks that size — leftover Data Stream stays as its own balance. Redeeming a
 // FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
 // reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
 // bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
-// disk's contents came from Memory via the read-cache flush, not a further transfer out of it at redeem time.
+// disk's contents came from Data Stream via the read-cache flush, not a further transfer out of it at redeem time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
-// even though Memory itself resets, letting banked-up Storage give a fresh cycle a head start.
+// even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
-// until Memory's own capacity reaches this many bits — 80,000 bits, "9.765 KiB" in Memory's own
-// binary display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
+// until Buffer / pool Memory Capacity reaches this many bits — 80,000 bits, "9.765 KiB" in binary
+// display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
 // (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
-// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS ceiling, reachable via repeated Sacrifice
-// doublings from INTRO_STARTING_CAPACITY. A deliberate pacing gate: Storage is a later-game
-// mechanic, revealed only once the player has grown capacity a bit past the Kilobyte-transfer
-// row's own, earlier 1000-bit reveal.
+// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS end bound. After #506, Buffer snaps to that
+// end bound on Combine, so Storage reveals as soon as the Byte generator exists (intentional —
+// Capacity is start–end delimited; no Sacrifice pacing ladder). Historically this was a later-game
+// reveal once the player had grown capacity past the Kilobyte-transfer row via Sacrifice doublings.
 export const INTRO_DISK_UNLOCK_CAPACITY = 80000
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
@@ -262,14 +261,16 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // "Data Lake Booster transfers" below), and has no relationship to Memory/Storage at all; see
 // docs/DESIGN_HISTORY.md for why.
 //
-// Capacity threshold at which Compute Cores/the Compute screen reveal — a later, more
-// advanced-game gate than Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching
-// the same "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
-// 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's new
-// hard cap (INTRO_CAPACITY_CAP_BITS, 1 MiB) — one Sacrifice doubling-step short of it, i.e.
-// 4,194,304 bits (512 KiB) — since the old value no longer lines up with any capacity the doubling
-// ladder actually passes through. Preserves the original's "last/highest of the two
-// capacity-gated reveals" relative ordering (conversion < storage < compute); see
+// Capacity threshold at which Boosters / ComputePage reveal — historically a later gate than
+// Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching the same
+// "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
+// 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
+// Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, 1 MiB) — i.e. 4,194,304 bits (512 KiB);
+// historically one Sacrifice doubling-step short of that hard cap. After #506, Buffer snaps to
+// the pool end on Combine, so this unlocks together with conversion/Storage once the Byte
+// generator exists. Preserves the original's "last/highest of the two
+// capacity-gated reveals" relative ordering of the threshold constants themselves (conversion <
+// storage < compute); see
 // docs/DESIGN_HISTORY.md.
 export const INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP
 // How many Compute Cores the separate, unrelated lifetime-counter latch

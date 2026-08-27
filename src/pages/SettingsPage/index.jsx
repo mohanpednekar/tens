@@ -545,8 +545,9 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         </Button>
         <p>
           Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
-          Capacity was pushed too far. Combine, Invest / Bandwidth, Disk Build, and Capacity
-          (Sacrifice) restart from scratch, then all auto-press again up to your pre-reset highs.
+          Capacity was pushed too far. Combine, Speed (Invest), and Disk Build restart from
+          scratch, then auto-press again up to your pre-reset highs. Combine snaps Buffer to the
+          pool Memory end bound (Capacity Sacrifice was removed).
           Ladder progress and Prestige stay.
         </p>
         <Button
@@ -557,7 +558,7 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
           title={
             frozen
               ? 'Prestige first — production is frozen at 1 Googol Bytes'
-              : 'Resets Foundry to scratch; auto-replays upgrades (including Capacity) up to prior highs'
+              : 'Resets Foundry to scratch; auto-replays Combine / Speed / Disk Build up to prior highs'
           }
           type="button"
           variant="danger"
