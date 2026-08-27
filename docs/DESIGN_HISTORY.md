@@ -1,5 +1,23 @@
 # Design history & rationale
 
+### Data Stream / Buffer rename; Capacity Sacrifice removed (#506) — 2026-08-27
+
+Maintainer revised epic #456's naming before pools 2–10 ship. Today's Foundry "Memory" conflated
+the tap/production intake with the per-pool generator. Split:
+
+- Foundry intake → **Data Stream** (capacity = **Buffer**; **Bandwidth** name kept for the
+  global rate concept; pool rate UI is **Speed ×2**)
+- Each storage pool → **Memory** with **Capacity** start/end from the shared binary ladder
+  (`getStoragePoolMemoryBounds`) — no Sacrifice doubling button, because pools are delimited
+  directly by those bounds
+
+Judgment call while implementing: with no Sacrifice ladder, Buffer snaps to the pool end bound
+on Combine (`combineIntroByte`) and on save load (`normalizePoolMemoryCapacity` when
+`byteCreated`). Speed/Invest upgrades stay. Forced priority drops the Capacity/Sacrifice rank.
+Alternatives considered for Data Stream: Bit Stream, Intake, Channel, Pipeline.
+
+Tracked as interactive issue #506 (revises #456).
+
 ### Sacrifice confirm: in-game dialog; Core warning only when unlocked
 
 Sacrifice for 10x Capacity used a native `window.confirm` that always warned about future Cores

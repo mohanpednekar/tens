@@ -9,7 +9,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Ladder → Guide → More**. Storage
-is under Foundry as continuous **Memory + Disk** sections on the same screen (not its own AppNav
+is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Memory | Storage tabs). Ladder uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
@@ -75,7 +75,7 @@ src/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← the 10 Data Lake rows on ByteFoundryPage; see "Byte Foundry" below
   pages/
-    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory + Disks continuous sections; see
+    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
     StoragePage/index.jsx  ← thin Disks list wrapper (primary UI is Foundry; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
@@ -111,7 +111,7 @@ switches pages via a local `page` `useState` and a shared bottom `AppNav` (Found
 Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is continuous Foundry sections (Memory + Disks), not gate-exempt on its own. Ladder
+below). Storage is continuous Foundry sections (Data Stream + Disks), not gate-exempt on its own. Ladder
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 
