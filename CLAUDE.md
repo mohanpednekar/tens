@@ -440,9 +440,8 @@ src/
                                below for the Data Lake mechanic itself.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
-                               SettingsPage's Era ascension action (Sacrifice on ByteFoundryPage
-                               fires immediately on click, with no confirm prompt). Full
+                               ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
+                               SettingsPage's Era ascension action. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
                                JSX), extracted so both MainPage and ByteFoundryPage can render it —
@@ -887,7 +886,8 @@ Bytes are no longer a purchasable tier — they're produced entirely by the **By
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
 that combines into a permanent, passively-producing Byte generator. On Combine (and on save load via
-`normalizePoolMemoryCapacity` when `byteCreated`), Buffer snaps to `INTRO_CAPACITY_CAP_BITS` (1 MiB
+`normalizePoolMemoryCapacity` when `byteCreated`), and on Era ascension when the permanent Byte
+generator is kept, Buffer snaps to `INTRO_CAPACITY_CAP_BITS` (1 MiB
 — large enough to afford building the pool's own largest Disk). Grow production via **Speed ×2**
 (Invest — own cost ladder stepped ×4 per tier); the old Sacrifice / "Memory ×2" capacity ladder is
 removed. Plus — once far enough along — Disks

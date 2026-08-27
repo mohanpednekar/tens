@@ -451,8 +451,8 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
 // once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Activation is still gated
-// by the Byte Foundry's forced priority order — Disk Fill > Bandwidth > Disk Build > Compute >
-// Memory — so a preset can show disabled here even while mechanically activatable
+// by the Byte Foundry's forced priority order — Disk Fill > Speed > Disk Build > Compute —
+// so a preset can show disabled here even while mechanically activatable
 // (canActivateComputeBoost), if something ranked above Compute (which lives back on
 // ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
@@ -565,7 +565,7 @@ const ComputePage = ({ game }) => {
                   : sameAsActive
                     ? 'This boost is already active — use Stack to extend it'
                     : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill, Bandwidth, or Disk Build)'
+                      ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Disk Build)'
                       : needsForfeit
                         ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
                         : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`

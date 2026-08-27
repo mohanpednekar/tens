@@ -129,15 +129,15 @@ with whatever capacity/speed/rate/banked Storage was already built, refilling Me
 the first time.
 
 Nothing here ever fully "freezes" — there is no `completed`-style flag, and no cap either.
-Tap/Combine/Sacrifice/Invest/Convert all stay live indefinitely, every cycle.
+Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
 **The loop:**
 1. **Tap** (`tapIntroBit`) adds `getIntroProductionRate(intro)` bits — "one second's worth" at the
-   Byte's *current* rate, not a flat 1 — to `state.intro.bits` ("Memory"), capped at
-   `state.intro.capacity` (`INTRO_STARTING_CAPACITY`, 8 bits = 1 Byte, initially). Before the Byte
+   Byte's *current* rate, not a flat 1 — to `state.intro.bits` (Data Stream balance), capped at
+   `state.intro.capacity` (Buffer — `INTRO_STARTING_CAPACITY`, 8 bits = 1 Byte, initially). Before the Byte
    exists (or at the starting rate) this is still the same flat 1 bit it's always been, since the
    starting rate is exactly 1 bit/sec. The tap TARGET changes once `intro.mainGameUnlocked`: the
-   standalone Tap button (`ByteFoundryPage`'s `TapArea`) is removed entirely, and Memory's own tile
+   standalone Tap button (`ByteFoundryPage`'s `TapArea`) is removed entirely, and the Data Stream tile
    (`FillableStatCard`, rendered `as="button"` in that state) becomes clickable instead, calling the
    identical `tapIntroBit` action — one control instead of two, once the main loop no longer needs
    tapping to be the primary action.
@@ -1063,10 +1063,12 @@ save Reset only).
 **Award:** `getEonsAwarded(state)` returns `1 + eonAmplifierLevel * EON_AMPLIFIER_AWARD_PER_LEVEL`
 (Eon Amplifier shop upgrade deferred to #414).
 
-**On `eraGame` — resets:** full Foundry (generator upgrades, Memory/gate, Disks, Data Lakes,
+**On `eraGame` — resets:** full Foundry (generator upgrades, Data Stream/gate, Disks, Data Lakes,
 compute ladder entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
-`computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined.
+`computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined — and when kept,
+snaps Buffer (`intro.capacity`) to `getStoragePoolMemoryBounds(1).endBits` so the Foundry gate stays
+escapable without Sacrifice (#506).
 
 **On `eraGame` — persists:** automation unlocks + pause flags (except Double PP level, which resets),
 tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum, `era.count` (+1),
@@ -1680,17 +1682,17 @@ page (`'game'`, which the Foundry gate then overrides until `mainGameUnlocked`).
 
 A second Danger-zone control, **"↺ Reset Byte Foundry…"**, calls `resetByteFoundry` (also behind
 `window.confirm` via `buildResetByteFoundryConfirmMessage`). It replaces `state.intro` with a fresh
-`createInitialGameState().intro` — Memory → 0, Capacity → `INTRO_STARTING_CAPACITY`, Combine /
-Invest / Bandwidth multipliers and Disks/Storage and every Compute ladder entity / boost /
+`createInitialGameState().intro` — Data Stream balance → 0, Buffer → `INTRO_STARTING_CAPACITY`,
+Combine / Speed multipliers and Disks/Storage and every Compute ladder entity / boost /
 auto-claim / auto-merge unlock / reveal latch wiped — so Foundry progress genuinely restarts from
-scratch. It records high-water marks in `intro.foundryResetCaps` (Combine, Invest ladder progress,
-per-size `disksBuiltTotal`, and Capacity itself). `tickFoundryResetConvenience` (from `tickGame`,
-after Disk auto-fill) then auto-presses Combine, bit-funded Invest / Bandwidth, Disk Build, and
-Capacity (Sacrifice) whenever their normal turn gates allow, capped at those highs — a convenience
-so the player does not have to click every upgrade/build/Sacrifice button again. `intro.mainGameUnlocked`
-is preserved when already true. Every non-`intro` field (Tiers, Prestige, automations, …) is left
-unchanged. Unlike full Reset, it does not clear the save slot. Both Danger-zone actions stay
-disabled while production is frozen at the Prestige threshold.
+scratch. It records high-water marks in `intro.foundryResetCaps` (Combine, Speed/Invest ladder
+progress, per-size `disksBuiltTotal`, and Capacity itself for merge compatibility).
+`tickFoundryResetConvenience` (from `tickGame`, after Disk auto-fill) then auto-presses Combine,
+bit-funded Speed / Invest, and Disk Build whenever their normal turn gates allow, capped at those
+highs — Combine itself snaps Buffer to the pool Memory end bound (#506; Capacity Sacrifice is gone).
+`intro.mainGameUnlocked` is preserved when already true. Every non-`intro` field (Tiers, Prestige,
+automations, …) is left unchanged. Unlike full Reset, it does not clear the save slot. Both
+Danger-zone actions stay disabled while production is frozen at the Prestige threshold.
 
 ### Game state shape
 
