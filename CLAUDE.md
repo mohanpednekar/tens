@@ -250,9 +250,9 @@ keeps milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 
-Four Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
+Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
 unattended, opening, fixing up, and merging PRs with no human in the loop — except a narrow,
-conservative class of low-risk bot-authored PRs that merge on green checks alone. All four
+conservative class of low-risk bot-authored PRs that merge on green checks alone. All five
 authenticate via the `GH_AUTOMATION_PAT` repo secret rather than the default `GITHUB_TOKEN`
 (whose commits/pushes/merges can't trigger other workflows). That PAT is deliberately
 narrowly-scoped and includes `Workflows: write`, so autonomous runs can push commits that touch
@@ -275,7 +275,10 @@ workflow self-improvement, gap analysis).
 itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
 `main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
 or on green checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the
-diff meets a conservative low-risk bar.
+diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
+workflows (Claude + Cursor maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
+runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
+issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
 
 **Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
 `cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones

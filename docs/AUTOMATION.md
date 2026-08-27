@@ -6,20 +6,22 @@ PR-opening/fix-up/auto-merge pipeline behaves. `CLAUDE.md` keeps only a short su
 pointer so the full phase-by-phase logic below isn't loaded into every session's context by
 default.
 
-Four Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
+Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
 unattended, working together to open, fix up, and merge PRs with no human in the loop until an
 approval is needed — except for a narrow, conservative class of low-risk bot-authored PRs that
-merge on green checks alone (see Auto-merge below). All four authenticate git/GitHub operations
+merge on green checks alone (see Auto-merge below). All five authenticate git/GitHub operations
 with a `GH_AUTOMATION_PAT` repo secret instead of the default `GITHUB_TOKEN`, because
 commits/pushes/merges authored by the default token can't trigger other workflows (see
 `docs/DESIGN_HISTORY.md` for why this matters concretely).
-`autonomous-maintenance.yml`/`autonomous-pr-followup.yml`/`dependabot-pr-followup.yml` additionally
-need `id-token: write` (OIDC token for `claude_code_oauth_token` auth) and
-`autonomous-maintenance.yml` needs `issues: write` (so its guard step's `gh issue list --label
-claude-task` doesn't silently return empty) and `security-events: read` (so its guard step's
-default-`GITHUB_TOKEN` call to the Dependabot alerts REST API, used by Phase 0(c)/Phase B item 2
-below, doesn't come back empty or 403 — GitHub enables Dependabot alerts by default for public
-repos, so no separate manual step is needed for this one).
+`autonomous-maintenance.yml`/`autonomous-pr-followup.yml`/`dependabot-pr-followup.yml`/
+`automation-self-heal.yml` additionally need `id-token: write` (OIDC token for
+`claude_code_oauth_token` auth) and `autonomous-maintenance.yml` needs `issues: write` (so its
+guard step's `gh issue list --label claude-task` doesn't silently return empty) and
+`security-events: read` (so its guard step's default-`GITHUB_TOKEN` call to the Dependabot alerts
+REST API, used by Phase 0(c)/Phase B item 2 below, doesn't come back empty or 403 — GitHub enables
+Dependabot alerts by default for public repos, so no separate manual step is needed for this one).
+`automation-self-heal.yml` also needs `issues: write` so it can file `automation-failure` triage
+issues when a config-level fix isn't confident.
 
 **Cost implications:** this repo is public, so GitHub Actions minutes on standard runners are free and
 unlimited. The real constraint is agent usage quota:
@@ -276,6 +278,37 @@ force-push, never merge or approve. `settings.permissions.deny` blocks Edit/Writ
 `deploy.yml`, `autonomous-maintenance.yml`, `autonomous-pr-followup.yml`, `pr-auto-merge.yml`, and
 its own file. Merging a fixed Dependabot PR still goes through the existing `pr-auto-merge.yml`
 paths (human approval, or green-checks low-risk for patch/minor bumps) — unchanged.
+
+### Automation self-heal (`automation-self-heal.yml`)
+
+When an automation-orchestration workflow fails a run, this companion diagnoses the failure from
+the failed run's logs and either opens a **draft** config-level fix PR on a `claude/self-heal-*`
+branch, or files/updates a GitHub issue labeled `automation-failure` for human triage — so a
+failure doesn't sit unnoticed until someone checks the Actions tab. It does **not** cover `ci.yml`
+or `deploy.yml` (product-facing; broken-`main` CI is Phase 0 / issue #37; broken deploys are
+surfaced by the deterministic deploy-failure step above). It also never edits its own file
+(runaway self-modification ban).
+
+**Watched workflows** (by `name:`): Autonomous maintenance, Autonomous PR follow-up, Auto-merge on
+approval, Dependabot PR follow-up, Cursor autonomous maintenance, Cursor PR follow-up. Trigger is
+`workflow_run: [completed]`, filtered in-job to `conclusion == 'failure'`.
+
+**Guard:** skips when a `claude/self-heal-<workflow-slug>-*` PR is already open for the same
+failing workflow, and hard-caps at 3 concurrently-open `claude/self-heal-*` PRs total. Failed-run
+logs are fetched with `gh run view --log-failed` and capped (~80 KiB / ~1200 lines) before being
+passed to the agent.
+
+**Agent:** `anthropics/claude-code-action@v1` with `CLAUDE_CODE_OAUTH_TOKEN` +
+`GH_AUTOMATION_PAT`, `--max-turns 25`, no `yarn` tools (workflow-config only).
+`settings.permissions.deny` blocks Edit/Write on `ci.yml`, `deploy.yml`, and
+`automation-self-heal.yml` itself — and deliberately **omits** the watched automation workflow
+files so a confident config fix can land (issue #36's deny-list-narrowing authorization). Choose
+exactly one path: (1) confident config fix → draft PR on
+`claude/self-heal-<slug>-<short-desc>`; (2) residual transient/infra (GitHub API 5xx,
+runner/network) → no-op (Claude-side 429/5xx on autonomous-maintenance already stay green
+upstream); (3) not confidently fixable → `automation-failure` issue (deduped). Never weakens
+never-self-merge / always-open-a-PR / PAT+OIDC auth / `ci.yml`/`deploy.yml` deny entries /
+duplicate-PR or budget guards; never `gh run rerun`s the failed run.
 
 ### Auto-merge (`pr-auto-merge.yml`)
 
