@@ -2065,6 +2065,12 @@ disabled while production is frozen at the Prestige threshold.
                                                           // unlike every other Disk field above.
                                                           // { [capacityBits]: true } once tickDiskAutoRedeem
                                                           // has auto-redeemed that size this cycle
+    dataLakes: { … },                                     // PERMANENT across real Prestige (see prestigeGame).
+                                                          // One lake per storage denomination (KB … QB):
+                                                          // { deposits: {1,10,100}, purchased, transfers[],
+                                                          // capacityLevel }. Era ascension resets with the
+                                                          // rest of the Foundry via buildEraIntroReset
+                                                          // (...initial.intro) — see "Era ascension" above
     computeCores: 0,                                      // PERMANENT, normally capped at COMPUTE_ENTITY_CAP (10)
                                                           // but startBoosterTransfer can push it past that
                                                           // (Data-Lake-limited, not inventory-capped). Granted by

@@ -891,7 +891,8 @@ through the mandatory pre-unlock gate even past Storage's own reveal threshold, 
 alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
 been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
 never hidden while it's still the only way out of the gate.
-The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
+The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
+`capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
 permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
