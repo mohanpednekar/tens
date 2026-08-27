@@ -998,46 +998,42 @@ reserve beyond its own deposits (below) — past that, it's a throughput pipe on
 inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to
 QB.
 
-*Deposits* — a prepaid convenience buffer, filled by depositing Disks
-(`10×1 + 10×10 + 10×100` of that tier's denomination at full capacity) via `depositDiskToDataLake` —
-fully automatic, no manual click: `tickDiskAutoDeposit` (called from `tickGame`'s `tickStorage`
-right after auto-redeem) deposits the smallest eligible size each tick, but only once that SIZE's
-own disk array is completely built (all `DISK_ARRAY_LADDER_CAP` (10) disks ever built,
-`disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, not merely holding one full disk) **and** the
-size is not currently redeemable for the main game (`!isDiskRedeemable`) — the same "disks always
-take priority for matching level costs" rule the read cache already follows, so a disk a tier could
-still redeem stays available for that instead of being swept into the lake. Since a lake's 3
-sub-slots map to 3 successive disk sizes (all feeding the SAME lake, one per pool), this naturally
-stages a lake's PHYSICAL per-sub-slot ceiling at `DISK_ARRAY_LADDER_CAP` (10): a lake can never be
-asked to hold more of a denomination than a single completed array of that size could ever
-physically produce (`isDiskArrayFullyBuilt` in `engine.js`), summing to an absolute physical
-maximum of `DISK_ARRAY_LADDER_CAP × 111` = 1,110 units if every sub-slot were ever filled to that
-ceiling.
-
-*Capacity* — but a lake's own ACTUAL capacity (`getDataLakeCapacity(state, tierIndex)`,
-`canDepositDiskToDataLake`'s real gate on top of the physical per-sub-slot ceiling above) is smaller
-and purchasable: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB lake, in
-that lake's own Byte-scale currency) and doubling by 1 level per `doubleDataLakeCapacity(tierIndex)`
-purchase, permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units,
-"1024 KB" for the KB lake) via `isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that
-current capacity converted into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the
-current value to double it" shape Memory's own Sacrifice uses, and the same currency Disks
-themselves are priced in, not a bare unit count. Gated by the same forced priority order every
-other Byte Foundry milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available
-only once Disk Fill, Bandwidth, Disk Build, and Compute are all currently unavailable, same rank as
-Memory's own Sacrifice, not competing with it). Since the 1,024-unit hard cap sits below the
-1,110-unit physical ceiling, a lake's largest (×100) sub-slot can never be fully filled to its own
-physical cap of 10 — the level cap always binds first. `canDepositDiskToDataLake` enforces both
-ceilings (the per-sub-slot physical cap AND the lake-wide capacity level), and the
-digit-decomposition ceiling `decomposeDataLakeDeposits` still caps each place at the physical
-`DISK_ARRAY_LADDER_CAP` (10) regardless of the current level — deposits stay fungible, not tracked
-per physical disk, so spending re-decomposes the remaining total largest-denomination-first.
-`DataLakePanel` displays deposited/capacity/next-Booster-cost/doubling-cost figures in Byte-scale
-(`formatDiskSize`, KB/MB/GB/…) rather than a bare unit count — each abstract unit converted through
-the `getDataLakeUnitBits` helper — since "Data lake uses the same currency as disks" (see
-`docs/DESIGN_HISTORY.md`). An earlier version fixed this cap at the 1,110-unit physical ceiling with
-no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a smaller, doublable,
+*Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
+purchasable, doubling ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for
+the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
+`doubleDataLakeCapacity(tierIndex)` purchase, permanently hard-capped at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
+`isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
+into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
+it" shape Memory's own Sacrifice uses, and the same currency Disks themselves are priced in, not a
+bare unit count. Gated by the same forced priority order every other Byte Foundry milestone action
+follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Bandwidth, Disk
+Build, and Compute are all currently unavailable, same rank as Memory's own Sacrifice, not
+competing with it). An earlier version fixed this cap at a value derived from the Disk arrays
+themselves with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
 explicitly-capped ladder replaced that.
+
+*Deposits* — filled by depositing Disks (`10×1 + 10×10 + 10×100` of that tier's denomination at
+full capacity) via `depositDiskToDataLake` — fully automatic, no manual click: `tickDiskAutoDeposit`
+(called from `tickGame`'s `tickStorage` right after auto-redeem) deposits the smallest eligible
+size each tick, but only once that SIZE's own disk array is completely built (all
+`DISK_ARRAY_LADDER_CAP` (10) disks ever built, `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`,
+not merely holding one full disk) **and** the size is not currently redeemable for the main game
+(`!isDiskRedeemable`) — the same "disks always take priority for matching level costs" rule the
+read cache already follows, so a disk a tier could still redeem stays available for that instead of
+being swept into the lake. A sub-slot's own deposit count naturally never exceeds
+`DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever be built) — this was never
+a separate design cap, just a backstop that keeps the deposits counter from exceeding what's
+physically possible; `canDepositDiskToDataLake` enforces it alongside the real, intentional limit
+above, the lake's own capacity level, which is far smaller (1,024 max vs. an incidental 1,110-unit
+sum if every sub-slot were somehow filled to that backstop) and is what actually gates deposits in
+practice. `decomposeDataLakeDeposits` still caps each digit place at that same backstop value
+regardless of the current level — deposits stay fungible, not tracked per physical disk, so spending
+re-decomposes the remaining total largest-denomination-first. `DataLakePanel` displays
+deposited/capacity/next-Booster-cost/doubling-cost figures in Byte-scale (`formatDiskSize`,
+KB/MB/GB/…) rather than a bare unit count — each abstract unit converted through the
+`getDataLakeUnitBits` helper — since "Data lake uses the same currency as disks" (see
+`docs/DESIGN_HISTORY.md`).
 
 *Starting a Booster* (`startBoosterTransfer(tierIndex)`, ComputePage) — the nth Booster ever
 started at tier *t* (completed or still in flight) costs *n* units of lake *t*

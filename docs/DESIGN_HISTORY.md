@@ -3087,20 +3087,23 @@ be 1024 KB" — which had itself been set aside pending the "auto-derive the cap
 simplification; that simplification is what got reverted here, restoring the level-based design that
 predated it.
 
-The key design question this reversal raised: does the new level cap *replace* the physical
-per-sub-slot ceiling the previous PR introduced (`DISK_ARRAY_LADDER_CAP`, staging a lake's ceiling
-at 10 → 110 → 1,110 as each of the 3 sub-size Disk arrays completes), or *layer on top of* it? The
-two are answering different questions — "how much can a completed Disk array ever physically
-produce" vs. "how much of that has the player actually paid to be able to bank" — so they coexist:
-`canDepositDiskToDataLake` now enforces BOTH, and since the new hard cap (1,024) sits below the
-physical ceiling (1,110), the level cap is always the one that actually binds in practice. A fully
-built pool (all three sub-arrays complete) at max level can still never deposit a 10th ×100 disk —
-10 (×1) + 100 (×10) + 900 (9×100) = 1,010 already leaves only 14 units of headroom under the 1,024
-cap, one short of the 100 a 10th ×100 disk would need. This is not a bug: 1,024 is a deliberately
-*tighter*, round, binary ceiling the maintainer explicitly chose over the array's own looser physical
-maximum — the same instinct Memory's own capacity cap (`INTRO_CAPACITY_CAP_BITS`, exactly 1 MiB)
-already follows elsewhere in this codebase, a clean power-of-two rather than whatever number falls
-out of an unrelated mechanic's own math.
+The key clarification this reversal settled: the `DISK_ARRAY_LADDER_CAP`-derived 10 → 110 → 1,110
+figure the previous PR's removal had leaned on was never itself an explicit design cap the
+maintainer asked for — it's just the incidental sum of how many disks of each size can ever exist
+(`isDiskArrayFullyBuilt`'s own per-sub-slot backstop, DISK_ARRAY_LADDER_CAP = 10, applied at 3
+different weights). The ONE explicit, intentional cap a player actually experiences is the doubling
+ladder (1 unit → 1,024 units). The two aren't competing designs to choose between, since they answer
+different questions — "how many disks of that size could physically ever exist" (a backstop with no
+design intent behind its resulting sum) vs. "how much has the player actually paid to bank" (the
+real cap) — so `canDepositDiskToDataLake` enforces both, and since 1,024 sits below the incidental
+1,110 backstop, the doubling ladder is always what actually binds in practice. A fully built pool
+(all three sub-arrays complete) at max level can still never deposit a 10th ×100 disk — 10 (×1) +
+100 (×10) + 900 (9×100) = 1,010 already leaves only 14 units of headroom under the 1,024 cap, one
+short of the 100 a 10th ×100 disk would need. This is not a bug: 1,024 is a deliberate, round,
+binary ceiling the maintainer explicitly asked for, independent of wherever the backstop's own
+incidental sum happens to land — the same instinct Memory's own capacity cap
+(`INTRO_CAPACITY_CAP_BITS`, exactly 1 MiB) already follows elsewhere in this codebase, a clean
+power-of-two rather than whatever number falls out of an unrelated mechanic's own math.
 
 The cost formula keeps the same shape as the original (now-removed) `doubleDataLakeCapacity`: spend
 the lake's own CURRENT capacity, converted from an abstract unit count into real bits via

@@ -31,13 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fields you're changing) onto the current dev save.
 - **Data Lakes + Booster transfers** — ten storage-tier lakes (KB … QB). A lake never itself banks a
   spendable reserve — past a small prepaid deposit buffer (below), it's a throughput pipe onto the
-  live Disk inventory. Depositing Disks (`10×1 + 10×10 + 10×100` of that denomination) into the buffer
-  requires that size's disk array to be COMPLETELY built (all 10 disks ever built), which naturally
-  stages the buffer's PHYSICAL ceiling: 10 once only the smallest sub-size's array is complete, 110
-  once the next size up is also complete, the full 1,110 once the largest of the three is complete
-  too — the same fixed per-array cap a Disk array itself can never exceed. A lake's own actual
-  capacity (see Changed below) is a smaller, separate, purchasable ladder sitting under this
-  physical ceiling. Starting a
+  live Disk inventory. Depositing Disks (`10×1 + 10×10 + 10×100` of that denomination) into the
+  buffer requires that size's disk array to be COMPLETELY built (all 10 disks ever built) — a
+  backstop that keeps the deposit counter from exceeding how many disks of that size can ever exist,
+  not a design cap in itself. A lake's own actual, intentional deposit capacity (see Changed below)
+  is a smaller, separate, purchasable doubling ladder. Starting a
   Booster on the Boosters screen costs escalating lake units (the nth Booster ever started, counting
   ones still in flight, costs n) — spent out of the deposit buffer FIRST (instant), then any
   remaining cost is sourced live from built Disks and transferred into the lake over time, at 10×
@@ -77,11 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - **Data Lake panel redesigned; capacity is now a doubling ladder hard-capped at 1,024 units** —
   `DataLakePanel` is a proper CSS Grid with an explicit Lake/Deposited/Capacity/Bought/Next header
-  row instead of an unaligned, single-flex-row-per-lake layout. Each sub-slot's PHYSICAL ceiling
-  (how much a fully-built Disk array of that size could ever produce) is a fixed
-  `DISK_ARRAY_LADDER_CAP` (10), staging up to 1,110 total once all three of a lake's sub-size arrays
-  are complete — but a lake's own ACTUAL capacity is a separate, smaller, purchasable ladder:
-  starts at 1 unit ("1 KB" for the KB lake) and doubles per purchase (spending the lake's own
+  row instead of an unaligned, single-flex-row-per-lake layout. A lake's own deposit capacity is
+  the explicit, purchasable ladder: starts at 1 unit ("1 KB" for the KB lake) and doubles per
+  purchase (spending the lake's own
   current capacity in Bits, the same shape Memory's Sacrifice uses), permanently hard-capped at
   1,024 units ("1024 KB") via a compact "⚡ ×2" button in the panel's new Capacity column.
 - **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or

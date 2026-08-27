@@ -8546,7 +8546,7 @@ describe('Data Lakes', () => {
     expect(doubleDataLakeCapacity(1)(state)).toBe(state) // no-op once maxed
   })
 
-  it('a lake\'s own capacity level hard-caps the total below the Disk arrays\' own 1,110 physical maximum', () => {
+  it('a lake\'s own capacity level (1,024 at max) hard-caps the total below what a fully-built pool could incidentally hold (1,110)', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 10, [kb10]: 10, [kb100]: 10 },
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },

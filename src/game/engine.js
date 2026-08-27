@@ -3384,22 +3384,18 @@ export const getDataLakeDepositedUnits = tierIndex => state => {
   )
 }
 
-// Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP (10) — a lake can never be asked to
-// hold more of a denomination than a single array of that size could ever physically produce (once
-// DISK_ARRAY_LADDER_CAP disks exist, that size's ladder position is permanently full — see
-// isDiskArrayFullyBuilt). Sum of one unit at each sub-size (1 + 10 + 100 = 111) — the absolute
-// physical maximum a lake could ever bank is exactly DISK_ARRAY_LADDER_CAP times this (1,110).
+// Sum of one unit at each sub-size (1 + 10 + 100 = 111) — used below only for the
+// decomposeDataLakeDeposits correctness argument. NOT an explicit design cap: a sub-slot's own
+// count naturally never exceeds DISK_ARRAY_LADDER_CAP (10, since only 10 disks of a given size can
+// ever be built — see isDiskArrayFullyBuilt), so the resulting 1,110-unit sum a lake could
+// theoretically ever bank is just an incidental consequence of that limit, not a separately
+// designed or enforced ceiling — the real, explicit, intentional cap is the doubling ladder below,
+// which sits far under it (1,024 max) and is the one that actually binds in practice.
 const DATA_LAKE_SUB_SIZE_TOTAL = DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize, 0)
 
-// A lake's own current deposit capacity is a purchasable, doubling ladder — see
-// getDataLakeCapacityLevel/doubleDataLakeCapacity below — starting at 1 unit (level 0) and
-// permanently hard-capped at DATA_LAKE_CAPACITY_MAX_LEVEL (1,024 units at level 10). This is
-// independent of, and always well under, the 1,110-unit physical ceiling the Disk arrays
-// themselves impose (see DATA_LAKE_SUB_SIZE_TOTAL above) — the Math.min is a defensive clamp, not
-// a normally-binding one, so a future change to either ladder can't silently let one exceed the
-// other. An earlier iteration made this cap fixed at the physical ceiling with no purchasable lever
-// at all — see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder
-// replaced that.
+// A lake's own deposit capacity is THE explicit, purchasable, doubling ladder a player actually
+// interacts with: starts at 1 unit (level 0) and doubles per doubleDataLakeCapacity purchase below,
+// permanently hard-capped at DATA_LAKE_CAPACITY_MAX_LEVEL (1,024 units at level 10).
 export const getDataLakeCapacityLevel = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.capacityLevel ?? 0
 
@@ -3407,16 +3403,16 @@ export const isDataLakeCapacityMaxed = (state, tierIndex) =>
   getDataLakeCapacityLevel(state, tierIndex) >= DATA_LAKE_CAPACITY_MAX_LEVEL
 
 export const getDataLakeCapacity = (state, tierIndex) =>
-  Math.min(DISK_ARRAY_LADDER_CAP * DATA_LAKE_SUB_SIZE_TOTAL, 2 ** getDataLakeCapacityLevel(state, tierIndex))
+  2 ** getDataLakeCapacityLevel(state, tierIndex)
 
 // A lake's `deposits` (sub-slot counts, each 0..DISK_ARRAY_LADDER_CAP) are exactly the
 // base-(DISK_ARRAY_LADDER_CAP+1) hundreds/tens/ones digit decomposition of its own deposited
-// total, since the total is always 0..1,110 (bounded well under that by getDataLakeCapacity above)
-// and each digit place caps at DISK_ARRAY_LADDER_CAP. The greedy top-down
-// cap-at-DISK_ARRAY_LADDER_CAP decomposition is exact because DISK_ARRAY_LADDER_CAP (10) is at
-// least DATA_LAKE_SUB_SIZE_TOTAL / DATA_LAKE_SUB_SIZES[1] (111 / 10 = 11.1 rounded down to the
-// nearest whole unit each place can actually hold) — below that threshold a capped-off remainder at
-// a larger place isn't always absorbable by the smaller places' own combined capacity;
+// total, since the total is always 0..1,110 (in practice bounded far under that by
+// getDataLakeCapacity's own 1,024 hard cap) and each digit place caps at DISK_ARRAY_LADDER_CAP. The
+// greedy top-down cap-at-DISK_ARRAY_LADDER_CAP decomposition is exact because DISK_ARRAY_LADDER_CAP
+// (10) is at least DATA_LAKE_SUB_SIZE_TOTAL / DATA_LAKE_SUB_SIZES[1] (111 / 10 = 11.1 rounded down
+// to the nearest whole unit each place can actually hold) — below that threshold a capped-off
+// remainder at a larger place isn't always absorbable by the smaller places' own combined capacity;
 // DISK_ARRAY_LADDER_CAP is a fixed constant, so this holds for the whole game with no further
 // reasoning needed about it ever changing at runtime. Starting a Booster spends however much of
 // `cost` deposits can cover by re-deriving this decomposition from (deposited - fromDeposits) — see
@@ -3455,15 +3451,14 @@ export const getBoosterPurchaseCost = tierIndex => state => {
 }
 
 // A size's disk array must be COMPLETELY built out — every DISK_ARRAY_LADDER_CAP (10) disk ever
-// built at that size — before any of its disks can be deposited to a Data Lake at all. Since a
-// lake's 3 sub-slots (1/10/100 — see DATA_LAKE_SUB_SIZES) map to 3 successive disk sizes, this
-// gate stages the PHYSICAL per-place ceiling as each array completes — up to DISK_ARRAY_LADDER_CAP
-// (10) units once the ×1 array is complete, 110 once the ×10 array is also complete, the full 1,110
-// once the ×100 array is complete too — independently of, and on top of, the lake's own smaller
-// purchasable capacity (getDataLakeCapacity above), which gates the actual total regardless of how
-// much of this physical ceiling is unlocked. This check is permanent/monotonic (disksBuiltTotal
-// never decreases), unlike the "at least one currently full disk" check below, which fluctuates as
-// disks are deposited and rebuilt.
+// built at that size — before any of its disks can be deposited to a Data Lake at all. This check
+// is permanent/monotonic (disksBuiltTotal never decreases), unlike the "at least one currently full
+// disk" check below, which fluctuates as disks are deposited and rebuilt. The per-sub-slot check
+// below it (lake.deposits[subSize] >= DISK_ARRAY_LADDER_CAP) is a backstop, not a second design
+// cap: it just keeps the deposits counter from exceeding how many disks of that size could ever
+// exist — the real, intentional limit a player actually experiences is the lake's own doubling
+// capacity (getDataLakeCapacity below), which sits far under it and is what actually gates deposits
+// in practice.
 const isDiskArrayFullyBuilt = (state, sizeBits) =>
   (state.intro?.disksBuiltTotal?.[sizeBits] ?? 0) >= DISK_ARRAY_LADDER_CAP
 
