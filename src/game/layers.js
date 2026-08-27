@@ -227,11 +227,31 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
 // Byte-scale). Cache funds matching main-game tier level blocks via manual release
-// (releaseDiskCacheBlock, only while some tier's current per-unit cost matches this size and no
-// full redeemable disk exists). When full, it also flushes into an empty disk over one block's
+// (releaseDiskCacheBlock, only while this size's own fixed corresponding tier currently sits at
+// its required level and no full redeemable disk exists). When full, it also flushes into an empty disk over one block's
 // production duration (getDiskReadCacheFlushSeconds). Steady state is full; gaps only right after
 // a release, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
+
+// --- Disk/Cache fill bandwidth --- every timed Byte Foundry storage transfer (disk build,
+// read-cache refill/flush, write-cache collect/flush) is paced as a multiple of the Byte Foundry's
+// own current production rate (getIntroProductionRate in engine.js — "Memory bandwidth"), not a
+// flat/hardcoded rate, so it always tracks Invest/Compute Boost like every other timed mechanic
+// here. Building a fresh disk (an empty container, not yet fed by any cache) takes exactly the
+// time to fill it at 1x Memory bandwidth — no multiplier constant of its own, since 1x is bandwidth
+// itself.
+//
+// A DISK filling FROM a cache (read-cache → disk, write-cache → disk) moves faster than Memory's
+// own live production, since the cache itself is a pre-staged buffer, not a live trickle.
+export const DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2
+// A CACHE filling FROM Memory (read-cache refill) can drain a banked Memory balance faster still —
+// even a large surplus balance still only drains into the cache at this multiple of the CURRENT
+// production rate, not instantly.
+export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10
+// A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — slower
+// than filling from Memory directly, since it's moving already-built Disk contents rather than the
+// live generator output.
+export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked in engine.js and
 // intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic
@@ -380,8 +400,9 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 
 // --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
 // startBoosterTransfer in engine.js. Each of the 10 storage denominations (KB … QB) has a Data
-// Lake that can hold up to DATA_LAKE_CAPACITY units of PREPAID deposits, filled by manually
-// depositing built Disks (9×1 + 9×10 + 9×100 of that tier's denomination = 999) — a convenience
+// Lake that can hold up to getDataLakeCapacity() units of PREPAID deposits, filled automatically
+// (`tickDiskAutoDeposit`, no manual action) by depositing built Disks (up to DISK_ARRAY_LADDER_CAP
+// (10) each of that tier's ×1/×10/×100 denominations — 10 each, 1110 total) — a convenience
 // stockpile, not the lake's only source of Boosters (see "Data Lake Booster transfers" below).
 // Starting a Booster at tier N spends units genuinely OUT of lake N's own current deposits FIRST
 // (not against a separate ledger, real capacity that only returns once more Disks get deposited),
@@ -390,12 +411,20 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // getBoosterPurchaseCost in engine.js, which now also counts in-flight transfers so starting
 // several concurrently (see DATA_LAKE_TRANSFER_CAPACITY_MAX below) still charges the correct
 // escalating cost rather than letting concurrency dodge it.
-export const DATA_LAKE_CAPACITY = 999
-export const DATA_LAKE_SLOT_MAX = 9
+//
+// Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP — a lake can never be asked to hold
+// more of a denomination than a single array of that size could ever physically produce. On top of
+// that physical ceiling, a lake's own actual capacity is a smaller, purchasable, doubling ladder
+// (see getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB"
+// for the KB lake) and doubling per purchase, permanently hard-capped at
+// DATA_LAKE_CAPACITY_MAX_LEVEL (level 10, 1,024 units — "1024 KB" for the KB lake). An earlier
+// version instead made the cap fixed at the physical ceiling with no purchasable lever at all —
+// see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder replaced that.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
+export const DATA_LAKE_CAPACITY_MAX_LEVEL = 10
 
 // --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
 // tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and

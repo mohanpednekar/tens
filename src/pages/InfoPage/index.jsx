@@ -23,8 +23,9 @@ import {
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
-  DATA_LAKE_CAPACITY,
-  DATA_LAKE_SLOT_MAX,
+  CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
+  CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
+  DATA_LAKE_CAPACITY_MAX_LEVEL,
   DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
@@ -36,6 +37,7 @@ import {
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
+  DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
@@ -233,8 +235,9 @@ const InfoPage = () => {
             Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).
           </li>
           <li>
-            Build time is real: the first disk of a size takes 1s per “KB” of that size; the Nth
-            disk of the same array takes N× that base time.
+            Build time is real: the first disk of a size takes exactly as long as filling it would
+            at your current Byte Foundry production rate (Memory bandwidth); the Nth disk of the
+            same array takes N× that base time.
           </li>
           <li>
             While an array rebuilds, every disk in it is offline — no fill, release, or redeem —
@@ -254,33 +257,42 @@ const InfoPage = () => {
         <h3>Cache, fill, release, redeem</h3>
         <ul>
           <li>
-            Each array keeps a Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth
-            of bits (e.g. a 1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory
-            refills whole blocks when a block was just released or the size was just unlocked —
-            Memory fills visibly between transfers rather than draining bit-by-bit.
+            Only the pool's smallest array — the one that actually draws from Memory — keeps a
+            Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth of bits (e.g. a
+            1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
+            blocks when a block was just released or the size was just unlocked — Memory fills
+            visibly between transfers rather than draining bit-by-bit, at up to
+            {' '}{CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× your current production rate, so
+            even a large banked balance can't refill it instantly.
           </li>
           <li>
-            Empty disks fill from a full read cache when no tier claim blocks that size — the flush
-            takes as long as filling one cache block at your current Byte Foundry production rate
-            (not instant). Larger sizes can also fill via write-cache merges from the size below.
+            That smallest array's empty disks fill from its full read cache when no tier claim
+            blocks that size — the flush takes as long as filling one cache block at
+            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your current Byte Foundry production
+            rate (not instant). Every larger size fills exclusively via write-cache merges from the
+            size below — collecting from those built Disks at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}×
+            your rate, then flushing into the next size's own empty disk at
+            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× — it has no read cache of its own.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
-            into Memory) — but only while some tier’s current per-unit cost matches that array’s
-            size <strong>and no full redeemable disk of that size exists</strong>. Disks always
-            take priority; cache is fallback only.
+            into Memory) — but only while that size’s own fixed corresponding tier currently sits
+            at its required level <strong>and no full redeemable disk of that size exists</strong>.
+            Disks always take priority; cache is fallback only.
           </li>
           <li>
             With <strong>Smart</strong> on, the matching tier’s autobuyer auto-releases cache
             blocks when no disk is available; otherwise release cache by hand.
           </li>
           <li>
-            A full disk <strong>redeems</strong> for 1 free unit of whichever tier’s current price
-            exactly matches its size (any tier). Ties break toward the earliest tier in the main
-            ladder.
+            Every disk size has one fixed, permanent tier and level it corresponds to (KB-scale
+            sizes to Kilobytes, MB-scale to Megabytes, and so on — the 1st/2nd/3rd size within each
+            maps to that tier’s own level 1/2/3). A full disk <strong>redeems</strong> only while
+            its tier is currently sitting at exactly that level, completing the tier’s whole
+            current level in one shot rather than granting a single unit.
           </li>
           <li>
-            Auto-redeem fires only when that matching tier’s unit autobuyer is unlocked and
+            Auto-redeem fires only when that tier’s unit autobuyer is unlocked and
             unpaused; otherwise redeem by hand.
           </li>
           <li>Disks are reusable and permanent across Prestige; a full disk stays full through Prestige.</li>
@@ -303,15 +315,25 @@ const InfoPage = () => {
             onto your built Disks, not a stockpile.
           </li>
           <li>
-            Depositing a size's disks (a prepaid buffer, spent first when starting a Booster)
-            requires that size's array to be completely built (all {DISK_ARRAY_LADDER_CAP} disks
-            ever built), not just one currently full — deposit from a Foundry disk row once
-            eligible.
+            A size's disks deposit into its lake automatically — no manual action — once that
+            size's array is completely built (all {DISK_ARRAY_LADDER_CAP} disks ever built, not
+            just one currently full) and the disk isn't currently redeemable for the main game
+            (redeeming always comes first).
           </li>
           <li>
-            Each lake's deposit buffer stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
-            once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
-            built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too.
+            A lake's own deposit capacity is purchasable: it starts at 1 unit and doubles each
+            purchase (spending the lake's own current capacity, converted into Memory Bits — the
+            same "spend the current value to double it" shape Sacrifice uses), permanently
+            hard-capped at {2 ** DATA_LAKE_CAPACITY_MAX_LEVEL} units once fully doubled — shown on
+            the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
+            these raw unit counts.
+          </li>
+          <li>
+            Each denomination can also never hold more disks of a size than {DISK_ARRAY_LADDER_CAP}{' '}
+            — the most that size's array can ever physically produce — so a lake's largest
+            denomination can bank up to {DISK_ARRAY_LADDER_CAP * 111} once every sub-size array is
+            complete; this is well above the purchasable capacity above, so it's the doubling cap
+            that actually limits deposits in practice, not this incidental ceiling.
           </li>
           <li>
             Starting the nth Booster ever started at a lake (whether already granted or still

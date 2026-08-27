@@ -117,4 +117,54 @@ describe('pr-low-risk-eligible.sh', () => {
     });
     expect(major.status).toBe(1);
   });
+
+  it('rejects a large non-docs bot PR that is not a Dependabot patch/minor', () => {
+    const r = run({
+      branch: 'cursor/auto-example',
+      title: 'refactor engine helpers',
+      isCrossRepository: false,
+      additions: 40,
+      deletions: 20,
+      files: ['src/game/engine.js'],
+    });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/does not meet the low-risk bar/);
+  });
+
+  it('rejects large diffs that touch non-allowlisted doc paths', () => {
+    // Only CLAUDE.md / *.test.js / *.test.jsx count as docs/tests-only —
+    // AGENTS.md and CHANGELOG.md alone must not slip through on size alone.
+    expect(
+      run({
+        branch: 'cursor/auto-example',
+        title: 'sync agents',
+        isCrossRepository: false,
+        additions: 80,
+        deletions: 10,
+        files: ['AGENTS.md'],
+      }).status,
+    ).toBe(1);
+    expect(
+      run({
+        branch: 'claude/auto-example',
+        title: 'changelog only',
+        isCrossRepository: false,
+        additions: 60,
+        deletions: 5,
+        files: ['CHANGELOG.md'],
+      }).status,
+    ).toBe(1);
+  });
+
+  it('exits 2 when branch is missing from --from-json input', () => {
+    const r = run({
+      title: 'no branch field',
+      isCrossRepository: false,
+      additions: 1,
+      deletions: 0,
+      files: ['CLAUDE.md'],
+    });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toMatch(/missing branch/);
+  });
 });

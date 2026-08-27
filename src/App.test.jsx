@@ -12,6 +12,7 @@ import {
   COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
+  DATA_LAKE_CAPACITY_MAX_LEVEL,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
   DISK_CACHE_BLOCK_COUNT,
@@ -3082,14 +3083,16 @@ describe('Byte Foundry Storage', () => {
         [size10kb]: 2,
       },
       disks: { [currentBankSize]: 1, [size10kb]: 1 },
-      diskCache: { [currentBankSize]: currentBankSize, [size10kb]: size10kb },
+      diskCache: { [currentBankSize]: currentBankSize },
     })
     render(<App />)
 
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
     expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('10 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
+    // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
+    expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
     expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
@@ -3116,7 +3119,7 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('Foundry keeps every previously-built Disk size plus the highest offer even when no shown size is redeemable', () => {
-    // Ladder offers futureBankSize; tier01 is past both FIRST and level-2 costs, so nothing matches.
+    // Ladder offers futureBankSize; tier01 is past both FIRST's and level-2's required levels, so neither is redeemable.
     // Previously-built 1 KB and the incomplete 10 KB offer both stay on the continuous Foundry screen.
     seedIntroState(
       {
@@ -3130,7 +3133,9 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /build disk/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^10 kb read cache$/i })).toBeInTheDocument()
+    // 10 KB never gets a read cache, regardless of redeemability — only the pool's smallest size
+    // (1 KB) does (see isDiskReadCacheEligible in engine.js).
+    expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
   })
 
   test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {
@@ -3194,12 +3199,13 @@ describe('Byte Foundry Storage', () => {
     // finishes — the button itself reflects the in-progress rebuild.
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
-    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: 1, totalSeconds: 1 })
+    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: currentBankSize, totalSeconds: currentBankSize })
     expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
     expect(screen.getByRole('button', { name: /disk array rebuilding/i })).toBeDisabled()
 
-    // The smallest size's very first build takes exactly 1 second (1 second per real "KB" of size).
-    act(() => { vi.advanceTimersByTime(1000) })
+    // The smallest size's very first build takes exactly the time to fill it at 1x Memory
+    // bandwidth — the default 1 bit/sec production rate, so currentBankSize (8000) seconds.
+    act(() => { vi.advanceTimersByTime(currentBankSize * 1000) })
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.diskBuild).toBeNull()
@@ -3221,7 +3227,11 @@ describe('Byte Foundry Storage', () => {
 
     // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
     // level 1 so read cache may flush into the empty disk without an active tier claim at this size.
-    // High production rate makes the one-block flush finish within a single tick.
+    // High production rate makes the one-block flush finish within a single tick — but a cache
+    // refill FROM Memory is itself bandwidth-capped (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER ×
+    // the current rate × elapsed REAL seconds), so refilling the cache a second time after the
+    // first tick's flush empties it needs a second real tick's worth of elapsed time, not the same
+    // 0-elapsed intra-tick pass the old unbounded refill relied on.
     seedIntroState(
       {
         bits: currentBankSize * 2,
@@ -3240,9 +3250,20 @@ describe('Byte Foundry Storage', () => {
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
     // Read cache topped up and flushed into the empty disk in the same tick. At tier level 2 the
-    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance.
+    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance. The cache
+    // itself is empty again immediately after flushing into the disk — it only refills on a later
+    // tick's own bandwidth budget.
     expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.bits).toBe(currentBankSize)
+    expect(saved.intro.diskCache?.[currentBankSize] ?? 0).toBe(0)
+    expect(saved.intro.disks[currentBankSize]).toBe(1)
+    expect(saved.owned.tier01).toBe(0)
+
+    // A second tick's worth of (ample) bandwidth refills the cache from the remaining balance.
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+
+    saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
@@ -3289,7 +3310,8 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryByRole('button', { name: /auto-redeem 1 kb disk/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
+    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
+    expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.diskAutoRedeemedSizes[String(currentBankSize)]).toBe(true)
 
     unmount()
@@ -3310,8 +3332,8 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /redeem 10 kb disk/i })).toBeDisabled()
     unmount()
 
-    // tier01 now at level 2 — its current per-unit cost (10,000 Bits = 80,000 bits) matches the
-    // held disk.
+    // tier01 now at level 2 — exactly the required level for the held disk's own fixed size (10 KB,
+    // disk-ladder step 2).
     seedIntroState(
       { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [futureBankSize]: 1 } },
       { purchaseLevels: { [tier01.id]: 2 } }
@@ -3329,14 +3351,16 @@ describe('Byte Foundry Storage', () => {
     // convention as "the manual convert button appears..." above.
     expect(screen.queryByRole('button', { name: /redeem 10 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
+    // Completes tier01's whole level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
+    expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks[futureBankSize]).toBeUndefined()
 
-    // Redeeming advances tier01's purchase-block progress the same way a manual Buy would —
-    // visible on ByteFoundryPage's own transfer-block row (a live mirror of the same progress) once
-    // navigated back there via AppNav.
+    // Redeeming completes tier01's whole level 2 in one shot (see redeemDisk's own doc comment),
+    // rolling it straight into a fresh level 3 with no progress yet — visible on ByteFoundryPage's
+    // own transfer-block row (a live mirror of the same purchaseLevelProgress) as zero transferred
+    // blocks, not a partial 1/8, once navigated back there via AppNav.
     fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-    expect(screen.getAllByRole('button', { name: /^transferred block/i })).toHaveLength(1)
+    expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   })
 
   test('Data Lake renders bare (no separate "Data Lakes" card) as part of the same pool card once a lake has any deposit', () => {
@@ -3349,11 +3373,58 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    expect(screen.getByText(/KB Data Lake.*Cores/i)).toBeInTheDocument()
+    expect(screen.getByText(/^KB.*Cores$/i)).toBeInTheDocument()
     // `bare` mode (see components/DataLakePanel) skips its own StatCard wrapper — there is no
     // separately-labeled "Data Lakes" region; it renders as the last sub-section of the same
     // PoolCard as Memory/Storage above it.
     expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
+  })
+
+  test('Data Lake capacity can be doubled by clicking its ⚡×2 button', () => {
+    // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
+    // tick landing between render and the click could otherwise change intro.bits or another
+    // forced-priority input out from under the click before it's processed.
+    vi.useFakeTimers()
+
+    // bits (8000) covers the KB lake's level-0 doubling cost (1 unit × 8000 bits/unit) but stays
+    // well under a Disk Build's own cost (80,000), so Disk Build never outranks it; Invest's
+    // current-tier claims are already used up (productionMilestoneTierClaims: 2) — the same
+    // higher-priority-action neutralization the Sacrifice tests above use, since capacity doubling
+    // sits at the same forced-priority rank.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      productionMilestoneTierClaims: 2,
+      dataLakes: { 1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 0, capacityLevel: 0 } },
+    })
+    const { unmount } = render(<App />)
+    openStorage()
+
+    const doubleButton = screen.getByRole('button', { name: /double the KB Data Lake's capacity/i })
+    expect(doubleButton).toBeEnabled()
+
+    fireEvent.click(doubleButton)
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.dataLakes['1'].capacityLevel).toBe(1)
+    expect(saved.intro.bits).toBe(0)
+
+    unmount()
+    vi.useRealTimers()
+  })
+
+  test('Data Lake capacity-doubling button disappears once the lake hits its hard cap', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+    })
+    render(<App />)
+    openStorage()
+
+    expect(screen.queryByRole('button', { name: /double the KB Data Lake's capacity/i })).not.toBeInTheDocument()
   })
 
   test('a full disk above 1 KB auto-redeems once the matching tier\'s own autobuyer is unlocked and enabled — there is no separate storage-specific pause toggle any more', () => {
@@ -3373,9 +3444,10 @@ describe('Byte Foundry Storage', () => {
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Auto-redeemed without a manual click on the disk button itself.
+    // Auto-redeemed without a manual click on the disk button itself. Completes tier01's whole
+    // level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(1)
+    expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks?.[futureBankSize] ?? 0).toBe(0)
 
     unmount()

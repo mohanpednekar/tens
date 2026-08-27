@@ -134,21 +134,37 @@ player taps to accumulate bits into "Memory" (capacity-capped, displayed in bina
 passively-producing Byte generator, then grows it via Sacrifice (2x capacity, hard-capped at 1 MiB —
 large enough to afford building the pool's own largest Disk)
 and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
-far enough along — Disks (`StoragePage`, timed
-builds with a per-array always-full **read cache** (Memory → read cache → timed flush to disk when
-tier allows; flush duration = one cache block at production rate; write-cache upward merges from
-the size below) as fallback tier funding when no matching disk exists;
-Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
+far enough along — Disks (`StoragePage`, timed builds — a fresh disk takes exactly the time to fill
+it at 1x Memory bandwidth (current production rate), ×N for the array's Nth disk; only the pool's
+smallest size gets an always-full **read cache** (Memory → read cache → timed flush to disk when
+tier allows; the Memory→cache refill is itself bandwidth-capped at 10x rate, and the cache→disk
+flush duration is one cache block at 2x rate) — every larger size fills exclusively via write-cache
+upward merges from the size below (collect from Disks at 2x rate, flush into the disk at 2x rate),
+never its own read cache (running both was redundant); as fallback tier funding when no matching disk exists,
+Smart autobuyers auto-release read cache; disks always take priority) — each disk size has a fixed,
+permanent one-to-one mapping to one tier+level (KB sizes → Kilobytes, MB sizes → Megabytes, etc.,
+1st/2nd/3rd size → that tier's level 1/2/3); redeeming only fires while the tier is currently at
+exactly that level, and completes the whole level in one shot rather than granting 1 unit)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund
-Boosters, escalating cost (nth = n units, counting in-flight starts too): deposited Disks (a prepaid
-buffer) spend first/instantly, any remaining cost live-transfers off built Disks over time (10x the
-Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake never itself
-banks a spendable reserve beyond its deposits. A separate PP **Compute (Flops)**
+Boosters, escalating cost (nth = n units, counting in-flight starts too): a fully-built disk array
+auto-deposits into its lake (no manual action — deferring to a still-redeemable disk first) as a
+prepaid buffer that spends first/instantly, any remaining cost live-transfers off built Disks over
+time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
+never itself banks a spendable reserve beyond its deposits. A lake's own deposit capacity is a
+purchasable doubling ladder: starts at 1 unit, doubles per purchase (spending the lake's current
+capacity in Bits, same shape as Sacrifice), hard-capped at 1,024 units
+(`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the intentional limit a player actually experiences.
+Each sub-slot's own deposit count is separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since
+only 10 disks of a given size can ever exist) purely so the counter can't exceed what's physically
+possible — not a second design cap, just incidental headroom (1,110 if ever fully filled) that sits
+well above the 1,024 ladder which is what actually gates deposits. Deposited/capacity/
+next-cost/doubling-cost all display in Byte-scale (KB/MB/GB), matching Disks, not a bare unit count. A
+separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
 auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
-and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
+Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
 main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
 freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
 beyond Googol, improvable via Double PP upgrades on the Upgrades tab.

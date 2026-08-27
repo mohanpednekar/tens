@@ -31,10 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fields you're changing) onto the current dev save.
 - **Data Lakes + Booster transfers** — ten storage-tier lakes (KB … QB). A lake never itself banks a
   spendable reserve — past a small prepaid deposit buffer (below), it's a throughput pipe onto the
-  live Disk inventory. Depositing Disks (`9×1 + 9×10 + 9×100` of that denomination) into the buffer
-  requires that size's disk array to be COMPLETELY built (all 10 disks ever built), which naturally
-  stages the buffer's cap: 9 once only the smallest sub-size's array is complete, 99 once the next
-  size up is also complete, the full 999 once the largest of the three is complete too. Starting a
+  live Disk inventory. Depositing Disks (`10×1 + 10×10 + 10×100` of that denomination) into the
+  buffer requires that size's disk array to be COMPLETELY built (all 10 disks ever built) — a
+  backstop that keeps the deposit counter from exceeding how many disks of that size can ever exist,
+  not a design cap in itself. A lake's own actual, intentional deposit capacity (see Changed below)
+  is a smaller, separate, purchasable doubling ladder. Starting a
   Booster on the Boosters screen costs escalating lake units (the nth Booster ever started, counting
   ones still in flight, costs n) — spent out of the deposit buffer FIRST (instant), then any
   remaining cost is sourced live from built Disks and transferred into the lake over time, at 10×
@@ -53,6 +54,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
+- **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
+  (deposits, purchased Boosters, in-flight transfers, and capacity level) unchanged, matching
+  Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
+  with the rest of the Foundry.
+- **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
+  cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
+  so stretching it to the full row width also stretched it to that same width in height. It now
+  uses `DISK_ARRAY_LADDER_CAP` as its aspect ratio instead, landing back near one segment's own
+  height.
 - **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
   least one Flops tier (previously hardcoded off).
 - **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
@@ -67,6 +77,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Data Lake panel redesigned; capacity is now a doubling ladder hard-capped at 1,024 units** —
+  `DataLakePanel` is a proper CSS Grid with an explicit Lake/Deposited/Capacity/Bought/Next header
+  row instead of an unaligned, single-flex-row-per-lake layout. A lake's own deposit capacity is
+  the explicit, purchasable ladder: starts at 1 unit ("1 KB" for the KB lake) and doubles per
+  purchase (spending the lake's own
+  current capacity in Bits, the same shape Memory's Sacrifice uses), permanently hard-capped at
+  1,024 units ("1024 KB") via a compact "⚡ ×2" button in the panel's new Capacity column.
+- **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or
+  unbounded rates** — a fresh disk build now takes exactly the time to fill it at 1x Memory
+  bandwidth (was a flat "1 second per real KB," decoupled from Invest/Compute Boost); a disk filling
+  FROM a cache (read-cache or write-cache flush) runs at 2x bandwidth; a cache filling FROM Memory
+  (read-cache refill) is capped at 10x bandwidth, so even a large banked balance can no longer drain
+  into the cache instantly; a cache filling FROM Disks (write-cache collect) runs at 2x bandwidth.
+  All four now scale with Invest/Compute Boost the same way every other timed Byte Foundry mechanic
+  already does.
+- **Disk redemption is now a fixed one-to-one (tier, level) mapping, not a price coincidence** — a
+  disk of a given size now always corresponds to one specific tier and level (1st/2nd/3rd
+  disk-ladder step → that tier's level 1/2/3, sharing the same KB/MB/GB/… grouping Data Lakes
+  already use), and is redeemable only while that tier currently sits at exactly that level.
+  Redeeming completes the tier's WHOLE current level in one shot (its entire purchase block)
+  instead of granting a single unit. Replaces the old "redeems into whichever tier's current
+  per-unit cost happens to match its size right now" design, which could drift or skip a disk
+  entirely if a tier's price jumped past it mid-run.
+- **Data Lake figures now display in the same Byte-scale currency as Disks** — deposited amount,
+  capacity, and the next Booster's cost on the Data Lake panel now render as KB/MB/GB/… (matching
+  Disk sizing) instead of a bare unit count (previously shown as raw numbers like 9/99/999).
+- **Storage Pool: read cache trimmed to one array, Data Lake deposits now automatic** — only the
+  pool's smallest disk size (the one that actually touches Memory) keeps a read cache; every larger
+  size fills exclusively via the write-cache ripple from the size below, which already existed and
+  never used the read cache anyway — running both was pure redundancy. Depositing a fully-built
+  array's disks into its Data Lake no longer needs a manual click: `tickDiskAutoDeposit` deposits
+  the smallest eligible size automatically every tick, deferring to a disk that's still redeemable
+  for the main game first (disks always take priority). `DiskArrayRow`'s manual "→ Lake" button and
+  the `depositDiskToDataLake` action are removed from the UI (the underlying engine function is
+  unchanged, now called automatically). A save carrying a stale read cache for a size that's no
+  longer eligible self-heals on its next tick, refunding the cached bits back into Memory.
 - **Byte Foundry pool renders as one card** — Memory, its Combine/Sacrifice/Bandwidth actions, and
   Storage (Build Disk + every disk-array row + the Data Lake panel) now render inside a single
   `PoolCard`, instead of Memory as its own boxed tile, bare buttons/rows in the middle, and a
