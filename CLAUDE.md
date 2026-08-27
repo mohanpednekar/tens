@@ -844,7 +844,7 @@ the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` 
 continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a
 separate voluntary meta-prestige at **1 Googol unspent PP** (`ERA_ELIGIBILITY_PP`): it awards
 **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414), increments `era.count`,
-resets the full Foundry (generator upgrades, Disks, compute ladder entities, Memory/gate) plus the
+resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder entities, Memory/gate) plus the
 ordinary Ladder cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
 `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
@@ -891,7 +891,8 @@ through the mandatory pre-unlock gate even past Storage's own reveal threshold, 
 alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
 been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
 never hidden while it's still the only way out of the gate.
-The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
+The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
+`capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
 permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
@@ -998,45 +999,42 @@ reserve beyond its own deposits (below) — past that, it's a throughput pipe on
 inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to
 QB.
 
-*Deposits* — a prepaid convenience buffer, up to `getDataLakeCapacity(state, tierIndex)` (999 to
-start — see "Capacity doubling" below) units per lake, filled by depositing Disks
-(`9×1 + 9×10 + 9×100` of that tier's denomination at the starting capacity) via
-`depositDiskToDataLake` — fully automatic, no manual click: `tickDiskAutoDeposit` (called from
-`tickGame`'s `tickStorage` right after auto-redeem) deposits the smallest eligible size each tick,
-but only once that SIZE's own disk array is completely built (all `DISK_ARRAY_LADDER_CAP` (10)
-disks ever built, `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`, not merely holding one full
-disk) **and** the size is not currently redeemable for the main game (`!isDiskRedeemable`) — the
-same "disks always take priority for matching level costs" rule the read cache already follows, so
-a disk a tier could still redeem stays available for that instead of being swept into the lake.
-Since a lake's 3 sub-slots map to 3 successive disk sizes (all feeding the SAME lake, one per
-pool), this naturally stages the lake's deposit cap at the starting `getDataLakeSlotMax` (9): **9**
-once only the smallest (×1) size's array is complete, **99** once the ×10 size's array is also
-complete, the full **999** once the ×100 size's array is complete too — no separate staged-capacity
-field, the existing sub-slot structure already encodes it (see `isDiskArrayFullyBuilt` in
-`engine.js`).
+*Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
+purchasable, doubling ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for
+the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
+`doubleDataLakeCapacity(tierIndex)` purchase, permanently hard-capped at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
+`isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
+into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
+it" shape Memory's own Sacrifice uses, and the same currency Disks themselves are priced in, not a
+bare unit count. Gated by the same forced priority order every other Byte Foundry milestone action
+follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Bandwidth, Disk
+Build, and Compute are all currently unavailable, same rank as Memory's own Sacrifice, not
+competing with it). An earlier version fixed this cap at a value derived from the Disk arrays
+themselves with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
+explicitly-capped ladder replaced that.
 
-*Capacity doubling* (`doubleDataLakeCapacity(tierIndex)`) — a standing lever on top of the staged
-progression above, not a replacement for it (the array-completion gate on each sub-slot is
-unaffected): spends a lake's own current capacity, converted into real Memory Bits, to double its
-`slotMax` (`getDataLakeSlotMax`, `DATA_LAKE_CAPACITY_DOUBLING_STEP` = 2× per purchase — same "spend
-the current value to double it" shape Memory's own Sacrifice uses), and therefore its capacity
-(`getDataLakeCapacity` = `slotMax × 111`, the sum of the three sub-sizes — still an abstract unit
-count internally). `getDataLakeCapacityDoublingCost` is that unit count multiplied by
-`getDataLakeUnitBits(tierIndex)` (one deposit-unit's own real bit face value — exactly its lake's
-×1 sub-size Disk's size, e.g. 8,000 bits for the KB lake), so the amount actually spent from Memory
-is the lake's capacity expressed in the same currency Disks themselves are priced in, not a bare
-unit count. Gated by the same forced priority order every other Byte Foundry milestone action
-follows — available only once nothing ranked above it (Disk Fill, Bandwidth, Disk Build, Compute)
-currently is, same rank as Memory's own Sacrifice (`isDataLakeCapacityDoublingTurnAvailable`).
-Raising `slotMax` past the base value also raises each sub-slot's own cap in
-`canDepositDiskToDataLake` and the digit-decomposition ceiling `decomposeDataLakeDeposits` caps
-each place at (generalizing what was previously a hardcoded base-10/`DATA_LAKE_SLOT_MAX`
-assumption) — deposits stay fungible, not tracked per physical disk, so spending re-decomposes the
-remaining total largest-denomination-first, same as before. Rendered as a compact "⚡ ×2 Capacity"
-button per lake row in `DataLakePanel`, which also displays deposited/capacity/next-Booster-cost
-figures in Byte-scale (`formatDiskSize`, KB/MB/GB/…) rather than a bare unit count — each abstract
-unit converted through the same `getDataLakeUnitBits` helper — since "Data lake uses the same
-currency as disks" (see `docs/DESIGN_HISTORY.md`).
+*Deposits* — filled by depositing Disks (`10×1 + 10×10 + 10×100` of that tier's denomination at
+full capacity) via `depositDiskToDataLake` — fully automatic, no manual click: `tickDiskAutoDeposit`
+(called from `tickGame`'s `tickStorage` right after auto-redeem) deposits the smallest eligible
+size each tick, but only once that SIZE's own disk array is completely built (all
+`DISK_ARRAY_LADDER_CAP` (10) disks ever built, `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`,
+not merely holding one full disk) **and** the size is not currently redeemable for the main game
+(`!isDiskRedeemable`) — the same "disks always take priority for matching level costs" rule the
+read cache already follows, so a disk a tier could still redeem stays available for that instead of
+being swept into the lake. A sub-slot's own deposit count naturally never exceeds
+`DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever be built) — this was never
+a separate design cap, just a backstop that keeps the deposits counter from exceeding what's
+physically possible; `canDepositDiskToDataLake` enforces it alongside the real, intentional limit
+above, the lake's own capacity level, which is far smaller (1,024 max vs. an incidental 1,110-unit
+sum if every sub-slot were somehow filled to that backstop) and is what actually gates deposits in
+practice. `decomposeDataLakeDeposits` still caps each digit place at that same backstop value
+regardless of the current level — deposits stay fungible, not tracked per physical disk, so spending
+re-decomposes the remaining total largest-denomination-first. `DataLakePanel` displays
+deposited/capacity/next-Booster-cost/doubling-cost figures in Byte-scale (`formatDiskSize`,
+KB/MB/GB/…) rather than a bare unit count — each abstract unit converted through the
+`getDataLakeUnitBits` helper — since "Data lake uses the same currency as disks" (see
+`docs/DESIGN_HISTORY.md`).
 
 *Starting a Booster* (`startBoosterTransfer(tierIndex)`, ComputePage) — the nth Booster ever
 started at tier *t* (completed or still in flight) costs *n* units of lake *t*
@@ -1172,7 +1170,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1572 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1580 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

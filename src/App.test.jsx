@@ -12,6 +12,7 @@ import {
   COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
+  DATA_LAKE_CAPACITY_MAX_LEVEL,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
   DISK_CACHE_BLOCK_COUNT,
@@ -3372,11 +3373,58 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    expect(screen.getByText(/KB Data Lake.*Cores/i)).toBeInTheDocument()
+    expect(screen.getByText(/^KB.*Cores$/i)).toBeInTheDocument()
     // `bare` mode (see components/DataLakePanel) skips its own StatCard wrapper — there is no
     // separately-labeled "Data Lakes" region; it renders as the last sub-section of the same
     // PoolCard as Memory/Storage above it.
     expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
+  })
+
+  test('Data Lake capacity can be doubled by clicking its ⚡×2 button', () => {
+    // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
+    // tick landing between render and the click could otherwise change intro.bits or another
+    // forced-priority input out from under the click before it's processed.
+    vi.useFakeTimers()
+
+    // bits (8000) covers the KB lake's level-0 doubling cost (1 unit × 8000 bits/unit) but stays
+    // well under a Disk Build's own cost (80,000), so Disk Build never outranks it; Invest's
+    // current-tier claims are already used up (productionMilestoneTierClaims: 2) — the same
+    // higher-priority-action neutralization the Sacrifice tests above use, since capacity doubling
+    // sits at the same forced-priority rank.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      productionMilestoneTierClaims: 2,
+      dataLakes: { 1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 0, capacityLevel: 0 } },
+    })
+    const { unmount } = render(<App />)
+    openStorage()
+
+    const doubleButton = screen.getByRole('button', { name: /double the KB Data Lake's capacity/i })
+    expect(doubleButton).toBeEnabled()
+
+    fireEvent.click(doubleButton)
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.dataLakes['1'].capacityLevel).toBe(1)
+    expect(saved.intro.bits).toBe(0)
+
+    unmount()
+    vi.useRealTimers()
+  })
+
+  test('Data Lake capacity-doubling button disappears once the lake hits its hard cap', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+    })
+    render(<App />)
+    openStorage()
+
+    expect(screen.queryByRole('button', { name: /double the KB Data Lake's capacity/i })).not.toBeInTheDocument()
   })
 
   test('a full disk above 1 KB auto-redeems once the matching tier\'s own autobuyer is unlocked and enabled — there is no separate storage-specific pause toggle any more', () => {
