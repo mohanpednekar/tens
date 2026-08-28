@@ -38,6 +38,13 @@ export const TIER_DEFINITIONS = [
 
 // Precompute dictionaries for O(1) lookups rather than O(N) Array.find calls.
 // Keys are tier ids ('tier01', etc).
+export const TIER_BY_ID = Object.fromEntries(
+  TIER_DEFINITIONS.map(t => [t.id, t])
+)
+export const TIER_INDEX_BY_ID = Object.fromEntries(
+  TIER_DEFINITIONS.map((t, index) => [t.id, index])
+)
+
 const TIER_SYMBOLS = Object.fromEntries(
   TIER_DEFINITIONS.map(t => [t.id, t.symbol])
 )
@@ -637,6 +644,12 @@ export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
   { id: 'flop09', name: 'RFlops', symbol: 'RF', baseCostPP: 1E27, boostsTierId: 'tier09' },
   { id: 'flop10', name: 'QFlops', symbol: 'QF', baseCostPP: 1E30, boostsTierId: 'tier10' },
 ]
+export const COMPUTE_FLOPS_TIER_BY_ID = Object.fromEntries(
+  COMPUTE_FLOPS_TIER_DEFINITIONS.map(t => [t.id, t])
+)
+export const COMPUTE_FLOPS_TIER_INDEX_BY_ID = Object.fromEntries(
+  COMPUTE_FLOPS_TIER_DEFINITIONS.map((t, index) => [t.id, index])
+)
 
 // --- Era / Eons meta layer (#407) — see docs/ECONOMY_REFERENCE.md "Era ascension" ---
 // Era ascension requires this many unspent Prestige Points (1 Googol PP).

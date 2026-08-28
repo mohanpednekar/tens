@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SLOT_MAX, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP , TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -722,7 +722,7 @@ export const getTickspeedMultiplierBaseCost = tierIndex => {
 // itself (base^1); each level after that multiplies the cost by another factor of the base
 // (base^2, base^3, …) — e.g. the 2nd tier's (index 1, base 10^9) level-4 cost is (10^9)^3 = 10^27.
 export const getTickspeedMultiplierCost = (tierId, targetLevel) => {
-  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  const tierIndex = Math.max(0, (TIER_INDEX_BY_ID[tierId] ?? -1))
   return getTickspeedMultiplierBaseCost(tierIndex) ** Math.max(0, clampNonNegative(targetLevel) - 1)
 }
 
@@ -733,7 +733,7 @@ export const getTickspeedMultiplierCost = (tierId, targetLevel) => {
 // shift when Unlock itself was made free: 1 PP-equivalent for the first tier, up through 10 for
 // the 10th/last tier.
 export const getAutobuyerUnlockCost = tierId => {
-  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  const tierIndex = Math.max(0, (TIER_INDEX_BY_ID[tierId] ?? -1))
   return AUTOBUYER_UNLOCK_BASE_COST * (tierIndex + 1)
 }
 
@@ -741,7 +741,7 @@ export const getAutobuyerUnlockCost = tierId => {
 // applyAutobuyerMilestones) — no PP cost at all: tier01 unlocks after the 1st prestige, tier02
 // after the 2nd, … tier10 after the 10th.
 export const getAutobuyerUnlockMilestone = tierId => {
-  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  const tierIndex = Math.max(0, (TIER_INDEX_BY_ID[tierId] ?? -1))
   return AUTOBUYER_UNLOCK_MILESTONE_START + tierIndex * AUTOBUYER_UNLOCK_MILESTONE_STEP
 }
 
@@ -750,7 +750,7 @@ export const getAutobuyerUnlockMilestone = tierId => {
 // tier01) and adds TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP (2) per tier after that, up through
 // prestige 30 for tier10. Also no PP cost.
 export const getTierTickspeedAutobuyerMilestone = tierId => {
-  const tierIndex = Math.max(0, TIER_DEFINITIONS.findIndex(t => t.id === tierId))
+  const tierIndex = Math.max(0, (TIER_INDEX_BY_ID[tierId] ?? -1))
   return TIER_TICKSPEED_AUTOBUYER_MILESTONE_START + tierIndex * TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP
 }
 
@@ -935,7 +935,7 @@ export const getComputeFlopsTierCost = (flopTier, ownedCount = 0) => {
 }
 
 export const canBuyComputeFlopsTier = (state, flopId) => {
-  const flopTier = COMPUTE_FLOPS_TIER_DEFINITIONS.find(t => t.id === flopId)
+  const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
   if (!flopTier) return false
   const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
   const cost = getComputeFlopsTierCost(flopTier, owned)
@@ -943,7 +943,7 @@ export const canBuyComputeFlopsTier = (state, flopId) => {
 }
 
 export const buyComputeFlopsTier = flopId => state => {
-  const flopTier = COMPUTE_FLOPS_TIER_DEFINITIONS.find(t => t.id === flopId)
+  const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
   if (!flopTier) return state
   if (!canBuyComputeFlopsTier(state, flopId)) return state
   const latched = latchComputeFlopsPageUnlocked(state)
@@ -1050,7 +1050,7 @@ export const buyHyperscaler = state => {
 }
 
 export const getFlopsAutobuyerUnlockEra = flopId => {
-  const tierIndex = Math.max(0, COMPUTE_FLOPS_TIER_DEFINITIONS.findIndex(t => t.id === flopId))
+  const tierIndex = Math.max(0, (COMPUTE_FLOPS_TIER_INDEX_BY_ID[flopId] ?? -1))
   return FLOPS_AUTOBUYER_ERA_START + tierIndex * FLOPS_AUTOBUYER_ERA_STEP
 }
 
@@ -1304,7 +1304,7 @@ const TIER_UNLOCK_PREV_LEVEL_REQUIREMENT = 3
 // everUnlockedTierIds flag (see latchEverUnlockedTiers), even if `owned`/`purchaseLevels` is later
 // reset by something narrower than a full Prestige/Speed Up (see consumeXpForLastTierTickspeed).
 export const isTierUnlocked = state => tier => {
-  const tierIndex = TIER_DEFINITIONS.findIndex(t => t.id === tier.id)
+  const tierIndex = (TIER_INDEX_BY_ID[tier.id] ?? -1)
   if (tierIndex === 0) return true
   if (state.everUnlockedTierIds?.[tier.id]) return true
   if ((state.owned[tier.id] ?? 0) > 0) return true
@@ -1834,7 +1834,7 @@ export const getTierPurchasedCount = (state, tierId) =>
 
 export const buyTier = tierId => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
   const level = state.purchaseLevels?.[tierId] ?? 1
@@ -1882,7 +1882,7 @@ export const buyTier = tierId => state => {
 // Buys up to `quantity` units of a tier, capped at the current level's boundary so every unit
 // purchased is at the same price. Stops early if a purchase becomes unaffordable.
 export const buyTierQuantity = (tierId, quantity) => state => {
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
   const levelProgress = state.purchaseLevelProgress?.[tierId] ?? 0
@@ -1911,7 +1911,7 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 // tickIntroAutoInvest below, both of which pay from the separate intro bit pool, not the tier's
 // own costResourceId.
 const grantTierUnits = (tierId, quantity) => state => {
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  const tier = TIER_BY_ID[tierId]
   if (!tier || quantity <= 0) return state
 
   let result = state
@@ -4068,7 +4068,7 @@ export const setAutobuyerEnabled = (tierId, enabled) => state => {
 // even though the purchase "succeeded". Require at least 1 generator left over instead.
 export const buyTickspeedMultiplier = tierId => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
   // The last tier's Money-funded tickspeed ladder is replaced by the XP-funded one while the
   // player currently owns >= 10 of that tier (see isLastTierTickspeedXpUnlocked/
@@ -4111,7 +4111,7 @@ export const buyTickspeedMultiplier = tierId => state => {
 // or there aren't enough unspent points.
 export const buySmartAutobuyer = tierId => state => {
   if (isProductionFrozen(state)) return state
-  const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
+  const tier = TIER_BY_ID[tierId]
   if (!tier) return state
   if (state.autobuyers[tierId] == null) return state
   if (state.smartAutobuyer?.[tierId]) return state
