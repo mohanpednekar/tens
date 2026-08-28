@@ -91,6 +91,11 @@ const manualPulse = keyframes`
 // will take it) vs $manualRedeem (good/green + pulse — player must tap) vs merely redeemable-
 // looking but not yet full.
 const DiskSquare = styled.button`
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
@@ -149,6 +154,11 @@ const CacheBlocksRow = styled.div`
 `
 
 const CacheBlock = styled.button`
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
