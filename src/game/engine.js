@@ -1912,17 +1912,49 @@ export const buyTierQuantity = (tierId, quantity) => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
+  const level = state.purchaseLevels?.[tierId] ?? 1
   const levelProgress = state.purchaseLevelProgress?.[tierId] ?? 0
   const blockSize = getPurchaseBlockSize(state)
-  const cappedQuantity = getTierBulkQuantity(blockSize, levelProgress, quantity)
 
-  let result = state
-  for (let i = 0; i < cappedQuantity; i++) {
-    const next = buyTier(tierId)(result)
-    if (next === result) break // can no longer afford
-    result = next
+  const affordable = getTierAffordableQuantity(
+    tier,
+    level,
+    blockSize,
+    levelProgress,
+    getTierSpendableAmount(state, tier),
+    quantity
+  )
+
+  if (affordable <= 0) return state
+
+  const cost = getTierCost(tier, level) * affordable
+  const newPurchased = getTierPurchasedCount(state, tierId) + affordable
+  const newProgress = levelProgress + affordable
+  const completesLevel = newProgress >= blockSize
+
+  const nextState = {
+    ...state,
+    resources: {
+      ...state.resources,
+      [tier.costResourceId]: clampNonNegative((state.resources[tier.costResourceId] ?? 0) - cost),
+      [tierId]: (state.resources[tierId] ?? 0) + affordable,
+    },
+    owned: { ...state.owned, [tierId]: (state.owned[tierId] ?? 0) + affordable },
+    purchased: {
+      ...state.purchased,
+      [tierId]: newPurchased,
+    },
+    purchaseLevels: {
+      ...state.purchaseLevels,
+      [tierId]: completesLevel ? level + 1 : level,
+    },
+    purchaseLevelProgress: {
+      ...state.purchaseLevelProgress,
+      [tierId]: completesLevel ? 0 : newProgress,
+    },
   }
-  return result
+
+  return latchEverUnlockedTiers(nextState)
 }
 
 // --- Byte Foundry (pre-game intro) --- state lives in state.intro (see createInitialGameState
@@ -1941,22 +1973,26 @@ const grantTierUnits = (tierId, quantity) => state => {
   const tier = TIER_DEFINITIONS.find(t => t.id === tierId)
   if (!tier || quantity <= 0) return state
 
-  let result = state
-  for (let i = 0; i < quantity; i++) {
-    const level = result.purchaseLevels?.[tierId] ?? 1
-    const blockSize = getPurchaseBlockSize(result)
-    const newProgress = (result.purchaseLevelProgress?.[tierId] ?? 0) + 1
-    const completesLevel = newProgress >= blockSize
+  const blockSize = getPurchaseBlockSize(state)
+  const currentLevel = state.purchaseLevels?.[tierId] ?? 1
+  const currentProgress = state.purchaseLevelProgress?.[tierId] ?? 0
+  const currentPurchased = getTierPurchasedCount(state, tierId)
 
-    result = {
-      ...result,
-      resources: { ...result.resources, [tierId]: (result.resources[tierId] ?? 0) + 1 },
-      owned: { ...result.owned, [tierId]: (result.owned[tierId] ?? 0) + 1 },
-      purchased: { ...result.purchased, [tierId]: getTierPurchasedCount(result, tierId) + 1 },
-      purchaseLevels: { ...result.purchaseLevels, [tierId]: completesLevel ? level + 1 : level },
-      purchaseLevelProgress: { ...result.purchaseLevelProgress, [tierId]: completesLevel ? 0 : newProgress },
-    }
+  const totalProgress = currentProgress + quantity
+  const levelsGained = Math.floor(totalProgress / blockSize)
+  const newProgress = totalProgress % blockSize
+  const newLevel = currentLevel + levelsGained
+  const newPurchased = currentPurchased + quantity
+
+  const result = {
+    ...state,
+    resources: { ...state.resources, [tierId]: (state.resources[tierId] ?? 0) + quantity },
+    owned: { ...state.owned, [tierId]: (state.owned[tierId] ?? 0) + quantity },
+    purchased: { ...state.purchased, [tierId]: newPurchased },
+    purchaseLevels: { ...state.purchaseLevels, [tierId]: newLevel },
+    purchaseLevelProgress: { ...state.purchaseLevelProgress, [tierId]: newProgress },
   }
+
   return latchEverUnlockedTiers(result)
 }
 
