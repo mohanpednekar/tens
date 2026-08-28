@@ -118,6 +118,11 @@ const DiskSquare = styled.button`
     transform: scale(0.9);
   }
 
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   &:disabled {
     cursor: not-allowed;
     animation: none;
@@ -171,6 +176,11 @@ const CacheBlock = styled.button`
 
   &:active:not(:disabled) {
     transform: scale(0.9);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
   }
 
   &:disabled {

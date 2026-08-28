@@ -90,6 +90,11 @@ const TierSelectButton = styled.button`
   &:hover {
     filter: brightness(1.15);
   }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 const TierLabel = styled.span`
@@ -161,6 +166,11 @@ const ReserveSlotsRow = styled.button`
 
   &:disabled {
     cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
   }
 `
 
