@@ -2579,13 +2579,23 @@ export const tickIntroAutoInvest = state => {
   const blockSize = getPurchaseBlockSize(state)
   const maxUnitsThisCall = getTierBulkQuantity(blockSize, levelProgress, Number.MAX_SAFE_INTEGER)
 
-  let result = state
-  for (let i = 0; i < maxUnitsThisCall; i++) {
-    const next = convertIntroBitsToKilobytes(result)
-    if (next === result) break // no longer affordable
-    result = next
+  const unitCost = getIntroKilobyteConversionCost(state)
+  const affordableUnits = unitCost > 0 ? Math.floor(state.intro.bits / unitCost) : maxUnitsThisCall
+  const unitsToBuy = Math.min(maxUnitsThisCall, affordableUnits)
+
+  if (unitsToBuy > 0) {
+    const totalCost = unitsToBuy * unitCost
+    return grantTierUnits(firstTierId, unitsToBuy)({
+      ...state,
+      intro: {
+        ...state.intro,
+        bits: state.intro.bits - totalCost,
+        mainGameUnlocked: true,
+      },
+    })
   }
-  return result
+
+  return state
 }
 
 // --- Byte Foundry Storage (Disks) --- see the "Byte Foundry Storage" comment in layers.js and
