@@ -62,4 +62,18 @@ describe('setValueAtPath', () => {
       intro: { dataLakes: { 1: { purchased: true } } },
     })
   })
+
+  it('prevents prototype pollution via __proto__', () => {
+    const original = {}
+    const next = setValueAtPath(original, ['__proto__', 'polluted'], true)
+    expect(next).toEqual(original)
+    expect(Object.prototype.polluted).toBeUndefined()
+  })
+
+  it('prevents prototype pollution via constructor', () => {
+    const original = {}
+    const next = setValueAtPath(original, ['constructor', 'prototype', 'polluted'], true)
+    expect(next).toEqual(original)
+    expect(Object.prototype.polluted).toBeUndefined()
+  })
 })
