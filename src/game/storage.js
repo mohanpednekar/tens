@@ -567,6 +567,7 @@ const isPlainObject = value => Boolean(value) && typeof value === 'object' && !A
 // same as before.
 const mergeStateForDevWrite = (base, parsed) =>
   Object.keys(parsed).reduce((acc, key) => {
+    if (key === '__proto__' || key === 'constructor') return acc
     const parsedValue = parsed[key]
     const baseValue = base[key]
     acc[key] = isPlainObject(parsedValue) && isPlainObject(baseValue)

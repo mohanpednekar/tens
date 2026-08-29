@@ -87,6 +87,11 @@ const TapArea = styled.button`
     transform: scale(0.98);
   }
 
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   &:disabled {
     cursor: not-allowed;
   }
@@ -259,6 +264,11 @@ const TransferBlock = styled.button`
 
   &:active:not(:disabled) {
     transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
   }
 
   &:disabled {
