@@ -23,6 +23,7 @@ export const isEditableScalar = value =>
 // shape, so it never needs updating when engine.js grows a new nested field.
 export const setValueAtPath = (obj, path, value) => {
   const [head, ...rest] = path
+  if (head === '__proto__' || head === 'constructor') return obj
   if (rest.length === 0) return { ...obj, [head]: value }
   return { ...obj, [head]: setValueAtPath(obj[head] ?? {}, rest, value) }
 }
