@@ -426,7 +426,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
-          {intro.byteCreated && (
+          {intro.byteCreated && !investClaimsUsedUp && (
             <MilestonesRow>
               <Button
                 aria-label={
@@ -437,13 +437,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 disabled={!canInvest}
                 onClick={actions.pickIntroProductionMilestone}
                 title={
-                  investClaimsUsedUp
-                    ? 'Already claimed at this tier'
-                    : investBlockedByPriority
-                      ? 'Redeem a full Disk first'
-                      : computeFundedInvest
-                        ? `Bit cost exceeds Buffer — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 Speed`
-                        : 'Doubles pool Memory Speed'
+                  investBlockedByPriority
+                    ? 'Redeem a full Disk first'
+                    : computeFundedInvest
+                      ? `Bit cost exceeds Buffer — sacrifice ${COMPUTE_ENTITY_CAP} ${computeBandwidthLabel} for ×2 Speed`
+                      : 'Doubles pool Memory Speed'
                 }
                 type="button"
                 variant={canInvest ? 'info' : 'neutral'}
@@ -473,40 +471,38 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         {storageRevealed && (
           <>
             <Divider />
-            <Button
-              aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete for this pool' : 'build disk'}
-              disabled={!canStartDiskBuild || !!diskBuildInProgress}
-              onClick={actions.startDiskBuild}
-              title={
-                diskBuildInProgress
-                  ? `Rebuilding ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-                  : diskLadderExhausted
-                    ? `Every Disk size this pool can fund (up to ${formatDiskSize(diskSize)}) is fully built — more storage pools are coming in a future update`
+            {!diskLadderExhausted && (
+              <Button
+                aria-label={diskBuildInProgress ? 'disk array rebuilding' : 'build disk'}
+                disabled={!canStartDiskBuild || !!diskBuildInProgress}
+                onClick={actions.startDiskBuild}
+                title={
+                  diskBuildInProgress
+                    ? `Rebuilding ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
                     : diskBuildBlockedByPriority
                       ? 'Take Speed (or redeem a full Disk) first'
                       : diskRedeemTierName
                         ? `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
                         : `Costs ${formatDiskSize(diskCost)} and takes time to build — builds an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
-              }
-              type="button"
-              variant={canStartDiskBuild ? 'info' : 'neutral'}
-              $progress={diskBuildProgress}
-            >
-              <ButtonContent>
-                {diskBuildInProgress
-                  ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-                  : diskLadderExhausted
-                    ? `🏦 Pool complete (${formatDiskSize(diskSize)})`
+                }
+                type="button"
+                variant={canStartDiskBuild ? 'info' : 'neutral'}
+                $progress={diskBuildProgress}
+              >
+                <ButtonContent>
+                  {diskBuildInProgress
+                    ? `🏦 Building ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
                     : `🏦 Build ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-              </ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry disk build progress"
-                aria-valuenow={Math.round(diskBuildProgress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </Button>
+                </ButtonContent>
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="byte foundry disk build progress"
+                  aria-valuenow={Math.round(diskBuildProgress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </Button>
+            )}
 
             {diskSizesToShow.map(size => (
               <DiskArrayRow key={size} actions={actions} size={size} state={state} />
