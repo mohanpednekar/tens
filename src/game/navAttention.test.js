@@ -146,7 +146,7 @@ describe('navAttention', () => {
   })
 
   it('lights Foundry (via folded Storage attention) when a full disk is redeemable', () => {
-    // 8000-bit disk matches tier01's fresh per-unit cost (1000 Bytes × 8 bits).
+    // 8000-bit disk is tier01's own fixed level-1 disk size, and tier01 defaults to level 1.
     const diskSize = 8000
     const state = withIntro({
       capacity: INTRO_DISK_UNLOCK_CAPACITY,

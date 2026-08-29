@@ -36,12 +36,15 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 
 ## `DiskArrayRow/index.jsx`
 
-styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size: a
-`DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares (`aria-label="… read cache"`), each labeled inside with its bit-scale
+styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size. Only when
+`isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
+sub-slot is ×1 — every larger size fills exclusively via write-cache ripple and renders no read
+cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
+(`aria-label="… read cache"`), each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
 full and `isDiskCacheBlockManualReleaseAvailable` — manual transfer to Ladder Bits when no matching
 disk exists; Smart autobuyers may auto-release via `isDiskCacheBlockAutoReleaseEligible` when no
-matching disk is available), then an optional **write cache** progress row when
+matching disk is available). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
 below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
 does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip that **always** keeps all ten
@@ -52,7 +55,9 @@ row titles — shapes plus in-cell labels carry identity; built/full counts stay
 distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria `"auto-redeem …"`)
 from **manual redeem** (`isDiskManualRedeemAvailable` — good/green pulsing fill, aria
 `"redeem … for <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable`; instructional
-copy lives in `title`/`aria` only (no under-strip ActionHint). While `intro.diskBuild?.size`
+copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit control of any
+kind here — a fully-built, non-redeemable array's disks feed its pool's Data Lake automatically
+(`tickDiskAutoDeposit` in `engine.js`), not through this component. While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
 replaces the cache strip (disk circles stay, disabled; `<size>` via `formatDiskSize` e.g. `1 KB`,
 `<N>` is the 1-indexed disk under construction). Neither size label uses `text-transform: uppercase`
@@ -70,10 +75,10 @@ specific size's own array being mid-build.
 
 styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed
 dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
-Foundry actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
+actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
 confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
-`ByteFoundryPage` for Sacrifice for 2x Capacity (Compute-token-wipe warning in `children` only when
-Compute is unlocked).
+`SettingsPage` for Era ascension. Sacrifice for 2x Capacity on `ByteFoundryPage` does **not** use
+this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
 ## `Money/index.js`
 

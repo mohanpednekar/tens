@@ -1,0 +1,227 @@
+name: Automation self-heal
+
+# When an automation-orchestration workflow fails, diagnose the failure and either
+# open a config-level fix PR (claude/self-heal-*) or file an automation-failure
+# issue for human triage. Never touches ci.yml / deploy.yml / this file.
+# See docs/AUTOMATION.md "Automation self-heal" and issue #36.
+
+on:
+  workflow_run:
+    workflows:
+      - Autonomous maintenance
+      - Autonomous PR follow-up
+      - Auto-merge on approval
+      - Dependabot PR follow-up
+      - Cursor autonomous maintenance
+      - Cursor PR follow-up
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+  issues: write
+
+concurrency:
+  group: automation-self-heal-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+jobs:
+  self-heal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Guard — failure only, dedupe, cap
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_NAME: ${{ github.event.workflow_run.name }}
+          RUN_PATH: ${{ github.event.workflow_run.path }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$RUN_CONCLUSION" != "failure" ]; then
+            echo "Triggering run did not fail (conclusion=$RUN_CONCLUSION); nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Map workflow display name → repo-relative file (must stay in sync with `on.workflows`).
+          case "$RUN_NAME" in
+            "Autonomous maintenance") slug="autonomous-maintenance"; file=".github/workflows/autonomous-maintenance.yml" ;;
+            "Autonomous PR follow-up") slug="autonomous-pr-followup"; file=".github/workflows/autonomous-pr-followup.yml" ;;
+            "Auto-merge on approval") slug="pr-auto-merge"; file=".github/workflows/pr-auto-merge.yml" ;;
+            "Dependabot PR follow-up") slug="dependabot-pr-followup"; file=".github/workflows/dependabot-pr-followup.yml" ;;
+            "Cursor autonomous maintenance") slug="cursor-autonomous-maintenance"; file=".github/workflows/cursor-autonomous-maintenance.yml" ;;
+            "Cursor PR follow-up") slug="cursor-pr-followup"; file=".github/workflows/cursor-pr-followup.yml" ;;
+            *)
+              echo "Unrecognized workflow name '$RUN_NAME'; skipping."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+
+          # Prefer the event's path only when it matches the trusted case-map (do not let an
+          # unexpected workflow_run.path steer Edit/Write at a non-healable file).
+          if [ -n "${RUN_PATH:-}" ] && [ "$RUN_PATH" != "$file" ]; then
+            echo "workflow_run.path='$RUN_PATH' != mapped '$file'; using mapped path."
+          fi
+          # `$file` stays the case-mapped path from above.
+
+          # Hard-cap: at most 3 open claude/self-heal-* PRs across all watched workflows.
+          open_self_heal=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+            --json headRefName --jq '[.[] | select(.headRefName | startswith("claude/self-heal-"))] | length')
+          if [ "$open_self_heal" -ge 3 ]; then
+            echo "Already $open_self_heal open claude/self-heal-* PRs (cap 3); skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Skip if a self-heal PR is already open for this same workflow file/slug.
+          # `$slug` is from the trusted case-map above (not event-spliced raw), so embedding
+          # it in the jq program is safe.
+          existing=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \
+            --json number,headRefName --jq \
+            "[.[] | select(.headRefName | startswith(\"claude/self-heal-${slug}-\"))] | .[0].number // empty")
+          if [ -n "$existing" ]; then
+            echo "Open self-heal PR #$existing already covers $slug; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "run_name=$RUN_NAME" >> "$GITHUB_OUTPUT"
+          echo "run_url=$RUN_URL" >> "$GITHUB_OUTPUT"
+          echo "run_head_sha=$RUN_HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "workflow_file=$file" >> "$GITHUB_OUTPUT"
+          echo "workflow_slug=$slug" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          # Always heal against default-branch tip — workflow_run executes in the default
+          # branch context; we open a fix PR from here, never push to main.
+          fetch-depth: 0
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+
+      - name: Fetch failed-run logs (capped)
+        if: steps.guard.outputs.skip != 'true'
+        id: logs
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          RUN_ID: ${{ steps.guard.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/automation-self-heal
+          # Cap so the agent context stays bounded (#81-adjacent hygiene).
+          if ! gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed \
+              > /tmp/automation-self-heal/failed.log 2>/tmp/automation-self-heal/fetch.err; then
+            echo "(gh run view --log-failed failed; see fetch.err)" \
+              > /tmp/automation-self-heal/failed.log
+            cat /tmp/automation-self-heal/fetch.err >> /tmp/automation-self-heal/failed.log || true
+          fi
+          # Keep ~80 KiB / ~1200 lines of the tail (failures usually land near the end).
+          if [ "$(wc -c < /tmp/automation-self-heal/failed.log)" -gt 81920 ]; then
+            tail -c 81920 /tmp/automation-self-heal/failed.log > /tmp/automation-self-heal/failed.tail
+            mv /tmp/automation-self-heal/failed.tail /tmp/automation-self-heal/failed.log
+          fi
+          if [ "$(wc -l < /tmp/automation-self-heal/failed.log)" -gt 1200 ]; then
+            tail -n 1200 /tmp/automation-self-heal/failed.log > /tmp/automation-self-heal/failed.tail
+            mv /tmp/automation-self-heal/failed.tail /tmp/automation-self-heal/failed.log
+          fi
+          # Workspace copy so the agent Read tool can open it; gitignored (see .gitignore).
+          cp /tmp/automation-self-heal/failed.log \
+            "$GITHUB_WORKSPACE/.automation-self-heal-failed.log"
+          echo "log_path=.automation-self-heal-failed.log" >> "$GITHUB_OUTPUT"
+
+      - name: Diagnose and heal (or file automation-failure)
+        if: steps.guard.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          claude_args: |
+            --max-turns 25
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(gh run view:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh issue create:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue edit:*),Bash(gh label create:*)"
+          settings: |
+            {
+              "permissions": {
+                "deny": [
+                  "Edit(.github/workflows/ci.yml)",
+                  "Write(.github/workflows/ci.yml)",
+                  "Edit(.github/workflows/deploy.yml)",
+                  "Write(.github/workflows/deploy.yml)",
+                  "Edit(.github/workflows/automation-self-heal.yml)",
+                  "Write(.github/workflows/automation-self-heal.yml)"
+                ]
+              }
+            }
+          prompt: |
+            You are the automation self-heal agent for ${{ github.repository }}, running
+            unattended. Read CLAUDE.md and docs/AUTOMATION.md (Automation self-heal section)
+            first and follow them exactly. Your turn budget is capped (--max-turns 25).
+
+            A watched automation workflow just failed:
+            - Workflow name: ${{ steps.guard.outputs.run_name }}
+            - Workflow file (ONLY file you may edit for a fix): ${{ steps.guard.outputs.workflow_file }}
+            - Failed run URL: ${{ steps.guard.outputs.run_url }}
+            - Failed run id: ${{ steps.guard.outputs.run_id }}
+            - Head SHA of that run: ${{ steps.guard.outputs.run_head_sha }}
+            - Failed-run logs (capped): ${{ steps.logs.outputs.log_path }}
+
+            Read the log file and the current contents of the workflow file above.
+
+            Choose exactly ONE path:
+
+            1. **Confident config-level fix** (bad env/secret name, missing permission block,
+               insufficient `--max-turns` on a workflow that still uses a fixed cap, YAML
+               syntax slip, wrong branch/trigger filter, etc.):
+               - Edit ONLY `${{ steps.guard.outputs.workflow_file }}`.
+               - Branch must be named
+                 `claude/self-heal-${{ steps.guard.outputs.workflow_slug }}-<short-desc>`
+                 (short-desc: lowercase kebab, ≤40 chars).
+               - Push and open a **draft** PR against main explaining the diagnosis and fix.
+                 Use `gh pr create --draft`. Never push to main, never self-merge, never approve.
+               - Do NOT re-introduce a fixed `--max-turns` cap on
+                 `autonomous-maintenance.yml` / `cursor-autonomous-maintenance.yml` (those use
+                 dynamic budget targeting). Raising `--max-turns` is only valid for workflows
+                 that still have a fixed cap (e.g. autonomous-pr-followup).
+
+            2. **Transient/infra failure** (GitHub API 5xx, runner/network blip, something the
+               logs show already succeeded on an automatic retry). Claude-side 429 / 5xx
+               overload on autonomous-maintenance already keeps that job green upstream — you
+               should not normally see those here. For residual transient cases: make no
+               changes, open no PR and no issue.
+
+            3. **Not confidently fixable** (judgment call, deeper design issue, or the failed
+               run's agent behavior/output rather than workflow config):
+               - Ensure label exists:
+                 `gh label create automation-failure --color ededed --description "Automation workflow failure needing human triage" --force`
+               - Open (or update an existing still-open) GitHub issue labeled
+                 `automation-failure` summarizing the failure and why it wasn't auto-fixed.
+                 Deduplicate: search open issues with that label for the same workflow file /
+                 similar failure before filing a new one.
+               - Do not guess at a fix.
+
+            Hard forbids (never weaken these in any file you touch):
+            - never-self-merge / never push to main / always open a PR for fixes
+            - `GH_AUTOMATION_PAT` / `id-token: write` auth pattern
+            - deny-list entries protecting `ci.yml` / `deploy.yml`
+            - existing duplicate-PR / turn-budget / Phase-A-priority / housekeeping-vs-development
+              guards
+            - Never edit `ci.yml`, `deploy.yml`, or `.github/workflows/automation-self-heal.yml`
+            - Never use `--no-verify`, never force-push, never `gh run rerun` the failed run
+              (fix root causes; do not mask with retry)
+            - Never touch application source under `src/` — workflow config only
+
+            If you open a PR, keep the body structured like `.github/pull_request_template.md`
+            and mention it addresses the failed run URL above. Do not claim `Closes #36`
+            (that issue is the feature that created this workflow, not this failure).

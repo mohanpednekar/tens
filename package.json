@@ -7,7 +7,7 @@
   "resolutions": {
     "**/glob/minimatch/brace-expansion": "^5.0.8",
     "**/filelist/minimatch/brace-expansion": "^5.0.8",
-    "**/fast-uri": "^3.1.5",
+    "**/fast-uri": "^3.1.6",
     "**/nanoid": "^3.3.17",
     "**/uuid": "11.1.1"
   },
@@ -45,6 +45,7 @@
     "test:watch": "vitest --host 127.0.0.1",
     "test:e2e": "playwright test",
     "audit": "yarn audit",
+    "bump-version": "node scripts/bump-version.mjs",
     "gen-pwa-icons": "node scripts/generate-pwa-icons.mjs"
   },
   "browserslist": {

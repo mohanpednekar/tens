@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Security
+- Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
+  `constructor` keys (supersedes #478 / #480).
 - Pin transitive `uuid` to **11.1.1** via Yarn `resolutions` (Dependabot alert #185 /
   moderate: missing buffer bounds check in v3/v5/v6 when `buf` is provided). Pulled in by
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
@@ -27,28 +29,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   game state (so it always matches whatever `engine.js` currently defines — no hand-maintained
   field list to keep in sync), and a raw state-JSON editor that merges a partial object (only the
   fields you're changing) onto the current dev save.
-- **Data Lakes + Booster purchases** — ten storage-tier lakes (KB … QB), each holding up to 999
-  units deposited from Disks (9×1 + 9×10 + 9×100 of that denomination). Depositing a size's disks
-  requires that size's disk array to be COMPLETELY built (all 10 disks ever built), which naturally
-  stages each lake's effective capacity: 9 once only the smallest sub-size's array is complete, 99
-  once the next size up is also complete, the full 999 once the largest of the three is complete
-  too. Boosters are bought on the Boosters screen for escalating lake cost (nth purchase costs n
-  units), spent genuinely out of the lake's own current deposits rather than a separate ledger —
-  spent capacity only returns once more Disks get deposited to replace it. A full, undepleted lake
-  funds 44 purchases in one uninterrupted burst before needing fresh deposits, but redepositing
-  between purchases lets a patient player reach the true lifetime cap of exactly 999 Boosters per
-  tier (the 1,000th would cost 1,000 units, impossible regardless of how much gets redeposited) —
-  no separate inventory limit beyond that. Foundry disk rows expose deposit-to-lake actions; a Data
-  Lake summary appears once any lake has content.
+- **Data Lakes + Booster transfers** — ten storage-tier lakes (KB … QB). A lake never itself banks a
+  spendable reserve — past a small prepaid deposit buffer (below), it's a throughput pipe onto the
+  live Disk inventory. Depositing Disks (`10×1 + 10×10 + 10×100` of that denomination) into the
+  buffer requires that size's disk array to be COMPLETELY built (all 10 disks ever built) — a
+  backstop that keeps the deposit counter from exceeding how many disks of that size can ever exist,
+  not a design cap in itself. A lake's own actual, intentional deposit capacity (see Changed below)
+  is a smaller, separate, purchasable doubling ladder. Starting a
+  Booster on the Boosters screen costs escalating lake units (the nth Booster ever started, counting
+  ones still in flight, costs n) — spent out of the deposit buffer FIRST (instant), then any
+  remaining cost is sourced live from built Disks and transferred into the lake over time, at 10×
+  the Byte Foundry's current production rate, only granting the Booster once that transfer
+  completes. Each lake can run up to 3 of these live transfers at once, one concurrency slot
+  unlocked per completed sub-size Disk array (the same staged gate the deposit buffer uses). Foundry
+  disk rows expose deposit-to-lake actions; a Data Lake summary shows deposited stock, next cost,
+  and any in-flight transfers.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
   minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
   buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
-  will cost more" warning is also gone (no longer true); the "wipes all held Compute tokens"
-  warning stays.
+  will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
+  all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
+  fires immediately" entry under Changed below).
 
 ### Fixed
+- **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
+  (deposits, purchased Boosters, in-flight transfers, and capacity level) unchanged, matching
+  Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
+  with the rest of the Foundry.
+- **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
+  cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
+  so stretching it to the full row width also stretched it to that same width in height. It now
+  uses `DISK_ARRAY_LADDER_CAP` as its aspect ratio instead, landing back near one segment's own
+  height.
 - **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
   least one Flops tier (previously hardcoded off).
 - **Compute Boost base preset ordering** — the base (tier 1/Core) preset values (`burst` ×32/1
@@ -63,6 +77,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Byte Foundry: Data Stream / Buffer rename; Sacrifice removed; Buffer snaps on Combine** (#506) —
+  player-facing "Memory" is now **Data Stream** (balance) with capacity labeled **Buffer**;
+  "Bandwidth ×2" is **Speed ×2**. The Sacrifice / "Memory ×2" capacity ladder is removed —
+  Combine (and save-load via `normalizePoolMemoryCapacity`) snaps Buffer to the pool end
+  (`INTRO_CAPACITY_CAP_BITS`, 1 MiB). Era ascension also snaps Buffer to the pool end when the
+  permanent Byte generator is kept, so the Foundry gate cannot softlock. Forced priority is Disk
+  Fill → Speed/Invest → Disk Build → Compute Boost (no Sacrifice rank). Guide and Reset Byte Foundry
+  copy updated to match.
+- **Prestige progress bar repositioned to just above the bottom tab bar** — it's now pinned via
+  `position: fixed` directly above `AppNav` so it stays visible regardless of scroll position,
+  instead of scrolling away near the top of the Ladder screen. Its `"N% to Prestige"` label now
+  renders inside the bar itself (centered over the fill), rather than as a separate line below it.
+- **Data Lake panel redesigned; capacity is now a doubling ladder hard-capped at 1,024 units** —
+  `DataLakePanel` is a proper CSS Grid with an explicit Lake/Deposited/Capacity/Bought/Next header
+  row instead of an unaligned, single-flex-row-per-lake layout. A lake's own deposit capacity is
+  the explicit, purchasable ladder: starts at 1 unit ("1 KB" for the KB lake) and doubles per
+  purchase (spending the lake's own
+  current capacity in Bits, the same shape Memory's Sacrifice uses), permanently hard-capped at
+  1,024 units ("1024 KB") via a compact "⚡ ×2" button in the panel's new Capacity column.
+- **Disk/Cache fill speeds now tied to Memory bandwidth (Byte Foundry production rate), not flat or
+  unbounded rates** — a fresh disk build now takes exactly the time to fill it at 1x Memory
+  bandwidth (was a flat "1 second per real KB," decoupled from Invest/Compute Boost); a disk filling
+  FROM a cache (read-cache or write-cache flush) runs at 2x bandwidth; a cache filling FROM Memory
+  (read-cache refill) is capped at 10x bandwidth, so even a large banked balance can no longer drain
+  into the cache instantly; a cache filling FROM Disks (write-cache collect) runs at 2x bandwidth.
+  All four now scale with Invest/Compute Boost the same way every other timed Byte Foundry mechanic
+  already does.
+- **Disk redemption is now a fixed one-to-one (tier, level) mapping, not a price coincidence** — a
+  disk of a given size now always corresponds to one specific tier and level (1st/2nd/3rd
+  disk-ladder step → that tier's level 1/2/3, sharing the same KB/MB/GB/… grouping Data Lakes
+  already use), and is redeemable only while that tier currently sits at exactly that level.
+  Redeeming completes the tier's WHOLE current level in one shot (its entire purchase block)
+  instead of granting a single unit. Replaces the old "redeems into whichever tier's current
+  per-unit cost happens to match its size right now" design, which could drift or skip a disk
+  entirely if a tier's price jumped past it mid-run.
+- **Data Lake figures now display in the same Byte-scale currency as Disks** — deposited amount,
+  capacity, and the next Booster's cost on the Data Lake panel now render as KB/MB/GB/… (matching
+  Disk sizing) instead of a bare unit count (previously shown as raw numbers like 9/99/999).
+- **Storage Pool: read cache trimmed to one array, Data Lake deposits now automatic** — only the
+  pool's smallest disk size (the one that actually touches Memory) keeps a read cache; every larger
+  size fills exclusively via the write-cache ripple from the size below, which already existed and
+  never used the read cache anyway — running both was pure redundancy. Depositing a fully-built
+  array's disks into its Data Lake no longer needs a manual click: `tickDiskAutoDeposit` deposits
+  the smallest eligible size automatically every tick, deferring to a disk that's still redeemable
+  for the main game first (disks always take priority). `DiskArrayRow`'s manual "→ Lake" button and
+  the `depositDiskToDataLake` action are removed from the UI (the underlying engine function is
+  unchanged, now called automatically). A save carrying a stale read cache for a size that's no
+  longer eligible self-heals on its next tick, refunding the cached bits back into Memory.
+- **Byte Foundry pool renders as one card** — Memory, its Combine/Sacrifice/Bandwidth actions, and
+  Storage (Build Disk + every disk-array row + the Data Lake panel) now render inside a single
+  `PoolCard`, instead of Memory as its own boxed tile, bare buttons/rows in the middle, and a
+  separately-boxed "Data Lake" card at the bottom. `DataLakePanel` gained a `bare` prop (skips its
+  own card chrome) for this nested use; its standalone/boxed rendering is unchanged for any other
+  caller.
+- **Memory ×2 (Sacrifice) fires immediately, no confirm prompt** — clicking the button now drains
+  Memory and doubles Capacity right away, the same as every other Byte Foundry action; the
+  "Sacrifice Memory?" confirm dialog (with its Compute-token-wipe warning) is removed.
 - **Screen reader accessibility** — `ButtonIcon` decorative icons are now `aria-hidden` so screen
   readers announce only a button's own `aria-label`, not redundant icon content; the offline-
   progress notice card now carries `role="status"`/`aria-live="polite"` so it's announced when it
@@ -218,9 +289,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Compute Boost duration** scales with merge tier again: **×2 per tier**
   (`durationSeconds * 2^(tierIndex-1)`), alongside the existing **×4** effect step. Restores
   “effect time doubles after merge” after #363/#364 had flattened duration.
-- **Sacrifice confirm** uses an in-game `ConfirmDialog` (theme overlay) instead of
-  `window.confirm`. The “future Cores cost more” warning appears only once Compute Cores are
-  unlocked.
+- **Sacrifice confirm** used an in-game `ConfirmDialog` (theme overlay) instead of
+  `window.confirm`, with a "future Cores cost more" warning shown only once Compute Cores were
+  unlocked — the confirm dialog itself was later removed entirely (see Memory ×2 above); Sacrifice
+  now fires directly on click.
 - **Disk build ladder** now offers every Byte power-of-ten size (1 KB → 10 KB → 100 KB → **1 MB** →
   10 MB → …) instead of walking Kilobytes’ level-cost sequence (which skipped 1 MB). A 1 MB disk
   redeems into Megabytes at level 1; building it costs 10 MB of Memory. Saves that already own
@@ -240,9 +312,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   preset/funding tier. Both paths require an explicit confirmation dialog.
 - **Reset Byte Foundry** (Settings → Danger zone): wipe Memory, Capacity, Disks / Storage, and all
   Compute on the active save — Tiers progress, Prestige Points / count / upgrades, and (if already
-  unlocked) main-game access this cycle stay. Combine, Invest / Bandwidth, and Disk Build
-  **restart from scratch**, then convenience-auto-press again up to your pre-reset highs as each
-  becomes affordable (Capacity stays manual — you still click Sacrifice). Separate from full Reset /
+  unlocked) main-game access this cycle stay. Combine, Invest / Bandwidth, Disk Build, and Capacity
+  (Sacrifice) **restart from scratch**, then all convenience-auto-press again up to your pre-reset
+  highs as each becomes affordable. Separate from full Reset /
   Erase all; still asks for confirmation and stays disabled while production is frozen at Prestige.
 - **Queued Capacity upgrade** (Byte Foundry): queue Sacrifice before Memory is full via
   `queueIntroCapacityUpgrade`. When Memory fills (and Disk Fill / Invest / Disk Build are not
@@ -356,7 +428,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Speed Up**'s first activation now requires the last tier to reach level 5 instead of level 1;
   each subsequent activation still needs exactly one more level than the last.
 - Every tier's per-level cost now scales along a Fibonacci-driven exponent sequence (1, 2, 3, 5, 8, 13, … per level, versus a flatter triangular-number sequence before) — costs grow the same way through level 2, then noticeably faster from level 3 on, and skip specific round numbers along the way (e.g. a level costing exactly 1,000,000× `baseCost` never occurs — the sequence jumps straight from 100,000× to 10,000,000×).
-- **Sacrifice for 10x Capacity** is now offered only once every other currently-possible Byte Foundry action has been taken first — Combine into a Byte, Invest for Double Production, and building a Disk (once revealed) all block it while any of them is still affordable. Since Invest's own cost ladder tracks capacity's own growth, claiming the current Invest tier is now effectively a required click before Sacrificing again most cycles. Clicking it now also asks for confirmation first, spelling out that it's permanent and makes future Cores cost more.
+- **Sacrifice for 10x Capacity** is now offered only once every other currently-possible Byte Foundry action has been taken first — Combine into a Byte, Invest for Double Production, and building a Disk (once revealed) all block it while any of them is still affordable. Since Invest's own cost ladder tracks capacity's own growth, claiming the current Invest tier is now effectively a required click before Sacrificing again most cycles. (Clicking it once asked for confirmation first, spelling out that it's permanent and made future Cores cost more — see Memory ×2 above for the current, dialog-free behavior.)
 - The **⚙️ Byte Foundry** and **ℹ️ Guide** links on the main game page are now real buttons, matching the same nav-button styling every other page-to-page link in the app already uses (e.g. the Byte Foundry screen's own "🏦 Storage"/"⚡ Compute" buttons) — previously they were a small underlined text link, easy to miss.
 - The **Compute** page's layout: each entity's count now sits in the same row as its own action button(s) instead of a separate counters section at the top. Burst/Standard/Sustain now render as small buttons with icons, alongside the currently-available Core count in the same row, instead of full-size text-only buttons with the count shown elsewhere. The active Boost's status (effect, countdown, stack count, and the Reclaim control) now renders at the very top of the screen, right below the header, instead of below the preset buttons — so it stays visible no matter what else is on screen.
 - **Compute Boost durations**: Burst is now 1 minute (was 10 seconds), Standard is now 10 minutes (was 1 minute), and Sustain is now 1 hour (was 10 minutes) — the ×16/×4/×2 multipliers are unchanged.

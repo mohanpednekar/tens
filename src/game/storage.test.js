@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialGameState, eraGame } from './engine'
-import { ERA_ELIGIBILITY_PP, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
+import { ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
 import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
 const tensTier = TIER_DEFINITIONS[0]
@@ -28,6 +28,19 @@ describe('loadGameState', () => {
       throw new Error('SecurityError: private browsing')
     })
     expect(loadGameState()).toBeNull()
+  })
+
+  it('strips __proto__ / constructor from polluted save JSON without polluting Object.prototype', () => {
+    localStorage.setItem(
+      'tens_game_state',
+      `{"saveSchemaVersion":${SAVE_SCHEMA_VERSION},"resources":{"${MONEY_ID}":4242},"__proto__":{"polluted":true},"constructor":{"evil":true}}`,
+    )
+    const loaded = loadGameState()
+    expect(loaded.resources[MONEY_ID]).toBe(4242)
+    expect(Object.hasOwn(loaded, '__proto__')).toBe(false)
+    expect(Object.hasOwn(loaded, 'constructor')).toBe(false)
+    expect(Object.hasOwn(loaded.resources, '__proto__')).toBe(false)
+    expect(Object.prototype.polluted).toBeUndefined()
   })
 })
 
@@ -404,7 +417,7 @@ describe('schema merge on load', () => {
     const state = {
       ...createInitialGameState(),
       intro: {
-        bits: 5, productionAccumulator: 0.2, capacity: 80, byteCreated: true, tickSpeedSeconds: 0.5,
+        bits: 5, productionAccumulator: 0.2, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.5,
         productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
         mainGameUnlocked: false,
         capacityUpgradeQueued: false,
@@ -437,6 +450,23 @@ describe('schema merge on load', () => {
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.intro).toEqual(state.intro)
+  })
+
+  it('normalizes a mid-Sacrifice-ladder Buffer up to the pool Memory end bound on load (#506)', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        bits: 5,
+        capacity: 80,
+        byteCreated: true,
+      },
+    }
+    saveGameState(state)
+    const loaded = loadGameState()
+    expect(loaded.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(loaded.intro.bits).toBe(5)
+    expect(loaded.intro.byteCreated).toBe(true)
   })
 
 })
@@ -646,7 +676,10 @@ describe('supporter unlock + save slots', () => {
     expect(message).toMatch(/capacity/i)
     expect(message).toMatch(/convenience/i)
     expect(message).toMatch(/auto-press/i)
+    expect(message).toMatch(/speed/i)
     expect(message).toMatch(/invest/i)
+    expect(message).toMatch(/data stream/i)
+    expect(message).not.toMatch(/bandwidth progress/i)
     expect(message).toMatch(/disks\/storage/i)
     expect(message).toMatch(/compute/i)
     expect(message).toMatch(/also kept:\s*ladder\b/i)
@@ -734,6 +767,19 @@ describe('Dev Mode', () => {
     expect(result.reason).toBe('dev_mode_inactive')
   })
 
+  it('applyDevGameStateJson strips __proto__ / constructor from polluted editor JSON', () => {
+    setDevModeActive(true)
+    const result = applyDevGameStateJson(
+      `{"resources":{"${MONEY_ID}":777},"__proto__":{"polluted":true},"constructor":{"evil":true}}`,
+      createInitialGameState(),
+    )
+    expect(result.ok).toBe(true)
+    expect(result.state.resources[MONEY_ID]).toBe(777)
+    expect(Object.hasOwn(result.state, '__proto__')).toBe(false)
+    expect(Object.hasOwn(result.state, 'constructor')).toBe(false)
+    expect(Object.prototype.polluted).toBeUndefined()
+  })
+
   it('applyDevGameStateJson rejects invalid JSON without touching the dev save', () => {
     setDevModeActive(true)
     const currentState = { ...createInitialGameState(), resources: { ...createInitialGameState().resources, [MONEY_ID]: 42 } }
@@ -776,8 +822,8 @@ describe('Dev Mode', () => {
         ...createInitialGameState().intro,
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
-          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5 },
-          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 },
+          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5, transfers: [], capacityLevel: 0 },
+          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 },
         },
       },
     }
@@ -791,7 +837,7 @@ describe('Dev Mode', () => {
     // ...and every sibling at every depth survives untouched: tier 1's own deposits (a sibling of
     // the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
     expect(result.state.intro.dataLakes['1'].deposits).toEqual({ 1: 50, 10: 3, 100: 0 })
-    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12 })
+    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

@@ -23,22 +23,28 @@ import {
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
-  DATA_LAKE_CAPACITY,
-  DATA_LAKE_SLOT_MAX,
+  CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
+  CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
+  DATA_LAKE_CAPACITY_MAX_LEVEL,
+  DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
+  DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
-  INTRO_CAPACITY_DOUBLING_STEP,
+  INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
   DISK_CACHE_BLOCK_COUNT,
+  DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
+  INTRO_STARTING_CAPACITY,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
+  getStoragePoolMemoryBounds,
 } from 'game/layers'
 import { version } from '../../../package.json'
 import styled from 'styled-components'
@@ -159,40 +165,36 @@ const InfoPage = () => {
         <h2>Byte Foundry</h2>
         <p>
           Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from the bottom nav’s Foundry item. Memory Capacity reads in binary units
-          (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes, Data Lake, caches) stays SI
-          (KB, MB, …, 1 KB = 1000 Bytes) throughout.
+          Reopen any time from the bottom nav’s Foundry item. Data Stream Buffer / pool Memory
+          Capacity reads in binary units (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes,
+          Data Lake, caches) stays SI (KB, MB, …, 1 KB = 1000 Bytes) throughout.
         </p>
 
         <h3>The loop</h3>
         <ul>
           <li>
-            <strong>Tap</strong> fills Memory with bits (one second of production per tap at the
-            current rate). After the main game unlocks, Memory’s own tile is the tap target —
-            the standalone Tap button goes away.
+            <strong>Tap</strong> fills the Data Stream with bits (one second of production per tap
+            at the current rate). After the main game unlocks, the Data Stream tile is the tap
+            target — the standalone Tap button goes away.
           </li>
           <li>
             Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
-            produces passively forever after.
+            produces passively forever after. On Combine, Buffer snaps from{' '}
+            {formatBitsInNearestUnit(INTRO_STARTING_CAPACITY)} to the pool end (
+            {formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)}). Capacity for this pool runs{' '}
+            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} –{' '}
+            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).endBits)}.
           </li>
           <li>
-            <strong>Sacrifice</strong> drains Memory for ×{INTRO_CAPACITY_DOUBLING_STEP} capacity
-            (only when Memory is full and nothing higher-priority is available). Capacity is
-            measured in binary units (KiB, MiB, …) and hard-caps at the next full binary tier —
-            once at the cap, Sacrifice stops being offered for good.
-          </li>
-          <li>
-            <strong>Invest</strong> spends Memory on an independent cost ladder, stepped
-            ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
-            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} production (doesn’t require a full balance). When
-            that bit cost exceeds Memory capacity, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
+            <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost
+            ladder, stepped ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
+            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} pool Memory Speed (doesn’t require a full Buffer).
+            When that bit cost exceeds Buffer, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
             the next Compute tier (Cores → … → Megacomputers, then wrapping back to Cores) for the
-            same ×2 — separate from auto-merge sacrifices, and still usable even once Sacrifice
-            itself is permanently capped. Memory Sacrifice rolls those compute-funded Bandwidth
-            claims back.
+            same ×2 — separate from auto-merge sacrifices.
           </li>
           <li>
-            <strong>Transfer blocks</strong> convert Memory into free {firstTierName} at
+            <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at
             {firstTierName}’ current per-unit cost. The first transfer unlocks the main game;
             there’s no per-cycle cap after that. Auto-convert keeps running even when the manual
             row is hidden.
@@ -202,10 +204,10 @@ const InfoPage = () => {
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Prestige:</strong> Memory balance and the main-game unlock gate.
+            <strong>Resets each Prestige:</strong> Data Stream balance and the main-game unlock gate.
           </li>
           <li>
-            <strong>Permanent:</strong> the Byte generator, capacity/production upgrades, Disks,
+            <strong>Permanent:</strong> the Byte generator, Buffer/production upgrades, Disks,
             and every Compute entity.
           </li>
           <li>Later cycles are a fast pit-stop, not a full replay.</li>
@@ -214,15 +216,17 @@ const InfoPage = () => {
         <h3>Forced priority</h3>
         <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
         <ul>
-          <li>Disk Fill → Bandwidth/Invest → Disk Build → Compute Boost → Memory/Sacrifice</li>
+          <li>Disk Fill → Speed/Invest → Disk Build → Compute Boost</li>
         </ul>
       </Section>
 
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Unlocks once Memory capacity reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
-          Open it from the bottom nav’s Storage item.
+          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}
+          {' '}(after Combine, Buffer snaps to the pool Memory end, so this is true as soon as the
+          Byte generator exists). Disk arrays live under Foundry as continuous sections (not a
+          separate top-level nav item).
         </p>
 
         <h3>Building Disks</h3>
@@ -231,8 +235,9 @@ const InfoPage = () => {
             Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).
           </li>
           <li>
-            Build time is real: the first disk of a size takes 1s per “KB” of that size; the Nth
-            disk of the same array takes N× that base time.
+            Build time is real: the first disk of a size takes exactly as long as filling it would
+            at your current Byte Foundry production rate (Memory bandwidth); the Nth disk of the
+            same array takes N× that base time.
           </li>
           <li>
             While an array rebuilds, every disk in it is offline — no fill, release, or redeem —
@@ -252,33 +257,42 @@ const InfoPage = () => {
         <h3>Cache, fill, release, redeem</h3>
         <ul>
           <li>
-            Each array keeps a Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth
-            of bits (e.g. a 1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory
-            refills whole blocks when a block was just released or the size was just unlocked —
-            Memory fills visibly between transfers rather than draining bit-by-bit.
+            Only the pool's smallest array — the one that actually draws from Memory — keeps a
+            Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth of bits (e.g. a
+            1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
+            blocks when a block was just released or the size was just unlocked — Memory fills
+            visibly between transfers rather than draining bit-by-bit, at up to
+            {' '}{CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× your current production rate, so
+            even a large banked balance can't refill it instantly.
           </li>
           <li>
-            Empty disks fill from a full read cache when no tier claim blocks that size — the flush
-            takes as long as filling one cache block at your current Byte Foundry production rate
-            (not instant). Larger sizes can also fill via write-cache merges from the size below.
+            That smallest array's empty disks fill from its full read cache when no tier claim
+            blocks that size — the flush takes as long as filling one cache block at
+            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× your current Byte Foundry production
+            rate (not instant). Every larger size fills exclusively via write-cache merges from the
+            size below — collecting from those built Disks at {CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER}×
+            your rate, then flushing into the next size's own empty disk at
+            {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× — it has no read cache of its own.
           </li>
           <li>
             A full cache block can be <strong>released into your Bits balance</strong> (not back
-            into Memory) — but only while some tier’s current per-unit cost matches that array’s
-            size <strong>and no full redeemable disk of that size exists</strong>. Disks always
-            take priority; cache is fallback only.
+            into Memory) — but only while that size’s own fixed corresponding tier currently sits
+            at its required level <strong>and no full redeemable disk of that size exists</strong>.
+            Disks always take priority; cache is fallback only.
           </li>
           <li>
             With <strong>Smart</strong> on, the matching tier’s autobuyer auto-releases cache
             blocks when no disk is available; otherwise release cache by hand.
           </li>
           <li>
-            A full disk <strong>redeems</strong> for 1 free unit of whichever tier’s current price
-            exactly matches its size (any tier). Ties break toward the earliest tier in the main
-            ladder.
+            Every disk size has one fixed, permanent tier and level it corresponds to (KB-scale
+            sizes to Kilobytes, MB-scale to Megabytes, and so on — the 1st/2nd/3rd size within each
+            maps to that tier’s own level 1/2/3). A full disk <strong>redeems</strong> only while
+            its tier is currently sitting at exactly that level, completing the tier’s whole
+            current level in one shot rather than granting a single unit.
           </li>
           <li>
-            Auto-redeem fires only when that matching tier’s unit autobuyer is unlocked and
+            Auto-redeem fires only when that tier’s unit autobuyer is unlocked and
             unpaused; otherwise redeem by hand.
           </li>
           <li>Disks are reusable and permanent across Prestige; a full disk stays full through Prestige.</li>
@@ -296,30 +310,51 @@ const InfoPage = () => {
         <h3>Data Lakes</h3>
         <ul>
           <li>
-            Ten permanent lakes (one per storage denomination, KB … QB) hold deposited Disks and
-            fund Booster purchases at the matching Compute tier.
+            Ten permanent lakes (one per storage denomination, KB … QB). A lake never itself holds a
+            big spendable balance — past a small prepaid deposit buffer (below), it's a live pipe
+            onto your built Disks, not a stockpile.
           </li>
           <li>
-            Depositing a size's disks requires that size's array to be completely built (all{' '}
-            {DISK_ARRAY_LADDER_CAP} disks ever built), not just one currently full — deposit from a
-            Foundry disk row once eligible.
+            A size's disks deposit into its lake automatically — no manual action — once that
+            size's array is completely built (all {DISK_ARRAY_LADDER_CAP} disks ever built, not
+            just one currently full) and the disk isn't currently redeemable for the main game
+            (redeeming always comes first).
           </li>
           <li>
-            Each lake's capacity stages as its three sub-size arrays complete: {DATA_LAKE_SLOT_MAX}{' '}
-            once only the smallest is built, {DATA_LAKE_SLOT_MAX * 11} once the next size up is also
-            built, the full {DATA_LAKE_CAPACITY} once the largest of the three is built too.
+            A lake's own deposit capacity is purchasable: it starts at 1 unit and doubles each
+            purchase (spending the lake's own current capacity, converted into Data Stream Bits —
+            the same "spend the current value to double it" shape the removed Memory Sacrifice once
+            used), permanently
+            hard-capped at {2 ** DATA_LAKE_CAPACITY_MAX_LEVEL} units once fully doubled — shown on
+            the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
+            these raw unit counts.
           </li>
           <li>
-            The nth Booster purchase from a lake costs n units of that lake's own current deposits —
-            spent capacity only returns by depositing more Disks.
+            Each denomination can also never hold more disks of a size than {DISK_ARRAY_LADDER_CAP}{' '}
+            — the most that size's array can ever physically produce — so a lake's largest
+            denomination can bank up to {DISK_ARRAY_LADDER_CAP * 111} once every sub-size array is
+            complete; this is well above the purchasable capacity above, so it's the doubling cap
+            that actually limits deposits in practice, not this incidental ceiling.
+          </li>
+          <li>
+            Starting the nth Booster ever started at a lake (whether already granted or still
+            transferring) costs n units. Deposits pay first, instantly; any cost still remaining is
+            transferred live from your held Disks over time, at {DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER}×
+            the Byte Foundry's current production rate, only granting the Booster once that transfer
+            finishes.
+          </li>
+          <li>
+            Each lake can run up to {DATA_LAKE_TRANSFER_CAPACITY_MAX} of these live transfers at
+            once — one slot unlocks per completed sub-size array, the same staged progression the
+            deposit buffer uses.
           </li>
         </ul>
 
         <h3>Cores</h3>
         <ul>
           <li>
-            Bought with Boosters from the matching Data Lake — the buy button on the Cores row —
-            there is no other way to obtain a Core.
+            Started from the matching Data Lake — the Booster button on the Cores row — there is no
+            other way to obtain a Core.
           </li>
           <li>
             Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge
@@ -327,7 +362,7 @@ const InfoPage = () => {
           </li>
           <li>
             Every compute entity caps at {COMPUTE_ENTITY_CAP} held — except on the Data Lake
-            Booster purchase path itself (any of the ten tiers, not just Cores), which is
+            Booster path itself (any of the ten tiers, not just Cores), which is
             Data-Lake-limited rather than inventory-capped and can push a tier's held count past
             {' '}{COMPUTE_ENTITY_CAP}.
           </li>

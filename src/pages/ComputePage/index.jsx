@@ -1,5 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canPurchaseBoosterFromDataLake, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getBoosterPurchaseCost, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getDataLakeAvailableUnits, getDataLakeTierLabel, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isProductionFrozen, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, canStartBoosterTransfer, formatAmount, formatOfflineDuration, getBoosterPurchaseCost, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getDataLakeAvailableUnits, getDataLakeTier, getDataLakeTierLabel, getDataLakeTransferCapacity, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isProductionFrozen, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
 import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -193,6 +193,18 @@ const MergeCountdown = styled.span`
   color: ${props => props.theme.color.warn};
 `
 
+// In-flight Data Lake Booster transfer count + soonest completion (see
+// startBoosterTransfer/tickDataLakeTransfers in engine.js) — same compact treatment as
+// MergeCountdown above, next to the Booster IconButton rather than a reserve-slots row since a
+// lake's transfer concurrency (DATA_LAKE_TRANSFER_CAPACITY_MAX, up to 3) has no slot squares of
+// its own to render into.
+const TransferStatus = styled.span`
+  flex: 0 0 auto;
+  font-size: 0.78em;
+  font-family: ${props => props.theme.font.display};
+  color: ${props => props.theme.color.warn};
+`
+
 // Issue #326: which compute-ladder tier is currently armed to fund a Boost — a small status line
 // above the 3 preset buttons so it's clear what clicking one would spend/grant.
 const ArmedStatusText = styled.p`
@@ -281,9 +293,10 @@ const COMPUTE_BOOST_DISPLAY = {
 // once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
 // autoMergeNodesIntoCluster/… in engine.js) — transitions from an instant manual click to
 // engine.js's timed reserve-pool system (see issue #321). Core → Node is included as an ordinary
-// boundary here, same as every other one. Cores themselves are obtained by buying Boosters from
-// the matching Data Lake (purchaseBoosterFromDataLake), not minted from Memory — the earlier
-// "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
+// boundary here, same as every other one. Cores themselves are obtained by starting Boosters from
+// the matching Data Lake (startBoosterTransfer — deposited Disk stock spent instantly, any
+// remaining cost live-transferred off the raw Disk inventory over time), not minted from Memory —
+// the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
 // Megacomputer (the last tier) has no merge row at all — nothing to merge into or automate past it
 // (see issue #280's "Out of scope").
 const ENTITY_ROWS = [
@@ -448,8 +461,8 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
 // once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Activation is still gated
-// by the Byte Foundry's forced priority order — Disk Fill > Bandwidth > Disk Build > Compute >
-// Memory — so a preset can show disabled here even while mechanically activatable
+// by the Byte Foundry's forced priority order — Disk Fill > Speed > Disk Build > Compute —
+// so a preset can show disabled here even while mechanically activatable
 // (canActivateComputeBoost), if something ranked above Compute (which lives back on
 // ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
 // Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer, see
@@ -562,7 +575,7 @@ const ComputePage = ({ game }) => {
                   : sameAsActive
                     ? 'This boost is already active — use Stack to extend it'
                     : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill, Bandwidth, or Disk Build)'
+                      ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Disk Build)'
                       : needsForfeit
                         ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
                         : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
@@ -696,10 +709,15 @@ const ComputePage = ({ game }) => {
               const merging = remainingSeconds > 0
               const startAvailable = autoEnabled && !merging && count >= COMPUTE_MERGE_RATIO && (intro[row.mergeOutputField] ?? 0) < COMPUTE_ENTITY_CAP
 
-              const canBuyFromLake = canPurchaseBoosterFromDataLake(state, tierIndex)
+              const canStartTransfer = canStartBoosterTransfer(state, tierIndex)
               const buyCost = getBoosterPurchaseCost(tierIndex)(state)
               const lakeLabel = getDataLakeTierLabel(tierIndex)
-              const lakeAvailable = getDataLakeAvailableUnits(tierIndex)(state)
+              const lakeDeposited = getDataLakeAvailableUnits(tierIndex)(state)
+              const lakeTransfers = getDataLakeTier(state, tierIndex)?.transfers ?? []
+              const lakeTransferCapacity = getDataLakeTransferCapacity(state, tierIndex)
+              const soonestTransferSeconds = lakeTransfers.length > 0
+                ? Math.min(...lakeTransfers.map(transfer => transfer.remainingSeconds ?? 0))
+                : 0
 
               return (
                 <TierBlock key={row.key} aria-label={`${row.label} tier`}>
@@ -724,19 +742,24 @@ const ComputePage = ({ game }) => {
 
                   <TierMergeRow>
                     <IconButton
-                      aria-label={`buy 1 ${row.label.toLowerCase().slice(0, -1) || row.label.toLowerCase()} from the ${lakeLabel} Data Lake`}
-                      disabled={!canBuyFromLake}
-                      onClick={() => actions.purchaseBoosterFromDataLake(tierIndex)}
+                      aria-label={`start 1 ${row.label.toLowerCase().slice(0, -1) || row.label.toLowerCase()} from the ${lakeLabel} Data Lake`}
+                      disabled={!canStartTransfer}
+                      onClick={() => actions.startBoosterTransfer(tierIndex)}
                       title={
-                        canBuyFromLake
-                          ? `Buy 1 ${singularize(row.label)} for ${formatAmount(buyCost)} ${lakeLabel} from the Data Lake (${formatAmount(lakeAvailable)} ${lakeLabel} free)`
-                          : `Needs ${formatAmount(buyCost)} ${lakeLabel} free in the Data Lake — deposit Disks on Foundry`
+                        canStartTransfer
+                          ? `Start 1 ${singularize(row.label)} for ${formatAmount(buyCost)} ${lakeLabel} — spent from ${formatAmount(lakeDeposited)} ${lakeLabel} deposited first, any remainder live-transferred from built Disks (${formatAmount(lakeTransferCapacity - lakeTransfers.length)}/${formatAmount(lakeTransferCapacity)} transfer slots free)`
+                          : `Needs ${formatAmount(buyCost)} ${lakeLabel} worth of deposited + built Disks, and a free transfer slot — deposit or build Disks on Foundry`
                       }
                       type="button"
                       variant="success"
                     >
                       <ButtonContent>{`+ ${formatAmount(buyCost)}${lakeLabel}`}</ButtonContent>
                     </IconButton>
+                    {lakeTransfers.length > 0 && (
+                      <TransferStatus title={`${formatAmount(lakeTransfers.length)}/${formatAmount(lakeTransferCapacity)} ${lakeLabel} transfers in flight — soonest completes in ${formatOfflineDuration(soonestTransferSeconds)}`}>
+                        {`⇄${formatAmount(lakeTransfers.length)} ${formatOfflineDuration(soonestTransferSeconds)}`}
+                      </TransferStatus>
+                    )}
 
                     {hasMergeRow && (
                       autoEnabled ? (

@@ -1,0 +1,174 @@
+name: Dependabot PR follow-up
+
+# When CI fails on a Dependabot dependency-bump PR for a reason beyond "branch is
+# simply behind main" (Phase 0 already comments @dependabot rebase for that case),
+# diagnose the failure and push a genuine call-site/config fix to the existing
+# Dependabot branch — or leave one explanatory comment if it can't. Never opens a
+# new PR, never downgrades the bump, never merges/approves.
+
+on:
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: dependabot-pr-followup-${{ github.event.check_suite.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  followup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Resolve target PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK_SUITE_CONCLUSION: ${{ github.event.check_suite.conclusion }}
+          CHECK_SUITE_BRANCH: ${{ github.event.check_suite.head_branch }}
+        run: |
+          # All untrusted github.event.* values arrive via env vars above, never spliced
+          # directly into this script, so a crafted branch name can't inject shell.
+          if [ "$CHECK_SUITE_CONCLUSION" != "failure" ]; then
+            echo "Check suite did not fail, nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # --repo is required: this step runs before checkout, so there's no local git
+          # repo for `gh` to infer the target from.
+          number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$CHECK_SUITE_BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            echo "No open PR for this branch, skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Re-resolve branch / same-repo from the API rather than trusting event payload
+          # fields: check_suite can fire for fork PRs, and a fork branch can be named
+          # anything including dependabot/*. Only ever check out a branch that lives in
+          # this repository.
+          pr_json=$(gh pr view "$number" --repo "$GITHUB_REPOSITORY" --json headRefName,headRefOid,isCrossRepository)
+          branch=$(jq -r '.headRefName' <<<"$pr_json")
+          sha=$(jq -r '.headRefOid' <<<"$pr_json")
+          is_cross_repo=$(jq -r '.isCrossRepository' <<<"$pr_json")
+
+          if [ "$is_cross_repo" = "true" ]; then
+            echo "PR head is in a fork, not this repository — refusing to check it out. Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$branch" != dependabot/* ]]; then
+            echo "Not a Dependabot PR (branch: $branch), skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v7
+        if: steps.pr.outputs.skip != 'true'
+        with:
+          # Pin to the exact commit resolved above, not the mutable branch tip — same
+          # TOCTOU rationale as autonomous-pr-followup.yml.
+          ref: ${{ steps.pr.outputs.sha }}
+          fetch-depth: 0
+          # Dependabot branches are protected against ordinary GITHUB_TOKEN pushes in
+          # some setups; use the automation PAT so a genuine fix can land.
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+
+      - name: Enable Corepack
+        if: steps.pr.outputs.skip != 'true'
+        run: corepack enable
+
+      - name: Set up Node
+        if: steps.pr.outputs.skip != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Diagnose and fix Dependabot PR CI failure
+        if: steps.pr.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          claude_args: |
+            --max-turns 30
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh run list:*),Bash(gh run view:*)"
+          settings: |
+            {
+              "permissions": {
+                "deny": [
+                  "Edit(.github/workflows/ci.yml)",
+                  "Write(.github/workflows/ci.yml)",
+                  "Edit(.github/workflows/deploy.yml)",
+                  "Write(.github/workflows/deploy.yml)",
+                  "Edit(.github/workflows/autonomous-maintenance.yml)",
+                  "Write(.github/workflows/autonomous-maintenance.yml)",
+                  "Edit(.github/workflows/autonomous-pr-followup.yml)",
+                  "Write(.github/workflows/autonomous-pr-followup.yml)",
+                  "Edit(.github/workflows/pr-auto-merge.yml)",
+                  "Write(.github/workflows/pr-auto-merge.yml)",
+                  "Edit(.github/workflows/dependabot-pr-followup.yml)",
+                  "Write(.github/workflows/dependabot-pr-followup.yml)"
+                ]
+              }
+            }
+          prompt: |
+            You are following up, unattended, on Dependabot PR #${{ steps.pr.outputs.number }}
+            (branch ${{ steps.pr.outputs.branch }}) in ${{ github.repository }}. This run was
+            triggered by a failing check suite on that PR. Your turn budget is capped
+            (--max-turns 30; every tool call counts as a turn) — work efficiently.
+
+            Read CLAUDE.md and docs/AUTOMATION.md first and follow them exactly.
+
+            Scope of this workflow: fix a CI failure caused by the dependency bump itself
+            (breaking API/behavior change at call sites or config). Phase 0 of
+            autonomous-maintenance.yml already handles the "branch is simply behind main"
+            case by commenting `@dependabot rebase` — do NOT try to rebase yourself, and do
+            NOT treat an outdated base as something to fix with a code change here.
+
+            Use `gh pr view ${{ steps.pr.outputs.number }}`, `gh pr diff
+            ${{ steps.pr.outputs.number }}`, and recent failing check-run logs (`gh run list` /
+            `gh run view --log-failed`) to determine whether the failure is caused by the
+            bumped dependency vs. something unrelated / an outdated base.
+
+            - If you can confidently fix call sites or config to restore green while
+              **keeping the bumped version** (never downgrade the bump to dodge the failure —
+              that defeats Dependabot's purpose), do so and push to the **existing** branch.
+            - Never hand-edit `yarn.lock` version resolution beyond what's needed to keep
+              tests green after a legitimate call-site/config fix.
+            - The checkout is pinned to a specific commit, so you're on a detached HEAD.
+              Before committing, run `git checkout -B ${{ steps.pr.outputs.branch }}` to
+              attach to the real branch, then commit and push normally to
+              ${{ steps.pr.outputs.branch }} — never create a new branch or a new PR. If the
+              push is rejected as non-fast-forward, someone else changed the branch since this
+              run started — stop rather than force-pushing over it.
+            - Never use `--no-verify`, never skip or delete a failing test to make it pass,
+              never disable a check to route around it — fixes must be genuine.
+            - Never force-push, never push to main, never modify anything under
+              `.github/workflows/`.
+            - Run `yarn test` (and `yarn build` if dependencies or build config are involved)
+              and confirm it is green before pushing.
+            - If a change touches anything CLAUDE.md documents, update CLAUDE.md in the same
+              commit.
+            - Never merge or approve this PR yourself.
+
+            If you cannot confidently fix it (major/breaking change you can't resolve safely,
+            failure looks like an outdated base that needs `@dependabot rebase`, or the root
+            cause is unclear), leave exactly one explanatory `gh pr comment` on PR
+            #${{ steps.pr.outputs.number }} describing what's blocking, and make no code
+            changes. Check existing comments first so you don't duplicate an identical
+            explanation already posted by a prior run of this workflow.

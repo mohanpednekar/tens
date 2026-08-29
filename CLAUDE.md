@@ -49,6 +49,8 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
+yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
+                  # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
 ```
 
@@ -243,22 +245,23 @@ replace) the Project's `Track` field from #53. A `Track` answers "what's related
 possibly multiple releases; a Milestone answers "what's targeted for this release" and gives a
 native due-date plus automatic X/Y-closed progress. Interactive sessions and Planning (#53) should
 assign player-facing feature/economy issues to a milestone for the next planned release; process
-and infrastructure `claude-task` issues typically stay off a versioned milestone. The current
-next-release milestone is `v0.6.0` (UI-revamp chain #138/#139/#140); Era ascension
-(`#407` / `#411–#414`) targets `v0.7.0`. `scripts/sync-release-milestones.sh`
-keeps both milestones and assignments idempotent on housekeeping runs.
+and infrastructure `claude-task` issues typically stay off a versioned milestone. `v0.6.0`
+(UI-revamp chain #138/#139/#140) has fully shipped; the current next-release milestone is `v0.7.0`,
+targeting Era ascension (`#407` / `#411–#414`, in progress). `scripts/sync-release-milestones.sh`
+keeps milestones and assignments idempotent on housekeeping runs.
 
 ## Automation workflows
 
-Three workflows under `.github/workflows/` run Claude Code and GitHub automation unattended, opening,
-fixing up, and merging PRs with no human in the loop — except a narrow, conservative class of low-risk
-bot-authored PRs that merge on green checks alone. All three authenticate via the `GH_AUTOMATION_PAT`
-repo secret rather than the default `GITHUB_TOKEN` (whose commits/pushes/merges can't trigger other
-workflows). That PAT is deliberately narrowly-scoped and includes `Workflows: write`, so autonomous
-runs can push commits that touch `.github/workflows/**` when a task authorizes it (e.g. Phase B
-self-improvement on `autonomous-maintenance.yml`, or a new workflow file from a Phase A issue).
-Owner review via `.github/CODEOWNERS` still applies once branch protection requires it (see issue
-#62 and `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
+Five Claude-side workflows under `.github/workflows/` run Claude Code and GitHub automation
+unattended, opening, fixing up, and merging PRs with no human in the loop — except a narrow,
+conservative class of low-risk bot-authored PRs that merge on green checks alone. All five
+authenticate via the `GH_AUTOMATION_PAT` repo secret rather than the default `GITHUB_TOKEN`
+(whose commits/pushes/merges can't trigger other workflows). That PAT is deliberately
+narrowly-scoped and includes `Workflows: write`, so autonomous runs can push commits that touch
+`.github/workflows/**` when a task authorizes it (e.g. Phase B self-improvement on
+`autonomous-maintenance.yml`, or a new workflow file from a Phase A issue). Owner review via
+`.github/CODEOWNERS` still applies once branch protection requires it (see issue #62 and
+`docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
@@ -270,9 +273,14 @@ always outranks Phase B (a maintenance menu: test coverage, dependency/security 
 medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
 workflow self-improvement, gap analysis).
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` PRs.
-`pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR) or on green
-checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the diff meets a
-conservative low-risk bar.
+`dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
+itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
+`main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
+or on green checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the
+diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
+workflows (Claude + Cursor maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
+runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
+issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
 
 **Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
 `cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones
@@ -343,8 +351,16 @@ fixes (`### Removed`/`### Security`/`### Deprecated` as needed). Purely internal
 CI/workflow tweaks with no user-visible effect) don't need an entry. `package.json`'s `"version"`
 field (currently `0.5.0`) and future git tags (`v0.1.0`–`v0.5.0` retroactively, then onward) mirror
 this file's version sections — see `docs/DESIGN_HISTORY.md` for why versioning/tagging started here
-rather than at project inception. Bumping the version and pushing/tagging a release is handled by
-separate follow-up tooling, not by every individual PR.
+rather than at project inception.
+
+**Version bump before release:** when a PR is ready to cut the accumulated `## [Unreleased]`
+entries into a dated release section, run `yarn bump-version` (`scripts/bump-version.mjs`) as a
+final step on that PR's own branch — it reads Unreleased, chooses **minor** if `### Added` or
+`### Removed` has entries (otherwise **patch**; major is never auto-selected), writes the new
+`package.json` version, moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to
+empty subheadings. No-op (exit 0) when Unreleased has no bullet entries. The bump lands in the PR
+diff like any other change (never a direct commit to `main`). Post-merge tag push + GitHub Release
+creation is the remaining half of #52 (`release.yml`), blocked on historical tags from #51.
 
 ## Repo layout
 
@@ -408,17 +424,24 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (cache blocks, disk squares,
-                               releasing, redeeming) for a single size, taking `{ actions, size,
+    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (read cache blocks — only on
+                               the pool's smallest size, see `isDiskReadCacheEligible` — disk
+                               squares, releasing, redeeming; no deposit control, Data Lake feeding
+                               is fully automatic) for a single size, taking `{ actions, size,
                                state }`; extracted so both ByteFoundryPage (the single currently-
                                active/buildable size only) and StoragePage (every size ever reached)
                                render identical, fully interactive detail rather than StoragePage
                                alone owning it and ByteFoundryPage settling for a text summary.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
+                               next Booster cost, in-flight transfers) rendered inside ByteFoundryPage's
+                               `PoolCard` (see Architecture 4 below), taking `{ state, bare }` — `bare`
+                               drops its own StatCard chrome for that nested use. See "Economy model"
+                               below for the Data Lake mechanic itself.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); replaces
-                               native `window.confirm` for Sacrifice on ByteFoundryPage. Full
+    ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
+                               SettingsPage's Era ascension action. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
                                JSX), extracted so both MainPage and ByteFoundryPage can render it —
@@ -436,16 +459,15 @@ src/
                                model" below). Takes `{ game, focusNonce }` — top-level navigation
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
-                               same as MainPage; Memory + every DiskArrayRow as continuous sections
-                               (no second-level tabs). Memory ×2 (Sacrifice) always sits in the
-                               milestones row beside Bandwidth
+                               same as MainPage; Data Stream + every DiskArrayRow as continuous
+                               sections (no second-level tabs). Speed ×2 (Invest) sits in the
+                               milestones row; pool Memory Capacity is start–end (no Sacrifice)
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
                                once `isComputeCoreConversionUnlocked`; page id `'boosters'`. Takes `{ game }`
-    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen — KFlops→QFlops tiers bought with PP,
-                               boosting matching Ladder tiers. Reached via AppNav once
-                               `isComputeFlopsPageRevealed` (100 PP); page id `'compute'`. Takes `{ game }`
+    ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`.
+                               See Architecture 4c / Economy model below for the full mechanic.
     MainPage/index.jsx      ← the tier ladder (see "Architecture" below). Takes `{ game, focusNonce }`
                                — the full `useIncrementalGame()` object, lifted up into App.jsx so
                                ByteFoundryPage and MainPage can share one save/tick loop. Second-
@@ -483,8 +505,8 @@ src/
     GlobalStyle.js          ← createGlobalStyle: box-sizing reset, base font/smoothing, form `font: inherit`,
                                and the token-driven page background/text (absorbs the removed index.css/App.css)
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
-                               imports `./fonts` as a side effect; `mode` defaults to dark and is the
-                               seam #140 will drive from system pref + toggle
+                               imports `./fonts` as a side effect; `mode` defaults to dark, driven from
+                               system pref + Settings → Appearance toggle (#140)
   App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
                                from MainPage so ByteFoundryPage can share the same save/tick loop) and
                                wraps <ThemeProvider><GlobalStyle/>, switching between
@@ -534,9 +556,15 @@ e2e/
   autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
   prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
-  data-lake.e2e.js            ← depositing a built disk array into its Data Lake, then buying a
-                               Core Booster from that lake on ComputePage
+  data-lake.e2e.js            ← a fully-built disk array auto-depositing into its Data Lake (no
+                               manual action — see `tickDiskAutoDeposit`), then starting a
+                               Core Booster (deposits-funded, instant grant) from that lake on
+                               ComputePage
 scripts/
+  bump-version.mjs (+ `.test.js`) ← `yarn bump-version`: cut CHANGELOG ## [Unreleased] into a
+                               dated ## [x.y.z] section and bump package.json (minor if
+                               Added/Removed entries, else patch; no-op if empty) — Part of #52;
+                               post-merge tag/Release workflow still deferred
   generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
                                PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
                                not part of the build — only re-run it if the icon design/palette changes
@@ -623,14 +651,19 @@ Strict three-layer separation:
    bits ever converted into Kilobytes this cycle), it stops being a gate and becomes a permanent
    screen the player can voluntarily reopen at any time via AppNav's Foundry item — but it stays just
    as interactive either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the
-   standalone Tap button is removed entirely — Memory's own tile becomes the tap target instead (an
+   standalone Tap button is removed entirely — the Data Stream tile becomes the tap target instead (an
    `as="button"` swap on the same styled `FillableStatCard`, calling the identical
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
-   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Starting the next Disk's
-   build (its own core-loop action, alongside Sacrifice/Invest) and every shown size's full
-   interactive detail — cache blocks, disk squares, releasing (Disk Fill's manual-release half →
+   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream, its
+   Combine/Speed actions, pool Memory Capacity (start–end display), and Storage (Build Disk + every
+   disk-array row + the Data Lake panel) all render inside one `PoolCard` — a single card for the
+   whole pool; `components/DataLakePanel` takes a `bare` prop to drop its own StatCard chrome for
+   this nested use. Starting the next Disk's
+   build (its own core-loop action, alongside Speed) and every shown size's full
+   interactive detail — read cache blocks (only on the pool's smallest size — see
+   "Economy model" below), disk squares, releasing (Disk Fill's manual-release half →
    Ladder Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
    on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
    layout" above), ascending smallest→largest with Cache of a row immediately above that row's
@@ -638,9 +671,8 @@ Strict three-layer separation:
    every tier's current cost is a deliberate strategy — see "Economy model" below); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. Memory ×2 (Sacrifice) always sits in the milestones row beside
-   Bandwidth. Every action — here or on either dedicated screen — stays gated by the forced
-   priority order (see "Economy model" below).
+   slots in one unbroken row. Speed ×2 sits in the milestones row. Every action — here or on either
+   dedicated screen — stays gated by the forced priority order (see "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
    `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests.
@@ -683,8 +715,9 @@ Strict three-layer separation:
    (8) reserve-slot squares themselves, clickable as the manual-start trigger with no separate
    button ("slots are the button"), showing a countdown while a merge is in flight. Megacomputer
    (the bottom of the chain) has no row 2, but its row 1 is still Boost-selectable — the only place
-   a Megacomputer has any use at all. Cores are obtained by buying Boosters from the matching Data
-   Lake (row 2 for Cores — see "Economy model" below), not minted from Memory — the earlier "Claim
+   a Megacomputer has any use at all. Cores are obtained by starting Boosters from the matching
+   Data Lake (row 2 for Cores — see "Economy model" below; deposits spend instantly, any remaining
+   cost live-transfers off built Disks over time), not minted from Memory — the earlier "Claim
    Core"/auto-claim mechanic was removed once Data Lakes superseded it.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
@@ -713,8 +746,8 @@ Strict three-layer separation:
     Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build convenience-auto up
-    to prior highs; Capacity stays manual; Ladder + Prestige kept). Takes `{ game, onReset,
+    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build
+    convenience-auto up to prior highs; Ladder + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
     aside from local form state.
@@ -827,7 +860,7 @@ the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` 
 continues and Prestige is optional (see `isProductionFrozen`). **Era ascension** (`eraGame`) is a
 separate voluntary meta-prestige at **1 Googol unspent PP** (`ERA_ELIGIBILITY_PP`): it awards
 **Eons** (+1 base, +1 per Eon Amplifier level — shop deferred to #414), increments `era.count`,
-resets the full Foundry (generator upgrades, Disks, compute ladder entities, Memory/gate) plus the
+resets the full Foundry (generator upgrades, Disks, Data Lakes, compute ladder entities, Memory/gate) plus the
 ordinary Ladder cycle (`prestige.points`/`count`/`prestigeDoublePpLevel` → 0,
 `computeFlops.owned` → 0, `cumulativeBoost` fresh), while keeping automation unlocks/pause flags
 (except Double PP level), tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`,
@@ -851,55 +884,52 @@ Prestige-threshold overlay) keeps reading in Bits, its actual priced/spent denom
 Bytes are no longer a purchasable tier — they're produced entirely by the **Byte Foundry**
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
-onward) is reachable. Tapping accumulates bits into "Memory" (a capacity-capped balance) that combines
-into a permanent, passively-producing Byte generator, then grows via Sacrifice (2x capacity — binary
-KiB/MiB/… display, hard-capped at 1 MiB, large enough to afford building the pool's own largest Disk
-— see below) and
-Invest (double production, own cost ladder now stepped ×4 per tier) on independent cost ladders,
-plus — once far enough along — Disks
+onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
+that combines into a permanent, passively-producing Byte generator. On Combine (and on save load via
+`normalizePoolMemoryCapacity` when `byteCreated`), and on Era ascension when the permanent Byte
+generator is kept, Buffer snaps to `INTRO_CAPACITY_CAP_BITS` (1 MiB
+— large enough to afford building the pool's own largest Disk). Grow production via **Speed ×2**
+(Invest — own cost ladder stepped ×4 per tier); the old Sacrifice / "Memory ×2" capacity ladder is
+removed. Plus — once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
-**PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — ten tiers
-KFlops→QFlops costing 1,000–10³⁰ PP, each adding 0.01%/s per owned unit to the matching Ladder tier;
-owned counts persist across Prestige, cumulative boost resets each cycle. Five recurring "upgrade"
-actions are ranked in a fixed **forced priority order** — Disk Fill > Bandwidth/Invest > Disk Build >
-Compute > Memory/Sacrifice — so a lower-ranked action is disabled (both in the UI and in the engine
+**PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
+Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
+actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Disk Build >
+Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
-always-on auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost;
-the first successful transfer unlocks the main game, and there's no per-cycle cap on further ones.
-ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the main game is
-already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point Disk
-redemption offers an alternative path to tier units, making the manual row redundant; the
+always-on auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current
+per-unit cost; the first successful transfer unlocks the main game, and there's no per-cycle cap
+on further ones. ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the
+main game is already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point
+Disk redemption offers an alternative path to tier units, making the manual row redundant; the
 always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
-through the mandatory pre-unlock gate even past Storage's own reveal threshold, since capacity
-alone (grown via repeated Sacrifice) can reach that threshold without the main game ever having
+through the mandatory pre-unlock gate even past Storage's own reveal threshold, since Buffer
+(snapped to the pool end after Combine) can reach that threshold without the main game ever having
 been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
 never hidden while it's still the only way out of the gate.
-The generator, Disks, and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
+The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
+`capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
-permanent across every real Prestige; only Memory itself, the main-game-unlock gate, and tier01's
-own purchase-block progress reset each cycle. Nothing here ever fully freezes — every action stays
+permanent across every real Prestige; only Data Stream balance itself, the main-game-unlock gate,
+and tier01's own purchase-block progress reset each cycle. Nothing here ever fully freezes — every
+action stays
 live indefinitely, every cycle.
 
-**Memory's binary units and capacity cap** (`getMemoryUnit`/`formatBitsInNearestUnit`/
-`isMemoryCapacityAtCap` in `engine.js`, `INTRO_CAPACITY_DOUBLING_STEP`/`INTRO_CAPACITY_CAP_BITS`/
-`INTRO_BANDWIDTH_COST_MULTIPLIER`/`MEMORY_BINARY_UNIT_STEP` in `layers.js`) — Memory Capacity and
-balance render in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024
-(`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
-Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). Sacrifice
-multiplies capacity by `INTRO_CAPACITY_DOUBLING_STEP` (2) each claim, but is hard-capped at
-`INTRO_CAPACITY_CAP_BITS` — exactly 1 MiB (8,388,608 bits) for this generator, large enough to cover
-`getDiskCost` for pool 1's own largest (100 KB) buildable Disk (8,000,000 bits) — after which
-`isMemoryCapacityUpgradeAvailable` returns `false` permanently (`isMemoryCapacityAtCap`); no
-partial/clamped final step. An earlier version capped at half this (the largest power of two
-strictly below 1 MiB) purely by binary-tier convention without checking against the pool's own
-largest Disk's build cost, which left that Disk permanently unbuildable — see
-`docs/DESIGN_HISTORY.md`. "Invest for Double Production"'s own independent cost ladder
-(`getIntroProductionMilestoneCost`) now steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier
-instead of ×10 — its production-doubling effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
-`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the cap (4,194,304 bits / 512 KiB) so Compute
-Cores stay reachable within it. This is the first slice of a larger per-storage-pool generator
-design — see `docs/DESIGN_HISTORY.md`.
+**Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
+`isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds` in
+`engine.js`/`layers.js`, `INTRO_CAPACITY_CAP_BITS`/`INTRO_BANDWIDTH_COST_MULTIPLIER`/
+`MEMORY_BINARY_UNIT_STEP`) — Data Stream balance and Buffer render in binary (IEC-style) units —
+`B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024 (`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes =
+1.024 KB` — distinct from Disks/Data Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`,
+unchanged, step 1000). Pool Memory Capacity is delimited by shared start/end bounds
+(`getStoragePoolMemoryBounds(1)` → `INTRO_STARTING_CAPACITY` … `INTRO_CAPACITY_CAP_BITS` / 1 MiB) —
+no Sacrifice doubling button (#506). On Combine (and on load when `byteCreated`), Buffer snaps to
+the pool end. **Speed ×2** (was Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4)
+per tier; production-doubling effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,194,304 bits / 512 KiB). This is
+the first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md` and
+epic #456 / tracking #506.
 
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
 `getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
@@ -917,64 +947,128 @@ ByteFoundryPage's Build button shows a distinct "Pool complete" state instead of
 cost, until a future pool's own generator (epic #456) raises the ceiling. Starting
 a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
-size, 1-indexed) takes `N × (size ÷ 8000)` seconds (1s per real "KB" of size for the first disk,
-scaling with position — a 1 KB array's 6th disk takes 6s, a 10 KB array's 1st disk takes 10s) — during
-which every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
+size, 1-indexed) takes `N ×` that size's own base build time, where the base time is exactly how
+long filling that size takes at **1x Memory bandwidth** (the Byte Foundry's current
+`getIntroProductionRate`, snapshotted when the build starts) — at the default starting rate (1
+bit/sec) a fresh 1 KB (8000-bit) array's first disk takes 8000 seconds, its 6th disk 48,000 seconds,
+and a 10 KB array's first disk 80,000 seconds; all three shrink in lockstep as Invest/Compute Boost
+grow the rate. An earlier version used a flat, rate-independent "1 second per real KB of size"
+instead — see `docs/DESIGN_HISTORY.md`. During the build, every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
-array has its own always-full **read cache** (`diskCache[size]`, `DISK_CACHE_BLOCK_COUNT` (8) blocks of
-`size / 8` bits each, totaling one disk's worth — e.g. a 1 MB array → 8 × 1 Mb; displayed in the
-bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`, lowercase `b` for bits, distinct from a
-Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`, uppercase `B` for Bytes). Steady state is
-full; Memory refills whole blocks when a block was just released or the size was just unlocked
-(so Memory visibly fills between transfers). Read cache flushes into an empty disk over the time to
-fill one cache block at the current Byte Foundry production rate when all 8 blocks are full and no
-tier claim blocks that size (pauses while a tier matches). Disks above the smallest built size also fill
-via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when 10 full disks exist at size
-N and size N+1 has an empty container, `tickDiskWriteCache` collects 10 timed segments (one source
-disk emptied per segment; collect pauses while the source size has an active tier match), then
-flushes for one target build duration into one disk at N+1. `tickGame` runs
+array's smallest size — the one whose `getDataLakeSubSize` sub-slot is ×1, the rung that actually
+touches Memory directly — has its own always-full **read cache** (`diskCache[size]`,
+`DISK_CACHE_BLOCK_COUNT` (8) blocks of `size / 8` bits each, totaling one disk's worth — e.g. a
+1 MB array → 8 × 1 Mb; displayed in the bit-scale `Kb`/`Mb`/…/`Qb` unit via `formatCacheSize`,
+lowercase `b` for bits, distinct from a Disk's own Byte-scale `B`/`KB`/… via `formatDiskSize`,
+uppercase `B` for Bytes) — see `isDiskReadCacheEligible` in `engine.js`; every larger size in the
+same pool fills exclusively via write cache (below), never getting a read cache of its own (running
+both was pure redundancy). Steady state is full; Memory refills whole blocks when a block was just
+released or the size was just unlocked (so Memory visibly fills between transfers) — this refill
+itself is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) times the current
+production rate (a CACHE filling FROM Memory), so even a large banked balance sitting behind a
+block/tier claim drains into the cache at a real, continuous, bounded rate once unblocked — not
+instantly — rather than the fixed rate/tier check alone gating it. Read cache flushes into an empty
+disk over the time to fill one cache block at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) times
+the current Byte Foundry production rate (a DISK filling FROM a cache) when all 8 blocks are full
+and no tier claim blocks that size (pauses while a tier matches). Every size above the pool's
+smallest fills exclusively via **write cache** (`diskWriteCache[targetSize]` — empty at rest): when
+10 full disks exist at size N and size N+1 has an empty container, `tickDiskWriteCache` collects 10
+timed segments (one source disk emptied per segment, each segment's own duration = that source
+disk's size ÷ `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` (2) × rate — a CACHE filling FROM Disks;
+collect pauses while the source size has an active tier match), then flushes for the target's own
+size ÷ `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) × rate into one disk at N+1 (a DISK filling
+FROM a cache — the same rate class the read-cache flush above uses, timed independently of a fresh
+disk BUILD's own 1x-bandwidth duration). `tickGame` runs
 `tickDiskAutoFill` → `tickDiskWriteCache` → `tickDiskAutoFill` so write-cache ripple refills source
 slots same tick. **Disks always take priority over read cache** for matching level costs: while a
 full redeemable disk exists, cache is neither clickable nor auto-used. A full block can be released
 (`releaseDiskCacheBlock`) only when no full redeemable disk of that size exists — crediting the
 block's bits into `resources.base` (Bits). Smart autobuyers also auto-release cache via
-`tickDiskAutoReleaseCache` when no matching disk is available. A full disk redeems
-(`redeemDisk`) into whichever tier's CURRENT per-unit cost exactly matches its size right now —
-**any** tier, not just tier01 — via `isDiskRedeemable`/`getDiskRedeemTierName`; if more than one
-tier's cost happens to coincide, the tie always breaks toward whichever tier appears earlier in
-`TIER_DEFINITIONS` itself (read live, not a hardcoded index — a future reordering of that array
-changes the tie-break automatically, with no code change). Auto-redeem (`tickDiskAutoRedeem`) fires
+`tickDiskAutoReleaseCache` when no matching disk is available. Each disk size has a permanent, fixed
+**one-to-one correspondence** to exactly one (tier, level) pair — the tier sharing its Data Lake
+grouping (`getDataLakeTierIndex`; steps 1–3/1 KB–100 KB → tier01/Kilobytes, steps 4–6/1 MB–100 MB →
+tier02/Megabytes, and so on — the same KB/MB/GB/… naming `TIER_DEFINITIONS` and
+`DATA_LAKE_TIER_LABELS` already share) and that size's own position (1st/2nd/3rd) within that
+tier's 3-step group as the required LEVEL. A full disk redeems (`redeemDisk`) via
+`isDiskRedeemable`/`getDiskRedeemTierName` only while its corresponding tier is CURRENTLY sitting
+at exactly that required level — not yet there, or already past it, and it isn't redeemable this
+cycle (the "already past it" case is exactly what `tickDiskAutoDeposit` claims into the pool's Data
+Lake instead, see below). Redeeming **completes that whole level in one shot** — grants the tier's
+entire current purchase block, not a single unit, rolling it straight into the next level — replacing
+an earlier design where a disk redeemed into "whichever tier's current per-unit cost happened to
+coincidentally match its size," which needed its own tie-break rule and could permanently strand a
+disk mid-cycle; see `docs/DESIGN_HISTORY.md`. Auto-redeem (`tickDiskAutoRedeem`) fires
 only when the matching tier's own unit-buying autobuyer is currently unlocked and unpaused; otherwise
 a full, redeemable disk simply waits for a manual click. `disks`/`disksBuiltTotal`/`diskCache`/
 `diskBuild` are all PERMANENT across every real Prestige, like the Byte generator itself; only
 `diskAutoRedeemedSizes` (which sizes have already auto-redeemed this cycle) resets each cycle.
 
 **Data Lakes** (`intro.dataLakes` in `createInitialGameState`, `DATA_LAKE_*` constants in `layers.js`,
-`depositDiskToDataLake`/`purchaseBoosterFromDataLake`/`getDataLakeDepositedUnits`/
-`getDataLakeAvailableUnits`/`getBoosterPurchaseCost`/`getMaxBoosterPurchasesForCapacity` in
-`engine.js`) — ten permanent lakes (KB … QB), one per storage denomination, each holding up to
-`DATA_LAKE_CAPACITY` (999) units deposited from Disks (`9×1 + 9×10 + 9×100` of that tier's
-denomination). Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to QB. A full disk
-deposits via `depositDiskToDataLake` (Foundry disk rows) — but only once that SIZE's own disk array
-is completely built (all `DISK_ARRAY_LADDER_CAP` (10) disks ever built, `disksBuiltTotal[size] >=
-DISK_ARRAY_LADDER_CAP`), not merely holding one full disk. Since a lake's 3 sub-slots map to 3
-successive disk sizes, this naturally stages the lake's effective capacity: **9** once only the
-smallest (×1) size's array is complete, **99** once the ×10 size's array is also complete, the full
-**999** once the ×100 size's array is complete too — no separate staged-capacity field, the existing
-sub-slot structure already encodes it (see `isDiskArrayFullyBuilt` in `engine.js`). Booster purchases on ComputePage spend
-units genuinely OUT of the lake's own current deposits (no separate "used" ledger) — the nth
-purchase at tier *t* costs *n* units of lake *t* and grants 1 of the matching compute-ladder entity
-(`COMPUTE_BOOST_TIER_FIELDS`). Spent capacity only returns the same way it arrived — depositing more
-Disks, once that array rebuilds a replacement through the ordinary build/fill pipeline — so a full,
-undepleted lake can fund 44 purchases in one uninterrupted burst (triangular total `n×(n+1)/2` ≤
-999) before needing fresh deposits, but a patient player redepositing between purchases can reach
-the true lifetime cap of exactly `DATA_LAKE_CAPACITY` (999) Boosters per tier — the 1,000th would
-cost 1,000 units, impossible regardless of how much gets redeposited. No separate inventory cap on
-the purchase path itself (merge/UI slots still use `COMPUTE_ENTITY_CAP`). Memory→Core conversion and
-8:1 merging remain as alternate paths. Boost preset multipliers/durations are unchanged.
+`depositDiskToDataLake`/`startBoosterTransfer`/`tickDataLakeTransfers`/`getDataLakeDepositedUnits`/
+`getDataLakeAvailableUnits`/`getBoosterPurchaseCost`/`getDataLakeTransferCapacity` in `engine.js`) —
+ten permanent lakes (KB … QB), one per storage denomination. A lake never itself banks a spendable
+reserve beyond its own deposits (below) — past that, it's a throughput pipe onto the live Disk
+inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4–6 to MB, …, 28–30 to
+QB.
 
-**The above is a summary only.** The full mechanic reference — the complete tap/combine/Sacrifice/
-Invest loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
+*Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
+purchasable, doubling ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for
+the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
+`doubleDataLakeCapacity(tierIndex)` purchase, permanently hard-capped at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
+`isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
+into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
+it" shape the removed Memory Sacrifice once used, and the same currency Disks themselves are priced
+in, not a bare unit count. Gated by the same forced priority order every other Byte Foundry
+milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
+Speed, Disk Build, and Compute are all currently unavailable; sits at the former Sacrifice rank,
+not competing with Speed). An earlier version fixed this cap at a value derived from the Disk arrays
+themselves with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
+explicitly-capped ladder replaced that.
+
+*Deposits* — filled by depositing Disks (`10×1 + 10×10 + 10×100` of that tier's denomination at
+full capacity) via `depositDiskToDataLake` — fully automatic, no manual click: `tickDiskAutoDeposit`
+(called from `tickGame`'s `tickStorage` right after auto-redeem) deposits the smallest eligible
+size each tick, but only once that SIZE's own disk array is completely built (all
+`DISK_ARRAY_LADDER_CAP` (10) disks ever built, `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`,
+not merely holding one full disk) **and** the size is not currently redeemable for the main game
+(`!isDiskRedeemable`) — the same "disks always take priority for matching level costs" rule the
+read cache already follows, so a disk a tier could still redeem stays available for that instead of
+being swept into the lake. A sub-slot's own deposit count naturally never exceeds
+`DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever be built) — this was never
+a separate design cap, just a backstop that keeps the deposits counter from exceeding what's
+physically possible; `canDepositDiskToDataLake` enforces it alongside the real, intentional limit
+above, the lake's own capacity level, which is far smaller (1,024 max vs. an incidental 1,110-unit
+sum if every sub-slot were somehow filled to that backstop) and is what actually gates deposits in
+practice. `decomposeDataLakeDeposits` still caps each digit place at that same backstop value
+regardless of the current level — deposits stay fungible, not tracked per physical disk, so spending
+re-decomposes the remaining total largest-denomination-first. `DataLakePanel` displays
+deposited/capacity/next-Booster-cost/doubling-cost figures in Byte-scale (`formatDiskSize`,
+KB/MB/GB/…) rather than a bare unit count — each abstract unit converted through the
+`getDataLakeUnitBits` helper — since "Data lake uses the same currency as disks" (see
+`docs/DESIGN_HISTORY.md`).
+
+*Starting a Booster* (`startBoosterTransfer(tierIndex)`, ComputePage) — the nth Booster ever
+started at tier *t* (completed or still in flight) costs *n* units of lake *t*
+(`getBoosterPurchaseCost`, which counts in-flight transfers alongside completed ones so starting
+several concurrently can't dodge the escalating cost). That cost is spent out of the lake's own
+deposits FIRST — instant, since those Disks are already at the lake — and whatever remains is
+sourced live from raw, undeposited built Disks and transferred into the lake over time, at
+`DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) the Byte Foundry's current bits/sec production rate
+(`getIntroProductionRate`, no Compute Boost) — `(bits transferred) / (10 × rate)` seconds — only
+granting 1 of the matching compute-ladder entity (`COMPUTE_BOOST_TIER_FIELDS`) once that transfer
+completes (`tickDataLakeTransfers`, part of `tickGame`). When deposits alone cover the full cost,
+there's nothing left to transfer and the Booster grants immediately, same as before this mechanic
+existed. A lake can run up to `DATA_LAKE_TRANSFER_CAPACITY_MAX` (3) of these live transfers at
+once, one concurrency slot unlocked per completed sub-size Disk array (×1/×10/×100 — the same
+staged gate deposits use, see `getDataLakeTransferCapacity`) — this is a throughput cap on live
+transfers only, not a lifetime cap on Boosters (deposits + repeated live transfers can fund a lake
+indefinitely). No separate inventory cap on the Booster path itself (merge/UI slots still use
+`COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate paths. Boost
+preset multipliers/durations are unchanged.
+
+**The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
+loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
 Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock,
@@ -1008,8 +1102,9 @@ into `main`, and do not rename it with an agent/session suffix.
 All component styling resolves to **semantic design tokens** defined once in `src/theme/tokens.js`
 (`buildTheme(mode)` + `themes.dark`/`themes.light`), so the app's two themes — an evolved **dark**
 (default) and a **light** theme — fall out of swapping palette values rather than forking any component
-on mode. This is the foundation for the UI-revamp epic (#132); components migrate onto these tokens one
-at a time in later sub-issues. Fonts (`font.display` = Space Grotesk, `font.body` = Inter) are locally
+on mode. This was the foundation for the now-complete UI-revamp epic (#132, all 8 sub-issues shipped,
+including light mode's activation in #140); every component consumes these tokens. Fonts
+(`font.display` = Space Grotesk, `font.body` = Inter) are locally
 bundled via `theme/fonts.js` — no runtime CDN fetch. Settings → Appearance drives
 `<ThemeProvider mode>` from `tens_theme_preference` (`system` default, or `light`/`dark`); System
 follows `prefers-color-scheme`. Reset / `clearGameState` do not clear the theme preference.
@@ -1088,7 +1183,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1532 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1574 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
@@ -1103,11 +1198,13 @@ already cover the genuinely useful items on that checklist.
   `tokens.contrast.test.js` add two more files — the latter audits the design tokens' plain
   (unblended) text/UI-component color pairs for AA compliance in both themes, see `docs/THEMING_REFERENCE.md`.
   `engine.computeFlops.test.js` covers the PP Compute (Flops) screen mechanics;
-  `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path. Together with
-  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 10 of the 12 files; the
-  remaining two are `scripts/adversarialReviewMarker.test.js` and
-  `scripts/pr-low-risk-eligible.test.js` — Vitest's default glob picks these up alongside `src/`
-  since `vite.config.js`'s `test` block sets no custom `include`.
+  `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
+  `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
+  (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). Together with
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 14 files; the
+  remaining three are `scripts/adversarialReviewMarker.test.js`,
+  `scripts/pr-low-risk-eligible.test.js`, and `scripts/bump-version.test.js` — Vitest's default glob
+  picks these up alongside `src/` since `vite.config.js`'s `test` block sets no custom `include`.
 
 ### End-to-end testing
 
@@ -1149,7 +1246,8 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
 - All purchases, autobuyer upgrades, and prestige are validated inside `engine.js`, not just via disabled UI
   buttons — the engine re-checks affordability/unlock state on every call.
 - `saveGameState`/`loadGameState`/`clearGameState`/`loadLastSaveTimestamp` wrap `localStorage` access in
-  try/catch and fail silently (quota errors, private-browsing restrictions).
+  try/catch and fail silently (quota errors, private-browsing restrictions). JSON loads use
+  `safeJsonParse` (drops `__proto__`/`constructor`) before merge.
 - Timer effects (`useIncrementalGame`'s `setInterval`) are cleaned up on unmount.
 
 ## graphify

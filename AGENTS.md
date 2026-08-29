@@ -9,7 +9,7 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Ladder → Guide → More**. Storage
-is under Foundry as continuous **Memory + Disk** sections on the same screen (not its own AppNav
+is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
 item, and no second-level Memory | Storage tabs). Ladder uses **Ladder | Upgrades**
 after the first Prestige. Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
@@ -41,6 +41,7 @@ yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
 yarn audit        # dependency audit
+yarn bump-version # cut CHANGELOG Unreleased → dated release + bump package.json
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png
 ```
 
@@ -70,10 +71,11 @@ src/
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Ladder → Guide → More) + More sheet
-    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/  ← shared
-                            styled components; see docs/COMPONENTS_REFERENCE.md
+    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
+                            ← shared styled components; see docs/COMPONENTS_REFERENCE.md
+    DataLakePanel/          ← the 10 Data Lake rows on ByteFoundryPage; see "Byte Foundry" below
   pages/
-    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Memory + Disks continuous sections; see
+    ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
     StoragePage/index.jsx  ← thin Disks list wrapper (primary UI is Foundry; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
@@ -109,7 +111,7 @@ switches pages via a local `page` `useState` and a shared bottom `AppNav` (Found
 Ladder → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`)
 — whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is continuous Foundry sections (Memory + Disks), not gate-exempt on its own. Ladder
+below). Storage is continuous Foundry sections (Data Stream + Disks), not gate-exempt on its own. Ladder
 stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
 main game. Once unlocked, Foundry is just another AppNav destination.
 
@@ -128,25 +130,43 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 `ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
 cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
-player taps to accumulate bits into "Memory" (capacity-capped, displayed in binary units — B/KiB/MiB/…,
-1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a permanent,
-passively-producing Byte generator, then grows it via Sacrifice (2x capacity, hard-capped at 1 MiB —
-large enough to afford building the pool's own largest Disk)
-and Invest (double production, own cost ladder now ×4/tier) on independent cost ladders, plus — once
-far enough along — Disks (`StoragePage`, timed
-builds with a per-array always-full **read cache** (Memory → read cache → timed flush to disk when
-tier allows; flush duration = one cache block at production rate; write-cache upward merges from
-the size below) as fallback tier funding when no matching disk exists;
-Smart autobuyers auto-release read cache; disks always take priority) redeemable against any main-game tier whose current price matches)
+player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
+B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
+permanent, passively-producing Byte generator (on Combine / save-load with `byteCreated`, Buffer snaps
+to 1 MiB / `INTRO_CAPACITY_CAP_BITS`), then grows production via **Speed ×2** (Invest — own cost ladder
+now ×4/tier; the old Sacrifice / "Memory ×2" capacity ladder is removed), plus — once
+far enough along — Disks (`StoragePage`, timed builds — a fresh disk takes exactly the time to fill
+it at 1x Memory bandwidth (current production rate), ×N for the array's Nth disk; only the pool's
+smallest size gets an always-full **read cache** (Data Stream → read cache → timed flush to disk when
+tier allows; the Memory→cache refill is itself bandwidth-capped at 10x rate, and the cache→disk
+flush duration is one cache block at 2x rate) — every larger size fills exclusively via write-cache
+upward merges from the size below (collect from Disks at 2x rate, flush into the disk at 2x rate),
+never its own read cache (running both was redundant); as fallback tier funding when no matching disk exists,
+Smart autobuyers auto-release read cache; disks always take priority) — each disk size has a fixed,
+permanent one-to-one mapping to one tier+level (KB sizes → Kilobytes, MB sizes → Megabytes, etc.,
+1st/2nd/3rd size → that tier's level 1/2/3); redeeming only fires while the tier is currently at
+exactly that level, and completes the whole level in one shot rather than granting 1 unit)
 and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund
-Booster purchases: deposit full Disks on Foundry, buy on Boosters for escalating lake cost (nth = n
-units; ~44 max per full lake). A separate PP **Compute (Flops)**
+Boosters, escalating cost (nth = n units, counting in-flight starts too): a fully-built disk array
+auto-deposits into its lake (no manual action — deferring to a still-redeemable disk first) as a
+prepaid buffer that spends first/instantly, any remaining cost live-transfers off built Disks over
+time (10x the Byte Foundry's bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake
+never itself banks a spendable reserve beyond its deposits. A lake's own deposit capacity is a
+purchasable doubling ladder: starts at 1 unit, doubles per purchase (spending the lake's current
+capacity in Bits, same shape the removed Sacrifice once used), hard-capped at 1,024 units
+(`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the intentional limit a player actually experiences.
+Each sub-slot's own deposit count is separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since
+only 10 disks of a given size can ever exist) purely so the counter can't exceed what's physically
+possible — not a second design cap, just incidental headroom (1,110 if ever fully filled) that sits
+well above the 1,024 ladder which is what actually gates deposits. Deposited/capacity/
+next-cost/doubling-cost all display in Byte-scale (KB/MB/GB), matching Disks, not a bare unit count. A
+separate PP **Compute (Flops)**
 screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on
-auto-convert) turn Memory into free `tier01` units at tier01's own current per-unit cost, with **no
+auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current per-unit cost, with **no
 per-cycle cap**; the first successful transfer unlocks the main game. The generator, Disks,
-and Compute Cores/Nodes are permanent across every real Prestige; only Memory itself and the
-main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
+Data Lakes, and Compute Cores/Nodes are permanent across every real Prestige; only Data Stream balance
+and the main-game-unlock gate reset each cycle. After **100 lifetime prestiges**, production no longer
 freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64 money-exponent powers
 beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
 
@@ -181,7 +201,8 @@ resolve to that dir's `index.jsx`/`index.js`.
 `CHANGELOG.md` (repo root, Keep a Changelog format) tracks user-facing/behaviorally-relevant changes
 from `v0.5.0` onward — add an entry under `## [Unreleased]`'s matching subheading for any such PR;
 skip it for docs-only/internal CI changes. `package.json`'s `"version"` mirrors this file's released
-sections.
+sections. To cut Unreleased into a dated release on a PR branch, run `yarn bump-version` (see
+`CLAUDE.md`'s Changelog convention; major bumps stay manual).
 
 ## Issue tracking conventions
 
@@ -199,9 +220,8 @@ sections.
   targets one planned release (due date + automatic X/Y-closed progress); `Track` groups issues by
   theme/dependency chain and can span multiple releases. Interactive sessions and Planning (#53)
   should assign **player-facing** feature/economy issues to a milestone for the next planned
-  release (currently `v0.6.0` UI revamp, `v0.7.0` Era ascension); process/infrastructure
-  `claude-task` issues typically stay off a
-  versioned milestone.
+  release. `v0.6.0` (UI revamp) has shipped; `v0.7.0` (Era ascension) is the current next-release
+  milestone. Process/infrastructure `claude-task` issues typically stay off a versioned milestone.
 
 ## Budget discipline
 
@@ -239,18 +259,21 @@ Without `GH_TOKEN`, land issue-only changes via a housekeeping GHA run (determin
 ## Automation engines (Claude now, Cursor successor)
 
 The unattended pipeline currently runs the **Claude** engine (`autonomous-maintenance.yml` +
-`autonomous-pr-followup.yml`, via `anthropics/claude-code-action`). Two twin workflows —
-`cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same orchestration on the
-**Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the Claude engine, but not
-immediately: both coexist for now. The Cursor twins share the `claude-task` backlog and the same
-`CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches, authenticate with a
-`CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert until that secret is
-added**. While both are live, the Cursor guard counts both engines' `*/auto-*` PRs so they never
-double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor runs five IST
-slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures, conflicts,
-spec drift, backlog, process) and the same housekeeping sweep on every push to `main`;
+`autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml` +
+`automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved). Two
+twin workflows — `cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same
+orchestration on the **Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the
+Claude engine, but not immediately: both coexist for now. The Cursor twins share the `claude-task`
+backlog and the same `CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches,
+authenticate with a `CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert
+until that secret is added**. While both are live, the Cursor guard counts both engines' `*/auto-*`
+PRs so they never double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor
+runs five IST slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures,
+conflicts, spec drift, backlog, process) and the same housekeeping sweep on every push to `main`;
 Claude runs twice daily at 9:00am/9:00pm IST. All Cursor sessions share the ~1% Cursor Pro soft
-quota guidance (see Budget discipline).
+quota guidance (see Budget discipline). `automation-self-heal.yml` watches orchestration-workflow
+failures and opens draft `claude/self-heal-*` fixes or `automation-failure` issues (see
+`docs/AUTOMATION.md`).
 Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section
 (authoritative: `CLAUDE.md`).
 
@@ -325,8 +348,8 @@ publicly visible but isn't legally reusable without written permission. No `CODE
   UI buttons — every action is re-checked server-side-equivalent (there is no server, but the engine
   is the single point of truth regardless of which UI control triggered it).
 - Timer effects are cleaned up on unmount.
-- Save/load wraps `localStorage` access in try/catch and fails silently on quota/private-browsing
-  errors.
+- Save/load wraps `localStorage` in try/catch (quota/private-browsing) and strips
+  `__proto__`/`constructor` from parsed JSON before merge.
 - `.github/workflows/**` changes require the repo owner's review, enforced two ways:
   `pr-auto-merge.yml`'s script-level exclusion, and (once branch protection enables "Require review
   from Code Owners") `.github/CODEOWNERS`.
