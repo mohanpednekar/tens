@@ -306,6 +306,11 @@ Error generating stack: `+e.message+`
     transform: scale(0.9);
   }
 
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   &:disabled {
     cursor: not-allowed;
     animation: none;
@@ -337,6 +342,11 @@ Error generating stack: `+e.message+`
 
   &:active:not(:disabled) {
     transform: scale(0.9);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
   }
 
   &:disabled {
@@ -509,6 +519,11 @@ Error generating stack: `+e.message+`
     transform: scale(0.98);
   }
 
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   &:disabled {
     cursor: not-allowed;
   }
@@ -608,6 +623,11 @@ Error generating stack: `+e.message+`
 
   &:active:not(:disabled) {
     transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
   }
 
   &:disabled {
@@ -727,6 +747,11 @@ Error generating stack: `+e.message+`
   &:hover {
     filter: brightness(1.15);
   }
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
 `,Xd=P.span`
   flex: 0 0 auto;
   font-weight: 600;
@@ -776,6 +801,11 @@ Error generating stack: `+e.message+`
 
   &:disabled {
     cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
   }
 `,af=P.span`
   flex: 0 0 auto;
