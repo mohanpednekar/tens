@@ -283,11 +283,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    from `tier01`'s CURRENT level — see `docs/DESIGN_HISTORY.md`). An earlier ladder walked
    `tier01`'s level-cost sequence and skipped sizes whenever cost-epoch exponents jumped (100 KB →
    10 MB, never 1 MB); that blocked the intended "10 MB Memory → build 1 MB disks → redeem Tier02
-   L1" path. `getDiskSize` never advances past `MAX_ACTIVE_DISK_LADDER_STEP` (today, pool 1's own
-   3 sizes: 1/10/100 KB) — a 1 MB disk's own build cost (8,000,000 bits) would permanently exceed
-   `INTRO_CAPACITY_CAP_BITS` with no pool 2 generator yet to fund it, so the "10 MB Memory → build
-   1 MB disks" path above is presently unreachable via pool 1 alone; Tier02+ still redeems the
-   ordinary way (the ladder's own Buy button) in the meantime. Earlier pools remain as compact
+   L1" path. `getDiskSize` advances through the currently unlocked pools using
+   `getMaxActiveDiskLadderStep(state)` (three sizes per pool) — a 1 MB disk belongs to pool 2 and
+   becomes available once all three pool-1 arrays are complete. Earlier pools remain as compact
    summaries while the largest unlocked pool is expanded. `isDiskLadderExhaustedForActivePools`
    becomes true only after pool 10's largest array is fully built.
 
@@ -504,7 +502,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    amount actually spent from Data Stream Bits is the lake's capacity expressed in the same currency
    Disks themselves are priced/sized in, per "Data lake uses the same currency as disks" (see
    `docs/DESIGN_HISTORY.md`), not a bare unit count — the same "spend the current value to double
-   it" shape the removed Memory Sacrifice once used. Gated by the same forced
+   it" shape used by Capacity ×2. Gated by the same forced
    priority chain as every other Byte Foundry milestone action
    (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Speed, Disk
    Build, and Compute are all currently unavailable; sits at the former Sacrifice rank, not
@@ -574,8 +572,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    id `'boosters'`) reveals once Buffer reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,194,304
    bits, "512 KiB" binary — half of pool 1's Memory Capacity end bound
    `INTRO_CAPACITY_CAP_BITS`; historically one Sacrifice doubling short of that hard cap —
-   `isComputeCoreConversionUnlocked`). After #506, Buffer snaps to the pool end on Combine, so
-   Boosters unlock with conversion/Storage as soon as the Byte generator exists. Every
+   `isComputeCoreConversionUnlocked`). Capacity grows through full-Buffer Capacity ×2 doublings,
+   so Boosters unlock when the corresponding capacity threshold is reached. Every
    successful tier-1 Booster (instant or completed transfer) also increments
    `intro.computeCoresEverEarned`, a lifetime
    counter tracked alongside `computeCores` but never decremented by spending
@@ -795,7 +793,7 @@ does the ten-tier merge chain (Core → Node → Cluster → Network → Grid �
 → Supercomputer → Megacomputer) — every `mergeCompute*Into*` function gates only on `canMerge`
 (enough of the input entity, room under `COMPUTE_ENTITY_CAP` on the output), never on whether a
 higher-ranked action is currently available. `isMemoryCapacityUpgradeAvailable` is retained as a
-legacy always-false predicate (Capacity Sacrifice removed). Disk Fill itself (`isDiskFillAvailable`,
+full-Buffer Capacity ×2 predicate, available until the active highest-unlocked-pool ceiling. Disk Fill itself (`isDiskFillAvailable`,
 and the `redeemDisk`/`tickDiskAutoRedeem` reducers it gates) is never blocked by anything —
 top priority, unaffected by the other three.
 
@@ -849,7 +847,7 @@ instead, since that button's label already names the array's *size* separately (
 `formatDiskSize` above) and the cost is the only other number on it. This is a display-only
 convention — internal state always stores raw bit counts.
 
-Disks' Start Build button and every shown size's full DiskArrayRow stay on ByteFoundryPage itself as
+Disks' common Provision Disk button and every shown size's full DiskArrayRow stay on ByteFoundryPage itself as
 continuous sections; the thin `StoragePage` wrapper remains for reuse/tests (see "Architecture" in
 `CLAUDE.md`) — see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" and "Storage page" sections for
 the render-level layout. Auto-redeem has no standalone pause/resume control of
@@ -1073,8 +1071,8 @@ save Reset only).
 compute ladder entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined — and when kept,
-snaps Buffer (`intro.capacity`) to `getStoragePoolMemoryBounds(1).endBits` so the Foundry gate stays
-escapable without Sacrifice (#506).
+preserves the existing Buffer (`intro.capacity`) while the Capacity ×2 ladder remains available up
+to the active highest-unlocked-pool end bound.
 
 **On `eraGame` — persists:** automation unlocks + pause flags (except Double PP level, which resets),
 tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum, `era.count` (+1),
@@ -1695,7 +1693,8 @@ scratch. It records high-water marks in `intro.foundryResetCaps` (Combine, Speed
 progress, per-size `disksBuiltTotal`, and Capacity itself for merge compatibility).
 `tickFoundryResetConvenience` (from `tickGame`, after Disk auto-fill) then auto-presses Combine,
    bit-funded Speed / Invest, and Provision Disk whenever their normal turn gates allow, capped at those
-highs — Combine itself snaps Buffer to the pool Memory end bound (#506; Capacity Sacrifice is gone).
+highs — Combine leaves Capacity on its doubling ladder; Capacity ×2 remains available up to the
+active highest-unlocked-pool end bound.
 `intro.mainGameUnlocked` is preserved when already true. Every non-`intro` field (Tiers, Prestige,
 automations, …) is left unchanged. Unlike full Reset, it does not clear the save slot. Both
 Danger-zone actions stay disabled while production is frozen at the Prestige threshold.
@@ -1969,8 +1968,9 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // tierProductionAccumulators above. Resets on Prestige.
     capacity: 8,                                          // PERMANENT. Data Stream Buffer / pool Memory
                                                           // Capacity. Starts at INTRO_STARTING_CAPACITY;
-                                                          // snaps to getStoragePoolMemoryBounds(1).endBits
-                                                          // on Combine / load / Era when byteCreated (#506).
+                                                          // remains on the doubling ladder across Combine /
+                                                          // load / Era when byteCreated, clamped only if
+                                                          // it exceeds the active pool ceiling.
                                                           // Displayed in binary units (B/KiB/MiB/…), not SI
     byteCreated: false,                                   // PERMANENT. One persistent Byte generator — a
                                                           // flag, not a counter (only ever one)
@@ -1997,10 +1997,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // App.jsx's page routing gate. NOT a freeze flag —
                                                           // the Byte Foundry stays fully interactive well
                                                           // past this point
-    capacityUpgradeQueued: false,                         // Legacy soft-lock for removed Capacity Sacrifice.
-                                                          // Cleared on load / Reset / Prestige / Era; always
-                                                          // false in current play (Buffer snaps to pool Memory
-                                                          // end — see normalizePoolMemoryCapacity / #506)
+    capacityUpgradeQueued: false,                         // Queued Capacity ×2 request; cleared on load /
+                                                          // Reset / Prestige / Era when no longer applicable.
     disks: {},                                            // PERMANENT. { [capacityBits]: count } of
                                                           // currently-FULL Disks of that size — see
                                                           // tickDiskAutoFill/redeemDisk. A full disk's
@@ -2377,7 +2375,7 @@ purchases were manual or automatic.
 - `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's derived Bandwidth. A fresh disk Provision (`getProvisionDiskBaseSeconds`) fills at 1x that pool value
 - `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10` — Byte Foundry Disks: a read-cache's refill FROM Memory (`tickDiskAutoFill`'s pass 1) is capped, per call, at this multiple of the current production rate × `elapsedSeconds` — even a large banked Memory balance sitting behind a blocked tier claim only drains into the cache at this bounded rate once unblocked, never instantly
 - `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: a write-cache's collect-from-Disks phase (`getDiskWriteCacheSegmentSeconds`, one segment per full source disk) runs at this multiple of the current production rate — slower than filling from Memory directly, since it's moving already-built Disk contents rather than the live generator output. Currently equal to `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, which is why the write cache's own 10-segment collect phase happens to sum to the same total duration as its flush phase (see `tickDiskWriteCache`) — coincidental, not structural
-- `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 4_194_304` — Byte Foundry Compute Cores: Buffer / pool Memory Capacity threshold (512 KiB in binary scale, half of pool 1's end bound — historically one Sacrifice doubling short of the cap) at which Boosters/`ComputePage` becomes visible — retuned from a flat `8_000_000` under the old ×10-forever capacity ladder; unrelated to Disks (see `isComputeCoreConversionUnlocked`). With #506's Combine snap to the pool end, Buffer jumps past this threshold on Combine, so Boosters unlock as soon as Capacity is at the end bound (subject to other gates)
+- `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 4_194_304` — Byte Foundry Compute Cores: Buffer / pool Memory Capacity threshold (512 KiB in binary scale, half of pool 1's end bound — historically one Capacity doubling short of the cap) at which Boosters/`ComputePage` becomes visible — retuned from a flat `8_000_000` under the old ×10-forever capacity ladder; unrelated to Disks (see `isComputeCoreConversionUnlocked`). Capacity reaches this threshold through the full-Buffer doubling ladder rather than a Combine snap (subject to other gates)
 - `COMPUTE_CORES_PER_NODE = 8` — Byte Foundry Compute Cores: how many Compute Cores 1 Compute Node costs via the separate, unrelated `latchComputeMergePageIfNeeded`/`computeCoresEverEarned` lifetime-counter bookkeeping (NOT the Core → Node merge boundary below, which reuses the same ratio via `COMPUTE_MERGE_RATIO` instead)
 - `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes`/`computeClusters`/`computeNetworks`/`computeGrids`/`computeFabrics`/`computeClouds`/`computeDatacenters`/`computeSupercomputers`/`computeMegacomputers`) — see every `mergeCompute*Into*` function/the reserve-timer system below. Also the auto-trigger threshold for starting a reserve merge (`tickAutoMerge*`), stricter than the manual `COMPUTE_MERGE_RATIO`
 - `COMPUTE_MERGE_RATIO = 8` — ComputePage merge chain (issues #280/#321): how many of one compute-ladder entity merge into 1 of the next tier up (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer) — the manual-trigger threshold either for the old instant merge (pre-unlock) or for starting a reserve merge (post-unlock, via `startCompute*Merge`) — see every `mergeCompute*Into*` function and `startComputeMergeReserve`

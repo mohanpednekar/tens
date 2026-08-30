@@ -1260,7 +1260,7 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
     expect(after.intro.productionMilestoneTier).toBe(7)
   })
 
-  it('pickIntroCapacityMilestone no longer wipes Compute — Capacity Sacrifice was removed (#506)', () => {
+  it('pickIntroCapacityMilestone at the ceiling leaves Compute state untouched', () => {
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_CAPACITY_CAP_BITS,
       bits: INTRO_CAPACITY_CAP_BITS,
@@ -1288,8 +1288,8 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
 })
 
 // Base and forced-priority-turn predicates for the Byte Foundry's recurring "upgrade"
-// actions — Disk Fill > Speed > Provision Disk > Compute (#506 dropped Memory / Sacrifice rank;
-// see CLAUDE.md's "Byte Foundry" section).
+// actions — Disk Fill > Speed > Provision Disk > Compute; Capacity ×2 uses the shared full-Buffer
+// ladder outside that ordering (see CLAUDE.md's "Byte Foundry" section).
 describe('isDiskFillAvailable', () => {
   it('is false with no built disks', () => {
     expect(isDiskFillAvailable(withIntro(createInitialGameState(), {}))).toBe(false)

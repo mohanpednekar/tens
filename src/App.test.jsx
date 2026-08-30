@@ -31,6 +31,7 @@ import {
   PRESTIGE_THRESHOLD,
   TICK_RATE_MS,
   TIER_DEFINITIONS,
+  getStoragePoolMemoryBounds,
 } from 'game/layers'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
@@ -210,8 +211,8 @@ test('More menu reaches Milestones and Settings from any screen without progress
 
 // Attention dots on AppNav — Data Stream full on Foundry; affordable full purchase level on Tiers.
 test('AppNav Foundry attention dot lights when Data Stream is full while on Factory', () => {
-  // After Combine, Buffer snaps to INTRO_CAPACITY_CAP_BITS on load — seed bits at the cap so
-  // the stream is actually full (a low seeded capacity is normalized upward).
+  // Seed bits at the cap so the stream is actually full; load normalization preserves the
+  // doubling-ladder Capacity rather than force-raising a lower value.
   seedMainGameState({
     intro: {
       mainGameUnlocked: true,
@@ -2459,7 +2460,7 @@ test('Capacity ×2 remains visible after Combine and is capped at the active poo
 test('the manual convert button appears once Buffer reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
   const user = userEvent.setup()
 
-  // After Combine, Buffer is always at INTRO_CAPACITY_CAP_BITS — conversion is unlocked immediately.
+  // This fixture starts with Capacity at the pool-1 ceiling, so conversion is unlocked immediately.
   seedIntroState({
     bits: INTRO_BITS_PER_KILOBYTE_CONVERSION,
     capacity: INTRO_CAPACITY_CAP_BITS,
@@ -2510,8 +2511,8 @@ test('the transfer section hides once Storage unlocks, once the main game is alr
 })
 
 test('the transfer section stays visible through the mandatory gate even past Storage\'s own reveal threshold, since it\'s still the only way to ever unlock the main game', () => {
-  // mainGameUnlocked defaults to false (the mandatory gate) via seedIntroState — after Combine,
-  // Buffer is at the pool end so Storage is revealed, but redeemDisk never sets mainGameUnlocked
+  // mainGameUnlocked defaults to false (the mandatory gate) via seedIntroState — this fixture's
+  // Capacity is at the pool end so Storage is revealed, but redeemDisk never sets mainGameUnlocked
   // — only convertIntroBitsToKilobytes/tickIntroAutoInvest do — so this row stays visible
   // through the gate.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
@@ -2521,8 +2522,8 @@ test('the transfer section stays visible through the mandatory gate even past St
 })
 
 test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit level cost, not a flat rate', () => {
-  // After Combine, Buffer is always at the pool end → Storage unlocked. Transfer stays visible
-  // only while still gated (mainGameUnlocked false).
+  // This fixture starts at the pool end → Storage unlocked. Transfer stays visible only while
+  // still gated (mainGameUnlocked false).
   seedIntroState(
     { bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, mainGameUnlocked: false },
     { purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 } },
@@ -2539,8 +2540,8 @@ test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit leve
 
 test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it unlocks the main game', () => {
   // Fake timers so the live tick loop can't fire — and silently drain the pre-seeded balance —
-  // between mount and this test's own manual click below. After Combine, Buffer is at the pool
-  // end so Storage is revealed; transfer stays visible only while still gated. The first convert
+  // between mount and this test's own manual click below. This fixture starts at the pool end so
+  // Storage is revealed; transfer stays visible only while still gated. The first convert
   // unlocks the main game (and then hides the transfer row once Storage + unlocked).
   vi.useFakeTimers()
 
@@ -2597,7 +2598,7 @@ test('auto-transfers a full block once the threshold is reached, then hides the 
   expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
-  // Navigating back to the Byte Foundry: Storage is revealed (Buffer at pool end) and the main
+  // Navigating back to the Byte Foundry: Storage is revealed (this fixture has Buffer at pool end) and the main
   // game is unlocked, so the manual transfer row hides — Disk redemption is the alternate path.
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
@@ -2686,8 +2687,8 @@ test('Invest for Double Production shows its cost in the nearest fitting binary 
 })
 
 test('Invest for Double Production grants 2 claims at tier 0\'s cost before advancing to the 10x-higher tier-1 cost — independent of capacity', () => {
-  // Fake timers so auto-convert / production ticks can't race the remounts below. Buffer is at
-  // the pool end after Combine; Invest's ladder is still independent of it.
+  // Fake timers so auto-convert / production ticks can't race the remounts below. This fixture's
+  // Buffer is at the pool end; Invest's ladder is still independent of it.
   vi.useFakeTimers()
 
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
@@ -2814,9 +2815,9 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
   expect(balanceBar.closest('section')).not.toHaveTextContent(/\d+(?:\.\d+)? B\s*\/\s*/)
 })
 
-test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit (MiB) once at the pool end', () => {
-  // After Combine, Buffer snaps to INTRO_CAPACITY_CAP_BITS (1 MiB). Half-full reads as 0.5 MiB /
-  // 1 MiB — both share the unit picked off Buffer (getMemoryUnit), never a mismatched pairing.
+test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit (MiB) at pool capacity', () => {
+  // A full pool-1 Capacity is 1 MiB. Half-full reads as 0.5 MiB / 1 MiB — both share the unit
+  // picked off Buffer (getMemoryUnit), never a mismatched pairing.
   seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS / 2, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
@@ -2872,7 +2873,7 @@ describe('Byte Foundry Storage', () => {
   const currentBankSize = getTierCost(tier01, 1) * BITS_PER_BYTE // 8000 — the ladder's starting, Byte-accurate size
   const currentBankCost = currentBankSize * DISK_BUILD_COST_MULTIPLIER
   // A larger, not-yet-reached size — used to exercise the "held disk becomes redeemable once
-  // some tier's level catches up to it" path independent of what the Build button currently offers.
+  // some tier's level catches up to it" path independent of what the Provision button currently offers.
   const futureBankSize = getTierCost(tier01, 2) * BITS_PER_BYTE
 
   const openFoundry = () => {
@@ -2935,17 +2936,26 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 2' })).toBeInTheDocument()
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
     const pool2 = screen.getByRole('region', { name: 'pool 2' })
+    expect(pool1).toHaveTextContent('Kilobytes')
+    expect(pool2).toHaveTextContent('Megabytes')
     expect(pool1).toHaveTextContent(`Bandwidth ${formatBitsInNearestUnit(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 1))}/sec`)
     expect(pool2).toHaveTextContent(`Bandwidth ${formatBitsInNearestUnit(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 2))}/sec`)
     expect(pool1).toHaveTextContent(`Capacity ${formatBitsInNearestUnit(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 1))}`)
     expect(pool2).toHaveTextContent(`Capacity ${formatBitsInNearestUnit(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 2))}`)
+    expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 mb disks$/i })).toBeInTheDocument()
+    fireEvent.click(within(pool2).getByRole('button', { name: /collapse pool 2/i }))
+    expect(within(pool2).getByRole('button', { name: /expand pool 2/i })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('group', { name: /^1 mb disks$/i })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /expand pool 1/i }))
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
+      `Memory Capacity ${formatBitsInNearestUnit(getStoragePoolMemoryBounds(2).startBits)} – ${formatBitsInNearestUnit(getStoragePoolMemoryBounds(2).endBits)}`
+    )
   })
 
   test('Provision Disk stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
@@ -3942,7 +3952,7 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
 // Once intro.mainGameUnlocked is true, the Byte Foundry no longer disappears — AppNav's Foundry
 // item reopens it at any time. Unlike the old completed-gated design, nothing here ever goes
 // read-only: Tap/Speed stay live indefinitely. Convert stays visible only while still gated or
-// before Storage unlocks — after Combine, Buffer is at the pool end so Storage is revealed and
+// before Storage unlocks — this fixture starts with Buffer at the pool end so Storage is revealed and
 // the transfer row hides once unlocked. Before mainGameUnlocked, it's still the same mandatory
 // gate as always — AppNav omits Factory, so there's no way onto MainPage.
 

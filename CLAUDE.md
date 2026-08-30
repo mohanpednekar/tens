@@ -435,9 +435,9 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
                                next Booster cost, in-flight transfers) rendered inside ByteFoundryPage's
-                               `PoolCard` (see Architecture 4 below), taking `{ state, bare }` — `bare`
-                               drops its own StatCard chrome for that nested use. See "Economy model"
-                               below for the Data Lake mechanic itself.
+                               the standalone ByteFoundryPage panel, taking `{ state, bare }` —
+                               `bare` is retained for reuse/legacy composition and drops its own
+                               StatCard chrome. See "Economy model" below for the Data Lake mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -891,11 +891,12 @@ Bytes are no longer a purchasable tier — they're produced entirely by the **By
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
-that combines into a permanent, passively-producing Byte generator. On Combine (and on save load via
-`normalizePoolMemoryCapacity` when `byteCreated`), and on Era ascension when the permanent Byte
-generator is kept, and grow production via **Speed ×2** (Invest — own cost ladder stepped ×4 per
-tier) plus the restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles
-the shared Data Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
+that combines into a permanent, passively-producing Byte generator. Combine creates the generator
+without snapping Capacity; save load via `normalizePoolMemoryCapacity` preserves current Capacity
+and only clamps it when necessary, and Era ascension preserves the permanent generator and its
+Capacity. Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
+restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
+Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
 once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
@@ -1025,7 +1026,7 @@ the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
 `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
 `isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
 into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
-it" shape the removed Memory Sacrifice once used, and the same currency Disks themselves are priced
+it" shape used by Capacity ×2, and the same currency Disks themselves are priced
 in, not a bare unit count. Gated by the same forced priority order every other Byte Foundry
 milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
 Speed, Provision Disk, and Compute are all currently unavailable; sits at the Capacity rank,

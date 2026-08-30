@@ -5,7 +5,7 @@ import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS, getStoragePoolMemoryBounds } from 'game/layers'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
 const RootDiv = styled.div`
@@ -315,8 +315,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
   const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  // Null follows the largest unlocked pool by default; 0 is an explicit "all collapsed" choice.
   const [expandedPoolIndex, setExpandedPoolIndex] = useState(null)
-  const visibleExpandedPool = expandedPoolIndex ?? unlockedPoolCount
+  useEffect(() => {
+    setExpandedPoolIndex(null)
+  }, [unlockedPoolCount])
+  const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? unlockedPoolCount
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
@@ -386,7 +390,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
-  const poolBounds = getStoragePoolMemoryBounds(1)
+  const poolBounds = getStoragePoolMemoryBounds(unlockedPoolCount)
   const poolCapacityRangeLabel = `${formatBitsInNearestUnit(poolBounds.startBits)} – ${formatBitsInNearestUnit(poolBounds.endBits)}`
 
   return (
@@ -502,8 +506,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 onClick={actions.pickIntroCapacityMilestone}
                 title={
                   capacityUpgradeAvailable
-                    ? `Spend ${formatBitsInNearestUnit(capacityUpgradeCost)} to double the Data Stream Buffer`
-                    : 'Fill the Data Stream and resolve higher-priority actions first'
+                    ? 'The Data Stream Buffer is full; drain it to double Capacity'
+                    : intro.bits < intro.capacity
+                      ? 'Fill the Data Stream Buffer completely before doubling Capacity'
+                      : 'Resolve higher-priority actions before doubling Capacity'
                 }
                 type="button"
                 variant={capacityUpgradeAvailable ? 'prestige' : 'neutral'}
@@ -574,17 +580,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <PoolSummaryButton
               aria-expanded={isExpanded}
               aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
-              onClick={() => setExpandedPoolIndex(isExpanded ? null : poolIndex)}
+              onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
               type="button"
             >
-              Pool {poolIndex} · {arraysComplete ? 'Arrays complete' : 'Arrays in progress'} ·{' '}
+              Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`} ·{' '}
+              {arraysComplete ? 'Arrays complete' : 'Arrays in progress'} ·{' '}
               Bandwidth {formatBitsInNearestUnit(poolBandwidth)}/sec · Capacity {formatBitsInNearestUnit(poolCapacity)}
             </PoolSummaryButton>
             {isExpanded && (
               <>
-                <StatusText>
-                  Bandwidth {formatBitsInNearestUnit(poolBandwidth)}/sec · Capacity {formatBitsInNearestUnit(poolCapacity)}
-                </StatusText>
                 {poolSizes.map(size => (
                   <DiskArrayRow key={size} actions={actions} size={size} state={state} />
                 ))}

@@ -546,8 +546,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         <p>
           Wipe Capacity, Memory, Disks / Storage, and Compute on the active save — useful if
           Capacity was pushed too far. Combine, Speed (Invest), and Provision Disk restart from
-          scratch, then auto-press again up to your pre-reset highs. Combine snaps Buffer to the
-          pool Memory end bound (Capacity Sacrifice was removed).
+          scratch, then auto-press again up to your pre-reset highs. Capacity ×2 remains a
+          full-Buffer doubling ladder whose ceiling rises as storage pools unlock.
           Ladder progress and Prestige stay.
         </p>
         <Button

@@ -2285,7 +2285,7 @@ export const upgradePoolCapacity = state => {
   }
 }
 
-export const pickIntroCapacityMilestone = state => upgradePoolCapacity(state, 1)
+export const pickIntroCapacityMilestone = state => upgradePoolCapacity(state)
 
 // Commit to the next Capacity upgrade before Memory is full. The queued action fires once the
 // balance fills and higher-priority Storage actions no longer have work to do.
@@ -2379,7 +2379,7 @@ export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 // cover this tier's cost, independently of the Data Stream's current Capacity.
 // Deducts exactly that cost and doubles the Byte generator's overall bits/sec rate (see
 // getIntroProductionRate) by INTRO_PRODUCTION_MULTIPLIER_STEP. Independently callable — no
-// coupling to the removed pickIntroCapacityMilestone Capacity path. No-op below cost or once
+// coupling to pickIntroCapacityMilestone's separate Capacity path. No-op below cost or once
 // getIntroProductionMilestoneMaxClaims(productionMilestoneTier) claims have already been made at
 // the current tier; a successful claim either stays at the same tier (incrementing
 // productionMilestoneTierClaims) or, once the tier's claim limit is reached, advances to the next
@@ -2457,7 +2457,7 @@ export const pickIntroProductionMilestone = state => {
 // INTRO_CONVERSION_UNLOCK_CAPACITY (1000) bits at once.
 export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_CONVERSION_UNLOCK_CAPACITY
 
-// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Build button, disk
+// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Provision Disk button, disk
 // squares rows) should be shown at all — true once capacity has grown enough to ever hold
 // INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory's own binary display scale) at
 // once. A later, more deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above —
@@ -2596,8 +2596,10 @@ export const convertIntroBitsToKilobytes = state => {
 // mainGameUnlocked.
 export const tickIntroProduction = elapsedSeconds => state => {
   if (!state.intro.byteCreated) return state
+
+  const tickSpeed = state.intro.tickSpeedSeconds
   const accumulated = state.intro.productionAccumulator + elapsedSeconds
-  const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / state.intro.tickSpeedSeconds)
+  const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / tickSpeed)
   if (ticksElapsed <= 0) {
     return accumulated === state.intro.productionAccumulator
       ? state
@@ -2611,7 +2613,7 @@ export const tickIntroProduction = elapsedSeconds => state => {
     intro: {
       ...state.intro,
       bits: Math.min(state.intro.capacity, state.intro.bits + bitsToAdd),
-      productionAccumulator: accumulated - ticksElapsed * state.intro.tickSpeedSeconds,
+      productionAccumulator: accumulated - ticksElapsed * tickSpeed,
     },
   }
 }
