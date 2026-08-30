@@ -164,8 +164,8 @@ doubling shape used by Capacity ×2), hard-capped at 1,024 units (`DATA_LAKE_CAP
 separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever
 exist) purely so the counter can't exceed what's physically possible — not a second design cap, just
 incidental headroom (1,110 if ever fully filled) that sits well above the 1,024 ladder which is what
-actually gates deposits. Deposited/capacity/next-cost/doubling-cost all display in Byte-scale (KB,
-MB/GB), matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
+actually gates deposits. Deposited/capacity/next-cost/doubling-cost all display in Byte-scale
+(KB/MB/GB), matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 Manual transfer blocks (plus an always-on auto-convert) turn Data Stream bits into free `tier01`
 units at tier01's own current per-unit cost, with **no per-cycle cap**; the first successful transfer
