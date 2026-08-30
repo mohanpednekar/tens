@@ -81,7 +81,7 @@ import {
   speedUpGame,
   stackComputeBoost,
   startBoosterTransfer,
-  startDiskBuild,
+  provisionDisk,
   tapIntroBit,
   tickGame,
   tickQueuedCapacityUpgrade,
@@ -189,7 +189,7 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   }
 
   s = pickIntroProductionMilestone(s)
-  s = startDiskBuild(s)
+  s = provisionDisk(s)
 
   // Queue Capacity before the bar is full when Invest can't take the next Memory spend (or while
   // still climbing to the conversion unlock) — tickQueuedCapacityUpgrade / tickGame then fires it
