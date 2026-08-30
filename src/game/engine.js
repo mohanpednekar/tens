@@ -2199,7 +2199,7 @@ export const isComputeUpgradeAvailable = state =>
       Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
     ))
 
-export const isPoolCapacityUpgradeAvailable = (state, _poolIndex = 1) => {
+export const isPoolCapacityUpgradeAvailable = state => {
   if (state.intro.bits < state.intro.capacity) return false
   if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
   return !isMemoryCapacityAtCap(state)
@@ -2267,7 +2267,7 @@ export const rollbackComputeFundedBandwidth = state => {
 
 // Capacity ×2 drains the full Data Stream balance. Its ceiling follows the highest unlocked
 // storage pool, while lower pools derive their displayed Capacity from this one value.
-export const upgradePoolCapacity = (state, _poolIndex = 1) => {
+export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
   const afterWipe = isComputeCoreConversionUnlocked(state)
     ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
