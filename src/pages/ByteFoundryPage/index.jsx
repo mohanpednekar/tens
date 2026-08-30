@@ -4,7 +4,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS, getStoragePoolMemoryBounds } from 'game/layers'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -390,8 +390,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     : clampPercent((intro.bits / investCost) * 100)
   const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
-  const poolBounds = getStoragePoolMemoryBounds(unlockedPoolCount)
-  const poolCapacityRangeLabel = `${formatBitsInNearestUnit(poolBounds.startBits)} – ${formatBitsInNearestUnit(poolBounds.endBits)}`
+
 
   return (
     <RootDiv>
@@ -412,10 +411,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <SectionLabel>Data Stream</SectionLabel>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
-          <StatusText>
-            Buffer {formatBitsInNearestUnit(intro.capacity)}
-            {intro.byteCreated ? ` · Memory Capacity ${poolCapacityRangeLabel}` : ''}
-          </StatusText>
+          <StatusText>Buffer {formatBitsInNearestUnit(intro.capacity)}</StatusText>
           <VisuallyHidden
             role="progressbar"
             aria-label="data stream bit balance"

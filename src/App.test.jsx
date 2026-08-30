@@ -31,7 +31,6 @@ import {
   PRESTIGE_THRESHOLD,
   TICK_RATE_MS,
   TIER_DEFINITIONS,
-  getStoragePoolMemoryBounds,
 } from 'game/layers'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
@@ -2954,7 +2953,7 @@ describe('Byte Foundry Storage', () => {
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
-      `Memory Capacity ${formatBitsInNearestUnit(getStoragePoolMemoryBounds(2).startBits)} – ${formatBitsInNearestUnit(getStoragePoolMemoryBounds(2).endBits)}`
+      `Buffer ${formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}`
     )
   })
 

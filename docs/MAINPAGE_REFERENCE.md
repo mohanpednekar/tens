@@ -51,8 +51,8 @@ paired with a visible 8-block segmented `role="progressbar"` (`aria-label="data 
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
 (`getIntroProductionRate(intro) / BITS_PER_BYTE`). A StatusText line under the balance reads
-**Buffer** `{formatBitsInNearestUnit(intro.capacity)}`, and once `byteCreated` also **Memory Capacity**
-as the pool's start–end window (`getStoragePoolMemoryBounds`). There is no separate Cache tile — the same
+**Buffer** `{formatBitsInNearestUnit(intro.capacity)}` (the current Data Stream capacity value, not a
+range). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is now
 read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
 `FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
