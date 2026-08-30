@@ -52,6 +52,8 @@ import {
   isStorageUnlocked,
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
+  tickIntroProduction,
+  unlockEligibleStoragePools,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
   isBitFundedBandwidthAvailable,
@@ -88,6 +90,12 @@ import {
   getDiskLadderSizeBits,
   getDiskRedeemTierName,
   getDiskSize,
+  getPoolIndexForDiskSize,
+  getStoragePoolCount,
+  getStoragePoolBandwidth,
+  getStoragePoolCapacity,
+  getUnlockedStoragePoolCount,
+  isStoragePoolUnlocked,
   getDiskSizesToShow,
   getRelevantDiskSizesForFoundry,
   getEffectiveTierTickSpeedSeconds,
@@ -243,7 +251,6 @@ import {
   isDiskWriteCacheCollectPaused,
   tickGame,
   tickIntroAutoInvest,
-  tickIntroProduction,
 } from './engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_TIER_COUNT, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
@@ -611,12 +618,12 @@ describe('tapIntroBit', () => {
 })
 
 describe('combineIntroByte', () => {
-  it('consumes INTRO_BYTE_COMBINE_COST bits, sets byteCreated, and snaps Buffer to pool Memory end', () => {
+  it('consumes INTRO_BYTE_COMBINE_COST bits and leaves Capacity on its doubling ladder', () => {
     const state = withIntro(createInitialGameState(), { bits: INTRO_BYTE_COMBINE_COST })
     const after = combineIntroByte(state)
     expect(after.intro.byteCreated).toBe(true)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
   })
 
   it('is a no-op below the combine cost', () => {
@@ -630,8 +637,7 @@ describe('combineIntroByte', () => {
   })
 })
 
-// Capacity Sacrifice was removed (#506). Pool Memory Capacity is delimited by
-// getStoragePoolMemoryBounds start/end; Combine snaps Buffer to the end bound.
+// Pool Memory Capacity doubles from each pool's start bound up to its end bound.
 const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 2 }
 
 // getDiskSize's own real-Byte-accurate ladder — a fresh cycle's smallest disk is 8000 bits (1 KB),
@@ -639,11 +645,11 @@ const noOtherUpgradesLeft = { byteCreated: true, productionMilestoneTierClaims: 
 const FIRST_DISK_SIZE = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE
 
 describe('isMemoryCapacityUpgradeAvailable', () => {
-  it('is always false — Capacity Sacrifice was removed (#506)', () => {
+  it('is available when the selected pool is full and no higher-priority action is available', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
     })
-    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
   it('stays false at the pool end bound with a full balance', () => {
@@ -661,12 +667,12 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS }))).toBe(true)
   })
 
-  it('normalizePoolMemoryCapacity snaps capacity to the end bound once byteCreated', () => {
+  it('normalizePoolMemoryCapacity does not raise capacity to the end bound', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true, capacity: INTRO_STARTING_CAPACITY, capacityUpgradeQueued: true,
     })
     const after = normalizePoolMemoryCapacity(state)
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
     expect(after.intro.capacityUpgradeQueued).toBe(false)
   })
 
@@ -677,14 +683,16 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
 })
 
 describe('pickIntroCapacityMilestone', () => {
-  it('is always a no-op — Capacity Sacrifice was removed (#506)', () => {
+  it('doubles Capacity and drains the full balance', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
     })
-    expect(pickIntroCapacityMilestone(state)).toBe(state)
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(after.intro.bits).toBe(0)
   })
 
-  it('does not drain bits or grow capacity even when Memory is full', () => {
+  it('is a no-op at the pool end bound', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
     })
@@ -695,11 +703,65 @@ describe('pickIntroCapacityMilestone', () => {
   })
 })
 
+describe('storage pools', () => {
+  it('unlocks pool 2 only after all three pool 1 arrays reach the build cap', () => {
+    const partial = withIntro(createInitialGameState(), {
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP - 1,
+      },
+    })
+    expect(isStoragePoolUnlocked(partial, 2)).toBe(false)
+    expect(unlockEligibleStoragePools(partial)).toBe(partial)
+
+    const complete = withIntro(partial, {
+      disksBuiltTotal: {
+        ...partial.intro.disksBuiltTotal,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+      },
+    })
+    const unlocked = unlockEligibleStoragePools(complete)
+    expect(isStoragePoolUnlocked(unlocked, 2)).toBe(true)
+    expect(getUnlockedStoragePoolCount(unlocked)).toBe(2)
+  })
+
+  it('derives each pool bandwidth and capacity from the highest unlocked pool', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      bits: 0,
+      capacity: 1024 * 1024 * 8,
+      disksBuiltTotal: Object.fromEntries(
+        [...Array(3)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
+      ),
+    })
+    expect(getStoragePoolBandwidth(state, 2)).toBe(getIntroProductionRate(state.intro))
+    expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro) / 1024)
+    expect(getStoragePoolCapacity(state, 2)).toBe(state.intro.capacity)
+    expect(getStoragePoolCapacity(state, 1)).toBe(8 * 1024)
+  })
+
+  it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
+    const pool1Complete = withIntro(createInitialGameState(), {
+      capacity: INTRO_CAPACITY_CAP_BITS,
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+      },
+    })
+    expect(isMemoryCapacityAtCap(withIntro(pool1Complete, { disksBuiltTotal: {} }))).toBe(true)
+    expect(getUnlockedStoragePoolCount(pool1Complete)).toBe(2)
+    expect(isMemoryCapacityAtCap(pool1Complete)).toBe(false)
+  })
+})
+
 describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
-  it('no longer queues a Capacity upgrade — Sacrifice was removed (#506)', () => {
+  it('queues a Capacity upgrade before the Buffer is full', () => {
     const state = withIntro(createInitialGameState(), { bits: 1, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
-    expect(queueIntroCapacityUpgrade(state)).toBe(state)
-    expect(state.intro.capacityUpgradeQueued).toBe(false)
+    const queued = queueIntroCapacityUpgrade(state)
+    expect(queued).not.toBe(state)
+    expect(queued.intro.capacityUpgradeQueued).toBe(true)
   })
 
   it('clearIntroCapacityUpgradeQueue clears a legacy queued flag', () => {
@@ -709,17 +771,18 @@ describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
     expect(clearIntroCapacityUpgradeQueue(cleared)).toBe(cleared)
   })
 
-  it('tickQueuedCapacityUpgrade clears the legacy flag and normalizes Capacity to the pool end', () => {
+  it('tickQueuedCapacityUpgrade clears the legacy flag and doubles a full Capacity', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
       byteCreated: true,
       capacityUpgradeQueued: true,
+      productionMilestoneTierClaims: 2,
     })
     const after = tickQueuedCapacityUpgrade(state)
     expect(after.intro.capacityUpgradeQueued).toBe(false)
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
-    expect(after.intro.bits).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(after.intro.bits).toBe(0)
   })
 
   it('refuses to queue once pool 1 is already at its capacity end bound', () => {
@@ -882,8 +945,8 @@ describe('tickFoundryResetConvenience', () => {
       || state.intro.productionMultiplier > 1
       || state.intro.tickSpeedSeconds < INTRO_STARTING_TICK_SPEED_SECONDS,
     ).toBe(true)
-    // Combine snaps Buffer to the pool Memory end bound (#506).
-    expect(state.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    // Combine leaves Capacity on its current doubling ladder value.
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
 
     // Keep auto-Investing while Memory can cover the bit-funded path.
     for (let i = 0; i < 20; i += 1) {
@@ -898,7 +961,7 @@ describe('tickFoundryResetConvenience', () => {
     }
     expect(state.intro.productionMilestoneTier).toBe(1)
     expect(state.intro.productionMilestoneTierClaims).toBe(0)
-    expect(state.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
   })
 
   it('auto-starts Disk Build when under the per-size cap', () => {
@@ -948,7 +1011,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.capacityUpgradeQueued).toBe(false)
   })
 
-  it('does not auto-Sacrifice Capacity — Combine already snaps Buffer to the pool end (#506)', () => {
+  it('does not auto-upgrade Capacity during convenience', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
@@ -968,7 +1031,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.bits).toBe(INTRO_STARTING_CAPACITY)
   })
 
-  it('auto-Combine during convenience snaps Capacity to the pool end bound', () => {
+  it('auto-Combine during convenience leaves Capacity on the doubling ladder', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_BYTE_COMBINE_COST,
       capacity: INTRO_STARTING_CAPACITY,
@@ -985,7 +1048,7 @@ describe('tickFoundryResetConvenience', () => {
     })
     const after = tickFoundryResetConvenience(state)
     expect(after.intro.byteCreated).toBe(true)
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
   })
 })
 
@@ -1666,11 +1729,7 @@ describe('getDiskSize', () => {
     expect(size100KB).toBe(800000)
   })
 
-  it('never advances past 100 KB — stays at pool 1\'s own funded ceiling instead of reaching a size no currently-unlocked pool could ever afford', () => {
-    // 1 MB's own build cost (8,000,000 bits) would permanently exceed INTRO_CAPACITY_CAP_BITS with
-    // no pool 2 generator yet to fund it — see isDiskLadderExhaustedForActivePools and
-    // docs/DESIGN_HISTORY.md. Replaces an earlier "keeps advancing indefinitely — the ladder is
-    // uncapped" version of this test, from before that reachability gap was found and fixed.
+  it('advances to 1 MB once pool 2 is unlocked', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
@@ -1680,7 +1739,7 @@ describe('getDiskSize', () => {
         [size100KB]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(getDiskSize(state)).toBe(size100KB)
+    expect(getDiskSize(state)).toBe(size100KB * DISK_LADDER_SIZE_MULTIPLIER)
   })
 })
 
@@ -1694,12 +1753,22 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
   })
 
-  it('is true once the 100 KB array — pool 1\'s own last funded size — is fully built', () => {
+  it('is false at pool 1 completion because pool 2 is now active', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
     })
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(false)
+  })
+
+  it('is true only once pool 10\'s largest array is fully built', () => {
+    const disksBuiltTotal = {}
+    for (let step = 1; step <= DATA_LAKE_TIER_COUNT * 3; step += 1) {
+      disksBuiltTotal[getDiskLadderSizeBits(step)] = DISK_ARRAY_LADDER_CAP
+    }
+    const state = withIntro(createInitialGameState(), { disksBuiltTotal })
+    expect(getUnlockedStoragePoolCount(state)).toBe(DATA_LAKE_TIER_COUNT)
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
   })
 })
@@ -1860,6 +1929,28 @@ describe('startDiskBuild', () => {
     })
     const after = startDiskBuild(state)
     expect(after.intro.diskBuild).toEqual({ size: level2Size, remainingSeconds: level2Size, totalSeconds: level2Size })
+  })
+
+  it('a 1 MB disk uses pool 2 bandwidth for pacing while spending the shared Data Stream balance', () => {
+    const megabyteSize = FIRST_DISK_SIZE * 1000
+    const state = withIntro(createInitialGameState(), {
+      bits: getDiskCost(megabyteSize),
+      capacity: getDiskCost(megabyteSize),
+      byteCreated: true,
+      ...bandwidthExhausted,
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+      },
+    })
+    const after = startDiskBuild(state)
+    expect(after.intro.bits).toBe(0)
+    expect(after.intro.diskBuild).toEqual({
+      size: megabyteSize,
+      remainingSeconds: megabyteSize,
+      totalSeconds: megabyteSize,
+    })
   })
 
   it('building the 6th disk of a size takes 6x that size\'s base build time — ordinal is read from disksBuiltTotal at the moment the build starts', () => {
@@ -2081,6 +2172,22 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.bits).toBe(blockBits * 5 - budget)
   })
 
+  it('uses the owner pool\'s derived Capacity when refilling a lower-pool cache', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: 8 * MEMORY_BINARY_UNIT_STEP,
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+      },
+      disks: { [FIRST_DISK_SIZE]: 1 },
+    })
+    const after = tickDiskAutoFill(1e12)(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.bits).toBe(0)
+  })
+
   it('refills exactly one whole block once elapsed time covers that block\'s own bandwidth-capped duration', () => {
     const state = withIntro(createInitialGameState(), {
       bits: blockBits * 5,
@@ -2241,6 +2348,25 @@ describe('tickDiskAutoFill', () => {
     expect(started.intro.diskCache[FIRST_DISK_SIZE]).toBe(FIRST_DISK_SIZE)
     const flush = getDiskReadCacheFlush(started, FIRST_DISK_SIZE)
     expect(flush).toEqual({ remainingSeconds: expectedSeconds, totalSeconds: expectedSeconds })
+  })
+
+  it('paces pool 2 and pool 1 read-cache flushes from their derived bandwidths', () => {
+    const megabyteSize = FIRST_DISK_SIZE * 1000
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
+        [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
+        [megabyteSize]: 1,
+      },
+    })
+    const pool2FlushSeconds = getDiskReadCacheFlushSeconds(state, megabyteSize)
+    const pool1FlushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
+    expect(pool2FlushSeconds).toBe(megabyteSize / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
+    expect(pool1FlushSeconds).toBe(
+      FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT
+        / (DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / MEMORY_BINARY_UNIT_STEP),
+    )
   })
 
   it('completes the read-cache flush after one cache-block production duration and fills the disk', () => {
@@ -8075,15 +8201,14 @@ describe('eraGame', () => {
     expect(after.prestigeDoublePpLevel).toBe(0)
   })
 
-  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and snaps Buffer to pool end', () => {
+  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and resets Buffer', () => {
     const state = eraEligibleState()
     const after = eraGame(state)
     expect(after.intro.byteCreated).toBe(true)
     expect(after.intro.mainGameUnlocked).toBe(false)
     expect(after.intro.bits).toBe(0)
-    // Without Sacrifice (#506), Buffer must sit at the pool end so the Foundry gate is escapable.
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
-    expect(isIntroConversionUnlocked(after)).toBe(true)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
+    expect(isIntroConversionUnlocked(after)).toBe(false)
     expect(after.intro.computeCores).toBe(0)
     expect(after.intro.disks).toEqual({})
     expect(after.intro.foundryResetCaps).toEqual({})
@@ -8360,7 +8485,9 @@ describe('Data Lakes', () => {
   it('doubleDataLakeCapacity spends the lake\'s current capacity in bits and doubles its level/capacity', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 8_000,
-      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      disksBuiltTotal: Object.fromEntries(
+        [...Array(30)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
+      ),
       ...noOtherUpgradesLeft,
     })
     const after = doubleDataLakeCapacity(1)(state)
@@ -8375,10 +8502,15 @@ describe('Data Lakes', () => {
   it('doubleDataLakeCapacity hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — capacity never exceeds 1,024 units', () => {
     let state = withIntro(createInitialGameState(), {
       bits: Number.MAX_SAFE_INTEGER,
-      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      disksBuiltTotal: Object.fromEntries(
+        [...Array(30)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
+      ),
       ...noOtherUpgradesLeft,
+      productionMilestoneTier: 100,
+      productionMilestoneTierClaims: 1,
     })
     for (let i = 0; i < DATA_LAKE_CAPACITY_MAX_LEVEL; i += 1) {
+      state = withIntro(state, { bits: Number.MAX_SAFE_INTEGER })
       state = doubleDataLakeCapacity(1)(state)
     }
     expect(getDataLakeCapacityLevel(state, 1)).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)

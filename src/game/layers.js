@@ -211,9 +211,9 @@ export const DISK_LADDER_BASE_SIZE_BITS = BITS_PER_BYTE * 1000
 // Byte-scale power-of-ten size with no gaps (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …, issue #368,
 // fixing an earlier ladder that walked tier01's level-cost sequence instead and skipped sizes
 // whenever cost-epoch exponents jumped — 100 KB → 10 MB, never 1 MB). `getDiskSize` (engine.js)
-// only actually WALKS this formula up to `MAX_ACTIVE_DISK_LADDER_STEP` though — today just pool 1's
-// own 1/10/100 KB, since no pool 2 generator exists yet to fund a 1 MB disk's own build cost; see
-// docs/DESIGN_HISTORY.md.
+// only actually WALKS this formula up to getMaxActiveDiskLadderStep(state) in engine.js — three
+// sizes per currently-unlocked storage pool, with each newly unlocked pool extending the active
+// ladder by another 1/10/100 × tier of disk sizes.
 export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // How many disks must ever be built at the current ladder size before getDiskSize advances to the
 // next (×DISK_LADDER_SIZE_MULTIPLIER) size. Driven by intro.disksBuiltTotal — cumulative, never

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createInitialGameState, eraGame } from './engine'
+import { createInitialGameState, eraGame, getUnlockedStoragePoolCount } from './engine'
 import { ERA_ELIGIBILITY_PP, INTRO_CAPACITY_CAP_BITS, MONEY_ID, MONEY_STARTING_AMOUNT, COMPUTE_FLOPS_TIER_DEFINITIONS, PRESTIGE_UNBOUNDED_MIN_COUNT, TIER_DEFINITIONS } from './layers'
 import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, getActiveSlotId, isDevModeActive, isSupporterUnlocked, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, loadThemePreference, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, saveThemePreference, setActiveSaveSlot, setDevModeActive, SAVE_SCHEMA_VERSION, THEME_PREFERENCE_KEY, buildClearSlotConfirmMessage, buildEraseAllSavesConfirmMessage, buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, FREE_SLOT_COUNT, SUPPORTER_SLOT_COUNT, SUPPORTER_UNLOCK_CODE } from './storage'
 
@@ -452,7 +452,21 @@ describe('schema merge on load', () => {
     expect(loaded.intro).toEqual(state.intro)
   })
 
-  it('normalizes a mid-Sacrifice-ladder Buffer up to the pool Memory end bound on load (#506)', () => {
+  it('preserves fully built KB arrays so pool 2 unlocks from an old save', () => {
+    const state = {
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        disksBuiltTotal: { 8000: 10, 80000: 10, 800000: 10 },
+      },
+    }
+    saveGameState(state)
+    const loaded = loadGameState()
+    expect(loaded.intro.disksBuiltTotal).toEqual(state.intro.disksBuiltTotal)
+    expect(getUnlockedStoragePoolCount(loaded)).toBe(2)
+  })
+
+  it('preserves a mid-ladder Buffer capacity on load', () => {
     const state = {
       ...createInitialGameState(),
       intro: {
@@ -464,7 +478,7 @@ describe('schema merge on load', () => {
     }
     saveGameState(state)
     const loaded = loadGameState()
-    expect(loaded.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(loaded.intro.capacity).toBe(80)
     expect(loaded.intro.bits).toBe(5)
     expect(loaded.intro.byteCreated).toBe(true)
   })
