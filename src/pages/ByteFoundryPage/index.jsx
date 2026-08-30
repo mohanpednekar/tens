@@ -66,11 +66,6 @@ const BalanceText = styled.p`
 // button is removed entirely — Memory's own tile (FillableStatCard below) becomes the tap target
 // instead, calling the identical actions.tapIntroBit.
 const TapArea = styled.button`
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
   position: relative;
   width: 100%;
   aspect-ratio: 5 / 2;
@@ -257,11 +252,6 @@ const TransferBlocksRow = styled.div`
 // Only the active block is ever passed a $progress value — progressFill returns null without one, so
 // the plain `background` rule below (transparent, or surfaceSunken once $consumed) applies instead.
 const TransferBlock = styled.button`
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
   flex: 1 1 2.5rem;
   min-width: 0;
   aspect-ratio: 1;

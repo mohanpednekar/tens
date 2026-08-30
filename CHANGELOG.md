@@ -54,11 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
-- **Keyboard focus and hover affordances** (#509, #515) — `:focus-visible` outlines on custom
-  `styled.button` components that previously had none (`FillableStatCard`, `TransferBlock`,
-  `DiskSquare`, `CacheBlock`, `TierSelectButton`, `ReserveSlotsRow`, `TapArea`), and `title`
-  tooltips on the tier autobuyer pause toggles, matching their `aria-label`s and the global
-  automation toggles.
+- **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
+  tooltips matching their `aria-label`s and the global automation toggles.
 - **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
   (deposits, purchased Boosters, in-flight transfers, and capacity level) unchanged, matching
   Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
