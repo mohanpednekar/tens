@@ -88,6 +88,7 @@ import {
   getCostEpochExponent,
   getDiskCost,
   getDiskLadderSizeBits,
+  getNextDiskLadderSize,
   getDiskRedeemTierName,
   getDiskSize,
   getPoolIndexForDiskSize,
@@ -1767,6 +1768,18 @@ describe('isDiskLadderExhaustedForActivePools', () => {
     const state = withIntro(createInitialGameState(), { disksBuiltTotal })
     expect(getUnlockedStoragePoolCount(state)).toBe(DATA_LAKE_TIER_COUNT)
     expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
+  })
+})
+
+describe('getNextDiskLadderSize', () => {
+  it('returns the canonical ladder size for every step, including the ones where ×10 drifts in floating point', () => {
+    for (let step = 1; step < DATA_LAKE_TIER_COUNT * 3; step += 1) {
+      const sourceSize = getDiskLadderSizeBits(step)
+      expect(getNextDiskLadderSize(sourceSize)).toBe(getDiskLadderSizeBits(step + 1))
+      expect(getDiskLadderStep(getNextDiskLadderSize(sourceSize))).toBe(step + 1)
+    }
+    // Step 22 → 23 is the first transition where sourceSize * 10 !== getDiskLadderSizeBits(23).
+    expect(getDiskLadderSizeBits(22) * DISK_LADDER_SIZE_MULTIPLIER).not.toBe(getDiskLadderSizeBits(23))
   })
 })
 
