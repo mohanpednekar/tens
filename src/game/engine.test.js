@@ -5,6 +5,7 @@ import {
   tickAutoComputeBoost,
   setComputeAutoBoostType,
   buyComputeAutoBoost,
+  canBuyComputeFlopsTier,
   canForfeitComputeBoost,
   forfeitComputeBoost,
   upgradeComputeMergeDuration,
@@ -4090,6 +4091,19 @@ describe('getTickspeedMultiplierCost', () => {
 
   it('treats an unrecognized tier id as index 0 (the priciest base)', () => {
     expect(getTickspeedMultiplierCost('does_not_exist', 2)).toBe(10 ** 10)
+  })
+
+  it('treats Object.prototype member names as unrecognized tier ids', () => {
+    for (const id of ['toString', 'constructor', '__proto__', 'valueOf']) {
+      const state = createInitialGameState()
+      expect(getTickspeedMultiplierCost(id, 2)).toBe(10 ** 10)
+      expect(getAutobuyerUnlockCost(id)).toBe(1)
+      expect(buyTier(id)(state)).toBe(state)
+      expect(buyTierQuantity(id, 5)(state)).toBe(state)
+      expect(buyTickspeedMultiplier(id)(state)).toBe(state)
+      expect(buyComputeFlopsTier(id)(state)).toBe(state)
+      expect(canBuyComputeFlopsTier(state, id)).toBe(false)
+    }
   })
 })
 
