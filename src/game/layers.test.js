@@ -49,9 +49,36 @@ import {
   TICKSPEED_MULTIPLIER_BASE_EXPONENT,
   TICKSPEED_PRODUCTION_STEP,
   TIER_DEFINITIONS,
+  TIER_BY_ID,
+  TIER_INDEX_BY_ID,
+  COMPUTE_FLOPS_TIER_DEFINITIONS,
+  COMPUTE_FLOPS_TIER_BY_ID,
+  COMPUTE_FLOPS_TIER_INDEX_BY_ID,
   TICK_RATE_MS,
   getStoragePoolMemoryBounds,
 } from './layers'
+
+describe('tier lookup dictionaries', () => {
+  it('map every definition id to its entry and index', () => {
+    TIER_DEFINITIONS.forEach((tier, index) => {
+      expect(TIER_BY_ID[tier.id]).toBe(tier)
+      expect(TIER_INDEX_BY_ID[tier.id]).toBe(index)
+    })
+    COMPUTE_FLOPS_TIER_DEFINITIONS.forEach((flopTier, index) => {
+      expect(COMPUTE_FLOPS_TIER_BY_ID[flopTier.id]).toBe(flopTier)
+      expect(COMPUTE_FLOPS_TIER_INDEX_BY_ID[flopTier.id]).toBe(index)
+    })
+  })
+
+  it('return undefined for Object.prototype member names rather than an inherited value', () => {
+    for (const id of ['toString', 'constructor', '__proto__', 'valueOf', 'hasOwnProperty']) {
+      expect(TIER_BY_ID[id]).toBeUndefined()
+      expect(TIER_INDEX_BY_ID[id]).toBeUndefined()
+      expect(COMPUTE_FLOPS_TIER_BY_ID[id]).toBeUndefined()
+      expect(COMPUTE_FLOPS_TIER_INDEX_BY_ID[id]).toBeUndefined()
+    }
+  })
+})
 
 describe('TIER_DEFINITIONS', () => {
   it('has exactly 10 tiers', () => {
