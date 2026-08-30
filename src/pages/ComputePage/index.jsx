@@ -72,6 +72,11 @@ const TierHeaderRow = styled.div`
 // shares this row (Cores only) rather than making the whole TierHeaderRow itself a button, since
 // nesting a <button> (auto-claim) inside another <button> is invalid HTML.
 const TierSelectButton = styled.button`
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   display: flex;
   flex: 1 1 auto;
   align-items: center;
@@ -153,6 +158,11 @@ const IconButton = styled(CompactButton)`
 `
 
 const ReserveSlotsRow = styled.button`
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   display: flex;
   flex: 1 1 auto;
   align-items: center;
