@@ -54,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
+- **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
+  tooltips matching their `aria-label`s and the global automation toggles.
 - **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
   (deposits, purchased Boosters, in-flight transfers, and capacity level) unchanged, matching
   Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
@@ -82,6 +84,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   pool expands while earlier pools remain available as compact summaries. Capacity ×2 uses the
   restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
   the shared Disk Build control is now labeled **Provision Disk**.
+- **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
+  `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
+  and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)
+  use them instead of `Array.find`/`findIndex`. Unknown ids — including `Object.prototype` member
+  names like `toString` — still miss, preserving the previous fallback behavior.
 - **Byte Foundry: Data Stream / Buffer rename; Sacrifice removed; Buffer snaps on Combine** (#506) —
   player-facing "Memory" is now **Data Stream** (balance) with capacity labeled **Buffer**;
   "Bandwidth ×2" is **Speed ×2**. The Sacrifice / "Memory ×2" capacity ladder is removed —

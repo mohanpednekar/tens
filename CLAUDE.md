@@ -893,8 +893,9 @@ every real Prestige cycle after that — must pass through before the main game 
 onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
 that combines into a permanent, passively-producing Byte generator. Combine creates the generator
 without snapping Capacity; save load via `normalizePoolMemoryCapacity` preserves current Capacity
-and only clamps it when necessary, and Era ascension preserves the permanent generator and its
-Capacity. Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
+and only clamps it when necessary. Era ascension keeps the permanent Byte generator
+(`byteCreated`) but resets Capacity to `INTRO_STARTING_CAPACITY` with the rest of the Foundry reset.
+Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
 restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
 Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
 once far enough along — Disks

@@ -1070,9 +1070,9 @@ save Reset only).
 **On `eraGame` — resets:** full Foundry (generator upgrades, Data Stream/gate, Disks, Data Lakes,
 compute ladder entities, `intro.foundryResetCaps`), ordinary Ladder cycle (same fields as `prestigeGame`),
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
-`computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined — and when kept,
-preserves the existing Buffer (`intro.capacity`) while the Capacity ×2 ladder remains available up
-to the active highest-unlocked-pool end bound.
+`computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined, but resets
+`intro.capacity` to `INTRO_STARTING_CAPACITY` with the rest of the Foundry reset; the Capacity ×2
+ladder remains available up to the active highest-unlocked-pool end bound.
 
 **On `eraGame` — persists:** automation unlocks + pause flags (except Double PP level, which resets),
 tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum, `era.count` (+1),

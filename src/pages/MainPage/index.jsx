@@ -1840,6 +1840,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                           aria-pressed={tierTickspeedAutobuyerEnabled}
                           aria-label={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
                           onClick={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tierTickspeedAutobuyerEnabled)}
+                          title={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
                           type="button"
                           variant="ghost"
                         >
@@ -1878,6 +1879,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                             aria-pressed={autobuyerEnabled}
                             aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
                             onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
+                            title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
                             type="button"
                             variant="ghost"
                           >
