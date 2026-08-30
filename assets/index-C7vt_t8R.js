@@ -586,6 +586,11 @@ Error generating stack: `+e.message+`
       transform: scale(0.98);
     }
 
+    &:focus-visible {
+      outline: 2px solid ${e.theme.color.accent};
+      outline-offset: 2px;
+    }
+
     &:disabled {
       cursor: not-allowed;
     }
