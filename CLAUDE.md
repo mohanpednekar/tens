@@ -435,9 +435,9 @@ src/
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
                                next Booster cost, in-flight transfers) rendered inside ByteFoundryPage's
-                               `PoolCard` (see Architecture 4 below), taking `{ state, bare }` — `bare`
-                               drops its own StatCard chrome for that nested use. See "Economy model"
-                               below for the Data Lake mechanic itself.
+                               the standalone ByteFoundryPage panel, taking `{ state, bare }` —
+                               `bare` is retained for reuse/legacy composition and drops its own
+                               StatCard chrome. See "Economy model" below for the Data Lake mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -460,8 +460,9 @@ src/
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage; Data Stream + every DiskArrayRow as continuous
-                               sections (no second-level tabs). Speed ×2 (Invest) sits in the
-                               milestones row; pool Memory Capacity is start–end (no Sacrifice)
+                               sections (no second-level tabs). Speed ×2 (Invest) and Capacity ×2
+                               sit in the Data Stream section; pool Memory values are derived
+                               from the shared Data Stream and its moving Capacity ceiling
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
@@ -656,25 +657,30 @@ Strict three-layer separation:
    `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
-   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream, its
-   Combine/Speed actions, pool Memory Capacity (start–end display), and Storage (Build Disk + every
-   disk-array row + the Data Lake panel) all render inside one `PoolCard` — a single card for the
-   whole pool; `components/DataLakePanel` takes a `bare` prop to drop its own StatCard chrome for
-   this nested use. Starting the next Disk's
+   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
+   shared Combine/Speed/Capacity actions and the common Provision Disk control. Storage pools 1–10
+   are derived views over the one Data Stream: the highest unlocked pool uses its Bandwidth/Capacity
+   directly, while earlier pools divide by 1024 per step and clamp Capacity into their chained bounds.
+   One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
+   expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
+   their three disk-array rows when opened. The single `components/DataLakePanel` remains after the
+   pool cards and renders all ten lake rows once. Starting the next Disk's
    build (its own core-loop action, alongside Speed) and every shown size's full
    interactive detail — read cache blocks (only on the pool's smallest size — see
    "Economy model" below), disk squares, releasing (Disk Fill's manual-release half →
    Ladder Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
    on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
    layout" above), ascending smallest→largest with Cache of a row immediately above that row's
-   Disks. The Build button always stays visible/usable regardless of eligibility (building ahead of
+   Disks. The Provision Disk button always stays visible/usable once Storage is revealed, regardless
+   of eligibility (building ahead of
    every tier's current cost is a deliberate strategy — see "Economy model" below); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. Speed ×2 sits in the milestones row. Every action — here or on either
-   dedicated screen — stays gated by the forced priority order (see "Economy model" below).
+   slots in one unbroken row. Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
+   action — here or on either dedicated screen — stays gated by the forced priority order (see
+   "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
-   `getDiskSizesToShow`) — NOT the Build button, which stays on ByteFoundryPage itself. Takes
+   `getDiskSizesToShow`) — NOT the Provision Disk button, which stays on ByteFoundryPage itself. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests.
    A pure renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
@@ -746,7 +752,7 @@ Strict three-layer separation:
     Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Disk Build
+    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Provision Disk
     convenience-auto up to prior highs; Ladder + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
@@ -885,16 +891,18 @@ Bytes are no longer a purchasable tier — they're produced entirely by the **By
 (`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
 every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
-that combines into a permanent, passively-producing Byte generator. On Combine (and on save load via
-`normalizePoolMemoryCapacity` when `byteCreated`), and on Era ascension when the permanent Byte
-generator is kept, Buffer snaps to `INTRO_CAPACITY_CAP_BITS` (1 MiB
-— large enough to afford building the pool's own largest Disk). Grow production via **Speed ×2**
-(Invest — own cost ladder stepped ×4 per tier); the old Sacrifice / "Memory ×2" capacity ladder is
-removed. Plus — once far enough along — Disks
+that combines into a permanent, passively-producing Byte generator. Combine creates the generator
+without snapping Capacity; save load via `normalizePoolMemoryCapacity` preserves current Capacity
+and only clamps it when necessary, and Era ascension keeps the permanent generator (`byteCreated`)
+but resets Capacity to `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`).
+Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
+restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
+Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
+once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
 Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
-actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Disk Build >
+actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk >
 Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
 always-on auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current
@@ -904,7 +912,7 @@ main game is already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlock
 Disk redemption offers an alternative path to tier units, making the manual row redundant; the
 always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
 through the mandatory pre-unlock gate even past Storage's own reveal threshold, since Buffer
-(snapped to the pool end after Combine) can reach that threshold without the main game ever having
+can reach that threshold without the main game ever having
 been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
 never hidden while it's still the only way out of the gate.
 The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
@@ -922,39 +930,40 @@ live indefinitely, every cycle.
 `MEMORY_BINARY_UNIT_STEP`) — Data Stream balance and Buffer render in binary (IEC-style) units —
 `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024 (`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes =
 1.024 KB` — distinct from Disks/Data Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`,
-unchanged, step 1000). Pool Memory Capacity is delimited by shared start/end bounds
-(`getStoragePoolMemoryBounds(1)` → `INTRO_STARTING_CAPACITY` … `INTRO_CAPACITY_CAP_BITS` / 1 MiB) —
-no Sacrifice doubling button (#506). On Combine (and on load when `byteCreated`), Buffer snaps to
-the pool end. **Speed ×2** (was Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4)
-per tier; production-doubling effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
+unchanged, step 1000). Pool Memory Capacity uses the shared start/end bounds from
+`getStoragePoolMemoryBounds`; the Data Stream's own value is the highest unlocked pool's value,
+while each earlier pool derives a 1/1024 step and clamps into its own bounds. Capacity remains a
+full-Buffer **Capacity ×2** ladder, with `INTRO_CAPACITY_CAP_BITS` retained as the pool-1 alias and
+the active highest pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
+Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
+effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,194,304 bits / 512 KiB). This is
 the first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md` and
 epic #456 / tracking #506.
 
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
-`getDiskSize`/`getDiskCost`/`startDiskBuild`/`tickDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
+`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickProvisionDisk`/`tickDiskAutoFill`/`tickDiskWriteCache`/
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
 `DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → **100 KB**, so a "1 KB" disk needs 8000 bits, not
 a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the current size — but only up
 to the highest size any currently-unlocked storage pool's own generator can fund (`getDiskSize` never
-advances past `MAX_ACTIVE_DISK_LADDER_STEP`, today just pool 1's own 3 sizes — 1/10/100 KB — since
-only pool 1 has a Byte generator; an unfunded further size, like 1 MB, would cost more than
-`INTRO_CAPACITY_CAP_BITS` could ever hold). Once that last size's array is fully built,
-`isDiskLadderExhaustedForActivePools` goes permanently true and `isDiskBuildAvailable` follows it —
-ByteFoundryPage's Build button shows a distinct "Pool complete" state instead of an ever-unaffordable
-cost, until a future pool's own generator (epic #456) raises the ceiling. Starting
-a build (`startDiskBuild`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
+advances through the active ladder using `getMaxActiveDiskLadderStep` as pools unlock; the terminal
+limit is pool 10's largest size. Once that last size's array is fully built,
+`isDiskLadderExhaustedForActivePools` goes true only once pool 10's largest size is fully built and
+`isProvisionDiskAvailable` follows it. Completing a pool derives the next pool; earlier pools remain
+as compact summaries while the largest unlocked pool is expanded. Starting a provision
+(`provisionDisk`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
 size, 1-indexed) takes `N ×` that size's own base build time, where the base time is exactly how
 long filling that size takes at **1x Memory bandwidth** (the Byte Foundry's current
-`getIntroProductionRate`, snapshotted when the build starts) — at the default starting rate (1
+the owning derived pool's Bandwidth, snapshotted when provisioning starts) — at the default starting rate (1
 bit/sec) a fresh 1 KB (8000-bit) array's first disk takes 8000 seconds, its 6th disk 48,000 seconds,
 and a 10 KB array's first disk 80,000 seconds; all three shrink in lockstep as Invest/Compute Boost
 grow the rate. An earlier version used a flat, rate-independent "1 second per real KB of size"
-instead — see `docs/DESIGN_HISTORY.md`. During the build, every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
-manual cache-block release, no manual redeem) until `tickDiskBuild` finishes the countdown. Each
+instead — see `docs/DESIGN_HISTORY.md`. During provisioning, every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
+manual cache-block release, no manual redeem) until `tickProvisionDisk` finishes the countdown. Each
 array's smallest size — the one whose `getDataLakeSubSize` sub-slot is ×1, the rung that actually
 touches Memory directly — has its own always-full **read cache** (`diskCache[size]`,
 `DISK_CACHE_BLOCK_COUNT` (8) blocks of `size / 8` bits each, totaling one disk's worth — e.g. a
@@ -1018,10 +1027,10 @@ the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
 `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
 `isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
 into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
-it" shape the removed Memory Sacrifice once used, and the same currency Disks themselves are priced
+it" shape used by Capacity ×2, and the same currency Disks themselves are priced
 in, not a bare unit count. Gated by the same forced priority order every other Byte Foundry
 milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
-Speed, Disk Build, and Compute are all currently unavailable; sits at the former Sacrifice rank,
+Speed, Provision Disk, and Compute are all currently unavailable; sits at the Capacity rank,
 not competing with Speed). An earlier version fixed this cap at a value derived from the Disk arrays
 themselves with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
 explicitly-capped ladder replaced that.

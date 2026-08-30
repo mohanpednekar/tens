@@ -32,7 +32,6 @@ import {
   ERA_ELIGIBILITY_PP,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
-  INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
   DISK_BUILD_COST_MULTIPLIER,
@@ -40,7 +39,6 @@ import {
   DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
-  INTRO_STARTING_CAPACITY,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -179,11 +177,9 @@ const InfoPage = () => {
           </li>
           <li>
             Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
-            produces passively forever after. On Combine, Buffer snaps from{' '}
-            {formatBitsInNearestUnit(INTRO_STARTING_CAPACITY)} to the pool end (
-            {formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)}). Capacity for this pool runs{' '}
-            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} –{' '}
-            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).endBits)}.
+            produces passively forever after. Capacity starts at{' '}
+            {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} and grows through a
+            full-Buffer Capacity ×2 ladder; its ceiling follows the highest unlocked storage pool.
           </li>
           <li>
             <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost
@@ -216,42 +212,43 @@ const InfoPage = () => {
         <h3>Forced priority</h3>
         <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
         <ul>
-          <li>Disk Fill → Speed/Invest → Disk Build → Compute Boost</li>
+          <li>Disk Fill → Speed/Invest → Provision Disk → Compute Boost</li>
         </ul>
       </Section>
 
       <Section aria-label="storage section">
         <h2>Storage</h2>
         <p>
-          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}
-          {' '}(after Combine, Buffer snaps to the pool Memory end, so this is true as soon as the
-          Byte generator exists). Disk arrays live under Foundry as continuous sections (not a
-          separate top-level nav item).
+          Unlocks once Data Stream Buffer reaches {formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)}.
+          Disk arrays live under Foundry as continuous sections (not a separate top-level nav item);
+          pools 1–10 are derived from the shared Data Stream, with earlier pools dividing Bandwidth
+          and Capacity by 1024 per step and clamping Capacity to their chained bounds.
         </p>
 
-        <h3>Building Disks</h3>
+        <h3>Provisioning Disks</h3>
         <ul>
           <li>
             Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).
           </li>
           <li>
-            Build time is real: the first disk of a size takes exactly as long as filling it would
+            Provision time is real: the first disk of a size takes exactly as long as filling it would
             at your current Byte Foundry production rate (Memory bandwidth); the Nth disk of the
             same array takes N× that base time.
           </li>
           <li>
             While an array rebuilds, every disk in it is offline — no fill, release, or redeem —
-            until the build finishes.
+            until provisioning finishes.
           </li>
           <li>
-            Up to {DISK_ARRAY_LADDER_CAP} disks can be built at the current size before the ladder
-            advances, through every Byte power of ten (1 KB → 10 KB → 100 KB) with no gaps.
+            Up to {DISK_ARRAY_LADDER_CAP} disks can be provisioned at the current size before the
+            ladder advances, through every Byte power of ten (1 KB → 10 KB → 100 KB → 1 MB …) with
+            no gaps.
           </li>
           <li>
-            Building stops for good once the 100 KB array is fully built — a future update adds more
-            storage pools (1 MB and beyond) with their own generators to fund them.
+            Completing all three arrays in a pool unlocks the next derived pool; only the largest
+            disk size in pool 10 is terminal.
           </li>
-          <li>The Build button always stays on Byte Foundry; Storage shows every size you’ve reached.</li>
+          <li>The Provision Disk button stays on Byte Foundry; Storage shows every size you’ve reached.</li>
         </ul>
 
         <h3>Cache, fill, release, redeem</h3>
@@ -323,8 +320,7 @@ const InfoPage = () => {
           <li>
             A lake's own deposit capacity is purchasable: it starts at 1 unit and doubles each
             purchase (spending the lake's own current capacity, converted into Data Stream Bits —
-            the same "spend the current value to double it" shape the removed Memory Sacrifice once
-            used), permanently
+            the same current-value doubling shape used by Capacity ×2), permanently
             hard-capped at {2 ** DATA_LAKE_CAPACITY_MAX_LEVEL} units once fully doubled — shown on
             the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
             these raw unit counts.

@@ -1,6 +1,20 @@
 # Design history & rationale
 
-### Data Stream / Buffer rename; Capacity Sacrifice removed (#506) — 2026-08-27
+### Storage pools derive from one Data Stream; Capacity ladder restored (#456) — 2026-08-27
+
+The reviewed storage-pool model keeps exactly one Data Stream generator. Pools 1–10 are derived
+views: the highest unlocked pool uses the Data Stream's Bandwidth and Capacity directly, while each
+earlier pool divides both by 1024 and clamps Capacity into its own chained bounds. Completing all
+three disk arrays in a pool derives the next pool, extends the disk ladder, and moves the shared
+Capacity ceiling to that pool's end bound.
+
+This reverses #506's snap-to-end behavior. Combine, load normalization, and Era no longer force
+Capacity to a pool endpoint; Capacity ×2 is again a full-Buffer doubling ladder, draining the Buffer
+and stopping at the active ceiling. The reversal preserves gradual progression while allowing the
+ceiling to expand as storage pools unlock. Player-facing and engine operation terminology now says
+**Provision Disk**, but the persisted `intro.diskBuild` key remains unchanged for save compatibility.
+
+### Data Stream / Buffer rename; Capacity Sacrifice removed (#506; superseded by #456) — 2026-08-27
 
 Maintainer revised epic #456's naming before pools 2–10 ship. Today's Foundry "Memory" conflated
 the tap/production intake with the per-pool generator. Split:
@@ -11,10 +25,9 @@ the tap/production intake with the per-pool generator. Split:
   (`getStoragePoolMemoryBounds`) — no Sacrifice doubling button, because pools are delimited
   directly by those bounds
 
-Judgment call while implementing: with no Sacrifice ladder, Buffer snaps to the pool end bound
-on Combine (`combineIntroByte`) and on save load (`normalizePoolMemoryCapacity` when
-`byteCreated`). Speed/Invest upgrades stay. Forced priority drops the Capacity/Sacrifice rank.
-Alternatives considered for Data Stream: Bit Stream, Intake, Channel, Pipeline.
+This interim behavior was later reversed by the reviewed #456 implementation: Capacity ×2 and its
+full-Buffer doubling ladder returned, with a moving ceiling as derived pools unlock. Speed/Invest
+upgrades stay. Alternatives considered for Data Stream: Bit Stream, Intake, Channel, Pipeline.
 
 Tracked as interactive issue #506 (revises #456).
 

@@ -1,5 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, canStartBoosterTransfer, formatAmount, formatOfflineDuration, getBoosterPurchaseCost, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getDataLakeAvailableUnits, getDataLakeTier, getDataLakeTierLabel, getDataLakeTransferCapacity, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskBuildAvailable, isDiskFillAvailable, isProductionFrozen, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, canStartBoosterTransfer, formatAmount, formatOfflineDuration, getBoosterPurchaseCost, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getDataLakeAvailableUnits, getDataLakeTier, getDataLakeTierLabel, getDataLakeTransferCapacity, getNextComputeMergeDurationUpgradeIndex, isBandwidthAvailable, isComputeBoostTurnAvailable, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
 import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -461,7 +461,7 @@ const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COM
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
 // once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Activation is still gated
-// by the Byte Foundry's forced priority order — Disk Fill > Speed > Disk Build > Compute —
+// by the Byte Foundry's forced priority order — Disk Fill > Speed > Provision Disk > Compute —
 // so a preset can show disabled here even while mechanically activatable
 // (canActivateComputeBoost), if something ranked above Compute (which lives back on
 // ByteFoundryPage/StoragePage) currently outranks it. The ten-tier merge chain (Core → Node →
@@ -500,7 +500,7 @@ const ComputePage = ({ game }) => {
   // armed implicitly without needing a clickable row.
   const [selectedBoostTierIndex, setSelectedBoostTierIndex] = useState(null)
 
-  const blockedByPriority = isDiskFillAvailable(state) || isBandwidthAvailable(state) || isDiskBuildAvailable(state)
+  const blockedByPriority = isDiskFillAvailable(state) || isBandwidthAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
   // Once a boost is active, its own funding tier is what Stack/Reclaim and the preset buttons'
   // preview all act on, regardless of which row a player might click next (issue #326 — Stack
@@ -575,7 +575,7 @@ const ComputePage = ({ game }) => {
                   : sameAsActive
                     ? 'This boost is already active — use Stack to extend it'
                     : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Disk Build)'
+                      ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Provision Disk)'
                       : needsForfeit
                         ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
                         : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`

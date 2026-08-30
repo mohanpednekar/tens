@@ -348,15 +348,16 @@ export const createInitialGameState = () => ({
   // strength was already built, not from scratch. speedUpGame/overclockGame carry the whole object
   // through untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
   //
-  // Naming (#506): the fillable intake is the Data Stream (bits vs Buffer = capacity). Each
-  // storage pool owns Memory with Capacity start/end (getStoragePoolMemoryBounds) and Speed (the
-  // Invest/Bandwidth ×2 ladder). Nothing here ever fully "freezes" — Tap/Combine/Speed/Convert
-  // keep working indefinitely, every cycle, for as long as the Data Stream Buffer covers the cost.
+  // Naming (#506): the fillable intake is the Data Stream (bits vs Buffer = capacity). Storage
+  // pools are derived views with Capacity start/end (getStoragePoolMemoryBounds) and Bandwidth
+  // scaled from the Data Stream's Speed ×2 ladder. Nothing here ever fully "freezes" —
+  // Tap/Combine/Speed/Convert keep working indefinitely, every cycle, for as long as the Data
+  // Stream Buffer covers the cost.
   intro: {
     bits: 0,                   // Data Stream balance — always an integer. Resets on Prestige.
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
-    // PERMANENT — Data Stream Buffer / pool Memory Capacity. Starts at INTRO_STARTING_CAPACITY;
-    // snaps to the active pool's end bound on Combine (no Sacrifice ladder — #506).
+    // PERMANENT — Data Stream Buffer / pool Memory Capacity. Starts at INTRO_STARTING_CAPACITY
+    // and advances by the pool's own Capacity ×2 ladder up to its end bound.
     capacity: INTRO_STARTING_CAPACITY,
     byteCreated: false,        // PERMANENT — one persistent Byte generator, a flag not a counter
     tickSpeedSeconds: INTRO_STARTING_TICK_SPEED_SECONDS, // PERMANENT — the delivery period a batch lands every, see getIntroProductionRate
@@ -370,14 +371,14 @@ export const createInitialGameState = () => ({
     productionMilestoneTierClaims: 0,
     // PERMANENT: how many Speed ×2 claims were funded by sacrificing COMPUTE_ENTITY_CAP tokens of
     // a compute tier (when the bit cost exceeded Buffer). Legacy Sacrifice used to rewind these;
-    // Capacity doubling is gone (#506), so this counter only advances via compute-funded Speed.
+    // Capacity doubling can rewind compute-funded Speed claims when it erases Compute tokens.
     computeFundedBandwidthClaims: 0,
     // PERMANENT: next COMPUTE_BOOST_TIER_FIELDS index (0 = Cores … 9 = Megacomputers) for the
     // sequential Speed-via-compute sacrifice, wrapping back to 0 after Megacomputers (see
     // getEffectiveComputeBandwidthSacrificeIndex).
     computeBandwidthSacrificeIndex: 0,
     // Set by resetByteFoundry: high-water marks for Convenience auto-replay (Combine, Speed /
-    // Invest, Disk Build) after a Foundry wipe. null when inactive. Survives Prestige like other
+    // Invest, Provision Disk) after a Foundry wipe. null when inactive. Survives Prestige like other
     // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
     // Resets to false every real Prestige. True the instant any bits are ever converted into
@@ -385,8 +386,8 @@ export const createInitialGameState = () => ({
     // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
     // flag at all — converting keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
-    // Legacy queue flag from the removed Sacrifice ladder (#506). Cleared on load/normalize; kept
-    // in the shape so old saves merge cleanly. No longer fires a Capacity doubling.
+    // Queue flag for a pending Capacity doubling. Cleared on load/normalize; retained for save
+    // compatibility with the historical Sacrifice flow.
     capacityUpgradeQueued: false,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
     // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
@@ -421,7 +422,8 @@ export const createInitialGameState = () => ({
     diskWriteCache: {},
     // PERMANENT — null when no array is currently mid-build, otherwise
     // { size, remainingSeconds, totalSeconds } for the one disk array build in progress (see
-    // startDiskBuild/tickDiskBuild below). Only one
+    // provisionDisk/tickProvisionDisk below). The persisted `diskBuild` key deliberately keeps
+    // its historical name while the engine action API uses Provision terminology. Only one
     // size is ever buildable at a time (getDiskSize's own single-size ladder), so a single field
     // suffices rather than a per-size map. While set, every IO operation (auto-fill, auto-redeem,
     // manual cache release, manual redeem) against `size`'s own array is disallowed — "the array
@@ -1113,17 +1115,9 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
 
 const buildEraIntroReset = (state, initial) => {
   const byteCreated = Boolean(state.intro?.byteCreated)
-  // Permanent Byte generator survives Era, but Foundry Buffer/capacity otherwise resets with
-  // initial.intro. Without Sacrifice (#506), Capacity cannot be re-grown — snap Buffer to the
-  // pool Memory end bound whenever the generator is kept, or the mandatory Foundry gate softlocks
-  // (conversion cost exceeds an 8-bit Buffer).
-  const capacity = byteCreated
-    ? getStoragePoolMemoryBounds(1).endBits
-    : initial.intro.capacity
   return {
     ...initial.intro,
     byteCreated,
-    capacity,
     bits: 0,
     productionAccumulator: 0,
     mainGameUnlocked: false,
@@ -1495,7 +1489,7 @@ const checkMilestones = (resources, prestige) => {
 // level onward.
 export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // The Byte Foundry intro runs first, every tick: passive production, then any in-progress disk
-  // array build counts down (tickDiskBuild — unconditional, bypasses nothing), then Storage's own
+  // array build counts down (tickProvisionDisk — unconditional, bypasses nothing), then Storage's own
   // auto-fill (Memory -> each array's cache -> empty disks) gets first claim on the resulting
   // Memory balance, ahead of tickIntroAutoInvest's own direct bit-to-Kilobyte conversion —
   // otherwise a disk the player has already built and is waiting to fill would be starved by fresh
@@ -1513,10 +1507,10 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // more unit (their own first-line guards); none of these ever fully freeze, matching the "return
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
-  const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
+  const stateAfterProvision = tickProvisionDisk(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
   // Disk auto-fill can spend that full bar — see tickQueuedCapacityUpgrade.
-  const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
+  const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterProvision)
   // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
   // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
   // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
@@ -1524,8 +1518,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
-  // After a Foundry reset, auto-press Combine / Speed (Invest) / Disk Build up to
-  // foundryResetCaps (Capacity Sacrifice removed in #506 — Combine snaps Buffer to pool end).
+  // After a Foundry reset, auto-press Combine / Speed (Invest) / Provision Disk up to
+  // foundryResetCaps (Capacity doubling is not part of reset convenience replay).
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
   // Counts down any in-flight Data Lake Booster transfers (see startBoosterTransfer/
   // tickDataLakeTransfers), granting Compute Cores/Nodes/… as they complete — ahead of
@@ -2029,47 +2023,91 @@ export const tapIntroBit = state => {
 export const combineIntroByte = state => {
   if (state.intro.byteCreated) return state
   if (state.intro.bits < INTRO_BYTE_COMBINE_COST) return state
-  // Pool Memory Capacity snaps to the pool's end bound on Combine — no Sacrifice doubling ladder
-  // (#506). Buffer (intro.capacity) and pool Memory Capacity share this field for pool 1.
-  const { endBits } = getStoragePoolMemoryBounds(1)
   return {
     ...state,
     intro: {
       ...state.intro,
       bits: state.intro.bits - INTRO_BYTE_COMBINE_COST,
       byteCreated: true,
-      capacity: endBits,
       capacityUpgradeQueued: false,
     },
   }
 }
 
-// Ensure pool-1 Memory Capacity sits at its end bound once the Byte generator exists. Used on
-// save load so mid-Sacrifice-ladder saves from before #506 match the start/end model.
+export const getStoragePoolCount = () => DATA_LAKE_TIER_COUNT
+
+export const getPoolIndexForDiskSize = sizeBits => {
+  const step = getDiskLadderStep(sizeBits)
+  return step ? Math.ceil(step / DATA_LAKE_SUB_SIZES.length) : null
+}
+
+export const isStoragePoolUnlocked = (state, poolIndex) => {
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getStoragePoolCount()) return false
+  if (poolIndex === 1) return true
+  const firstStep = (poolIndex - 2) * DATA_LAKE_SUB_SIZES.length + 1
+  return DATA_LAKE_SUB_SIZES.every((_, offset) => {
+    const size = getDiskLadderSizeBits(firstStep + offset)
+    return (state.intro?.disksBuiltTotal?.[size] ?? 0) >= DISK_ARRAY_LADDER_CAP
+  })
+}
+
+export const getUnlockedStoragePoolCount = state => {
+  let count = 0
+  for (let poolIndex = 1; poolIndex <= getStoragePoolCount(); poolIndex += 1) {
+    if (!isStoragePoolUnlocked(state, poolIndex)) break
+    count = poolIndex
+  }
+  return count
+}
+
+export const getStoragePoolBandwidth = (state, poolIndex) => {
+  const unlockedCount = getUnlockedStoragePoolCount(state)
+  // Locked or invalid pools return 0. Callers must treat that as no available throughput:
+  // Math.max(rate, Number.MIN_VALUE) makes timed pacing effectively infinite, while
+  // getDataLakeTransferDurationSeconds returns 0 for a non-positive rate. Live callers only pass
+  // unlocked pools: a lake tier's transfer capacity requires its own arrays fully built, which
+  // necessarily unlocks the matching storage pool.
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
+  return getIntroProductionRate(state.intro ?? {}) / (
+    MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex)
+  )
+}
+
+export const getStoragePoolCapacity = (state, poolIndex) => {
+  const unlockedCount = getUnlockedStoragePoolCount(state)
+  // Locked or invalid pools return 0. This is a sentinel rather than a usable Capacity; live
+  // callers derive the pool from a built disk or a fully-built lake tier, both of which imply the
+  // corresponding pool is unlocked.
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
+  const rawCapacity = (state.intro?.capacity ?? 0) / (
+    MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex)
+  )
+  const floorBits = poolIndex === 1
+    ? getStoragePoolMemoryBounds(1).startBits
+    : getStoragePoolMemoryBounds(poolIndex - 1).endBits
+  const ceilingBits = getStoragePoolMemoryBounds(poolIndex).endBits
+  return Math.min(Math.max(rawCapacity, floorBits), ceilingBits)
+}
+
+// Ensure the Data Stream Capacity stays inside the current highest pool's bounds on save load.
+// Legacy queued Capacity flags are cleared, but no capacity is force-raised to the end bound.
 export const normalizePoolMemoryCapacity = state => {
-  if (!state?.intro?.byteCreated) {
-    if (!(state?.intro?.capacityUpgradeQueued ?? false)) return state
-    return { ...state, intro: { ...state.intro, capacityUpgradeQueued: false } }
+  if (!state?.intro) return state
+  let changed = state.intro.capacityUpgradeQueued ?? false
+  const nextIntro = { ...state.intro, capacityUpgradeQueued: false }
+  const maxCapacity = getStoragePoolMemoryBounds(getUnlockedStoragePoolCount(state)).endBits
+  const capacity = Math.min(Math.max(0, nextIntro.capacity ?? INTRO_STARTING_CAPACITY), maxCapacity)
+  if (capacity !== nextIntro.capacity) {
+    changed = true
+    nextIntro.capacity = capacity
   }
-  const { endBits } = getStoragePoolMemoryBounds(1)
-  const capacity = state.intro.capacity ?? 0
-  const queued = state.intro.capacityUpgradeQueued ?? false
-  if (capacity >= endBits && !queued) return state
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      capacity: Math.max(capacity, endBits),
-      capacityUpgradeQueued: false,
-    },
-  }
+  return changed ? { ...state, intro: nextIntro } : state
 }
 
 // Forced priority order for the Byte Foundry's recurring upgrade actions — Disk Fill > Speed
-// (Bandwidth) > Disk Build > Compute (see CLAUDE.md). Capacity/Sacrifice was removed (#506);
-// pool Memory Capacity is delimited by getStoragePoolMemoryBounds start/end instead. Combine into
-// a Byte sits outside this forced order. Each base predicate below is that action's own plain
-// availability check; the "turn"-suffixed composites fold the ordering in.
+// (Bandwidth) > Provision Disk > Compute > Capacity (see CLAUDE.md). Combine into a Byte sits outside
+// this forced order. Each base predicate below is that action's own plain availability check; the
+// "turn"-suffixed composites fold the ordering in.
 
 // "Disk Fill" (highest priority) — true whenever ANY built disk, of any size, is both currently
 // FULL and redeemable right now (see isDiskRedeemable, defined further down this file — safe, not
@@ -2138,15 +2176,15 @@ export const getComputeBandwidthSacrificeLabel = state => {
   return COMPUTE_TIER_LABELS[index] ?? null
 }
 
-// "Disk Build" — true whenever no array is already mid-build (intro.diskBuild — only one build
+// "Provision Disk" — true whenever no array is already mid-build (intro.diskBuild — only one build
 // slot exists at a time, since only one size is ever buildable) and the current ladder size's
 // build cost is affordable (see getDiskSize/getDiskCost, defined further down this file) — matches
-// startDiskBuild's own actual gate, which (like every other Byte Foundry reducer) has never itself
+// provisionDisk's own actual gate, which (like every other Byte Foundry reducer) has never itself
 // required isStorageUnlocked; that threshold only governs the button's own UI reveal. Also false
-// once isDiskLadderExhaustedForActivePools — nothing left pool 1's generator could ever fund, so
-// there's no cost to become newly affordable towards; that's a distinct, permanent state from
-// "not affordable yet" (see ByteFoundryPage, which renders the two differently).
-export const isDiskBuildAvailable = state =>
+// once isDiskLadderExhaustedForActivePools — there is no active-pool size left to build, so there
+// is no cost to become newly affordable towards; that's a distinct, permanent state from "not
+// affordable yet" (see ByteFoundryPage, which renders the two differently).
+export const isProvisionDiskAvailable = state =>
   !state.intro.diskBuild &&
   !isDiskLadderExhaustedForActivePools(state) &&
   state.intro.bits >= getDiskCost(getDiskSize(state))
@@ -2162,15 +2200,26 @@ export const isComputeUpgradeAvailable = state =>
       Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
     ))
 
-// Pool Memory Capacity is at its end bound (no further growth — Sacrifice removed in #506).
+export const isPoolCapacityUpgradeAvailable = state => {
+  if (state.intro.bits < state.intro.capacity) return false
+  if (!state.intro.byteCreated && state.intro.bits >= INTRO_BYTE_COMBINE_COST) return false
+  return !isMemoryCapacityAtCap(state)
+}
+
+// The moving ceiling is reached once Capacity is at or above the highest unlocked pool's end
+// bound. This intentionally differs from the historical pre-#506 "halt before the next doubling
+// would exceed the cap" check: the current ladder clamps at the ceiling instead of stopping early.
 export const isMemoryCapacityAtCap = state => {
-  const { endBits } = getStoragePoolMemoryBounds(1)
+  const { endBits } = getStoragePoolMemoryBounds(getUnlockedStoragePoolCount(state))
   return (state.intro?.capacity ?? 0) >= endBits
 }
 
-// Always false — Capacity doubling (Sacrifice) was removed (#506). Kept as an exported predicate
-// so callers (navAttention, Reset convenience, tests) stay stable without a broader rename.
-export const isMemoryCapacityUpgradeAvailable = () => false
+export const isMemoryCapacityUpgradeAvailable = state =>
+  isPoolCapacityUpgradeAvailable(state) &&
+  !isDiskFillAvailable(state) &&
+  !isBandwidthAvailable(state) &&
+  !isProvisionDiskAvailable(state) &&
+  !isComputeUpgradeAvailable(state)
 
 // Rewind one Speed ×2 claim (inverse of applyIntroProductionDoublingToIntro) — used when
 // rollbackComputeFundedBandwidth undoes compute-funded Invest steps (#324).
@@ -2217,20 +2266,33 @@ export const rollbackComputeFundedBandwidth = state => {
   return { ...state, intro }
 }
 
-// Legacy no-op — Capacity Sacrifice removed (#506). Callers may still invoke this; always
-// same-reference when unavailable. Prefer normalizePoolMemoryCapacity / combineIntroByte.
-export const pickIntroCapacityMilestone = state => {
+// Capacity ×2 drains the full Data Stream balance. Its ceiling follows the highest unlocked
+// storage pool, while lower pools derive their displayed Capacity from this one value.
+export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
-  return state
+  const afterWipe = isComputeCoreConversionUnlocked(state)
+    ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
+    : state
+  const { endBits } = getStoragePoolMemoryBounds(getUnlockedStoragePoolCount(afterWipe))
+  return {
+    ...afterWipe,
+    intro: {
+      ...afterWipe.intro,
+      bits: 0,
+      capacity: Math.min(afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP, endBits),
+      capacityUpgradeQueued: false,
+    },
+  }
 }
 
-// Commit queue for the removed Sacrifice ladder — now only clears/rejects. Kept so old UI/tests
-// and save fields merge without crashing.
+export const pickIntroCapacityMilestone = state => upgradePoolCapacity(state)
+
+// Commit to the next Capacity upgrade before Memory is full. The queued action fires once the
+// balance fills and higher-priority Storage actions no longer have work to do.
 export const queueIntroCapacityUpgrade = state => {
   if (state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return state
-  // No longer queues a real upgrade; leave state unchanged (do not set the flag).
-  return state
+  return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true } }
 }
 
 export const clearIntroCapacityUpgradeQueue = state => {
@@ -2285,14 +2347,14 @@ export const eraseAllComputeTokens = state => {
   return { ...state, intro: next }
 }
 
-// Legacy queued Sacrifice path — clears the flag and normalizes Capacity to the pool end bound
-// instead of doubling (#506). Same-reference no-op when nothing is queued.
+// Fires a queued Capacity upgrade once its full-buffer and priority conditions are met.
 export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
-  return normalizePoolMemoryCapacity({
+  if (!isMemoryCapacityUpgradeAvailable({
     ...state,
     intro: { ...state.intro, capacityUpgradeQueued: false },
-  })
+  })) return state
+  return upgradePoolCapacity(state)
 }
 
 // "Invest for Double Production"'s own cost ladder — entirely independent of `capacity`/Sacrifice
@@ -2314,11 +2376,10 @@ export const getIntroProductionMilestoneMaxClaims = tier => tier > 2 ? 1 : 2
 // "Speed ×2" / Invest for Double Production — an ordinary cost-gated purchase: costs
 // getIntroProductionMilestoneCost(productionMilestoneTier), NOT tied to the current Buffer
 // (`capacity`) at all, so a claim never requires a full Data Stream balance — only enough bits to
-// cover this tier's cost, which (after Buffer snaps to the pool Memory end on Combine, #506) sits
-// well below capacity for early Speed tiers.
+// cover this tier's cost, independently of the Data Stream's current Capacity.
 // Deducts exactly that cost and doubles the Byte generator's overall bits/sec rate (see
 // getIntroProductionRate) by INTRO_PRODUCTION_MULTIPLIER_STEP. Independently callable — no
-// coupling to the removed pickIntroCapacityMilestone Capacity path. No-op below cost or once
+// coupling to pickIntroCapacityMilestone's separate Capacity path. No-op below cost or once
 // getIntroProductionMilestoneMaxClaims(productionMilestoneTier) claims have already been made at
 // the current tier; a successful claim either stays at the same tier (incrementing
 // productionMilestoneTierClaims) or, once the tier's claim limit is reached, advances to the next
@@ -2396,7 +2457,7 @@ export const pickIntroProductionMilestone = state => {
 // INTRO_CONVERSION_UNLOCK_CAPACITY (1000) bits at once.
 export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_CONVERSION_UNLOCK_CAPACITY
 
-// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Build button, disk
+// Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Provision Disk button, disk
 // squares rows) should be shown at all — true once capacity has grown enough to ever hold
 // INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory's own binary display scale) at
 // once. A later, more deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above —
@@ -2450,8 +2511,7 @@ const MEMORY_BINARY_UNIT_SYMBOLS = ['B', ...TIER_DEFINITIONS.map(tier => tier.sy
 // larger of the two, when comparing a balance against its own capacity) so a balance never shows
 // in a coarser unit than its own capacity — e.g. never "512 B / 1 KiB". `byteCreated` gates whether
 // there's anything to denominate in yet at all: before the Byte generator exists, Buffer is
-// always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte — Capacity only snaps to the pool Memory
-// end on Combine / normalize / Era, #506; the old Sacrifice growth path is gone), so a
+// always exactly INTRO_STARTING_CAPACITY (8 bits = 1 Byte), so a
 // capacity-magnitude check alone can never catch
 // this phase. Without this gate, tapping through that very first 0-8 bit range would render as
 // fractional Bytes ("0.125 B", "0.25 B", …) — a less readable unit than the raw bit count for a
@@ -2540,7 +2600,6 @@ export const tickIntroProduction = elapsedSeconds => state => {
   const tickSpeed = state.intro.tickSpeedSeconds
   const accumulated = state.intro.productionAccumulator + elapsedSeconds
   const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / tickSpeed)
-
   if (ticksElapsed <= 0) {
     return accumulated === state.intro.productionAccumulator
       ? state
@@ -2601,7 +2660,7 @@ export const tickIntroAutoInvest = state => {
 // --- Byte Foundry Storage (Disks) --- see the "Byte Foundry Storage" comment in layers.js and
 // intro.disks/disksBuiltTotal/diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState
 // above. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item: building one
-// (startDiskBuild) takes real TIME (see tickDiskBuild) and, once complete, only constructs a
+// (provisionDisk) takes real TIME (see tickProvisionDisk) and, once complete, only constructs a
 // permanent, EMPTY container of a given size — Memory (intro.bits) then keeps each array's Cache
 // full (whole-block transfers) and flushes a full read cache into an empty disk over one
 // cache-block production duration when no tier claim blocks that size (see tickDiskAutoFill),
@@ -2619,39 +2678,33 @@ export const getDiskLadderSizeBits = step => {
   return DISK_LADDER_BASE_SIZE_BITS * (DISK_LADDER_SIZE_MULTIPLIER ** (safeStep - 1))
 }
 
-// How many disk-ladder steps (sizes) pool 1's own generator can ever fund — 1/10/100 KB, the same
-// 3-step grouping DATA_LAKE_SUB_SIZES already uses to carve the ladder into per-pool tiers (see
-// getDataLakeTierIndex below). Only pool 1 has a Byte generator today (INTRO_CAPACITY_CAP_BITS is
-// sized specifically to afford this step's own build cost — see layers.js), so this is a flat
-// constant for now; a future per-pool generator (epic #456) will make it depend on how many pools
-// are unlocked instead of always stopping after the first.
-const MAX_ACTIVE_DISK_LADDER_STEP = DATA_LAKE_SUB_SIZES.length
+// Number of disk-ladder steps currently reachable from unlocked storage pools.
+export const getMaxActiveDiskLadderStep = state =>
+  getUnlockedStoragePoolCount(state) * DATA_LAKE_SUB_SIZES.length
 
-// Whether every disk size pool 1's generator can ever fund has already been fully built
-// (DISK_ARRAY_LADDER_CAP disks at MAX_ACTIVE_DISK_LADDER_STEP) — i.e. there is genuinely nothing
-// left for startDiskBuild to offer until a future pool's own generator arrives. Distinct from
-// "can't currently afford it": this is permanent until epic #456 ships pool 2+.
+// Whether every disk size belonging to the currently unlocked pools has been fully built.
 export const isDiskLadderExhaustedForActivePools = state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
-  const lastActiveSize = getDiskLadderSizeBits(MAX_ACTIVE_DISK_LADDER_STEP)
+  const lastActiveSize = getDiskLadderSizeBits(getMaxActiveDiskLadderStep(state))
   return (builtTotal[lastActiveSize] ?? 0) >= DISK_ARRAY_LADDER_CAP
 }
 
-// The size (in bits) startDiskBuild currently builds: walks the gapless Byte power-of-ten ladder
+// The size (in bits) provisionDisk currently builds: walks the gapless Byte power-of-ten ladder
 // (see getDiskLadderSizeBits), advancing once DISK_ARRAY_LADDER_CAP disks have ever been built at
 // the current size (disksBuiltTotal — cumulative, never decremented by redeeming). Deliberately
 // decoupled from any tier's CURRENT purchase level — see layers.js / docs/DESIGN_HISTORY.md. A
 // freshly offered size isn't necessarily redeemable yet — isDiskRedeemable is the separate gate.
-// Never advances past MAX_ACTIVE_DISK_LADDER_STEP — once that size's array is fully built, this
+// Never advances past getMaxActiveDiskLadderStep(state) — once that size's array is fully built, this
 // keeps returning it rather than reaching a size no currently-unlocked pool could ever afford (see
-// isDiskLadderExhaustedForActivePools, the actual "nothing left to build" gate for startDiskBuild).
+// isDiskLadderExhaustedForActivePools, the actual "nothing left to build" gate for provisionDisk).
 // Replaced an earlier ladder that walked tier01's level-cost sequence and skipped sizes whenever
 // cost-epoch exponents jumped (100 KB → 10 MB, never 1 MB — issue #368).
 export const getDiskSize = state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
+  const maxStep = getMaxActiveDiskLadderStep(state)
   let step = 1
   let size = getDiskLadderSizeBits(step)
-  while (step < MAX_ACTIVE_DISK_LADDER_STEP && (builtTotal[size] ?? 0) >= DISK_ARRAY_LADDER_CAP) {
+  while (step < maxStep && (builtTotal[size] ?? 0) >= DISK_ARRAY_LADDER_CAP) {
     step += 1
     size = getDiskLadderSizeBits(step)
   }
@@ -2667,13 +2720,14 @@ export const getDiskSize = state => {
 export const getDiskCost = capacityBits => capacityBits * DISK_BUILD_COST_MULTIPLIER
 
 // The base build TIME, in seconds, for the FIRST disk ever built at a given size — exactly the
-// time to fill an empty container that size at 1x Memory bandwidth (getIntroProductionRate), i.e.
-// the same rate Memory itself is currently produced at — snapshotted once when the build starts
-// (see startDiskBuild; totalSeconds itself is fixed thereafter, only remainingSeconds ticks down).
+// time to fill an empty container that size at its owning pool's derived Bandwidth — snapshotted
+// once when the build starts
+// (see provisionDisk; totalSeconds itself is fixed thereafter, only remainingSeconds ticks down).
 // An earlier version used a flat, hardcoded "1 second per real KB of size" rate instead — see
 // docs/DESIGN_HISTORY.md.
-const getDiskBuildBaseSeconds = (state, capacityBits) => {
-  const rate = getIntroProductionRate(state.intro ?? {})
+const getProvisionDiskBaseSeconds = (state, capacityBits) => {
+  const poolIndex = getPoolIndexForDiskSize(capacityBits)
+  const rate = getStoragePoolBandwidth(state, poolIndex)
   return capacityBits / Math.max(rate, Number.MIN_VALUE)
 }
 
@@ -2683,9 +2737,9 @@ const getDiskBuildBaseSeconds = (state, capacityBits) => {
 // predecessors already built) takes 6× as long as its 1st, a 10 KB array's 6th disk also takes 6×
 // its own base time, and so on. N is read from disksBuiltTotal (the permanent, cumulative count) at
 // the moment the build STARTS, not the ladder's own current level.
-const getDiskBuildSeconds = (state, capacityBits) => {
+const getProvisionDiskSeconds = (state, capacityBits) => {
   const ordinal = (state.intro.disksBuiltTotal?.[capacityBits] ?? 0) + 1
-  return getDiskBuildBaseSeconds(state, capacityBits) * ordinal
+  return getProvisionDiskBaseSeconds(state, capacityBits) * ordinal
 }
 
 // Disk sizes are real, Byte-accurate bit counts (see getDiskSize above), rendered in the SI B/KB/
@@ -2722,31 +2776,30 @@ export const getDiskSizesToShow = state => {
     .sort((a, b) => a - b)
 }
 
-// "Disk Build"'s own forced-priority turn: available AND nothing ranked above it (Disk Fill,
-// Bandwidth) currently is. Used by startDiskBuild's own guard below and directly by
+// "Provision Disk"'s own forced-priority turn: available AND nothing ranked above it (Disk Fill,
+// Bandwidth) currently is. Used by provisionDisk's own guard below and directly by
 // ByteFoundryPage/StoragePage to disable the button the same way.
-export const isDiskBuildTurnAvailable = state =>
-  isDiskBuildAvailable(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state)
+export const isProvisionDiskTurnAvailable = state =>
+  isProvisionDiskAvailable(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state)
 
 // Starts building one EMPTY disk sized to getDiskSize(state): spends getDiskCost(that size) bits
 // from Memory immediately (the intro's own separate currency pool — same "bypasses
 // isProductionFrozen entirely" posture as Combine/Sacrifice/Invest, since none of this touches
 // resources.base) and sets intro.diskBuild to a { size, remainingSeconds, totalSeconds } countdown
-// (see getDiskBuildSeconds above/tickDiskBuild below) — the array itself only actually gains the
+// (see getProvisionDiskSeconds above/tickProvisionDisk below) — the array itself only actually gains the
 // new container, and starts accepting IO again, once that countdown finishes. `totalSeconds` is
-// fixed at the build's own starting duration (tickDiskBuild only ever updates remainingSeconds),
+// fixed at the build's own starting duration (tickProvisionDisk only ever updates remainingSeconds),
 // kept alongside remainingSeconds purely so the UI can render a "% built" progress fill without
-// having to recompute getDiskBuildSeconds itself (which depends on disksBuiltTotal at the moment
+// having to recompute getProvisionDiskSeconds itself (which depends on disksBuiltTotal at the moment
 // the build started, not the moment it's being rendered). No-op below cost, or if an array is
-// already mid-build (isDiskBuildAvailable). Only ever queues ONE build at a time — only one size
+// already mid-build (isProvisionDiskAvailable). Only ever queues ONE build at a time — only one size
 // is ever offered on the ladder, so there's nothing to parallelize.
-export const startDiskBuild = state => {
-  if (!isDiskBuildTurnAvailable(state)) return state
+export const provisionDisk = state => {
+  if (!isProvisionDiskTurnAvailable(state)) return state
 
   const size = getDiskSize(state)
   const cost = getDiskCost(size)
-  const totalSeconds = getDiskBuildSeconds(state, size)
-
+  const totalSeconds = getProvisionDiskSeconds(state, size)
   return {
     ...state,
     intro: {
@@ -2762,7 +2815,7 @@ export const startDiskBuild = state => {
 // disksBuiltTotal[size] increments (the container itself now exists, empty, ready for
 // read-cache / write-cache fill) and diskBuild clears, re-enabling every IO operation against
 // that size's array.
-export const tickDiskBuild = elapsedSeconds => state => {
+export const tickProvisionDisk = elapsedSeconds => state => {
   const build = state.intro.diskBuild
   if (!build) return state
 
@@ -2784,7 +2837,15 @@ export const tickDiskBuild = elapsedSeconds => state => {
   }
 }
 
-export const getNextDiskLadderSize = sourceSize => sourceSize * DISK_LADDER_SIZE_MULTIPLIER
+// Resolved through the ladder step rather than multiplying, so the result is the canonical
+// getDiskLadderSizeBits value: past step 22 the two expressions disagree in the last IEEE-754 bit
+// (8e25 vs 7.999999999999999e25), which would key disksBuiltTotal / diskWriteCache off a size the
+// rest of the ladder never produces.
+export const getNextDiskLadderSize = sourceSize => {
+  const step = getDiskLadderStep(sourceSize)
+  if (!step) return sourceSize * DISK_LADDER_SIZE_MULTIPLIER
+  return getDiskLadderSizeBits(step + 1)
+}
 
 export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
@@ -2826,11 +2887,13 @@ const decrementFullDiskCount = (disks, size) => {
 
 // The write-cache flush into the target's own empty container is a DISK filling FROM a cache — the
 // same DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER rate a read-cache flush uses — sized to the
-// target's own full capacity. Unlike a fresh build (getDiskBuildSeconds), this isn't scaled by
+// target's own full capacity. Unlike a fresh build (getProvisionDiskSeconds), this isn't scaled by
 // ordinal: refilling an already-built empty container from cache is a pure bandwidth-limited
 // transfer, not a build.
 const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
-  const rate = getIntroProductionRate(state.intro ?? {}) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
+  const poolIndex = getPoolIndexForDiskSize(targetSize)
+  const rate = getStoragePoolBandwidth(state, poolIndex)
+    * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
   return targetSize / Math.max(rate, Number.MIN_VALUE)
 }
 
@@ -2842,7 +2905,9 @@ const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
 // below — coincidental, not structural: the two phases pace conceptually distinct fills (cache-from-
 // disk vs. disk-from-cache) and would diverge if either multiplier changed independently.
 const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
-  const rate = getIntroProductionRate(state.intro ?? {}) * CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER
+  const poolIndex = getPoolIndexForDiskSize(sourceSize)
+  const rate = getStoragePoolBandwidth(state, poolIndex)
+    * CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER
   return sourceSize / Math.max(rate, Number.MIN_VALUE)
 }
 
@@ -2955,7 +3020,9 @@ export const getDiskReadCacheFlush = (state, size) =>
 
 export const getDiskReadCacheFlushSeconds = (state, size) => {
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
-  const rate = getIntroProductionRate(state.intro ?? {}) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
+  const poolIndex = getPoolIndexForDiskSize(size)
+  const rate = getStoragePoolBandwidth(state, poolIndex)
+    * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER
   // Rate is >= 1 by construction once intro fields are valid; guard corrupted/partial saves.
   return blockBits / Math.max(rate, Number.MIN_VALUE)
 }
@@ -2983,8 +3050,15 @@ export const isDiskReadCacheEligible = size => getDataLakeSubSize(size) === DATA
 export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
-  const capacity = state.intro?.capacity ?? 0
   let bits = state.intro.bits
+  const poolBudgets = {}
+  const getPoolBudget = poolIndex => {
+    if (poolBudgets[poolIndex] === undefined) {
+      poolBudgets[poolIndex] = CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER
+        * getStoragePoolBandwidth(state, poolIndex) * elapsedSeconds
+    }
+    return poolBudgets[poolIndex]
+  }
   let disks = state.intro.disks ?? {}
   let diskCache = state.intro.diskCache ?? {}
   let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
@@ -3029,12 +3103,15 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible),
   // capped at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER times the current Byte Foundry production
   // rate — a CACHE filling FROM Memory can drain a big banked balance faster than live production,
-  // but never instantly, no matter how much has piled up while blocked. One shared budget across
-  // every eligible size this call, since it's all drawn from the same Memory bandwidth. Skip sizes
-  // mid-flush: their cache is locked full until the pour completes or cancels.
-  let memoryToCacheBudget = CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER * getIntroProductionRate(state.intro ?? {}) * elapsedSeconds
+  // but never instantly, no matter how much has piled up while blocked. One shared budget per pool
+  // across every eligible size in that pool this call, since it's all drawn from that pool's
+  // derived Memory bandwidth. Skip sizes mid-flush: their cache is locked full until the pour
+  // completes or cancels.
   for (const size of sizes) {
     if (diskReadCacheFlush[size]) continue
+    const poolIndex = getPoolIndexForDiskSize(size)
+    let memoryToCacheBudget = getPoolBudget(poolIndex)
+    const capacity = getStoragePoolCapacity(state, poolIndex)
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
     for (;;) {
       const cached = diskCache[size] ?? 0
@@ -3061,6 +3138,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
       }
       break
     }
+    poolBudgets[poolIndex] = memoryToCacheBudget
   }
 
   // Pass 2 — start timed read-cache → empty disk flushes when tier isn't reserving this size for
@@ -3088,7 +3166,16 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   for (const size of flushSizes) {
     const flush = diskReadCacheFlush[size]
     if (!flush) continue
-    if (isDiskRedeemable({ ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }, size)) {
+    if (isDiskRedeemable({
+      ...state,
+      intro: {
+        ...state.intro,
+        bits,
+        disks,
+        diskCache,
+        diskReadCacheFlush,
+      },
+    }, size)) {
       continue
     }
 
@@ -3125,7 +3212,7 @@ const hasFullRedeemableDiskAtSize = (state, capacityBits) =>
 
 // Whether a size's cache currently has at least one full, releasable block (see
 // DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
-// — see tickDiskBuild), while capacityBits' own fixed corresponding tier isn't currently at the
+// — see tickProvisionDisk), while capacityBits' own fixed corresponding tier isn't currently at the
 // required level (see isDiskRedeemable below — a released block is only ever spendable toward an
 // eligible tier's own level, so with none eligible there's nothing for it to fund), OR while a full
 // redeemable disk of that same size exists (disks always take priority — cache is fallback only).
@@ -3220,7 +3307,7 @@ export const getDiskRedeemTierName = (state, capacityBits) =>
 // fill again later (next tick, or same tick via tickGame's post-auto-redeem ASAP pass — never
 // sync-filled here, so clearing the last full disk can hand Memory to Bandwidth under Forced
 // Priority). No-op if no disk of that size is currently full, if that size's array is
-// currently mid-build (IO disallowed — see tickDiskBuild), or if its corresponding tier isn't
+// currently mid-build (IO disallowed — see tickProvisionDisk), or if its corresponding tier isn't
 // currently at exactly this size's required level (see isDiskRedeemable).
 export const redeemDisk = capacityBits => state => {
   const full = state.intro.disks?.[capacityBits] ?? 0
@@ -3235,12 +3322,10 @@ export const redeemDisk = capacityBits => state => {
   // getPurchaseBlockSize(state) is read once here, from the state BEFORE any units are granted, then
   // passed as a fixed quantity into grantTierUnits' own loop below — which recomputes
   // getPurchaseBlockSize fresh on every iteration off its own mutating state. That's only safe
-  // because the disk-ladder currently never reaches tier.id === getLastTierId() (disks are
-  // capped at MAX_ACTIVE_DISK_LADDER_STEP, tier01's own first 3 levels — see DISK_ARRAY_LADDER_CAP
-  // above), so the loop can never cross a PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS boundary of
-  // THIS tier mid-grant and have the block size grow out from under remainingInLevel. Once a future
-  // storage pool (epic #456) lets disks reach the last tier, this fixed snapshot would need
-  // recomputing inside the loop instead — see docs/DESIGN_HISTORY.md.
+  // because the disk ladder's fixed size-to-tier mapping keeps each size within one tier's
+  // three-level boundary (see DISK_ARRAY_LADDER_CAP above), so the loop cannot cross a
+  // PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS boundary of THIS tier mid-grant and have the block
+  // size grow out from under remainingInLevel.
   const remainingInLevel = getPurchaseBlockSize(state) - (state.purchaseLevelProgress?.[tier.id] ?? 0)
 
   return grantTierUnits(tier.id, remainingInLevel)({
@@ -3598,13 +3683,13 @@ export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
 }
 
 // Gated by the same forced priority order every other Byte Foundry milestone action follows —
-// available only once nothing ranked above it (Disk Fill, Speed, Disk Build, Compute) currently
-// is. Capacity Sacrifice is gone (#506), so lake doubling sits alone at that bottom rank.
+// available only once nothing ranked above it (Disk Fill, Speed, Provision Disk, Compute) currently
+// is. Lake doubling sits alone at that bottom rank.
 export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
   isDataLakeCapacityDoublingAvailable(state, tierIndex) &&
   !isDiskFillAvailable(state) &&
   !isBandwidthAvailable(state) &&
-  !isDiskBuildAvailable(state) &&
+  !isProvisionDiskAvailable(state) &&
   !isComputeUpgradeAvailable(state)
 
 export const doubleDataLakeCapacity = tierIndex => state => {
@@ -3652,7 +3737,7 @@ export const getDataLakeTransferCapacity = (state, tierIndex) => {
 // real bit total of whatever Disks the transfer is sourced from, regardless of which sizes.
 const getDataLakeTransferDurationSeconds = (state, tierIndex, units) => {
   if (!(units > 0)) return 0
-  const rate = getIntroProductionRate(state.intro ?? {})
+  const rate = getStoragePoolBandwidth(state, tierIndex)
   if (!(rate > 0) || !Number.isFinite(rate)) return 0
   return (units * getDataLakeUnitBits(tierIndex)) / (DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER * rate)
 }
@@ -3694,7 +3779,7 @@ const planLiveDiskFunding = (state, tierIndex, unitsNeeded) => {
 // run a live transfer at all" question, and gating per-size on top would only ever matter for the
 // largest sub-size a player is still actively building out (by construction, a size only ever has
 // held Disks once every smaller size's array is already complete — see the disk ladder in
-// startDiskBuild).
+// provisionDisk).
 const getBoosterTransferPlan = (state, tierIndex) => {
   if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return null
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
@@ -3799,7 +3884,7 @@ export const tickDataLakeTransfers = elapsedSeconds => state => {
     const remainingTransfers = []
     for (const transfer of transfers) {
       const nextRemaining = (transfer.remainingSeconds ?? 0) - elapsedSeconds
-      // Same TICK_ACCUMULATION_EPSILON tolerance tickDiskBuild's own countdown uses — absorbs
+      // Same TICK_ACCUMULATION_EPSILON tolerance tickProvisionDisk's own countdown uses — absorbs
       // floating-point drift from repeatedly summing a fractional elapsedSeconds so a transfer
       // that should complete this tick doesn't linger one extra tick on a near-zero residual.
       if (nextRemaining > TICK_ACCUMULATION_EPSILON) {
@@ -3841,10 +3926,10 @@ export const tickDataLakeTransfers = elapsedSeconds => state => {
 
 // Predicate, not a reducer: whether Boosters / ComputePage should be active at all. True once
 // Buffer / pool Memory Capacity reaches INTRO_COMPUTE_CORE_UNLOCK_CAPACITY (4,194,304 bits,
-// "512 KiB" binary). After #506, Buffer snaps to the pool end on Combine, so this unlocks with
-// Storage / conversion as soon as the Byte generator exists (intentional — Capacity is
-// start–end delimited). Same capacity-magnitude reveal convention as isIntroConversionUnlocked /
-// isStorageUnlocked; historically one Sacrifice stage later than Storage.
+// "512 KiB" binary). Capacity reaches this threshold through its doubling ladder, so this unlocks
+// once the Data Stream has grown sufficiently. Same capacity-magnitude reveal convention as
+// isIntroConversionUnlocked / isStorageUnlocked; historically one Sacrifice stage later than
+// Storage.
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Shared shape for the 9-boundary Core → Node → Cluster → Network → Grid → Fabric → Cloud →
@@ -4215,11 +4300,11 @@ export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConf
 
 // A specific (boostType, tierIndex) activation's own forced-priority turn: mechanically
 // activatable (see canActivateComputeBoost above) AND nothing ranked above Compute (Disk Fill,
-// Bandwidth, Disk Build) currently is. Pass forfeitConfirmed=true only after the player has
+// Bandwidth, Provision Disk) currently is. Pass forfeitConfirmed=true only after the player has
 // explicitly confirmed forfeiting an active boost (no refund).
 export const isComputeBoostTurnAvailable = (state, boostType, tierIndex, forfeitConfirmed = false) =>
   canActivateComputeBoost(state, boostType, tierIndex, forfeitConfirmed) &&
-  !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)
+  !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isProvisionDiskAvailable(state)
 
 // Whether stackComputeBoost below would do anything right now: a boost IS currently active, it
 // hasn't already hit COMPUTE_BOOST_MAX_STACKS, and at least 1 more token of the ACTIVE boost's OWN
@@ -4238,7 +4323,7 @@ export const canStackComputeBoost = state => {
 // Stack's own forced-priority turn — same shape as isComputeBoostTurnAvailable above.
 export const isStackComputeBoostTurnAvailable = state =>
   canStackComputeBoost(state) &&
-  !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isDiskBuildAvailable(state)
+  !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isProvisionDiskAvailable(state)
 
 // Whether ANY Compute Boost action currently has its turn — either starting a brand new boost from
 // some tier (canActivateComputeBoost, only possible while none is active — forfeit-replace is a
@@ -4661,9 +4746,9 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tiers, not to change what Prestige/Speed Up themselves do.
 
 // Snapshot of Foundry upgrade progress used as a high-water cap for resetByteFoundry's
-// convenience auto-replay (see tickFoundryResetConvenience) — Speed/Invest + Disk Build + Combine.
-// `capacity` is retained for merge compatibility with older cap snapshots but is no longer
-// auto-pressed (Sacrifice removed — #506).
+// convenience auto-replay (see tickFoundryResetConvenience) — Speed/Invest + Provision Disk + Combine.
+// `capacity` is retained for merge compatibility with older cap snapshots but is not auto-pressed
+// by reset convenience replay.
 export const captureFoundryUpgradeCaps = intro => {
   const disksBuiltTotal = intro?.disksBuiltTotal ?? {}
   const diskCaps = {}
@@ -4731,10 +4816,9 @@ const isDiskBuildBelowCap = (state, caps) => {
 const FOUNDRY_RESET_CONVENIENCE_MAX_STEPS = 64
 
 // Convenience auto-clicker after resetByteFoundry: while foundryResetCaps is set, press Combine,
-// bit-funded Speed / Invest, and Disk Build whenever their normal turn gates allow — capped at the
-// pre-reset highs. Capacity/Sacrifice is no longer auto-pressed (#506); combineIntroByte itself
-// snaps Buffer to the pool end bound. Same-reference no-op when caps are inactive or nothing is
-// eligible. Called from tickGame after Disk auto-fill.
+// bit-funded Speed / Invest, and Provision Disk whenever their normal turn gates allow — capped at the
+// pre-reset highs. Capacity is not part of reset convenience replay. Same-reference no-op when
+// caps are inactive or nothing is eligible. Called from tickGame after Disk auto-fill.
 export const tickFoundryResetConvenience = state => {
   const caps = state.intro?.foundryResetCaps
   if (!caps) return state
@@ -4759,7 +4843,7 @@ export const tickFoundryResetConvenience = state => {
   }
 
   if (isDiskBuildBelowCap(next, caps)) {
-    const built = startDiskBuild(next)
+    const built = provisionDisk(next)
     if (built !== next) {
       next = built
       changed = true

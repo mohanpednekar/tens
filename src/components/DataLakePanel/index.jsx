@@ -92,7 +92,7 @@ const LakeTransferNote = styled.span`
 `
 
 // Only rendered in `bare` mode, and only once there's actually a list below it to separate from
-// whatever the host card rendered above (Storage's Build button/Disk rows) — mirrors the
+// whatever the host card rendered above (Storage's Provision Disk button/Disk rows) — mirrors the
 // StatCard-wrapped mode, where that same visual break is just the card's own outer border.
 const BareDivider = styled.hr`
   width: 100%;

@@ -51,8 +51,8 @@ paired with a visible 8-block segmented `role="progressbar"` (`aria-label="data 
 rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
 at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
 (`getIntroProductionRate(intro) / BITS_PER_BYTE`). A StatusText line under the balance reads
-**Buffer** `{formatBitsInNearestUnit(intro.capacity)}`, and once `byteCreated` also **Memory Capacity**
-as the pool's start–end window (`getStoragePoolMemoryBounds`). There is no separate Cache tile — the same
+**Buffer** `{formatBitsInNearestUnit(intro.capacity)}` (the current Data Stream capacity value, not a
+range). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is now
 read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
 `FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
@@ -75,8 +75,10 @@ fill, so a second meter on the tap button would just duplicate it; its `backgrou
 used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`; Combine also snaps Buffer to the pool Memory end bound
-(`INTRO_CAPACITY_CAP_BITS` for pool 1 — there is no Sacrifice / Memory ×2 button, #506). Once
+INTRO_BYTE_COMBINE_COST`; Capacity ×2 instead requires a full Buffer, drains it, and doubles
+Capacity up to the active highest-unlocked-pool end bound
+(`INTRO_CAPACITY_CAP_BITS` for pool 1, with Capacity ×2 available on the shared Data Stream
+doubling ladder). Once
 `byteCreated`, a single milestone button sits in `MilestonesRow` (`display: flex`, the button
 `flex: 1`) rather than a paired Sacrifice+Invest row. It renders its own two-line
 `MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
@@ -103,9 +105,11 @@ INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by sta
 the matching Data Lake (`startBoosterTransfer` — deposits spend instantly, any remaining cost
 live-transfers off built Disks over time), not minted from Data Stream — the earlier manual
 "Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
-Speed ×2 is the only milestone action in that row (Capacity Sacrifice was removed).
+Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the shared Data Stream
+section.
 
-Storage is continuous on this same page: **Build Disk** — its own core-loop action, alongside
+Storage is continuous on this same page: **Provision Disk** — the common Data Stream operation,
+alongside
 Speed above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
 scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above). Its
 visible label always tracks
@@ -124,45 +128,44 @@ Below Build, every size from `getDiskSizesToShow(state)` renders a full interact
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
 not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
 
-Building a disk is no longer instant — `startDiskBuild` (`actions.startDiskBuild`) spends the cost
+Provisioning a disk is no longer instant — `provisionDisk` (`actions.provisionDisk`) spends the cost
 immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
 (`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
-Memory bandwidth (the current Byte Foundry production rate, snapshotted at build start), times
+Memory bandwidth (the current Byte Foundry production rate, snapshotted at provisioning start), times
 the disk's own 1-indexed position in the array at the moment the build started, see
-`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so at the default starting rate
+`getProvisionDiskSeconds`/`getProvisionDiskBaseSeconds` in engine.js — so at the default starting rate
 (1 bit/sec) a 1 KB array's first disk takes 8000 seconds, its 6th disk 48,000 seconds, a 10 KB
-array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickDiskBuild`
+array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickProvisionDisk`
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array rebuilding." The Build button renders three distinct states off
+disallowed, "the array provisioning." The Provision button renders three distinct states off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
-isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="build disk"`,
-`disabled={!canStartDiskBuild}` where `canStartDiskBuild = isDiskBuildTurnAvailable(state)` (below
+isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="provision disk"`,
+`disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
 the build cost, no build already in progress, the ladder not yet exhausted for every currently-active
 pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both higher priority, see
 "Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
-`variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Build {size} Disk ({cost})"`,
+`variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Provision {size} Disk ({cost})"`,
 `title` either naming which higher-priority action to take first (`"Take Bandwidth (or redeem a full
 Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
 corresponding tier is currently at its required level (`diskRedeemTierName`, from
 `getDiskRedeemTierName(state, diskSize)`) — `"Costs
-{cost} and takes time to build — builds an empty {size} container; its cache auto-fills it,
+{cost} and takes time to provision — creates an empty {size} container; its cache auto-fills it,
 redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
 be redeemable until its own fixed corresponding tier reaches its matching level"`; **mid-build** — `aria-label="disk array
-rebuilding"`, always `disabled`, visible text `"🏦 Building {size} Disk — {ceil(remainingSeconds)}s"`,
-`title="Rebuilding {size} — {ceil(remainingSeconds)}s (array offline)"`; and **pool complete**
+rebuilding"`, always `disabled`, visible text `"🏦 Provisioning {size} Disk — {ceil(remainingSeconds)}s"`,
+`title="Provisioning {size} — {ceil(remainingSeconds)}s (array offline)"`; and **ladder complete**
 (`diskLadderExhausted`, checked before `diskBuildInProgress`'s idle-state alternatives) —
-`aria-label="disk ladder complete for this pool"`, always `disabled`, visible text `"🏦 Pool complete
-({size})"`, `title="Every Disk size this pool can fund (up to {size}) is fully built — more storage
-pools are coming in a future update"` — a distinct, permanent "nothing left to build until epic #456
-ships pool 2+" state rather than an ever-climbing but never-affordable idle button (see
-`isDiskLadderExhaustedForActivePools`/`MAX_ACTIVE_DISK_LADDER_STEP` in engine.js). `$progress`
-(`diskBuildProgress`) reads differently in each state: mid-build, `100 - (remainingSeconds /
+`aria-label="disk ladder complete"`, always `disabled`, visible text `"🏦 All Pools Complete
+({size})"`, `title="All storage pools are complete through {size}"` only at pool 10's terminal size;
+completing all three arrays in an earlier pool unlocks the next pool (see
+`isDiskLadderExhaustedForActivePools`/`getMaxActiveDiskLadderStep` in engine.js). `$progress`
+(`diskBuildProgress`) reads differently in each state: mid-provision, `100 - (remainingSeconds /
 totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
 fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
 idle, `(bits / diskCost) * 100` (progress toward affording the next build), paired with a hidden
-`role="progressbar"` (`aria-label="byte foundry disk build progress"`,
+`role="progressbar"` (`aria-label="byte foundry disk provision progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
 formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER`
@@ -273,7 +276,7 @@ the cycle — and stays just as interactive there as on the gate itself.
 **Storage page** (`src/pages/StoragePage/index.jsx`). Thin reusable every-size DiskArrayRow wrapper
 kept for reuse/tests — the **primary** UI path is Foundry's continuous Memory + Disk sections
 (see "Byte Foundry" section above). Not a top-level AppNav destination. Takes `{ game }`. A
-centered title `🏦 Storage` is all the page-chrome it has — **no Build button and no Memory balance
+  centered title `🏦 Storage` is all the page-chrome it has — **no Provision Disk button and no Memory balance
 readout here**: building the next disk stays on ByteFoundryPage itself (see above).
 
 For every size in `getDiskSizesToShow(state)` (every size ever built or currently held, plus
@@ -1145,4 +1148,3 @@ full-screen button still auto-focuses on mount. Presentation gates (`showFullScr
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.
-

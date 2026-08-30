@@ -174,14 +174,13 @@ export const INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY
 // starting per-unit cost once expressed in bits.
 export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // Buffer / pool Memory Capacity threshold at which the manual "convert bits to a Kilobyte" action
-// becomes available (see isIntroConversionUnlocked in engine.js). After #506, Buffer snaps from
-// INTRO_STARTING_CAPACITY to the pool Memory end on Combine / normalize / Era-with-byteCreated,
-// so this threshold (and Storage / Boosters below) is crossed immediately then — not via the old
-// discrete Sacrifice ladder stages (8/80/800/8000/…). Historically also equal to the first
+// becomes available (see isIntroConversionUnlocked in engine.js). Capacity reaches this threshold
+// through the full-Buffer Capacity ×2 ladder rather than snapping on Combine / normalize /
+// Era-with-byteCreated. Historically also equal to the first
 // conversion's starting balance cost at INTRO_BITS_PER_KILOBYTE_CONVERSION.
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
-// --- Byte Foundry Storage (Disks) --- see startDiskBuild/tickDiskBuild/tickDiskAutoFill/
+// --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
 // redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
@@ -200,10 +199,10 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // until Buffer / pool Memory Capacity reaches this many bits — 80,000 bits, "9.765 KiB" in binary
 // display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
 // (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
-// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS end bound. After #506, Buffer snaps to that
-// end bound on Combine, so Storage reveals as soon as the Byte generator exists (intentional —
-// Capacity is start–end delimited; no Sacrifice pacing ladder). Historically this was a later-game
-// reveal once the player had grown capacity past the Kilobyte-transfer row via Sacrifice doublings.
+// down). Well under pool 1's INTRO_CAPACITY_CAP_BITS end bound. Storage reveals once the Capacity ×2
+// ladder reaches this threshold; it is not forced to the pool end on Combine. Historically this was
+// a later-game reveal once the player had grown capacity past the Kilobyte-transfer row via
+// Capacity doublings.
 export const INTRO_DISK_UNLOCK_CAPACITY = 80000
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
@@ -220,9 +219,9 @@ export const DISK_LADDER_BASE_SIZE_BITS = BITS_PER_BYTE * 1000
 // Byte-scale power-of-ten size with no gaps (1 KB → 10 KB → 100 KB → 1 MB → 10 MB → …, issue #368,
 // fixing an earlier ladder that walked tier01's level-cost sequence instead and skipped sizes
 // whenever cost-epoch exponents jumped — 100 KB → 10 MB, never 1 MB). `getDiskSize` (engine.js)
-// only actually WALKS this formula up to `MAX_ACTIVE_DISK_LADDER_STEP` though — today just pool 1's
-// own 1/10/100 KB, since no pool 2 generator exists yet to fund a 1 MB disk's own build cost; see
-// docs/DESIGN_HISTORY.md.
+// only actually WALKS this formula up to getMaxActiveDiskLadderStep(state) in engine.js — three
+// sizes per currently-unlocked storage pool, with each newly unlocked pool extending the active
+// ladder by another 1/10/100 × tier of disk sizes.
 export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // How many disks must ever be built at the current ladder size before getDiskSize advances to the
 // next (×DISK_LADDER_SIZE_MULTIPLIER) size. Driven by intro.disksBuiltTotal — cumulative, never
@@ -275,9 +274,8 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
 // 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
 // Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, 1 MiB) — i.e. 4,194,304 bits (512 KiB);
-// historically one Sacrifice doubling-step short of that hard cap. After #506, Buffer snaps to
-// the pool end on Combine, so this unlocks together with conversion/Storage once the Byte
-// generator exists. Preserves the original's "last/highest of the two
+// historically one Capacity doubling-step short of that hard cap. This unlocks when the Capacity
+// doubling ladder reaches the threshold, not by snapping on Combine. Preserves the original's "last/highest of the two
 // capacity-gated reveals" relative ordering of the threshold constants themselves (conversion <
 // storage < compute); see
 // docs/DESIGN_HISTORY.md.
