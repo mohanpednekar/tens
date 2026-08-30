@@ -53,7 +53,6 @@ import {
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
   tickIntroProduction,
-  unlockEligibleStoragePools,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
   isBitFundedBandwidthAvailable,
@@ -713,17 +712,14 @@ describe('storage pools', () => {
       },
     })
     expect(isStoragePoolUnlocked(partial, 2)).toBe(false)
-    expect(unlockEligibleStoragePools(partial)).toBe(partial)
-
     const complete = withIntro(partial, {
       disksBuiltTotal: {
         ...partial.intro.disksBuiltTotal,
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    const unlocked = unlockEligibleStoragePools(complete)
-    expect(isStoragePoolUnlocked(unlocked, 2)).toBe(true)
-    expect(getUnlockedStoragePoolCount(unlocked)).toBe(2)
+    expect(isStoragePoolUnlocked(complete, 2)).toBe(true)
+    expect(getUnlockedStoragePoolCount(complete)).toBe(2)
   })
 
   it('derives each pool bandwidth and capacity from the highest unlocked pool', () => {

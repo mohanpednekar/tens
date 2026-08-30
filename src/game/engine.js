@@ -1506,9 +1506,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // more unit (their own first-line guards); none of these ever fully freeze, matching the "return
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
-  const stateAfterDiskBuild = unlockEligibleStoragePools(
-    tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state)),
-  )
+  const stateAfterDiskBuild = tickDiskBuild(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
   // Disk auto-fill can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterDiskBuild)
@@ -2061,10 +2059,13 @@ export const getUnlockedStoragePoolCount = state => {
   return count
 }
 
-export const unlockEligibleStoragePools = state => state
-
 export const getStoragePoolBandwidth = (state, poolIndex) => {
   const unlockedCount = getUnlockedStoragePoolCount(state)
+  // Locked or invalid pools return 0. Callers must treat that as no available throughput:
+  // Math.max(rate, Number.MIN_VALUE) makes timed pacing effectively infinite, while
+  // getDataLakeTransferDurationSeconds returns 0 for a non-positive rate. Live callers only pass
+  // unlocked pools: a lake tier's transfer capacity requires its own arrays fully built, which
+  // necessarily unlocks the matching storage pool.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
   return getIntroProductionRate(state.intro ?? {}) / (
     MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex)
@@ -2073,6 +2074,9 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
 
 export const getStoragePoolCapacity = (state, poolIndex) => {
   const unlockedCount = getUnlockedStoragePoolCount(state)
+  // Locked or invalid pools return 0. This is a sentinel rather than a usable Capacity; live
+  // callers derive the pool from a built disk or a fully-built lake tier, both of which imply the
+  // corresponding pool is unlocked.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
   const rawCapacity = (state.intro?.capacity ?? 0) / (
     MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex)
@@ -2201,6 +2205,9 @@ export const isPoolCapacityUpgradeAvailable = (state, _poolIndex = 1) => {
   return !isMemoryCapacityAtCap(state)
 }
 
+// The moving ceiling is reached once Capacity is at or above the highest unlocked pool's end
+// bound. This intentionally differs from the historical pre-#506 "halt before the next doubling
+// would exceed the cap" check: the current ladder clamps at the ceiling instead of stopping early.
 export const isMemoryCapacityAtCap = state => {
   const { endBits } = getStoragePoolMemoryBounds(getUnlockedStoragePoolCount(state))
   return (state.intro?.capacity ?? 0) >= endBits
@@ -2590,22 +2597,20 @@ export const tickIntroProduction = elapsedSeconds => state => {
   if (!state.intro.byteCreated) return state
   const accumulated = state.intro.productionAccumulator + elapsedSeconds
   const ticksElapsed = Math.floor((accumulated + TICK_ACCUMULATION_EPSILON) / state.intro.tickSpeedSeconds)
-  const nextAccumulator = ticksElapsed <= 0
-    ? accumulated
-    : accumulated - ticksElapsed * state.intro.tickSpeedSeconds
-  const bitsToAdd = ticksElapsed > 0
-    ? INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed
-      * getComputeBoostMultiplier(state.intro)
-    : 0
-  if (nextAccumulator === state.intro.productionAccumulator && bitsToAdd === 0) return state
+  if (ticksElapsed <= 0) {
+    return accumulated === state.intro.productionAccumulator
+      ? state
+      : { ...state, intro: { ...state.intro, productionAccumulator: accumulated } }
+  }
+
+  const bitsToAdd = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed * getComputeBoostMultiplier(state.intro)
+
   return {
     ...state,
     intro: {
       ...state.intro,
-      bits: ticksElapsed > 0
-        ? Math.min(state.intro.capacity, state.intro.bits + bitsToAdd)
-        : state.intro.bits,
-      productionAccumulator: nextAccumulator,
+      bits: Math.min(state.intro.capacity, state.intro.bits + bitsToAdd),
+      productionAccumulator: accumulated - ticksElapsed * state.intro.tickSpeedSeconds,
     },
   }
 }
@@ -3087,9 +3092,10 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible),
   // capped at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER times the current Byte Foundry production
   // rate — a CACHE filling FROM Memory can drain a big banked balance faster than live production,
-  // but never instantly, no matter how much has piled up while blocked. One shared budget across
-  // every eligible size this call, since it's all drawn from the same Memory bandwidth. Skip sizes
-  // mid-flush: their cache is locked full until the pour completes or cancels.
+  // but never instantly, no matter how much has piled up while blocked. One shared budget per pool
+  // across every eligible size in that pool this call, since it's all drawn from that pool's
+  // derived Memory bandwidth. Skip sizes mid-flush: their cache is locked full until the pour
+  // completes or cancels.
   for (const size of sizes) {
     if (diskReadCacheFlush[size]) continue
     const poolIndex = getPoolIndexForDiskSize(size)
@@ -3121,6 +3127,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
       }
       break
     }
+    poolBudgets[poolIndex] = memoryToCacheBudget
   }
 
   // Pass 2 — start timed read-cache → empty disk flushes when tier isn't reserving this size for
@@ -3153,7 +3160,6 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
       intro: {
         ...state.intro,
         bits,
-        capacity: state.intro.capacity,
         disks,
         diskCache,
         diskReadCacheFlush,
