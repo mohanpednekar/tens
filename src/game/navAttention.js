@@ -44,7 +44,7 @@ import {
   isComputeNodesMergeStartAvailable,
   isComputeSupercomputersMergeStartAvailable,
   isComputeUpgradeTurnAvailable,
-  isDiskBuildTurnAvailable,
+  isProvisionDiskTurnAvailable,
   isDiskCacheBlockReleasable,
   isDiskFillAvailable,
   isGlobalTickspeedMultiplierUnlocked,
@@ -208,7 +208,7 @@ export const hasFoundryAttention = state =>
   isCombineAvailable(state) ||
   isMemoryCapacityUpgradeAvailable(state) ||
   isBandwidthTurnAvailable(state) ||
-  isDiskBuildTurnAvailable(state) ||
+  isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state) ||
   isDiskFillAvailable(state)
 

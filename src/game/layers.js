@@ -172,7 +172,7 @@ export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // conversion's starting balance cost at INTRO_BITS_PER_KILOBYTE_CONVERSION.
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
-// --- Byte Foundry Storage (Disks) --- see startDiskBuild/tickDiskBuild/tickDiskAutoFill/
+// --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
 // redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
 // storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY

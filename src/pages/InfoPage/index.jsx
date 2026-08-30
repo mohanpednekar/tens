@@ -216,7 +216,7 @@ const InfoPage = () => {
         <h3>Forced priority</h3>
         <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
         <ul>
-          <li>Disk Fill → Speed/Invest → Disk Build → Compute Boost</li>
+          <li>Disk Fill → Speed/Invest → Provision Disk → Compute Boost</li>
         </ul>
       </Section>
 
@@ -229,7 +229,7 @@ const InfoPage = () => {
           separate top-level nav item).
         </p>
 
-        <h3>Building Disks</h3>
+        <h3>Provisioning Disks</h3>
         <ul>
           <li>
             Each array costs {DISK_BUILD_COST_MULTIPLIER}× its size in bits (paid up front).

@@ -77,6 +77,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   the **Bytes** pool (matching the buy button), not Bits.
 
 ### Changed
+- **Byte Foundry storage pools (#456)** — the Foundry now derives storage pools 1–10 from one
+  shared Data Stream. Completing a pool unlocks the next disk-array sizes; the largest unlocked
+  pool expands while earlier pools remain available as compact summaries. Capacity ×2 uses the
+  restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
+  the shared Disk Build control is now labeled **Provision Disk**.
 - **Byte Foundry: Data Stream / Buffer rename; Sacrifice removed; Buffer snaps on Combine** (#506) —
   player-facing "Memory" is now **Data Stream** (balance) with capacity labeled **Buffer**;
   "Bandwidth ×2" is **Speed ×2**. The Sacrifice / "Memory ×2" capacity ladder is removed —

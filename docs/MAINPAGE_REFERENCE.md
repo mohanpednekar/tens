@@ -76,7 +76,8 @@ used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`; Combine also snaps Buffer to the pool Memory end bound
-(`INTRO_CAPACITY_CAP_BITS` for pool 1 — there is no Sacrifice / Memory ×2 button, #506). Once
+(`INTRO_CAPACITY_CAP_BITS` for pool 1, with Capacity ×2 available on the shared Data Stream
+doubling ladder). Once
 `byteCreated`, a single milestone button sits in `MilestonesRow` (`display: flex`, the button
 `flex: 1`) rather than a paired Sacrifice+Invest row. It renders its own two-line
 `MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
@@ -103,9 +104,11 @@ INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by sta
 the matching Data Lake (`startBoosterTransfer` — deposits spend instantly, any remaining cost
 live-transfers off built Disks over time), not minted from Data Stream — the earlier manual
 "Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
-Speed ×2 is the only milestone action in that row (Capacity Sacrifice was removed).
+Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the shared Data Stream
+section.
 
-Storage is continuous on this same page: **Build Disk** — its own core-loop action, alongside
+Storage is continuous on this same page: **Provision Disk** — the common Data Stream operation,
+alongside
 Speed above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
 scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above). Its
 visible label always tracks
@@ -124,21 +127,21 @@ Below Build, every size from `getDiskSizesToShow(state)` renders a full interact
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
 not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
 
-Building a disk is no longer instant — `startDiskBuild` (`actions.startDiskBuild`) spends the cost
+Provisioning a disk is no longer instant — `provisionDisk` (`actions.provisionDisk`) spends the cost
 immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
 (`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
 Memory bandwidth (the current Byte Foundry production rate, snapshotted at build start), times
 the disk's own 1-indexed position in the array at the moment the build started, see
-`getDiskBuildSeconds`/`getDiskBuildBaseSeconds` in engine.js — so at the default starting rate
+`getProvisionDiskSeconds`/`getProvisionDiskBaseSeconds` in engine.js — so at the default starting rate
 (1 bit/sec) a 1 KB array's first disk takes 8000 seconds, its 6th disk 48,000 seconds, a 10 KB
-array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickDiskBuild`
+array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickProvisionDisk`
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array rebuilding." The Build button renders three distinct states off
+disallowed, "the array provisioning." The Provision button renders three distinct states off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
-isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="build disk"`,
-`disabled={!canStartDiskBuild}` where `canStartDiskBuild = isDiskBuildTurnAvailable(state)` (below
+isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="provision disk"`,
+`disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
 the build cost, no build already in progress, the ladder not yet exhausted for every currently-active
 pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both higher priority, see
 "Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
@@ -1145,4 +1148,3 @@ full-screen button still auto-focuses on mount. Presentation gates (`showFullScr
 
 Once `isProductionFrozen(state)` is true, every control except Prestige disables — see "Prestige and
 the Googol freeze" below.
-

@@ -160,9 +160,9 @@ import {
   isComputeSupercomputersMergeStartAvailable,
   isComputeUpgradeAvailable,
   isComputeUpgradeTurnAvailable,
-  isDiskBuildAvailable,
+  isProvisionDiskAvailable,
   isDiskLadderExhaustedForActivePools,
-  isDiskBuildTurnAvailable,
+  isProvisionDiskTurnAvailable,
   isDiskCacheBlockReleasable,
   isDiskCacheBlockAutoReleaseEligible,
   isDiskCacheBlockManualReleaseAvailable,
@@ -204,7 +204,7 @@ import {
   startComputeNetworksMerge,
   startComputeNodesMerge,
   startComputeSupercomputersMerge,
-  startDiskBuild,
+  provisionDisk,
   tapIntroBit,
   tickFoundryResetConvenience,
   tickAutoMergeClustersIntoNetwork,
@@ -222,7 +222,7 @@ import {
   tickDiskAutoFill,
   tickDiskAutoRedeem,
   tickDiskAutoReleaseCache,
-  tickDiskBuild,
+  tickProvisionDisk,
   tickDiskWriteCache,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushSeconds,
@@ -960,7 +960,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(state.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 100)
   })
 
-  it('auto-starts Disk Build when under the per-size cap', () => {
+  it('auto-starts Provision Disk when under the per-size cap', () => {
     const size = getDiskLadderSizeBits(1)
     const state = withIntro(createInitialGameState(), {
       bits: getDiskCost(size) + 10,
@@ -988,7 +988,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(tickFoundryResetConvenience(state)).toBe(state)
   })
 
-  it('never auto-Sacrifices Capacity when the cap has no headroom above the current capacity', () => {
+  it('never auto-upgrades Capacity when the cap has no headroom above the current capacity', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
@@ -1288,7 +1288,7 @@ describe('rollbackComputeFundedBandwidth / Sacrifice wipe (#324)', () => {
 })
 
 // Base and forced-priority-turn predicates for the Byte Foundry's recurring "upgrade"
-// actions — Disk Fill > Speed > Disk Build > Compute (#506 dropped Memory / Sacrifice rank;
+// actions — Disk Fill > Speed > Provision Disk > Compute (#506 dropped Memory / Sacrifice rank;
 // see CLAUDE.md's "Byte Foundry" section).
 describe('isDiskFillAvailable', () => {
   it('is false with no built disks', () => {
@@ -1329,15 +1329,15 @@ describe('isBandwidthAvailable', () => {
   })
 })
 
-describe('isDiskBuildAvailable', () => {
+describe('isProvisionDiskAvailable', () => {
   it('is true once the currently-offered disk size\'s build cost is affordable', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
-    expect(isDiskBuildAvailable(state)).toBe(true)
+    expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
   it('is false below the build cost', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) - 1 })
-    expect(isDiskBuildAvailable(state)).toBe(false)
+    expect(isProvisionDiskAvailable(state)).toBe(false)
   })
 
   it('is false while an array is already mid-build, even with the build cost affordable', () => {
@@ -1345,7 +1345,7 @@ describe('isDiskBuildAvailable', () => {
       bits: getDiskCost(FIRST_DISK_SIZE),
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    expect(isDiskBuildAvailable(state)).toBe(false)
+    expect(isProvisionDiskAvailable(state)).toBe(false)
   })
 
   it('is false once the disk ladder is exhausted for every currently-active pool, even with the (stale) build cost fully affordable', () => {
@@ -1355,7 +1355,7 @@ describe('isDiskBuildAvailable', () => {
       bits: getDiskCost(size100KB),
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
     })
-    expect(isDiskBuildAvailable(state)).toBe(false)
+    expect(isProvisionDiskAvailable(state)).toBe(false)
   })
 })
 
@@ -1388,22 +1388,22 @@ describe('isBandwidthTurnAvailable', () => {
   })
 })
 
-describe('isDiskBuildTurnAvailable', () => {
-  it('matches isDiskBuildAvailable with nothing ranked above it pending', () => {
+describe('isProvisionDiskTurnAvailable', () => {
+  it('matches isProvisionDiskAvailable with nothing ranked above it pending', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2 })
-    expect(isDiskBuildTurnAvailable(state)).toBe(true)
+    expect(isProvisionDiskTurnAvailable(state)).toBe(true)
   })
 
   it('is false while Bandwidth (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
-    expect(isDiskBuildTurnAvailable(state)).toBe(false)
+    expect(isProvisionDiskTurnAvailable(state)).toBe(false)
   })
 
   it('is false while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
       bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2, disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(isDiskBuildTurnAvailable(state)).toBe(false)
+    expect(isProvisionDiskTurnAvailable(state)).toBe(false)
   })
 })
 
@@ -1428,7 +1428,7 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
 
-  it('is false while a Disk Build (higher priority) is currently available', () => {
+  it('is false while Provision Disk (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { ...computeReady, bits: getDiskCost(FIRST_DISK_SIZE) })
     expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
@@ -1889,9 +1889,9 @@ describe('getRelevantDiskSizesForFoundry', () => {
   })
 })
 
-describe('startDiskBuild', () => {
-  // Disk Build ranks below Bandwidth in the Byte Foundry's forced priority order (see
-  // isDiskBuildTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable at
+describe('provisionDisk', () => {
+  // Provision Disk ranks below Bandwidth in the Byte Foundry's forced priority order (see
+  // isProvisionDiskTurnAvailable) — Bandwidth's own tier-0 cost (8 bits) is trivially affordable at
   // every balance these tests use, so every test that expects a build to actually FIRE must mark
   // the current Invest tier's claims already used up (mirroring noOtherUpgradesLeft above).
   const bandwidthExhausted = { productionMilestoneTierClaims: 2 }
@@ -1903,9 +1903,9 @@ describe('startDiskBuild', () => {
   it('spends the build cost from Memory immediately and starts a timed build — does not construct the disk yet', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted })
 
-    const after = startDiskBuild(state)
+    const after = provisionDisk(state)
     expect(after.intro.bits).toBe(0)
-    // Not constructed yet — only tickDiskBuild, once the countdown finishes, increments this.
+    // Not constructed yet — only tickProvisionDisk, once the countdown finishes, increments this.
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
@@ -1913,7 +1913,7 @@ describe('startDiskBuild', () => {
 
   it('the FIRST disk ever built at the smallest size takes exactly the time to fill it at 1x Memory bandwidth', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted })
-    const after = startDiskBuild(state)
+    const after = provisionDisk(state)
     expect(after.intro.diskBuild.totalSeconds).toBe(FIRST_DISK_SIZE)
   })
 
@@ -1923,7 +1923,7 @@ describe('startDiskBuild', () => {
       bits: getDiskCost(level2Size), ...bandwidthExhausted,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, // advances the ladder to level2Size
     })
-    const after = startDiskBuild(state)
+    const after = provisionDisk(state)
     expect(after.intro.diskBuild).toEqual({ size: level2Size, remainingSeconds: level2Size, totalSeconds: level2Size })
   })
 
@@ -1940,7 +1940,7 @@ describe('startDiskBuild', () => {
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    const after = startDiskBuild(state)
+    const after = provisionDisk(state)
     expect(after.intro.bits).toBe(0)
     expect(after.intro.diskBuild).toEqual({
       size: megabyteSize,
@@ -1954,13 +1954,13 @@ describe('startDiskBuild', () => {
       bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 }, // 5 already built — this build is the 6th
     })
-    const after = startDiskBuild(state)
+    const after = provisionDisk(state)
     expect(after.intro.diskBuild.totalSeconds).toBe(FIRST_DISK_SIZE * 6)
   })
 
   it('is a no-op below the build cost', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) - 1, ...bandwidthExhausted })
-    expect(startDiskBuild(state)).toBe(state)
+    expect(provisionDisk(state)).toBe(state)
   })
 
   it('is a no-op while an array is already mid-build', () => {
@@ -1968,33 +1968,33 @@ describe('startDiskBuild', () => {
       bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted,
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    expect(startDiskBuild(state)).toBe(state)
+    expect(provisionDisk(state)).toBe(state)
   })
 
   it('is a no-op while Bandwidth (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
-    expect(startDiskBuild(state)).toBe(state)
+    expect(provisionDisk(state)).toBe(state)
   })
 
   it('is a no-op while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
       bits: getDiskCost(FIRST_DISK_SIZE), ...bandwidthExhausted, disks: { [FIRST_DISK_SIZE]: 1 },
     })
-    expect(startDiskBuild(state)).toBe(state)
+    expect(provisionDisk(state)).toBe(state)
   })
 })
 
-describe('tickDiskBuild', () => {
+describe('tickProvisionDisk', () => {
   it('is a same-reference no-op when no build is in progress', () => {
     const state = withIntro(createInitialGameState(), { diskBuild: null })
-    expect(tickDiskBuild(1)(state)).toBe(state)
+    expect(tickProvisionDisk(1)(state)).toBe(state)
   })
 
   it('counts remainingSeconds down by elapsedSeconds without completing early', () => {
     const state = withIntro(createInitialGameState(), {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 6, totalSeconds: 6 },
     })
-    const after = tickDiskBuild(2)(state)
+    const after = tickProvisionDisk(2)(state)
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: 4, totalSeconds: 6 })
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBeUndefined()
   })
@@ -2003,7 +2003,7 @@ describe('tickDiskBuild', () => {
     const state = withIntro(createInitialGameState(), {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    const after = tickDiskBuild(1)(state)
+    const after = tickProvisionDisk(1)(state)
     expect(after.intro.diskBuild).toBeNull()
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
   })
@@ -2012,7 +2012,7 @@ describe('tickDiskBuild', () => {
     const state = withIntro(createInitialGameState(), {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
-    const after = tickDiskBuild(5)(state)
+    const after = tickProvisionDisk(5)(state)
     expect(after.intro.diskBuild).toBeNull()
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
   })
@@ -2022,12 +2022,12 @@ describe('tickDiskBuild', () => {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 },
     })
-    const after = tickDiskBuild(1)(state)
+    const after = tickProvisionDisk(1)(state)
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(6)
   })
 })
 
-describe('tickGame Disk Build integration', () => {
+describe('tickGame Provision Disk integration', () => {
   it('completes a full build through tickGame itself, not just the raw reducer', () => {
     const state = withIntro(createInitialGameState(), {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
@@ -2103,7 +2103,7 @@ describe('Disk array IO lockout during a build', () => {
       }),
       tensTier.id, 1
     )
-    const afterBuild = tickDiskBuild(1)(state)
+    const afterBuild = tickProvisionDisk(1)(state)
     expect(afterBuild.intro.diskBuild).toBeNull()
     // Disk takes priority — cache stays blocked while the full redeemable disk exists.
     expect(isDiskCacheBlockReleasable(afterBuild, FIRST_DISK_SIZE)).toBe(false)
@@ -3598,7 +3598,7 @@ describe('activateComputeBoost', () => {
     expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
 
-  it('is a same-reference no-op while Disk Build (higher priority) is currently available', () => {
+  it('is a same-reference no-op while Provision Disk (higher priority) is currently available', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 1, bits: getDiskCost(FIRST_DISK_SIZE), productionMilestoneTierClaims: 2,
     })
@@ -8459,7 +8459,7 @@ describe('Data Lakes', () => {
   it('isDataLakeCapacityDoublingAvailable/TurnAvailable gate on affordability and the forced priority order', () => {
     // Not affordable — 1 bit short of the starting 1 * 8000 = 8000 bit cost.
     expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { bits: 7_999, ...noOtherUpgradesLeft }), 1)).toBe(false)
-    // Affordable, and nothing ranked above it (Disk Fill/Bandwidth/Disk Build/Compute) is available.
+    // Affordable, and nothing ranked above it (Disk Fill/Bandwidth/Provision Disk/Compute) is available.
     const diskLadderExhausted = { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP } }
     const affordable = withIntro(createInitialGameState(), { bits: 8_000, ...noOtherUpgradesLeft, ...diskLadderExhausted })
     expect(isDataLakeCapacityDoublingAvailable(affordable, 1)).toBe(true)

@@ -71,13 +71,22 @@ by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `is
 `engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this
 specific size's own array being mid-build.
 
+## `ByteFoundryPage` pool layout
+
+`ByteFoundryPage` keeps one shared Data Stream section containing Speed ×2, Capacity ×2, and the
+common Provision Disk control. It renders one derived `PoolCard` per unlocked storage pool in
+ascending order (`aria-label="pool N"`). Only the largest unlocked pool is expanded initially;
+earlier pools remain visible as compact summary disclosure buttons with `aria-expanded` and reveal
+their three `DiskArrayRow`s when opened. `DataLakePanel` remains a single panel after the pool cards
+and renders all ten lake rows once; it is not split into per-pool panels.
+
 ## `ConfirmDialog/index.jsx`
 
 styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed
 dimmed backdrop, Escape / backdrop-click cancel. Replaces native `window.confirm` for irreversible
 actions so the prompt matches the rest of the UI. Takes `{ open, title, children,
 confirmLabel, cancelLabel, confirmVariant, onConfirm, onCancel, ariaLabel }`. Used by
-`SettingsPage` for Era ascension. Sacrifice for 2x Capacity on `ByteFoundryPage` does **not** use
+`SettingsPage` for Era ascension. Capacity ×2 on `ByteFoundryPage` does **not** use
 this component — it fires immediately on click, with no confirm prompt (see `docs/DESIGN_HISTORY.md`).
 
 ## `Money/index.js`
