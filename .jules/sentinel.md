@@ -7,3 +7,7 @@
 **Vulnerability:** A recursive property setter (`setValueAtPath`) didn't validate keys, allowing arbitrary properties like `__proto__` and `constructor` to be modified on objects.
 **Learning:** Functions that recursively assign values into an object based on an array of path keys are highly susceptible to prototype pollution if the path segments are not validated against sensitive keys. Spread operations in recursive setups don't natively prevent prototype mutation if `__proto__` is explicitly accessed.
 **Prevention:** Always check if the current property name (or `head` of the path array) is `__proto__` or `constructor` and early-return to block the assignment within recursive setter functions.
+## 2026-08-30 - Remove unsafe-eval from CSP
+**Vulnerability:** The Content Security Policy in index.html contained `unsafe-eval` in its `script-src` directive, permitting the execution of dynamically evaluated code via `eval()` or `new Function()`.
+**Learning:** `unsafe-eval` was likely added for convenience during development, but the codebase does not actually require `eval()`.
+**Prevention:** Avoid adding `unsafe-eval` to Content Security Policy unless strictly necessary, and audit dependencies for dynamic code execution.
