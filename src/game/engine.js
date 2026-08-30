@@ -2837,7 +2837,15 @@ export const tickProvisionDisk = elapsedSeconds => state => {
   }
 }
 
-export const getNextDiskLadderSize = sourceSize => sourceSize * DISK_LADDER_SIZE_MULTIPLIER
+// Resolved through the ladder step rather than multiplying, so the result is the canonical
+// getDiskLadderSizeBits value: past step 22 the two expressions disagree in the last IEEE-754 bit
+// (8e25 vs 7.999999999999999e25), which would key disksBuiltTotal / diskWriteCache off a size the
+// rest of the ladder never produces.
+export const getNextDiskLadderSize = sourceSize => {
+  const step = getDiskLadderStep(sourceSize)
+  if (!step) return sourceSize * DISK_LADDER_SIZE_MULTIPLIER
+  return getDiskLadderSizeBits(step + 1)
+}
 
 export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
