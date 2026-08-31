@@ -171,7 +171,7 @@ const DataLakePanel = ({ actions, state, bare = false }) => {
                   aria-label={`double the ${label} Data Lake's capacity`}
                   disabled={!canDouble}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Spend ${formatDiskSize(doublingCost)} — this lake's own current capacity — to double it to ${formatDiskSize(capacity * 2 * unitBits)}`}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} deposited) to double its capacity to ${formatDiskSize(capacity * 2 * unitBits)} — needs it completely full first`}
                   type="button"
                   variant={canDouble ? 'prestige' : 'neutral'}
                 >

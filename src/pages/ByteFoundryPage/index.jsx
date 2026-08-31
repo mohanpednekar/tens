@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -155,15 +155,112 @@ const DataStreamCard = styled(StatCard)`
   gap: ${props => props.theme.space.md};
 `
 
+// Structured header + stats block, replacing the earlier single concatenated text line — matches
+// the tier row's own name/stat layout convention elsewhere in the app (see MainPage's TierName/
+// OwnedText/ProductionText) rather than staying a plain sentence.
 const PoolSummaryButton = styled.button`
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   padding: ${props => props.theme.space.sm};
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const PoolHeaderRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${props => props.theme.space.sm};
+`
+
+const PoolTitle = styled.h3`
+  display: flex;
+  align-items: baseline;
+  gap: ${props => props.theme.space.xs};
+  margin: 0;
+  min-width: 0;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.md.size};
+  line-height: ${props => props.theme.type.scale.md.lineHeight};
+  font-weight: 700;
+  color: ${props => props.theme.color.text};
+`
+
+const PoolTitleSymbol = styled.span`
+  flex-shrink: 0;
+`
+
+const PoolTitleName = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-weight: 500;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+// Text-only status indicator (color carries the state), matching MilestonesPage's own Badge
+// convention elsewhere in the app rather than introducing a new pill/chip shape.
+const PoolStatusBadge = styled.span`
+  flex-shrink: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  font-weight: 600;
+  color: ${props => (props.$complete ? props.theme.color.good : props.theme.color.textMuted)};
+`
+
+const PoolStatsRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.space.md};
+`
+
+const PoolStat = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+`
+
+const PoolStatLabel = styled.span`
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => props.theme.color.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+`
+
+const PoolStatValue = styled.span`
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 500;
+  color: ${props => props.theme.color.text};
+  font-variant-numeric: tabular-nums;
+`
+
+// Each pool's own small local buffer (see intro.poolBuffers) — a lightweight throughput
+// reservoir the pool spends from directly, distinct from the big Capacity ladder shown in
+// PoolStatsRow above. A slim bar reusing the same progressFill gradient mixin every other fill
+// meter on this page already uses, paired with a compact label/value line.
+const PoolBufferRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+`
+
+const PoolBufferMeter = styled.div`
+  width: 100%;
+  height: 0.4rem;
+  border-radius: ${props => props.theme.radius.sm};
+  ${progressFill}
 `
 
 // A thin visual break between the Data Stream controls and its common Provision Disk operation.
@@ -343,15 +440,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
   const diskSize = getDiskSize(state)
   const diskCost = getDiskCost(diskSize)
+  const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
+  const diskPoolBufferBits = getPoolBufferBits(state, diskPoolIndex)
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
-  const diskBuildBlockedByPriority = !diskLadderExhausted && intro.bits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
+  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
   const diskBuildProgress = diskBuildInProgress
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : diskLadderExhausted
       ? 100
-      : clampPercent((intro.bits / diskCost) * 100)
+      : clampPercent((diskPoolBufferBits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
@@ -566,6 +665,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolIndex = offset + 1
         const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
         const poolCapacity = getStoragePoolCapacity(state, poolIndex)
+        const poolBufferBits = getPoolBufferBits(state, poolIndex)
+        const poolBufferCapacity = getPoolBufferCapacity(state, poolIndex)
+        const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         const arraysComplete = poolSizes.length > 0 && poolSizes.every(size =>
@@ -579,9 +681,39 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
               type="button"
             >
-              Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`} ·{' '}
-              {arraysComplete ? 'Arrays complete' : 'Arrays in progress'} ·{' '}
-              Bandwidth {formatBitsInNearestUnit(poolBandwidth)}/sec · Capacity {formatBitsInNearestUnit(poolCapacity)}
+              <PoolHeaderRow>
+                <PoolTitle>
+                  <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
+                  <PoolTitleName>Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`}</PoolTitleName>
+                </PoolTitle>
+                <PoolStatusBadge $complete={arraysComplete}>
+                  {arraysComplete ? 'Arrays complete' : 'Arrays in progress'}
+                </PoolStatusBadge>
+              </PoolHeaderRow>
+              <PoolStatsRow>
+                <PoolStat>
+                  <PoolStatLabel>Bandwidth</PoolStatLabel>
+                  <PoolStatValue>{formatBitsInNearestUnit(poolBandwidth)}/sec</PoolStatValue>
+                </PoolStat>
+                <PoolStat>
+                  <PoolStatLabel>Capacity</PoolStatLabel>
+                  <PoolStatValue>{formatBitsInNearestUnit(poolCapacity)}</PoolStatValue>
+                </PoolStat>
+              </PoolStatsRow>
+              <PoolBufferRow>
+                <PoolStatLabel>Memory</PoolStatLabel>
+                <PoolBufferMeter
+                  $progress={poolBufferPercent}
+                  role="progressbar"
+                  aria-label={`pool ${poolIndex} memory buffer`}
+                  aria-valuenow={Math.round(poolBufferPercent)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+                <PoolStatValue>
+                  {formatBitsInNearestUnit(poolBufferBits)} / {formatBitsInNearestUnit(poolBufferCapacity)}
+                </PoolStatValue>
+              </PoolBufferRow>
             </PoolSummaryButton>
             {isExpanded && (
               <>
