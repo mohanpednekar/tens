@@ -1144,7 +1144,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.capacityUpgradeQueued).toBe(false)
   })
 
-  it('does not auto-upgrade Capacity during convenience', () => {
+  it('auto-upgrades Capacity during convenience', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
       capacity: INTRO_STARTING_CAPACITY,
@@ -1160,8 +1160,8 @@ describe('tickFoundryResetConvenience', () => {
       },
     })
     const after = tickFoundryResetConvenience(state)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
-    expect(after.intro.bits).toBe(INTRO_STARTING_CAPACITY)
+    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 2)
+    expect(after.intro.bits).toBe(0)
   })
 
   it('auto-Combine during convenience leaves Capacity on the doubling ladder', () => {
