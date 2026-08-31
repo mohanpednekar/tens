@@ -440,6 +440,12 @@ const TierNameTrigger = styled.div`
   grid-area: name;
   min-width: 0;
   width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${props => props.theme.radius.sm};
+  }
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
