@@ -2068,9 +2068,10 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   // unlocked pools: a lake tier's transfer capacity requires its own arrays fully built, which
   // necessarily unlocks the matching storage pool.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
-  return getIntroProductionRate(state.intro ?? {}) / (
-    MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex)
-  )
+  // Each unlocked pool paces at the full Byte Foundry production rate. The previous
+  // division by MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex) made lower-pool
+  // throughput collapse as higher pools unlocked, which is not the intended behavior.
+  return getIntroProductionRate(state.intro ?? {})
 }
 
 export const getStoragePoolCapacity = (state, poolIndex) => {
@@ -2079,9 +2080,9 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
   // callers derive the pool from a built disk or a fully-built lake tier, both of which imply the
   // corresponding pool is unlocked.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
-  const rawCapacity = (state.intro?.capacity ?? 0) / (
-    MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex)
-  )
+  // Capacity is the single shared Memory ceiling, clamped to this pool's own window.
+  // It does not scale down when higher pools unlock, so pool 1 stays capped at 1 MiB once maxed.
+  const rawCapacity = state.intro?.capacity ?? 0
   const floorBits = poolIndex === 1
     ? getStoragePoolMemoryBounds(1).startBits
     : getStoragePoolMemoryBounds(poolIndex - 1).endBits

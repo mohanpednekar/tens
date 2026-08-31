@@ -931,10 +931,11 @@ live indefinitely, every cycle.
 `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024 (`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes =
 1.024 KB` — distinct from Disks/Data Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`,
 unchanged, step 1000). Pool Memory Capacity uses the shared start/end bounds from
-`getStoragePoolMemoryBounds`; the Data Stream's own value is the highest unlocked pool's value,
-while each earlier pool derives a 1/1024 step and clamps into its own bounds. Capacity remains a
-full-Buffer **Capacity ×2** ladder, with `INTRO_CAPACITY_CAP_BITS` retained as the pool-1 alias and
-the active highest pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
+`getStoragePoolMemoryBounds`; the Data Stream's own value is the shared Memory ceiling, and each
+pool's displayed Capacity is that value clamped to its own bounds. Earlier pools no longer derive
+a 1/1024 step down from the highest unlocked pool, so pool 1 stays capped at `INTRO_CAPACITY_CAP_BITS`
+once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder, with `INTRO_CAPACITY_CAP_BITS`
+retained as the pool-1 alias and the active highest pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
 Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
 effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,194,304 bits / 512 KiB). This is
@@ -948,7 +949,7 @@ epic #456 / tracking #506.
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
 `DISK_LADDER_SIZE_MULTIPLIER^(n-1)`: 1 KB → 10 KB → **100 KB**, so a "1 KB" disk needs 8000 bits, not
 a "kilobit" 1000) advances every `DISK_ARRAY_LADDER_CAP` (10) built at the current size — but only up
-to the highest size any currently-unlocked storage pool's own generator can fund (`getDiskSize` never
+to the highest size any currently-unlocked storage pool can fund (`getDiskSize` never
 advances through the active ladder using `getMaxActiveDiskLadderStep` as pools unlock; the terminal
 limit is pool 10's largest size. Once that last size's array is fully built,
 `isDiskLadderExhaustedForActivePools` goes true only once pool 10's largest size is fully built and
@@ -957,8 +958,8 @@ as compact summaries while the largest unlocked pool is expanded. Starting a pro
 (`provisionDisk`) spends `getDiskCost(size)` (`DISK_BUILD_COST_MULTIPLIER` (10) × size)
 immediately and takes real TIME to complete — the array's Nth disk (N = disks already built at that
 size, 1-indexed) takes `N ×` that size's own base build time, where the base time is exactly how
-long filling that size takes at **1x Memory bandwidth** (the Byte Foundry's current
-the owning derived pool's Bandwidth, snapshotted when provisioning starts) — at the default starting rate (1
+long filling that size takes at the current Byte Foundry production rate (snapshotted when provisioning
+starts) — at the default starting rate (1
 bit/sec) a fresh 1 KB (8000-bit) array's first disk takes 8000 seconds, its 6th disk 48,000 seconds,
 and a 10 KB array's first disk 80,000 seconds; all three shrink in lockstep as Invest/Compute Boost
 grow the rate. An earlier version used a flat, rate-independent "1 second per real KB of size"
