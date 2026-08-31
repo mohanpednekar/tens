@@ -137,9 +137,9 @@ B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines 
 permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
 cost ladder now ×4/tier) and **Capacity ×2**. Capacity requires a full Buffer, drains it, doubles
 the shared Data Stream capacity, and stops at the moving end bound of the highest unlocked pool; the
-ceiling advances as pools unlock. Storage pools 1–10 are derived views over this one generator: the
-highest unlocked pool shows the Data Stream's Bandwidth and Capacity, while each earlier pool is
-divided by 1024 per step and Capacity is clamped to its chained bounds. The common **Provision Disk**
+ceiling advances as pools unlock. Storage pools 1–10 are derived views over this one generator: every
+unlocked pool shares the Data Stream's Bandwidth, while each pool's displayed Capacity is the shared
+Memory ceiling clamped to its own chained bounds. The common **Provision Disk**
 operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
 targets the next disk size. Only the largest unlocked pool is expanded; earlier pools remain as
 compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a

@@ -83,12 +83,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `× BITS_PER_BYTE`, so the headline balance and Prestige progress move again (regression from #430).
 - **Ladder nav attention** — the Factory/Ladder attention dot for affordable Clock Speed now checks
   the **Bytes** pool (matching the buy button), not Bits.
+- **Storage pool bandwidth/capacity no longer divided by higher unlocked pools** —
+  `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
+  Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
+  stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
 
 ### Changed
 - **Byte Foundry storage pools (#456)** — the Foundry now derives storage pools 1–10 from one
-  shared Data Stream. Completing a pool unlocks the next disk-array sizes; the largest unlocked
-  pool expands while earlier pools remain available as compact summaries. Capacity ×2 uses the
-  restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
+  shared Data Stream. Completing a pool unlocks the next disk-array sizes; earlier pools stay
+  available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses
+  the restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
   the shared Disk Build control is now labeled **Provision Disk**.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,

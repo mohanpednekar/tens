@@ -724,7 +724,7 @@ describe('storage pools', () => {
     expect(getUnlockedStoragePoolCount(complete)).toBe(2)
   })
 
-  it('derives each pool bandwidth and capacity from the highest unlocked pool', () => {
+  it('keeps lower-pool bandwidth and capacity fixed without dividing by higher unlocked pools', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 0,
@@ -734,9 +734,9 @@ describe('storage pools', () => {
       ),
     })
     expect(getStoragePoolBandwidth(state, 2)).toBe(getIntroProductionRate(state.intro))
-    expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro) / 1024)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
     expect(getStoragePoolCapacity(state, 2)).toBe(state.intro.capacity)
-    expect(getStoragePoolCapacity(state, 1)).toBe(8 * 1024)
+    expect(getStoragePoolCapacity(state, 1)).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 
   it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
@@ -2182,10 +2182,10 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.bits).toBe(blockBits * 5 - budget)
   })
 
-  it('uses the owner pool\'s derived Capacity when refilling a lower-pool cache', () => {
+  it('dumps the whole Memory balance when the pool\'s clamped capacity is smaller than one cache block', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY,
-      capacity: 8 * MEMORY_BINARY_UNIT_STEP,
+      capacity: INTRO_STARTING_CAPACITY,
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
         [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
@@ -2360,7 +2360,7 @@ describe('tickDiskAutoFill', () => {
     expect(flush).toEqual({ remainingSeconds: expectedSeconds, totalSeconds: expectedSeconds })
   })
 
-  it('paces pool 2 and pool 1 read-cache flushes from their derived bandwidths', () => {
+  it('paces read-cache flushes at the full Byte Foundry bandwidth for every unlocked pool', () => {
     const megabyteSize = FIRST_DISK_SIZE * 1000
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: {
@@ -2373,10 +2373,7 @@ describe('tickDiskAutoFill', () => {
     const pool2FlushSeconds = getDiskReadCacheFlushSeconds(state, megabyteSize)
     const pool1FlushSeconds = getDiskReadCacheFlushSeconds(state, FIRST_DISK_SIZE)
     expect(pool2FlushSeconds).toBe(megabyteSize / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
-    expect(pool1FlushSeconds).toBe(
-      FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT
-        / (DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / MEMORY_BINARY_UNIT_STEP),
-    )
+    expect(pool1FlushSeconds).toBe(FIRST_DISK_SIZE / DISK_CACHE_BLOCK_COUNT / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
   })
 
   it('completes the read-cache flush after one cache-block production duration and fills the disk', () => {
