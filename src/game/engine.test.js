@@ -769,7 +769,7 @@ describe('storage pools', () => {
   it('leaves Bandwidth at the raw production rate while it stays under sqrt(Capacity)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // sqrt = 2,000
+      capacity: 4_000_000, // sqrt(4,000,000 / 8 Bytes) * 8 ≈ 5,656.85 bits/sec cap
       productionMultiplier: 500, // under the cap
     })
     expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
@@ -814,8 +814,9 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1000,
-      // Capacity is 32,000,000 bits = 4,000,000 Bytes; sqrt(4,000,000 Bytes) = 2,000 Bytes/sec
-      // = 16,000 bits/sec pool 1 Bandwidth cap.
+      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (8,388,608 bits =
+      // 1,048,576 Bytes) regardless of this seeded value; sqrt(1,048,576 Bytes) = 1,024
+      // Bytes/sec = 8,192 bits/sec pool 1 Bandwidth cap.
       capacity: 32_000_000,
       productionMultiplier: 999_999, // far above the cap, so the cap (not the rate) binds
     })
