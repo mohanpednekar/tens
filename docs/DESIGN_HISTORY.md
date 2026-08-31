@@ -1,5 +1,23 @@
 # Design history & rationale
 
+### Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31
+
+#431 (closing #399) had renamed this screen from "Factory"/"Byte Factory" to "Ladder" specifically
+to avoid colliding with Compute/Flops "tier" terminology. Six days later the maintainer explicitly
+asked to rename it back to **Byte Factory** (short nav label **Factory**) — the AppNav item, the
+MainPage `<h1>`, the Factory | Upgrades peer tabs, `DiskArrayRow`'s cache-transfer copy ("to Factory
+Bits"), Settings danger-zone / confirm-dialog copy, the Guide, and the DevModePage quick-seed preset
+all reverted. Flagged the direct conflict with #399's own stated rationale before making the change;
+the maintainer confirmed they wanted to proceed anyway.
+
+This is a pure naming reversal with no mechanical difference — internal identifiers
+(`page === 'game'`, `showTiers`, `hasTiersAttention`/`hasTiersGameAttention`) and the pre-existing,
+unrelated **Factory Bytes** resource pool (`BYTES_ID` — the Byte Foundry's own Bytes currency,
+already called "Factory Bytes" even during the "Ladder" era per #399's own out-of-scope note) were
+untouched by either rename. If this screen's name is revisited again, note that it has now thrashed
+between "Factory" and "Ladder" twice — check with the maintainer rather than re-guessing, since
+#399's Compute/Flops-tier-collision concern still applies to whichever name is *not* current.
+
 ### Storage pools derive from one Data Stream; Capacity ladder restored (#456) — 2026-08-27
 
 The reviewed storage-pool model keeps exactly one Data Stream generator. Pools 1–10 are derived
