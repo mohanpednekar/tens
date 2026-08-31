@@ -756,14 +756,15 @@ describe('storage pools', () => {
   it('caps a pool\'s own Bandwidth at the square root of its own Capacity (in Bytes) once the production rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (8,388,608 bits =
-      // 1,048,576 Bytes); sqrt(1,048,576 Bytes) = 1,024 Bytes/sec = 8,192 bits/sec — a clean cap
-      // value once converted back to bits.
+      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (8,000,000 bits =
+      // 1,000,000 Bytes, a clean SI 1 MB — see POOL_CAPACITY_SI_STEP in layers.js);
+      // sqrt(1,000,000 Bytes) = 1,000 Bytes/sec = 8,000 bits/sec (1 KB/sec) — matching the
+      // clean SI Bandwidth cap the pool's own 1 MB Capacity should produce.
       capacity: INTRO_CAPACITY_CAP_BITS,
       productionMultiplier: 999_999, // far above the cap
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(8_192)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(8_192)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(8_000)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(8_000)
   })
 
   it('leaves Bandwidth at the raw production rate while it stays under sqrt(Capacity)', () => {
@@ -844,9 +845,9 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
-      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS regardless of the
-      // shared Capacity's own magnitude; pool 1 Bandwidth cap = sqrt(1,048,576 Bytes) =
-      // 1,024 Bytes/sec = 8,192 bits/sec.
+      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (8,000,000 bits, a
+      // clean SI 1 MB) regardless of the shared Capacity's own magnitude; pool 1 Bandwidth cap
+      // = sqrt(1,000,000 Bytes) = 1,000 Bytes/sec = 8,000 bits/sec.
       capacity: 32_000_000,
       productionMultiplier: 999_999, // total "Data Stream rate" far exceeds any single pool's cap
       disksBuiltTotal: {
@@ -856,10 +857,10 @@ describe('pool buffers', () => {
       }, // unlocks pool 2
     })
     const after = tickPoolBufferFill(1)(state)
-    // Pool 1 reserves exactly its own 8,192 bits/sec cap off the top of the shared rate; pool 2
+    // Pool 1 reserves exactly its own 8,000 bits/sec cap off the top of the shared rate; pool 2
     // gets whatever's left of the (effectively unlimited, here) remaining rate, still bounded by
     // its own Bandwidth cap and buffer room.
-    expect(after.intro.poolBuffers[1]).toBe(8_192)
+    expect(after.intro.poolBuffers[1]).toBe(8_000)
     expect(after.intro.poolBuffers[2]).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - after.intro.poolBuffers[1] - after.intro.poolBuffers[2])
   })
@@ -1641,11 +1642,19 @@ describe('formatMemoryAmount', () => {
 
 describe('formatBitsInNearestUnit', () => {
   it('picks the binary unit that best fits the given amount itself', () => {
-    expect(formatBitsInNearestUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY)).toBe('512 KiB')
+    // A literal clean binary value (512 KiB), not INTRO_COMPUTE_CORE_UNLOCK_CAPACITY — that
+    // constant no longer lands on a clean binary figure now that pool Capacity bounds are
+    // SI-aligned (see POOL_CAPACITY_SI_STEP in layers.js), so this test uses its own
+    // independent, deliberately clean fixture to exercise the unit-picking logic itself.
+    expect(formatBitsInNearestUnit(BITS_PER_BYTE * 512 * 1024)).toBe('512 KiB')
   })
 
-  it('renders exactly INTRO_CAPACITY_CAP_BITS (pool 1\'s cap) as 1 MiB', () => {
-    expect(formatBitsInNearestUnit(INTRO_CAPACITY_CAP_BITS)).toBe('1 MiB')
+  it('renders a clean binary-power bit count as 1 MiB', () => {
+    // A literal 1 MiB (BITS_PER_BYTE * 1024^2), not INTRO_CAPACITY_CAP_BITS — that constant is
+    // now a clean SI 1 MB (8,000,000 bits) rather than a clean binary 1 MiB, since pool Capacity
+    // bounds are SI-aligned (see POOL_CAPACITY_SI_STEP in layers.js). This test exercises the
+    // binary formatter itself, independent of that constant's own current value.
+    expect(formatBitsInNearestUnit(BITS_PER_BYTE * 1024 * 1024)).toBe('1 MiB')
   })
 })
 
