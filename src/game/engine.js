@@ -2093,7 +2093,13 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   // ahead of what its own tiny Memory window could ever plausibly move through. The cap grows
   // with Capacity ×2 purchases just like the rate itself does, so it only ever binds while a
   // pool's Capacity hasn't caught up yet.
-  return Math.min(getIntroProductionRate(state.intro ?? {}), Math.sqrt(getStoragePoolCapacity(state, poolIndex)))
+  // The sqrt operates on Capacity converted to Bytes (SI, ÷ BITS_PER_BYTE), not the raw bit
+  // count, then the result is converted back to bits/sec — Storage pools use SI units for all
+  // purposes, so the cap must land on SI-round figures (e.g. a 1MB-capacity pool caps at
+  // 1KB/s, a 1GB-capacity pool at ~32KB/s, a 1TB-capacity pool at 1MB/s), which a raw-bit sqrt
+  // would not produce.
+  const capacityBytes = getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE
+  return Math.min(getIntroProductionRate(state.intro ?? {}), Math.sqrt(capacityBytes) * BITS_PER_BYTE)
 }
 
 export const getStoragePoolCapacity = (state, poolIndex) => {

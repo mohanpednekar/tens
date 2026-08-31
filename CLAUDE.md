@@ -661,9 +661,14 @@ Strict three-layer separation:
    shared Combine/Speed/Capacity actions and the common Provision Disk control. Storage pools 1–10
    are derived views over the one Data Stream: each unlocked pool's own Bandwidth is the Data
    Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
-   (`getStoragePoolBandwidth` — `Math.min(rate, Math.sqrt(capacity))`), so a pool with a small
-   Capacity window can lag behind the raw rate once production outgrows it; while each pool's
-   displayed Capacity is the shared Memory ceiling clamped to its own binary bounds. Each pool also
+   **converted to Bytes** (`getStoragePoolBandwidth` —
+   `Math.min(rate, Math.sqrt(capacity / BITS_PER_BYTE) * BITS_PER_BYTE)`, both sides still in
+   bits/sec for internal consistency — a 1 MB-capacity pool caps at 1 KB/s, a 1 GB-capacity pool at
+   ~32 KB/s, a 1 TB-capacity pool at 1 MB/s), so a pool with a small Capacity window can lag behind
+   the raw rate once production outgrows it. **Storage pools display in SI units for all purposes**
+   (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike Memory
+   Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below); while
+   each pool's displayed Capacity is the shared Memory ceiling clamped to its own binary bounds. Each pool also
    owns a small local **buffer** (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/
    `getPoolBufferCapacity`) that every bit-costing Storage action for that pool — Provision Disk's
    build cost, the read-cache fill-from-Memory pass — spends from exclusively; the shared Data

@@ -137,7 +137,9 @@ cost ladder now ×4/tier) and **Capacity ×2**. Capacity requires a full Buffer,
 the shared Data Stream capacity, and stops at the moving end bound of the highest unlocked pool; the
 ceiling advances as pools unlock. Storage pools 1–10 are derived views over this one generator: each
 unlocked pool's own Bandwidth is the shared production rate hard-capped at the square root of that
-pool's OWN Capacity, while each pool's displayed Capacity is the shared Memory ceiling clamped to
+pool's OWN Capacity **converted to Bytes** (both sides still bits/sec internally — Storage pools
+display in SI units for all purposes, unlike Memory Capacity/the Data Stream Buffer, which stays
+binary), while each pool's displayed Capacity is the shared Memory ceiling clamped to
 its own chained bounds. Each pool also owns a small local **buffer** (`intro.poolBuffers`) that
 every bit-costing Storage action for that pool spends from exclusively (Provision Disk's cost, the
 read-cache fill) — the shared Buffer only tops it up (`tickPoolBufferFill`, bandwidth-limited,

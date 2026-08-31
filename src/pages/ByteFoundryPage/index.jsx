@@ -510,7 +510,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <SectionLabel>Data Stream</SectionLabel>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
-          <StatusText>Buffer {formatBitsInNearestUnit(intro.capacity)}</StatusText>
           <VisuallyHidden
             role="progressbar"
             aria-label="data stream bit balance"
@@ -693,11 +692,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <PoolStatsRow>
                 <PoolStat>
                   <PoolStatLabel>Bandwidth</PoolStatLabel>
-                  <PoolStatValue>{formatBitsInNearestUnit(poolBandwidth)}/sec</PoolStatValue>
+                  <PoolStatValue>{formatDiskSize(poolBandwidth)}/sec</PoolStatValue>
                 </PoolStat>
                 <PoolStat>
                   <PoolStatLabel>Capacity</PoolStatLabel>
-                  <PoolStatValue>{formatBitsInNearestUnit(poolCapacity)}</PoolStatValue>
+                  <PoolStatValue>{formatDiskSize(poolCapacity)}</PoolStatValue>
                 </PoolStat>
               </PoolStatsRow>
               <PoolBufferRow>
@@ -710,9 +709,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   aria-valuemin={0}
                   aria-valuemax={100}
                 />
-                <PoolStatValue>
-                  {formatBitsInNearestUnit(poolBufferBits)} / {formatBitsInNearestUnit(poolBufferCapacity)}
-                </PoolStatValue>
+                {/* No "/ max" here — the buffer's own ceiling always equals the Capacity stat
+                    already shown above (see getPoolBufferCapacity), so restating it would just
+                    repeat the same number a second time in the same card. */}
+                <PoolStatValue>{formatDiskSize(poolBufferBits)}</PoolStatValue>
               </PoolBufferRow>
             </PoolSummaryButton>
             {isExpanded && (
