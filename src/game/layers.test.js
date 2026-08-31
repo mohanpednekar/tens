@@ -37,6 +37,7 @@ import {
   MONEY_ID,
   OVERCLOCK_MULTIPLIER_STEP,
   OVERCLOCK_REQUIREMENT_STEP,
+  POOL_CAPACITY_SI_STEP,
   PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE,
   PRESTIGE_POINT_SPEED_BONUS,
   PRESTIGE_POWERS_PER_PP_BASE,
@@ -278,15 +279,19 @@ describe('constants', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
   })
 
-  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 4,194,304 bits (512 KiB in Memory\'s own binary display scale) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(4194304)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 1024 * 512)
+  it('POOL_CAPACITY_SI_STEP is 1000 (pool Capacity end bounds land on clean SI powers of 1000 Bytes)', () => {
+    expect(POOL_CAPACITY_SI_STEP).toBe(1000)
   })
 
-  it('INTRO_CAPACITY_CAP_BITS is 8,388,608 bits (exactly 1 MiB) — large enough to afford building pool 1\'s own largest (100 KB) Disk', () => {
-    expect(INTRO_CAPACITY_CAP_BITS).toBe(8388608)
-    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * 1024 * 1024)
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 4,000,000 bits (500 KB SI) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(4000000)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 500_000)
+  })
+
+  it('INTRO_CAPACITY_CAP_BITS is 8,000,000 bits (exactly 1 MB SI) — large enough to afford building pool 1\'s own largest (100 KB) Disk', () => {
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(8000000)
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 2)
   })
 
   it('INTRO_CAPACITY_DOUBLING_STEP is 2 (shared binary Capacity ladder spacing)', () => {
@@ -297,15 +302,18 @@ describe('constants', () => {
     expect(INTRO_BANDWIDTH_COST_MULTIPLIER).toBe(4)
   })
 
-  it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared ladder', () => {
+  it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared SI-aligned ladder', () => {
     expect(getStoragePoolMemoryBounds(1)).toEqual({
       startBits: INTRO_STARTING_CAPACITY,
       endBits: INTRO_CAPACITY_CAP_BITS,
     })
-    expect(getStoragePoolMemoryBounds(2).endBits).toBe(BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 3)
+    // Pool 2 (Megabyte pool) ends at exactly 1 GB (SI), pool 3 (Gigabyte pool) at exactly 1 TB —
+    // and so on, matching Storage's own SI display convention throughout.
+    expect(getStoragePoolMemoryBounds(2).endBits).toBe(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 3)
+    expect(getStoragePoolMemoryBounds(3).endBits).toBe(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 4)
   })
 
-  it('MEMORY_BINARY_UNIT_STEP is 1024 (Memory Capacity\'s binary unit ladder — 1 KiB = 1024 Bytes)', () => {
+  it('MEMORY_BINARY_UNIT_STEP is 1024 (Data Stream Buffer display\'s own binary unit ladder — 1 KiB = 1024 Bytes; no longer governs where a pool\'s Capacity end bound itself lands, see POOL_CAPACITY_SI_STEP)', () => {
     expect(MEMORY_BINARY_UNIT_STEP).toBe(1024)
   })
 

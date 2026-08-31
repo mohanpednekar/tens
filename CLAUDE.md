@@ -949,18 +949,31 @@ live indefinitely, every cycle.
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
 `isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds` in
 `engine.js`/`layers.js`, `INTRO_CAPACITY_CAP_BITS`/`INTRO_BANDWIDTH_COST_MULTIPLIER`/
-`MEMORY_BINARY_UNIT_STEP`) — Data Stream balance and Buffer render in binary (IEC-style) units —
-`B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024 (`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes =
-1.024 KB` — distinct from Disks/Data Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`,
-unchanged, step 1000). Pool Memory Capacity uses the shared start/end bounds from
-`getStoragePoolMemoryBounds`; the Data Stream's own value is the shared Memory ceiling, and each
-pool's displayed Capacity is that value clamped to its own bounds. Earlier pools no longer derive
-a 1/1024 step down from the highest unlocked pool, so pool 1 stays capped at `INTRO_CAPACITY_CAP_BITS`
-once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder, with `INTRO_CAPACITY_CAP_BITS`
-retained as the pool-1 alias and the active highest pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
+`MEMORY_BINARY_UNIT_STEP`/`POOL_CAPACITY_SI_STEP`) — the Data Stream card's own balance/Buffer
+figure still RENDERS in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024
+(`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
+Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). But each pool's
+own Capacity end bound VALUE itself (not just its Storage-pool-card display) is now SI-aligned
+(`POOL_CAPACITY_SI_STEP` = 1000, not `MEMORY_BINARY_UNIT_STEP`): `getStoragePoolMemoryBounds(poolIndex).endBits`
+is exactly `BITS_PER_BYTE * 1000 ** (poolIndex + 1)` — pool 1 → 1 MB (SI), pool 2 → 1 GB, pool 3 →
+1 TB, … — so a pool's own Capacity/Bandwidth stats (SI-displayed on its `PoolCard`, see above) land
+on genuinely clean SI figures rather than binary ones converted to SI units after the fact. The
+Data Stream card's OWN binary rendering of this same underlying value is therefore no longer a
+round binary figure either (pool 1's 8,000,000-bit cap reads "976.562 KiB," not "1 MiB") — an
+accepted, deliberate side effect of decoupling the value's true magnitude (now SI-round) from its
+one remaining binary display surface (the Data Stream card only). Pool Memory Capacity uses the
+shared start/end bounds from `getStoragePoolMemoryBounds`; the Data Stream's own value is the
+shared Memory ceiling, and each pool's displayed Capacity is that value clamped to its own bounds.
+Earlier pools no longer derive a step down from the highest unlocked pool, so pool 1 stays capped
+at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder
+(plain `×2` per purchase, unchanged — the SI alignment lives entirely in the pool boundary
+CONSTANTS above, not in the doubling mechanic itself, so the ladder's last purchase before a new
+pool's cap simply clamps a little earlier than a raw double would land, same clamp shape as before
+this change), with `INTRO_CAPACITY_CAP_BITS` retained as the pool-1 alias and the active highest
+pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
 Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
 effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
-`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,194,304 bits / 512 KiB). This is
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
 the first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md` and
 epic #456 / tracking #506.
 

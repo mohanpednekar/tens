@@ -3498,3 +3498,115 @@ the same clean `8,192` bits/sec cap; tests exercising a *specific* below-clamp c
 derived their seeded `capacity` backwards from the desired cap
 (`capacityBits = (desiredCapBits / BITS_PER_BYTE) ** 2 * BITS_PER_BYTE`) rather than guessing at a
 bit count and hoping the sqrt happened to be clean.
+
+**Superseded by the entry below: `INTRO_CAPACITY_CAP_BITS` is no longer 8,388,608 (1 MiB) — every
+"8,192 bits/sec" / "1 MiB" figure in this entry describes the PRE-correction binary-aligned cap.
+See "Pool Capacity end bounds corrected to SI powers of 1000" immediately below for the current
+values (8,000,000 bits, 1 MB SI, 8,000 bits/sec).**
+
+### Pool Capacity end bounds corrected to SI powers of 1000, not binary powers of 1024
+
+The sqrt-Bandwidth-cap-in-Bytes correction (entry above) fixed the CAP FORMULA but left a residual
+gap the entry itself flagged: pool 1's Capacity end bound (`INTRO_CAPACITY_CAP_BITS`) was still
+architecturally `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 2` — a binary `1024^2` Bytes (1 MiB,
+8,388,608 bits) — not the clean SI `1,000,000` Bytes (1 MB) the worked examples specified ("KB Pool
+Capacity 1MB, Bandwidth 1KB/s"). Feeding that binary cap through the (now-correct) Bytes-based sqrt
+still produced a non-round `8,192` bits/sec, not the intended `8,000`. The gap wasn't the sqrt
+formula any more — it was that the value being square-rooted was itself binary-shaped underneath a
+newly SI-shaped formula.
+
+The user's own correction supplied the exact mechanism: **"The switchover while doubling happens at
+64 to 125, to ensure 1000 as end result."** Read as a derivation: a pure binary-doubling sequence
+(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, …) can be bent onto a clean SI endpoint with a single
+deviation per "decade" of 10 doublings — instead of doubling the 7th step from 64 to 128, step to
+125 instead (×1.953125, not ×2) and resume ordinary doubling from there (125 → 250 → 500 → 1000).
+The result crosses 1000 (not 1024) after exactly 10 doublings from a 1-unit floor, and 1000^d after
+every 10*d doublings — a general technique for aligning any binary-doubling ladder onto SI decade
+marks with the minimum possible deviation from pure doubling (only 1 non-×2 step per 10).
+
+**Scope: which ladder did this apply to?** Two candidates existed in the code, and the fix only
+applies to one of them — asked the user directly (`AskUserQuestion`) rather than guessing, since a
+wrong guess would mean either a wasted implementation or, worse, silently shipping a wrong economy
+formula:
+- **Data Lake capacity doubling** (`getDataLakeCapacity = (state, tierIndex) => 2 ** getDataLakeCapacityLevel(...)`,
+  hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` = 10, landing on `2^10 = 1,024` units) — a strong
+  surface match: it already tracks a discrete level 0–10 (exactly one "decade"), and 1,024 units is
+  visibly non-round next to Disk sizes' own clean SI 1 KB/10 KB/100 KB/… in the same UI.
+- **Memory/Pool Capacity ladder** (`getStoragePoolMemoryBounds`, `INTRO_CAPACITY_CAP_BITS`,
+  `intro.capacity`'s own raw-doubling growth) — no explicit level counter (a raw bit value
+  multiplied by `INTRO_CAPACITY_DOUBLING_STEP` each purchase, clamped to the pool's end bound), but
+  its END BOUNDS are exactly what "KB Pool Capacity 1MB / MB Pool 1GB / GB Pool 1TB" describes, and
+  each pool boundary sits at a whole multiple of 10 doublings from the 1-Byte floor (pool `n`'s
+  bound is `1024^(n+1)` Bytes = `2^(10*(n+1))` Bytes under the old formula) — so "ensure 1000 as end
+  result" (singular target, one clean value per boundary) fits this ladder's actual worked examples
+  more precisely than the Data Lake's single fixed 1,024-unit cap does.
+
+The user confirmed **Memory/Pool Capacity ladder**.
+
+**Implementation: fix the boundary CONSTANTS, not the doubling MECHANIC.** Every pool boundary
+sits at a whole multiple of 10 doublings from the floor, so the full per-step mantissa sequence
+(`[1,2,4,8,16,32,64,125,250,500]` repeating ×1000 per decade) is unnecessary — at any multiple-of-10
+step count the decade formula collapses to a plain power: `value = 1000^d` where `d` is the number
+of complete decades. So the fix is a one-constant change: `getStoragePoolMemoryBounds(poolIndex).endBits`
+went from `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** (poolIndex + 1)` (base 1024) to
+`BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)` (base 1000, a new named constant —
+deliberately NOT reusing `MEMORY_BINARY_UNIT_STEP`, which stays 1024 and keeps governing the Data
+Stream card's own binary display rounding, an unrelated concern). `INTRO_CAPACITY_CAP_BITS` (pool
+1's alias) followed the same substitution. The actual per-purchase Capacity ×2 MECHANIC
+(`upgradePoolCapacity`'s `Math.min(capacity * INTRO_CAPACITY_DOUBLING_STEP, endBits)`) was **not**
+touched — it still doubles by a plain ×2 every purchase; only the boundary it clamps against
+changed. This works because the boundary was always reached via a clamp anyway: a raw double from
+just under the new SI boundary already overshoots past it (2× any value below 1,000,000 Bytes that's
+above 500,000 lands above 1,000,000), so `Math.min(doubled, newEndBits)` naturally lands exactly on
+the new SI figure on the final purchase, the same clamp shape the ladder already used before this
+change — no state-shape change, no level counter, no float-precision "reverse-engineer my position
+in a decade" logic required.
+
+**A pleasing coincidence confirmed the target was right.** `INTRO_CAPACITY_CAP_BITS`'s own doc
+comment (written *before* this correction) already said pool 1's Capacity "must hold at least the
+pool's largest Disk build cost (100 KB × `DISK_BUILD_COST_MULTIPLIER` = 8,000,000 bits)" — the
+binary cap (8,388,608) satisfied that with headroom; the new SI cap (8,000,000) satisfies it
+*exactly*, with zero margin. The buffer must reach completely full to fund that last disk now,
+rather than "at least" with slack — not a problem (a full buffer is always achievable), and strong
+independent confirmation that 8,000,000 was the number the mechanic was always implicitly built
+around, not an arbitrary new target.
+
+**Downstream effects, all automatic.** `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS
+/ INTRO_CAPACITY_DOUBLING_STEP` is a formula, not a literal, so it followed the constant change with
+no edit of its own (4,194,304 → 4,000,000). `getStoragePoolBandwidth`'s sqrt-in-Bytes formula
+(previous entry) needed no changes at all — it already converts to Bytes and back, so feeding it a
+now-SI-round Capacity value just makes its OWN output round too: pool 1's Bandwidth cap moved from
+`8,192` to a clean `8,000` bits/sec (`sqrt(1,000,000 Bytes) = 1,000 Bytes/sec`), finally matching
+the "KB Pool Capacity 1MB, Bandwidth 1KB/s" worked example exactly rather than approximately.
+
+**The Data Stream card's own binary display is the one deliberate casualty.** Its balance/Buffer
+figure stays binary-denominated by design (unchanged convention — Storage pools moved to SI, Memory
+Capacity's raw display did not). Before this fix, pool 1's cap (8,388,608 bits) was ALSO a clean
+binary round number, so the Data Stream card happened to show a tidy "1 MiB" at pool 1's ceiling.
+After this fix, the same card shows "976.562 KiB" at that same (now SI-clean, not binary-clean)
+ceiling — an accepted, understood side effect: the underlying value's true magnitude is now
+SI-round, and only ONE of its two display surfaces (the Storage pool cards) actually renders in that
+matching unit system; the other (Data Stream card) inherited a now-slightly-odd-looking binary
+figure. This was a deliberate trade — matching the explicit "Storage pools use SI units for all
+purposes" instruction takes priority over keeping the Data Stream card's own cosmetic binary
+roundness, and the Data Stream card was never specified to need round numbers in the first place
+(only Storage pools were).
+
+**Test fallout: three categories.** (1) `engine.test.js`'s two Bandwidth-cap tests from the previous
+entry needed their expected values updated again (`8,192` → `8,000`), since they read the real
+`INTRO_CAPACITY_CAP_BITS` constant rather than a synthetic value. (2) `layers.test.js`'s constants
+tests asserting the old binary figures (`8,388,608`, `4,194,304`, `getStoragePoolMemoryBounds(2).endBits`
+via `MEMORY_BINARY_UNIT_STEP ** 3`) were updated to the new SI figures and formula. (3)
+`App.test.jsx` and `engine.test.js`'s `formatBitsInNearestUnit` tests that had asserted a clean
+"1 MiB" / "512 KiB" rendering FROM the real economy constants (`INTRO_CAPACITY_CAP_BITS`,
+`INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`) could no longer do so, since those constants are no longer
+binary-round — these were switched to synthetic, deliberately-clean binary fixtures (e.g.
+`BITS_PER_BYTE * 1024 * 1024`) to keep testing the binary formatter's own unit-picking/flooring
+logic in isolation from the (now intentionally non-binary-round) economy constants it happens to be
+called on elsewhere. One of these, the "floors rather than rounds" test, needed a bigger seeded
+deficit than the original "cap minus 1 bit": at the new cap's smaller KiB-range magnitude
+(976.562 KiB, versus the old cap's MiB-range magnitude), a 1-bit gap floors to the *same* 3-decimal
+text as the full capacity (their absolute difference is below the display's decimal resolution at
+that scale) — the property the test verifies (a nearly-full balance never *reads* complete) still
+holds for any gap large enough to actually move the 3rd decimal place, so the test uses a deliberately
+larger (still small) deficit instead of a single bit.

@@ -138,8 +138,12 @@ the shared Data Stream capacity, and stops at the moving end bound of the highes
 ceiling advances as pools unlock. Storage pools 1–10 are derived views over this one generator: each
 unlocked pool's own Bandwidth is the shared production rate hard-capped at the square root of that
 pool's OWN Capacity **converted to Bytes** (both sides still bits/sec internally — Storage pools
-display in SI units for all purposes, unlike Memory Capacity/the Data Stream Buffer, which stays
-binary), while each pool's displayed Capacity is the shared Memory ceiling clamped to
+display in SI units for all purposes, unlike the Data Stream card's own balance/Buffer display,
+which stays binary). A pool's own Capacity end bound VALUE itself is also SI-aligned
+(`POOL_CAPACITY_SI_STEP`, not the shared ladder's binary `MEMORY_BINARY_UNIT_STEP`) — pool 1 caps
+at exactly 1 MB, pool 2 at 1 GB, pool 3 at 1 TB, … — so the Data Stream card's own binary rendering
+of that same value is no longer a round binary figure (pool 1's cap reads "976.562 KiB," not
+"1 MiB"), while each pool's displayed Capacity is the shared Memory ceiling clamped to
 its own chained bounds. Each pool also owns a small local **buffer** (`intro.poolBuffers`) that
 every bit-costing Storage action for that pool spends from exclusively (Provision Disk's cost, the
 read-cache fill) — the shared Buffer only tops it up (`tickPoolBufferFill`, bandwidth-limited,

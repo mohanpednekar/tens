@@ -2109,7 +2109,8 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
   // corresponding pool is unlocked.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
   // Capacity is the single shared Memory ceiling, clamped to this pool's own window.
-  // It does not scale down when higher pools unlock, so pool 1 stays capped at 1 MiB once maxed.
+  // It does not scale down when higher pools unlock, so pool 1 stays capped at 1 MB (SI) once
+  // maxed — see POOL_CAPACITY_SI_STEP in layers.js.
   const rawCapacity = state.intro?.capacity ?? 0
   const floorBits = poolIndex === 1
     ? getStoragePoolMemoryBounds(1).startBits
