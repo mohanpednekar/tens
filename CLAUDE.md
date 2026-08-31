@@ -659,8 +659,8 @@ Strict three-layer separation:
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
    shared Combine/Speed/Capacity actions and the common Provision Disk control. Storage pools 1–10
-   are derived views over the one Data Stream: the highest unlocked pool uses its Bandwidth/Capacity
-   directly, while earlier pools divide by 1024 per step and clamp Capacity into their chained bounds.
+   are derived views over the one Data Stream: every unlocked pool shares the Data Stream's Bandwidth,
+   while each pool's displayed Capacity is the shared Memory ceiling clamped to its own binary bounds.
    One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
    expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
    their three disk-array rows when opened. The single `components/DataLakePanel` remains after the

@@ -350,7 +350,7 @@ export const createInitialGameState = () => ({
   //
   // Naming (#506): the fillable intake is the Data Stream (bits vs Buffer = capacity). Storage
   // pools are derived views with Capacity start/end (getStoragePoolMemoryBounds) and Bandwidth
-  // scaled from the Data Stream's Speed ×2 ladder. Nothing here ever fully "freezes" —
+  // equal to the Data Stream's current production rate for every unlocked pool. Nothing here ever fully "freezes" —
   // Tap/Combine/Speed/Convert keep working indefinitely, every cycle, for as long as the Data
   // Stream Buffer covers the cost.
   intro: {
@@ -2721,7 +2721,7 @@ export const getDiskSize = state => {
 export const getDiskCost = capacityBits => capacityBits * DISK_BUILD_COST_MULTIPLIER
 
 // The base build TIME, in seconds, for the FIRST disk ever built at a given size — exactly the
-// time to fill an empty container that size at its owning pool's derived Bandwidth — snapshotted
+// time to fill an empty container that size at the current Byte Foundry production rate — snapshotted
 // once when the build starts
 // (see provisionDisk; totalSeconds itself is fixed thereafter, only remainingSeconds ticks down).
 // An earlier version used a flat, hardcoded "1 second per real KB of size" rate instead — see
@@ -3106,7 +3106,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   // rate — a CACHE filling FROM Memory can drain a big banked balance faster than live production,
   // but never instantly, no matter how much has piled up while blocked. One shared budget per pool
   // across every eligible size in that pool this call, since it's all drawn from that pool's
-  // derived Memory bandwidth. Skip sizes mid-flush: their cache is locked full until the pour
+  // own Bandwidth. Skip sizes mid-flush: their cache is locked full until the pour
   // completes or cancels.
   for (const size of sizes) {
     if (diskReadCacheFlush[size]) continue
