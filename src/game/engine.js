@@ -1524,8 +1524,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const stateAfterReadCache = tickDiskAutoFill(elapsedSeconds)(stateAfterQueuedCapacity)
   const stateAfterWriteCache = tickDiskWriteCache(elapsedSeconds)(stateAfterReadCache)
   const stateAfterStorage = tickDiskAutoFill(0)(stateAfterWriteCache)
-  // After a Foundry reset, auto-press Combine / Speed (Invest) / Provision Disk up to
-  // foundryResetCaps (Capacity doubling is not part of reset convenience replay).
+  // After a Foundry reset, auto-press Combine / Speed (Invest) / Provision Disk / Capacity up to
+  // foundryResetCaps.
   const stateAfterFoundryConvenience = tickFoundryResetConvenience(stateAfterStorage)
   // Counts down any in-flight Data Lake Booster transfers (see startBoosterTransfer/
   // tickDataLakeTransfers), granting Compute Cores/Nodes/… as they complete — ahead of
@@ -4927,9 +4927,7 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tiers, not to change what Prestige/Speed Up themselves do.
 
 // Snapshot of Foundry upgrade progress used as a high-water cap for resetByteFoundry's
-// convenience auto-replay (see tickFoundryResetConvenience) — Speed/Invest + Provision Disk + Combine.
-// `capacity` is retained for merge compatibility with older cap snapshots but is not auto-pressed
-// by reset convenience replay.
+// convenience auto-replay (see tickFoundryResetConvenience) — Capacity + Speed/Invest + Provision Disk + Combine.
 export const captureFoundryUpgradeCaps = intro => {
   const disksBuiltTotal = intro?.disksBuiltTotal ?? {}
   const diskCaps = {}
@@ -5027,6 +5025,14 @@ export const tickFoundryResetConvenience = state => {
     const built = provisionDisk(next)
     if (built !== next) {
       next = built
+      changed = true
+    }
+  }
+
+  if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
+    const upgraded = pickIntroCapacityMilestone(next)
+    if (upgraded !== next) {
+      next = upgraded
       changed = true
     }
   }
