@@ -659,8 +659,30 @@ Strict three-layer separation:
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
    shared Combine/Speed/Capacity actions and the common Provision Disk control. Storage pools 1–10
-   are derived views over the one Data Stream: every unlocked pool shares the Data Stream's Bandwidth,
-   while each pool's displayed Capacity is the shared Memory ceiling clamped to its own binary bounds.
+   are derived views over the one Data Stream: each unlocked pool's own Bandwidth is the Data
+   Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
+   **converted to Bytes** (`getStoragePoolBandwidth` —
+   `Math.min(rate, Math.sqrt(capacity / BITS_PER_BYTE) * BITS_PER_BYTE)`, both sides still in
+   bits/sec for internal consistency — a 1 MB-capacity pool caps at 1 KB/s, a 1 GB-capacity pool at
+   ~32 KB/s, a 1 TB-capacity pool at 1 MB/s), so a pool with a small Capacity window can lag behind
+   the raw rate once production outgrows it. **Storage pools display in SI units for all purposes**
+   (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike Memory
+   Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below); while
+   each pool's displayed Capacity is the shared Memory ceiling clamped to its own binary bounds. Each pool also
+   owns a small local **buffer** (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/
+   `getPoolBufferCapacity`) that every bit-costing Storage action for that pool — Provision Disk's
+   build cost, the read-cache fill-from-Memory pass — spends from exclusively; the shared Data
+   Stream Buffer no longer funds these directly. `tickPoolBufferFill` tops the buffer up from
+   `intro.bits`, ascending pool-by-pool (pool 1 first), each pool reserving fill-rate up to its own
+   Bandwidth cap off the top of the Data Stream's rate — whatever's left ("leftover speed") goes to
+   the next pool. Runs AFTER tier01's own bootstrap conversion (`tickIntroAutoInvest`) and Queued
+   Capacity each tick, so pool funding never competes with unlocking the main game or a Capacity
+   doubling in flight. `getPoolBufferCapacity` equals the pool's own Capacity exactly (not some
+   smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
+   an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
+   size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
+   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a small
+   `PoolBufferMeter` bar (label "Memory") alongside the Bandwidth/Capacity stats.
    One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
    expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
    their three disk-array rows when opened. The single `components/DataLakePanel` remains after the
@@ -1026,15 +1048,19 @@ purchasable, doubling ladder: starting at 1 unit (`getDataLakeCapacityLevel` lev
 the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
 `doubleDataLakeCapacity(tierIndex)` purchase, permanently hard-capped at
 `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
-`isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity converted
-into real bits via `getDataLakeUnitBits(tierIndex)` — the same "spend the current value to double
-it" shape used by Capacity ×2, and the same currency Disks themselves are priced
-in, not a bare unit count. Gated by the same forced priority order every other Byte Foundry
-milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
-Speed, Provision Disk, and Compute are all currently unavailable; sits at the Capacity rank,
-not competing with Speed). An earlier version fixed this cap at a value derived from the Disk arrays
-themselves with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
-explicitly-capped ladder replaced that.
+`isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
+the lake to be completely full (`isDataLakeCapacityDoublingAvailable` — deposited units at least the
+lake's own current capacity) and empties every deposit back to zero on purchase — the same
+"requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the
+lake's own banked Disks instead of Data Stream Buffer bits.
+`getDataLakeCapacityDoublingCost` is kept only as a display-only helper (that same current-capacity
+figure converted into real bits via `getDataLakeUnitBits(tierIndex)`, for the button's own tooltip)
+— no code path spends it out of `intro.bits`. Gated by the same forced priority order every other
+Byte Foundry milestone action follows (`isDataLakeCapacityDoublingTurnAvailable` — available only
+once Disk Fill, Speed, Provision Disk, and Compute are all currently unavailable; sits at the
+Capacity rank, not competing with Speed). An earlier version fixed this cap at a value derived from
+the Disk arrays themselves with no purchasable lever at all, and a version after that funded
+doubling from Bits like Memory's own Capacity ×2 — see `docs/DESIGN_HISTORY.md` for both.
 
 *Deposits* — filled by depositing Disks (`10×1 + 10×10 + 10×100` of that tier's denomination at
 full capacity) via `depositDiskToDataLake` — fully automatic, no manual click: `tickDiskAutoDeposit`
@@ -1076,6 +1102,18 @@ transfers only, not a lifetime cap on Boosters (deposits + repeated live transfe
 indefinitely). No separate inventory cap on the Booster path itself (merge/UI slots still use
 `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate paths. Boost
 preset multipliers/durations are unchanged.
+
+*Idle disk liquidation* — once a pool's Lake is maxed (`isDataLakeCapacityMaxed`), its deposits can
+never absorb another disk, so a completed pool's LAST (largest, ×100) disk array would otherwise
+just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
+after auto-deposit/auto-release-cache) liquidates that idle output straight into Bits — the same
+Data Stream currency Provision Disk spends from — automatically funding whatever Provision Disk
+needs next (in practice, the next pool's first disk). Gated by the full forced priority order,
+including EVERY tier's own Lake Capacity doubling ranked directly above it
+(`isIdleDiskLiquidationTurnAvailable`/`isIdleDiskLiquidationAvailable`): it only ever kicks in once
+the Foundry would otherwise be completely idle — Disk Fill, Speed, Provision Disk, Compute, and
+every lake's own Capacity doubling all unavailable — so it never competes with or bypasses a
+higher-ranked action. The lowest rank in the whole forced priority chain.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
 loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -1193,7 +1231,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1588 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1602 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

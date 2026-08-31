@@ -3231,3 +3231,252 @@ tests cover the bandwidth cap itself (a huge banked balance still only moves the
 amount, and exactly one block moves once elapsed time covers that block's own bandwidth-capped
 duration) and the write-cache formula's rate-scaling, mirroring the existing read-cache-flush
 rate-scaling test's own style.
+
+### Per-pool Bandwidth capped at sqrt(Capacity); Data Lake capacity doubling funded by draining the lake; idle output liquidates into Bits
+
+Four related requests landed together, all about a pool's Bandwidth staying credible relative to
+its own (much smaller) Memory Capacity window, and Data Lake capacity growth costing the lake's own
+banked output rather than the Data Stream: (1) "Bandwidth per second for each pool should be capped
+at a value that is square root of capacity," (2) enhance the pool summary card's layout to match the
+rest of the app, (3) "Lake capacity upgrade cost shall be funded via the lake itself, by essentially
+emptying it," and (4) "The last disk array of a pool can fund first disk of next pool iff there is
+nothing else to do and also no capacity left to buy booster as well."
+
+**Bandwidth cap.** `getStoragePoolBandwidth` previously returned the raw, uncapped Byte Foundry
+production rate for every unlocked pool (see the "keeps lower-pool bandwidth... fixed" entry above —
+that fix removed a division-by-higher-pools bug but left the rate itself uncapped). It now returns
+`Math.min(rate, Math.sqrt(getStoragePoolCapacity(state, poolIndex)))`. Because pool 1's own Capacity
+ceiling is architecturally fixed at `INTRO_CAPACITY_CAP_BITS` (1 MiB in bits — see "moves the Data
+Stream Capacity ceiling forward" further up) regardless of how high `intro.capacity` is ever pushed,
+pool 1's Bandwidth is now permanently hard-ceilinged at `sqrt(8,388,608) ≈ 2,896.3` bits/sec no
+matter how far Speed ×2 grows the raw rate — later pools have a far higher ceiling (`sqrt` of their
+own, much larger, end bound), so this mostly bites pool 1 specifically once a run's rate has grown
+past a few thousand bits/sec. This is a deliberate, if blunt, balance lever: every disk/cache fill
+formula already read `getStoragePoolBandwidth`, not the raw rate, directly (`getProvisionDiskBaseSeconds`,
+`getDiskWriteCacheFlushSeconds`/`SegmentSeconds`, `getDiskReadCacheFlushSeconds`, `tickDiskAutoFill`'s
+Memory→cache budget, and `getDataLakeTransferDurationSeconds`'s Booster live-transfer pacing), so
+capping it there automatically re-paces every one of those mechanics without touching their own
+formulas.
+
+**Test fallout was the bulk of this change.** Several `engine.test.js`/`App.test.jsx` fixtures had
+relied on an arbitrarily high `productionMultiplier` to make a disk/cache fill "instant" for a
+different, unrelated assertion — those needed an explicit `capacity` large enough (but for pool 1,
+never *too* large — it clamps to the fixed 1 MiB ceiling regardless) that `sqrt(capacity)` still
+comfortably exceeds the rate under test, so the cap isn't what's actually being exercised there. One
+`App.test.jsx` integration test (cache fill → flush → refill, spanning real advanced-timer ticks)
+could no longer complete within a single 100ms tick at all once pool 1's rate was capped below the
+8,000-bit KB disk's own cache size — no `capacity` seed can raise it high enough, since pool 1's
+ceiling is fixed. That test was rewritten around a clean, deliberately chosen cap (`capacity:
+4_000_000` → `sqrt` = a round 2,000 bits/sec) and real computed millisecond windows (600ms to fill +
+flush, then 400ms more to refill) instead of a single-tick assumption. It also surfaced a subtlety
+worth noting for future timing-sensitive tests: the Byte Foundry's own passive income
+(`tickIntroProduction`) delivers in discrete BATCHES every `tickSpeedSeconds` real seconds (not a
+continuous per-tick trickle — see `INTRO_STARTING_TICK_SPEED_SECONDS`'s own doc comment), so a test
+advancing real time by more than one such batch period will see `intro.bits` jump by a whole batch
+mid-window unless `tickSpeedSeconds` is deliberately set far outside the test's own elapsed window
+(this test sets `tickSpeedSeconds: 1_000` for exactly that reason, with `productionMultiplier`
+scaled up to match so the *rate* stays comfortably above the Bandwidth cap despite the huge
+`tickSpeedSeconds` denominator).
+
+**Data Lake capacity funded by draining the lake, not Bits.** `doubleDataLakeCapacity`/
+`getDataLakeCapacityDoublingCost`/`isDataLakeCapacityDoublingAvailable` previously spent the lake's
+current-capacity value (converted to real bits) out of `intro.bits` to double it (see "Data Lake
+capacity-doubling cost" and "reinstated" further up) — the same "spend the current value to double
+it" shape Memory's own Capacity ×2 uses, but paid from a different pool (Data Stream Buffer bits
+rather than the lake's own deposits). The new behavior instead requires the lake to be completely
+full (`getDataLakeAvailableUnits(tierIndex)(state) >= getDataLakeCapacity(state, tierIndex)`) and
+drains every deposit back to `{ 1: 0, 10: 0, 100: 0 }` on purchase — genuinely mirroring Memory's own
+"requires a full Buffer, drains it" Capacity ×2 shape now, just scoped to the lake's own banked Disks
+instead. `getDataLakeCapacityDoublingCost` is kept as a display-only helper (the real-bit face value
+of what gets drained, for the button's tooltip) since nothing computationally requires removing it,
+but no code path spends it from `intro.bits` any more. Every existing capacity-doubling test needed
+rewriting around a `withFullLake` helper (sets `deposits` directly to a brimful `{1:10, 10:10,
+100:10}` — 1,110 units, safely above the 1,024 hard cap at every level) rather than seeding `bits`.
+
+**Idle disk liquidation.** A genuinely new mechanic, not a rework: once a pool's Lake is maxed
+(`isDataLakeCapacityMaxed`), `tickDiskAutoDeposit` can no longer absorb any further completed disk
+at that pool's own LAST (largest, ×100) size — those disks would otherwise just accumulate, full and
+unredeemable (past their own tier's required level) and undepositable (lake full), forever. The
+literal request ("last disk array of a pool can fund first disk of next pool iff there is nothing
+else to do and also no capacity left to buy booster") left two things ambiguous enough to ask about
+rather than guess: *how* the funding actually happens, and what "no capacity left to buy booster"
+gates on precisely. Two clarifying answers: (1) auto-liquidate the idle disk straight into Bits
+(the same currency Provision Disk already spends from) rather than tracking a separate
+"pre-funded toward next pool's first disk" balance — since Bits is the one currency Provision Disk
+draws from regardless of which pool, crediting it generically automatically funds whatever
+Provision Disk needs next, with no new cross-pool bookkeeping required; and (2) "no capacity left to
+buy booster" means that pool's own Lake sitting at `isDataLakeCapacityMaxed` (level 10), not merely
+"can't afford to double it right now" or a separate Booster-transfer-concurrency check. The new
+`isIdleDiskLiquidationAvailable`/`isIdleDiskLiquidationTurnAvailable`/`tickIdleDiskLiquidation` slot
+in as the lowest rank of the whole forced priority chain — below even Lake Capacity doubling, and
+checked against EVERY tier's own doubling availability (`isAnyDataLakeCapacityDoublingAvailable`),
+not just the liquidating pool's own — so liquidation only ever fires once the entire Foundry would
+otherwise sit completely idle. Wired into `tickStorage` as the last step, after
+`tickDiskAutoReleaseCache`.
+
+**Pool summary layout.** The pool disclosure's summary line (`ByteFoundryPage`'s `PoolCard`) was a
+single plain-text sentence ("Pool 1 · Kilobytes · Arrays complete · Bandwidth 8 KiB/sec · Capacity 1
+MiB") inside a bare `<button>` — flagged as not matching the rest of the app's styled-component
+conventions. Rebuilt around the same patterns already established elsewhere: a `PoolTitle` heading
+(tier symbol + name, mirroring `MainPage`'s `TierName`/`TierNameLabel`), a text-only
+`PoolStatusBadge` colored by state (`theme.color.good` vs `textMuted`, the same plain-text-badge
+convention `MilestonesPage`'s own `Badge` already uses rather than a new pill/chip shape), and a
+`PoolStatsRow` of labeled Bandwidth/Capacity stat blocks (label above value, muted-then-prominent
+color pairing, matching `MainPage`'s `OwnedText`/`ProductionText` and `DataLakePanel`'s grid-cell
+convention). One `App.test.jsx` assertion had asserted the OLD single-string sentence
+(`toHaveTextContent('Bandwidth 8 KiB/sec')`) — since the label and value now render as separate
+sibling elements with no literal space between them in the DOM (JSX drops purely-whitespace text
+between elements on separate lines), that assertion was split into two separate
+`toHaveTextContent` checks (one for the label text, one for the formatted value) rather than forcing
+an artificial space back into the markup purely to keep one test's string concatenation intact.
+
+### Per-pool Memory buffers: a real intermediary reservoir between the Data Stream and Storage spending
+
+The request, verbatim: "Each pool has its own small visual of memory buffer. The pool shall always
+be funded from this memory. This memory itself is funded by the main data stream at the pool's
+bandwidth or leftover speed, whichever is lower." Read literally this asks for a genuinely new piece
+of state — not another formula layered on the existing shared `intro.bits` — so before implementing,
+three clarifying questions nailed down what the one-liner left open:
+
+1. **Scope** — does EVERY pool-scoped spend (Provision Disk's build cost, the read-cache
+   fill-from-Memory pass) route through this new buffer, or only the passive fill mechanics?
+   Answer: everything a pool spends — `intro.bits` no longer funds Storage directly at all, only
+   tops up the buffer.
+2. **Buffer capacity** — a small fixed size shared by every pool, or a fraction of that pool's own
+   Capacity? Answer: a fraction of Capacity (see below for why the fraction chosen matters far more
+   than it first appears).
+3. **"Leftover speed"** — leftover after what, and in what order across pools? Answer: the Data
+   Stream's raw production rate, allocated to pools ascending (pool 1 first) — each pool reserves
+   fill-rate up to its own Bandwidth cap off the top, and whatever's left goes to the next pool.
+
+**New state**: `intro.poolBuffers = { [poolIndex]: bits }`, permanent across ordinary Prestige (added
+alongside `disks`/`disksBuiltTotal`/`diskBuild` in `prestigeGame`'s carry-over list) but wiped fresh
+on Era ascension and Reset Byte Foundry (both already spread a fresh `initial.intro`, so no explicit
+carry-over means an automatic reset — no code change needed there). `getPoolBufferBits`/
+`getPoolBufferCapacity` are the read-side helpers; `tickPoolBufferFill(elapsedSeconds)` is the new
+tick function that performs the actual bandwidth-limited transfer out of `intro.bits`.
+
+**The buffer-capacity fraction very nearly shipped broken.** The first implementation picked
+`capacity / MEMORY_BINARY_UNIT_STEP` (i.e. 1/1024) reasoning that it would land in the same
+ballpark as a pool's own smallest disk denomination — for pool 1 (KB-scale), `INTRO_CAPACITY_CAP_BITS
+/ 1024 = 8192` looked plausibly close to a 1 KB disk's 8000-bit face value. That reasoning didn't
+check what the buffer actually needs to fund: `getDiskCost`, not a disk's face value.
+`DISK_BUILD_COST_MULTIPLIER` (10) alone already makes even the smallest disk's build cost 10×
+its face value (80,000 bits for a 1 KB disk, not 8,000) — and a pool's LARGEST disk (three
+`DISK_LADDER_SIZE_MULTIPLIER` (10) steps up the ladder from its smallest) costs another 1000× that.
+Deriving the exact ratio: a pool `N`'s largest disk costs `DISK_LADDER_BASE_SIZE_BITS ×
+DISK_LADDER_SIZE_MULTIPLIER^(3N-1) × DISK_BUILD_COST_MULTIPLIER`, while that pool's own Capacity
+ceiling is `BITS_PER_BYTE × MEMORY_BINARY_UNIT_STEP^(N+1)` — working through the algebra, the ratio
+of the two is `(DISK_LADDER_SIZE_MULTIPLIER^3 / MEMORY_BINARY_UNIT_STEP)^N × (a constant close to
+1)`, and `DISK_LADDER_SIZE_MULTIPLIER^3 = 1000` sits close to `MEMORY_BINARY_UNIT_STEP = 1024` *by
+design* (the same near-alignment `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` and other Foundry constants
+already lean on elsewhere) — so that ratio stays close to 1 for every pool, not shrinking or growing
+much as `N` increases. Concretely: pool 1's own largest disk (100 KB) costs 8,000,000 bits against a
+1 MiB (8,388,608-bit) Capacity ceiling — **95% of the whole pool's Capacity**, not roughly 1/1024 of
+it. A buffer capped at 1/1024 of Capacity (8,192 bits) could *never* hold enough to build even that
+pool's SMALLEST disk (80,000 bits needed), permanently — not a pacing slowdown, an unconditional,
+un-fixable block on ever provisioning a single disk in pool 1 or any pool after it. This was caught
+before merge by hand-deriving the ratio and writing a dedicated test
+(`provisionDisk/isProvisionDiskAvailable read from the pool buffer that tickPoolBufferFill actually
+fills`) that exercises the real, non-trivial cost (`getDiskCost(FIRST_DISK_SIZE)` = 80,000) rather
+than an arbitrary round seed value — the test failed immediately, which is what surfaced the bug
+before it reached players.
+
+**The fix**: `getPoolBufferCapacity(state, poolIndex)` now simply returns
+`getStoragePoolCapacity(state, poolIndex)` — the fraction is 1, not a reduction at all. This still
+honors "a fraction of the pool's own Capacity" (the user's own chosen framing) while being the
+*smallest* fraction that keeps every disk in every pool permanently buildable, since a pool's own
+largest disk cost sits so close to its own Capacity ceiling that no meaningfully smaller ceiling
+would work. The design reads sensibly once reframed: "Capacity" is a pool's potential ceiling (a
+purchasable, permanent value); the buffer is how much of that potential is actually banked and
+spendable *right now*, filled gradually at the pool's own Bandwidth rather than available all at
+once — a genuinely different axis from Capacity, not a redundant mirror of it, even though the two
+numbers now share a ceiling. The "small visual" the request asked for describes the UI widget's
+size (a slim bar, `PoolBufferMeter`, reusing the same `progressFill` gradient every other meter on
+`ByteFoundryPage` already uses), not the underlying bit value's magnitude relative to Capacity.
+
+**Tick ordering also needed a real fix, not just a formula one.** The first working version called
+`tickPoolBufferFill` immediately after production/build countdown, ahead of `tickQueuedCapacityUpgrade`
+and `tickIntroAutoInvest` (tier01's own bootstrap conversion) — reasoning that "the pool shall
+always be funded" implied first claim on fresh bits. In practice this let Storage's own background
+funding silently compete with, and starve, the two things a fresh bit balance is actually MOST
+needed for: crossing the transfer-block threshold that unlocks the main game, and completing a
+Capacity doubling already in progress. An `App.test.jsx` regression made this concrete — a large
+catch-up jump that should auto-convert a full 8-unit tier01 purchase block in one tick instead
+granted only 7, because `tickPoolBufferFill` had already skimmed a few bits off the top before
+`tickIntroAutoInvest` got its turn. The fix moves `tickPoolBufferFill` to run AFTER
+`tickIntroAutoInvest` and Queued Capacity instead — pool buffers now fill from genuine leftover
+throughput only, at the cost of a one-tick (100ms) lag before a freshly topped-up buffer is visible
+to that same tick's own cache fill (`tickDiskAutoFill`, which runs earlier in the pipeline) —
+imperceptible at the game's own tick rate.
+
+**Real-timer test fallout, a familiar pattern by now.** Several `App.test.jsx` tests that use real
+(not fake) timers had seeded `capacity: INTRO_CAPACITY_CAP_BITS` purely for headroom on an assertion
+unrelated to Storage — once Storage-unlocked capacity makes `tickPoolBufferFill` live, a real
+`setInterval` tick landing between render and an assertion could siphon a fractional bit out of
+`intro.bits` before the test read it, producing values like `0.9` instead of an exact `1`. Fixed the
+same two ways used earlier in this same session for the sqrt-Bandwidth-cap fallout: tests genuinely
+unrelated to Storage got their capacity lowered below `INTRO_DISK_UNLOCK_CAPACITY` so
+`tickPoolBufferFill` never engages; one test that specifically needed the large capacity value (to
+assert `aria-valuemax`) switched from `userEvent`+`await` to fake timers +
+`fireEvent.click`, closing the real-time window entirely rather than trying to out-guess it.
+
+**Test fixtures needed a broad, mechanical sweep.** Every existing `provisionDisk`/
+`isProvisionDiskAvailable`/`tickDiskAutoFill` test that seeded `bits: X` to fund a build or cache
+fill needed to seed `poolBuffers: { 1: X }` instead (a new `withPoolBuffer` test helper), and every
+assertion reading `after.intro.bits` after such an action needed to read
+`after.intro.poolBuffers[1]` instead — mechanical but pervasive, matching the same rewrite shape
+the sqrt-Bandwidth-cap change needed on its own test suite in the entry above. A few tests
+incidentally relied on Bandwidth (Speed/Invest) — which still spends `intro.bits` directly, since
+it's a Data-Stream-level action, not pool-scoped — outranking Provision Disk in the forced priority
+order; those needed `bits` seeded *alongside* the pool buffer for that higher-priority block to
+still genuinely apply, rather than accidentally passing because the pool buffer alone was already
+insufficient.
+
+### Bandwidth cap corrected to sqrt(Capacity in Bytes), not raw bits; Storage pools switched to SI display
+
+The sqrt-Bandwidth-cap entry above (`Math.min(rate, Math.sqrt(getStoragePoolCapacity(state,
+poolIndex)))`) computed the square root directly on the pool's Capacity as stored — a raw BIT count.
+The request that introduced the cap was later corrected, twice, to specify the sqrt should operate
+on Capacity converted to BYTES instead, with worked examples pinning the exact intended scale: "KB
+Pool Capacity 1MB, Bandwidth 1KB/s / MB Pool 1GB, 32KB/s / GB Pool 1TB, 1MB/s… Storage pools use SI
+units for all purposes." A bit-based sqrt cannot land on these figures — `sqrt(1MB in bits)` is not
+`1KB/s` under any consistent unit reading — so this was a genuine formula defect, not just a display
+mismatch: pool 1's Bandwidth had been hard-ceilinged at `sqrt(8,388,608 bits) ≈ 2,896.3` bits/sec
+(see above), whereas the corrected formula, `Math.sqrt(capacityBits / BITS_PER_BYTE) *
+BITS_PER_BYTE`, ceilings it at a clean `8,192` bits/sec (`sqrt(1,048,576 Bytes) = 1,024 Bytes/sec =
+1 KiB/sec` — pool 1's Capacity is architecturally fixed at `INTRO_CAPACITY_CAP_BITS`, 1 MiB, not a
+round 1 MB, so the numbers are clean in binary rather than exactly matching the user's own SI
+KB-pool worked example; later pools, whose Capacity bound is itself SI-round, land on the user's
+figures exactly — see `getStoragePoolBandwidth`'s own doc comment). The function's return value
+stays in bits/sec either way — only the cap's own derivation changed — so every downstream
+consumer (`getProvisionDiskBaseSeconds`, `getDiskReadCacheFlushSeconds`,
+`getDiskWriteCacheFlushSeconds`/`SegmentSeconds`, `getDataLakeTransferDurationSeconds`,
+`tickPoolBufferFill`'s own rate cap) needed no changes at all — they all just consume "the pool's
+current Bandwidth in bits/sec," whatever that figure happens to be.
+
+**Display followed the same correction.** "Storage pools use SI units for all purposes" is broader
+than just the Bandwidth formula — it also means the pool card's own Bandwidth/Capacity/Memory-buffer
+stat values (`ByteFoundryPage`'s `PoolCard`) should render in the SI B/KB/MB/… scale (`formatDiskSize`
+— already used for Disk sizes/costs) rather than the binary B/KiB/MiB/… scale
+(`formatBitsInNearestUnit`) those three stats had inherited from Memory Capacity's own binary
+display. This is a deliberate split within the same pool card: the underlying shared Data Stream
+Capacity ladder stays binary internally (unchanged — see the "Pool 1 byte generator: binary units"
+entry elsewhere in this file), and the Data Stream card itself (balance/Buffer) still displays that
+binary figure; only the pool-card-specific Bandwidth/Capacity/Memory stats switched to SI, matching
+every other Storage-adjacent figure (Disks, Data Lake, caches) that was already SI. `formatDiskSize`
+needed no changes — it already converts a raw bit count into SI Bytes (`formatBitsInNearestSiUnit`,
+dividing by `BITS_PER_BYTE` first) — this was purely a call-site swap in `ByteFoundryPage`.
+
+**Test fallout picked clean numbers deliberately, not just any capacity.** Several `engine.test.js`
+fixtures had chosen a `capacity` value specifically so the OLD bit-based `sqrt` landed on a round
+number (e.g. `capacity: 4_000_000` → `sqrt = 2,000`). Under the corrected Bytes-based formula the
+same seeded values no longer produce round results (`sqrt(4,000,000 bits / 8 = 500,000 Bytes) ≈
+707.1 Bytes/sec = 5,656.85... bits/sec`), so each fixture was re-derived rather than left to assert
+an ugly float: pool 1's own Capacity is architecturally clamped to `INTRO_CAPACITY_CAP_BITS`
+regardless of how large a `capacity` a test seeds (a pre-existing clamp, not new — see "keeps lower-
+pool bandwidth... fixed" further up), so seeding any value at or above that clamp reliably produces
+the same clean `8,192` bits/sec cap; tests exercising a *specific* below-clamp cap value instead
+derived their seeded `capacity` backwards from the desired cap
+(`capacityBits = (desiredCapBits / BITS_PER_BYTE) ** 2 * BITS_PER_BYTE`) rather than guessing at a
+bit count and hoping the sqrt happened to be clean.
