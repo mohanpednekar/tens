@@ -1347,6 +1347,12 @@ Error generating stack: `+e.message+`
   grid-area: name;
   min-width: 0;
   width: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${e=>e.theme.radius.sm};
+  }
 `,zp=I.div`
   grid-area: details;
   font-size: ${e=>e.theme.type.scale.xs.size};
