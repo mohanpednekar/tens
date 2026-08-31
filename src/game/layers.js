@@ -115,24 +115,41 @@ export const INTRO_STARTING_CAPACITY = 8
 // describe the common level table pools draw start/end bounds from — not a player-facing Sacrifice
 // multiplier anymore (#506 / Revision 2 of #456). Kept so docs/tests can name the ladder spacing.
 export const INTRO_CAPACITY_DOUBLING_STEP = 2
-// Shared binary-unit ladder step for Data Stream Buffer / pool Memory Capacity display —
-// 1 KiB = 1024 Bytes (vs. a Disk's own SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/
-// getMemoryUnit in engine.js). Storage stays SI-scaled throughout.
+// Shared binary-unit ladder step for Data Stream Buffer display ONLY — 1 KiB = 1024 Bytes (vs. a
+// Disk's own SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/getMemoryUnit in engine.js). The
+// Data Stream card's own balance/Buffer figure stays binary-denominated — this step governs that
+// display rounding only. It no longer governs where a pool's own Capacity end bound actually
+// lands (see POOL_CAPACITY_SI_STEP below) — Storage pools use SI units for all purposes.
 export const MEMORY_BINARY_UNIT_STEP = 1024
-// Pool 1 (Kilobyte pool) Memory Capacity end bound, in bits — exactly 1 MiB (1024^2 Bytes). Must
-// hold at least the pool's largest Disk build cost (100 KB × DISK_BUILD_COST_MULTIPLIER =
-// 8,000,000 bits). See getStoragePoolMemoryBounds / docs/DESIGN_HISTORY.md. Alias of pool 1's
+// Per-pool Memory Capacity end bounds land on clean SI powers of 1000 Bytes (1 MB, 1 GB, 1 TB, …),
+// not the binary powers of 1024 a raw Capacity-×2 doubling ladder would naturally produce (1 MiB,
+// 1 GiB, …) — Storage pools use SI units for all purposes, including their own Capacity ceiling,
+// so the underlying value itself must land on an SI-round number, not merely its display. A pure
+// binary doubling sequence (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, …) can be corrected onto
+// an SI-round endpoint with a single deviation per decade of 10 doublings: instead of doubling from
+// 64 to 128, the 10th doubling of a decade steps from 64 to 125 (×1.953125, not ×2) and then
+// resumes ordinary doubling (125 → 250 → 500 → 1000) — landing exactly on 1000 (not 1024) after
+// every 10 doublings, and on 1000^d after every 10d doublings. Every pool boundary below sits at a
+// whole multiple of 10 doublings from the 1-Byte floor, so this reduces to a plain power of this
+// constant rather than needing the full per-step mantissa sequence — see
+// docs/DESIGN_HISTORY.md for the derivation and the reasoning for exactly this switchover point.
+export const POOL_CAPACITY_SI_STEP = 1000
+// Pool 1 (Kilobyte pool) Memory Capacity end bound, in bits — exactly 1 MB (SI, 1,000,000 Bytes),
+// which happens to exactly equal the pool's largest Disk build cost (100 KB ×
+// DISK_BUILD_COST_MULTIPLIER = 8,000,000 bits) — the buffer must reach completely full to fund
+// that last disk, not merely "at least" it with margin, as the old binary 1 MiB (8,388,608-bit)
+// bound gave. See getStoragePoolMemoryBounds / docs/DESIGN_HISTORY.md. Alias of pool 1's
 // endBits so existing call sites stay stable.
-export const INTRO_CAPACITY_CAP_BITS = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP ** 2
-// Per-pool Memory Capacity window on the shared binary ladder (#506). startBits is always the
-// common 1-Byte floor; endBits is exactly 1024^(poolIndex+1) Bytes (pool 1 → 1 MiB, pool 2 → 1 GiB,
-// …). Pools do not use Sacrifice doubling — Capacity is delimited by these bounds directly.
-// poolIndex is 1-based.
+export const INTRO_CAPACITY_CAP_BITS = BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 2
+// Per-pool Memory Capacity window (#506, corrected to SI — see POOL_CAPACITY_SI_STEP above).
+// startBits is always the common 1-Byte floor; endBits is exactly 1000^(poolIndex+1) Bytes (pool 1
+// → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …). Pools do not use Sacrifice doubling — Capacity is
+// delimited by these bounds directly. poolIndex is 1-based.
 export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
   const index = Math.max(1, Math.floor(Number(poolIndex) || 1))
   return {
     startBits: INTRO_STARTING_CAPACITY,
-    endBits: BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** (index + 1)),
+    endBits: BITS_PER_BYTE * (POOL_CAPACITY_SI_STEP ** (index + 1)),
   }
 }
 // "Speed ×2" (was Bandwidth / Invest) cost ladder steps ×4 per tier — see
@@ -273,9 +290,10 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching the same
 // "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
 // 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
-// Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, 1 MiB) — i.e. 4,194,304 bits (512 KiB);
-// historically one Capacity doubling-step short of that hard cap. This unlocks when the Capacity
-// doubling ladder reaches the threshold, not by snapping on Combine. Preserves the original's "last/highest of the two
+// Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, now a clean SI 1 MB — see
+// POOL_CAPACITY_SI_STEP) — i.e. 4,000,000 bits (500 KB); one Capacity doubling-step short of that
+// hard cap. This unlocks when the Capacity doubling ladder reaches the threshold, not by snapping
+// on Combine. Preserves the original's "last/highest of the two
 // capacity-gated reveals" relative ordering of the threshold constants themselves (conversion <
 // storage < compute); see
 // docs/DESIGN_HISTORY.md.

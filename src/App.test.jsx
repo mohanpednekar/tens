@@ -2827,26 +2827,38 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
   expect(balanceBar.closest('section')).not.toHaveTextContent(/\d+(?:\.\d+)? B\s*\/\s*/)
 })
 
-test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit (MiB) at pool capacity', () => {
-  // A full pool-1 Capacity is 1 MiB. Half-full reads as 0.5 MiB / 1 MiB — both share the unit
-  // picked off Buffer (getMemoryUnit), never a mismatched pairing.
+test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit at real pool capacity', () => {
+  // Pool 1's real Capacity end bound (INTRO_CAPACITY_CAP_BITS) is now a clean SI 1 MB
+  // (8,000,000 bits), not a clean binary 1 MiB — see POOL_CAPACITY_SI_STEP in layers.js. The
+  // Data Stream card's own balance/Buffer display stays binary regardless, so this real value
+  // renders as a plain (non-round) KiB figure rather than a whole MiB — this test pins that
+  // actual rendering rather than a synthetic round number, so a future change to either the SI
+  // Capacity bound or the binary display logic can't silently drift the two apart.
   seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS / 2, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('0.5 MiB / 1 MiB')
+  expect(balanceBar.closest('section')).toHaveTextContent('488.281 KiB / 976.562 KiB')
 })
 
 test('Data Stream balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
-  // CAP-1 / CAP *floors* to "0.999 MiB" rather than rounding up to a full "1 MiB / 1 MiB".
-  seedIntroState({ bits: INTRO_CAPACITY_CAP_BITS - 1, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  // A 1-bit deficit (as the original binary-1-MiB-capacity version of this test used) is now
+  // below this display's own decimal resolution at the real pool-1 Capacity's new KiB-range
+  // magnitude (976.562 KiB, not a round MiB — see the comment on the previous test): both the
+  // full capacity and a balance just 1 bit short floor to the identical "976.562 KiB" text at 3
+  // decimal places, since the capacity itself is no longer an exact multiple of the KiB divisor
+  // the way the old round-MiB cap was. A meaningfully larger (but still small) deficit still
+  // demonstrably floors below the full reading, which is what this test actually verifies.
+  const bits = INTRO_CAPACITY_CAP_BITS - 8_000
+  seedIntroState({ bits, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('0.999 MiB / 1 MiB')
-  expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(INTRO_CAPACITY_CAP_BITS - 1))
-  // Flooring: must not round the nearly-full balance up to a complete "1 MiB" amount line.
-  expect(balanceBar.closest('section').textContent).not.toMatch(/(?:^|[^\d.])1 MiB \/ 1 MiB/)
+  const balanceText = balanceBar.closest('section').textContent
+  expect(balanceText).toContain('/ 976.562 KiB')
+  expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
+  // Flooring: must not round the nearly-full balance up to match the full capacity reading.
+  expect(balanceText).not.toMatch(/(?:^|[^\d.])976\.562 KiB \/ 976\.562 KiB/)
 })
 
 test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
