@@ -753,14 +753,17 @@ describe('storage pools', () => {
     expect(getStoragePoolCapacity(state, 1)).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 
-  it('caps a pool\'s own Bandwidth at the square root of its own Capacity once the production rate outgrows it', () => {
+  it('caps a pool\'s own Bandwidth at the square root of its own Capacity (in Bytes) once the production rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // sqrt(4,000,000) = 2,000 — a clean cap value
+      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (8,388,608 bits =
+      // 1,048,576 Bytes); sqrt(1,048,576 Bytes) = 1,024 Bytes/sec = 8,192 bits/sec — a clean cap
+      // value once converted back to bits.
+      capacity: INTRO_CAPACITY_CAP_BITS,
       productionMultiplier: 999_999, // far above the cap
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(2_000)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(8_192)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(8_192)
   })
 
   it('leaves Bandwidth at the raw production rate while it stays under sqrt(Capacity)', () => {
@@ -811,7 +814,9 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1000,
-      capacity: 4_000_000, // sqrt = 2,000 bits/sec pool 1 Bandwidth cap
+      // Capacity is 32,000,000 bits = 4,000,000 Bytes; sqrt(4,000,000 Bytes) = 2,000 Bytes/sec
+      // = 16,000 bits/sec pool 1 Bandwidth cap.
+      capacity: 32_000_000,
       productionMultiplier: 999_999, // far above the cap, so the cap (not the rate) binds
     })
     const after = tickPoolBufferFill(1)(state)
@@ -838,7 +843,10 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
-      capacity: 4_000_000, // pool 1 Bandwidth cap = sqrt(4,000,000) = 2,000 bits/sec
+      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS regardless of the
+      // shared Capacity's own magnitude; pool 1 Bandwidth cap = sqrt(1,048,576 Bytes) =
+      // 1,024 Bytes/sec = 8,192 bits/sec.
+      capacity: 32_000_000,
       productionMultiplier: 999_999, // total "Data Stream rate" far exceeds any single pool's cap
       disksBuiltTotal: {
         [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
@@ -847,10 +855,10 @@ describe('pool buffers', () => {
       }, // unlocks pool 2
     })
     const after = tickPoolBufferFill(1)(state)
-    // Pool 1 reserves exactly its own 2,000 bits/sec cap off the top of the shared rate; pool 2
+    // Pool 1 reserves exactly its own 8,192 bits/sec cap off the top of the shared rate; pool 2
     // gets whatever's left of the (effectively unlimited, here) remaining rate, still bounded by
     // its own Bandwidth cap and buffer room.
-    expect(after.intro.poolBuffers[1]).toBe(2000)
+    expect(after.intro.poolBuffers[1]).toBe(8_192)
     expect(after.intro.poolBuffers[2]).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - after.intro.poolBuffers[1] - after.intro.poolBuffers[2])
   })

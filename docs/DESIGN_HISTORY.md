@@ -3432,3 +3432,51 @@ it's a Data-Stream-level action, not pool-scoped — outranking Provision Disk i
 order; those needed `bits` seeded *alongside* the pool buffer for that higher-priority block to
 still genuinely apply, rather than accidentally passing because the pool buffer alone was already
 insufficient.
+
+### Bandwidth cap corrected to sqrt(Capacity in Bytes), not raw bits; Storage pools switched to SI display
+
+The sqrt-Bandwidth-cap entry above (`Math.min(rate, Math.sqrt(getStoragePoolCapacity(state,
+poolIndex)))`) computed the square root directly on the pool's Capacity as stored — a raw BIT count.
+The request that introduced the cap was later corrected, twice, to specify the sqrt should operate
+on Capacity converted to BYTES instead, with worked examples pinning the exact intended scale: "KB
+Pool Capacity 1MB, Bandwidth 1KB/s / MB Pool 1GB, 32KB/s / GB Pool 1TB, 1MB/s… Storage pools use SI
+units for all purposes." A bit-based sqrt cannot land on these figures — `sqrt(1MB in bits)` is not
+`1KB/s` under any consistent unit reading — so this was a genuine formula defect, not just a display
+mismatch: pool 1's Bandwidth had been hard-ceilinged at `sqrt(8,388,608 bits) ≈ 2,896.3` bits/sec
+(see above), whereas the corrected formula, `Math.sqrt(capacityBits / BITS_PER_BYTE) *
+BITS_PER_BYTE`, ceilings it at a clean `8,192` bits/sec (`sqrt(1,048,576 Bytes) = 1,024 Bytes/sec =
+1 KiB/sec` — pool 1's Capacity is architecturally fixed at `INTRO_CAPACITY_CAP_BITS`, 1 MiB, not a
+round 1 MB, so the numbers are clean in binary rather than exactly matching the user's own SI
+KB-pool worked example; later pools, whose Capacity bound is itself SI-round, land on the user's
+figures exactly — see `getStoragePoolBandwidth`'s own doc comment). The function's return value
+stays in bits/sec either way — only the cap's own derivation changed — so every downstream
+consumer (`getProvisionDiskBaseSeconds`, `getDiskReadCacheFlushSeconds`,
+`getDiskWriteCacheFlushSeconds`/`SegmentSeconds`, `getDataLakeTransferDurationSeconds`,
+`tickPoolBufferFill`'s own rate cap) needed no changes at all — they all just consume "the pool's
+current Bandwidth in bits/sec," whatever that figure happens to be.
+
+**Display followed the same correction.** "Storage pools use SI units for all purposes" is broader
+than just the Bandwidth formula — it also means the pool card's own Bandwidth/Capacity/Memory-buffer
+stat values (`ByteFoundryPage`'s `PoolCard`) should render in the SI B/KB/MB/… scale (`formatDiskSize`
+— already used for Disk sizes/costs) rather than the binary B/KiB/MiB/… scale
+(`formatBitsInNearestUnit`) those three stats had inherited from Memory Capacity's own binary
+display. This is a deliberate split within the same pool card: the underlying shared Data Stream
+Capacity ladder stays binary internally (unchanged — see the "Pool 1 byte generator: binary units"
+entry elsewhere in this file), and the Data Stream card itself (balance/Buffer) still displays that
+binary figure; only the pool-card-specific Bandwidth/Capacity/Memory stats switched to SI, matching
+every other Storage-adjacent figure (Disks, Data Lake, caches) that was already SI. `formatDiskSize`
+needed no changes — it already converts a raw bit count into SI Bytes (`formatBitsInNearestSiUnit`,
+dividing by `BITS_PER_BYTE` first) — this was purely a call-site swap in `ByteFoundryPage`.
+
+**Test fallout picked clean numbers deliberately, not just any capacity.** Several `engine.test.js`
+fixtures had chosen a `capacity` value specifically so the OLD bit-based `sqrt` landed on a round
+number (e.g. `capacity: 4_000_000` → `sqrt = 2,000`). Under the corrected Bytes-based formula the
+same seeded values no longer produce round results (`sqrt(4,000,000 bits / 8 = 500,000 Bytes) ≈
+707.1 Bytes/sec = 5,656.85... bits/sec`), so each fixture was re-derived rather than left to assert
+an ugly float: pool 1's own Capacity is architecturally clamped to `INTRO_CAPACITY_CAP_BITS`
+regardless of how large a `capacity` a test seeds (a pre-existing clamp, not new — see "keeps lower-
+pool bandwidth... fixed" further up), so seeding any value at or above that clamp reliably produces
+the same clean `8,192` bits/sec cap; tests exercising a *specific* below-clamp cap value instead
+derived their seeded `capacity` backwards from the desired cap
+(`capacityBits = (desiredCapBits / BITS_PER_BYTE) ** 2 * BITS_PER_BYTE`) rather than guessing at a
+bit count and hoping the sqrt happened to be clean.
