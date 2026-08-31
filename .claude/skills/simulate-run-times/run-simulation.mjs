@@ -662,7 +662,7 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 
 1. **Foundry gate:** Tap / Combine; pause tier autobuyers while gated; convert Memory → Kilobytes before redeeming permanent Disks (avoids softlock).
 2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → redeem again if convert unlocked a waiting disk → **Data Lake Booster buys** (\`startBoosterTransfer\`; deposits via \`tickDiskAutoDeposit\` in \`tickGame\`; skipped while Disk Fill is available) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
-3. **Ladder:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
+3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).
 6. **PP:** Unlock prestige speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Speed-Up / Auto-Prestige in this baseline.

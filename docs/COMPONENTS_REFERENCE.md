@@ -10,7 +10,7 @@ state each is currently in.
 Fixed bottom navigation bar (`.jsx`) in progression order: **Foundry** (`open byte foundry`) →
 **Boosters** (`open boosters`, page id `'boosters'`, once `isComputeCoreConversionUnlocked`) →
 **Compute** (`open compute`, page id `'compute'`, once `isComputeFlopsPageRevealed`) →
-**Ladder** (`open ladder`, page id `'game'`, only once `mainGameUnlocked`) → **Guide**
+**Factory** (`open byte factory`, page id `'game'`, only once `mainGameUnlocked`) → **Guide**
 (`open guide`, always) → **More** (`open more menu`, always — opens `AppMenu`). Storage is
 **not** a top-level item — it lives under Foundry as continuous Memory + Disk sections on the
 same screen.
@@ -25,7 +25,7 @@ larger pulsing green dot).
 ## `AppMenu/index.jsx`
 
 Bottom sheet / dialog (`.jsx`) opened from AppNav's More item. Always-available utilities that
-must not depend on unlocking Ladder: **Milestones** and **Settings**. Destructive **Reset** / **Reset
+must not depend on unlocking Factory: **Milestones** and **Settings**. Destructive **Reset** / **Reset
 Byte Foundry** live only under Settings → Danger zone (not duplicated in this sheet or on MainPage).
 Closes on backdrop
 click, Escape, or any action. Takes `{ open, onClose, onNavigate }`.
@@ -42,7 +42,7 @@ sub-slot is ×1 — every larger size fills exclusively via write-cache ripple a
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
 (`aria-label="… read cache"`), each labeled inside with its bit-scale
 block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
-full and `isDiskCacheBlockManualReleaseAvailable` — manual transfer to Ladder Bits when no matching
+full and `isDiskCacheBlockManualReleaseAvailable` — manual transfer to Factory Bits when no matching
 disk exists; Smart autobuyers may auto-release via `isDiskCacheBlockAutoReleaseEligible` when no
 matching disk is available). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
