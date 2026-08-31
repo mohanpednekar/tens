@@ -138,7 +138,12 @@ the shared Data Stream capacity, and stops at the moving end bound of the highes
 ceiling advances as pools unlock. Storage pools 1–10 are derived views over this one generator: each
 unlocked pool's own Bandwidth is the shared production rate hard-capped at the square root of that
 pool's OWN Capacity, while each pool's displayed Capacity is the shared Memory ceiling clamped to
-its own chained bounds. The common **Provision Disk**
+its own chained bounds. Each pool also owns a small local **buffer** (`intro.poolBuffers`) that
+every bit-costing Storage action for that pool spends from exclusively (Provision Disk's cost, the
+read-cache fill) — the shared Buffer only tops it up (`tickPoolBufferFill`, bandwidth-limited,
+ascending pool-by-pool, after tier01's own bootstrap conversion and Queued Capacity each tick). The
+buffer's own ceiling matches that pool's Capacity exactly (not a smaller fraction — see
+`docs/DESIGN_HISTORY.md` for why). The common **Provision Disk**
 operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
 targets the next disk size. Only the largest unlocked pool is expanded; earlier pools remain as
 compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a

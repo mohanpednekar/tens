@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -245,6 +245,24 @@ const PoolStatValue = styled.span`
   font-variant-numeric: tabular-nums;
 `
 
+// Each pool's own small local buffer (see intro.poolBuffers) — a lightweight throughput
+// reservoir the pool spends from directly, distinct from the big Capacity ladder shown in
+// PoolStatsRow above. A slim bar reusing the same progressFill gradient mixin every other fill
+// meter on this page already uses, paired with a compact label/value line.
+const PoolBufferRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+`
+
+const PoolBufferMeter = styled.div`
+  width: 100%;
+  height: 0.4rem;
+  border-radius: ${props => props.theme.radius.sm};
+  ${progressFill}
+`
+
 // A thin visual break between the Data Stream controls and its common Provision Disk operation.
 const Divider = styled.hr`
   width: 100%;
@@ -422,15 +440,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
   const diskSize = getDiskSize(state)
   const diskCost = getDiskCost(diskSize)
+  const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
+  const diskPoolBufferBits = getPoolBufferBits(state, diskPoolIndex)
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
-  const diskBuildBlockedByPriority = !diskLadderExhausted && intro.bits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
+  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
   const diskBuildProgress = diskBuildInProgress
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : diskLadderExhausted
       ? 100
-      : clampPercent((intro.bits / diskCost) * 100)
+      : clampPercent((diskPoolBufferBits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
@@ -645,6 +665,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolIndex = offset + 1
         const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
         const poolCapacity = getStoragePoolCapacity(state, poolIndex)
+        const poolBufferBits = getPoolBufferBits(state, poolIndex)
+        const poolBufferCapacity = getPoolBufferCapacity(state, poolIndex)
+        const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         const arraysComplete = poolSizes.length > 0 && poolSizes.every(size =>
@@ -677,6 +700,20 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolStatValue>{formatBitsInNearestUnit(poolCapacity)}</PoolStatValue>
                 </PoolStat>
               </PoolStatsRow>
+              <PoolBufferRow>
+                <PoolStatLabel>Memory</PoolStatLabel>
+                <PoolBufferMeter
+                  $progress={poolBufferPercent}
+                  role="progressbar"
+                  aria-label={`pool ${poolIndex} memory buffer`}
+                  aria-valuenow={Math.round(poolBufferPercent)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+                <PoolStatValue>
+                  {formatBitsInNearestUnit(poolBufferBits)} / {formatBitsInNearestUnit(poolBufferCapacity)}
+                </PoolStatValue>
+              </PoolBufferRow>
             </PoolSummaryButton>
             {isExpanded && (
               <>

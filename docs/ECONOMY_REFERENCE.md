@@ -295,12 +295,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    conversion is needed here — an earlier "kilobit"-scaled version of this ladder needed one, and
    priced a real 1 KB array's build cost wrong as a result — see `docs/DESIGN_HISTORY.md`): a real 1
    KB (8000-bit) array costs 80,000 bits ("10 KB") to build, a real 10 KB (80,000-bit) array costs
-   800,000 bits ("100 KB"), and so on — but does **not** grant the container instantly any more.
-   Instead it sets `intro.diskBuild = { size, remainingSeconds, totalSeconds }`, a real TIMED
-   construction (an earlier version completed instantly — see `docs/DESIGN_HISTORY.md`).
-   `totalSeconds = getProvisionDiskBaseSeconds(state, size) * ordinal`, where
-   `getProvisionDiskBaseSeconds(state, size)` uses the current Byte Foundry production rate
-   (bandwidth is now the same for every unlocked pool), so the time to fill the size is
+   800,000 bits ("100 KB"), and so on. That cost is spent out of the disk's own POOL's local buffer
+   (`intro.poolBuffers`, `getPoolBufferBits`/`getPoolBufferCapacity`), not the shared Data Stream
+   Buffer directly — see the "Pool buffers" entry further down. It does **not** grant the container
+   instantly any more. Instead it sets `intro.diskBuild = { size, remainingSeconds, totalSeconds }`,
+   a real TIMED construction (an earlier version completed instantly — see
+   `docs/DESIGN_HISTORY.md`). `totalSeconds = getProvisionDiskBaseSeconds(state, size) * ordinal`,
+   where `getProvisionDiskBaseSeconds(state, size)` uses that size's own pool Bandwidth
+   (`getStoragePoolBandwidth` — the production rate hard-capped at `sqrt` of that pool's own
+   Capacity, so pools no longer necessarily pace identically), so the time to fill the size is
    `size / rate`, snapshotted once when provisioning starts — `totalSeconds` itself never
    recomputes thereafter, only
    `remainingSeconds` ticks down) — and `ordinal = disksBuiltTotal[size] + 1` at the
@@ -327,6 +330,36 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    — so `isProvisionDiskAvailable` (the base predicate, ignoring priority) checks only `!diskBuild &&
    affordable`.
 
+   **Pool buffers.** Every bit-costing Storage action for a pool — Provision Disk's own build cost
+   above, and the read-cache fill-from-Memory pass below — spends from that pool's own small local
+   buffer (`intro.poolBuffers[poolIndex]`), never the shared Data Stream Buffer (`intro.bits`)
+   directly. `tickPoolBufferFill(elapsedSeconds)` tops each unlocked pool's buffer up from
+   `intro.bits`, ascending (pool 1 first): each pool reserves fill-rate up to its own Bandwidth cap
+   (`getStoragePoolBandwidth`) off the top of the Data Stream's raw production rate
+   (`getIntroProductionRate`), and whatever remains — the "leftover speed" — is what's available to
+   the next pool; a pool's own reservation counts against the shared rate whether or not it
+   currently has room to use all of it, so an earlier pool's cap always determines how much
+   throughput a later one can ever see. The actual transfer is a real bit move out of `intro.bits`,
+   bounded by `elapsedSeconds`, the pool's own remaining buffer room, and whatever `intro.bits`
+   holds — never instant. No-op below `isStorageUnlocked` (Storage isn't revealed yet — pool 1 is
+   otherwise always structurally "unlocked," so without this gate bits would silently start
+   siphoning into an invisible buffer from the very start of a cycle). Called from `tickGame` AFTER
+   `tickIntroAutoInvest` (tier01's own bootstrap conversion) and Queued Capacity, so pool funding
+   never competes with unlocking the main game or a Capacity doubling already in flight — a buffer
+   topped up this tick isn't visible to that same tick's own cache fill (which runs earlier in the
+   pipeline) until the next tick, imperceptible at `TICK_RATE_MS`.
+   `getPoolBufferCapacity(state, poolIndex)` — the buffer's own ceiling — equals
+   `getStoragePoolCapacity(state, poolIndex)` exactly, not some smaller fraction: within one pool,
+   the disk ladder's own three step costs already span roughly an 80–95% spread of that pool's
+   Capacity ceiling by the time the ladder reaches its largest size (each `DISK_BUILD_COST_MULTIPLIER`-
+   scaled step is `DISK_LADDER_SIZE_MULTIPLIER` (10) bigger than the last, while a pool's own
+   Capacity ceiling is only `MEMORY_BINARY_UNIT_STEP` (1024) bigger than the previous pool's — close
+   by design, not equal), so any meaningfully smaller buffer ceiling would leave that top disk
+   permanently unaffordable, even fully topped up. See `docs/DESIGN_HISTORY.md` for the full
+   derivation (and the original, broken `/MEMORY_BINARY_UNIT_STEP` fraction this replaced).
+   `ByteFoundryPage`'s pool summary shows this buffer as a small `PoolBufferMeter` bar (label
+   "Memory") alongside the Bandwidth/Capacity stats, always visible (not just when expanded).
+
    **The read cache.** Only the pool's own smallest disk size — the one whose `getDataLakeSubSize`
    sub-slot is `DATA_LAKE_SUB_SIZES[0]` (×1), the rung that actually touches Memory directly — ever
    keeps a `diskCache[size]` (0..size bits) at all (see `isDiskReadCacheEligible`); every larger size
@@ -335,7 +368,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    redundancy — two fill paths pouring into the same container — so `tickDiskAutoFill` now scopes
    its own three passes (below) to eligible sizes only, and self-heals a save still carrying a stale
    `diskCache`/`diskReadCacheFlush` entry for a now-ineligible size by refunding it straight back
-   into `intro.bits` the next time it runs. Where it applies, the cache is a permanent always-full
+   into that size's own POOL BUFFER (not the shared `intro.bits`, which is what originally funded
+   the cache in the first place) the next time it runs. Where it applies, the cache is a permanent always-full
    reserve — split into `DISK_CACHE_BLOCK_COUNT` (8) equal blocks, each holding
    `size / DISK_CACHE_BLOCK_COUNT` bits (e.g. a 1 MB array → 8 × 1 Mb), totaling one disk's own
    capacity. Steady state is full; gaps appear only right after a manual block release, a completed
@@ -2221,9 +2255,12 @@ purchases were manual or automatic.
 | `formatDiskSize` | `bits → string` | Byte Foundry Disks: an alias for the internal SI-only `formatBitsInNearestSiUnit` helper (**not** `formatBitsInNearestUnit`, which is binary-unit — Storage stays SI even though Memory Capacity moved to binary; see `docs/DESIGN_HISTORY.md`). Disk sizes are real, Byte-accurate bit counts, rendered on the same B/KB/MB/…/QB SI scale disks have always used — no separate "kilobit" formatting scale (see `docs/DESIGN_HISTORY.md` for that earlier bug and its fix) |
 | `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a save/seed missing a matching built-total entry), plus whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built). Shared by Foundry's continuous DiskArrayRow sections and the thin `StoragePage` wrapper |
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose own fixed corresponding tier is currently at that size's required level, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
-| `provisionDisk` | `state → state` | Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, spends the next disk's cost from shared `intro.bits`, and sets the intentionally historical `intro.diskBuild` persisted key. Duration uses `getProvisionDiskBaseSeconds` at the current Byte Foundry production rate |
+| `provisionDisk` | `state → state` | Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, spends the next disk's cost from that size's own POOL buffer (`intro.poolBuffers`, not the shared Data Stream Buffer directly), and sets the intentionally historical `intro.diskBuild` persisted key. Duration uses `getProvisionDiskBaseSeconds` at that pool's own Bandwidth |
 | `tickProvisionDisk` | `elapsedSeconds → state → state` | Counts down the persisted `intro.diskBuild` timer and, on completion, increments that size's cumulative built count and clears the timer; unconditional in `tickGame` |
-| `tickDiskAutoFill` | `(elapsedSeconds = 0) → state → state` | Byte Foundry Disks: three ascending passes over every known size (skipping mid-build — `intro.diskBuild?.size`): (1) refill each size's **read cache** toward full in whole-block transfers only when Memory holds ≥ one block (or dump a full-but-sub-block balance when capacity itself is &lt; one block) — skips sizes mid-flush, and this whole pass is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) × the current production rate × `elapsedSeconds` (one shared budget across every eligible size this call — a 0-elapsed call contributes no refill); (2) start a timed flush into one empty disk when `diskCache[size] >= size`, no write-cache merge, and `isDiskRedeemable` is false — duration `getDiskReadCacheFlushSeconds` (one block ÷ (production rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)); (3) count down `intro.diskReadCacheFlush` (pause on tier match) and complete into one disk. Same-reference no-op when nothing changed. Called from `tickGame` before `tickDiskWriteCache` with real elapsed (advances flushes) and after it with `0` elapsed (refill/start only — avoids double-countdown), and again after a successful `tickDiskAutoRedeem` with 0 elapsed — unconditional, bypasses `isProductionFrozen` |
+| `getPoolBufferCapacity` | `(state, poolIndex) → number` | Byte Foundry Storage: a pool's own local buffer ceiling — equals `getStoragePoolCapacity(state, poolIndex)` exactly (see the "Pool buffers" entry below for why the fraction is 1, not smaller) |
+| `getPoolBufferBits` | `(state, poolIndex) → number` | Byte Foundry Storage: how much of that ceiling is currently banked — `state.intro.poolBuffers[poolIndex] ?? 0` |
+| `tickPoolBufferFill` | `elapsedSeconds → state → state` | Byte Foundry Storage: tops up every unlocked pool's own local buffer from `intro.bits`, ascending (pool 1 first) — each pool reserves fill-rate up to its own Bandwidth cap off the top of the Data Stream's rate, leftover goes to the next pool; a real bit transfer bounded by `elapsedSeconds`, the pool's own remaining buffer room, and `intro.bits` itself. No-op below `INTRO_DISK_UNLOCK_CAPACITY` (Storage isn't revealed yet). Called from `tickGame` AFTER `tickIntroAutoInvest`/Queued Capacity each tick, so pool funding never competes with the main-game-unlock gate or a Capacity doubling in flight |
+| `tickDiskAutoFill` | `(elapsedSeconds = 0) → state → state` | Byte Foundry Disks: three ascending passes over every known size (skipping mid-build — `intro.diskBuild?.size`): (1) refill each size's **read cache** toward full in whole-block transfers only when that size's own POOL BUFFER holds ≥ one block (or dump a full-but-sub-block balance when the pool buffer's own capacity is &lt; one block) — skips sizes mid-flush, and this whole pass is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) × that pool's own Bandwidth × `elapsedSeconds` (one shared budget across every eligible size in that pool this call — a 0-elapsed call contributes no refill); (2) start a timed flush into one empty disk when `diskCache[size] >= size`, no write-cache merge, and `isDiskRedeemable` is false — duration `getDiskReadCacheFlushSeconds` (one block ÷ (that pool's Bandwidth × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)); (3) count down `intro.diskReadCacheFlush` (pause on tier match) and complete into one disk. Same-reference no-op when nothing changed. Called from `tickGame` before `tickDiskWriteCache` with real elapsed (advances flushes) and after it with `0` elapsed (refill/start only — avoids double-countdown), and again after a successful `tickDiskAutoRedeem` with 0 elapsed — unconditional, bypasses `isProductionFrozen` |
 | `getDiskReadCacheFlushSeconds` | `(state, size) → number` | Duration for a new read-cache → disk flush (a DISK filling FROM a cache): `(size / DISK_CACHE_BLOCK_COUNT) / (getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)` |
 | `getDiskReadCacheFlush` / `getDiskReadCacheFlushFill` / `isDiskReadCacheFlushPaused` | helpers | In-flight flush lookup, 0..1 progress fill, and whether tier match is currently pausing the countdown |
 | `tickDiskWriteCache` | `elapsedSeconds → state → state` | Byte Foundry Disks upward ladder: when 10 full disks exist at source size N and target N+1 has an empty container, collects 10 timed segments — a CACHE filling FROM Disks, each segment's duration = source size / (production rate × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 2) — into `intro.diskWriteCache[N+1]` (pausing collect while source size has an active tier claim), then flushes — a DISK filling FROM a cache, duration = target size / (production rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2), independent of `getDiskBuildSeconds`'s own 1x-bandwidth fresh-build duration — into one disk at N+1. Empty at rest. Called from `tickGame` between the two `tickDiskAutoFill` passes |

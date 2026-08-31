@@ -663,7 +663,21 @@ Strict three-layer separation:
    Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
    (`getStoragePoolBandwidth` — `Math.min(rate, Math.sqrt(capacity))`), so a pool with a small
    Capacity window can lag behind the raw rate once production outgrows it; while each pool's
-   displayed Capacity is the shared Memory ceiling clamped to its own binary bounds.
+   displayed Capacity is the shared Memory ceiling clamped to its own binary bounds. Each pool also
+   owns a small local **buffer** (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/
+   `getPoolBufferCapacity`) that every bit-costing Storage action for that pool — Provision Disk's
+   build cost, the read-cache fill-from-Memory pass — spends from exclusively; the shared Data
+   Stream Buffer no longer funds these directly. `tickPoolBufferFill` tops the buffer up from
+   `intro.bits`, ascending pool-by-pool (pool 1 first), each pool reserving fill-rate up to its own
+   Bandwidth cap off the top of the Data Stream's rate — whatever's left ("leftover speed") goes to
+   the next pool. Runs AFTER tier01's own bootstrap conversion (`tickIntroAutoInvest`) and Queued
+   Capacity each tick, so pool funding never competes with unlocking the main game or a Capacity
+   doubling in flight. `getPoolBufferCapacity` equals the pool's own Capacity exactly (not some
+   smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
+   an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
+   size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
+   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a small
+   `PoolBufferMeter` bar (label "Memory") alongside the Bandwidth/Capacity stats.
    One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
    expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
    their three disk-array rows when opened. The single `components/DataLakePanel` remains after the
@@ -1212,7 +1226,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1593 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1602 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

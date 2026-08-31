@@ -429,6 +429,12 @@ export const createInitialGameState = () => ({
     // manual cache release, manual redeem) against `size`'s own array is disallowed — "the array
     // rebuild" — until the build completes and disksBuiltTotal[size] increments.
     diskBuild: null,
+    // PERMANENT — { [poolIndex]: bits currently held } in each unlocked pool's own small local
+    // buffer (see getPoolBufferCapacity/tickPoolBufferFill). Every bit-costing Storage action for
+    // a pool (Provision Disk's build cost, cache fill-from-Memory) spends exclusively from this
+    // buffer, never the shared Data Stream Buffer directly — the shared Buffer only ever tops this
+    // up, bandwidth-limited, same posture as disks/disksBuiltTotal above.
+    poolBuffers: {},
     // NOT permanent — resets to {} on every real Prestige (see prestigeGame), unlike every other
     // Storage field above. { [capacityBits]: true } once tickDiskAutoRedeem has auto-redeemed that
     // size this cycle, capping auto-redeem at one disk per size per cycle — further eligible disks
@@ -1536,8 +1542,15 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // tickAutoComputeBoost) — countdown first so an expired boost can be replaced the same tick.
   const stateAfterComputeBoost = tickAutoComputeBoost(tickComputeBoost(elapsedSeconds)(stateAfterAutoMerges))
   const stateAfterIntro = tickIntroAutoInvest(stateAfterComputeBoost)
+  // Each unlocked pool's own local buffer (see tickPoolBufferFill) tops up from whatever's left of
+  // the shared Data Stream AFTER tier01's own bootstrap conversion (tickIntroAutoInvest) and Queued
+  // Capacity above have already had first claim this tick — pools fill from genuine leftover
+  // throughput, never competing with the main-game-unlock gate or a Capacity doubling in flight.
+  // One tick's lag before a topped-up buffer is visible to that same tick's own cache fill
+  // (tickDiskAutoFill, which already ran earlier this tick) is imperceptible at TICK_RATE_MS.
+  const stateAfterPoolBufferFill = tickPoolBufferFill(elapsedSeconds)(stateAfterIntro)
   const stateAfterFlops = tickComputeFlopsAutobuyers(elapsedSeconds)(
-    tickComputeFlops(elapsedSeconds)(stateAfterIntro),
+    tickComputeFlops(elapsedSeconds)(stateAfterPoolBufferFill),
   )
 
   const autoPrestigeLevel = stateAfterFlops.autoPrestige ?? null
@@ -2099,6 +2112,76 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
   return Math.min(Math.max(rawCapacity, floorBits), ceilingBits)
 }
 
+// Each pool's own small local buffer (intro.poolBuffers) is sized as a fraction of that pool's
+// big Capacity ladder above — but that fraction is 1 (the buffer's ceiling matches Capacity
+// exactly), not some smaller slice. This isn't a rounding-down choice: within a single pool, the
+// disk-ladder's own three step costs already span roughly a 1%/10%/90% spread of that pool's own
+// Capacity ceiling (each DISK_BUILD_COST_MULTIPLIER-scaled step is DISK_LADDER_SIZE_MULTIPLIER
+// bigger than the last, while a pool's own Capacity ceiling is only MEMORY_BINARY_UNIT_STEP bigger
+// than the previous pool's — the two ratios are close by design, see docs/DESIGN_HISTORY.md, but
+// not equal), so a pool's own LARGEST disk always costs roughly 80-95% of that pool's Capacity
+// ceiling. Any meaningfully smaller fraction (the original 1/MEMORY_BINARY_UNIT_STEP this started
+// as) would leave that top disk permanently unaffordable — the buffer could never hold enough,
+// even fully topped up, since it caps out below the cost forever. "Capacity" and the buffer's own
+// ceiling therefore match: Capacity is the pool's potential; the buffer is how much of it is
+// actually banked and spendable right now, gradually filled at the pool's own Bandwidth rather
+// than available all at once.
+export const getPoolBufferCapacity = (state, poolIndex) => getStoragePoolCapacity(state, poolIndex)
+
+export const getPoolBufferBits = (state, poolIndex) =>
+  state.intro?.poolBuffers?.[poolIndex] ?? 0
+
+// Tops up every unlocked pool's own local buffer from the shared Data Stream, ascending (pool 1
+// first): each pool reserves fill-rate up to its own Bandwidth cap (getStoragePoolBandwidth) off
+// the top of the Data Stream's raw production rate, and whatever remains — the "leftover speed"
+// — is what's left for the next pool. A pool's own reservation counts against the shared rate
+// whether or not it currently has room to use all of it (the same "fixed-priority allocation,
+// unused share isn't returned mid-chain" shape the forced priority order itself already uses
+// elsewhere), so an earlier pool's Bandwidth cap always determines how much throughput a later
+// one can ever see, never the other way around. A real bit TRANSFER out of intro.bits into that
+// pool's buffer, bounded by elapsedSeconds, the pool's own remaining buffer room, and whatever
+// intro.bits actually holds — never instant, matching every other Memory-derived transfer in this
+// file. Called from tickGame AFTER tier01's own bootstrap conversion (tickIntroAutoInvest) and
+// Queued Capacity have already had first claim on the shared Data Stream this tick — pool buffers
+// only ever fill from genuine leftover throughput, so Storage's own background funding can never
+// compete with (and delay) unlocking the main game or a Capacity doubling in flight. A buffer
+// topped up this tick isn't visible to that same tick's own cache fill (tickDiskAutoFill, which
+// runs earlier in the pipeline) until the next tick — imperceptible at TICK_RATE_MS.
+export const tickPoolBufferFill = elapsedSeconds => state => {
+  // Storage itself (and so any pool) isn't a thing yet below this threshold — pool 1 is otherwise
+  // always structurally "unlocked" (see isStoragePoolUnlocked), which would silently start
+  // siphoning bits into an invisible buffer from the very start of a cycle without this gate.
+  if (!isStorageUnlocked(state)) return state
+  const unlockedCount = getUnlockedStoragePoolCount(state)
+  if (unlockedCount < 1) return state
+
+  let bits = state.intro.bits
+  const poolBuffers = { ...(state.intro.poolBuffers ?? {}) }
+  let remainingRate = getIntroProductionRate(state.intro ?? {})
+  let changed = false
+
+  for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
+    const poolRate = getStoragePoolBandwidth(state, poolIndex)
+    const fillRate = Math.min(poolRate, remainingRate)
+    remainingRate = Math.max(0, remainingRate - poolRate)
+    if (fillRate <= 0 || bits <= 0) continue
+
+    const current = poolBuffers[poolIndex] ?? 0
+    const room = Math.max(0, getPoolBufferCapacity(state, poolIndex) - current)
+    if (room <= 0) continue
+
+    const transfer = Math.min(fillRate * elapsedSeconds, room, bits)
+    if (transfer <= 0) continue
+
+    bits -= transfer
+    poolBuffers[poolIndex] = current + transfer
+    changed = true
+  }
+
+  if (!changed) return state
+  return { ...state, intro: { ...state.intro, bits, poolBuffers } }
+}
+
 // Ensure the Data Stream Capacity stays inside the current highest pool's bounds on save load.
 // Legacy queued Capacity flags are cleared, but no capacity is force-raised to the end bound.
 export const normalizePoolMemoryCapacity = state => {
@@ -2188,16 +2271,22 @@ export const getComputeBandwidthSacrificeLabel = state => {
 
 // "Provision Disk" — true whenever no array is already mid-build (intro.diskBuild — only one build
 // slot exists at a time, since only one size is ever buildable) and the current ladder size's
-// build cost is affordable (see getDiskSize/getDiskCost, defined further down this file) — matches
-// provisionDisk's own actual gate, which (like every other Byte Foundry reducer) has never itself
-// required isStorageUnlocked; that threshold only governs the button's own UI reveal. Also false
-// once isDiskLadderExhaustedForActivePools — there is no active-pool size left to build, so there
-// is no cost to become newly affordable towards; that's a distinct, permanent state from "not
-// affordable yet" (see ByteFoundryPage, which renders the two differently).
-export const isProvisionDiskAvailable = state =>
-  !state.intro.diskBuild &&
-  !isDiskLadderExhaustedForActivePools(state) &&
-  state.intro.bits >= getDiskCost(getDiskSize(state))
+// build cost is affordable OUT OF THAT SIZE'S OWN POOL BUFFER (see getDiskSize/getDiskCost,
+// defined further down this file, and getPoolBufferBits — the shared Data Stream Buffer no longer
+// funds this directly; it only tops up the pool buffer, bandwidth-limited, via
+// tickPoolBufferFill) — matches provisionDisk's own actual gate, which (like every other Byte
+// Foundry reducer) has never itself required isStorageUnlocked; that threshold only governs the
+// button's own UI reveal. Also false once isDiskLadderExhaustedForActivePools — there is no
+// active-pool size left to build, so there is no cost to become newly affordable towards; that's
+// a distinct, permanent state from "not affordable yet" (see ByteFoundryPage, which renders the
+// two differently).
+export const isProvisionDiskAvailable = state => {
+  if (state.intro.diskBuild) return false
+  if (isDiskLadderExhaustedForActivePools(state)) return false
+  const size = getDiskSize(state)
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return getPoolBufferBits(state, poolIndex) >= getDiskCost(size)
+}
 
 // "Compute" — true once Compute Core conversion is unlocked and either a brand new boost is
 // mechanically activatable from some compute-ladder tier, or the currently active boost (if any)
@@ -2810,11 +2899,12 @@ export const provisionDisk = state => {
   const size = getDiskSize(state)
   const cost = getDiskCost(size)
   const totalSeconds = getProvisionDiskSeconds(state, size)
+  const poolIndex = getPoolIndexForDiskSize(size)
   return {
     ...state,
     intro: {
       ...state.intro,
-      bits: state.intro.bits - cost,
+      poolBuffers: { ...state.intro.poolBuffers, [poolIndex]: getPoolBufferBits(state, poolIndex) - cost },
       diskBuild: { size, remainingSeconds: totalSeconds, totalSeconds },
     },
   }
@@ -3060,7 +3150,8 @@ export const isDiskReadCacheEligible = size => getDataLakeSubSize(size) === DATA
 export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   const builtTotal = state.intro?.disksBuiltTotal ?? {}
   const buildingSize = state.intro.diskBuild?.size
-  let bits = state.intro.bits
+  const poolBuffers = { ...(state.intro.poolBuffers ?? {}) }
+  const getPoolBufferBitsLocal = poolIndex => poolBuffers[poolIndex] ?? 0
   const poolBudgets = {}
   const getPoolBudget = poolIndex => {
     if (poolBudgets[poolIndex] === undefined) {
@@ -3076,12 +3167,14 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
 
   // Self-heal a save carrying leftover diskCache/diskReadCacheFlush for a size that no longer
   // keeps a read cache (see isDiskReadCacheEligible above) — refund whatever's cached back into
-  // Memory rather than stranding it where nothing will ever fill or flush it again. A
-  // same-reference no-op (aside from the loop itself) once nothing is stranded.
+  // ITS OWN pool's buffer (that's what funded it — see Pass 1 below) rather than stranding it
+  // where nothing will ever fill or flush it again. A same-reference no-op (aside from the loop
+  // itself) once nothing is stranded.
   for (const sizeStr in diskCache) {
     const size = Number(sizeStr)
     if (isDiskReadCacheEligible(size)) continue
-    bits += diskCache[size]
+    const poolIndex = getPoolIndexForDiskSize(size)
+    if (poolIndex) poolBuffers[poolIndex] = getPoolBufferBitsLocal(poolIndex) + diskCache[size]
     const { [size]: _removedCache, ...restCache } = diskCache
     diskCache = restCache
     changed = true
@@ -3110,37 +3203,40 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     }
   }
 
-  // Pass 1 — refill caches toward full in whole-block quanta (Memory progress stays visible),
-  // capped at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER times the current Byte Foundry production
-  // rate — a CACHE filling FROM Memory can drain a big banked balance faster than live production,
-  // but never instantly, no matter how much has piled up while blocked. One shared budget per pool
-  // across every eligible size in that pool this call, since it's all drawn from that pool's
-  // own Bandwidth. Skip sizes mid-flush: their cache is locked full until the pour
-  // completes or cancels.
+  // Pass 1 — refill caches toward full in whole-block quanta (each pool's own buffer progress
+  // stays visible), capped at CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER times the current Byte
+  // Foundry production rate — a CACHE filling FROM that pool's buffer can drain a big banked
+  // balance faster than live production, but never instantly, no matter how much has piled up
+  // while blocked. One shared budget per pool across every eligible size in that pool this call,
+  // since it's all drawn from that pool's own Bandwidth AND its own local buffer (see
+  // getPoolBufferBits/tickPoolBufferFill — the shared Data Stream Buffer no longer funds this
+  // directly). Skip sizes mid-flush: their cache is locked full until the pour completes or
+  // cancels.
   for (const size of sizes) {
     if (diskReadCacheFlush[size]) continue
     const poolIndex = getPoolIndexForDiskSize(size)
     let memoryToCacheBudget = getPoolBudget(poolIndex)
-    const capacity = getStoragePoolCapacity(state, poolIndex)
+    const bufferCapacity = getPoolBufferCapacity(state, poolIndex)
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
     for (;;) {
       const cached = diskCache[size] ?? 0
-      if (cached >= size || bits <= 0 || memoryToCacheBudget <= 0) break
+      const available = getPoolBufferBitsLocal(poolIndex)
+      if (cached >= size || available <= 0 || memoryToCacheBudget <= 0) break
 
       const need = size - cached
       const transferUnit = Math.min(blockBits, need, memoryToCacheBudget)
-      if (bits >= transferUnit) {
-        bits -= transferUnit
+      if (available >= transferUnit) {
+        poolBuffers[poolIndex] = available - transferUnit
         diskCache = { ...diskCache, [size]: cached + transferUnit }
         memoryToCacheBudget -= transferUnit
         changed = true
         continue
       }
-      // Memory is full but capacity itself is smaller than one block on this size — dump the
-      // full balance rather than stalling the refill forever on a large array.
-      if (capacity > 0 && capacity < transferUnit && bits >= capacity) {
-        const add = Math.min(need, bits, memoryToCacheBudget)
-        bits -= add
+      // The pool's own buffer is full but its capacity itself is smaller than one block on this
+      // size — dump the full balance rather than stalling the refill forever on a large array.
+      if (bufferCapacity > 0 && bufferCapacity < transferUnit && available >= bufferCapacity) {
+        const add = Math.min(need, available, memoryToCacheBudget)
+        poolBuffers[poolIndex] = available - add
         diskCache = { ...diskCache, [size]: cached + add }
         memoryToCacheBudget -= add
         changed = true
@@ -3180,7 +3276,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
       ...state,
       intro: {
         ...state.intro,
-        bits,
+        poolBuffers,
         disks,
         diskCache,
         diskReadCacheFlush,
@@ -3210,7 +3306,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   }
 
   if (!changed) return state
-  return { ...state, intro: { ...state.intro, bits, disks, diskCache, diskReadCacheFlush } }
+  return { ...state, intro: { ...state.intro, poolBuffers, disks, diskCache, diskReadCacheFlush } }
 }
 
 // True when a size currently has at least one FULL disk that could redeem right now — Cache is
@@ -5021,6 +5117,7 @@ export const prestigeGame = state => {
       disksBuiltTotal: state.intro?.disksBuiltTotal ?? initial.intro.disksBuiltTotal,
       diskCache: state.intro?.diskCache ?? initial.intro.diskCache,
       diskBuild: state.intro?.diskBuild ?? initial.intro.diskBuild,
+      poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       diskReadCacheFlush: initial.intro.diskReadCacheFlush,
       diskWriteCache: initial.intro.diskWriteCache,
       // Data Lakes (deposits / purchased Boosters / in-flight transfers / capacityLevel) are just

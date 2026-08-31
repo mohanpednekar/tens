@@ -3329,3 +3329,106 @@ sibling elements with no literal space between them in the DOM (JSX drops purely
 between elements on separate lines), that assertion was split into two separate
 `toHaveTextContent` checks (one for the label text, one for the formatted value) rather than forcing
 an artificial space back into the markup purely to keep one test's string concatenation intact.
+
+### Per-pool Memory buffers: a real intermediary reservoir between the Data Stream and Storage spending
+
+The request, verbatim: "Each pool has its own small visual of memory buffer. The pool shall always
+be funded from this memory. This memory itself is funded by the main data stream at the pool's
+bandwidth or leftover speed, whichever is lower." Read literally this asks for a genuinely new piece
+of state — not another formula layered on the existing shared `intro.bits` — so before implementing,
+three clarifying questions nailed down what the one-liner left open:
+
+1. **Scope** — does EVERY pool-scoped spend (Provision Disk's build cost, the read-cache
+   fill-from-Memory pass) route through this new buffer, or only the passive fill mechanics?
+   Answer: everything a pool spends — `intro.bits` no longer funds Storage directly at all, only
+   tops up the buffer.
+2. **Buffer capacity** — a small fixed size shared by every pool, or a fraction of that pool's own
+   Capacity? Answer: a fraction of Capacity (see below for why the fraction chosen matters far more
+   than it first appears).
+3. **"Leftover speed"** — leftover after what, and in what order across pools? Answer: the Data
+   Stream's raw production rate, allocated to pools ascending (pool 1 first) — each pool reserves
+   fill-rate up to its own Bandwidth cap off the top, and whatever's left goes to the next pool.
+
+**New state**: `intro.poolBuffers = { [poolIndex]: bits }`, permanent across ordinary Prestige (added
+alongside `disks`/`disksBuiltTotal`/`diskBuild` in `prestigeGame`'s carry-over list) but wiped fresh
+on Era ascension and Reset Byte Foundry (both already spread a fresh `initial.intro`, so no explicit
+carry-over means an automatic reset — no code change needed there). `getPoolBufferBits`/
+`getPoolBufferCapacity` are the read-side helpers; `tickPoolBufferFill(elapsedSeconds)` is the new
+tick function that performs the actual bandwidth-limited transfer out of `intro.bits`.
+
+**The buffer-capacity fraction very nearly shipped broken.** The first implementation picked
+`capacity / MEMORY_BINARY_UNIT_STEP` (i.e. 1/1024) reasoning that it would land in the same
+ballpark as a pool's own smallest disk denomination — for pool 1 (KB-scale), `INTRO_CAPACITY_CAP_BITS
+/ 1024 = 8192` looked plausibly close to a 1 KB disk's 8000-bit face value. That reasoning didn't
+check what the buffer actually needs to fund: `getDiskCost`, not a disk's face value.
+`DISK_BUILD_COST_MULTIPLIER` (10) alone already makes even the smallest disk's build cost 10×
+its face value (80,000 bits for a 1 KB disk, not 8,000) — and a pool's LARGEST disk (three
+`DISK_LADDER_SIZE_MULTIPLIER` (10) steps up the ladder from its smallest) costs another 1000× that.
+Deriving the exact ratio: a pool `N`'s largest disk costs `DISK_LADDER_BASE_SIZE_BITS ×
+DISK_LADDER_SIZE_MULTIPLIER^(3N-1) × DISK_BUILD_COST_MULTIPLIER`, while that pool's own Capacity
+ceiling is `BITS_PER_BYTE × MEMORY_BINARY_UNIT_STEP^(N+1)` — working through the algebra, the ratio
+of the two is `(DISK_LADDER_SIZE_MULTIPLIER^3 / MEMORY_BINARY_UNIT_STEP)^N × (a constant close to
+1)`, and `DISK_LADDER_SIZE_MULTIPLIER^3 = 1000` sits close to `MEMORY_BINARY_UNIT_STEP = 1024` *by
+design* (the same near-alignment `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` and other Foundry constants
+already lean on elsewhere) — so that ratio stays close to 1 for every pool, not shrinking or growing
+much as `N` increases. Concretely: pool 1's own largest disk (100 KB) costs 8,000,000 bits against a
+1 MiB (8,388,608-bit) Capacity ceiling — **95% of the whole pool's Capacity**, not roughly 1/1024 of
+it. A buffer capped at 1/1024 of Capacity (8,192 bits) could *never* hold enough to build even that
+pool's SMALLEST disk (80,000 bits needed), permanently — not a pacing slowdown, an unconditional,
+un-fixable block on ever provisioning a single disk in pool 1 or any pool after it. This was caught
+before merge by hand-deriving the ratio and writing a dedicated test
+(`provisionDisk/isProvisionDiskAvailable read from the pool buffer that tickPoolBufferFill actually
+fills`) that exercises the real, non-trivial cost (`getDiskCost(FIRST_DISK_SIZE)` = 80,000) rather
+than an arbitrary round seed value — the test failed immediately, which is what surfaced the bug
+before it reached players.
+
+**The fix**: `getPoolBufferCapacity(state, poolIndex)` now simply returns
+`getStoragePoolCapacity(state, poolIndex)` — the fraction is 1, not a reduction at all. This still
+honors "a fraction of the pool's own Capacity" (the user's own chosen framing) while being the
+*smallest* fraction that keeps every disk in every pool permanently buildable, since a pool's own
+largest disk cost sits so close to its own Capacity ceiling that no meaningfully smaller ceiling
+would work. The design reads sensibly once reframed: "Capacity" is a pool's potential ceiling (a
+purchasable, permanent value); the buffer is how much of that potential is actually banked and
+spendable *right now*, filled gradually at the pool's own Bandwidth rather than available all at
+once — a genuinely different axis from Capacity, not a redundant mirror of it, even though the two
+numbers now share a ceiling. The "small visual" the request asked for describes the UI widget's
+size (a slim bar, `PoolBufferMeter`, reusing the same `progressFill` gradient every other meter on
+`ByteFoundryPage` already uses), not the underlying bit value's magnitude relative to Capacity.
+
+**Tick ordering also needed a real fix, not just a formula one.** The first working version called
+`tickPoolBufferFill` immediately after production/build countdown, ahead of `tickQueuedCapacityUpgrade`
+and `tickIntroAutoInvest` (tier01's own bootstrap conversion) — reasoning that "the pool shall
+always be funded" implied first claim on fresh bits. In practice this let Storage's own background
+funding silently compete with, and starve, the two things a fresh bit balance is actually MOST
+needed for: crossing the transfer-block threshold that unlocks the main game, and completing a
+Capacity doubling already in progress. An `App.test.jsx` regression made this concrete — a large
+catch-up jump that should auto-convert a full 8-unit tier01 purchase block in one tick instead
+granted only 7, because `tickPoolBufferFill` had already skimmed a few bits off the top before
+`tickIntroAutoInvest` got its turn. The fix moves `tickPoolBufferFill` to run AFTER
+`tickIntroAutoInvest` and Queued Capacity instead — pool buffers now fill from genuine leftover
+throughput only, at the cost of a one-tick (100ms) lag before a freshly topped-up buffer is visible
+to that same tick's own cache fill (`tickDiskAutoFill`, which runs earlier in the pipeline) —
+imperceptible at the game's own tick rate.
+
+**Real-timer test fallout, a familiar pattern by now.** Several `App.test.jsx` tests that use real
+(not fake) timers had seeded `capacity: INTRO_CAPACITY_CAP_BITS` purely for headroom on an assertion
+unrelated to Storage — once Storage-unlocked capacity makes `tickPoolBufferFill` live, a real
+`setInterval` tick landing between render and an assertion could siphon a fractional bit out of
+`intro.bits` before the test read it, producing values like `0.9` instead of an exact `1`. Fixed the
+same two ways used earlier in this same session for the sqrt-Bandwidth-cap fallout: tests genuinely
+unrelated to Storage got their capacity lowered below `INTRO_DISK_UNLOCK_CAPACITY` so
+`tickPoolBufferFill` never engages; one test that specifically needed the large capacity value (to
+assert `aria-valuemax`) switched from `userEvent`+`await` to fake timers +
+`fireEvent.click`, closing the real-time window entirely rather than trying to out-guess it.
+
+**Test fixtures needed a broad, mechanical sweep.** Every existing `provisionDisk`/
+`isProvisionDiskAvailable`/`tickDiskAutoFill` test that seeded `bits: X` to fund a build or cache
+fill needed to seed `poolBuffers: { 1: X }` instead (a new `withPoolBuffer` test helper), and every
+assertion reading `after.intro.bits` after such an action needed to read
+`after.intro.poolBuffers[1]` instead — mechanical but pervasive, matching the same rewrite shape
+the sqrt-Bandwidth-cap change needed on its own test suite in the entry above. A few tests
+incidentally relied on Bandwidth (Speed/Invest) — which still spends `intro.bits` directly, since
+it's a Data-Stream-level action, not pool-scoped — outranking Provision Disk in the forced priority
+order; those needed `bits` seeded *alongside* the pool buffer for that higher-priority block to
+still genuinely apply, rather than accidentally passing because the pool buffer alone was already
+insufficient.

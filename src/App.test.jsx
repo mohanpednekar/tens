@@ -2354,7 +2354,10 @@ test('tapping increments the bit balance and stops once capacity is reached', as
 test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream itself is the tap target', async () => {
   const user = userEvent.setup()
 
-  seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true } })
+  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (80,000) — this test uses real timers, so
+  // a real tick landing between mount and the assertion could otherwise let tickPoolBufferFill
+  // siphon a fractional bit out of intro.bits into pool 1's own (irrelevant here) buffer.
+  seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: 1000, byteCreated: true } })
   render(<App />)
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
@@ -2426,23 +2429,30 @@ test('the Speed ×2 offer stays disabled while the bit balance is below its cost
 })
 
 // Invest (Speed ×2) is an ordinary cost-gated purchase — independent of Capacity ×2.
-test('Invest for Double Production spends its own cost and doubles production without changing Buffer', async () => {
-  const user = userEvent.setup()
+test('Invest for Double Production spends its own cost and doubles production without changing Buffer', () => {
+  // Fake timers (see the Sacrifice tests elsewhere in this file for the same hazard): capacity
+  // here is well above INTRO_DISK_UNLOCK_CAPACITY, so Storage's own tickPoolBufferFill is live —
+  // a real tick landing between render and the click could otherwise siphon a fractional bit out
+  // of Buffer before this reads an exact post-Invest balance.
+  vi.useFakeTimers()
 
   seedIntroState({ bits: INTRO_STARTING_CAPACITY, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, productionMilestoneTierClaims: 0 })
-  render(<App />)
+  const { unmount } = render(<App />)
 
   expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
   const investButton = screen.getByRole('button', { name: /invest bits for double production/i })
   expect(investButton).toBeEnabled()
   expect(investButton).toHaveTextContent('⚡ Speed ×2')
 
-  await user.click(investButton)
+  fireEvent.click(investButton)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('Capacity ×2 remains visible after Combine and is capped at the active pool ceiling', () => {
@@ -2610,7 +2620,10 @@ test('auto-transfers a full block once the threshold is reached, then hides the 
 test('tapping still increments Data Stream (still tappable) after the Byte generator exists', async () => {
   const user = userEvent.setup()
 
-  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (80,000) — this test uses real timers, so
+  // a real tick landing between mount and the assertion could otherwise let tickPoolBufferFill
+  // siphon a fractional bit out of intro.bits into pool 1's own (irrelevant here) buffer.
+  seedIntroState({ bits: 0, capacity: 1000, byteCreated: true })
   render(<App />)
 
   const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
@@ -3120,10 +3133,10 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('starting a build spends the cost from Memory immediately, then constructs an EMPTY disk once the timed build completes', () => {
+  test('starting a build spends the cost from its own pool buffer immediately, then constructs an EMPTY disk once the timed build completes', () => {
     vi.useFakeTimers()
 
-    seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
+    seedIntroState({ poolBuffers: { 1: currentBankCost }, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
@@ -3131,7 +3144,7 @@ describe('Byte Foundry Storage', () => {
     // The cost is spent immediately, but the disk itself doesn't exist until the timed build
     // finishes — the button itself reflects the in-progress rebuild.
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.bits).toBe(0)
+    expect(saved.intro.poolBuffers['1']).toBe(0)
     expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: currentBankSize, totalSeconds: currentBankSize })
     expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
     expect(screen.getByRole('button', { name: /disk array rebuilding/i })).toBeDisabled()
@@ -3158,15 +3171,19 @@ describe('Byte Foundry Storage', () => {
   test('Memory keeps read cache full then pours into an empty disk on a later tick when tier does not block', () => {
     vi.useFakeTimers()
 
-    // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
-    // level 1 so read cache may flush into the empty disk without an active tier claim at this size.
-    // capacity is set so pool 1's own Bandwidth cap (sqrt of its own Capacity — see
-    // getStoragePoolBandwidth) lands on a clean 2,000 bits/sec — deliberately BELOW currentBankSize
-    // (8,000), so a full cache fill now genuinely takes real time. tickSpeedSeconds is set very
-    // large (with productionMultiplier scaled to match) purely to push the Byte generator's own
-    // periodic batch delivery (see tickIntroProduction) far outside this test's short window — this
-    // test cares only about the Storage-side bandwidth cap, not that separate passive-income timer.
-    // A cache refill FROM Memory is itself further bandwidth-capped
+    // A disk already built (empty) plus enough in its own POOL BUFFER for read cache and one disk
+    // pour — cache fill-from-Memory now spends that buffer directly, not the shared Data Stream
+    // Buffer (intro.bits), so this seeds poolBuffers directly rather than relying on
+    // tickPoolBufferFill's own separate bandwidth-limited top-up (a different mechanism this test
+    // isn't exercising). tier01 past level 1 so read cache may flush into the empty disk without an
+    // active tier claim at this size. capacity is set so pool 1's own Bandwidth cap (sqrt of its own
+    // Capacity — see getStoragePoolBandwidth) lands on a clean 2,000 bits/sec — deliberately BELOW
+    // currentBankSize (8,000), so a full cache fill genuinely takes real time. tickSpeedSeconds is
+    // set very large (with productionMultiplier scaled to match) purely to push the Byte generator's
+    // own periodic batch delivery (see tickIntroProduction) far outside this test's short window —
+    // with intro.bits seeded at 0, that keeps tickPoolBufferFill inert throughout (nothing to
+    // transfer), so it can't perturb the directly-seeded pool buffer either.
+    // A cache refill FROM the pool buffer is itself further bandwidth-capped
     // (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER × the pool's own capped rate × elapsed REAL
     // seconds), so filling this size's 8,000-bit cache from empty takes 4 real seconds (8,000 /
     // 2,000), then flushing the full cache into the empty disk (a DISK filling FROM a cache, at
@@ -3176,7 +3193,7 @@ describe('Byte Foundry Storage', () => {
     const bandwidthCapBits = 2000
     seedIntroState(
       {
-        bits: currentBankSize * 2,
+        poolBuffers: { 1: currentBankSize * 2 },
         capacity: bandwidthCapBits * bandwidthCapBits,
         byteCreated: true,
         disksBuiltTotal: { [currentBankSize]: 1 },
@@ -3197,7 +3214,7 @@ describe('Byte Foundry Storage', () => {
     // own bandwidth budget from here.
     expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.bits).toBe(currentBankSize)
+    expect(saved.intro.poolBuffers['1']).toBe(currentBankSize)
     expect(saved.intro.diskCache?.[currentBankSize] ?? 0).toBe(0)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
@@ -3208,7 +3225,7 @@ describe('Byte Foundry Storage', () => {
     act(() => { vi.advanceTimersByTime(400) })
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.bits).toBe(0)
+    expect(saved.intro.poolBuffers['1']).toBe(0)
     expect(saved.intro.diskCache[currentBankSize]).toBe(currentBankSize)
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
