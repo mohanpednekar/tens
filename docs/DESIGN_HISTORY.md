@@ -3,10 +3,10 @@
 ### Storage pools derive from one Data Stream; Capacity ladder restored (#456) — 2026-08-27
 
 The reviewed storage-pool model keeps exactly one Data Stream generator. Pools 1–10 are derived
-views: the highest unlocked pool uses the Data Stream's Bandwidth and Capacity directly, while each
-earlier pool divides both by 1024 and clamps Capacity into its own chained bounds. Completing all
-three disk arrays in a pool derives the next pool, extends the disk ladder, and moves the shared
-Capacity ceiling to that pool's end bound.
+views: every unlocked pool paces at the shared Data Stream's Bandwidth, while each pool's Capacity
+is the shared Memory ceiling clamped into its own chained bounds. Completing all three disk arrays
+in a pool derives the next pool, extends the disk ladder, and moves the shared Capacity ceiling to
+that pool's end bound.
 
 This reverses #506's snap-to-end behavior. Combine, load normalization, and Era no longer force
 Capacity to a pool endpoint; Capacity ×2 is again a full-Buffer doubling ladder, draining the Buffer
@@ -26,7 +26,7 @@ the tap/production intake with the per-pool generator. Split:
   directly by those bounds
 
 This interim behavior was later reversed by the reviewed #456 implementation: Capacity ×2 and its
-full-Buffer doubling ladder returned, with a moving ceiling as derived pools unlock. Speed/Invest
+full-Buffer doubling ladder returned, with a moving ceiling as storage pools unlock. Speed/Invest
 upgrades stay. Alternatives considered for Data Stream: Bit Stream, Intake, Channel, Pipeline.
 
 Tracked as interactive issue #506 (revises #456).
