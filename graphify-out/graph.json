@@ -9275,7 +9275,7 @@
       "node_kind": "heading",
       "norm_label": "adding a new tier",
       "source_file": "AGENTS.md",
-      "source_location": "L196"
+      "source_location": "L197"
     },
     {
       "id": "agents_agents_md",
@@ -9311,7 +9311,7 @@
       "node_kind": "heading",
       "norm_label": "automation design principles",
       "source_file": "AGENTS.md",
-      "source_location": "L336"
+      "source_location": "L337"
     },
     {
       "id": "agents_automation_engines_claude_now_cursor_successor",
@@ -9323,7 +9323,7 @@
       "node_kind": "heading",
       "norm_label": "automation engines (claude now, cursor successor)",
       "source_file": "AGENTS.md",
-      "source_location": "L276"
+      "source_location": "L277"
     },
     {
       "id": "agents_budget_discipline",
@@ -9335,7 +9335,7 @@
       "node_kind": "heading",
       "norm_label": "budget discipline",
       "source_file": "AGENTS.md",
-      "source_location": "L243"
+      "source_location": "L244"
     },
     {
       "id": "agents_byte_foundry",
@@ -9347,7 +9347,7 @@
       "node_kind": "heading",
       "norm_label": "byte foundry",
       "source_file": "AGENTS.md",
-      "source_location": "L129"
+      "source_location": "L130"
     },
     {
       "id": "agents_changelog_convention",
@@ -9359,7 +9359,7 @@
       "node_kind": "heading",
       "norm_label": "changelog convention",
       "source_file": "AGENTS.md",
-      "source_location": "L216"
+      "source_location": "L217"
     },
     {
       "id": "agents_code_review_tooling",
@@ -9371,7 +9371,7 @@
       "node_kind": "heading",
       "norm_label": "code review tooling",
       "source_file": "AGENTS.md",
-      "source_location": "L312"
+      "source_location": "L313"
     },
     {
       "id": "agents_commands",
@@ -9395,7 +9395,7 @@
       "node_kind": "heading",
       "norm_label": "cursor cloud github access",
       "source_file": "AGENTS.md",
-      "source_location": "L257"
+      "source_location": "L258"
     },
     {
       "id": "agents_funding",
@@ -9407,7 +9407,7 @@
       "node_kind": "heading",
       "norm_label": "funding",
       "source_file": "AGENTS.md",
-      "source_location": "L350"
+      "source_location": "L351"
     },
     {
       "id": "agents_issue_authoring_tooling",
@@ -9419,7 +9419,7 @@
       "node_kind": "heading",
       "norm_label": "issue-authoring tooling",
       "source_file": "AGENTS.md",
-      "source_location": "L329"
+      "source_location": "L330"
     },
     {
       "id": "agents_issue_tracking_conventions",
@@ -9431,7 +9431,7 @@
       "node_kind": "heading",
       "norm_label": "issue tracking conventions",
       "source_file": "AGENTS.md",
-      "source_location": "L224"
+      "source_location": "L225"
     },
     {
       "id": "agents_license",
@@ -9443,7 +9443,7 @@
       "node_kind": "heading",
       "norm_label": "license",
       "source_file": "AGENTS.md",
-      "source_location": "L355"
+      "source_location": "L356"
     },
     {
       "id": "agents_path_aliases_vite_config_js",
@@ -9455,7 +9455,7 @@
       "node_kind": "heading",
       "norm_label": "path aliases (`vite.config.js`)",
       "source_file": "AGENTS.md",
-      "source_location": "L203"
+      "source_location": "L204"
     },
     {
       "id": "agents_project",
@@ -9479,7 +9479,7 @@
       "node_kind": "heading",
       "norm_label": "reliability: concurrent runs",
       "source_file": "AGENTS.md",
-      "source_location": "L305"
+      "source_location": "L306"
     },
     {
       "id": "agents_reliability_cron_dormancy",
@@ -9491,7 +9491,7 @@
       "node_kind": "heading",
       "norm_label": "reliability: cron dormancy",
       "source_file": "AGENTS.md",
-      "source_location": "L297"
+      "source_location": "L298"
     },
     {
       "id": "agents_repo_layout",
@@ -9515,7 +9515,7 @@
       "node_kind": "heading",
       "norm_label": "security notes",
       "source_file": "AGENTS.md",
-      "source_location": "L361"
+      "source_location": "L362"
     },
     {
       "id": "agents_tech_stack",
@@ -9539,7 +9539,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "AGENTS.md",
-      "source_location": "L209"
+      "source_location": "L210"
     },
     {
       "id": "claude",
@@ -45196,17 +45196,6 @@
     },
     {
       "source": "agents_agents_md",
-      "target": "agents_testing",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "AGENTS.md",
-      "source_location": "L209",
-      "weight": 1.0
-    },
-    {
-      "source": "agents_agents_md",
       "target": "agents_tech_stack",
       "relation": "contains",
       "_origin": "ast",
@@ -45218,13 +45207,24 @@
     },
     {
       "source": "agents_agents_md",
+      "target": "agents_testing",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "AGENTS.md",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "agents_agents_md",
       "target": "agents_changelog_convention",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L216",
+      "source_location": "L217",
       "weight": 1.0
     },
     {
@@ -45235,7 +45235,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L224",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -45246,7 +45246,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L243",
+      "source_location": "L244",
       "weight": 1.0
     },
     {
@@ -45257,7 +45257,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L257",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -45268,7 +45268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L276",
+      "source_location": "L277",
       "weight": 1.0
     },
     {
@@ -45279,7 +45279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L297",
+      "source_location": "L298",
       "weight": 1.0
     },
     {
@@ -45290,7 +45290,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L305",
+      "source_location": "L306",
       "weight": 1.0
     },
     {
@@ -45301,7 +45301,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L312",
+      "source_location": "L313",
       "weight": 1.0
     },
     {
@@ -45323,7 +45323,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L329",
+      "source_location": "L330",
       "weight": 1.0
     },
     {
@@ -45334,7 +45334,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L336",
+      "source_location": "L337",
       "weight": 1.0
     },
     {
@@ -45345,7 +45345,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L350",
+      "source_location": "L351",
       "weight": 1.0
     },
     {
@@ -45356,7 +45356,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L355",
+      "source_location": "L356",
       "weight": 1.0
     },
     {
@@ -45367,7 +45367,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L361",
+      "source_location": "L362",
       "weight": 1.0
     },
     {
@@ -45400,7 +45400,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L129",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -45411,7 +45411,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L196",
+      "source_location": "L197",
       "weight": 1.0
     },
     {
@@ -45422,7 +45422,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "AGENTS.md",
-      "source_location": "L203",
+      "source_location": "L204",
       "weight": 1.0
     },
     {
@@ -60984,5 +60984,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7b037d4e14cb011a45d5d28108bbdee51199bc6f"
+  "built_at_commit": "556e19d5f554a975a6e0fc31e64f8d4b88ed59e8"
 }

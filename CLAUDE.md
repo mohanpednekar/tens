@@ -893,8 +893,8 @@ formula/gate a past iteration may already have tried and rejected.
   grows via **Speed ×2** and **Capacity ×2** ladders. Once far enough along: Disks (`StoragePage`),
   Compute Cores/Boost (`ComputePage`, nav **Boosters**), and PP Compute Flops (`ComputeFlopsPage`,
   nav **Compute**, unlocks at 100 PP — Architecture 4c above). Every recurring "upgrade" action is
-  ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk > Data Lake
-  Capacity doubling > Compute Boost > idle-disk liquidation (lowest rank) — so a lower-ranked action
+  ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk > Compute
+  Boost > Data Lake Capacity doubling > idle-disk liquidation (lowest rank) — so a lower-ranked action
   is disabled, in both UI and engine, whenever a higher one is currently available. A manual
   transfer-block row (plus an always-on auto-convert) turns Data Stream bits into free `tier01`
   units; the first successful transfer unlocks the main game.

@@ -123,8 +123,9 @@ not a purchasable tier — the ladder starts at Kilobytes; a fresh
 save earns its first Kilobytes via the Byte Foundry below, not by buying a `tier00`/Bytes entry.
 **Do not guess at cost/production formulas, the purchase-level system, prestige, Era ascension,
 or tickspeed mechanics here** — they're intricate and have changed shape multiple times (see
-`docs/DESIGN_HISTORY.md`). Read `docs/ECONOMY_REFERENCE.md` (or the matching section of `CLAUDE.md`)
-before touching `src/game/engine.js`, `src/game/layers.js`, or any economy constant.
+`docs/DESIGN_HISTORY.md`). Read `docs/ECONOMY_REFERENCE.md` — the full source of truth, not
+`CLAUDE.md`'s own Economy model section, which is an orientation summary only — before touching
+`src/game/engine.js`, `src/game/layers.js`, or any economy constant.
 
 ### Byte Foundry
 
