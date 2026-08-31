@@ -155,15 +155,94 @@ const DataStreamCard = styled(StatCard)`
   gap: ${props => props.theme.space.md};
 `
 
+// Structured header + stats block, replacing the earlier single concatenated text line — matches
+// the tier row's own name/stat layout convention elsewhere in the app (see MainPage's TierName/
+// OwnedText/ProductionText) rather than staying a plain sentence.
 const PoolSummaryButton = styled.button`
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
   padding: ${props => props.theme.space.sm};
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+`
+
+const PoolHeaderRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: ${props => props.theme.space.sm};
+`
+
+const PoolTitle = styled.h3`
+  display: flex;
+  align-items: baseline;
+  gap: ${props => props.theme.space.xs};
+  margin: 0;
+  min-width: 0;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.md.size};
+  line-height: ${props => props.theme.type.scale.md.lineHeight};
+  font-weight: 700;
+  color: ${props => props.theme.color.text};
+`
+
+const PoolTitleSymbol = styled.span`
+  flex-shrink: 0;
+`
+
+const PoolTitleName = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-weight: 500;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+// Text-only status indicator (color carries the state), matching MilestonesPage's own Badge
+// convention elsewhere in the app rather than introducing a new pill/chip shape.
+const PoolStatusBadge = styled.span`
+  flex-shrink: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  font-weight: 600;
+  color: ${props => (props.$complete ? props.theme.color.good : props.theme.color.textMuted)};
+`
+
+const PoolStatsRow = styled.div`
+  display: flex;
+  gap: ${props => props.theme.space.md};
+`
+
+const PoolStat = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+`
+
+const PoolStatLabel = styled.span`
+  font-size: ${props => props.theme.type.scale.xs.size};
+  color: ${props => props.theme.color.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+`
+
+const PoolStatValue = styled.span`
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 500;
+  color: ${props => props.theme.color.text};
+  font-variant-numeric: tabular-nums;
 `
 
 // A thin visual break between the Data Stream controls and its common Provision Disk operation.
@@ -579,9 +658,25 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
               type="button"
             >
-              Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`} ·{' '}
-              {arraysComplete ? 'Arrays complete' : 'Arrays in progress'} ·{' '}
-              Bandwidth {formatBitsInNearestUnit(poolBandwidth)}/sec · Capacity {formatBitsInNearestUnit(poolCapacity)}
+              <PoolHeaderRow>
+                <PoolTitle>
+                  <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
+                  <PoolTitleName>Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`}</PoolTitleName>
+                </PoolTitle>
+                <PoolStatusBadge $complete={arraysComplete}>
+                  {arraysComplete ? 'Arrays complete' : 'Arrays in progress'}
+                </PoolStatusBadge>
+              </PoolHeaderRow>
+              <PoolStatsRow>
+                <PoolStat>
+                  <PoolStatLabel>Bandwidth</PoolStatLabel>
+                  <PoolStatValue>{formatBitsInNearestUnit(poolBandwidth)}/sec</PoolStatValue>
+                </PoolStat>
+                <PoolStat>
+                  <PoolStatLabel>Capacity</PoolStatLabel>
+                  <PoolStatValue>{formatBitsInNearestUnit(poolCapacity)}</PoolStatValue>
+                </PoolStat>
+              </PoolStatsRow>
             </PoolSummaryButton>
             {isExpanded && (
               <>

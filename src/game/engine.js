@@ -1571,9 +1571,12 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const afterRedeem = tickDiskAutoRedeem(state)
     const afterDeposit = tickDiskAutoDeposit(afterRedeem)
     const afterCache = tickDiskAutoReleaseCache(afterDeposit)
+    // Lowest-priority Storage action — only reached once redeem/deposit/cache release all had
+    // nothing left to do (see tickIdleDiskLiquidation's own forced-priority gate).
+    const afterLiquidation = tickIdleDiskLiquidation(afterCache)
     // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
     // countdown continues on the next ordinary tickGame pass.
-    return afterCache === state ? state : tickDiskAutoFill(0)(afterCache)
+    return afterLiquidation === state ? state : tickDiskAutoFill(0)(afterLiquidation)
   }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
@@ -2071,7 +2074,13 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   // Each unlocked pool paces at the full Byte Foundry production rate. The previous
   // division by MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex) made lower-pool
   // throughput collapse as higher pools unlocked, which is not the intended behavior.
-  return getIntroProductionRate(state.intro ?? {})
+  // Hard-capped at sqrt(that pool's own Capacity) — without this, every pool shares the
+  // single global production rate uncapped, so a small early pool's Bandwidth (and every rate
+  // derived from it: disk/cache fill and build speeds, Booster transfer pacing) could run far
+  // ahead of what its own tiny Memory window could ever plausibly move through. The cap grows
+  // with Capacity ×2 purchases just like the rate itself does, so it only ever binds while a
+  // pool's Capacity hasn't caught up yet.
+  return Math.min(getIntroProductionRate(state.intro ?? {}), Math.sqrt(getStoragePoolCapacity(state, poolIndex)))
 }
 
 export const getStoragePoolCapacity = (state, poolIndex) => {
@@ -3670,17 +3679,20 @@ const getDataLakeSubSizeStep = (tierIndex, subSize) =>
 export const getDataLakeUnitBits = tierIndex =>
   getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[0]))
 
-// Doubling a lake's own capacity (see getDataLakeCapacity above) costs its CURRENT capacity,
-// converted from an abstract unit count into real bits via getDataLakeUnitBits — the same "spend
-// the current value to double it" shape the removed Memory / Capacity Sacrifice once used, and the same
-// currency Disks themselves are priced/sized in (see docs/DESIGN_HISTORY.md), not a bare unit count.
+// Doubling a lake's own capacity (see getDataLakeCapacity above) is funded by the lake ITSELF, not
+// Bits: it requires the lake to be completely full (deposited units at its own current capacity)
+// and doubling drains every deposit back to zero — the same "requires a full Buffer, drains it"
+// shape Memory's own Capacity ×2 ladder already uses, just paid in the lake's own banked Disks
+// instead of Data Stream Buffer bits. getDataLakeCapacityDoublingCost is kept as a display-only
+// helper (the real-bit face value of what gets drained, via getDataLakeUnitBits) for the button's
+// own tooltip; no code path spends it out of intro.bits any more.
 export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
 
 export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
   if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return false
   if (isDataLakeCapacityMaxed(state, tierIndex)) return false
-  return (state.intro?.bits ?? 0) >= getDataLakeCapacityDoublingCost(state, tierIndex)
+  return getDataLakeAvailableUnits(tierIndex)(state) >= getDataLakeCapacity(state, tierIndex)
 }
 
 // Gated by the same forced priority order every other Byte Foundry milestone action follows —
@@ -3695,22 +3707,87 @@ export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
 
 export const doubleDataLakeCapacity = tierIndex => state => {
   if (!isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)) return state
-  const cost = getDataLakeCapacityDoublingCost(state, tierIndex)
   const lake = getDataLakeTier(state, tierIndex)
   return {
     ...state,
     intro: {
       ...state.intro,
-      bits: state.intro.bits - cost,
       dataLakes: {
         ...state.intro.dataLakes,
         [tierIndex]: {
           ...lake,
+          deposits: { 1: 0, 10: 0, 100: 0 },
           capacityLevel: getDataLakeCapacityLevel(state, tierIndex) + 1,
         },
       },
     },
   }
+}
+
+// Once a pool's Lake is maxed (DATA_LAKE_CAPACITY_MAX_LEVEL — see isDataLakeCapacityMaxed), its
+// deposits can never absorb another disk, so a completed pool's LAST (largest, ×100) disk array
+// would otherwise just pile up full disks with nowhere to go. Rather than let that output sit
+// permanently idle, it liquidates straight into Bits — the same Data Stream currency Provision
+// Disk spends from — automatically funding whatever Provision Disk still needs next (in practice,
+// the next pool's first disk, since that's typically what's left blocking "nothing else to do").
+// Gated by the same forced priority order every other Byte Foundry action follows, with Lake
+// Capacity doubling (any tier, not just this pool's own) ranked directly above it: liquidation
+// only ever kicks in once the Foundry would otherwise be completely idle, so it never competes
+// with or bypasses a higher-ranked action.
+const getPoolLastDiskSize = poolIndex => getDiskLadderSizeBits(poolIndex * DATA_LAKE_SUB_SIZES.length)
+
+export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
+  if (!isStoragePoolUnlocked(state, poolIndex)) return false
+  const size = getPoolLastDiskSize(poolIndex)
+  if ((state.intro.disks?.[size] ?? 0) < 1) return false
+  if (state.intro.diskBuild?.size === size) return false
+  return isDataLakeCapacityMaxed(state, poolIndex)
+}
+
+const isAnyDataLakeCapacityDoublingAvailable = state => {
+  for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
+    if (isDataLakeCapacityDoublingAvailable(state, tierIndex)) return true
+  }
+  return false
+}
+
+export const isIdleDiskLiquidationTurnAvailable = (state, poolIndex) =>
+  isIdleDiskLiquidationAvailable(state, poolIndex) &&
+  !isDiskFillAvailable(state) &&
+  !isBandwidthAvailable(state) &&
+  !isProvisionDiskAvailable(state) &&
+  !isComputeUpgradeAvailable(state) &&
+  !isAnyDataLakeCapacityDoublingAvailable(state)
+
+const liquidateIdleDisk = poolIndex => state => {
+  if (!isIdleDiskLiquidationTurnAvailable(state, poolIndex)) return state
+  const size = getPoolLastDiskSize(poolIndex)
+  const disks = state.intro.disks ?? {}
+  const full = disks[size] ?? 0
+  const { [size]: _removed, ...remainingDisks } = disks
+  const nextDisks = full > 1 ? { ...disks, [size]: full - 1 } : remainingDisks
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      disks: nextDisks,
+      bits: state.intro.bits + size,
+    },
+  }
+}
+
+// Called from tickStorage, after auto-deposit/auto-release-cache have already had first claim on
+// every size — liquidation is the lowest-priority Storage tick action. Checks pools ascending;
+// isAnyDataLakeCapacityDoublingAvailable above already blocks this the instant ANY lake could
+// still usefully absorb more, so realistically only one pool is ever eligible at a time — this
+// returns as soon as one actually changes state.
+export const tickIdleDiskLiquidation = state => {
+  const unlockedCount = getUnlockedStoragePoolCount(state)
+  for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
+    const next = liquidateIdleDisk(poolIndex)(state)
+    if (next !== state) return next
+  }
+  return state
 }
 
 // How many live Booster transfers (see startBoosterTransfer/tickDataLakeTransfers) tier

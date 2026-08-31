@@ -2937,10 +2937,16 @@ describe('Byte Foundry Storage', () => {
     const pool2 = screen.getByRole('region', { name: 'pool 2' })
     expect(pool1).toHaveTextContent('Kilobytes')
     expect(pool2).toHaveTextContent('Megabytes')
-    expect(pool1).toHaveTextContent(`Bandwidth ${formatBitsInNearestUnit(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 1))}/sec`)
-    expect(pool2).toHaveTextContent(`Bandwidth ${formatBitsInNearestUnit(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 2))}/sec`)
-    expect(pool1).toHaveTextContent(`Capacity ${formatBitsInNearestUnit(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 1))}`)
-    expect(pool2).toHaveTextContent(`Capacity ${formatBitsInNearestUnit(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 2))}`)
+    // Label and value render as separate stat-block elements (see PoolStatLabel/PoolStatValue),
+    // not one concatenated sentence, so each is asserted on its own rather than as one joined string.
+    expect(pool1).toHaveTextContent('Bandwidth')
+    expect(pool1).toHaveTextContent(`${formatBitsInNearestUnit(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 1))}/sec`)
+    expect(pool2).toHaveTextContent('Bandwidth')
+    expect(pool2).toHaveTextContent(`${formatBitsInNearestUnit(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 2))}/sec`)
+    expect(pool1).toHaveTextContent('Capacity')
+    expect(pool1).toHaveTextContent(formatBitsInNearestUnit(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 1)))
+    expect(pool2).toHaveTextContent('Capacity')
+    expect(pool2).toHaveTextContent(formatBitsInNearestUnit(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 2)))
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 mb disks$/i })).toBeInTheDocument()
@@ -3154,19 +3160,28 @@ describe('Byte Foundry Storage', () => {
 
     // A disk already built (empty) plus enough Memory for read cache and one disk pour. tier01 past
     // level 1 so read cache may flush into the empty disk without an active tier claim at this size.
-    // High production rate makes the one-block flush finish within a single tick — but a cache
-    // refill FROM Memory is itself bandwidth-capped (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER ×
-    // the current rate × elapsed REAL seconds), so refilling the cache a second time after the
-    // first tick's flush empties it needs a second real tick's worth of elapsed time, not the same
-    // 0-elapsed intra-tick pass the old unbounded refill relied on.
+    // capacity is set so pool 1's own Bandwidth cap (sqrt of its own Capacity — see
+    // getStoragePoolBandwidth) lands on a clean 2,000 bits/sec — deliberately BELOW currentBankSize
+    // (8,000), so a full cache fill now genuinely takes real time. tickSpeedSeconds is set very
+    // large (with productionMultiplier scaled to match) purely to push the Byte generator's own
+    // periodic batch delivery (see tickIntroProduction) far outside this test's short window — this
+    // test cares only about the Storage-side bandwidth cap, not that separate passive-income timer.
+    // A cache refill FROM Memory is itself further bandwidth-capped
+    // (CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER × the pool's own capped rate × elapsed REAL
+    // seconds), so filling this size's 8,000-bit cache from empty takes 4 real seconds (8,000 /
+    // 2,000), then flushing the full cache into the empty disk (a DISK filling FROM a cache, at
+    // DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER × the same capped rate) takes another 0.25s — 4.2s
+    // of SIMULATED game time, but only 6 real 100ms ticks (600ms) since each tick only ever advances
+    // elapsedSeconds by TICK_RATE_MS/1000 regardless of the underlying rate.
+    const bandwidthCapBits = 2000
     seedIntroState(
       {
         bits: currentBankSize * 2,
-        capacity: INTRO_DISK_UNLOCK_CAPACITY,
+        capacity: bandwidthCapBits * bandwidthCapBits,
         byteCreated: true,
         disksBuiltTotal: { [currentBankSize]: 1 },
-        productionMultiplier: currentBankSize * 2,
-        tickSpeedSeconds: 1,
+        productionMultiplier: 3_000_000,
+        tickSpeedSeconds: 1_000,
       },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
@@ -3174,12 +3189,12 @@ describe('Byte Foundry Storage', () => {
     openStorage()
     expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+    act(() => { vi.advanceTimersByTime(600) })
 
-    // Read cache topped up and flushed into the empty disk in the same tick. At tier level 2 the
+    // Read cache topped up and flushed into the empty disk once fully staged. At tier level 2 the
     // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance. The cache
-    // itself is empty again immediately after flushing into the disk — it only refills on a later
-    // tick's own bandwidth budget.
+    // itself is empty again immediately after flushing into the disk — it only refills on the pool's
+    // own bandwidth budget from here.
     expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(currentBankSize)
@@ -3187,8 +3202,10 @@ describe('Byte Foundry Storage', () => {
     expect(saved.intro.disks[currentBankSize]).toBe(1)
     expect(saved.owned.tier01).toBe(0)
 
-    // A second tick's worth of (ample) bandwidth refills the cache from the remaining balance.
-    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+    // The same capped bandwidth refills the cache from the remaining balance — another 4s (8,000 /
+    // 2,000, i.e. 400ms more of real ticks) — with no further flush this time (the array's only
+    // container is already full).
+    act(() => { vi.advanceTimersByTime(400) })
 
     saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.bits).toBe(0)
@@ -3311,11 +3328,12 @@ describe('Byte Foundry Storage', () => {
     // forced-priority input out from under the click before it's processed.
     vi.useFakeTimers()
 
-    // bits (8000) covers the KB lake's level-0 doubling cost (1 unit × 8000 bits/unit) but stays
-    // well under a Provision Disk's own cost (80,000), so Provision Disk never outranks it; Invest's
-    // current-tier claims are already used up (productionMilestoneTierClaims: 2) — the same
-    // higher-priority-action neutralization the Sacrifice tests above use, since capacity doubling
-    // sits at the same forced-priority rank.
+    // The KB lake is holding exactly its own level-0 capacity (1 unit) — full, so doubling is
+    // funded by draining the lake itself, not Bits; bits (8000) is included only to prove doubling
+    // never touches it. Provision Disk's own cost (80,000) stays out of reach either way, so it
+    // never outranks doubling; Invest's current-tier claims are already used up
+    // (productionMilestoneTierClaims: 2) — the same higher-priority-action neutralization the
+    // Sacrifice tests above use, since capacity doubling sits at the same forced-priority rank.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3333,7 +3351,8 @@ describe('Byte Foundry Storage', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.dataLakes['1'].capacityLevel).toBe(1)
-    expect(saved.intro.bits).toBe(0)
+    expect(saved.intro.dataLakes['1'].deposits).toEqual({ 1: 0, 10: 0, 100: 0 })
+    expect(saved.intro.bits).toBe(8000)
 
     unmount()
     vi.useRealTimers()

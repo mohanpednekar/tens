@@ -244,6 +244,10 @@ import {
   getDataLakeTransferCapacity,
   getDataLakeAvailableUnits,
   getDataLakeDepositedUnits,
+  getDataLakeTier,
+  isIdleDiskLiquidationAvailable,
+  isIdleDiskLiquidationTurnAvailable,
+  tickIdleDiskLiquidation,
   getBoosterPurchaseCost,
   tickDataLakeTransfers,
   getDiskLadderStep,
@@ -737,6 +741,26 @@ describe('storage pools', () => {
     expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
     expect(getStoragePoolCapacity(state, 2)).toBe(state.intro.capacity)
     expect(getStoragePoolCapacity(state, 1)).toBe(INTRO_CAPACITY_CAP_BITS)
+  })
+
+  it('caps a pool\'s own Bandwidth at the square root of its own Capacity once the production rate outgrows it', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 4_000_000, // sqrt(4,000,000) = 2,000 — a clean cap value
+      productionMultiplier: 999_999, // far above the cap
+    })
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(2_000)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
+  })
+
+  it('leaves Bandwidth at the raw production rate while it stays under sqrt(Capacity)', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 4_000_000, // sqrt = 2,000
+      productionMultiplier: 500, // under the cap
+    })
+    expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
+    expect(getStoragePoolBandwidth(state, 1)).toBe(500)
   })
 
   it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
@@ -2491,6 +2515,9 @@ describe('tickDiskWriteCache', () => {
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 0 },
       productionMultiplier: 8,
       tickSpeedSeconds: 1,
+      // Ample headroom above sqrt(capacity) — pool 1's own Bandwidth cap — so the rate itself, not
+      // that cap, is what's under test here (see getStoragePoolBandwidth).
+      capacity: level2Size,
     })
     const after = tickDiskWriteCache(0)(fast)
     const merge = getDiskWriteCacheMerge(after, level2Size)
@@ -8480,38 +8507,51 @@ describe('Data Lakes', () => {
     expect(getDataLakeCapacityDoublingCost(state, 1)).toBe(1 * 8000)
   })
 
-  it('isDataLakeCapacityDoublingAvailable/TurnAvailable gate on affordability and the forced priority order', () => {
-    // Not affordable — 1 bit short of the starting 1 * 8000 = 8000 bit cost.
-    expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { bits: 7_999, ...noOtherUpgradesLeft }), 1)).toBe(false)
-    // Affordable, and nothing ranked above it (Disk Fill/Bandwidth/Provision Disk/Compute) is available.
+  // A lake holding DISK_ARRAY_LADDER_CAP (10) of every sub-size totals 10 + 100 + 1,000 = 1,110
+  // units — comfortably above the 1,024 hard cap, so this always reads as "full" regardless of the
+  // lake's current capacity level, matching how a real fully-built pool's deposits would sit.
+  const brimfulDeposits = { 1: DISK_ARRAY_LADDER_CAP, 10: DISK_ARRAY_LADDER_CAP, 100: DISK_ARRAY_LADDER_CAP }
+  const withFullLake = (state, tierIndex = 1) => ({
+    ...state,
+    intro: {
+      ...state.intro,
+      dataLakes: { ...state.intro.dataLakes, [tierIndex]: { ...getDataLakeTier(state, tierIndex), deposits: brimfulDeposits } },
+    },
+  })
+
+  it('isDataLakeCapacityDoublingAvailable/TurnAvailable gate on the lake being full (not Bits) and the forced priority order', () => {
+    // Not full — a fresh lake holds nothing, short of the starting 1-unit capacity.
+    expect(isDataLakeCapacityDoublingAvailable(withIntro(createInitialGameState(), { ...noOtherUpgradesLeft }), 1)).toBe(false)
+    // Full, and nothing ranked above it (Disk Fill/Bandwidth/Provision Disk/Compute) is available.
     const diskLadderExhausted = { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP } }
-    const affordable = withIntro(createInitialGameState(), { bits: 8_000, ...noOtherUpgradesLeft, ...diskLadderExhausted })
-    expect(isDataLakeCapacityDoublingAvailable(affordable, 1)).toBe(true)
-    expect(isDataLakeCapacityDoublingTurnAvailable(affordable, 1)).toBe(true)
+    const full = withFullLake(withIntro(createInitialGameState(), { ...noOtherUpgradesLeft, ...diskLadderExhausted }))
+    expect(isDataLakeCapacityDoublingAvailable(full, 1)).toBe(true)
+    expect(isDataLakeCapacityDoublingTurnAvailable(full, 1)).toBe(true)
     // A redeemable full disk (Disk Fill) outranks it — same forced-priority chain Sacrifice uses.
-    const diskFillBlocks = withIntro(createInitialGameState(), { bits: 8_000, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    const diskFillBlocks = withFullLake(withIntro(createInitialGameState(), { disks: { [kb1]: 1 }, ...noOtherUpgradesLeft }))
     expect(isDiskFillAvailable(diskFillBlocks)).toBe(true)
     expect(isDataLakeCapacityDoublingTurnAvailable(diskFillBlocks, 1)).toBe(false)
   })
 
-  it('doubleDataLakeCapacity is a no-op below cost or while a higher-priority action is available', () => {
-    const tooPoor = withIntro(createInitialGameState(), { bits: 7_999, ...noOtherUpgradesLeft })
-    expect(doubleDataLakeCapacity(1)(tooPoor)).toBe(tooPoor)
+  it('doubleDataLakeCapacity is a no-op while the lake isn\'t full or a higher-priority action is available', () => {
+    const notFull = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
+    expect(doubleDataLakeCapacity(1)(notFull)).toBe(notFull)
 
-    const blockedByDiskFill = withIntro(createInitialGameState(), { bits: 8_000, disks: { [kb1]: 1 }, ...noOtherUpgradesLeft })
+    const blockedByDiskFill = withFullLake(withIntro(createInitialGameState(), { disks: { [kb1]: 1 }, ...noOtherUpgradesLeft }))
     expect(doubleDataLakeCapacity(1)(blockedByDiskFill)).toBe(blockedByDiskFill)
   })
 
-  it('doubleDataLakeCapacity spends the lake\'s current capacity in bits and doubles its level/capacity', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: 8_000,
+  it('doubleDataLakeCapacity drains the lake\'s own deposits (not Bits) and doubles its level/capacity', () => {
+    const state = withFullLake(withIntro(createInitialGameState(), {
+      bits: 42, // untouched — this mechanic no longer spends Data Stream Bits at all.
       disksBuiltTotal: Object.fromEntries(
         [...Array(30)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
       ),
       ...noOtherUpgradesLeft,
-    })
+    }))
     const after = doubleDataLakeCapacity(1)(state)
-    expect(after.intro.bits).toBe(0)
+    expect(after.intro.bits).toBe(42)
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(0)
     expect(getDataLakeCapacityLevel(after, 1)).toBe(1)
     expect(getDataLakeCapacity(after, 1)).toBe(2)
     expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(2 * 8000)
@@ -8521,7 +8561,6 @@ describe('Data Lakes', () => {
 
   it('doubleDataLakeCapacity hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — capacity never exceeds 1,024 units', () => {
     let state = withIntro(createInitialGameState(), {
-      bits: Number.MAX_SAFE_INTEGER,
       disksBuiltTotal: Object.fromEntries(
         [...Array(30)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
       ),
@@ -8530,14 +8569,59 @@ describe('Data Lakes', () => {
       productionMilestoneTierClaims: 1,
     })
     for (let i = 0; i < DATA_LAKE_CAPACITY_MAX_LEVEL; i += 1) {
-      state = withIntro(state, { bits: Number.MAX_SAFE_INTEGER })
+      state = withFullLake(state)
       state = doubleDataLakeCapacity(1)(state)
     }
     expect(getDataLakeCapacityLevel(state, 1)).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)
     expect(getDataLakeCapacity(state, 1)).toBe(1024)
     expect(isDataLakeCapacityMaxed(state, 1)).toBe(true)
+    state = withFullLake(state)
     expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false)
-    expect(doubleDataLakeCapacity(1)(state)).toBe(state) // no-op once maxed
+    expect(doubleDataLakeCapacity(1)(state)).toBe(state) // no-op once maxed, even while full
+  })
+
+  describe('idle disk liquidation', () => {
+    // Pool 1's own arrays fully built, its lake already at the hard cap (so it can never absorb
+    // another deposit), and one further completed disk at the pool's LAST (largest, ×100) size
+    // sitting idle with nowhere to go.
+    const maxedLakePool1 = withIntro(createInitialGameState(), {
+      ...noOtherUpgradesLeft,
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      disks: { [kb100]: 1 },
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+    })
+
+    it('isIdleDiskLiquidationAvailable/TurnAvailable are true only once the pool\'s Lake is maxed and nothing else is available', () => {
+      expect(isIdleDiskLiquidationAvailable(maxedLakePool1, 1)).toBe(true)
+      expect(isIdleDiskLiquidationTurnAvailable(maxedLakePool1, 1)).toBe(true)
+
+      // Lake not yet maxed — no idle disk to liquidate into.
+      const notMaxed = withIntro(maxedLakePool1, {
+        dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, capacityLevel: 0 } },
+      })
+      expect(isIdleDiskLiquidationAvailable(notMaxed, 1)).toBe(false)
+
+      // No idle disk on hand.
+      const noIdleDisk = withIntro(maxedLakePool1, { disks: {} })
+      expect(isIdleDiskLiquidationAvailable(noIdleDisk, 1)).toBe(false)
+
+      // A redeemable full disk (Disk Fill) elsewhere outranks it.
+      const diskFillBlocks = withIntro(maxedLakePool1, { disks: { ...maxedLakePool1.intro.disks, [kb1]: 1 } })
+      expect(isDiskFillAvailable(diskFillBlocks)).toBe(true)
+      expect(isIdleDiskLiquidationTurnAvailable(diskFillBlocks, 1)).toBe(false)
+    })
+
+    it('tickIdleDiskLiquidation liquidates the idle disk straight into Bits', () => {
+      const after = tickIdleDiskLiquidation(maxedLakePool1)
+      expect(after).not.toBe(maxedLakePool1)
+      expect(after.intro.disks[kb100] ?? 0).toBe(0)
+      expect(after.intro.bits).toBe(maxedLakePool1.intro.bits + kb100)
+    })
+
+    it('tickIdleDiskLiquidation is a same-reference no-op once nothing is eligible', () => {
+      const nothingToLiquidate = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
+      expect(tickIdleDiskLiquidation(nothingToLiquidate)).toBe(nothingToLiquidate)
+    })
   })
 
   it('doubleDataLakeCapacity/isDataLakeCapacityDoublingAvailable are same-reference no-ops for an out-of-range tierIndex', () => {

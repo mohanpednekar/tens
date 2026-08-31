@@ -497,20 +497,23 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `getDataLakeCapacity` returns `2 ** getDataLakeCapacityLevel(state, tierIndex)`, starting at level
    0 (1 unit — "1 KB" for the KB lake, in that lake's own Byte-scale denomination) and permanently
    hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake)
-   via `isDataLakeCapacityMaxed`. `getDataLakeCapacityDoublingCost` is that current capacity
-   converted into real bits via `getDataLakeUnitBits(tierIndex)` — one deposit-unit's own bit face
-   value, exactly its lake's ×1 sub-size Disk's size (e.g. 8,000 bits for the KB lake) — so the
-   amount actually spent from Data Stream Bits is the lake's capacity expressed in the same currency
-   Disks themselves are priced/sized in, per "Data lake uses the same currency as disks" (see
-   `docs/DESIGN_HISTORY.md`), not a bare unit count — the same "spend the current value to double
-   it" shape used by Capacity ×2. Gated by the same forced
+   via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Data
+   Stream Bits: `isDataLakeCapacityDoublingAvailable` requires the lake to be completely full
+   (deposited units at least its own current capacity), and `doubleDataLakeCapacity` empties every
+   deposit back to zero on purchase — the same "requires a full Buffer, drains it" shape Memory's
+   own Capacity ×2 ladder uses, just paid in the lake's own banked Disks instead of Buffer bits.
+   `getDataLakeCapacityDoublingCost` (current capacity converted into real bits via
+   `getDataLakeUnitBits(tierIndex)` — one deposit-unit's own bit face value, exactly its lake's ×1
+   sub-size Disk's size, e.g. 8,000 bits for the KB lake) is kept only as a display-only helper for
+   the button's own tooltip; no code path spends it out of `intro.bits`. Gated by the same forced
    priority chain as every other Byte Foundry milestone action
    (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Speed, Disk
    Build, and Compute are all currently unavailable; sits at the former Sacrifice rank, not
    competing with Speed).
    An earlier version fixed this cap at a value derived directly from the Disk arrays themselves,
-   with no purchasable lever at all — see `docs/DESIGN_HISTORY.md` for why a doublable,
-   explicitly-capped ladder replaced that.
+   with no purchasable lever at all; a version after that funded doubling from Data Stream Bits
+   (spending the lake's own capacity expressed in real-bit currency, the "spend the current value to
+   double it" shape Capacity ×2 uses) — see `docs/DESIGN_HISTORY.md` for both.
 
    `canDepositDiskToDataLake` itself requires not just a currently-full disk but that size's disk
    array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
@@ -552,8 +555,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    multiple of the next, so using fewer of a larger one than this greedy's own max can only ever
    increase what's needed lower down. Returns null (nothing to fund) only when the total held Disks,
    respecting each sub-size's own count, genuinely can't reach the needed total. That live-sourced
-   portion is transferred at `DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) the Byte Foundry's current
-   bits/sec production rate (`getIntroProductionRate`, deliberately excluding an active Compute
+   portion is transferred at `DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER` (10×) that tier's own storage
+   pool Bandwidth (`getStoragePoolBandwidth(state, tierIndex)` — the Byte Foundry production rate,
+   hard-capped per pool at `sqrt(that pool's own Capacity)`, deliberately excluding an active Compute
    Boost, same posture as `getCoreEarnTimeSeconds`) — `(bits transferred) / (10 × rate)` seconds —
    tracked as `{ remainingSeconds }` entries in `intro.dataLakes[tierIndex].transfers`. When
    deposits alone cover the full cost there's nothing left to transfer, so the Booster grants
@@ -568,6 +572,21 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    returning non-null) is false whenever a live transfer would be needed but the tier's transfer
    concurrency is already full — this throughput cap bounds live transfers only, not a tier's
    lifetime Booster total (deposits plus repeated live transfers can fund a lake indefinitely).
+
+   **Idle disk liquidation** (`isIdleDiskLiquidationAvailable`/`isIdleDiskLiquidationTurnAvailable`/
+   `tickIdleDiskLiquidation`) — once a pool's Lake sits at `isDataLakeCapacityMaxed`, its deposits
+   can never absorb another disk, so a completed pool's LAST (largest, ×100) disk array would
+   otherwise just pile up full disks with nowhere to go once its own tier no longer needs them (see
+   the "Disks always take priority" rule above). Rather than let that output sit permanently idle,
+   `tickIdleDiskLiquidation` (called from `tickGame`'s `tickStorage`, right after
+   `tickDiskAutoReleaseCache`) liquidates one such idle disk straight into `intro.bits` — the same
+   Data Stream currency Provision Disk spends from — crediting the disk's own full bit size each
+   call. This automatically funds whatever Provision Disk needs next, in practice the next pool's
+   first disk once its own pool has nothing else left to do. Gated by the full forced priority
+   chain, with EVERY tier's own Lake Capacity doubling (not just the liquidating pool's) ranked
+   directly above it — it only ever fires once the Foundry would otherwise be completely idle (Disk
+   Fill, Speed, Provision Disk, Compute, and every lake's Capacity doubling all unavailable), so it
+   never competes with or bypasses a higher-ranked action. The lowest rank in the whole chain.
 
    `ComputePage` (page
    id `'boosters'`) reveals once Buffer reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,194,304
@@ -2373,7 +2392,7 @@ purchases were manual or automatic.
 - `DISK_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Disks: an array's Provision cost is this many times its own face value, already in bits (see `getDiskCost`/`provisionDisk`)
 - `DISK_ARRAY_LADDER_CAP = 10` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits — a full block can be manually released into `resources.base` (Bits) while that size's own fixed corresponding tier currently sits at its required level (see `releaseDiskCacheBlock` / `isDiskCacheBlockReleasable`)
-- `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's Bandwidth (equal to the Byte Foundry production rate for every unlocked pool). A fresh disk Provision (`getProvisionDiskBaseSeconds`) fills at 1x that rate
+- `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's own Bandwidth (`getStoragePoolBandwidth` — the Byte Foundry production rate, hard-capped per pool at `Math.sqrt(getStoragePoolCapacity(state, poolIndex))` so a pool with a small Capacity window can lag behind the raw rate once production outgrows it). A fresh disk Provision (`getProvisionDiskBaseSeconds`) fills at 1x that same capped rate
 - `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10` — Byte Foundry Disks: a read-cache's refill FROM Memory (`tickDiskAutoFill`'s pass 1) is capped, per call, at this multiple of the current production rate × `elapsedSeconds` — even a large banked Memory balance sitting behind a blocked tier claim only drains into the cache at this bounded rate once unblocked, never instantly
 - `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: a write-cache's collect-from-Disks phase (`getDiskWriteCacheSegmentSeconds`, one segment per full source disk) runs at this multiple of the current production rate — slower than filling from Memory directly, since it's moving already-built Disk contents rather than the live generator output. Currently equal to `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, which is why the write cache's own 10-segment collect phase happens to sum to the same total duration as its flush phase (see `tickDiskWriteCache`) — coincidental, not structural
 - `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 4_194_304` — Byte Foundry Compute Cores: Buffer / pool Memory Capacity threshold (512 KiB in binary scale, half of pool 1's end bound — historically one Capacity doubling short of the cap) at which Boosters/`ComputePage` becomes visible — retuned from a flat `8_000_000` under the old ×10-forever capacity ladder; unrelated to Disks (see `isComputeCoreConversionUnlocked`). Capacity reaches this threshold through the full-Buffer doubling ladder rather than a Combine snap (subject to other gates)
