@@ -39,7 +39,7 @@ function App() {
   // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Ladder so MainPage resets to the Ladder tab (not Upgrades).
+  // Bumped when AppNav selects Byte Factory so MainPage resets to the Factory tab (not Upgrades).
   const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.

@@ -105,7 +105,7 @@ test('renders the game title and the Kilobytes tier', () => {
   seedMainGameState()
   render(<App />)
 
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
   // Money=1 (MONEY_STARTING_AMOUNT) — Kilobytes' per-unit cost is 1,000, so nothing is affordable yet.
   expect(screen.getByRole('button', { name: /buy for 1,000 b\b/i })).toBeDisabled()
@@ -156,14 +156,14 @@ test('AppNav exposes accessibly-labeled Foundry, Guide, and More once unlocked',
   expect(foundryButton).toHaveTextContent(/foundry/i)
   expect(foundryButton).toHaveAttribute('title', 'Byte Foundry — Memory and Storage')
 
-  const tiersButton = screen.getByRole('button', { name: /open ladder/i })
-  expect(tiersButton).toHaveTextContent(/ladder/i)
+  const tiersButton = screen.getByRole('button', { name: /open byte factory/i })
+  expect(tiersButton).toHaveTextContent(/factory/i)
 
   // Progression order: Foundry before Factory in the bar.
   const nav = screen.getByRole('navigation', { name: /main navigation/i })
   const navButtons = within(nav).getAllByRole('button')
   const foundryIndex = navButtons.findIndex(b => /open byte foundry/i.test(b.getAttribute('aria-label') || ''))
-  const tiersIndex = navButtons.findIndex(b => /open ladder/i.test(b.getAttribute('aria-label') || ''))
+  const tiersIndex = navButtons.findIndex(b => /open byte factory/i.test(b.getAttribute('aria-label') || ''))
   expect(foundryIndex).toBeGreaterThanOrEqual(0)
   expect(tiersIndex).toBeGreaterThan(foundryIndex)
 
@@ -182,7 +182,7 @@ test('More menu reaches Milestones and Settings from any screen without progress
   render(<App />) // fresh gate — no mainGameUnlocked yet
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /open ladder/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   expect(screen.getByRole('dialog', { name: /more menu/i })).toBeInTheDocument()
@@ -231,18 +231,18 @@ test('AppNav Factory attention dot lights when a full purchase level is affordab
   seedMainGameState({ resources: { base: DEFAULT_PURCHASE_BLOCK_SIZE * 1000 } })
   render(<App />)
 
-  const tiersButton = screen.getByRole('button', { name: /open ladder/i })
+  const tiersButton = screen.getByRole('button', { name: /open byte factory/i })
   expect(within(tiersButton).getByLabelText(/important action available/i)).toBeInTheDocument()
-  // Ladder tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
+  // Factory tab is the default view — no redundant Game tab; Upgrades only appears after prestige.
   expect(screen.queryByRole('tab', { name: /open upgrades/i })).not.toBeInTheDocument()
 })
 
-test('no redundant Game or Milestones tabs on the Ladder screen', () => {
+test('no redundant Game or Milestones tabs on the Byte Factory screen', () => {
   seedMainGameState({ prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 } })
   render(<App />)
 
-  expect(screen.getByRole('tablist', { name: /ladder view/i })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('tablist', { name: /factory view/i })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: /^factory$/i })).toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /^game$/i })).not.toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /milestones/i })).not.toBeInTheDocument()
   // Upgrades stays as a peer tab — it's the only PP-purchase surface (not in AppNav/More).
@@ -275,8 +275,8 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   expect(screen.getByLabelText(/compute flops section/i)).toHaveTextContent(/kflops/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /open ladder/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open byte factory/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   // Navigating away and back doesn't touch game state — the previous purchase is still there.
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
 })
@@ -295,7 +295,7 @@ test('buying Kilobytes deducts cost and increases owned count', async () => {
   expect(screen.getByRole('button', { name: /buy for 1,000 b \(level 1, 1 of 8 purchased\)/i })).toBeDisabled()
 })
 
-test('Reset appears only in Settings → Danger zone, not on the Ladder screen or in More', async () => {
+test('Reset appears only in Settings → Danger zone, not on the Byte Factory screen or in More', async () => {
   const user = userEvent.setup()
   seedMainGameState()
   render(<App />)
@@ -373,7 +373,7 @@ test('cancelling the reset confirm dialog leaves the game state untouched', asyn
   expect(window.confirm).toHaveBeenCalled()
   // Still on Settings — cancel must not navigate away or wipe progress.
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /open ladder/i }))
+  await user.click(screen.getByRole('button', { name: /open byte factory/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 1\b/i)
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
@@ -424,7 +424,7 @@ test('Reset Byte Foundry wipes upgrades to scratch and stores convenience caps',
   expect(window.confirm.mock.calls[0][0]).toMatch(/speed/i)
 
   expect(screen.getByRole('heading', { level: 1, name: /^settings$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /open ladder/i }))
+  await user.click(screen.getByRole('button', { name: /open byte factory/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
@@ -1430,7 +1430,7 @@ test('pausing Auto Speed Up via its toggle stops it from firing automatically, e
   // regardless of which view is currently rendered.
   fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /resume auto speed up automation/i }))
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 6.
@@ -1904,7 +1904,7 @@ test('no PP Upgrades tab or PP-based controls appear before the player has ever 
 
   expect(screen.queryByLabelText(/^prestige points display$/i)).not.toBeInTheDocument()
   expect(screen.queryByRole('tab', { name: /open upgrades/i })).not.toBeInTheDocument()
-  expect(screen.queryByRole('tablist', { name: /ladder view/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tablist', { name: /factory view/i })).not.toBeInTheDocument()
   // Chapters (Milestones) stays reachable pre-prestige via AppNav → More.
   await user.click(screen.getByRole('button', { name: /open more menu/i }))
   await user.click(screen.getByRole('button', { name: /open milestones/i }))
@@ -2136,14 +2136,14 @@ test('pausing a tier\'s autobuyer via its PP Upgrades toggle stops it from buyin
   // (10 ticks) so a paused autobuyer's lack of purchases is a meaningful assertion, not just "not
   // enough time has passed yet".
   act(() => { vi.advanceTimersByTime(1000) })
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 0\b/i)
 
   fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
   fireEvent.click(screen.getByRole('button', { name: /resume kilobytes's autobuyer/i }))
   act(() => { vi.advanceTimersByTime(1000) })
 
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   expect(screen.getByLabelText(/^kilobytes layer$/i)).not.toHaveTextContent(/owned: 0\b/i)
 
   unmount()
@@ -2173,7 +2173,7 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   expect(screen.getByRole('button', { name: /pause ronnabytes's tickspeed autobuyer/i })).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('tab', { name: /^ladder$/i }))
+  fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
   unmount()
@@ -2486,7 +2486,7 @@ test('the manual convert button appears once Buffer reaches the conversion-unloc
   // Grants 1 free Kilobyte unit in the main game's save data, from the separate intro bit pool,
   // and — unlike the old design — this first conversion alone unlocks the main game, so <App />
   // navigates straight to MainPage instead of staying on the Byte Foundry.
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
   expect(saved.intro.mainGameUnlocked).toBe(true)
@@ -2573,8 +2573,8 @@ test('shows one transfer block per remaining unit of the Kilobyte tier\'s (defau
 
   fireEvent.click(activeBlock)
 
-  // First transfer unlocks the main game and navigates to Ladder.
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  // First transfer unlocks the main game and navigates to Byte Factory.
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
   expect(saved.owned.tier01).toBe(1)
   expect(saved.intro.mainGameUnlocked).toBe(true)
@@ -2604,7 +2604,7 @@ test('auto-transfers a full block once the threshold is reached, then hides the 
 
   // Transitioned to MainPage (mainGameUnlocked flips on the bulk auto-invest) with all 8 Kilobytes
   // granted at once, completing tier01's first level.
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
   // Navigating back to the Byte Foundry: Storage is revealed (this fixture has Buffer at pool end) and the main
@@ -2808,7 +2808,7 @@ test('the intro auto-transitions into the main game once the bit balance crosses
   // Transitioned to MainPage — the Byte Foundry heading is gone, replaced by the game itself, with
   // the auto-invest-granted Kilobytes already owned.
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
   unmount()
@@ -3079,7 +3079,7 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('Foundry keeps every previously-built Disk size plus the highest offer even when no shown size is redeemable', () => {
-    // Ladder offers futureBankSize; tier01 is past both FIRST's and level-2's required levels, so neither is redeemable.
+    // Factory offers futureBankSize; tier01 is past both FIRST's and level-2's required levels, so neither is redeemable.
     // Previously-built 1 KB and the incomplete 10 KB offer both stay on the continuous Foundry screen.
     seedIntroState(
       {
@@ -3122,7 +3122,7 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    expect(screen.getByRole('button', { name: /transfer 1 kb cache block 1 to Ladder Bits/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /transfer 1 kb cache block 1 to Factory Bits/i })).toBeEnabled()
   })
 
   test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
@@ -3923,10 +3923,10 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   })
   render(<App />)
 
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
 
-  expect(screen.queryByRole('heading', { level: 1, name: /^ladder$/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { level: 1, name: /^byte factory$/i })).not.toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
@@ -3960,7 +3960,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
   unmount()
@@ -4035,8 +4035,8 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /provision disk/i })).toBeInTheDocument()
 
-  await user.click(screen.getByRole('button', { name: /open ladder/i }))
-  expect(screen.getByRole('heading', { level: 1, name: /^ladder$/i })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /open byte factory/i }))
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
 })
 
 test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory but keeps Guide and More reachable', () => {
@@ -4044,7 +4044,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory b
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /open ladder/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
   // Utilities must not require progress — Guide + More (Milestones / Settings) stay available.
   expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
@@ -4070,7 +4070,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   // Reached voluntarily — Tap was already live before the Prestige, same as after (see test above).
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /open ladder/i })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /open byte factory/i })).toBeInTheDocument()
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
@@ -4078,7 +4078,7 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
   // gone, while Guide/More stay so utilities never depend on re-unlocking the main game.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /open ladder/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
@@ -4359,7 +4359,7 @@ describe('Dev Mode', () => {
     await openDevMode(user)
     await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
 
-    await user.click(screen.getByRole('button', { name: /unlock ladder/i }))
+    await user.click(screen.getByRole('button', { name: /unlock byte factory/i }))
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
 
     const jsonField = screen.getByLabelText(/dev save state json/i)

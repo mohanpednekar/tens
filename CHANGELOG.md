@@ -83,6 +83,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
 
 ### Changed
+- **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
+  "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
+  Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,
+  and the ComputeFlopsPage/DevModePage copy that named the screen all use **Byte Factory** (full)
+  / **Factory** (short) again. Internal ids (`page === 'game'`, `showTiers`, `hasTiersAttention`,
+  etc.) and the unrelated **Factory Bytes** resource pool (`BYTES_ID`) are unchanged.
 - **Byte Foundry storage pools (#456)** — the Foundry now derives storage pools 1–10 from one
   shared Data Stream. Completing a pool unlocks the next disk-array sizes; earlier pools stay
   available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses

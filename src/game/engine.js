@@ -979,7 +979,7 @@ export const buyComputeFlopsTier = flopId => state => {
 export const getComputeFlopsTierWeight = tierIndex => 10 ** clampNonNegative(tierIndex)
 
 // Cumulative Flops display: E = k + 10M + 100G + 1000T + … + 10^9Q — each tier's
-// cumulativeBoost on its matching Ladder tier, weighted by 10^tierIndex (K=10^0 … Q=10^9).
+// cumulativeBoost on its matching Factory tier, weighted by 10^tierIndex (K=10^0 … Q=10^9).
 export const getComputeFlopsTotal = state =>
   COMPUTE_FLOPS_TIER_DEFINITIONS.reduce((sum, flopTier, tierIndex) => {
     const boost = clampNonNegative(state.computeFlops?.cumulativeBoost?.[flopTier.boostsTierId] ?? 0)
@@ -987,7 +987,7 @@ export const getComputeFlopsTotal = state =>
   }, 0)
 
 // Permanent hyperscaler Flops boost rate (0.01%/s each at base; +efficiency levels) — never resets
-// on ordinary Prestige; persists across Era ascension. Added to every Ladder tier's Flops multiplier.
+// on ordinary Prestige; persists across Era ascension. Added to every Factory tier's Flops multiplier.
 export const getHyperscalerFlopsBoostRate = state => {
   const count = clampNonNegative(state.hyperscalerCount ?? 0)
   if (count <= 0) return 0

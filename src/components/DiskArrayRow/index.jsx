@@ -313,9 +313,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
                   readFlushing
                     ? `${sizeLabel} cache block ${index + 1} flushing to disk`
                     : autoRelease
-                      ? `auto-release ${sizeLabel} cache block ${index + 1} to Ladder Bits`
+                      ? `auto-release ${sizeLabel} cache block ${index + 1} to Factory Bits`
                       : manualRelease
-                        ? `transfer ${sizeLabel} cache block ${index + 1} to Ladder Bits`
+                        ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
                         : `${sizeLabel} cache block ${index + 1}`
                 }
                 disabled={!manualRelease}
@@ -327,9 +327,9 @@ const DiskArrayRow = ({ actions, size, state }) => {
                       : `Flushing read cache to disk (${Math.ceil(readFlush.remainingSeconds)}s)`)
                     : isFull
                       ? (autoRelease
-                        ? `Auto-releases this block's ${blockLabel} to Ladder as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
+                        ? `Auto-releases this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
                         : manualRelease
-                          ? `Transfer this block's ${blockLabel} to Ladder as Bits (toward ${redeemTierName}) — no matching disk available`
+                          ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — no matching disk available`
                           : `Use the matching ${sizeLabel} disk first — cache is blocked while a full redeemable disk exists`)
                       : 'Filling from Memory'
                 }
