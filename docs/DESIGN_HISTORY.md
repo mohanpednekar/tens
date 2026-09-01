@@ -4668,3 +4668,124 @@ draining-the-lake-itself and a 1,000-unit cap; neither doc had been updated at t
 one `engine.test.js` assertion) were updated to the new decade-power sequence; the one App.test.jsx
 seed-data inconsistency described above was corrected rather than papered over. `yarn build`
 succeeds.
+
+### Storage's own reveal threshold lowered to pool 1's own capacity gate; Data Lake panel redesigned; Dev Mode's raw state-updater gap closed
+
+Three more requests from the same conversation as the entries above, landed together in the same
+PR (#546): the whole Storage section should reveal the instant the Data Stream's raw Capacity
+crosses 1 KiB, at which point pool 1 should already show a clean "1 KB" Capacity and its read cache
+should already be filling; the Data Lake panel should be redesigned around fewer labels and bigger
+numbers, matching the rest of the page's visual language; and each lake's visible name should
+include its own size unit ("KB Lake," not just "KB").
+
+**Storage's reveal threshold.** `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY` had sat at
+80,000 bits ("9.765 KiB") since Storage was introduced — a value with no particular mathematical
+significance, just an early "later, more advanced-game reveal" choice. Meanwhile pool 1's own CARD
+visibility gate (`getPoolCapacityUnlockThresholdBits(1)`, from the "Pool cards gated on a capacity
+threshold" entry above) sits at exactly 1 KiB (8,192 bits) — a comment on that function even noted
+"pool 1's own 1 KiB threshold is already satisfied by the time Storage reveals at all," since
+80,000 bits is strictly past it. The practical effect: by the time a player ever SAW Storage at all,
+pool 1's own decade-power Capacity (see the "decade-of-10 ladder" entries above) had already advanced
+past its own "1 KB" starting figure to "10 KB" — the player's very first look at Storage skipped the
+smallest, cleanest state of the mechanic entirely.
+
+**Resolution: set `INTRO_DISK_UNLOCK_CAPACITY` equal to pool 1's own threshold.**
+`INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` (8,192 bits) replaces the
+bare `80000` literal — expressing it via the same two constants `getPoolCapacityUnlockThresholdBits`
+itself multiplies, rather than a second, independently-chosen number that happens to differ, closes
+the gap between the two gates by construction instead of by coincidence. Verified by hand and by a
+new test: at exactly this raw capacity, `getDecadePowerEquivalentBits` computes `steps = round(log2(1024)) = 10`,
+`decadeExponent = floor(10 * log10(2)) = 3`, landing on `10^3 = 1,000` Bytes — pool 1's Capacity
+reads a clean "1 KB" the very instant Storage (and pool 1's card) becomes visible, not a value
+already mid-decade. The read-cache-pre-fill mechanic from the "Pool cards gated..." entry above
+needed NO further change: it was already keyed off `getUnlockedStoragePoolCount` (pool 1 always
+structurally unlocked) rather than `isStorageUnlocked`, but the actual BITS a pool's cache can draw
+on come from `tickPoolBufferFill`, which itself IS gated on `isStorageUnlocked` — so lowering that
+gate automatically moves cache-filling's own effective start point earlier in lockstep, with no
+separate mechanism to touch. Confirmed by re-reading the full call chain rather than assuming it,
+given this was exactly the kind of easy-to-get-wrong indirect dependency the "Pool cards gated..."
+entry above had already been burned by once (folding a capacity check into the wrong shared
+primitive, 48 broken tests) — this time reading first paid off: no code change was needed, only
+verification that none was.
+
+One nuance surfaced while checking a maintainer-stated expectation that a freshly-revealed pool 1
+should show "32 bytes/sec" Bandwidth alongside "1 KB" Capacity: `sqrt(1,000 Bytes) ≈ 31.62`, which
+`getStoragePoolBandwidth`'s own SI-clean rounding legitimately resolves to exactly 32 — so 32 B/s
+IS the real, load-bearing ceiling a pool at "1 KB" Capacity can ever show, not a made-up number. But
+it is a CEILING, not a floor: Bandwidth is `min(rawProductionRate, that ceiling)`, so a genuinely
+fresh save (no Speed purchases yet) shows whatever the actual, much lower production rate is
+instead — confirmed by a real Playwright screenshot of a from-scratch state at exactly 1 KiB
+Capacity, which reads "+1 bit/sec," not "32 B/s". No code change was warranted here: the formula is
+correct and already produces 32 B/s once raw production actually reaches 256 bits/sec (which an
+attentive player prioritizing Speed — always ranked above Capacity in the forced priority order —
+plausibly has done well before their 10th Capacity doubling); hardcoding a floor would have meant
+lying about the pool's actual current throughput, the opposite of what every other number on this
+page is for.
+
+**Data Lake panel redesign.** The panel had shipped, several entries back, as a dense CSS-grid
+table — an explicit Lake/Deposited/Capacity/Bought/Next header row, one grid row per lake, small
+compact cells — modeled on a spreadsheet rather than on this game's own established visual
+language (`FillableStatCard` + `BalanceText`/`StatusText`, the shape the Data Stream card and every
+pool's own Memory buffer block already use). Rebuilt as one self-contained block per lake instead:
+a header row pairing the lake's title with a `StatusText` line showing how many of its funded
+Booster it has produced (e.g. "3× Cores" — this also communicates the lake's fixed Booster
+destination, previously a separate "→ Cores" arrow, with no dedicated space for it any more); a
+`FillableStatCard` showing `{deposited} / {capacity}` as the one big number, filling toward capacity
+the same visual way every other Byte Foundry balance already does; and an actions row pairing the
+"⚡ ×10" capacity-upgrade button with a `🎯 <cost>` `StatusText` for the next Booster's own price
+(informational — Boosters are started from `ComputePage`, not this panel). Column headers are gone
+entirely: every remaining number reads in context (a unit suffix, an icon, a multiplier symbol)
+rather than needing a labelled column to explain it — "less labels, more actual numbers," matching
+the instruction directly. The underlying styled components (`FillableStatCard`, `StatusText`,
+`BalanceText`) are duplicated locally in `DataLakePanel/index.jsx` rather than imported from
+`ByteFoundryPage`, which doesn't export them — matching how `ByteFoundryPage` itself already
+duplicates near-identical `PoolCard`/`DataStreamCard` wrappers side by side rather than sharing one;
+extracting a new shared component was judged more diff than this redesign needed. As a side effect
+of rebuilding around one block per lake, the always-true `maxed ? capacity : …` dead-code ternary an
+earlier adversarial review flagged as a nit (see the entry above) went away on its own — the
+replacement `!maxed && DATA_LAKE_CAPACITY_BY_LEVEL[level + 1]` is only ever evaluated where it's
+actually used, inside the same `!maxed` JSX guard.
+
+**Lake naming.** Each lake's visible title changed from the bare unit symbol ("KB") to "`<symbol>`
+Lake" ("KB Lake") — the size unit was already load-bearing information (it's literally what
+denominates that lake's own currency), but a bare two-letter symbol read as an abbreviation in need
+of a caption rather than a name. `getDataLakeTierLabel` itself (returning `DATA_LAKE_TIER_LABELS[n]`,
+already the short SI symbol) needed no change — only the JSX composing it with the literal word
+"Lake" next to it.
+
+**Dev Mode's own gap.** A same-session adversarial review round (against the PR's first commit,
+covering the decade-power-ladder-narrowing migration clamps described in the entry above) surfaced
+one more: `useIncrementalGame.js`'s `setDevState` — the direct state-updater escape hatch backing
+`DevModePage`'s Variables-tree "Set" editor — writes straight to React state with `setState(prev =>
+updater(prev))`, bypassing `storage.js`'s `mergeState`/`normalizePoolMemoryCapacity` pipeline
+entirely (that pipeline only runs inside `loadGameState`, which the OTHER two Dev Mode write paths —
+`toggleDevMode` and the raw-JSON editor's `applyDevGameStateJson` — both round-trip through, but
+`setDevState` does not). Concretely: a player one keystroke away from typing "10" into
+`intro.dataLakes.1.capacityLevel`'s Variables-tree input (a value that was valid before the ladder
+narrowed to 4 levels, and remains a plausible thing to type from muscle memory or curiosity) would
+silently break `getDataLakeCapacity` for that lake — returning `undefined` — for the rest of the Dev
+Mode session, with no error and no visible sign anything was wrong until deposits mysteriously
+stopped working. **Resolution:** `setDevState` now wraps its result in `normalizePoolMemoryCapacity`
+before committing — `setState(prev => normalizePoolMemoryCapacity(updater(prev)))` — applying the
+exact same defensive clamp a real save load already gets, without pulling in the rest of
+`mergeState`'s own default-filling behavior (inappropriate here: the live state is already a
+complete, valid shape; only the same narrow class of formula-drift field needs sanitizing). Severity
+was low (dev-build-only, requires a specific manual edit) but the fix was small enough that fixing
+it immediately, rather than filing a follow-up, was the better use of the finding.
+
+**Verification.** A new `App.test.jsx` test drives the actual Variables tree UI — expand `intro` →
+`dataLakes` → `1`, type "10" into the `capacityLevel` input, click Set — and asserts the persisted
+dev save clamps back to `3`, the same way a real save load would; this exercises `setDevState`
+specifically (not `applyDevStateJson`, which was already correct) since that's the one path the
+review found unguarded. A new `isStorageUnlocked` test pins the simultaneous-reveal property
+directly: at `INTRO_DISK_UNLOCK_CAPACITY`, `getVisibleStoragePoolCount` is already 1 and
+`getStoragePoolCapacity(state, 1)` already reads `8000` bits ("1 KB"). Only one pre-existing test
+needed a genuine behavioral update (a DOM-structure assertion checking for a single continuous "KB …
+Cores" text run, no longer valid once the name and Booster-destination stat moved into separate
+elements) — everything else that referenced `INTRO_DISK_UNLOCK_CAPACITY` symbolically continued
+passing unchanged, since the redesign preserved every `aria-label` an existing test queried by.
+`yarn test`: 1630/1630 green. `yarn build` succeeds. Verified visually via `yarn dev` + a real
+Playwright/Chromium screenshot of a from-scratch save seeded at exactly 1 KiB Capacity: Storage and
+the KB Pool card both visible immediately, the pool reading "0 bits / 1 KB," and the redesigned KB
+Lake block showing "1 KB / 1 KB" deposited/capacity alongside its "⚡ ×10" button and "🎯 4 KB" next-cost
+figure.

@@ -310,9 +310,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    { [capacityBits]: cumulativeBuiltCount }`, `diskCache: { [capacityBits]: bitsStaged }`,
    `diskBuild: null | { size, remainingSeconds, totalSeconds }`, `diskAutoRedeemedSizes:
    { [capacityBits]: true }`) live as continuous sections on `ByteFoundryPage` once
-   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits,
-   "9.765 KiB" in Memory's own binary display scale — a deliberately later, more advanced-game
-   reveal than step 6's own 8000-bit `isIntroConversionUnlocked` gate). Provision Disk and every shown
+   `isStorageUnlocked(state)`, i.e. `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (8,192 bits,
+   "1 KiB" in Memory's own binary display scale — a later reveal than step 6's own 8000-bit
+   `isIntroConversionUnlocked` gate, and deliberately equal to pool 1's own
+   `getPoolCapacityUnlockThresholdBits(1)`, so the whole Storage section and pool 1's card reveal at
+   the same instant, with pool 1 already showing a clean "1 KB" Capacity — see
+   `docs/DESIGN_HISTORY.md`). Provision Disk and every shown
    size's DiskArrayRow
    appear on that same Foundry screen (no second-level Storage tab; the thin `StoragePage` wrapper
    remains for reuse/tests). A Disk is a genuine storage **medium**, not a
@@ -2335,7 +2338,7 @@ purchases were manual or automatic.
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry Speed ×2 (was Bandwidth / Invest) — requires `isBandwidthTurnAvailable`. Prefers bit-funded Invest when affordable; otherwise compute-funded overflow (#323): spends `COMPUTE_ENTITY_CAP` of the next `COMPUTE_BOOST_TIER_FIELDS` tier, advances `computeBandwidthSacrificeIndex`, increments `computeFundedBandwidthClaims`, and applies the same rate doubling as bit Invest. No-op while Disk Fill ranks higher |
 | `rollbackComputeFundedBandwidth` | `state → state` | Issue #324: rewinds exactly `computeFundedBandwidthClaims` Invest doubles and resets sacrifice index to 0 |
 | `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000). No longer wired into any UI (the manual transfer-block row it used to gate was removed — see `docs/DESIGN_HISTORY.md`) — kept as a pure, tested export only |
-| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits, "9.765 KiB" in Memory's own binary display scale) — reveals Foundry's Provision Disk control and continuous DiskArrayRow sections |
+| `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (8,192 bits, "1 KiB" in Memory's own binary display scale, equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)`) — reveals Foundry's Provision Disk control and continuous DiskArrayRow sections |
 | `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory Capacity's own **binary** unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KiB/MiB/…/QiB unit (step `MEMORY_BINARY_UNIT_STEP`, 1024) a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits). Distinct from `getSiByteUnit` (internal, SI/step-1000, backs `formatDiskSize`) |
 | `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit` or `getSiByteUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null`, and ALSO when `unit` is given but the floored value would be a nonzero fraction below 1 (e.g. `0.5`/`0.003`) — never renders a "0.xyz `<unit>`" string with no significant digit before the decimal; a floored value of exactly `0` still renders as `"0 <unit>"` (no fraction to hide). See `docs/DESIGN_HISTORY.md` |
 | `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Data Stream–denominated cost (Speed / Disk build) in whichever **binary** unit best fits that specific amount |
@@ -2521,7 +2524,7 @@ purchases were manual or automatic.
 - `INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY` (8) — one-time cost, in bits, to combine the first 8 tapped bits into the Byte generator
 - `INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000` — `BITS_PER_BYTE` times Kilobytes' own real `baseCost` (1E3 Bits) in `TIER_DEFINITIONS`; the actual live conversion cost is `getIntroKilobyteConversionCost(state)` (`BITS_PER_BYTE` times tier01's CURRENT per-unit level cost, which equals this constant only at a fresh cycle's level 1 and grows from there) — this constant itself is now only used as the (fixed) `INTRO_CONVERSION_UNLOCK_CAPACITY` threshold below and as a test fixture
 - `INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION` (8000) — capacity threshold at which the manual convert action becomes available
-- `INTRO_DISK_UNLOCK_CAPACITY = 80000` — capacity threshold ("9.765 KiB" in Memory's own binary display scale — `getMemoryUnit`, distinct from a Disk's own SI-scaled size, `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible — a deliberately later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own
+- `INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` (8192) — capacity threshold ("1 KiB" in Memory's own binary display scale — `getMemoryUnit`, distinct from a Disk's own SI-scaled size, `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible — a later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own 8000-bit gate, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and pool 1's card reveal simultaneously
 - `DISK_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Disks: an array's Provision cost is this many times its own face value, already in bits (see `getDiskCost`/`provisionDisk`)
 - `DISK_ARRAY_LADDER_CAP = 10` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits — a full block can be manually released into `resources.base` (Bits) while that size's own fixed corresponding tier currently sits at its required level (see `releaseDiskCacheBlock` / `isDiskCacheBlockReleasable`)

@@ -213,14 +213,17 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
-// until Buffer / pool Memory Capacity reaches this many bits — 80,000 bits, "9.765 KiB" in binary
-// display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
+// until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
+// own display-capacity-threshold gate (getPoolCapacityUnlockThresholdBits(1) in engine.js — 1024
+// Bytes, "1 KiB" in binary display scale, getMemoryUnit) — NOT the same scale Disk sizes render in
 // (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
 // down). Well under pool 1's INTRO_CAPACITY_CAP_BITS end bound. Storage reveals once the Capacity ×2
-// ladder reaches this threshold; it is not forced to the pool end on Combine. Historically this was
-// a later-game reveal once the player had grown capacity past the Kilobyte-transfer row via
-// Capacity doublings.
-export const INTRO_DISK_UNLOCK_CAPACITY = 80000
+// ladder reaches this threshold; it is not forced to the pool end on Combine. At exactly this
+// threshold, pool 1's own decade-power Capacity (getDecadePowerEquivalentBits) is already a clean
+// "1 KB" (1,000 Bytes) — so Storage reveals with its first pool already showing a round number, not
+// mid-decade. An earlier version gated this much later (80,000 bits, by which point pool 1's own
+// Capacity had already advanced past "1 KB" to "10 KB") — see docs/DESIGN_HISTORY.md.
+export const INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
 // bits ("100 KB"), and so on; see getDiskCost in engine.js. This cost only ever pays for the empty

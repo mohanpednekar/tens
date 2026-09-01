@@ -337,9 +337,9 @@ describe('constants', () => {
     expect(COMPUTE_AUTO_BOOST_UNLOCK_COST).toBe(30)
   })
 
-  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits ("9.765 KiB" in Memory\'s own binary display scale)', () => {
-    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(80000)
-    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(10 * 1000 * BITS_PER_BYTE)
+  it('INTRO_DISK_UNLOCK_CAPACITY is 8,192 bits ("1 KiB" in Memory\'s own binary display scale) — deliberately equal to pool 1\'s own capacity-unlock threshold (BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP), see engine.js\'s getPoolCapacityUnlockThresholdBits(1)', () => {
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(8192)
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP)
   })
 
   it('DISK_BUILD_COST_MULTIPLIER is 10 (a disk costs 10x its own Byte-accurate size to build)', () => {

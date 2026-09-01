@@ -73,8 +73,9 @@ src/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
-    DataLakePanel/          ← one Data Lake's own row, embedded per pool on ByteFoundryPage (below
-                            that pool's own disks); see "Byte Foundry" below
+    DataLakePanel/          ← one Data Lake's own self-contained block (title + a big fillable
+                            deposited/capacity number, not a labelled table row), embedded per pool
+                            on ByteFoundryPage (below that pool's own disks); see "Byte Foundry" below
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
@@ -219,7 +220,10 @@ An always-on auto-convert turns Data Stream bits into free `tier01` units at tie
 per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
 was removed); the first successful conversion unlocks the main game. Storage pool cards also require
 `intro.capacity` to reach 1024^N Bytes (1 KiB/1 MiB/1 GiB/…, `getPoolCapacityUnlockThresholdBits`)
-on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`), and each
+on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
+own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
+so the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already
+showing a clean "1 KB" Capacity — and each
 unlocked pool's own read cache now starts filling from Memory the moment that pool unlocks, not only
 once a disk of that size has ever been built. The generator, Disks, Data Lakes, and Compute
 Cores/Nodes are permanent across every real Prestige; only Data Stream balance and the

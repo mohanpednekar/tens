@@ -2099,11 +2099,11 @@ export const getUnlockedStoragePoolCount = state => {
 // progression (getMaxActiveDiskLadderStep — which size is currently buildable), read-cache
 // eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing, none of which this
 // capacity rule was meant to touch — see docs/DESIGN_HISTORY.md for the wider blast radius an
-// earlier attempt at folding this into isStoragePoolUnlocked directly caused. In practice pool 1's
-// own 1 KiB (8,192-bit) threshold is already satisfied by the time Storage reveals at all
-// (isStorageUnlocked's own INTRO_DISK_UNLOCK_CAPACITY = 80,000 bits is stricter), so this rarely
-// changes pool 1's own reveal timing — it mainly bites pools 2+, whose thresholds grow past what
-// disk-build progress alone guarantees.
+// earlier attempt at folding this into isStoragePoolUnlocked directly caused. Pool 1's own 1 KiB
+// (8,192-bit) threshold here is deliberately equal to isStorageUnlocked's own
+// INTRO_DISK_UNLOCK_CAPACITY, so pool 1's card and the whole Storage section reveal at the same
+// instant — this rule mainly bites pools 2+, whose thresholds grow past what disk-build progress
+// alone guarantees.
 export const getPoolCapacityUnlockThresholdBits = poolIndex =>
   BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** poolIndex)
 
@@ -2753,9 +2753,10 @@ export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >
 
 // Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Provision Disk button, disk
 // squares rows) should be shown at all — true once capacity has grown enough to ever hold
-// INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory's own binary display scale) at
-// once. A later, more deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above —
-// see layers.js.
+// INTRO_DISK_UNLOCK_CAPACITY (8,192 bits, "1 KiB" in Memory's own binary display scale — deliberately
+// equal to pool 1's own getPoolCapacityUnlockThresholdBits(1), so Storage and its first pool card
+// reveal at the same instant) at once. A later, more deliberate reveal than
+// isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
 export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_DISK_UNLOCK_CAPACITY
 
 // Byte-scale (SI) unit ladder — B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own

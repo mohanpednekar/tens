@@ -127,6 +127,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   checks against it. `normalizePoolMemoryCapacity` (runs on every load) now clamps both back into
   range. Found by an automated review pass on the merged PR that introduced the decade-power
   Capacity ladder.
+- **Dev Mode's Variables-tree "Set" editor could leave a Data Lake `capacityLevel` past the ladder's
+  own bounds** — `setDevState` (the direct state-updater `DevModePage`'s per-field editor uses)
+  bypassed `normalizePoolMemoryCapacity` entirely, unlike the other two Dev Mode write paths
+  (toggling Dev Mode on, and the raw state-JSON editor), which both round-trip through it via
+  `loadGameState`. Typing an out-of-range `capacityLevel` value directly into the Variables tree
+  (e.g. `10`, valid under the ladder's old 11-level shape) would silently break `getDataLakeCapacity`
+  for that lake for the rest of the Dev Mode session. `setDevState` now runs its result through
+  `normalizePoolMemoryCapacity` before committing, same as a real save load. Dev-build-only.
 
 ### Changed
 - **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
@@ -207,6 +215,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   to reach 100, 100 to reach 1,000) — only the values themselves changed. The button's visible
   label/tooltip moved from "⚡ ×2"/"double…capacity" to "⚡ ×10"/"increase…capacity ×10" to match.
   See `docs/DESIGN_HISTORY.md`.
+- **Storage reveals a full decade earlier — right when the Data Stream hits 1 KiB, matching pool
+  1's own capacity-threshold gate** — `INTRO_DISK_UNLOCK_CAPACITY` moves from 80,000 bits ("9.765
+  KiB") to 8,192 bits ("1 KiB"), now expressed as `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` — the
+  same product `getPoolCapacityUnlockThresholdBits(1)` computes — so the whole Storage section and
+  pool 1's own card reveal at the exact same instant, with pool 1 already showing a clean "1 KB"
+  Capacity rather than one that had already advanced to "10 KB" by the time a player first saw it.
+  See `docs/DESIGN_HISTORY.md`.
+- **Data Lake panel redesigned around fewer labels and bigger numbers, matching the rest of the
+  page** — each lake now renders as a self-contained block (title + a big fillable
+  deposited/capacity number + a compact actions row) instead of a dense grid table with explicit
+  Lake/Deposited/Capacity/Bought/Next column headers, mirroring the same `FillableStatCard`/
+  `BalanceText`/`StatusText` shape every other Byte Foundry balance already uses. A lake's visible
+  name now includes its own size unit — "KB Lake," not just "KB". See `docs/DESIGN_HISTORY.md`.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)

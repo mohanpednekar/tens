@@ -3327,7 +3327,9 @@ describe('Byte Foundry Storage', () => {
     // Embedded per-pool now (see ByteFoundryPage/index.jsx) — no separate global "Data Lakes" panel.
     expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
-    expect(within(pool1).getByText(/^KB.*Cores$/i)).toBeInTheDocument()
+    const lakeBlock = within(pool1).getByLabelText('KB lake')
+    expect(within(lakeBlock).getByText('Lake')).toBeInTheDocument()
+    expect(within(lakeBlock).getByText(/Cores/)).toBeInTheDocument()
   })
 
   test('Data Lake capacity can be increased ×10 by clicking its ⚡×10 button', () => {
@@ -4306,6 +4308,28 @@ describe('Dev Mode', () => {
 
     expect(screen.getByText(/777 b\b/)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).resources.base).toBe(777)
+  })
+
+  it('setDevState clamps a Data Lake capacityLevel set past the ladder\'s own bounds via the Variables tree, same as a real save load would', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByText(/^intro \(\d+\)$/))
+    await user.click(screen.getByText(/^dataLakes \(\d+\)$/))
+    await user.click(screen.getByText(/^1 \(\d+\)$/))
+    const levelInput = screen.getByLabelText('intro.dataLakes.1.capacityLevel')
+    await user.clear(levelInput)
+    await user.type(levelInput, '10') // valid under the old 11-level ladder, out of range on the current 4-level one
+    await user.click(screen.getByRole('button', { name: /^set intro\.dataLakes\.1\.capacityLevel$/i }))
+
+    // setDevState (the Variables tree's own write path) bypasses the engine's action reducers
+    // entirely, so without routing it through normalizePoolMemoryCapacity this would silently
+    // leave capacityLevel at 10 — past DATA_LAKE_CAPACITY_BY_LEVEL's own bounds — breaking every
+    // downstream getDataLakeCapacity read for the rest of the Dev Mode session.
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.dataLakes['1'].capacityLevel).toBe(3)
   })
 
   it('boolean leaves in the Variables tree toggle on click', async () => {

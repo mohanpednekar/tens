@@ -1802,7 +1802,7 @@ describe('isIntroConversionUnlocked', () => {
 })
 
 describe('isStorageUnlocked', () => {
-  it('is false below INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory\'s own binary scale)', () => {
+  it('is false below INTRO_DISK_UNLOCK_CAPACITY (8,192 bits, "1 KiB" in Memory\'s own binary scale)', () => {
     const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY - 1 })
     expect(isStorageUnlocked(state)).toBe(false)
   })
@@ -1810,6 +1810,14 @@ describe('isStorageUnlocked', () => {
   it('is true once capacity reaches INTRO_DISK_UNLOCK_CAPACITY', () => {
     const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY })
     expect(isStorageUnlocked(state)).toBe(true)
+  })
+
+  it('unlocks at exactly the same instant pool 1\'s own card becomes visible, with pool 1 already showing a clean "1 KB" Capacity', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY })
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(getPoolCapacityUnlockThresholdBits(1))
+    expect(isStorageUnlocked(state)).toBe(true)
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    expect(getStoragePoolCapacity(state, 1)).toBe(8000) // "1 KB" (1,000 Bytes)
   })
 })
 
