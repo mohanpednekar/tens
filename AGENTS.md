@@ -144,12 +144,18 @@ grow past a pool's own ceiling once reached. Each Storage pool instead derives i
 Capacity (`getStoragePoolCapacity`) from that same doubling count via a separate switchover sequence
 (`getNextSiDoubledValue`: 1, 2, 4, …, 64, 125, 250, 500, 1000, … Bytes — the same shape the Data Lake
 ladder below uses), clamped to that pool's own window; a pool's Bandwidth
-(`getStoragePoolBandwidth`) then caps at `sqrt(pool Capacity in Bytes)`, snapped down to the nearest
-clean switchover term since the sequence's own square roots don't land cleanly. `isMemoryCapacityAtCap`
+(`getStoragePoolBandwidth`) simply follows the same raw production rate the Data Stream tile's own
+rate figure uses, through the identical transform (`getSiCleanEquivalentBits`, shared by both
+Capacity and Bandwidth: rounds `log2(raw / 1 Byte)` to find the doubling step, robust to
+floating-point drift from chained purchases/boosts) — `sqrt(pool Capacity in Bytes)` is only a
+guideline for the bandwidth's bounds, not the formula, though it still caps the real ceiling once a
+pool's own fixed Capacity can't keep up with an ever-growing rate. `isMemoryCapacityAtCap`
 (the purchase-availability gate) compares the pool's own derived Capacity to its ceiling, not the raw
 value. Two earlier, reverted attempts shared one raw value between both displays instead — see
-docs/DESIGN_HISTORY.md. Storage pools 1–10 are derived views over this one generator: each
-unlocked pool's own Bandwidth is the shared production rate hard-capped as above (both sides still
+docs/DESIGN_HISTORY.md (also home to the acknowledged, minor Compute merge/boost pacing consequence
+of `intro.capacity` no longer clamping to a pool ceiling — `getCoreEarnTimeSeconds` deliberately
+still reads the raw value). Storage pools 1–10 are derived views over this one generator: each
+unlocked pool's own Bandwidth is the shared production rate as above (both sides still
 bits/sec internally — Storage pools display in SI units for all purposes, unlike the Data Stream
 card's own balance/Buffer display, which stays binary). A pool's own Capacity end bound itself is
 also SI-aligned (`POOL_CAPACITY_SI_STEP`, not the shared ladder's binary `MEMORY_BINARY_UNIT_STEP`) —
