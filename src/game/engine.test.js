@@ -93,6 +93,7 @@ import {
   getDiskSize,
   getPoolIndexForDiskSize,
   getStoragePoolCount,
+  getNextSiDoubledValue,
   getStoragePoolBandwidth,
   getStoragePoolCapacity,
   getUnlockedStoragePoolCount,
@@ -717,16 +718,87 @@ describe('pickIntroCapacityMilestone', () => {
     expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 
-  it('doubles plainly through 64 Bytes too — no SI-clean deviation for pool Capacity (its value also drives the Data Stream tile\'s own binary display; see docs/DESIGN_HISTORY.md)', () => {
+  it('doubles plainly through 64 Bytes too — no SI-clean deviation for intro.capacity itself (it also drives the Data Stream tile\'s own binary display; see docs/DESIGN_HISTORY.md)', () => {
     const state = withIntro(createInitialGameState(), {
       bits: BITS_PER_BYTE * 64, capacity: BITS_PER_BYTE * 64, ...noOtherUpgradesLeft,
     })
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.capacity).toBe(BITS_PER_BYTE * 128)
   })
+
+  it('no longer clamps the raw intro.capacity value to the pool ceiling — only the pool\'s own SI-clean derived Capacity (getStoragePoolCapacity) stays clamped there', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 8 * 2 ** 19, capacity: 8 * 2 ** 19, ...noOtherUpgradesLeft,
+    })
+    expect(getStoragePoolCapacity(state, 1)).toBe(4_000_000) // 500,000 Bytes — below the 1 MB SI ceiling
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.capacity).toBe(8 * 2 ** 20) // raw doubles plainly, unclamped...
+    expect(after.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS) // ...now past the pool's own ceiling
+    expect(getStoragePoolCapacity(after, 1)).toBe(INTRO_CAPACITY_CAP_BITS) // the pool's own derived value still clamps there
+    expect(isMemoryCapacityAtCap(after)).toBe(true)
+  })
+})
+
+describe('getNextSiDoubledValue', () => {
+  it('doubles plainly below the 64-Byte deviation point', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 1)).toBe(BITS_PER_BYTE * 2)
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 32)).toBe(BITS_PER_BYTE * 64)
+  })
+
+  it('deviates from 64 to 125 instead of doubling to 128', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 64)).toBe(BITS_PER_BYTE * 125)
+  })
+
+  it('resumes plain doubling after the deviation', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 125)).toBe(BITS_PER_BYTE * 250)
+  })
+
+  it('repeats the same 64→125 deviation once per decade of ten doublings', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 64_000)).toBe(BITS_PER_BYTE * 125_000)
+  })
+
+  it('operates on bits, converting to/from Bytes internally', () => {
+    expect(getNextSiDoubledValue(8)).toBe(16) // 1 Byte -> 2 Bytes, expressed in bits
+  })
 })
 
 describe('storage pools', () => {
+  it('derives an SI-clean Capacity from intro.capacity\'s plain binary doubling count, distinct from the raw binary value', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 8 * 2 ** 14, // 14 doublings from 1 Byte = 16,384 Bytes raw (binary-clean, SI-unclean)
+    })
+    expect(state.intro.capacity).toBe(131_072) // 16,384 Bytes in bits — not what the pool itself shows
+    expect(getStoragePoolCapacity(state, 1)).toBe(128_000) // 16,000 Bytes (SI-clean) in bits instead
+  })
+
+  it('stays SI-clean at very large doubling counts — pool 8\'s own boundary (N=90), reachable within a single Era — where an iterative transform would lose precision and pick the wrong decade multiplier past Number.MAX_SAFE_INTEGER', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 8 * 2 ** 90, // exactly pool 8's own ceiling in raw binary doubling terms
+      disksBuiltTotal: Object.fromEntries(
+        // isStoragePoolUnlocked(state, poolIndex) checks the PRECEDING pool's own 3 disk sizes
+        // (completing pool N's arrays unlocks pool N+1) — sizes 1-21 covers pools 1-7's own three
+        // sizes each, satisfying pools 2 through 8's sequential unlock checks in turn
+        [...Array(21)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
+      ),
+    })
+    expect(getUnlockedStoragePoolCount(state)).toBe(8)
+    // 1e27 Bytes exactly — pool 8's own SI ceiling; a naive iterative getNextSiDoubledValue walk
+    // drifts to ~1.024e27 Bytes (8.192e27 bits) instead at this magnitude (verified independently
+    // before this fix)
+    expect(getStoragePoolCapacity(state, 8)).toBe(1e27 * BITS_PER_BYTE)
+  })
+
+  it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below sqrt(Capacity)', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 8 * 2 ** 14, // pool Capacity derives to 16,000 Bytes; sqrt(16,000) ≈ 126.49 Bytes/sec
+      productionMultiplier: 999_999, // far above the cap, so the cap (not the rate) binds
+    })
+    expect(getStoragePoolBandwidth(state, 1)).toBe(1_000) // 125 Bytes/sec (SI-clean), not a raw ~126.49
+  })
+
   it('unlocks pool 2 only after all three pool 1 arrays reach the build cap', () => {
     const partial = withIntro(createInitialGameState(), {
       disksBuiltTotal: {
@@ -750,14 +822,18 @@ describe('storage pools', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 0,
-      capacity: 1024 * 1024 * 8,
+      // 21 doublings from the 1-Byte start — its SI-clean pool equivalent (getSiCleanEquivalentBits)
+      // is exactly 2,000,000 Bytes (16,000,000 bits), safely between pool 1's ceiling
+      // (INTRO_CAPACITY_CAP_BITS, 1 MB SI) and pool 2's (1 GB SI), so pool 2 shows that derived
+      // value unclamped while pool 1 stays clamped at its own ceiling.
+      capacity: 1024 * 1024 * 16,
       disksBuiltTotal: Object.fromEntries(
         [...Array(3)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
       ),
     })
     expect(getStoragePoolBandwidth(state, 2)).toBe(getIntroProductionRate(state.intro))
     expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
-    expect(getStoragePoolCapacity(state, 2)).toBe(state.intro.capacity)
+    expect(getStoragePoolCapacity(state, 2)).toBe(16_000_000)
     expect(getStoragePoolCapacity(state, 1)).toBe(INTRO_CAPACITY_CAP_BITS)
   })
 
@@ -775,14 +851,25 @@ describe('storage pools', () => {
     expect(getStoragePoolBandwidth(state, 1)).toBe(8_000)
   })
 
-  it('leaves Bandwidth at the raw production rate while it stays under sqrt(Capacity)', () => {
+  it('Bandwidth follows the SI-clean equivalent of the raw production rate while it stays under sqrt(Capacity)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // sqrt(4,000,000 / 8 Bytes) * 8 ≈ 5,656.85 bits/sec cap
-      productionMultiplier: 500, // under the cap
+      capacity: 4_000_000, // sqrt(500,000 Bytes) ≈ 707 Bytes/sec cap — well above the rate below
+      productionMultiplier: 500, // 500 bits/sec raw ≈ 62.5 Bytes/sec, rounds to the nearest doubling step
     })
-    expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
-    expect(getStoragePoolBandwidth(state, 1)).toBe(500)
+    expect(getIntroProductionRate(state.intro)).toBe(500)
+    // 64 Bytes/sec (512 bits/sec) — still matches plain binary below the 64→125 deviation point
+    expect(getStoragePoolBandwidth(state, 1)).toBe(512)
+  })
+
+  it('Bandwidth diverges from the raw binary rate past 64 Bytes/sec, e.g. a raw 256 Bytes/sec rate reads as a clean 250', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — sqrt(1,000,000 Bytes) = 1,000 Bytes/sec cap, well above the rate below
+      productionMultiplier: 2048, // 2048 bits/sec raw = 256 Bytes/sec — 8 doublings from 1 Byte
+    })
+    expect(getIntroProductionRate(state.intro)).toBe(2048)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw 256
   })
 
   it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
@@ -823,9 +910,11 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1000,
-      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (8,388,608 bits =
-      // 1,048,576 Bytes) regardless of this seeded value; sqrt(1,048,576 Bytes) = 1,024
-      // Bytes/sec = 8,192 bits/sec pool 1 Bandwidth cap.
+      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (8,000,000 bits =
+      // 1,000,000 Bytes) regardless of this seeded value; sqrt(1,000,000 Bytes) = 1,000
+      // Bytes/sec = 8,000 bits/sec pool 1 Bandwidth cap — plenty above the 1,000-bit balance
+      // below, so it doesn't matter that this comment's own bound is only a guideline (see
+      // getStoragePoolBandwidth) rather than the exact number.
       capacity: 32_000_000,
       productionMultiplier: 999_999, // far above the cap, so the cap (not the rate) binds
     })
@@ -838,12 +927,14 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
-      capacity: 500_000, // buffer capacity = 500,000 — deliberately below the seeded bits balance
+      // 16 doublings from the 1-Byte start — its SI-clean pool equivalent is exactly 64,000 Bytes
+      // (512,000 bits), deliberately below the seeded bits balance.
+      capacity: 8 * 2 ** 16,
       productionMultiplier: 999_999,
     })
     const after = tickPoolBufferFill(1e6)(state) // ample elapsed time — room, not rate, binds
     const bufferCapacity = getPoolBufferCapacity(state, 1)
-    expect(bufferCapacity).toBe(500_000)
+    expect(bufferCapacity).toBe(512_000)
     expect(after.intro.poolBuffers[1]).toBe(bufferCapacity)
     expect(after.intro.bits).toBe(1_000_000 - bufferCapacity)
   })
@@ -2521,13 +2612,15 @@ describe('tickDiskAutoFill', () => {
   })
 
   it('dumps a full-but-sub-block pool buffer balance into cache when its own capacity cannot hold one block', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), 500), {
-      capacity: 500, // full Memory, but below one FIRST_DISK_SIZE cache block (blockBits = 1000)
+    // 512 = 8 * 2**6, an exact SI-clean pool capacity (no switchover deviation below term 7) —
+    // still below one FIRST_DISK_SIZE cache block (blockBits = 1000).
+    const state = withIntro(withPoolBuffer(createInitialGameState(), 512), {
+      capacity: 512,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       disks: { [FIRST_DISK_SIZE]: 1 },
     })
     const after = tickDiskAutoFill(1e12)(state)
-    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(500)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(512)
     expect(after.intro.poolBuffers[1]).toBe(0)
   })
 
@@ -3356,6 +3449,19 @@ describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues
     const fast = withIntro(createInitialGameState(), { capacity: 8000, productionMultiplier: 2, tickSpeedSeconds: 1 })
     expect(getComputeMergeDurationSeconds(slow, 0)).toBe(8000 * COMPUTE_MERGE_CORE_EARN_MULTIPLIER)
     expect(getComputeMergeDurationSeconds(fast, 0)).toBe(getComputeMergeDurationSeconds(slow, 0) / 2)
+  })
+
+  it('uses the raw (unclamped) intro.capacity value, not a pool\'s own smaller SI-clean derived Capacity — a deliberate, documented pacing consequence of intro.capacity no longer clamping to a pool ceiling (see docs/DESIGN_HISTORY.md)', () => {
+    const state = withIntro(createInitialGameState(), {
+      // 20 doublings from 1 Byte: intro.capacity now grows past pool 1's own 1 MB SI ceiling
+      // (INTRO_CAPACITY_CAP_BITS) instead of clamping there, unlike getStoragePoolCapacity's own
+      // (smaller, SI-clean) derived value for the same pool.
+      capacity: 8 * 2 ** 20,
+      productionMultiplier: 1,
+      tickSpeedSeconds: 1,
+    })
+    expect(state.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS)
+    expect(getCoreEarnTimeSeconds(state)).toBe(state.intro.capacity)
   })
 
   it('upgrading Core→Node makes it ×5 of Core earn and cascades later layers', () => {

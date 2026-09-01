@@ -91,8 +91,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
   Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
+- **Storage pool Capacity/Bandwidth showing non-round SI figures** (e.g. "16.384 KB" / "128 B/sec"
+  instead of a clean "16 KB" / "250 B/sec") — each pool now derives its own SI-clean Capacity from
+  `intro.capacity`'s plain binary doubling count via a rounded-log2 lookup into the SI-clean
+  switchover sequence, computed in closed form (`getSiCleanEquivalentBits`) rather than iterated —
+  robust to floating-point drift both from chained purchases/boosts (the rounded log2) and at very
+  large doubling counts past `Number.MAX_SAFE_INTEGER` (the closed form; an iterative approach
+  would silently pick the wrong decade multiplier once reachable, around pool 8's own boundary
+  within a single Era — see `getStoragePoolCapacity`). Bandwidth simply follows that same raw
+  production rate through the identical transform, with `sqrt(Capacity)` acting only as a bound on
+  the raw rate before the transform (a guideline for bandwidth's bounds, not the formula — see
+  `getStoragePoolBandwidth`). This is fully decoupled from `intro.capacity` itself, which keeps
+  doubling plainly and unclamped in binary for the Data Stream tile's own display — standing rule
+  going forward: the SI-clean switchover sequence is for storage-pool-scoped values only. See
+  `docs/DESIGN_HISTORY.md` for earlier reverted attempts that instead shared one raw value between
+  both displays.
 
 ### Changed
+- **Compute merge/boost pacing (Core earn time) runs slightly slower once `intro.capacity` grows
+  past a pool's own ceiling** — `intro.capacity` no longer clamps to a pool's SI boundary (see the
+  Storage pool Capacity/Bandwidth fix above), and `getCoreEarnTimeSeconds` deliberately keeps
+  reading that raw, now-larger value rather than a pool's own bounded Capacity, since it describes
+  the real Buffer's own refill time. A minor, acknowledged consequence (~2.4% slower per full
+  decade of doublings past a pool boundary, compounding within an Era) — see
+  `docs/DESIGN_HISTORY.md`.
 - **App icon redesigned** — the favicon/PWA/apple-touch icons move from a plain serif "10" text
   glyph to an 8-cell "byte" grid (4×2 rounded squares, a diagonal accent → violet → good gradient)
   evoking the Byte Foundry's own core mechanic (combining 8 bits into 1 Byte) rather than a generic
