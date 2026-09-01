@@ -33,6 +33,7 @@ import {
   canReclaimComputeBoost,
   canStackComputeBoost,
   combineIntroByte,
+  getNextSiDoubledValue,
   normalizePoolMemoryCapacity,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -715,6 +716,47 @@ describe('pickIntroCapacityMilestone', () => {
     expect(after).toBe(state)
     expect(after.intro.bits).toBe(INTRO_CAPACITY_CAP_BITS)
     expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+  })
+
+  it('at 64 Bytes, deviates to 125 Bytes instead of doubling to 128 — SI-clean intermediate values, not just the pool end bound', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: BITS_PER_BYTE * 64, capacity: BITS_PER_BYTE * 64, ...noOtherUpgradesLeft,
+    })
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.capacity).toBe(BITS_PER_BYTE * 125)
+  })
+})
+
+describe('getNextSiDoubledValue', () => {
+  it('doubles a below-64-Byte value normally (val is in bits, the switchover mantissa is checked in Bytes)', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 32)).toBe(BITS_PER_BYTE * 64)
+  })
+
+  it('deviates 64 Bytes to 125 Bytes instead of doubling to 128', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 64)).toBe(BITS_PER_BYTE * 125)
+  })
+
+  it('resumes plain doubling after the 64-to-125 deviation, through to the decade end at 1,000', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 125)).toBe(BITS_PER_BYTE * 250)
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 250)).toBe(BITS_PER_BYTE * 500)
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 500)).toBe(BITS_PER_BYTE * 1000)
+  })
+
+  it('repeats the same 64-to-125 deviation once per decade of 10 doublings (e.g. 64,000 to 125,000 Bytes)', () => {
+    expect(getNextSiDoubledValue(BITS_PER_BYTE * 64000)).toBe(BITS_PER_BYTE * 125000)
+  })
+
+  it('checks the switchover mantissa in Bytes, not raw bits — 64 bits (8 Bytes) is not the switchover point', () => {
+    expect(getNextSiDoubledValue(64)).toBe(128)
+  })
+
+  it('applied repeatedly from the 1-Byte floor, lands on a clean SI value where pure binary doubling would not', () => {
+    let bits = INTRO_STARTING_CAPACITY
+    for (let i = 0; i < 17; i += 1) bits = getNextSiDoubledValue(bits)
+    // Pure binary doubling would land on 131,072 Bytes (2^17) here — the exact non-round figure
+    // ("131.072 KB") the Storage pool card showed before this fix. The SI-corrected sequence lands
+    // on a clean 125,000 Bytes ("125 KB") instead.
+    expect(bits / BITS_PER_BYTE).toBe(125000)
   })
 })
 

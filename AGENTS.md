@@ -133,8 +133,10 @@ cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onw
 player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
 B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
 permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
-cost ladder now ×4/tier) and **Capacity ×2**. Capacity requires a full Buffer, drains it, doubles
-the shared Data Stream capacity, and stops at the moving end bound of the highest unlocked pool; the
+cost ladder now ×4/tier) and **Capacity ×2**. Capacity requires a full Buffer, drains it, grows
+the shared Data Stream capacity (`getNextSiDoubledValue` — a plain ×2 that deviates 64→125 Bytes,
+not 128, once per decade of 10 doublings, so intermediate values land on SI-clean figures too, not
+just each pool's own end bound), and stops at the moving end bound of the highest unlocked pool; the
 ceiling advances as pools unlock. Storage pools 1–10 are derived views over this one generator: each
 unlocked pool's own Bandwidth is the shared production rate hard-capped at the square root of that
 pool's OWN Capacity **converted to Bytes** (both sides still bits/sec internally — Storage pools

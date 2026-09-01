@@ -3610,3 +3610,74 @@ text as the full capacity (their absolute difference is below the display's deci
 that scale) — the property the test verifies (a nearly-full balance never *reads* complete) still
 holds for any gap large enough to actually move the 3rd decimal place, so the test uses a deliberately
 larger (still small) deficit instead of a single bit.
+
+### Pool Capacity doubling mechanic itself corrected to land on SI-clean intermediate steps
+
+The entry above ("Pool Capacity end bounds corrected to SI powers of 1000") fixed each pool's own
+*end* boundary to a clean SI figure (1 MB, 1 GB, 1 TB, …) but deliberately left the per-purchase
+`upgradePoolCapacity` mechanic as plain binary `×2`, reasoning that a `Math.min(doubled, endBits)`
+clamp already lands exactly on the SI boundary on the *final* purchase regardless of what the
+intermediate steps look like. That reasoning holds for the boundary value itself, but it left a
+real, visible gap: every Capacity value *before* that final purchase is still a pure binary power
+(1, 2, 4, …, 64, 128, 256, …, 131,072, … Bytes), and the Storage pool card displays Capacity (and
+therefore Bandwidth, `sqrt(Capacity in Bytes)`) in SI units — so mid-progression, the card showed
+figures like "131.072 KB" Capacity / "362.038 B/sec" Bandwidth, which read as broken even though
+they were arithmetically correct outputs of a binary sequence rendered through an SI formatter. A
+screenshot of exactly this ("KB Pool 1 · Kilobytes", Capacity 131.072 KB, Bandwidth 362.038 B/sec)
+is what surfaced the gap.
+
+An external agent (Jules, PR #533) independently identified the same underlying idea documented in
+the entry above — deviate the doubling sequence from 64 to 125 once per decade of 10 doublings, the
+same technique already used to derive the SI end-boundary constants — but applied it as a **new
+helper called inside the doubling mechanic itself** rather than only in the boundary-constant
+derivation, and got two things wrong in the process: (1) the switchover check compared the raw bit
+value against a mantissa of `64`, but `intro.capacity` is stored in *bits* while the switchover
+point ("64 Bytes → 125 Bytes") is defined in *Bytes* — so the deviation could never actually fire at
+the intended point; (2) it additionally applied the same treatment to the Data Lake capacity ladder
+(`getDataLakeCapacity`), changing its hard cap from 1,024 to 1,000 units — but the Data Lake ladder
+was the *other* candidate this same design decision explicitly considered and rejected earlier (see
+"Scope: which ladder did this apply to?" in the entry above — the user confirmed Memory/Pool
+Capacity only), so re-applying it there was an unauthorized, out-of-scope economy change (no linked
+issue, silently nerfing a value players actually see and rely on) rather than a bug fix. PR #533 was
+closed rather than merged for these reasons, and this entry documents the corrected, narrower fix
+that replaced it.
+
+**The corrected fix:** `getNextSiDoubledValue(val)` (in `engine.js`, `val` in bits) converts to
+Bytes first, then walks the value down by whole factors of 1000 to find its current "decade"
+mantissa; if that mantissa is exactly `64`, the next value is `125 * (that decade's power of 1000)`
+Bytes — otherwise it's a plain `bytes * 2` — converted back to bits before returning.
+`upgradePoolCapacity` calls this instead of `capacity * INTRO_CAPACITY_DOUBLING_STEP`, still passed
+through the same `Math.min(…, endBits)` clamp as before, so the boundary-landing behavior from the
+entry above is unchanged — only the *shape* of the steps leading up to it changed. `getDataLakeCapacity`
+was left exactly as it was (`2 ** getDataLakeCapacityLevel(...)`, cap 1,024) — this fix's scope is
+the Memory/Pool Capacity ladder only, matching the original, still-standing scope decision.
+
+**Precision at extreme scale.** `getNextSiDoubledValue`'s decade-mantissa detection relies on exact
+integer division/modulo, which loses exactness once a pool's magnitude exceeds `Number`'s ~2^53
+safe-integer range — roughly pool 5 and beyond, given each pool boundary sits 10 doublings past the
+last. Past that point the helper silently falls back to plain doubling rather than risking a wrong
+mantissa match. This wasn't treated as a blocking bug: the game already represents astronomically
+large figures (`GOOGOL` = 1e100, `PRESTIGE_THRESHOLD` = 8e100, and pool Capacity/Data Lake values at
+the higher pools already exceed safe-integer range under the *existing*, pre-this-fix formulas too)
+as plain JS `Number`s throughout, accepting the same float-precision ceiling everywhere else — adding
+exact-precision handling (BigInt or a decimal library) solely for this one helper would be
+inconsistent with how the rest of the economy already works, and the cosmetic payoff (SI-clean
+*intermediate* display) matters most in the early-to-mid pools a player actually watches tick by
+tick, not the deep pools whose numbers already read as "big and approximate" regardless.
+
+**An explicit step-counter was considered and rejected.** Precisely tracking "which decade doubling
+we're on" would be trivial with a new persisted counter field (mirroring how Data Lake tracks
+`capacityLevel`), sidestepping the precision question entirely. This was rejected as disproportionate
+to the fix: it would require a new `intro` state field, `createInitialGameState`/`mergeState`
+defaults, and reasoning through Era-ascension reset and save-migration interactions for a field whose
+entire purpose is cosmetic (making a displayed number look rounder at high pools where the game
+already tolerates approximation) — the deriving-from-current-value approach above is stateless, needs
+no migration, and is exact in the range that actually matters.
+
+**Test/doc fallout.** `engine.test.js` gained a `getNextSiDoubledValue` unit-test suite (the
+below-64 case, the 64→125 deviation, resumed doubling through a full decade, the deviation repeating
+at the next decade, the bits-vs-Bytes distinction, and a 17-step replay from the 1-Byte floor landing
+on a clean 125,000 Bytes where pure binary doubling would land on 131,072) plus one
+`pickIntroCapacityMilestone` integration test pinning the 64→125 Bytes step through the real action.
+`CLAUDE.md`/`AGENTS.md`'s Economy model sections were updated to describe `upgradePoolCapacity`'s
+step-shape change (previously documented as "plain ×2, unchanged").

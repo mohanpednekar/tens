@@ -965,12 +965,23 @@ one remaining binary display surface (the Data Stream card only). Pool Memory Ca
 shared start/end bounds from `getStoragePoolMemoryBounds`; the Data Stream's own value is the
 shared Memory ceiling, and each pool's displayed Capacity is that value clamped to its own bounds.
 Earlier pools no longer derive a step down from the highest unlocked pool, so pool 1 stays capped
-at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder
-(plain `×2` per purchase, unchanged — the SI alignment lives entirely in the pool boundary
-CONSTANTS above, not in the doubling mechanic itself, so the ladder's last purchase before a new
-pool's cap simply clamps a little earlier than a raw double would land, same clamp shape as before
-this change), with `INTRO_CAPACITY_CAP_BITS` retained as the pool-1 alias and the active highest
-pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
+at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder,
+but the per-step growth itself is no longer a literal `×2` multiply: `upgradePoolCapacity` grows
+via `getNextSiDoubledValue` (a helper that deviates 64→125 Bytes, not 128, once per "decade" of 10
+doublings), so intermediate Capacity values — not just each pool's own end boundary — land on
+SI-clean figures (1, 2, 4, …, 64, 125, 250, 500, 1,000, 2,000, … Bytes) once shown through the
+Storage pool card's own SI units, rather than binary intermediates (…, 64, 128, 256, …, 131,072,
+…) reading oddly next to a clean SI end bound. `getNextSiDoubledValue` operates on Bytes (the
+switchover point is 64 *Bytes*) even though `intro.capacity` itself is stored in bits, and its
+decade detection loses exactness once a pool's magnitude exceeds `Number`'s ~2^53 safe-integer
+range (roughly pool 5+), degrading to plain doubling past that point — the same floating-point
+tolerance every other astronomically-scaled figure here (`GOOGOL`, `PRESTIGE_THRESHOLD`, …) already
+accepts. `INTRO_CAPACITY_CAP_BITS` is retained as the pool-1 alias and the active highest pool's
+end bound is the authoritative moving ceiling that `Math.min` still clamps every step against —
+same clamp shape as before this change; see `docs/DESIGN_HISTORY.md` for why an earlier fix left
+the doubling mechanic itself untouched, and what made that insufficient. The Data Lake capacity
+ladder (below) is a separate, deliberately-unaffected doubling ladder — plain `2 ** level`, capped
+at 1,024 units — see "Data Lakes" below for why that scope was excluded. **Speed ×2** (was
 Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
 effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
@@ -1244,7 +1255,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1603 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1610 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

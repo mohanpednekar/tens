@@ -81,6 +81,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
   Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
+- **Pool Capacity progression showing non-round intermediate figures** (e.g. "131.072 KB" Capacity /
+  "362.038 B/sec" Bandwidth mid-progression) — `upgradePoolCapacity`'s per-purchase growth now uses
+  `getNextSiDoubledValue` (deviates 64→125 Bytes, not 128, once per decade of 10 doublings) instead
+  of a plain `×2`, so intermediate Capacity values land on SI-clean figures too, not just each pool's
+  own end boundary. See `docs/DESIGN_HISTORY.md` for why the earlier SI-boundary fix left this case
+  uncorrected.
 
 ### Changed
 - **Byte Foundry pool cards tightened up** — Bandwidth/Capacity/Memory now render as three equal
