@@ -8685,7 +8685,7 @@ describe('Data Lakes', () => {
     expect(getDataLakeCapacityLevel(after, 2)).toBe(0)
   })
 
-  it('doubleDataLakeCapacity hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — capacity never exceeds 1,000 units', () => {
+  it('doubleDataLakeCapacity hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — capacity never exceeds 1,024 units', () => {
     let state = withIntro(createInitialGameState(), {
       disksBuiltTotal: Object.fromEntries(
         [...Array(30)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
@@ -8699,7 +8699,7 @@ describe('Data Lakes', () => {
       state = doubleDataLakeCapacity(1)(state)
     }
     expect(getDataLakeCapacityLevel(state, 1)).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)
-    expect(getDataLakeCapacity(state, 1)).toBe(1000)
+    expect(getDataLakeCapacity(state, 1)).toBe(1024)
     expect(isDataLakeCapacityMaxed(state, 1)).toBe(true)
     state = withFullLake(state)
     expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false)
@@ -8758,7 +8758,7 @@ describe('Data Lakes', () => {
     expect(doubleDataLakeCapacity(DATA_LAKE_TIER_COUNT + 1)(state)).toBe(state)
   })
 
-  it('a lake\'s own capacity level (1,000 at max) hard-caps the total below what a fully-built pool could incidentally hold (1,110)', () => {
+  it('a lake\'s own capacity level (1,024 at max) hard-caps the total below what a fully-built pool could incidentally hold (1,110)', () => {
     let state = withIntro(createInitialGameState(), {
       disks: { [kb1]: 10, [kb10]: 10, [kb100]: 10 },
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
@@ -8767,18 +8767,16 @@ describe('Data Lakes', () => {
         1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL },
       },
     })
-    expect(getDataLakeCapacity(state, 1)).toBe(1000)
+    expect(getDataLakeCapacity(state, 1)).toBe(1024)
     for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb1)(state)
     for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb10)(state)
     for (let i = 0; i < 10; i += 1) state = depositDiskToDataLake(kb100)(state)
-    // 10×1 + 10×10 + 10×100 would total 1,110 if unrestricted, but the 1,000 level cap stops the
-    // ×100 place two disks short: 10 + 90 + 900 = 1000, then the 9th ×100 deposit would push the
-    // total to 1,010 > 1,000, so it's blocked and that disk stays undeposited.
-    // Actually, wait, 10*1 = 10. 10*10 = 100. 110 + 800 = 910. 110 + 900 = 1010 > 1000.
-    // So 8 × 100 can be deposited (800).
-    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 10, 10: 10, 100: 8 })
-    expect(getDataLakeDepositedUnits(1)(state)).toBe(910)
-    expect(state.intro.disks[kb100]).toBe(2)
+    // 10×1 + 10×10 + 10×100 would total 1,110 if unrestricted, but the 1,024 level cap stops the
+    // ×100 place one disk short: 110 + 9×100 = 1,010, then the 10th ×100 deposit would push the
+    // total to 1,110 > 1,024, so it's blocked and that disk stays undeposited.
+    expect(state.intro.dataLakes[1].deposits).toEqual({ 1: 10, 10: 10, 100: 9 })
+    expect(getDataLakeDepositedUnits(1)(state)).toBe(1010)
+    expect(state.intro.disks[kb100]).toBe(1)
     expect(canDepositDiskToDataLake(state, kb100)).toBe(false)
   })
 

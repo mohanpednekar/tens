@@ -83,10 +83,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
 
 ### Changed
-- **Byte Foundry pool cards tightened up** — Bandwidth/Capacity/Memory now render as three equal
-  columns spanning the card's full width (was two stats bunched at the left with a large empty
-  gap beside them, plus Memory trailing below as its own separate row); the redundant "Arrays in
-  progress"/"Arrays complete" status text is removed.
 - **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
   "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
   Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,

@@ -4,7 +4,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -211,20 +211,24 @@ const PoolTitleName = styled.span`
   white-space: nowrap;
 `
 
-// Three equal-width columns (Bandwidth / Capacity / Memory) so the row fills the card's full
-// width instead of clustering at the left with a large blank gap beside it.
+// Text-only status indicator (color carries the state), matching MilestonesPage's own Badge
+// convention elsewhere in the app rather than introducing a new pill/chip shape.
+const PoolStatusBadge = styled.span`
+  flex-shrink: 0;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  font-weight: 600;
+  color: ${props => (props.$complete ? props.theme.color.good : props.theme.color.textMuted)};
+`
+
 const PoolStatsRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: ${props => props.theme.space.md};
-  width: 100%;
 `
 
 const PoolStat = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  min-width: 0;
 `
 
 const PoolStatLabel = styled.span`
@@ -243,13 +247,18 @@ const PoolStatValue = styled.span`
 
 // Each pool's own small local buffer (see intro.poolBuffers) — a lightweight throughput
 // reservoir the pool spends from directly, distinct from the big Capacity ladder shown in
-// PoolStatsRow above. Rendered as the Memory column's own mini fill bar (see PoolStatsRow) so it
-// carries equal visual weight to Bandwidth/Capacity rather than trailing below as a separate,
-// mostly-empty full-width row.
+// PoolStatsRow above. A slim bar reusing the same progressFill gradient mixin every other fill
+// meter on this page already uses, paired with a compact label/value line.
+const PoolBufferRow = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+`
+
 const PoolBufferMeter = styled.div`
   width: 100%;
-  height: 0.35rem;
-  margin-top: 0.15rem;
+  height: 0.4rem;
   border-radius: ${props => props.theme.radius.sm};
   ${progressFill}
 `
@@ -660,6 +669,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
+        const arraysComplete = poolSizes.length > 0 && poolSizes.every(size =>
+          (intro.disksBuiltTotal?.[size] ?? 0) >= DISK_ARRAY_LADDER_CAP
+        )
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             <PoolSummaryButton
@@ -673,6 +685,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
                   <PoolTitleName>Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`}</PoolTitleName>
                 </PoolTitle>
+                <PoolStatusBadge $complete={arraysComplete}>
+                  {arraysComplete ? 'Arrays complete' : 'Arrays in progress'}
+                </PoolStatusBadge>
               </PoolHeaderRow>
               <PoolStatsRow>
                 <PoolStat>
@@ -683,19 +698,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolStatLabel>Capacity</PoolStatLabel>
                   <PoolStatValue>{formatDiskSize(poolCapacity)}</PoolStatValue>
                 </PoolStat>
-                <PoolStat>
-                  <PoolStatLabel>Memory</PoolStatLabel>
-                  <PoolStatValue>{formatDiskSize(poolBufferBits)}</PoolStatValue>
-                  <PoolBufferMeter
-                    $progress={poolBufferPercent}
-                    role="progressbar"
-                    aria-label={`pool ${poolIndex} memory buffer`}
-                    aria-valuenow={Math.round(poolBufferPercent)}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  />
-                </PoolStat>
               </PoolStatsRow>
+              <PoolBufferRow>
+                <PoolStatLabel>Memory</PoolStatLabel>
+                <PoolBufferMeter
+                  $progress={poolBufferPercent}
+                  role="progressbar"
+                  aria-label={`pool ${poolIndex} memory buffer`}
+                  aria-valuenow={Math.round(poolBufferPercent)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+                {/* No "/ max" here — the buffer's own ceiling always equals the Capacity stat
+                    already shown above (see getPoolBufferCapacity), so restating it would just
+                    repeat the same number a second time in the same card. */}
+                <PoolStatValue>{formatDiskSize(poolBufferBits)}</PoolStatValue>
+              </PoolBufferRow>
             </PoolSummaryButton>
             {isExpanded && (
               <>

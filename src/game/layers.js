@@ -443,7 +443,7 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // that physical ceiling, a lake's own actual capacity is a smaller, purchasable, doubling ladder
 // (see getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB"
 // for the KB lake) and doubling per purchase, permanently hard-capped at
-// DATA_LAKE_CAPACITY_MAX_LEVEL (level 10, 1,000 units — "1000 KB" for the KB lake). An earlier
+// DATA_LAKE_CAPACITY_MAX_LEVEL (level 10, 1,024 units — "1024 KB" for the KB lake). An earlier
 // version instead made the cap fixed at the physical ceiling with no purchasable lever at all —
 // see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder replaced that.
 export const DATA_LAKE_TIER_COUNT = 10
