@@ -54,7 +54,8 @@ at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line inste
 **Buffer** `{formatBitsInNearestUnit(intro.capacity)}` (the current Data Stream capacity value, not a
 range). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is now
-read directly off the active transfer block's own fill (see below). Once `intro.mainGameUnlocked`,
+implicit in the Data Stream balance itself — there's no separate manual transfer UI any more (see
+below). Once `intro.mainGameUnlocked`,
 `FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
 element-swap prop) instead of `as="section"`, with `onClick={actions.tapIntroBit}`,
 `disabled={isFull}`, and `aria-label="tap to generate a bit"` replacing the plain `"byte foundry
@@ -63,7 +64,7 @@ tap button below has. Before `mainGameUnlocked` the tile stays a plain, non-inte
 
 A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
 capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
-(Actions/Storage/transfer blocks), rather than up near the Data Stream tile, since once `byteCreated`
+(Actions/Storage), rather than up near the Data Stream tile, since once `byteCreated`
 passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
 as clickable either way, and never shrinks or changes size — but is removed entirely, not merely
 hidden, once `intro.mainGameUnlocked` (the Data Stream tile above takes over as the tap target
@@ -108,10 +109,17 @@ live-transfers off built Disks over time), not minted from Data Stream — the e
 Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the shared Data Stream
 section.
 
-Storage is continuous on this same page: **Provision Disk** — the common Data Stream operation,
-alongside
-Speed above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
-scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above). Its
+Storage is continuous on this same page: **Provision Disk** — the common disk-build operation —
+hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
+scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above).
+Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
+poolIndex`, right after that pool's summary/title row), not alongside Speed in the Data Stream
+section — an earlier layout had it there, standalone, but that separated the button from the pool
+it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
+card) for the rare case where the disk ladder has already advanced past the last pool card
+currently VISIBLE (`getVisibleStoragePoolCount`, capacity-threshold-gated — see
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — keeping the button reachable rather than
+letting it disappear until that pool's card catches up. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1
@@ -196,51 +204,30 @@ capacity figure over a compact "⚡ ×2" `DoubleCapacityButton` (hidden once the
 Boosters bought and the next purchase's cost (see
 docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic).
 
-Below Build (and, after Boosts unlocks, below Speed ×2),
-once `isIntroConversionUnlocked(state)`, a **transfer-block row**
-(`role="group"`, `aria-label="byte foundry kilobyte transfer blocks"`), preceded by a small
-`SectionLabel` ("Transfer to Main Game (N left)"). Always renders exactly
-`getPurchaseBlockSize(state)` blocks (`purchaseBlockSize`) — one per unit of tier01's (Kilobytes')
-own current purchase block (see docs/ECONOMY_REFERENCE.md's "Byte Foundry" step 7). Each block's index is compared against
-`blocksTransferred = tier01PurchaseProgress` (i.e. `purchaseLevelProgress[tier01]` — the same live
-value, not a separately-tracked field) to pick one of three states: **consumed**
-(`index < blocksTransferred`) — `aria-label="transferred block N"`, permanently disabled,
-`title="Already transferred"`, rendered with a solid muted `background` (`$consumed`,
-`theme.color.surfaceSunken`) instead of a `progressFill` gradient, reading as "done"; **active**
-(`index === blocksTransferred`, at most one at a time) — `aria-label="convert <cost> into 1
-Kilobyte"` where `<cost>` is `formatBitsInNearestUnit(transferBlockCost)` and `transferBlockCost =
-getIntroKilobyteConversionCost(state)` (tier01's own CURRENT per-unit level cost, not the fixed
-`INTRO_BITS_PER_KILOBYTE_CONVERSION` rate — "1,000 B" (below the binary KiB threshold) at a fresh
-cycle's level 1, "9.765 KiB" once tier01 reaches level 2, and so on), `$progress` = the
-bits-toward-`transferBlockCost` fill,
-`onClick={actions.convertIntroBitsToKilobytes}`, disabled only when `bits < transferBlockCost` —
-**there is no per-cycle cap to run into** — paired with a hidden `role="progressbar"`
-(`aria-label="byte foundry convert progress"`, `aria-valuemax={transferBlockCost}`);
-**upcoming** (every later index) — `aria-label="locked transfer block N"`, always disabled,
-`title="Transfer the block to your left first"`, empty (`background: transparent`). Read
-left-to-right, consumed (filled)/active (partially filled)/upcoming (empty) blocks together look
-like one continuous progress bar rather than a shrinking list. Because the row is a live mirror of
-tier01's own purchase-block progress rather than a cycle-scoped budget, once
-`blocksTransferred` reaches `purchaseBlockSize` (tier01's level completes), `purchaseLevelProgress`
-itself resets to 0 for the next level, and the row rolls over to a fresh all-upcoming set for that
-next level automatically — it never gets stuck fully `$consumed`. The very first successful transfer
-(clicking the active block, or the `tickIntroAutoInvest` auto-convenience firing inside the shared
-tick loop the instant a single unit is affordable — live, block by block, not just once a whole
-batch accumulates at once — which advances `purchaseLevelProgress` by one unit per call, capped at
-completing one tier01 level per call) sets `mainGameUnlocked: true`, and `App.jsx`'s own
-`showingFoundry` render check reveals whatever page the
-player was last on (typically `'game'`) the instant that flips — no button or handler needed here
-for that transition itself.
+There is no manual transfer-block UI any more (removed — see `docs/DESIGN_HISTORY.md`;
+`isIntroConversionUnlocked`/`getIntroKilobyteConversionCost` still exist as pure, tested exports but
+no longer gate or price anything rendered here). The `tickIntroAutoInvest` auto-convenience — firing
+inside the shared tick loop the instant a single unit is affordable, live, unit by unit, not just
+once a whole batch accumulates, capped at completing one tier01 level per call — is now the sole
+path advancing `purchaseLevelProgress[tier01]` from this screen. The very first successful
+auto-convert sets `mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check
+reveals whatever page the player was last on (typically `'game'`) the instant that flips — no button
+or handler needed for that transition.
 
-Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file, calling into
-`engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports, shared with `StoragePage`): raw
+Numbers are formatted via `formatMemoryBalance` (`ByteFoundryPage`-local helper, calling into
+`engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports): raw
 bits below 1 Byte, then B/KiB/MiB/…/QiB by **1024** each step once above it (`getMemoryUnit`,
 extending `TIER_DEFINITIONS`' own tier symbols with an "i" — `1 KiB = 1024 Bytes = 1.024 KB`),
 floored (not rounded) at up to 3 decimal places once converted into a binary unit — same
 never-overstate rationale as `formatCurrency` in `engine.js`, so a balance never reads as a complete
 unit ("1 KiB") one tick before it actually is — a display-only convention, internal state always
-stores raw bits. Every standalone Memory-denominated cost (Sacrifice, Invest, the transfer block's
-own dynamic cost) reuses this exact binary scale via `engine.js`'s own
+stores raw bits. Capacity always renders in its own unit; the balance shares it unless that would
+floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into its
+own finer unit instead (e.g. "30.031 KiB / 1 MiB") — only a genuinely sub-Byte balance still falls
+back to a raw bit count, since neither unit ladder defines anything smaller than a whole Byte. See
+`docs/ECONOMY_REFERENCE.md` and `docs/DESIGN_HISTORY.md` for the full three-way breakdown. Every
+standalone Memory-denominated cost (Sacrifice, Invest, tier01's own dynamic conversion cost)
+reuses this exact binary scale via `engine.js`'s own
 `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))` — calling
 `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance) picks whichever
 unit fits that specific amount, so a cost keeps scaling into KiB/MiB/… as it grows instead of
@@ -253,13 +240,12 @@ Capacity itself now does (see docs/DESIGN_HISTORY.md for the earlier "kilobit" f
 SI scale originally fixed, back when both scales were still identical and `formatDiskSize` really
 was a direct alias of `formatBitsInNearestUnit`). A disk's *size* AND its own build cost both render
 through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that same SI size); any
-bit amount actually spent out of Memory's own binary-scaled balance — the transfer block's own
-dynamic cost and the active block's `aria-label`/`title` — renders through `formatBitsInNearestUnit`
-(binary) instead.
+bit amount actually spent out of Memory's own binary-scaled balance renders through
+`formatBitsInNearestUnit` (binary) instead.
 This page's gate reappears every time a real Prestige resets Memory
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
 along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
-docs/ECONOMY_REFERENCE.md), which the transfer-block row above mirrors, so it starts over too — it's
+docs/ECONOMY_REFERENCE.md) — it's
 not a one-time-ever gate, it sets the pace for every run — but the
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
 productionMilestoneTier/productionMilestoneTierClaims) and Storage (`disks`/`disksBuiltTotal`/
@@ -338,10 +324,11 @@ already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrad
 here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
 tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then flushes
 a full read cache into an empty disk over one cache-block production duration when no tier claim
-blocks that size, smallest size first, whenever that size isn't mid-build. This page used to show its own live progress row mirroring tier01's
-current purchase-block progress — removed as redundant once ByteFoundryPage's transfer-block row
-started reading that exact same value directly; that transfer-block row (back on ByteFoundryPage) is
-the only place this progress is shown.
+blocks that size, smallest size first, whenever that size isn't mid-build. This page does not show
+tier01's own current purchase-block progress — nothing on either page renders it any more, now that
+ByteFoundryPage's manual transfer-block row (which used to be the one place it was shown) is gone
+(see `docs/DESIGN_HISTORY.md`); `purchaseLevelProgress[tier01]` is still tracked internally and
+still drives disk redemption/auto-convert exactly as before, just with no dedicated progress display.
 
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
 ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title

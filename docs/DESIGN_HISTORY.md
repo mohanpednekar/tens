@@ -4345,3 +4345,224 @@ exactly pool 8's own SI-clean ceiling for a raw `intro.capacity` of `8 * 2 ** 90
 magnitude the review's finding was computed at — so a regression back toward the iterative approach
 would fail this test rather than silently reappearing. `yarn test`: 1622/1622 green (+1 over the
 prior entry's 1621).
+
+### Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit; Pool Bandwidth moved beside its title
+
+A follow-up to "'0.xyz \<unit\>' fractions eliminated" above, prompted directly by a player looking
+at the rendered result: `formatMemoryBalance` (the `ByteFoundryPage`-local helper backing the Data
+Stream tile) shares ONE unit between the balance and capacity, sized off capacity — so a balance
+that's a small fraction of a much larger capacity (right after a Capacity ×2 purchase, or early in
+a fresh cycle) fell all the way back to a raw bit count, e.g. `"246,016 bits / 1 MiB"`. That fallback
+was itself the deliberate fix from the earlier entry — chosen specifically because a same-unit
+fraction (`"0.235 MiB / 1 MiB"`) was judged to read worse than a divergent-but-legible pair. In
+practice, though, a large raw bit count sitting directly beside a named unit ("bits" next to "MiB")
+reads as two different KINDS of number, not just two different magnitudes, and was reported as
+confusing on exactly that ground.
+
+**The fix keeps the "no 0.xyz" rule intact but narrows what counts as "no finer option."** Instead
+of falling straight to raw bits the instant the shared (capacity-sized) unit would floor the
+balance below 1, `formatMemoryBalance` first tries a unit sized off the BALANCE's own magnitude
+(the same `getMemoryUnit(bits, byteCreated)` self-sizing `formatBitsInNearestUnit` already uses
+elsewhere) — a finer-or-equal unit relative to capacity's own, since the balance is smaller or
+equal. In the overwhelming majority of cases this really is strictly finer (e.g. `"246,016 bits /
+1 MiB"` becomes `"30.031 KiB / 1 MiB"`: both sides read as real named magnitudes, and the balance
+never floors to a same-unit fraction since it's now sized specifically so it won't) — but at the
+very floor of the ladder the two CAN coincide: right after `combineIntroByte`, `intro.capacity` is
+still `INTRO_STARTING_CAPACITY` (8 bits/1 Byte), so `getMemoryUnit` for both capacity and a small
+balance bottoms out at the same `{symbol: 'B', divisor: 8}` — no functional bug (the existing
+`scaled < 1` check inside `formatMemoryAmount` still catches this and falls back to raw bits
+exactly as before), just a reminder that "strictly finer" isn't literally guaranteed by the unit
+ladder's own floor. Only when the self-sized unit ALSO floors below 1 — meaning the balance is
+genuinely sub-Byte, the one case with no named unit smaller than a Byte to fall back to — does it
+drop to the raw `"N bit(s)"` string, unchanged from before (e.g. `"4 bits / 1 MiB"`). This is a
+strict narrowing of when the fallback fires, not a reversal of the earlier fix: the balance still
+never renders a same-unit "0.xyz" fraction, it just reaches for a smaller *named* unit before
+giving up on one entirely.
+
+**Layout, corrected mid-session.** The player's report also asked to move "the bandwidth" onto the
+same line as its card's title, alongside a screenshot of the Data Stream tile. The first
+implementation read this as the Data Stream tile's own production-rate line and moved it beside the
+"Data Stream" label (a new `TitleRow` flex wrapper) — plausible from the screenshot alone, since
+that's exactly what the screenshot showed, but wrong: the player clarified they meant each Storage
+**Pool card's** own Bandwidth line (`PoolCard`/`PoolHeaderRow`/`PoolTitle` — the "`<symbol>` Pool"
+cards below the Data Stream tile), not the Data Stream tile's production rate. The Data Stream
+tile's layout was reverted to its original three-line structure (label, balance, rate) — only the
+unit-formatting fix above stuck there — and instead each Pool card's Bandwidth (`StatusText`,
+previously the second line inside its `FillableStatCard` buffer block) now renders beside its
+"`<symbol>` Pool" title in the existing `PoolHeaderRow` flex container, e.g. "KB Pool +20 B/sec" on
+one line, with the `FillableStatCard` below it showing only the buffer/capacity fraction. Worth
+noting for future report-driven UI changes: a screenshot pins the FORMATTING issue precisely (it's
+the rendered pixels), but a layout instruction phrased about "the bandwidth"/"the title" is
+ambiguous across multiple similarly-styled cards on the same page — confirm which card before
+implementing, or be ready to redo it once corrected, as happened here.
+
+**Verification.** Two new `App.test.jsx` cases pin the unit-formatting fix directly: a balance of
+246,016 bits against a 1 MiB capacity now renders `"30.031 KiB / 1 MiB"` (previously `"246,016
+bits / 1 MiB"`), and a genuinely sub-Byte balance of 4 bits against the same capacity still renders
+`"4 bits / 1 MiB"` — confirming the bottom-rung fallback from the earlier entry survives unchanged.
+A third case pins the Pool card's Bandwidth text sharing a DOM parent with its `<h3>` title,
+guarding the corrected layout change. Verified visually against `yarn dev` via real
+Playwright/Chromium screenshots — both for the initial (wrong-card) attempt and the corrected one,
+at the reported scenario's own values. `yarn test`: 1625/1625 green (+3 over the prior entry's
+1622). An adversarial review round against the first (Data-Stream-targeted) commit also caught
+`docs/ECONOMY_REFERENCE.md` and `docs/MAINPAGE_REFERENCE.md` describing the pre-fix two-branch
+`formatMemoryBalance` fallback and stale DOM-order prose; both were updated in the same PR to match
+the corrected three-branch behavior and the final Pool-card layout.
+
+### Pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock; manual transfer-block UI removed
+
+Three related requests from the same conversation, landed in the same PR as the two entries above:
+Storage Pool cards should require the Data Stream's raw Capacity to reach a power-of-1024 threshold
+(1 KiB for pool 1, 1 MiB for pool 2, and so on) before they appear, in addition to their existing
+disk-build condition; a pool's read cache should start filling from Memory the instant that pool
+unlocks rather than waiting for a disk of that size to actually be built; and the manual
+transfer-block row on the Byte Foundry screen — redundant now that both changes make the Disk path
+to the first tier01 units fast and automatic — should be removed.
+
+**The capacity-threshold request: first attempt folded it into the wrong primitive, with a much
+wider blast radius than intended.** The first implementation added the capacity check directly
+inside `isStoragePoolUnlocked` (removing its old unconditional `poolIndex === 1` return and adding
+`if (capacity < threshold) return false` up front). This looked like the obviously correct insertion
+point — `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` are THE shared primitive answering "is
+pool N unlocked" everywhere in the codebase — but that breadth turned out to be exactly the problem:
+`getMaxActiveDiskLadderStep` (`getUnlockedStoragePoolCount(state) * DATA_LAKE_SUB_SIZES.length`)
+drives the entire disk-build ladder's own progression (which size `provisionDisk` currently offers),
+and `getStoragePoolBandwidth`/`getStoragePoolCapacity`/Data Lake idle-disk-liquidation
+eligibility/Booster transfer pacing all key off the same function too. Since pool 1 had always been
+unconditionally unlocked before this change, dozens of existing tests across `engine.test.js` and
+`storage.test.js` — none of them about pool visibility at all, just ordinary disk-build/cache/Data
+Lake mechanics — had never needed to seed a Data Stream Capacity high enough to satisfy a threshold
+that didn't previously exist, and broke: `provisionDisk` timings went to `Infinity` (dividing by a
+now-zero locked-pool bandwidth), `getDiskSize`/`isDiskLadderExhaustedForActivePools`/
+`getDiskSizesToShow` all misbehaved since `getMaxActiveDiskLadderStep` collapsed toward 0, and one
+existing test (a pool buffer capacity deliberately seeded below one cache block, to test a "dump the
+remainder" edge case) became mathematically unreachable, since a pool's own derived buffer capacity
+at exactly its new unlock threshold is provably always at least one whole cache block. 28 test
+failures on the first full run, most of them not even visible in the initial tail of the output
+(only a fraction of them fit in the terminal scrollback actually reviewed at first), and after fixing
+what was visible, re-running surfaced 20 MORE previously-unseen failures in core disk-ladder tests —
+a strong signal the approach itself, not just the fixes, needed reconsidering.
+
+**Resolution: keep the capacity threshold entirely separate from `isStoragePoolUnlocked`.**
+`isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` were reverted to their exact original,
+disk-build-only form (pool 1 always true; pool N+1 requires pool N's three sizes fully built) — this
+alone fixed every one of the 28+20 test failures with no further changes needed to any of them. A new,
+separate function, `getPoolCapacityUnlockThresholdBits(poolIndex) = BITS_PER_BYTE *
+(MEMORY_BINARY_UNIT_STEP ** poolIndex)`, computes the 1024^N-Bytes threshold, and a new
+`getVisibleStoragePoolCount(state)` combines it with the unchanged `getUnlockedStoragePoolCount`
+(the smaller of the two counts) — this is the ONLY function `ByteFoundryPage` now calls to decide how
+many pool cards to render. Every other consumer of pool-unlock status (the disk ladder, read cache,
+Data Lake idle liquidation, Booster transfer pacing) is completely unaffected by the new capacity
+rule, exactly as before this change. The general lesson: a widely-shared "is X unlocked" primitive is
+not automatically the right insertion point for a NEW, UI-scoped gate just because it's the most
+obvious place to add a condition — check every consumer first, not just the one you're trying to
+change.
+
+**The cache-instant-fill request was more straightforward.** `tickDiskAutoFill`'s `sizes` list
+(which sizes it tries to top up from Memory) was keyed off `Object.keys(state.intro.disksBuiltTotal)`
+— a size only became cache-eligible once at least one disk of that size had ever been built (or
+attempted). It's now built from `getUnlockedStoragePoolCount(state)` directly: every currently
+unlocked pool's own smallest (read-cache-eligible) size, via the existing `getDataLakeUnitBits`
+helper, regardless of whether `disksBuiltTotal` has an entry for it yet. Passes 2/3 (which actually
+flush a full cache into an empty disk) already guarded on `hasEmptyContainer =
+builtTotal[size] > disks[size]`, so this required no further change — a size with zero disks built
+simply accumulates cache and waits, ready to flush the instant the player's first disk of that size
+finishes provisioning, rather than starting the fill from scratch only after.
+
+**Removing the manual transfer-block UI was the most mechanically simple of the three, but touched
+the most test surface** — roughly a dozen `App.test.jsx` tests existed solely to exercise the
+removed row (clicking blocks, checking block count/labels/visibility-toggling), and were deleted
+outright rather than patched, since the UI they tested no longer exists; two more tests had a single
+trailing assertion about the row bolted onto an otherwise-still-valid test (Disk redemption, AppNav
+navigation) and were trimmed rather than deleted wholesale. `convertIntroBitsToKilobytes` itself —
+the actual conversion reducer — was deliberately left untouched in `engine.js`/`useIncrementalGame.js`
+and its own dedicated `engine.test.js` describe block: it's still called by `tickIntroAutoInvest`
+every tick, just with no UI trigger of its own any more. `isIntroConversionUnlocked`/
+`INTRO_CONVERSION_UNLOCK_CAPACITY` were left in place too (still exported, still tested) even though
+nothing calls them any more — deleting a still-correct, still-tested pure predicate whose only sin is
+having lost its one caller was judged not worth the extra diff for this PR; a future cleanup pass can
+remove them if they're still unused then. One genuinely flaky test surfaced as a side effect of the
+cache-instant-fill change: a real-timer test tapping the Data Stream tile could have a real tick land
+between the click and the assertion, and — now that pool 1's cache-fill runs unconditionally instead
+of only after a disk has been built — that tick had a new path to siphon a fractional bit out of
+`intro.bits` before the assertion read it. Fixed by switching that one test to fake timers, the same
+remedy this codebase already uses for the analogous `tickPoolBufferFill` fragility elsewhere.
+
+**Verification.** All three changes landed together since they were requested together and are
+functionally related (all touch what "reaching a pool" means for the player). `yarn test`: 1618/1618
+green (down from 1625 — net removal of ~7 now-meaningless UI tests, offset by no new tests needed for
+the capacity gate itself beyond the reverted primitive already being covered). `yarn build` succeeds.
+Verified visually via `yarn dev` + a real Playwright/Chromium screenshot: a pool with its disk-build
+condition satisfied but capacity below its own threshold correctly stays hidden (a "GB Pool" that
+would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
+manual transfer-block row is confirmed gone from every state that used to show it.
+
+### Provision Disk moved back inside its pool card; pool Capacity switched from SI-clean to a plain decade-of-10 ladder
+
+Two more requests from the same conversation as the three entries above, landed together since both
+touch the same pool-card region: the shared Provision Disk button — pulled out of the pool cards
+during the earlier restyle above ("Byte Foundry pool cards restyled to match the Data Stream card")
+and left standalone in the Data Stream section — should move back inside the pool it actually builds
+into; and a pool's own Capacity value should climb in plain, coarse decade-of-10 steps (1 KB → 10 KB
+→ 100 KB → 1000 KB for pool 1) rather than the finer SI-clean sequence it shared with Bandwidth,
+jumping to the next step the instant the Data Stream's raw Capacity crosses that threshold.
+
+**Provision Disk relocation.** The button (`provisionDiskButton`, a JSX value now built once ahead of
+the component's `return`) renders inside the `PoolCard` whose `poolIndex` matches
+`diskPoolIndex = getPoolIndexForDiskSize(getDiskSize(state))` — the pool the ladder's CURRENT offer
+actually belongs to — right after that pool's summary/title row, so it sits with the disk arrays it
+funds instead of a separate section elsewhere on the page. This reintroduced a real edge case:
+pool-card VISIBILITY is capacity-threshold-gated (`getVisibleStoragePoolCount`, from the entry above)
+while the disk ladder's own progression is disk-build-only (`getUnlockedStoragePoolCount`), so the
+ladder can advance to a pool whose card isn't visible yet — the button would otherwise vanish
+entirely until that pool's card caught up. A fallback copy of the same button renders just below the
+Data Stream card, gated on `diskPoolIndex > unlockedPoolCount` (the visible count), so it stays
+reachable in that gap rather than disappearing.
+
+**Pool Capacity's decade-of-10 ladder.** `getStoragePoolCapacity` previously derived a pool's own
+Capacity from the shared Data Stream doubling count via the same SI-clean switchover sequence
+Bandwidth uses (`getSiCleanEquivalentBits` — 1, 2, 4, 8, …, 64, 125, 250, 500, 1000 × 1000^decade).
+The request asked for something deliberately coarser: flat within a decade, jumping straight from one
+power of 10 to the next the moment the raw Capacity crosses it — no intermediate SI-clean steps in
+between. A new closed-form helper, `getDecadePowerEquivalentBits`, reuses the exact same robust
+`N = round(log2(rawBits / BITS_PER_BYTE))` doubling-step calculation `getSiCleanEquivalentBits`
+already computes (for the same reason: a discrete iterative search would be vulnerable to the same
+large-N floating-point misclassification the precision-loss entry above fixed), then takes
+`10 ** Math.floor(N * Math.log10(2))` Bytes. Flooring rather than rounding is safe here specifically
+BECAUSE `log10(2)` is irrational — unlike the SI-clean sequence, which was deliberately constructed
+so certain doubling counts land EXACTLY on a decade boundary (needing `round` to avoid misclassifying
+which side of that boundary floating-point error put it on), `N * log10(2)` is never exactly an
+integer for `N > 0`, so there's no equivalent boundary-straddling case for `floor` to get wrong.
+
+Only `getStoragePoolCapacity` (and, through it, `getPoolBufferCapacity`, a direct alias) switched to
+the new helper. `getStoragePoolBandwidth` deliberately stays on `getSiCleanEquivalentBits` — the
+request was specifically about the Capacity FIGURE a pool card displays and gates its next Disk
+purchase on, not the finer-grained throughput number; conflating the two would have made Bandwidth
+jump in the same coarse decade steps too, which nothing asked for and would have made a pool's
+throughput look artificially chunky. This is a deliberate divergence between two values that used to
+share one formula, mirrored in code by two now-distinct closed-form helpers rather than one
+parameterized by a "clean or decade" flag — the two sequences have different mathematical shapes
+(one factors into `1000 ** floor(N/10)` times a 10-term local lookup, the other into a single
+`10 ** exponent` with no lookup at all), so a shared parameterization would have bought no real code
+reuse, just an extra branch neither caller needs.
+
+**A property the request didn't explicitly ask for, but that falls out of the formula and is worth
+noting:** each decade step exactly funds the disk-build cost one step *behind* it. Crossing into
+"10 KB" Capacity (10^4 Bytes = 80,000 bits) exactly equals `getDiskCost` for a 1 KB disk
+(`DISK_BUILD_COST_MULTIPLIER × 8000 bits`); crossing into "100 KB" exactly funds the 10 KB disk's own
+cost, and so on. Under the old SI-clean sequence this alignment was only approximate (the SI-clean
+steps and the disk-cost ladder don't share a common mathematical structure); under the decade ladder
+it's exact, since `getPoolBufferCapacity` is a direct alias of `getStoragePoolCapacity` and disk costs
+are themselves `DISK_BUILD_COST_MULTIPLIER (10) × size`, i.e. also decade-scaled. This means a pool's
+buffer is now always exactly far enough ahead to afford its own very next disk the instant the
+threshold is crossed — never a moment early, never left short.
+
+**Verification.** 6 existing `engine.test.js`/`App.test.jsx` assertions that pinned specific
+SI-clean-derived Capacity/buffer values were recalculated by hand and updated to their new
+decade-power equivalents (e.g. a Capacity previously expected at `4,000,000` bits now lands on the
+decade step `800,000`). 2 new tests pin the decade ladder itself directly (Capacity holding flat
+across several doubling counts within a decade, then jumping exactly at the crossing point) and the
+exact disk-cost-alignment property above. `yarn test`: 1624/1624 green. Verified visually via
+`yarn dev` + Playwright/Chromium screenshots: Provision Disk renders inside the active pool's card,
+and the fallback copy appears/disappears correctly as the ladder outruns and is caught up by pool
+visibility.

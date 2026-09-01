@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   unlocked per completed sub-size Disk array (the same staged gate the deposit buffer uses). Foundry
   disk rows expose deposit-to-lake actions; a Data Lake summary shows deposited stock, next cost,
   and any in-flight transfers.
+- **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
+  (`getVisibleStoragePoolCount`) needs the Data Stream's raw Capacity (`intro.capacity`) to have
+  reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on — on top of
+  its existing disk-build condition before it renders. In practice this rarely changes pool 1's own
+  reveal timing (Storage's own reveal threshold is already stricter), but it adds a real gate for
+  pools 2 and up. See `docs/DESIGN_HISTORY.md`.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
@@ -52,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
   all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
   fires immediately" entry under Changed below).
+- **Manual transfer-block row on the Byte Foundry screen** — the row of clickable blocks that let a
+  player manually convert Data Stream bits into `tier01` (Kilobyte) units is gone. The always-on
+  auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
+  it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
+  functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
@@ -108,6 +119,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   both displays.
 
 ### Changed
+- **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
+  built** — `tickDiskAutoFill`'s cache eligibility used to key off `disksBuiltTotal` having an entry
+  for a size; now it's keyed off which pools are currently unlocked (`getUnlockedStoragePoolCount`),
+  so each pool's smallest size starts filling from Memory as soon as the pool unlocks and is already
+  waiting (full, or filling) by the time the player's first disk of that size finishes provisioning.
+- **Pool cards: Bandwidth moved onto the title line, compacting each card** — each pool's own
+  Bandwidth figure ("+N/sec") now renders beside its "`<symbol>` Pool" title instead of inside the
+  Memory buffer block below, saving a row per pool card.
+- **Data Stream balance no longer drops to raw bits next to a named capacity unit** — the
+  balance/capacity pair (`formatMemoryBalance`) previously fell all the way back to a raw bit count
+  whenever the balance would floor below 1 in capacity's shared unit (e.g. "246,016 bits / 1 MiB");
+  it now self-sizes into its own finer named unit instead (e.g. "30.031 KiB / 1 MiB"), only falling
+  back to raw bits for a genuinely sub-Byte balance where no named unit exists. See
+  `docs/DESIGN_HISTORY.md`.
 - **Compute merge/boost pacing (Core earn time) runs slightly slower once `intro.capacity` grows
   past a pool's own ceiling** — `intro.capacity` no longer clamps to a pool's SI boundary (see the
   Storage pool Capacity/Bandwidth fix above), and `getCoreEarnTimeSeconds` deliberately keeps
@@ -148,6 +173,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses
   the restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
   the shared Disk Build control is now labeled **Provision Disk**.
+- **Provision Disk button moved back inside its pool card** — the button now renders inside the
+  pool card matching the disk ladder's current offer, right after that pool's title, instead of
+  standalone in the Data Stream section — pulling it back out had separated the control from the
+  pool it actually builds into. A fallback copy still renders just below the Data Stream card for
+  the rare case where the disk ladder has already advanced past the last pool card currently
+  visible (capacity-threshold-gated — see the "Storage Pool cards now also require a capacity
+  threshold to appear" entry above), so the button never disappears.
+- **Storage pool Capacity now climbs in plain decade-of-10 steps, not the finer SI-clean sequence**
+  — a pool's own Capacity (`getStoragePoolCapacity`) previously grew through the same 1, 2, 4, 8,
+  …, 64, 125, 250, 500, 1000 SI-clean sequence Bandwidth still uses; it now jumps straight from one
+  power of 10 to the next (1 KB → 10 KB → 100 KB → 1000 KB for pool 1, and so on for higher pools)
+  the instant the Data Stream's raw Capacity crosses that decade threshold, holding flat in between.
+  Each decade step lines up exactly with the disk-build cost one step behind it, so a pool's buffer
+  is always exactly far enough ahead to afford its own next disk the moment the threshold is
+  crossed. Bandwidth is unaffected — it still uses the finer SI-clean sequence. See
+  `docs/DESIGN_HISTORY.md`.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)

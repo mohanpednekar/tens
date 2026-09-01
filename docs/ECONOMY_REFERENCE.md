@@ -116,10 +116,8 @@ entirely separate currency pool from Money (`resources.base`) until the manual/a
 **Two halves, permanence-wise (see step 7 and `prestigeGame`'s table row below):** "Memory"
 (`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) reset to fresh
 every real Prestige — along with tier01's own `purchaseLevels`/`purchaseLevelProgress`, reset like
-every other tier's own purchase progress (see `prestigeGame`'s table row below); since the
-transfer-block row in step 7 is just a live mirror of that value, it effectively starts over each
-cycle too, purely as a side effect of that general reset rather than any transfer-specific field of
-its own. The Byte generator itself and every upgrade to it —
+every other tier's own purchase progress (see `prestigeGame`'s table row below), purely as a side
+effect of that general reset. The Byte generator itself and every upgrade to it —
 `byteCreated`/`capacity`/`tickSpeedSeconds`/`productionMultiplier`/`productionMilestoneTier`/
 `productionMilestoneTierClaims` — plus **Disks** (`disks`/`disksBuiltTotal`/`diskCache`/`diskBuild`,
 see step 8 below) and **Compute Cores/Nodes** (`computeCores`/`computeNodes`, see step 9 below) are
@@ -159,8 +157,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `INTRO_STARTING_TICK_SPEED_SECONDS` (1 second), so at the starting values this is exactly 1
    bit/sec. Bits are capped at `capacity`; any batch amount a capacity cap actually clips is not
    banked forward, same rule tapping follows.
-4. **Pool Memory Capacity.** **Standing rule: the SI-clean switchover sequence is for storage-pool-
-   scoped values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also
+4. **Pool Memory Capacity.** **Standing rule: non-binary (SI-clean or decade-power) transforms are
+   for storage-pool-scoped values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also
    the Data Stream tile's own balance/capacity figure. Two earlier attempts got this wrong by sharing
    one raw value between both displays — a shared value using the switchover sequence directly (which
    broke the Data Stream tile's binary display, e.g. a would-be-clean "2 KiB" reading "1.953 KiB"
@@ -176,43 +174,50 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      (`B`/`KiB`/`MiB`/…, step 1024 via `MEMORY_BINARY_UNIT_STEP` —
      `getMemoryUnit`/`formatBitsInNearestUnit`), and it always lands on a clean binary figure.
    - Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) from that same doubling
-     count N via a single shared helper, `getSiCleanEquivalentBits(rawBits)` — it finds
-     `N = round(log2(rawBits / BITS_PER_BYTE))` (a ROUNDED log2, not a discrete doubling-comparison
-     search, so floating-point drift from chained purchases/Compute Boosts/prestige bonuses can't
-     misclassify a value that's mathematically meant to sit exactly on a doubling boundary as one
-     step off) then computes the SI-clean switchover sequence's own value at that step in CLOSED
-     FORM — `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`, where
-     `SI_CLEAN_LOCAL_SEQUENCE = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500]` — rather than by iterating
-     `getNextSiDoubledValue` (the exported, directly-tested reference definition of that same
-     sequence — 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes: doubles normally except once per
-     decade of ten doublings, where a value's mantissa, after stripping factors of 1000, lands on
-     exactly 64 — there it goes to 125 instead of 128) N times: iterating instead would compound
-     floating-point imprecision at very large N (`getNextSiDoubledValue`'s own mantissa-stripping
-     check loses reliability well past `Number.MAX_SAFE_INTEGER`, reachable within a single Era at
-     pool 8's own boundary), silently picking the wrong decade multiplier. The
+     count N via a DECADE-POWER-OF-10 ladder — deliberately coarser than Bandwidth's own finer
+     SI-clean sequence below — 1 KB, 10 KB, 100 KB, 1000 KB (= 1 MB, pool 1's own ceiling), and so on
+     for higher pools: `getDecadePowerEquivalentBits(rawBits)` finds
+     `N = round(log2(rawBits / BITS_PER_BYTE))` (the SAME ROUNDED log2 `getSiCleanEquivalentBits`
+     below computes — not a discrete doubling-comparison search, so floating-point drift from
+     chained purchases/Compute Boosts/prestige bonuses can't misclassify a value that's
+     mathematically meant to sit exactly on a doubling boundary as one step off), then the decade
+     exponent as `Math.floor(N * Math.log10(2))` — multiplying a modest integer by a precise
+     constant stays far more numerically stable at large N than taking `log10` of an already-huge
+     raw byte value directly — and returns `10 ** decadeExponent` Bytes. Capacity therefore holds
+     FLAT within a decade (still exactly "1 KB" at 2×, 4×, or 8× the doubling count that first
+     crossed into it) and jumps straight to the next decade the instant `intro.capacity` crosses
+     it — no intermediate steps (2 KB, 4 KB, …) in between, unlike Bandwidth's finer sequence. Since
+     `log10(2)` is irrational, `N * log10(2)` is never exactly an integer for `N > 0`, so — unlike
+     the SI-clean sequence below, which WAS deliberately constructed to land exactly on
+     floating-point decade boundaries — there's no analogous "which side of the boundary" ambiguity
+     this decade-power ladder needs to guard against with rounding instead of flooring. The
      result is clamped to that pool's own start/end window (`getStoragePoolMemoryBounds`) — pool 1:
      `INTRO_STARTING_CAPACITY` … `INTRO_CAPACITY_CAP_BITS`; each pool's end bound is
-     `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`, an SI-round value (pool 1 → 1 MB,
-     pool 2 → 1 GB, pool 3 → 1 TB, …). Every pool boundary sits at a whole multiple of 10 doublings
-     from the 1-Byte floor — exactly where the switchover sequence itself lands on a clean `1000^d`
-     figure — so a pool's derived Capacity reaches its own ceiling at precisely the same N where the
-     raw binary value would have reached an equivalent milestone too; there's no drift between the
-     two sequences at a pool boundary. This is the value Storage pool cards (`PoolCard` in
-     `ByteFoundryPage`) render, in **SI units** (`formatDiskSize`), and it always lands on a clean SI
-     figure (e.g. 14 doublings from the 1-Byte start renders "16 KiB" on the Data Stream card and a
-     clean "16 KB" on the pool card, not "16.384 KB").
+     `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`, itself always a power of 10 (pool 1
+     → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …), so clamping never fights the decade-power ladder. Each
+     decade step exactly matches the disk-build COST one step behind it (e.g. crossing into "10 KB"
+     Capacity funds a 1 KB disk's own 80,000-bit `getDiskCost` — `DISK_BUILD_COST_MULTIPLIER` ×
+     size) — deliberate, not coincidental, so a pool's buffer is always exactly far enough ahead to
+     afford its own next disk the moment `intro.capacity` crosses that threshold. This is the value
+     Storage pool cards (`PoolCard` in `ByteFoundryPage`) render, in **SI units** (`formatDiskSize`)
+     — e.g. 14 doublings from the 1-Byte start renders "16 KiB" on the Data Stream card but a plain
+     "10 KB" on the pool card (10^4 Bytes, the decade step that doubling count falls into), not a
+     finer "16 KB"/"16.384 KB" reading. See `docs/DESIGN_HISTORY.md` for the full account, including
+     why this ladder is deliberately separate from Bandwidth's own finer one below.
    - Each pool's Bandwidth (`getStoragePoolBandwidth`) simply follows the SAME raw production rate
-     the Data Stream tile's own rate figure uses (`getIntroProductionRate`), run through the
-     identical `getSiCleanEquivalentBits` transform Capacity uses above — it matches the raw rate up
-     to 64 B/s, then diverges the same way (125 instead of 128, repeating every decade — e.g. a raw
+     the Data Stream tile's own rate figure uses (`getIntroProductionRate`), run through the finer
+     `getSiCleanEquivalentBits` transform (its OWN closed-form helper, distinct from Capacity's
+     decade-power one above, though both share the same `N = round(log2(...))` doubling-step
+     calculation) — it matches the raw rate up
+     to 64 B/s, then diverges (125 instead of 128, repeating every decade — e.g. a raw
      256 B/s rate reads as a clean 250 B/s). `sqrt(that pool's own Capacity in Bytes)` is only a
      GUIDELINE for the bandwidth's lower/upper bounds, not the formula itself — a small early pool's
      Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Booster transfer
      pacing) could otherwise run far ahead of what its own tiny Memory window could plausibly move
      through — so `getStoragePoolBandwidth` computes `min(rawRate, sqrt(Capacity))` in raw terms
-     FIRST, then applies the SI transform once to that bounded value; the sqrt bound still acts as
-     the real throughput ceiling once a pool's own (now fixed, maxed) Capacity can't keep up with an
-     ever-growing rate, but the number shown is always the SI-clean equivalent, never a raw `sqrt`
+     FIRST, then applies the SI-clean transform once to that bounded value; the sqrt bound still acts
+     as the real throughput ceiling once a pool's own (now fixed, maxed) Capacity can't keep up with
+     an ever-growing rate, but the number shown is always the SI-clean equivalent, never a raw `sqrt`
      remainder.
    - `isMemoryCapacityAtCap` — the predicate `isMemoryCapacityUpgradeAvailable`/
      `upgradePoolCapacity` actually gate on — compares the highest unlocked pool's OWN derived
@@ -247,51 +252,32 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `isBandwidthTurnAvailable(state)` is `pickIntroProductionMilestone`'s own actual gate, a no-op
    whenever a redeemable Disk Fill is currently available even if this tier's own cost is
    affordable.
-6. Once Buffer (`intro.capacity`) reaches `INTRO_CONVERSION_UNLOCK_CAPACITY` (8000 bits),
-   `isIntroConversionUnlocked(state)` goes true. After #506, Buffer is `INTRO_STARTING_CAPACITY`
-   (8) pre-Combine and remains on the Capacity doubling ladder through Combine / load-normalize /
-   Era-with-`byteCreated`; the active pool ceiling moves upward as pools unlock.
-   `ByteFoundryPage` shows a row of **transfer
-   blocks** at the bottom of the screen — always all `getPurchaseBlockSize(state)` of them (see
-   step 7), for the whole cycle; blocks never disappear once transferred, they just show as
-   consumed. Only the leftmost not-yet-transferred (active) block is ever clickable; clicking it
-   calls `convertIntroBitsToKilobytes` (spending `getIntroKilobyteConversionCost(state)` bits — tier01's
-   own CURRENT per-unit level cost, not a flat rate (see step 7) — from Data Stream for 1 free Kilobyte unit —
-   bypassing `isTierUnlocked`/`isProductionFrozen` entirely, since this pays from the separate intro
-   pool, not `resources.base`) and reveals the next block as active (any Data Stream surplus left over
-   after the transfer carries straight into it, so a large enough balance lets a player click
-   through several blocks in a row without waiting for more production) — the block just spent
-   stays rendered too, now permanently disabled and shown filled/greyed to mark it consumed.
-   **The very first successful transfer this cycle — a block click, or via the bulk auto-convenience
-   in step 7 — sets `mainGameUnlocked: true`**, opening `App.jsx`'s routing gate into MainPage
-   immediately; the player no longer has to wait for a full balance the way the old one-shot
-   auto-invest required.
-7. All conversions — block clicks (`convertIntroBitsToKilobytes`) and the auto-convenience below —
-   spend straight out of `intro.bits`, `getIntroKilobyteConversionCost(state)` bits per Kilobyte unit
-   granted — **tier01's own CURRENT per-unit level cost** (`getTierCost(TIER_DEFINITIONS[0],
+6. **`ByteFoundryPage` no longer renders any manual transfer-block UI** (removed — see
+   `docs/DESIGN_HISTORY.md`): the always-on auto-convert below (`tickIntroAutoInvest`) is now the
+   sole path from Data Stream bits to `tier01` units and to unlocking the main game, with no click
+   required and no per-cycle cap. `isIntroConversionUnlocked`/`INTRO_CONVERSION_UNLOCK_CAPACITY`
+   still exist as pure exports (still tested) but no longer gate anything in the UI — nothing calls
+   them any more. `convertIntroBitsToKilobytes` itself is unchanged, still exported, and still the
+   function `tickIntroAutoInvest` calls internally (see step 7) — only its one manual UI trigger was
+   removed. **The very first successful auto-convert this cycle sets `mainGameUnlocked: true`**,
+   opening `App.jsx`'s routing gate into MainPage immediately.
+7. Conversion spends straight out of `intro.bits`, `getIntroKilobyteConversionCost(state)` bits per
+   Kilobyte unit granted — **tier01's own CURRENT per-unit level cost** (`getTierCost(TIER_DEFINITIONS[0],
    state.purchaseLevels?.[tier01] ?? 1)`), the exact same value `getDiskSize`/
    `isDiskRedeemable` already key off (step 8), not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION`
    (8000) rate directly — `getIntroKilobyteConversionCost` is `BITS_PER_BYTE × getTierCost(...)`. At a
    fresh cycle's starting level this works out to exactly 8000 bits (`BITS_PER_BYTE` × tier01's own
    `baseCost` of 1000, matching `INTRO_BITS_PER_KILOBYTE_CONVERSION`), but it grows in lockstep with
-   tier01's own price from then on — 80,000 once tier01 reaches level 2, and so on — so a transfer's
+   tier01's own price from then on — 80,000 once tier01 reaches level 2, and so on — so a conversion's
    real value never falls behind what tier01 itself currently costs. (An
    earlier version stayed flat at `INTRO_BITS_PER_KILOBYTE_CONVERSION` forever, undervaluing a
-   transfer once tier01's price had grown past it — see `docs/DESIGN_HISTORY.md`.)
+   conversion once tier01's price had grown past it — see `docs/DESIGN_HISTORY.md`.)
    **There is no per-cycle cap on how many conversions can happen.** (An earlier design
    capped a shared, running `bitsTransferredThisCycle` total at one `getPurchaseBlockSize(state) *
    INTRO_BITS_PER_KILOBYTE_CONVERSION`'s worth per real Prestige cycle — see `docs/DESIGN_HISTORY.md`
-   for why that was wrong and removed.) `ByteFoundryPage` always renders exactly
-   `getPurchaseBlockSize(state)` transfer blocks (step 6), deriving each one's consumed/active/
-   upcoming state directly from `purchaseLevelProgress[tier01]`. This is the only place
-   `ByteFoundryPage` shows this progress — the Storage section (step 8) used to show a redundant,
-   separately-rendered copy of the identical value and no longer does. Because this is a genuine,
-   uncapped tier-level progress counter rather than a cycle-scoped budget, the row automatically
-   rolls over to a fresh, empty block set for the *next* level the instant one completes
-   (`getPurchaseBlockSize(state)` blocks transferred), rather than ever sitting permanently
-   "consumed." `convertIntroBitsToKilobytes` is a no-op only when `intro.bits <
+   for why that was wrong and removed.) `convertIntroBitsToKilobytes` is a no-op only when `intro.bits <
    getIntroKilobyteConversionCost(state)` — insufficient Memory, nothing else.
-   Separately, `tickIntroAutoInvest` (called from `tickGame`, every tick) converts one
+   `tickIntroAutoInvest` (called from `tickGame`, every tick) converts one
    `getIntroKilobyteConversionCost(state)`-bit unit **as soon as it's affordable** — live, block by
    block, exactly like a manual click, not just once a whole `getPurchaseBlockSize(state)`-sized
    batch accumulates at once. (An earlier version waited for that whole batch before converting
@@ -307,11 +293,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    tick instead of looping unboundedly in one call. `tickDiskAutoFill` (step 8) runs first, ahead
    of `tickIntroAutoInvest`, within `tickGame` — see the `tickGame` table row below — so a Disk
    array the player has already built and is waiting to fill gets first claim on fresh Memory, rather
-   than being starved by it being auto-converted directly into Kilobytes first. Both conversion paths
-   set `mainGameUnlocked: true` the first time they fire. Every real `prestigeGame` call resets
+   than being starved by it being auto-converted directly into Kilobytes first. Conversion (whether
+   via `tickIntroAutoInvest` or a direct `convertIntroBitsToKilobytes` call, e.g. from a test or Dev
+   Mode) sets `mainGameUnlocked: true` the first time it fires. Every real `prestigeGame` call resets
    Memory (`bits`/`productionAccumulator`) and the
    gate (`mainGameUnlocked: false`) back to fresh — see the intro above — along with tier01's
-   `purchaseLevels`/`purchaseLevelProgress`, so the transfer row starts over too, purely as a side
+   `purchaseLevels`/`purchaseLevelProgress`, purely as a side
    effect of that general per-tier reset. So a real Prestige sends the player back through the gate
    every cycle, but the generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
    productionMilestoneTier/productionMilestoneTierClaims) carries over, making every cycle after the
@@ -410,14 +397,14 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    topped up this tick isn't visible to that same tick's own cache fill (which runs earlier in the
    pipeline) until the next tick, imperceptible at `TICK_RATE_MS`.
    `getPoolBufferCapacity(state, poolIndex)` — the buffer's own ceiling — equals
-   `getStoragePoolCapacity(state, poolIndex)` exactly, not some smaller fraction: within one pool,
-   the disk ladder's own three step costs already span roughly an 80–95% spread of that pool's
-   Capacity ceiling by the time the ladder reaches its largest size (each `DISK_BUILD_COST_MULTIPLIER`-
-   scaled step is `DISK_LADDER_SIZE_MULTIPLIER` (10) bigger than the last, while a pool's own
-   Capacity ceiling is only `POOL_CAPACITY_SI_STEP` (1000) bigger than the previous pool's — close
-   by design, not equal), so any meaningfully smaller buffer ceiling would leave that top disk
-   permanently unaffordable, even fully topped up. See `docs/DESIGN_HISTORY.md` for the full
-   derivation (and the original, broken `/MEMORY_BINARY_UNIT_STEP` fraction this replaced).
+   `getStoragePoolCapacity(state, poolIndex)` exactly, not some smaller fraction: since Capacity now
+   advances in the same decade-power-of-10 steps the disk-build costs themselves sit on (see "Pool
+   Memory Capacity" above), each Capacity step is EXACTLY the cost of the disk one step behind it
+   (e.g. Capacity reaching "10 KB" funds a 1 KB disk's own 80,000-bit cost exactly), so any
+   meaningfully smaller buffer ceiling would leave that disk permanently unaffordable, even fully
+   topped up. See `docs/DESIGN_HISTORY.md` for the full derivation (the original, broken
+   `/MEMORY_BINARY_UNIT_STEP` fraction this replaced, and the later decade-power ladder that made
+   this relationship exact rather than approximate).
    `ByteFoundryPage`'s pool summary shows this buffer as a small `PoolBufferMeter` bar (label
    "Memory") alongside the Bandwidth/Capacity stats, always visible (not just when expanded).
 
@@ -590,9 +577,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    **Capacity doubling** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
    `doubleDataLakeCapacity(tierIndex)`) is the one intentional, explicit cap on a lake's deposits:
    `getDataLakeCapacity` looks up `DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`
-   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7, an
-   SI-clean switchover using the same `getNextSiDoubledValue` shape pool Capacity's own derivation
-   uses — a lake's own capacity is never rendered via any binary unit, so unlike `intro.capacity`
+   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7, the same
+   `getNextSiDoubledValue` SI-clean switchover shape the Data Stream's own finer SI-clean values
+   (e.g. pool Bandwidth — see "Pool Memory Capacity" above) use — pool Capacity itself no longer
+   does, see below — a lake's own capacity is never rendered via any binary unit, so unlike `intro.capacity`
    itself (the Data Stream tile's own value — see "Byte Foundry" above and `docs/DESIGN_HISTORY.md`
    for the two earlier, reverted attempts at sharing one raw value between both displays) there's no
    conflicting binary display for the switchover to break here — then 125→250→500→1,000 — starting
@@ -900,8 +888,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 11. `ByteFoundryPage` doesn't disappear once `intro.mainGameUnlocked` is true — it becomes a
    permanent, voluntarily-revisitable screen instead, reachable at any time via MainPage's own
    "⚙️ Byte Foundry" link (`onOpenFoundry`). Nothing about it goes read-only when reached this way —
-   Tap/Speed/Storage stay just as interactive as on the mandatory gate, and the
-   transfer-block row keeps working too — there's no per-cycle cap to exhaust (see
+   Tap/Speed/Storage stay just as interactive as on the mandatory gate, and the always-on
+   auto-convert keeps working too — there's no per-cycle cap to exhaust (see
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
 
 **Forced priority order.** The recurring "upgrade" actions above — Disk Fill (step 8) >
@@ -940,12 +928,17 @@ largest unit that comfortably fits `capacity` — raw bits before the Byte gener
 meaningfully denominate in yet — a fractional Byte reads worse than the raw count for a range this
 small), then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own
 `KB`..`QB` symbols with an "i" (pool Memory Capacity end bounds are evenly divisible by
-`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Both numbers render in the
-*same* unit (picked off `capacity`, the larger of the two) so a balance never reads in a coarser
-unit than its own Buffer — EXCEPT when the balance alone would floor to a nonzero fraction below 1
-in that unit (e.g. "0.488 KiB"), which `formatMemoryAmount` instead renders as raw bits for that one
-number, diverging from Buffer's own unit rather than showing a bare fraction — see
-`docs/DESIGN_HISTORY.md`. Data Stream balance/Buffer (and the pool Memory Capacity
+`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Capacity always renders in its
+own unit (picked off `capacity` itself). The balance shares that SAME unit as long as doing so
+wouldn't floor it to a nonzero fraction below 1 (e.g. "0.488 KiB") — a balance never reads in a
+coarser unit than its own Buffer. When it WOULD floor below 1 in the shared unit, the balance instead
+self-sizes into its own finer unit (`getMemoryUnit` applied to the balance itself, the same
+self-sizing `formatBitsInNearestUnit` already uses below) — e.g. "30.031 KiB / 1 MiB" rather than a
+bare "0.488 KiB / 1 MiB" fraction. Only when even that self-sized unit still floors below 1 — a
+genuinely sub-Byte balance, since neither unit ladder defines anything smaller than a whole Byte —
+does it fall back to a raw `"N bit(s)"` count instead (`formatMemoryBalance` in
+`ByteFoundryPage/index.jsx`; see `docs/DESIGN_HISTORY.md` for both the original "0.xyz elimination"
+fix and this later narrowing of it). Data Stream balance/Buffer (and the pool Memory Capacity
 start–end label once `byteCreated`) render in **binary** units — `B`/`KiB`/`MiB`/…/`QiB`, step 1024
 (`getMemoryUnit`/`MEMORY_BINARY_UNIT_STEP`) — so `1 KiB = 1024 Bytes = 1.024 KB`, distinct from
 Disks/Data Lake/caches, which stay on the original SI (step 1000) scale (see below). The unit
@@ -981,7 +974,9 @@ convention — internal state always stores raw bit counts.
 Disks' common Provision Disk button and every shown size's full DiskArrayRow stay on ByteFoundryPage itself as
 continuous sections; the thin `StoragePage` wrapper remains for reuse/tests (see "Architecture" in
 `CLAUDE.md`) — see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" and "Storage page" sections for
-the render-level layout. Auto-redeem has no standalone pause/resume control of
+the render-level layout. The Provision Disk button itself renders INSIDE the pool card matching the
+disk ladder's current offer (`diskPoolIndex`), not as a standalone section — see "Architecture" item 4
+in `CLAUDE.md` for the fallback that covers the ladder briefly outrunning a not-yet-visible pool card. Auto-redeem has no standalone pause/resume control of
 its own any more — it's gated per-matched-tier's own autobuyer instead, see the "Auto-redeem"
 paragraph above.
 
@@ -2079,12 +2074,12 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // productionMilestoneTier/
                                                           // productionMilestoneTierClaims) are PERMANENT,
                                                           // carried over unchanged like an unlocked autobuyer.
-                                                          // The transfer-block row shown on this screen has no
-                                                          // state of its own — it's a live mirror of tier01's
-                                                          // own purchaseLevels/purchaseLevelProgress (see
+                                                          // No manual transfer UI exists any more — only the
+                                                          // always-on auto-convert, driven by tier01's own
+                                                          // purchaseLevels/purchaseLevelProgress (see
                                                           // "purchaseLevelProgress" below), which reset like
-                                                          // every other tier's on prestige, so the row starts
-                                                          // over too as a side effect, not via any field here.
+                                                          // every other tier's on prestige, same as any other
+                                                          // tier — no field of its own here.
                                                           // speedUpGame/overclockGame carry the whole object
                                                           // through completely untouched either way
                                                           // (intra-cycle soft resets, not new cycles). A full
@@ -2303,13 +2298,14 @@ purchases were manual or automatic.
 | `isStackComputeBoostTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `canStackComputeBoost(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state) && !isProvisionDiskAvailable(state)` — `stackComputeBoost`'s own actual gate |
 | `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
 | `isMemoryCapacityUpgradeAvailable` | `state → bool` | Shared Data Stream Capacity ×2 predicate: requires a full Buffer and the highest-unlocked-pool's own derived Capacity below its ceiling (`!isMemoryCapacityAtCap`); Capacity ×2 drains the Buffer and doubles `intro.capacity` |
-| `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, unlockedCount) >= getStoragePoolMemoryBounds(unlockedCount).endBits` (`unlockedCount = getUnlockedStoragePoolCount(state)`) — compares the pool's own SI-clean DERIVED Capacity, not raw `intro.capacity`, since the raw value is no longer clamped to any pool ceiling |
+| `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, unlockedCount) >= getStoragePoolMemoryBounds(unlockedCount).endBits` (`unlockedCount = getUnlockedStoragePoolCount(state)`) — compares the pool's own decade-power DERIVED Capacity, not raw `intro.capacity`, since the raw value is no longer clamped to any pool ceiling |
 | `normalizePoolMemoryCapacity` | `state → state` | Clears legacy queued Capacity state and sanitizes a missing/negative `intro.capacity` to a floor of 0. No longer clamps `intro.capacity` to any pool boundary — only `getStoragePoolCapacity`'s own derived value does that |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Per-pool SI Capacity windows (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
-| `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own SI-clean Capacity — `getSiCleanEquivalentBits(intro.capacity)` (private helper), then clamps to that pool's `getStoragePoolMemoryBounds` window. `0` for a locked/invalid pool |
-| `getStoragePoolBandwidth` | `(state, poolIndex) → bits/sec` | A pool's own throughput — `getSiCleanEquivalentBits(min(rawProductionRate, sqrt(getStoragePoolCapacity(...) in Bytes)) in bits)`: the raw rate follows the SAME SI-clean transform Capacity uses, with `sqrt(Capacity)` only bounding the RAW value before that transform is applied (a guideline for bounds, not the formula). `0` for a locked/invalid pool |
-| `getSiCleanEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))`, then `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)` — a closed-form computation, not an iterative walk of `getNextSiDoubledValue` (which would drift at very large N — see "Pool Memory Capacity" above). Shared by `getStoragePoolCapacity`/`getStoragePoolBandwidth`; a rounded log2 (not a discrete search) avoids floating-point drift misclassifying a value right at a doubling boundary. Non-finite input returns `0`; values below 1 Byte pass through unchanged |
-| `getNextSiDoubledValue` | `bits → bits` | The next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes — doubles normally except once per decade of ten doublings, where a value's mantissa (after stripping factors of 1000) lands on exactly 64, going to 125 instead of 128. Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolCapacity`/`getStoragePoolBandwidth` actually call at runtime (they use the closed-form `getSiCleanEquivalentBits` instead — see its own row below) — nor a runtime call site for the Data Lake capacity ladder, whose own `DATA_LAKE_CAPACITY_BY_LEVEL` is a hardcoded array of the same shape, not computed via this function |
+| `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own decade-power Capacity — `getDecadePowerEquivalentBits(intro.capacity)` (private helper), then clamps to that pool's `getStoragePoolMemoryBounds` window. `0` for a locked/invalid pool |
+| `getStoragePoolBandwidth` | `(state, poolIndex) → bits/sec` | A pool's own throughput — `getSiCleanEquivalentBits(min(rawProductionRate, sqrt(getStoragePoolCapacity(...) in Bytes)) in bits)`: the raw rate follows its OWN finer SI-clean transform (distinct from Capacity's decade-power one), with `sqrt(Capacity)` only bounding the RAW value before that transform is applied (a guideline for bounds, not the formula). `0` for a locked/invalid pool |
+| `getDecadePowerEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))` (the SAME doubling-step calculation `getSiCleanEquivalentBits` below uses), then `decadeExponent = floor(N * log10(2))`, returning `10 ** decadeExponent` Bytes — a single closed-form computation. Used ONLY by `getStoragePoolCapacity`, not Bandwidth. `log10(2)` is irrational, so `N * log10(2)` is never exactly an integer for `N > 0` — unlike the SI-clean sequence below, which was deliberately constructed to land exactly on decade boundaries, there's no analogous boundary ambiguity here to guard against with rounding instead of flooring. Non-finite input returns `0`; values below 1 Byte pass through unchanged |
+| `getSiCleanEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))`, then `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)` — a closed-form computation, not an iterative walk of `getNextSiDoubledValue` (which would drift at very large N — see "Pool Memory Capacity" above). Used ONLY by `getStoragePoolBandwidth` now — `getStoragePoolCapacity` uses the separate `getDecadePowerEquivalentBits` above instead (see `docs/DESIGN_HISTORY.md`); a rounded log2 (not a discrete search) avoids floating-point drift misclassifying a value right at a doubling boundary. Non-finite input returns `0`; values below 1 Byte pass through unchanged |
+| `getNextSiDoubledValue` | `bits → bits` | The next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes — doubles normally except once per decade of ten doublings, where a value's mantissa (after stripping factors of 1000) lands on exactly 64, going to 125 instead of 128. Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolBandwidth` actually calls at runtime (it uses the closed-form `getSiCleanEquivalentBits` instead — see its own row above; `getStoragePoolCapacity` doesn't use this sequence at all any more, see `getDecadePowerEquivalentBits` above) — nor a runtime call site for the Data Lake capacity ladder, whose own `DATA_LAKE_CAPACITY_BY_LEVEL` is a hardcoded array of the same shape, not computed via this function |
 | `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and doubles `intro.capacity` (plain `×2`, unclamped) via `upgradePoolCapacity` |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full and no higher-priority action blocks it |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears a legacy `capacityUpgradeQueued` flag. Same-reference no-op when already false |
@@ -2321,13 +2317,13 @@ purchases were manual or automatic.
 | `getIntroProductionMilestoneMaxClaims` | `tier → number` | Byte Foundry: `2` for the three cheapest tiers (`tier <= 2`, i.e. 1/4/16 Bytes), `1` for every tier from there on (`tier > 2 ? 1 : 2`) — an intermediate iteration returned a flat `1` for every tier before this tier-dependent split was reinstated — see `docs/DESIGN_HISTORY.md` |
 | `pickIntroProductionMilestone` | `state → state` | Byte Foundry Speed ×2 (was Bandwidth / Invest) — requires `isBandwidthTurnAvailable`. Prefers bit-funded Invest when affordable; otherwise compute-funded overflow (#323): spends `COMPUTE_ENTITY_CAP` of the next `COMPUTE_BOOST_TIER_FIELDS` tier, advances `computeBandwidthSacrificeIndex`, increments `computeFundedBandwidthClaims`, and applies the same rate doubling as bit Invest. No-op while Disk Fill ranks higher |
 | `rollbackComputeFundedBandwidth` | `state → state` | Issue #324: rewinds exactly `computeFundedBandwidthClaims` Invest doubles and resets sacrifice index to 0 |
-| `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000) — drives whether `ByteFoundryPage` shows the transfer-block row at all |
+| `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000). No longer wired into any UI (the manual transfer-block row it used to gate was removed — see `docs/DESIGN_HISTORY.md`) — kept as a pure, tested export only |
 | `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits, "9.765 KiB" in Memory's own binary display scale) — reveals Foundry's Provision Disk control and continuous DiskArrayRow sections |
 | `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory Capacity's own **binary** unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KiB/MiB/…/QiB unit (step `MEMORY_BINARY_UNIT_STEP`, 1024) a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits). Distinct from `getSiByteUnit` (internal, SI/step-1000, backs `formatDiskSize`) |
 | `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit` or `getSiByteUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null`, and ALSO when `unit` is given but the floored value would be a nonzero fraction below 1 (e.g. `0.5`/`0.003`) — never renders a "0.xyz `<unit>`" string with no significant digit before the decimal; a floored value of exactly `0` still renders as `"0 <unit>"` (no fraction to hide). See `docs/DESIGN_HISTORY.md` |
 | `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Data Stream–denominated cost (Speed / Disk build) in whichever **binary** unit best fits that specific amount |
 | `getIntroKilobyteConversionCost` | `state → number` | Byte Foundry: `BITS_PER_BYTE * getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — `BITS_PER_BYTE` times tier01's own CURRENT per-unit level cost, the exact same underlying value `getDiskSize`/`isDiskRedeemable` key off (before the `BITS_PER_BYTE` scaling). Exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (8000) at a fresh cycle's level 1, growing in lockstep with tier01's own price from then on. An earlier version stayed flat at `INTRO_BITS_PER_KILOBYTE_CONVERSION` forever — see `docs/DESIGN_HISTORY.md` |
-| `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `getIntroKilobyteConversionCost(state)` bits (tier01's own CURRENT per-unit level cost, not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op only below cost — **no per-cycle cap**. Sets `mainGameUnlocked: true` on success. Called once per transfer-block click in `ByteFoundryPage`, and once per unit by `tickIntroAutoInvest` below |
+| `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `getIntroKilobyteConversionCost(state)` bits (tier01's own CURRENT per-unit level cost, not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op only below cost — **no per-cycle cap**. Sets `mainGameUnlocked: true` on success. No UI trigger of its own any more (the manual transfer-block row was removed — see `docs/DESIGN_HISTORY.md`); called once per unit by `tickIntroAutoInvest` below |
 | `tickIntroProduction` | `elapsedSeconds → state → state` | Byte Foundry: passive production for the Byte generator — no-op immediately before `intro.byteCreated`. Delivers one batch of `INTRO_BYTE_BASE_RATE * productionMultiplier` bits every `tickSpeedSeconds` of elapsed time (the same discrete "accumulate, deliver a whole period, bank the remainder" model `tickGame`'s own per-tier production uses — see there), crediting whole bits capped at `capacity`. Never freezes once `byteCreated` |
 | `tickIntroAutoInvest` | `state → state` | Byte Foundry: auto-convert convenience — loops `convertIntroBitsToKilobytes` (so it flips `mainGameUnlocked` and behaves identically to a manual click), converting one `getIntroKilobyteConversionCost(state)`-bit unit at a time (tier01's own CURRENT per-unit cost, re-read every iteration since a completed unit can itself advance tier01's level mid-call — not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) as soon as it's affordable, live rather than waiting for a whole `getPurchaseBlockSize(state)`-sized batch (an earlier version did the latter — see `docs/DESIGN_HISTORY.md`). Capped per call at `getTierBulkQuantity(getPurchaseBlockSize(state), purchaseLevelProgress[tier01], Number.MAX_SAFE_INTEGER)` — at most one tier01 level's worth of units — the same safety bound the tier autobuyers themselves use, so an extreme balance can't loop unboundedly in one call; a bigger jump finishes on a later tick. **No per-cycle cap**, unlike an earlier design |
 | `getDiskSize` | `state → number` | Walks the gapless Byte power-of-ten ladder and advances after each size's 10 built disks; the active limit is `getMaxActiveDiskLadderStep(state)`, which grows as derived pools unlock |
@@ -2415,7 +2411,7 @@ purchases were manual or automatic.
 | `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
 | `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
-| `prestigeGame` | `state → state` | Requires Money ≥ `PRESTIGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), `speedUpCount` back to 0 (run-scoped — unlike every other flag/level listed next, the stacking Speed Up multiplier does NOT survive a real Prestige and must be rebuilt from scratch each cycle), `prestige.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits`/`intro.productionAccumulator` ("Memory") and `intro.mainGameUnlocked` (the gate) back to `createInitialGameState()`'s fresh defaults — the transfer-block row's own progress resets too, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.capacity`/`intro.byteCreated`/`intro.tickSpeedSeconds`/`intro.productionMultiplier`/`intro.productionMilestoneTier`/`intro.productionMilestoneTierClaims` (the Byte generator and its upgrades) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige sends the player back through the gate every cycle, but not through a from-scratch replay of the generator itself, keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (permanent, including the Auto-Prestige *level*, the Auto-Prestige Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoSpeedUp` is the automation *toggle* only — it carries over even though the `speedUpCount` multiplier it drives resets), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
+| `prestigeGame` | `state → state` | Requires Money ≥ `PRESTIGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), `speedUpCount` back to 0 (run-scoped — unlike every other flag/level listed next, the stacking Speed Up multiplier does NOT survive a real Prestige and must be rebuilt from scratch each cycle), `prestige.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits`/`intro.productionAccumulator` ("Memory") and `intro.mainGameUnlocked` (the gate) back to `createInitialGameState()`'s fresh defaults, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.capacity`/`intro.byteCreated`/`intro.tickSpeedSeconds`/`intro.productionMultiplier`/`intro.productionMilestoneTier`/`intro.productionMilestoneTierClaims` (the Byte generator and its upgrades) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige sends the player back through the gate every cycle, but not through a from-scratch replay of the generator itself, keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (permanent, including the Auto-Prestige *level*, the Auto-Prestige Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoSpeedUp` is the automation *toggle* only — it carries over even though the `speedUpCount` multiplier it drives resets), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
 | `speedUpGame` | `state → state` | Requires `state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPrestigeAttemptBudget/tickspeedLevels/purchaseLevels/purchaseLevelProgress (every tier back to baseline)/`globalTickspeedMultiplier` (back to `null`)/`prestige.xp`/`lastTierXpConsumed` (both back to 0, same as `prestigeGame`)/`everUnlockedTierIds` (back to the fresh default, same as `prestigeGame`) exactly like a fresh `createInitialGameState` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`, undoing any in-run growth — unlike `prestigeGame`, keeps `intro` completely untouched (an intra-cycle soft reset, not a new cycle — see "Byte Foundry" below), autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`prestigeSpeedBonusUnlocked`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (mirrors `prestigeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier`/`prestige.xp`/`lastTierXpConsumed` the same way; see "The global tickspeed multiplier" above), **and now also `overclockCount`** (carried over unchanged — see "Overclock" below) — and — same as `prestigeGame` — disengages the last tier's live-checked XP-funded tickspeed mechanic with nothing banked to re-engage with — leaves `prestige.points`/`count`/`highestMilestone` untouched — unlike `prestigeGame`, it doesn't award or spend Prestige Points — and increments `speedUpCount` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto Speed Up is bought |
 | `overclockGame` | `state → state` | Requires `state.purchaseLevels[lastTier.id] >= getOverclockRequirement(overclockCount)` and not `isProductionFrozen`; resets everything `speedUpGame` resets, the same way, keeps the same permanent flags/levels `speedUpGame` keeps — **plus two differences**: resets `speedUpCount` back to 0 (wiping Speed Up's own stacking multiplier, not just leaving it alone) and sets `overclockCount` to `state.purchaseLevels[lastTier.id]` (the last tier's level at claim time — always at least +1 above the previous `overclockCount`, and a catch-up jump past that when the player is ahead of the bare minimum) instead of leaving it untouched. Leaves `prestige.points`/`count`/`highestMilestone` untouched, same as `speedUpGame` — doesn't award or spend Prestige Points. See "Overclock" below |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[tierId] > 0`, `purchaseLevels[prevTier] >= 3` (the tier below has fully purchased two levels), or the permanent `everUnlockedTierIds[tierId]` flag (see `latchEverUnlockedTiers`) |
@@ -2495,8 +2491,8 @@ purchases were manual or automatic.
 
 **Byte Foundry** (see its own section below for the full mechanic):
 - `INTRO_STARTING_CAPACITY = 8` — starting Buffer / pool Memory Capacity start bound (1 Byte)
-- `INTRO_CAPACITY_DOUBLING_STEP = 2` — Capacity ×2 doubling multiplier per purchase; `upgradePoolCapacity` multiplies `intro.capacity` by this directly, unclamped (no longer capped to a pool's own end bound — see "Pool Memory Capacity" above). Deliberately plain binary doubling, since `intro.capacity` also drives the Data Stream tile's own binary display; each Storage pool derives its OWN SI-clean Capacity from this same doubling count separately (`getStoragePoolCapacity`/`getNextSiDoubledValue`, see `POOL_CAPACITY_SI_STEP` below and `docs/DESIGN_HISTORY.md` for the two earlier, reverted attempts at sharing one raw value between both displays)
-- `getNextSiDoubledValue(bits)` — the next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes (doubles normally except once per decade of ten doublings, where a value's mantissa — after stripping factors of 1000 — lands on exactly 64, and it goes to 125 instead of 128). Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolCapacity`/`getStoragePoolBandwidth` actually call at runtime — iterating it N times drifts at very large N (its own mantissa-stripping check loses reliability well past `Number.MAX_SAFE_INTEGER`, reachable within a single Era at pool 8+), so those two instead use a private closed-form helper (`getSiCleanEquivalentBits`: `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`) that's exact for any reachable N — see "Pool Memory Capacity" above and `docs/DESIGN_HISTORY.md`
+- `INTRO_CAPACITY_DOUBLING_STEP = 2` — Capacity ×2 doubling multiplier per purchase; `upgradePoolCapacity` multiplies `intro.capacity` by this directly, unclamped (no longer capped to a pool's own end bound — see "Pool Memory Capacity" above). Deliberately plain binary doubling, since `intro.capacity` also drives the Data Stream tile's own binary display; each Storage pool derives its OWN decade-power Capacity from this same doubling count separately (`getStoragePoolCapacity`/`getDecadePowerEquivalentBits`, see `POOL_CAPACITY_SI_STEP` below and `docs/DESIGN_HISTORY.md` for the two earlier, reverted attempts at sharing one raw value between both displays)
+- `getNextSiDoubledValue(bits)` — the next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes (doubles normally except once per decade of ten doublings, where a value's mantissa — after stripping factors of 1000 — lands on exactly 64, and it goes to 125 instead of 128). Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolBandwidth` actually calls at runtime — iterating it N times drifts at very large N (its own mantissa-stripping check loses reliability well past `Number.MAX_SAFE_INTEGER`, reachable within a single Era at pool 8+), so it instead uses a private closed-form helper (`getSiCleanEquivalentBits`: `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`) that's exact for any reachable N; `getStoragePoolCapacity` doesn't use this sequence at all any more — see its own `getDecadePowerEquivalentBits` in "Pool Memory Capacity" above and `docs/DESIGN_HISTORY.md`
 - `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`), so pool boundaries land on clean SI values (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation
 - `INTRO_CAPACITY_CAP_BITS = 8,000,000` (exactly 1 MB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
 - `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — Speed ×2 (Invest) cost ladder steps by this per tier
