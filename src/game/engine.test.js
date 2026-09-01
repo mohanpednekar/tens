@@ -772,6 +772,22 @@ describe('storage pools', () => {
     expect(getStoragePoolCapacity(state, 1)).toBe(128_000) // 16,000 Bytes (SI-clean) in bits instead
   })
 
+  it('stays SI-clean at very large doubling counts — pool 8\'s own boundary (N=90), reachable within a single Era — where an iterative transform would lose precision and pick the wrong decade multiplier past Number.MAX_SAFE_INTEGER', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: 8 * 2 ** 90, // exactly pool 8's own ceiling in raw binary doubling terms
+      disksBuiltTotal: Object.fromEntries(
+        // pools 1-8 each need their own 3 disk sizes fully built to be considered unlocked
+        [...Array(21)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
+      ),
+    })
+    expect(getUnlockedStoragePoolCount(state)).toBe(8)
+    // 1e27 Bytes exactly — pool 8's own SI ceiling; a naive iterative getNextSiDoubledValue walk
+    // drifts to ~1.024e27 Bytes (8.192e27 bits) instead at this magnitude (verified independently
+    // before this fix)
+    expect(getStoragePoolCapacity(state, 8)).toBe(1e27 * BITS_PER_BYTE)
+  })
+
   it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below sqrt(Capacity)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
@@ -804,7 +820,7 @@ describe('storage pools', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 0,
-      // 21 doublings from the 1-Byte start — its SI-clean pool equivalent (getSiCleanCapacityBits)
+      // 21 doublings from the 1-Byte start — its SI-clean pool equivalent (getSiCleanEquivalentBits)
       // is exactly 2,000,000 Bytes (16,000,000 bits), safely between pool 1's ceiling
       // (INTRO_CAPACITY_CAP_BITS, 1 MB SI) and pool 2's (1 GB SI), so pool 2 shows that derived
       // value unclamped while pool 1 stays clamped at its own ceiling.

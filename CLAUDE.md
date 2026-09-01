@@ -981,22 +981,26 @@ decouples them entirely instead:
   higher pool unlocks and needs the growth). It always renders a clean binary figure.
 - Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) from that same doubling
   count N, but via the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes
-  instead of a plain ×2 (`getNextSiDoubledValue`: doubles normally except once per decade of ten
-  doublings, where a value's mantissa — after stripping factors of 1000 — lands on exactly 64, and
-  it goes to 125 instead of 128), then clamps the result to that pool's own
-  `getStoragePoolMemoryBounds` window (pool 1 → 1 MB SI, pool 2 → 1 GB, pool 3 → 1 TB, …
-  `endBits = BITS_PER_BYTE * 1000 ** (poolIndex + 1)`). Every pool boundary sits at a whole multiple
-  of 10 doublings from the 1-Byte floor, which is exactly where the switchover sequence itself lands
-  on a clean `1000^d` figure, so a pool's derived Capacity reaches its own ceiling at precisely the
-  same N where the underlying binary value would have reached it too — no drift between the two.
-  `getUnlockedStoragePoolCount`/`isMemoryCapacityAtCap` (below) both key off this SAME derived
-  value, not the raw `intro.capacity`, so the "moving ceiling" purchase gate tracks what the pool
-  actually shows.
+  instead of a plain ×2 — conceptually `getNextSiDoubledValue` (doubles normally except once per
+  decade of ten doublings, where a value's mantissa — after stripping factors of 1000 — lands on
+  exactly 64, and it goes to 125 instead of 128, exported and directly tested as the reference
+  definition of the sequence), but the actual runtime path (`getSiCleanEquivalentBits`) computes it
+  in CLOSED FORM instead of iterating that function N times — iterating would compound
+  floating-point imprecision at very large N (past `Number.MAX_SAFE_INTEGER`, reachable within a
+  single Era at pool 8's own boundary), silently picking the wrong decade multiplier — then clamps
+  the result to that pool's own `getStoragePoolMemoryBounds` window (pool 1 → 1 MB SI, pool 2 →
+  1 GB, pool 3 → 1 TB, … `endBits = BITS_PER_BYTE * 1000 ** (poolIndex + 1)`). Every pool boundary
+  sits at a whole multiple of 10 doublings from the 1-Byte floor, which is exactly where the
+  switchover sequence itself lands on a clean `1000^d` figure, so a pool's derived Capacity reaches
+  its own ceiling at precisely the same N where the underlying binary value would have reached it
+  too — no drift between the two. `getUnlockedStoragePoolCount`/`isMemoryCapacityAtCap` (below)
+  both key off this SAME derived value, not the raw `intro.capacity`, so the "moving ceiling"
+  purchase gate tracks what the pool actually shows.
 - Each pool's Bandwidth (`getStoragePoolBandwidth`) simply follows the raw production rate — the
   SAME rate the Data Stream tile's own `+N Bytes/sec` figure uses — through the identical
-  SI-clean-switchover transform Capacity uses above (`getSiCleanEquivalentBits`, a single helper
-  shared by both: `round(log2(rawBits / BITS_PER_BYTE))` finds the doubling step, then walks
-  `getNextSiDoubledValue` that many times from 1 Byte — a ROUNDED log2 rather than a discrete
+  SI-clean-switchover transform Capacity uses above (`getSiCleanEquivalentBits`, a single closed-form
+  helper shared by both: `N = round(log2(rawBits / BITS_PER_BYTE))` finds the doubling step, then
+  `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)` — a ROUNDED log2 rather than a discrete
   doubling search, so floating-point drift from chained purchases/Compute Boosts/prestige bonuses
   can't misclassify a value that's mathematically meant to sit exactly on a doubling boundary as
   one step off). It matches the raw rate up to 64 B/s, then diverges the same way Capacity does

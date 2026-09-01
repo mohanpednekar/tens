@@ -2117,20 +2117,29 @@ export const getNextSiDoubledValue = bits => {
 }
 
 // Finds N = round(log2(rawBits / BITS_PER_BYTE)) — how many doublings-from-1-Byte rawBits sits at —
-// then returns the SI-clean switchover sequence's own value at that same step (walking
-// getNextSiDoubledValue N times from BITS_PER_BYTE/1 Byte). Values below 1 Byte pass through
-// unchanged — Bytes-vs-bits doesn't meaningfully distinguish "SI-clean" from "binary" below that
-// scale, and the game's own bit-scale displays never do either. A ROUNDED log2 is used rather
-// than a discrete doubling search so that a raw value carrying tiny floating-point drift (from
-// many chained multiplications/divisions across purchases, Compute Boosts, prestige bonuses, etc.)
-// still lands on the doubling step it was mathematically meant to be, instead of a
-// comparison-based search misclassifying it one step off right at a boundary.
+// then returns the SI-clean switchover sequence's own value at that same step, in CLOSED FORM
+// rather than by iterating getNextSiDoubledValue N times: the sequence factors exactly into
+// `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`, since every 10 doublings compounds to
+// exactly ×1000 and the 64→125 deviation always lands at local position 7 within each decade
+// (verify: N=10 → 1000, N=20 → 1,000,000, matching getStoragePoolMemoryBounds' own pool-boundary
+// values). Iterating getNextSiDoubledValue instead would compound floating-point imprecision at
+// very large N — its own mantissa-stripping `% 1000 === 0` check becomes unreliable well past
+// Number.MAX_SAFE_INTEGER (reachable within a single Era: pool 8's own boundary sits at N=90),
+// silently picking the wrong decade multiplier and breaking the "no drift at a pool boundary"
+// property this whole mechanic depends on. A ROUNDED log2 (not a discrete doubling search) is used
+// to find N so that a raw value carrying tiny floating-point drift (from many chained
+// multiplications/divisions across purchases, Compute Boosts, prestige bonuses, etc.) still lands
+// on the doubling step it was mathematically meant to be. Non-finite input (should never occur via
+// any live code path, but cheap to guard) returns 0 rather than propagating NaN/Infinity; values
+// below 1 Byte pass through unchanged — Bytes-vs-bits doesn't meaningfully distinguish "SI-clean"
+// from "binary" below that scale, and the game's own bit-scale displays never do either.
+const SI_CLEAN_LOCAL_SEQUENCE = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500]
 const getSiCleanEquivalentBits = rawBits => {
-  if (!(rawBits >= BITS_PER_BYTE)) return Math.max(0, rawBits)
+  if (!Number.isFinite(rawBits)) return 0
+  if (rawBits < BITS_PER_BYTE) return Math.max(0, rawBits)
   const steps = Math.max(0, Math.round(Math.log2(rawBits / BITS_PER_BYTE)))
-  let cleanBits = BITS_PER_BYTE
-  for (let i = 0; i < steps; i += 1) cleanBits = getNextSiDoubledValue(cleanBits)
-  return cleanBits
+  const cleanBytes = SI_CLEAN_LOCAL_SEQUENCE[steps % 10] * (1000 ** Math.floor(steps / 10))
+  return cleanBytes * BITS_PER_BYTE
 }
 
 export const getStoragePoolBandwidth = (state, poolIndex) => {

@@ -142,8 +142,10 @@ own balance/capacity figure. Capacity requires a full Buffer, drains it, and dou
 with a plain `×2` (`INTRO_CAPACITY_DOUBLING_STEP`) — unclamped to any pool boundary now, so it can
 grow past a pool's own ceiling once reached. Each Storage pool instead derives its OWN SI-clean
 Capacity (`getStoragePoolCapacity`) from that same doubling count via a separate switchover sequence
-(`getNextSiDoubledValue`: 1, 2, 4, …, 64, 125, 250, 500, 1000, … Bytes — the same shape the Data Lake
-ladder below uses), clamped to that pool's own window; a pool's Bandwidth
+(1, 2, 4, …, 64, 125, 250, 500, 1000, … Bytes — the same shape the Data Lake ladder below uses,
+conceptually `getNextSiDoubledValue`, though `getStoragePoolCapacity` actually computes it in
+closed form via `getSiCleanEquivalentBits` to avoid floating-point drift at very large doubling
+counts an iterative walk would hit), clamped to that pool's own window; a pool's Bandwidth
 (`getStoragePoolBandwidth`) simply follows the same raw production rate the Data Stream tile's own
 rate figure uses, through the identical transform (`getSiCleanEquivalentBits`, shared by both
 Capacity and Bandwidth: rounds `log2(raw / 1 Byte)` to find the doubling step, robust to
