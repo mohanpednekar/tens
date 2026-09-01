@@ -42,7 +42,7 @@ yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
 yarn audit        # dependency audit
 yarn bump-version # cut CHANGELOG Unreleased → dated release + bump package.json
-yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png
+yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico
 ```
 
 > **Critical:** Vite 8 uses OXC, which infers JSX from the file extension. Any file containing JSX
