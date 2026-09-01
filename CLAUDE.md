@@ -1220,9 +1220,13 @@ indefinitely). No separate inventory cap on the Booster path itself (merge/UI sl
 `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate paths. Boost
 preset multipliers/durations are unchanged.
 
-*Idle disk liquidation* — once a pool's Lake is maxed (`isDataLakeCapacityMaxed`), its deposits can
-never absorb another disk, so a completed pool's LAST (largest, ×100) disk array would otherwise
-just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
+*Idle disk liquidation* — once a pool's Lake genuinely can't absorb another one of its own LAST
+(largest, ×100) disks (`!canDepositDiskToDataLake` — NOT just `isDataLakeCapacityMaxed`: a maxed
+lake was just DRAINED to reach that level, by `doubleDataLakeCapacity`'s own "requires full, drains
+it" shape, so a lake can sit at its hard-cap LEVEL with 1,000 units of totally empty room for
+exactly one tick right after that upgrade — checking `canDepositDiskToDataLake` directly is what
+correctly lets that deposit happen instead of destroying the disk), a completed pool's LAST disk
+array would otherwise just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
 after auto-deposit/auto-release-cache) liquidates that idle output straight into Bits — the same
 Data Stream currency Provision Disk spends from — automatically funding whatever Provision Disk
 needs next (in practice, the next pool's first disk). Gated by the full forced priority order,
@@ -1348,7 +1352,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1630 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1633 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

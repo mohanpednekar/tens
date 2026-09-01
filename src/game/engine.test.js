@@ -744,6 +744,38 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     expect(normalizePoolMemoryCapacity(state)).toBe(state)
   })
+
+  it('normalizePoolMemoryCapacity floors a negative or truncates a fractional Data Lake capacityLevel, both of which would also index DATA_LAKE_CAPACITY_BY_LEVEL out of bounds', () => {
+    // Only reachable via Dev Mode's Variables-tree free-text number input (setDevState), which
+    // accepts anything Number() parses — a negative or non-integer array index reads back
+    // undefined just like an above-bounds one does.
+    const negative = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: -1 } },
+    })
+    expect(normalizePoolMemoryCapacity(negative).intro.dataLakes[1].capacityLevel).toBe(0)
+
+    const fractional = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: 1.7 } },
+    })
+    expect(normalizePoolMemoryCapacity(fractional).intro.dataLakes[1].capacityLevel).toBe(1)
+
+    const notANumber = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: NaN } },
+    })
+    expect(normalizePoolMemoryCapacity(notANumber).intro.dataLakes[1].capacityLevel).toBe(0)
+  })
+
+  it('normalizePoolMemoryCapacity floors a negative pool buffer to 0', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: BITS_PER_BYTE * (2 ** 14),
+      poolBuffers: { 1: -500 },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.poolBuffers[1]).toBe(0)
+  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
@@ -4141,7 +4173,7 @@ describe('tickComputeBoost', () => {
 describe('tickGame Compute Boost integration', () => {
   it('multiplies Memory\'s own passive production while a boost is active', () => {
     const state = withIntro(createInitialGameState(), {
-      // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (80,000) — Storage/pool buffers
+      // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (8,192) — Storage/pool buffers
       // aren't revealed yet, so tickPoolBufferFill can't siphon any of this tick's production
       // away from intro.bits before the assertion below reads it.
       byteCreated: true, capacity: 1_000,
@@ -9018,24 +9050,31 @@ describe('Data Lakes', () => {
   })
 
   describe('idle disk liquidation', () => {
-    // Pool 1's own arrays fully built, its lake already at the hard cap (so it can never absorb
-    // another deposit), and one further completed disk at the pool's LAST (largest, ×100) size
-    // sitting idle with nowhere to go.
+    // Pool 1's own arrays fully built, its lake at the hard cap LEVEL *and* genuinely full
+    // (deposits already at its own 1,000-unit ceiling, all in the ×100 sub-slot — so it truly can
+    // never absorb another deposit, not merely maxed-but-just-drained), and one further completed
+    // disk at the pool's LAST (largest, ×100) size sitting idle with nowhere to go. Deliberately
+    // NOT the state right after a doubleDataLakeCapacity call to the max level (deposits reset to
+    // 0 there) — that state is maxed but still has 1,000 units of empty room, and liquidation must
+    // NOT fire then (see isIdleDiskLiquidationAvailable's own canDepositDiskToDataLake check, and
+    // the dedicated test below pinning that exact case).
     const maxedLakePool1 = withIntro(createInitialGameState(), {
       ...noOtherUpgradesLeft,
       disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       disks: { [kb100]: 1 },
-      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 10 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
     })
 
     it('isIdleDiskLiquidationAvailable/TurnAvailable are true only once the pool\'s Lake is maxed and nothing else is available', () => {
       expect(isIdleDiskLiquidationAvailable(maxedLakePool1, 1)).toBe(true)
       expect(isIdleDiskLiquidationTurnAvailable(maxedLakePool1, 1)).toBe(true)
 
-      // Lake not yet maxed — no idle disk to liquidate into.
+      // Lake not yet maxed, but with enough room (level 2 -> 100-unit capacity, exactly enough for
+      // one ×100 deposit) to still absorb this disk — no idle disk to liquidate into.
       const notMaxed = withIntro(maxedLakePool1, {
-        dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, capacityLevel: 0 } },
+        dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, capacityLevel: 2 } },
       })
+      expect(canDepositDiskToDataLake(notMaxed, kb100)).toBe(true)
       expect(isIdleDiskLiquidationAvailable(notMaxed, 1)).toBe(false)
 
       // No idle disk on hand.
@@ -9046,6 +9085,21 @@ describe('Data Lakes', () => {
       const diskFillBlocks = withIntro(maxedLakePool1, { disks: { ...maxedLakePool1.intro.disks, [kb1]: 1 } })
       expect(isDiskFillAvailable(diskFillBlocks)).toBe(true)
       expect(isIdleDiskLiquidationTurnAvailable(diskFillBlocks, 1)).toBe(false)
+    })
+
+    it('a lake AT the max LEVEL but just drained (0 deposited, 1,000 units of room) does NOT liquidate — being "maxed" isn\'t the same as being full', () => {
+      // doubleDataLakeCapacity always empties deposits back to zero on advancing a level,
+      // including the final advance to DATA_LAKE_CAPACITY_MAX_LEVEL — so a lake can sit at the max
+      // level with its full 1,000-unit capacity still completely empty. isIdleDiskLiquidationAvailable
+      // must check whether this specific disk can still be deposited (canDepositDiskToDataLake),
+      // not just isDataLakeCapacityMaxed, or it would destroy a disk the lake could still bank.
+      const justMaxedEmpty = withIntro(maxedLakePool1, {
+        dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+      })
+      expect(isDataLakeCapacityMaxed(justMaxedEmpty, 1)).toBe(true)
+      expect(canDepositDiskToDataLake(justMaxedEmpty, kb100)).toBe(true)
+      expect(isIdleDiskLiquidationAvailable(justMaxedEmpty, 1)).toBe(false)
+      expect(tickIdleDiskLiquidation(justMaxedEmpty)).toBe(justMaxedEmpty)
     })
 
     it('tickIdleDiskLiquidation liquidates the idle disk straight into Bits', () => {

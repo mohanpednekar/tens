@@ -690,10 +690,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    lifetime Booster total (deposits plus repeated live transfers can fund a lake indefinitely).
 
    **Idle disk liquidation** (`isIdleDiskLiquidationAvailable`/`isIdleDiskLiquidationTurnAvailable`/
-   `tickIdleDiskLiquidation`) — once a pool's Lake sits at `isDataLakeCapacityMaxed`, its deposits
-   can never absorb another disk, so a completed pool's LAST (largest, ×100) disk array would
-   otherwise just pile up full disks with nowhere to go once its own tier no longer needs them (see
-   the "Disks always take priority" rule above). Rather than let that output sit permanently idle,
+   `tickIdleDiskLiquidation`) — once a pool's Lake genuinely CAN'T absorb another one of its own LAST
+   (largest, ×100) disks (`!canDepositDiskToDataLake(state, size)` — deliberately NOT just
+   `isDataLakeCapacityMaxed`: `doubleDataLakeCapacity` always DRAINS a lake's deposits to zero on
+   advancing a level, including the final advance to the hard-cap level, so a lake can sit maxed with
+   its full 1,000-unit capacity still completely empty for exactly one tick right after that
+   upgrade — checking the real deposit condition directly is what correctly lets that deposit happen
+   instead of liquidating a disk the lake still had room for), a completed pool's LAST disk array
+   would otherwise just pile up full disks with nowhere to go once its own tier no longer needs them
+   (see the "Disks always take priority" rule above). Rather than let that output sit permanently idle,
    `tickIdleDiskLiquidation` (called from `tickGame`'s `tickStorage`, right after
    `tickDiskAutoReleaseCache`) liquidates one such idle disk straight into `intro.bits` — the same
    Data Stream currency Provision Disk spends from — crediting the disk's own full bit size each

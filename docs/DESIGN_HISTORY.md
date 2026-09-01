@@ -4722,6 +4722,33 @@ plausibly has done well before their 10th Capacity doubling); hardcoding a floor
 lying about the pool's actual current throughput, the opposite of what every other number on this
 page is for.
 
+**A second nuance, surfaced by an adversarial review round against this exact commit and worth
+stating explicitly rather than leaving implicit: Storage now reveals before its own first disk is
+affordable.** Before this change, `INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits) happened to coincide
+almost exactly with the point pool 1's own buffer ceiling first reached "10 KB" (80,000 bits) — the
+exact cost of the FIRST Disk (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER` (10) × the base 8,000-bit
+size) — so by the time a player ever saw Storage/Provision Disk at all, that first disk was already
+buildable. Moving the threshold to pool 1's own 1 KiB gate breaks that coincidence: at reveal, pool
+1's buffer ceiling is only "1 KB" (8,000 bits) — one full decade short of the 80,000-bit first-disk
+cost — so Provision Disk now renders visible but genuinely unaffordable for a real stretch of play
+(4 more Capacity ×2 purchases, `N`=10→14, before the buffer ceiling itself reaches "10 KB").
+
+This is judged an acceptable, even correct, trade-off rather than a bug to route around, for two
+reasons. First, it's the direct, unavoidable consequence of exactly what was asked: revealing pool
+1 the instant it shows a clean "1 KB" rather than waiting until it's already grown past that to
+"10 KB" necessarily means SOME reveal happens before the first disk is affordable — there is no
+threshold that satisfies both "reveals at a clean 1 KB" and "reveals only once the 80,000-bit first
+disk is already buildable," since those are two different capacity values by construction. Second,
+this is not a novel category of UI state for this page: Speed ×2, Capacity ×2, and every other
+milestone-style button here already renders visible-but-disabled with a partial `$progress` fill
+the instant its OWN section reveals, well before it's affordable — Provision Disk doing the same
+(confirmed via the same Playwright screenshot referenced above, which shows exactly this: a
+grayed-out "🏦 Provision 1 KB Disk (10 KB)" button, not a hidden one) is consistent with that
+existing convention, not a deviation from it. The alternative — keeping Storage's reveal pinned to
+"whichever raw capacity makes the first disk immediately affordable" — was the OLD design, and is
+exactly the design the "storage reveals mid-decade instead of at a clean magnitude" complaint this
+entry opened with was about.
+
 **Data Lake panel redesign.** The panel had shipped, several entries back, as a dense CSS-grid
 table — an explicit Lake/Deposited/Capacity/Bought/Next header row, one grid row per lake, small
 compact cells — modeled on a spreadsheet rather than on this game's own established visual
@@ -4789,3 +4816,69 @@ Playwright/Chromium screenshot of a from-scratch save seeded at exactly 1 KiB Ca
 the KB Pool card both visible immediately, the pool reading "0 bits / 1 KB," and the redesigned KB
 Lake block showing "1 KB / 1 KB" deposited/capacity alongside its "⚡ ×10" button and "🎯 4 KB" next-cost
 figure.
+
+### Two more migration/logic gaps found by a Devin review pass on this same PR: unbounded-below capacityLevel edits, and idle liquidation confusing "maxed" with "full"
+
+A `Devin Review` pass against the PR that shipped the two entries directly above (Storage's reveal
+threshold, the Data Lake panel redesign, the Dev Mode `setDevState` clamp) found two more issues in
+that exact area — one a narrower version of a gap already being fixed, the other a genuine,
+previously-undiscovered logic bug unrelated to anything this session had touched until now.
+
+**Gap 1: `normalizePoolMemoryCapacity`'s Data Lake `capacityLevel` clamp only checked the UPPER
+bound.** The clamp added two entries back (`if (level > DATA_LAKE_CAPACITY_MAX_LEVEL) { … }`)
+correctly stops a saved level from indexing `DATA_LAKE_CAPACITY_BY_LEVEL` past its own end, but a
+JavaScript array read at a negative or non-integer index ALSO returns `undefined` — the exact same
+failure mode from the other direction. Since Dev Mode's Variables-tree number input is a free-text
+field with no min/step validation, typing `-1` or `1.7` into `capacityLevel` was one keystroke away
+from reproducing the identical bug the upper-bound clamp exists to prevent. **Resolution:** the
+clamp now floors, truncates to an integer, and ceils in one expression —
+`Math.min(Math.max(Math.trunc(rawLevel) || 0, 0), DATA_LAKE_CAPACITY_MAX_LEVEL)` — the `|| 0` catches
+`NaN` (`Math.trunc(NaN)` is itself `NaN`, and `NaN || 0` is `0`) alongside the ordinary negative/
+fractional cases. The pool-buffer clamp got the same defensive floor (`Math.max(current, 0)`) for
+consistency, even though a negative buffer doesn't cause the same class of crash (it's read in
+ordinary numeric comparisons, not used as an array index) — just a nonsensical value with no
+legitimate way to arise outside Dev Mode.
+
+**Gap 2 (the real find): idle disk liquidation gated on `isDataLakeCapacityMaxed`, which is NOT the
+same thing as "this lake can't accept another deposit."** `doubleDataLakeCapacity` empties a lake's
+deposits back to zero every time it advances a level — including the FINAL advance to
+`DATA_LAKE_CAPACITY_MAX_LEVEL`. So immediately after a player upgrades a lake to its hard-cap level,
+that lake sits at 0/1,000 deposited — maxed in the sense that it can never grow its capacity
+further, but with its full 1,000 units of room still completely empty. `isIdleDiskLiquidationAvailable`
+checked only `isDataLakeCapacityMaxed(state, poolIndex)` to decide whether a pool's largest idle
+disk should be liquidated straight into Bits instead of deposited — meaning a disk sitting ready
+the tick after that upgrade could get destroyed by liquidation even though the lake it belonged to
+had 1,000 units of empty room waiting for exactly that deposit. This bug's ROOT CAUSE predates this
+session entirely (`doubleDataLakeCapacity` has always emptied deposits on every level advance, not
+just the final one), but the decade-power ladder's own narrowing from 11 levels to 4 (two entries
+back) made the max level dramatically easier to reach in ordinary play, turning a theoretical edge
+case into one worth fixing now rather than filing as a someday-follow-up.
+
+**Resolution: check `canDepositDiskToDataLake` directly instead of `isDataLakeCapacityMaxed`.**
+`canDepositDiskToDataLake` already encodes the real "can this specific disk still be banked right
+now" condition — disk array fully built, a disk on hand, not mid-rebuild, the sub-slot's own
+physical backstop not hit, AND `deposited + thisDisk's own unit value <= capacity` — so
+`isIdleDiskLiquidationAvailable` now returns `!canDepositDiskToDataLake(state, size)` instead. This
+correctly stays `false` (no liquidation) for a freshly-maxed-but-empty lake, since the disk really
+can still be deposited, while still returning `true` once the lake is GENUINELY full (either at a
+non-max level with capacity exhausted, or at the max level after 1,000 units really have
+accumulated). No change was needed to the surrounding forced-priority gate
+(`isIdleDiskLiquidationTurnAvailable`'s own `!isAnyDataLakeCapacityDoublingAvailable(state)` check)
+— that already independently defers to a capacity-doubling opportunity on ANY lake before liquidation
+ever fires, which continues to work exactly as before.
+
+**Verification.** The existing `idle disk liquidation` describe block's own fixture,
+`maxedLakePool1`, turned out to BE the exact bug — it seeded `deposits: { 1: 0, 10: 0, 100: 0 }`
+(completely empty) alongside `capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL`, and its existing
+assertions expected liquidation to fire in that state. That expectation was itself wrong under
+correct behavior, so the fixture was corrected to a genuinely full lake
+(`deposits: { 1: 0, 10: 0, 100: 10 }`, exactly 1,000 units, matching the physical backstop for
+that one sub-slot too) rather than the fix being weakened to match the old, incorrect expectation.
+A new, dedicated test pins the previously-buggy case directly: a lake at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` with all-zero deposits does NOT trigger
+`isIdleDiskLiquidationAvailable`, and `tickIdleDiskLiquidation` is a same-reference no-op against
+it. Two new `normalizePoolMemoryCapacity` tests cover the lower-bound fix (negative, fractional,
+and `NaN` `capacityLevel` values all land on a valid integer in range) and one covers the pool-buffer
+floor. `yarn test`: 1633/1633 green (+3 over the prior entry's 1630 — one existing test's fixture
+corrected, four new tests added, net +3 after accounting for the corrected fixture not itself adding
+a test). `yarn build` succeeds.

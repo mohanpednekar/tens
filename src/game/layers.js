@@ -290,7 +290,7 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Boosters / ComputePage reveal — historically a later gate than
-// Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching the same
+// Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, now 8,192 bits), matching the same
 // "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
 // 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
 // Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, now a clean SI 1 MB — see

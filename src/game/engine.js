@@ -2345,8 +2345,10 @@ export const normalizePoolMemoryCapacity = state => {
     for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
       const current = poolBuffers[poolIndex] ?? 0
       const cap = getPoolBufferCapacity(stateForBufferClamp, poolIndex)
-      if (current > cap) {
-        poolBuffers[poolIndex] = cap
+      const floored = Math.max(current, 0)
+      const clamped = Math.min(floored, cap)
+      if (clamped !== current) {
+        poolBuffers[poolIndex] = clamped
         buffersChanged = true
       }
     }
@@ -2355,22 +2357,25 @@ export const normalizePoolMemoryCapacity = state => {
       nextIntro.poolBuffers = poolBuffers
     }
   }
-  // Clamp each Data Lake's own capacityLevel down to the current DATA_LAKE_CAPACITY_MAX_LEVEL. A
-  // save written before that ladder narrowed from 11 SI-clean levels to 4 decade-power ones (see
-  // docs/DESIGN_HISTORY.md) could carry a capacityLevel past the new, shorter
-  // DATA_LAKE_CAPACITY_BY_LEVEL array's end — without this clamp, getDataLakeCapacity would index
-  // past the array and return undefined, breaking every downstream comparison against it (deposit
-  // eligibility, doubling availability, idle-disk liquidation) rather than just displaying a lower
-  // cap.
+  // Clamp each Data Lake's own capacityLevel into [0, DATA_LAKE_CAPACITY_MAX_LEVEL] and to a whole
+  // integer. A save written before that ladder narrowed from 11 SI-clean levels to 4 decade-power
+  // ones (see docs/DESIGN_HISTORY.md) could carry a capacityLevel past the new, shorter
+  // DATA_LAKE_CAPACITY_BY_LEVEL array's end; a negative or fractional value (only reachable via Dev
+  // Mode's Variables-tree free-text number input, which accepts anything `Number()` parses) hits
+  // the same class of bug from the other direction — a JS array index that isn't a non-negative
+  // integer also reads back `undefined`. Either way, without this clamp `getDataLakeCapacity` would
+  // return `undefined`, breaking every downstream comparison against it (deposit eligibility,
+  // doubling availability, idle-disk liquidation) rather than just displaying a lower cap.
   if (nextIntro.dataLakes) {
     const dataLakes = { ...nextIntro.dataLakes }
     let lakesChanged = false
     for (const tierKey of Object.keys(dataLakes)) {
       const lake = dataLakes[tierKey]
       if (!lake) continue
-      const level = lake.capacityLevel ?? 0
-      if (level > DATA_LAKE_CAPACITY_MAX_LEVEL) {
-        dataLakes[tierKey] = { ...lake, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL }
+      const rawLevel = lake.capacityLevel ?? 0
+      const level = Math.min(Math.max(Math.trunc(rawLevel) || 0, 0), DATA_LAKE_CAPACITY_MAX_LEVEL)
+      if (level !== rawLevel) {
+        dataLakes[tierKey] = { ...lake, capacityLevel: level }
         lakesChanged = true
       }
     }
@@ -4048,16 +4053,19 @@ export const doubleDataLakeCapacity = tierIndex => state => {
   }
 }
 
-// Once a pool's Lake is maxed (DATA_LAKE_CAPACITY_MAX_LEVEL — see isDataLakeCapacityMaxed), its
-// deposits can never absorb another disk, so a completed pool's LAST (largest, ×100) disk array
-// would otherwise just pile up full disks with nowhere to go. Rather than let that output sit
-// permanently idle, it liquidates straight into Bits — the same Data Stream currency Provision
-// Disk spends from — automatically funding whatever Provision Disk still needs next (in practice,
-// the next pool's first disk, since that's typically what's left blocking "nothing else to do").
-// Gated by the same forced priority order every other Byte Foundry action follows, with Lake
-// Capacity doubling (any tier, not just this pool's own) ranked directly above it: liquidation
-// only ever kicks in once the Foundry would otherwise be completely idle, so it never competes
-// with or bypasses a higher-ranked action.
+// Once a pool's Lake genuinely CAN'T absorb another one of its own LAST (largest, ×100) disks —
+// checked via canDepositDiskToDataLake itself, not just isDataLakeCapacityMaxed (a maxed lake was
+// just DRAINED to reach that level, by doubleDataLakeCapacity's own "requires full, drains it"
+// shape, so "maxed" and "actually full" are two different things for exactly one tick right after
+// the level-3 upgrade — checking maxed alone would liquidate a disk the lake still had 1,000 units
+// of empty room for) — a completed pool's own idle output would otherwise just pile up full disks
+// with nowhere to go. Rather than let that output sit permanently idle, it liquidates straight into
+// Bits — the same Data Stream currency Provision Disk spends from — automatically funding whatever
+// Provision Disk still needs next (in practice, the next pool's first disk, since that's typically
+// what's left blocking "nothing else to do"). Gated by the same forced priority order every other
+// Byte Foundry action follows, with Lake Capacity doubling (any tier, not just this pool's own)
+// ranked directly above it: liquidation only ever kicks in once the Foundry would otherwise be
+// completely idle, so it never competes with or bypasses a higher-ranked action.
 const getPoolLastDiskSize = poolIndex => getDiskLadderSizeBits(poolIndex * DATA_LAKE_SUB_SIZES.length)
 
 export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
@@ -4065,7 +4073,7 @@ export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
   const size = getPoolLastDiskSize(poolIndex)
   if ((state.intro.disks?.[size] ?? 0) < 1) return false
   if (state.intro.diskBuild?.size === size) return false
-  return isDataLakeCapacityMaxed(state, poolIndex)
+  return !canDepositDiskToDataLake(state, size)
 }
 
 const isAnyDataLakeCapacityDoublingAvailable = state => {

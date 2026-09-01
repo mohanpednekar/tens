@@ -135,6 +135,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (e.g. `10`, valid under the ladder's old 11-level shape) would silently break `getDataLakeCapacity`
   for that lake for the rest of the Dev Mode session. `setDevState` now runs its result through
   `normalizePoolMemoryCapacity` before committing, same as a real save load. Dev-build-only.
+- **A negative or fractional Data Lake `capacityLevel` (Dev Mode only) could also break
+  `getDataLakeCapacity`** — the clamp above only checked the upper bound; a JS array read at a
+  negative or non-integer index also returns `undefined`, the same failure mode from the other
+  direction. `normalizePoolMemoryCapacity` now floors, truncates, and caps `capacityLevel` in one
+  step; a negative pool buffer gets the same defensive floor for consistency.
+- **Idle disk liquidation could destroy a disk its own Data Lake still had 1,000 units of room
+  for** — `isIdleDiskLiquidationAvailable` gated on `isDataLakeCapacityMaxed`, which isn't the same
+  as "this lake can't accept another deposit": advancing a Data Lake to its hard-cap level always
+  drains its deposits to zero, so a lake can sit maxed with its full capacity completely empty for
+  exactly one tick right after that upgrade. It now checks `canDepositDiskToDataLake` directly — the
+  real "can this specific disk still be banked" condition — so a freshly-maxed-but-empty lake
+  correctly waits for the deposit instead of losing the disk to liquidation.
 
 ### Changed
 - **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been

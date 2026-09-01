@@ -2355,7 +2355,7 @@ test('tapping increments the bit balance and stops once capacity is reached', as
 test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream itself is the tap target', async () => {
   const user = userEvent.setup()
 
-  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (80,000) — this test uses real timers, so
+  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (8,192) — this test uses real timers, so
   // a real tick landing between mount and the assertion could otherwise let tickPoolBufferFill
   // siphon a fractional bit out of intro.bits into pool 1's own (irrelevant here) buffer.
   seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: 1000, byteCreated: true } })
