@@ -397,7 +397,7 @@
       "file_type": "code",
       "norm_label": "eraeligiblestate()",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8462"
+      "source_location": "L8464"
     },
     {
       "id": "src_game_engine_test_omit",
@@ -421,7 +421,7 @@
       "file_type": "code",
       "norm_label": "unlockedlasttierstate()",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6666"
+      "source_location": "L6668"
     },
     {
       "id": "src_game_engine_test_withautobuyer",
@@ -24592,7 +24592,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8463",
+      "source_location": "L8465",
       "weight": 1.0
     },
     {
@@ -24604,7 +24604,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8463",
+      "source_location": "L8465",
       "weight": 1.0
     },
     {
@@ -24616,7 +24616,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8464",
+      "source_location": "L8466",
       "weight": 1.0
     },
     {
@@ -24628,7 +24628,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6666",
+      "source_location": "L6668",
       "weight": 1.0
     },
     {
@@ -24640,7 +24640,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6666",
+      "source_location": "L6668",
       "weight": 1.0
     },
     {
@@ -55407,7 +55407,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.test.js",
-      "source_location": "L6666",
+      "source_location": "L6668",
       "weight": 1.0
     },
     {
@@ -55418,7 +55418,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/engine.test.js",
-      "source_location": "L8462",
+      "source_location": "L8464",
       "weight": 1.0
     },
     {
@@ -60767,7 +60767,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3313",
+      "source_location": "L3315",
       "weight": 1.0
     },
     {
@@ -60779,7 +60779,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3313",
+      "source_location": "L3315",
       "weight": 1.0
     },
     {
@@ -60791,7 +60791,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3313",
+      "source_location": "L3315",
       "weight": 1.0
     },
     {
@@ -60803,7 +60803,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3314",
+      "source_location": "L3316",
       "weight": 1.0
     },
     {
@@ -60815,7 +60815,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3314",
+      "source_location": "L3316",
       "weight": 1.0
     },
     {
@@ -60827,7 +60827,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3314",
+      "source_location": "L3316",
       "weight": 1.0
     },
     {
@@ -60839,7 +60839,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3315",
+      "source_location": "L3317",
       "weight": 1.0
     },
     {
@@ -60851,7 +60851,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3315",
+      "source_location": "L3317",
       "weight": 1.0
     },
     {
@@ -60863,7 +60863,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3315",
+      "source_location": "L3317",
       "weight": 1.0
     },
     {
@@ -60875,7 +60875,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3316",
+      "source_location": "L3318",
       "weight": 1.0
     },
     {
@@ -60887,7 +60887,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3316",
+      "source_location": "L3318",
       "weight": 1.0
     },
     {
@@ -60899,7 +60899,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3316",
+      "source_location": "L3318",
       "weight": 1.0
     },
     {
@@ -60911,7 +60911,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3317",
+      "source_location": "L3319",
       "weight": 1.0
     },
     {
@@ -60923,7 +60923,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3317",
+      "source_location": "L3319",
       "weight": 1.0
     },
     {
@@ -60935,7 +60935,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3317",
+      "source_location": "L3319",
       "weight": 1.0
     },
     {
@@ -60947,7 +60947,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3318",
+      "source_location": "L3320",
       "weight": 1.0
     },
     {
@@ -60959,7 +60959,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3318",
+      "source_location": "L3320",
       "weight": 1.0
     },
     {
@@ -60971,7 +60971,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3318",
+      "source_location": "L3320",
       "weight": 1.0
     },
     {
@@ -60983,7 +60983,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3319",
+      "source_location": "L3321",
       "weight": 1.0
     },
     {
@@ -60995,7 +60995,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3319",
+      "source_location": "L3321",
       "weight": 1.0
     },
     {
@@ -61007,7 +61007,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3319",
+      "source_location": "L3321",
       "weight": 1.0
     },
     {
@@ -61019,7 +61019,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3320",
+      "source_location": "L3322",
       "weight": 1.0
     },
     {
@@ -61031,7 +61031,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3320",
+      "source_location": "L3322",
       "weight": 1.0
     },
     {
@@ -61043,7 +61043,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3320",
+      "source_location": "L3322",
       "weight": 1.0
     },
     {
@@ -61055,7 +61055,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3321",
+      "source_location": "L3323",
       "weight": 1.0
     },
     {
@@ -61067,7 +61067,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3321",
+      "source_location": "L3323",
       "weight": 1.0
     },
     {
@@ -61079,7 +61079,7 @@
       "confidence_score": 0.85,
       "context": "collection",
       "source_file": "src/game/engine.test.js",
-      "source_location": "L3321",
+      "source_location": "L3323",
       "weight": 1.0
     },
     {
@@ -61300,5 +61300,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "c76f97f577dcb2c35f3aeb63593d521b31bcb247"
+  "built_at_commit": "27e83b7c2c4907553fbdec88f3561db92b677ff3"
 }
