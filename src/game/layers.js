@@ -703,8 +703,8 @@ export const COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30
 export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
 // Ten Flops tiers (KFlops → QFlops), 1:1 with main-game tiers. Each tier's base PP cost matches
 // TIER_DEFINITIONS' baseCost ladder (1000 PP … 10^30 PP); per-unit price then scales on every
-// purchase via the same triangular 10-power epoch as Factory tiers (getCostEpochExponent), not
-// Factory's 8-purchase level blocks.
+// purchase via the same linear-increment 10-power epoch as Factory tiers (getCostEpochExponent),
+// not Factory's 8-purchase level blocks.
 export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
   { id: 'flop01', name: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
   { id: 'flop02', name: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },

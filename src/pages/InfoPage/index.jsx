@@ -455,8 +455,8 @@ const InfoPage = () => {
             Base costs follow the same 10³ ladder as Factory tiers (
             {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} –{' '}
             {COMPUTE_FLOPS_LAST_TIER_COST_PP.toExponential(0).replace('+', '')} PP). Per-unit price
-            then rises on <strong>every</strong> purchase via the triangular power-of-ten epoch (same
-            curve as the Factory, but not gated behind 8-purchase level blocks).
+            then rises on <strong>every</strong> purchase via the linear-increment power-of-ten
+            epoch (same curve as the Factory, but not gated behind 8-purchase level blocks).
           </li>
           <li>
             Each owned unit adds{' '}

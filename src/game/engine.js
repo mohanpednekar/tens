@@ -647,24 +647,22 @@ export const formatMoneyBalance = value => {
     : `${formatScientific(bytes)} B`
 }
 
-// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 13, 21, …
-// for epochs 0, 1, 2, 3, 4, 5, 6, … — the classic Fibonacci sequence (exponent(e) = fib(e+2) in
-// the canonical 0-indexed fib(0)=0, fib(1)=1 numbering), computed iteratively rather than via a
-// closed form (Fibonacci has no simple integer one) or naive recursion (which is exponential-time
-// for larger epochs — see docs/DESIGN_HISTORY.md for the regression that came from getting this
-// wrong). A negative epoch is clamped to 0 rather than throwing, and getTierCost below separately
-// clamps level 0/negative levels to level 1 (epoch 0) before this is ever called, so this function
-// itself never needs to handle a negative epoch from that caller.
+// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 12, 17, 23, 30,
+// … for epochs 0, 1, 2, 3, 4, 5, 6, 7, 8, … — each epoch's exponent grows over the previous one by
+// a linear increment (1, 1, 2, 3, 4, 5, 6, …: 1 at epoch 0, the epoch number itself from epoch 1
+// on), computed iteratively. This matches the Fibonacci-driven sequence it replaces (see
+// docs/DESIGN_HISTORY.md) through epoch 4, then grows quadratically in the epoch rather than
+// exponentially — a deliberately gentler long-term cost curve. A negative epoch is clamped to 0
+// rather than throwing, and getTierCost below separately clamps level 0/negative levels to level 1
+// (epoch 0) before this is ever called, so this function itself never needs to handle a negative
+// epoch from that caller.
 export const getCostEpochExponent = epoch => {
   const e = clampNonNegative(epoch)
-  let a = 1 // exponent at epoch 0
-  let b = 2 // exponent at epoch 1
-  for (let i = 0; i < e; i++) {
-    const next = a + b
-    a = b
-    b = next
+  let exponent = 1 // exponent at epoch 0
+  for (let n = 0; n < e; n++) {
+    exponent += Math.max(n, 1)
   }
-  return a
+  return exponent
 }
 
 // The purchase block size every tier's current level currently requires to complete — a single

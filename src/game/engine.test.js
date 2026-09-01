@@ -4492,13 +4492,15 @@ describe('formatMoneyBalance', () => {
 // ─── getCostEpochExponent ────────────────────────────────────────────────────
 
 describe('getCostEpochExponent', () => {
-  it('follows the 1, 2, 3, 5, 8, 13 Fibonacci progression across epochs 0-5', () => {
+  it('follows the 1, 2, 3, 5, 8, 12, 17, 23 linear-increment progression across epochs 0-7, matching the prior Fibonacci sequence through epoch 4 and diverging (growing more slowly) from epoch 5 on', () => {
     expect(getCostEpochExponent(0)).toBe(1)
     expect(getCostEpochExponent(1)).toBe(2)
     expect(getCostEpochExponent(2)).toBe(3)
     expect(getCostEpochExponent(3)).toBe(5)
     expect(getCostEpochExponent(4)).toBe(8)
-    expect(getCostEpochExponent(5)).toBe(13)
+    expect(getCostEpochExponent(5)).toBe(12)
+    expect(getCostEpochExponent(6)).toBe(17)
+    expect(getCostEpochExponent(7)).toBe(23)
   })
 
   it('clamps a negative epoch to 0', () => {
