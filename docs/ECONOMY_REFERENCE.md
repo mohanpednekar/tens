@@ -546,10 +546,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    from under it.
    **Capacity doubling** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
    `doubleDataLakeCapacity(tierIndex)`) is the one intentional, explicit cap on a lake's deposits:
-   `getDataLakeCapacity` returns `2 ** getDataLakeCapacityLevel(state, tierIndex)`, starting at level
-   0 (1 unit — "1 KB" for the KB lake, in that lake's own Byte-scale denomination) and permanently
-   hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake)
-   via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Data
+   `getDataLakeCapacity` looks up `DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`
+   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7 (the same
+   SI-clean switchover pool Capacity's own `getNextSiDoubledValue` uses — see "Byte Foundry" above),
+   then 125→250→500→1,000 — starting at level 0 (1 unit — "1 KB" for the KB lake, in that lake's own
+   Byte-scale denomination) and permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 —
+   1,000 units, "1000 KB" for the KB lake) via `isDataLakeCapacityMaxed`. Unlike pool Capacity's raw
+   continuously-doubled bit value, a lake's level is an explicit small integer (0–10) already tracked
+   in state, so this lookup needs no float-precision handling. Doubling is funded by **draining the
+   lake itself**, not Data
    Stream Bits: `isDataLakeCapacityDoublingAvailable` requires the lake to be completely full
    (deposited units at least its own current capacity), and `doubleDataLakeCapacity` empties every
    deposit back to zero on purchase — the same "requires a full Buffer, drains it" shape Memory's
@@ -565,7 +570,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    An earlier version fixed this cap at a value derived directly from the Disk arrays themselves,
    with no purchasable lever at all; a version after that funded doubling from Data Stream Bits
    (spending the lake's own capacity expressed in real-bit currency, the "spend the current value to
-   double it" shape Capacity ×2 uses) — see `docs/DESIGN_HISTORY.md` for both.
+   double it" shape Capacity ×2 uses); a later correction switched the step sequence itself from
+   plain `2 ** level` to `DATA_LAKE_CAPACITY_BY_LEVEL`'s SI-clean sequence, moving the max-level cap
+   from 1,024 to 1,000 — see `docs/DESIGN_HISTORY.md` for all three.
 
    `canDepositDiskToDataLake` itself requires not just a currently-full disk but that size's disk
    array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
@@ -574,13 +581,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    cap above. Each lake's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10, 100]`) are ALSO each backstopped
    at `DISK_ARRAY_LADDER_CAP` (10) — not a second design cap, just keeping the deposits counter from
    exceeding how many disks of that size could ever exist (an array permanently stops growing at
-   exactly `DISK_ARRAY_LADDER_CAP` disks). Since the 1,024-unit capacity-level cap sits below what
+   exactly `DISK_ARRAY_LADDER_CAP` disks). Since the 1,000-unit capacity-level cap sits below what
    this backstop alone would allow if every sub-slot were somehow filled to it (`DISK_ARRAY_LADDER_CAP
    × DATA_LAKE_SUB_SIZE_TOTAL`, 10 × 111 = 1,110 — an incidental sum, not a target), the
    capacity-level cap is always the one that actually binds: a fully-built pool at max level can
-   still never fill its largest (×100) sub-slot to its own full backstop of 10 (1,024 leaves room
-   for only 9 full ×100 deposits once the ×1/×10 sub-slots are also full: 10 + 100 + 9×100 = 1,010,
-   one shy of 1,110). `decomposeDataLakeDeposits` caps each sub-size's own place at this same
+   still never fill its largest (×100) sub-slot to its own full backstop of 10 (1,000 leaves room
+   for only 8 full ×100 deposits once the ×1/×10 sub-slots are also full: 10 + 100 + 8×100 = 910;
+   a 9th ×100 deposit would push the total to 1,010, past the 1,000 cap). `decomposeDataLakeDeposits` caps each sub-size's own place at this same
    backstop value (`Math.min(DISK_ARRAY_LADDER_CAP, Math.floor(remainder / subSize))`), so the
    greedy largest-denomination-first re-decomposition after a spend is always exact (proven correct
    for any total in `[0, 1110]` once the per-slot cap is `>= 9`, comfortably true at 10) — this
@@ -2434,7 +2441,7 @@ purchases were manual or automatic.
 **Byte Foundry** (see its own section below for the full mechanic):
 - `INTRO_STARTING_CAPACITY = 8` — starting Buffer / pool Memory Capacity start bound (1 Byte)
 - `INTRO_CAPACITY_DOUBLING_STEP = 2` — named constant for the shared Capacity ladder's spacing (docs/tests only; `upgradePoolCapacity` itself no longer multiplies by this directly — see `getNextSiDoubledValue` below); Capacity ×2 requires a full Buffer, drains it, and grows Capacity via `getNextSiDoubledValue` (clamped to the active pool's own end bound — see `POOL_CAPACITY_SI_STEP` below)
-- `getNextSiDoubledValue(val)` (`engine.js`, not a `layers.js` constant) — `upgradePoolCapacity`'s own per-purchase growth function: converts `val` (bits) to Bytes, then returns a plain `×2` EXCEPT once per "decade" of 10 doublings, where a mantissa of 64 Bytes deviates to 125 Bytes (not 128) instead — so intermediate Capacity values land on SI-clean figures (1, 2, 4, …, 64, 125, 250, 500, 1,000, … Bytes), not just each pool's own end boundary. Decade detection loses exactness past `Number`'s ~2^53 safe-integer range (roughly pool 5+), degrading to plain doubling there — see `docs/DESIGN_HISTORY.md`
+- `getNextSiDoubledValue(val)` (`engine.js`, not a `layers.js` constant) — `upgradePoolCapacity`'s own per-purchase growth function: converts `val` (bits) to Bytes, then returns a plain `×2` EXCEPT once per "decade" of 10 doublings, where a mantissa of 64 Bytes deviates to 125 Bytes (not 128) instead — so intermediate Capacity values land on SI-clean figures (1, 2, 4, …, 64, 125, 250, 500, 1,000, … Bytes), not just each pool's own end boundary. Decade detection loses exactness past `Number`'s ~2^53 safe-integer range (empirically around pool 8+), degrading to plain doubling there — see `docs/DESIGN_HISTORY.md`
 - `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`), so pool boundaries land on clean SI values (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation
 - `INTRO_CAPACITY_CAP_BITS = 8,000,000` (exactly 1 MB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
 - `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — Speed ×2 (Invest) cost ladder steps by this per tier

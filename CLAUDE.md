@@ -681,8 +681,11 @@ Strict three-layer separation:
    smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
    an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
    size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
-   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a small
-   `PoolBufferMeter` bar (label "Memory") alongside the Bandwidth/Capacity stats.
+   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
+   `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
+   tile (fill-gradient background, `BalanceText`/`StatusText`, a hidden `role="progressbar"` for
+   a11y) rather than a bespoke bar — with the buffer/capacity fraction (equal to the pool's own
+   Capacity — see above) above and Bandwidth below, both unlabelled.
    One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
    expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
    their three disk-array rows when opened. The single `components/DataLakePanel` remains after the
@@ -974,14 +977,14 @@ Storage pool card's own SI units, rather than binary intermediates (…, 64, 128
 …) reading oddly next to a clean SI end bound. `getNextSiDoubledValue` operates on Bytes (the
 switchover point is 64 *Bytes*) even though `intro.capacity` itself is stored in bits, and its
 decade detection loses exactness once a pool's magnitude exceeds `Number`'s ~2^53 safe-integer
-range (roughly pool 5+), degrading to plain doubling past that point — the same floating-point
+range (empirically around pool 8+), degrading to plain doubling past that point — the same floating-point
 tolerance every other astronomically-scaled figure here (`GOOGOL`, `PRESTIGE_THRESHOLD`, …) already
 accepts. `INTRO_CAPACITY_CAP_BITS` is retained as the pool-1 alias and the active highest pool's
 end bound is the authoritative moving ceiling that `Math.min` still clamps every step against —
 same clamp shape as before this change; see `docs/DESIGN_HISTORY.md` for why an earlier fix left
 the doubling mechanic itself untouched, and what made that insufficient. The Data Lake capacity
-ladder (below) is a separate, deliberately-unaffected doubling ladder — plain `2 ** level`, capped
-at 1,024 units — see "Data Lakes" below for why that scope was excluded. **Speed ×2** (was
+ladder (below) now follows the same SI-clean sequence too (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at
+1,000 units) — see "Data Lakes" below. **Speed ×2** (was
 Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
 effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
@@ -1068,11 +1071,12 @@ inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4
 QB.
 
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
-purchasable, doubling ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for
-the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
-`doubleDataLakeCapacity(tierIndex)` purchase, permanently hard-capped at
-`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
-`isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
+purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB
+lake, in that lake's own Byte-scale currency) and climbing by 1 level per
+`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` (plain doubling
+except one 64→125 SI-switchover step, mirroring pool Capacity's own `getNextSiDoubledValue` — see
+above), permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB"
+for the KB lake) via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
 the lake to be completely full (`isDataLakeCapacityDoublingAvailable` — deposited units at least the
 lake's own current capacity) and empties every deposit back to zero on purchase — the same
 "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the
@@ -1098,7 +1102,7 @@ being swept into the lake. A sub-slot's own deposit count naturally never exceed
 `DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever be built) — this was never
 a separate design cap, just a backstop that keeps the deposits counter from exceeding what's
 physically possible; `canDepositDiskToDataLake` enforces it alongside the real, intentional limit
-above, the lake's own capacity level, which is far smaller (1,024 max vs. an incidental 1,110-unit
+above, the lake's own capacity level, which is far smaller (1,000 max vs. an incidental 1,110-unit
 sum if every sub-slot were somehow filled to that backstop) and is what actually gates deposits in
 practice. `decomposeDataLakeDeposits` still caps each digit place at that same backstop value
 regardless of the current level — deposits stay fungible, not tracked per physical disk, so spending
@@ -1255,7 +1259,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1610 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1612 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

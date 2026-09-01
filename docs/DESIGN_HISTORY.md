@@ -3654,9 +3654,12 @@ the Memory/Pool Capacity ladder only, matching the original, still-standing scop
 
 **Precision at extreme scale.** `getNextSiDoubledValue`'s decade-mantissa detection relies on exact
 integer division/modulo, which loses exactness once a pool's magnitude exceeds `Number`'s ~2^53
-safe-integer range — roughly pool 5 and beyond, given each pool boundary sits 10 doublings past the
-last. Past that point the helper silently falls back to plain doubling rather than risking a wrong
-mantissa match. This wasn't treated as a blocking bug: the game already represents astronomically
+safe-integer range — empirically around pool 8 and beyond (confirmed by tracing the real function
+through the full pool 1–10 progression: decade-boundary detection stays exact through pool 7's
+1e24-Byte magnitude and only starts silently reverting to plain doubling partway into pool 8, at
+`bytes = 6.4e25`, where `6.4e25 % 1000 !== 0` due to float rounding despite being mathematically an
+exact multiple). Past that point the helper silently falls back to plain doubling rather than risking
+a wrong mantissa match. This wasn't treated as a blocking bug: the game already represents astronomically
 large figures (`GOOGOL` = 1e100, `PRESTIGE_THRESHOLD` = 8e100, and pool Capacity/Data Lake values at
 the higher pools already exceed safe-integer range under the *existing*, pre-this-fix formulas too)
 as plain JS `Number`s throughout, accepting the same float-precision ceiling everywhere else — adding
@@ -3681,3 +3684,80 @@ on a clean 125,000 Bytes where pure binary doubling would land on 131,072) plus 
 `pickIntroCapacityMilestone` integration test pinning the 64→125 Bytes step through the real action.
 `CLAUDE.md`/`AGENTS.md`'s Economy model sections were updated to describe `upgradePoolCapacity`'s
 step-shape change (previously documented as "plain ×2, unchanged").
+
+### Data Lake capacity ladder brought under the same SI-clean sequence; pool Memory UI restyled to match the Data Stream card
+
+The entry above deliberately excluded the Data Lake capacity ladder from the SI-switchover
+treatment, citing an earlier, explicit design decision (see "Pool Capacity end bounds corrected to
+SI powers of 1000") where the maintainer was asked which of the two candidate ladders — Memory/Pool
+Capacity or Data Lake capacity — should get it, and confirmed only the Memory/Pool ladder. That
+same PR closed #533 partly *because* it applied the treatment to the Data Lake ladder without that
+authorization.
+
+Shortly after #539 merged, the maintainer explicitly asked to include the Data Lake ladder in "the
+same logic" after all — a direct, in-conversation instruction, which is exactly the authorization
+that was missing from #533. This entry documents implementing that request correctly, plus a
+companion UI request from the same conversation.
+
+**Data Lake capacity: `DATA_LAKE_CAPACITY_BY_LEVEL` lookup table, not a derived helper.** Unlike
+`intro.capacity` (a raw bit value doubled repeatedly, with no explicit step counter — see
+`getNextSiDoubledValue` above), a Data Lake's own capacity level is already an explicit small
+integer (`capacityLevel`, 0–`DATA_LAKE_CAPACITY_MAX_LEVEL`/10) tracked directly in state. This makes
+a plain lookup table strictly better than reusing `getNextSiDoubledValue`'s derive-from-value
+approach: `DATA_LAKE_CAPACITY_BY_LEVEL = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]` (`layers.js`)
+needs no float-precision handling at all, at any level, since every entry is a small hardcoded
+integer rather than something computed from a potentially-imprecise accumulated value.
+`getDataLakeCapacity` (`engine.js`) changed from `2 ** getDataLakeCapacityLevel(state, tierIndex)` to
+`DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]` — a one-line change.
+`DATA_LAKE_CAPACITY_MAX_LEVEL` itself stays 10 (11 table entries, levels 0–10); only the VALUE at
+the max level changed, from a binary 1,024 units to a clean SI 1,000. This is, functionally, exactly
+PR #533's original `getDataLakeCapacity` change — it was correct in isolation the first time; only
+its scope was wrong, and now the scope is authorized.
+
+Downstream: `getDataLakeCapacityDoublingCost`/`isDataLakeCapacityMaxed`/`canDepositDiskToDataLake`
+all read `getDataLakeCapacity`'s return value already, so needed no changes of their own — only their
+own doc comments citing "1,024" were updated to "1,000." The Guide (`InfoPage`) previously hardcoded
+`2 ** DATA_LAKE_CAPACITY_MAX_LEVEL` to describe the max cap in prose; since that's no longer the
+correct formula, it now reads `DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]`
+instead — still a pure derivation from the same exported constant table the engine uses, keeping the
+Guide's "reads no live state, only pure constants/formulas" property (see "Architecture" in
+`CLAUDE.md`) intact rather than hardcoding the literal `1000`.
+
+**Test fallout.** The two `engine.test.js` tests pinning the old 1,024 max (`doubleDataLakeCapacity`
+hard-cap; the "1,024 hard-caps the total below 1,110" deposit test) were updated to 1,000, with the
+deposit test's own worked-example arithmetic corrected: at a 1,000 cap, filling the ×1 and ×10
+sub-slots first (10 + 100 = 110 units) leaves room for exactly 8 full ×100 deposits (800 units,
+total 910) before a 9th would push the total to 1,010 > 1,000 and get blocked — two ×100 disks stay
+undeposited, not one (the 1,024-cap version left room for 9). A new test walks the full level 0→10
+progression through the real `doubleDataLakeCapacity` action, asserting the sequence matches
+`[1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]` exactly — mirroring the equivalent step-by-step
+coverage `getNextSiDoubledValue`'s own test suite already has for the Memory ladder.
+
+**Pool Memory UI: reuse the Data Stream card's own block, not a bespoke bar.** Separately, a
+screenshot-driven request: the pool card's "Bandwidth / Capacity / Memory" three-column stat row
+(each a labelled `PoolStatLabel`/`PoolStatValue` pair, Memory alone carrying a thin
+`PoolBufferMeter` fill bar) read as visually inconsistent with the Data Stream card immediately
+above it on the same screen, which shows its own balance as one full-width fillable block
+(`FillableStatCard` — a gradient fill background sized to the current percentage, with a bold
+balance line and a muted status line, no visible label). The fix was to reuse that same block
+verbatim for the pool's own Memory/Capacity/Bandwidth display, rather than inventing a second,
+parallel meter convention: `PoolStatsRow`/`PoolStat`/`PoolStatLabel`/`PoolStatValue`/
+`PoolBufferMeter` were deleted from `ByteFoundryPage/index.jsx` entirely, replaced by one
+`FillableStatCard` (the exact same styled component the Data Stream card already used) per pool,
+containing a `BalanceText` line reading `<buffer bits> / <buffer capacity>` (the pool's own small
+local buffer over its own Capacity — which `getPoolBufferCapacity` already equals exactly, per
+"Per-pool Memory buffers" further up this file, so no new value needed fetching) above a
+`StatusText` line reading `<bandwidth>/sec` below — both unlabelled, matching the Data Stream
+card's own convention of conveying the figure's meaning through position and styling rather than a
+caption. The fill percentage (`poolBufferPercent`, unchanged) drives the block's background exactly
+as it drove the old `PoolBufferMeter`'s. `getStoragePoolCapacity` was dropped from this file
+entirely — it was fetched solely to render the old, separate "Capacity" stat, which the new fraction
+already covers via the equal `poolBufferCapacity` value.
+
+`App.test.jsx`'s pool-advance test, which previously asserted on the literal strings `'Bandwidth'`
+and `'Capacity'` as separate labelled elements, was updated to assert on the actual rendered
+text — the bandwidth figure and the buffer/capacity fraction — computed via `getPoolBufferBits`/
+`getPoolBufferCapacity` (newly imported into the test file) rather than the no-longer-rendered
+`getStoragePoolCapacity`. Verified visually via a real Playwright/Chromium screenshot against
+`yarn dev` (seeded to the exact 125,000-Byte/67,382-Byte scenario from the reported screenshot)
+before considering the change done, per this repo's own "test UI changes in a browser" convention.

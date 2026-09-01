@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, getStoragePoolBandwidth, getStoragePoolCapacity, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -2962,16 +2962,18 @@ describe('Byte Foundry Storage', () => {
     const pool2 = screen.getByRole('region', { name: 'pool 2' })
     expect(pool1).toHaveTextContent('Kilobytes')
     expect(pool2).toHaveTextContent('Megabytes')
-    // Label and value render as separate stat-block elements (see PoolStatLabel/PoolStatValue),
-    // not one concatenated sentence, so each is asserted on its own rather than as one joined string.
-    expect(pool1).toHaveTextContent('Bandwidth')
-    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 1))}/sec`)
-    expect(pool2).toHaveTextContent('Bandwidth')
-    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 2))}/sec`)
-    expect(pool1).toHaveTextContent('Capacity')
-    expect(pool1).toHaveTextContent(formatDiskSize(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 1)))
-    expect(pool2).toHaveTextContent('Capacity')
-    expect(pool2).toHaveTextContent(formatDiskSize(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 2)))
+    // Bandwidth and the memory/capacity fraction render unlabelled, reusing the same Data
+    // Stream-style fillable block (see FillableStatCard/BalanceText/StatusText in
+    // ByteFoundryPage/index.jsx) rather than a labelled Bandwidth/Capacity/Memory stat row.
+    const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/sec`)
+    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/sec`)
+    expect(pool1).toHaveTextContent(
+      `${formatDiskSize(getPoolBufferBits(savedState, 1))} / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`
+    )
+    expect(pool2).toHaveTextContent(
+      `${formatDiskSize(getPoolBufferBits(savedState, 2))} / ${formatDiskSize(getPoolBufferCapacity(savedState, 2))}`
+    )
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 mb disks$/i })).toBeInTheDocument()

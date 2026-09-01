@@ -89,10 +89,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   uncorrected.
 
 ### Changed
-- **Byte Foundry pool cards tightened up** — Bandwidth/Capacity/Memory now render as three equal
-  columns spanning the card's full width (was two stats bunched at the left with a large empty
-  gap beside them, plus Memory trailing below as its own separate row); the redundant "Arrays in
+- **Byte Foundry pool cards restyled to match the Data Stream card** — the Bandwidth/Capacity/Memory
+  three-column stat row (each a labelled value, Memory alone carrying its own thin fill bar) is
+  replaced by one full-width fillable block reusing the Data Stream card's own component/style: the
+  buffer/capacity fraction above, Bandwidth below, both unlabelled, with the fill percentage driving
+  the block's background gradient the way the old Memory-only bar did. The redundant "Arrays in
   progress"/"Arrays complete" status text is removed.
+- **Data Lake capacity ladder now lands on 1,000 units at max, not 1,024** — `getDataLakeCapacity`
+  grows via the same SI-clean sequence pool Capacity's own `getNextSiDoubledValue` uses (plain
+  doubling except a 64→125 deviation), matching pool Capacity's own end-boundary convention. Only
+  the max-level value changes (1,024 → 1,000); the number of purchasable levels (0–10) is unchanged.
 - **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
   "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
   Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,

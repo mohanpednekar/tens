@@ -13,6 +13,7 @@ import {
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
   DATA_LAKE_TIER_COUNT,
   DATA_LAKE_TIER_LABELS,
@@ -392,5 +393,11 @@ describe('constants', () => {
     expect(DATA_LAKE_TIER_COUNT).toBe(10)
     expect(DATA_LAKE_TIER_LABELS).toEqual(['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB'])
     expect(DATA_LAKE_CAPACITY_MAX_LEVEL).toBe(10)
+  })
+
+  it('DATA_LAKE_CAPACITY_BY_LEVEL doubles per level except a 64-to-125 SI-clean deviation at level 7, landing on 1,000 (not 1,024) at the max level', () => {
+    expect(DATA_LAKE_CAPACITY_BY_LEVEL).toEqual([1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000])
+    expect(DATA_LAKE_CAPACITY_BY_LEVEL).toHaveLength(DATA_LAKE_CAPACITY_MAX_LEVEL + 1)
+    expect(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]).toBe(1000)
   })
 })
