@@ -54,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
+- **"0.xyz `<unit>`" fractions in Byte/bit-denominated displays** (e.g. "0.125 B/sec" Bandwidth,
+  "0.5 B" Disk sizes) — `formatMemoryAmount` (backing `formatDiskSize`/`formatBitsInNearestUnit`/
+  `formatCacheSize`) now falls back to a raw bit count whenever the value would floor to a nonzero
+  fraction below 1 in its chosen unit, so every such figure always has at least one significant
+  digit before the decimal point (a true zero still renders as a clean "0 `<unit>`", unaffected).
 - **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
   tooltips matching their `aria-label`s and the global automation toggles.
 - **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`

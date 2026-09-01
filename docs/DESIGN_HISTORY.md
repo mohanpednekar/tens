@@ -3829,3 +3829,74 @@ explicit ARIA role. Added `role="group"` so the label actually attaches; the Dat
 Verified visually via Playwright/Chromium against `yarn dev` for both changes together — a fresh
 pool card reads "KB Pool" / "MB Pool" (centered) with the KB lake's own row appearing directly below
 its disk squares once expanded, matching the request.
+
+### "0.xyz <unit>" fractions eliminated from every Byte/bit-denominated display
+
+A follow-up rule from the same conversation: never render a number as "0.xyz" — a fraction below 1
+with a bare "0" in front of the decimal reads as noise rather than a magnitude, and there's almost
+always a smaller unit (down to the raw bit count, the finest unit this game has) that would show the
+same underlying value with at least one meaningful significant digit before the decimal instead.
+
+**Where this actually occurs.** Every Byte/bit-scale display in the game ultimately routes through
+`formatMemoryAmount(bits, unit)`, which divides `bits` by `unit.divisor` and floors to 3 decimal
+places. The two unit ladders it's fed (`getSiByteUnit` for Disks/Data Lake/Bandwidth — SI, step
+1000; `getMemoryUnit` for the Data Stream Buffer/pool Memory Capacity — binary, step 1024) both
+bottom out at whole Bytes ("B", divisor `BITS_PER_BYTE` = 8) — neither defines any unit smaller than
+a Byte. A self-sized call (each ladder picks its OWN unit off the value it's about to display) can
+therefore only ever produce a sub-1 fraction at that one bottom rung — e.g. `formatDiskSize(4)`
+(4 bits = half a Byte) previously rendered `"0.5 B"`, and the reported live-game symptom,
+`getStoragePoolBandwidth` returning a sub-1-Byte-per-second rate, rendered `"0.125 B/sec"` on the
+Storage pool card. A second, less obvious source: `formatMemoryBalance` (`ByteFoundryPage`'s own
+local helper backing the Data Stream tile) deliberately sizes ONE shared unit off `capacity` (the
+larger of a bits/capacity pair) so both numbers read in the same unit — but the smaller `bits` value,
+shown through that SAME (capacity-sized) unit, can land anywhere below 1 whenever it's a small
+fraction of capacity — not just at the ladder's bottom rung. A balance of 500 bits shown through a
+capacity-derived KiB unit (divisor 1024) floors to `0.488`, a clear "0.xyz" violation despite the
+unit itself being nowhere near the bottom of the ladder.
+
+**The fix: catch this at render time, in the one shared function both ladders funnel through** —
+not at unit-selection time, and not by adding a third, sub-Byte unit rung to either ladder (there
+isn't a sensible name for one; a Byte is already this game's smallest *named* unit). After computing
+the floored `scaled = bits / unit.divisor`, `formatMemoryAmount` now checks `scaled > 0 && scaled < 1`
+— a genuine nonzero fraction below one whole unit — and if so, falls back to the exact same raw
+`"N bit(s)"` string the function already renders when `unit` itself is `null` (the pre-`byteCreated`
+case; see the `getMemoryUnit` doc comment for that earlier, narrower instance of the same underlying
+principle — "a fractional Byte reads worse than the raw count for a range this small"). A `scaled`
+that floors to exactly `0` is deliberately left alone (renders `"0 <unit>"`, e.g. `"0 MiB"`) — there's
+no fraction to hide since nothing after the decimal point would ever show.
+
+**Why render-time, not unit-selection-time.** Fixing this inside `getSiByteUnit`/`getMemoryUnit`
+themselves (e.g. having them return `null` whenever the INPUT value is below `BITS_PER_BYTE`, mirroring
+`getMemoryUnit`'s existing `byteCreated` gate) would correctly handle every SELF-sized call, but not
+the `formatMemoryBalance` shared-unit case above — there the unit is sized off `capacity` (always well
+above the ladder's bottom rung once `byteCreated`), while the problem value is the DIFFERENT, smaller
+`bits` argument sharing that same unit. Only a check at the point where a specific value is actually
+being rendered through whatever unit it was given catches both shapes with one change, regardless of
+which value (or whose reasoning) picked that unit.
+
+**Why the `formatMemoryBalance` pairing rule was knowingly relaxed, not preserved.** The existing,
+documented convention for that helper is "both numbers always render in the same unit... so a balance
+never reads in a coarser unit than its own Buffer" — explicitly to avoid a *different* kind of
+confusing mismatch (e.g. "512 B / 1 KiB"). This fix can now produce exactly the kind of mismatch that
+rule was written to prevent — e.g. "500 bits / 1 KiB" — whenever the balance alone would otherwise
+show a bare fraction. This was a deliberate trade-off, not an oversight: the newer, explicit,
+unconditional "never 0.xyz" instruction is more specific and postdates the original same-unit
+convention, and a divergent-but-legible pair ("500 bits / 1 KiB") reads more clearly than a
+same-unit-but-fractional one ("0.488 KiB / 1 KiB") — especially since the divergence is rare and
+self-correcting: it only ever triggers while the balance is a genuinely tiny fraction of a much
+larger capacity (e.g. right after a Capacity ×2 purchase drains it to near-zero), and resolves back
+to a shared unit as soon as the balance climbs high enough to floor to a value at least 1 in that
+unit. `getMemoryUnit`'s own pre-`byteCreated` gate was deliberately left untouched rather than
+removed as now-redundant: removing it would let a fresh cycle's tap-phase balance/capacity pair
+diverge into e.g. "3 bits / 1 B" (via this same fallback) instead of the current, still-preferred
+"3 bits / 8 bits" — keeping both sides in raw bits together reads better than a divergent pair for
+that specific, very-small-magnitude window, so the gate's pre-existing behavior stands on its own
+merits independent of this more general fix.
+
+**Test fallout.** `engine.test.js`'s `formatDiskSize` test suite had a test literally titled "renders
+a fractional Byte below the 1-Byte (8-bit) threshold," pinning the exact `"0.5 B"` output this fix
+eliminates — retitled and updated to assert the new `"4 bits"`/`"1 bit"` fallback instead. Two new
+`formatMemoryAmount` tests were added: one confirming the fallback fires for a value sharing a
+capacity-sized unit (not just a self-sized bottom-rung one), and one confirming a true zero is
+unaffected. Verified visually against the exact reported scenario (a pool Bandwidth of `1 bit/sec`,
+previously `"0.125 B/sec"`) via Playwright/Chromium against `yarn dev`.

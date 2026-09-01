@@ -2666,10 +2666,19 @@ export const getMemoryUnit = (capacityBits, byteCreated) => {
 // full.
 const floorToDecimals = (value, decimals) => Math.floor(value * 10 ** decimals) / 10 ** decimals
 
-export const formatMemoryAmount = (bits, unit) =>
-  unit
-    ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
-    : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+export const formatMemoryAmount = (bits, unit) => {
+  if (unit) {
+    const scaled = floorToDecimals(bits / unit.divisor, 3)
+    // Never show a "0.xyz <unit>" fraction — no significant digit before the decimal. Falls back
+    // to the raw bit count instead, the one unit finer than anything either unit ladder offers
+    // (both bottom out at whole Bytes, B, with no smaller SI/binary unit defined below it) — see
+    // docs/DESIGN_HISTORY.md. A true zero (`scaled === 0`) is unaffected: "0 <unit>" already has no
+    // decimal to violate the rule.
+    if (scaled > 0 && scaled < 1) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+    return `${formatAmount(scaled)} ${unit.symbol}`
+  }
+  return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+}
 
 // Any Memory-denominated amount (capacity, balance, Invest cost, transfer-block cost, the
 // Sacrifice confirm line — NOT Disk build cost, which renders via formatDiskSize/SI instead, since

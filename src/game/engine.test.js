@@ -1680,6 +1680,24 @@ describe('formatMemoryAmount', () => {
     const unit = { symbol: 'KiB', divisor: 1024 }
     expect(formatMemoryAmount(2047, unit)).toBe('1.999 KiB')
   })
+
+  it('never renders a "0.xyz <unit>" fraction — falls back to raw bits instead, regardless of which unit was picked', () => {
+    const kib = { symbol: 'KiB', divisor: 1024 }
+    // 500 bits in a KiB-sized unit (e.g. a small balance shown alongside a much larger capacity —
+    // see formatMemoryBalance in ByteFoundryPage/index.jsx, which shares one capacity-sized unit
+    // across both numbers) would floor to a nonzero 0.488 — falls back to raw bits instead.
+    expect(formatMemoryAmount(500, kib)).toBe('500 bits')
+    // 4 bits in a KiB-sized unit floors to a still-nonzero 0.003 at 3 decimals — also falls back.
+    expect(formatMemoryAmount(4, kib)).toBe('4 bits')
+  })
+
+  it('a true zero is unaffected — "0 <unit>" has no decimal to violate the no-fraction rule', () => {
+    const mib = { symbol: 'MiB', divisor: 1024 * 1024 }
+    expect(formatMemoryAmount(0, mib)).toBe('0 MiB')
+    // 3 bits in a MiB-sized unit floors to exactly 0.000 at 3 decimals — also a clean "0 MiB", not
+    // a fallback to raw bits, since there's no nonzero fraction being hidden.
+    expect(formatMemoryAmount(3, mib)).toBe('0 MiB')
+  })
 })
 
 describe('formatBitsInNearestUnit', () => {
@@ -1996,8 +2014,9 @@ describe('formatDiskSize', () => {
     expect(formatDiskSize(FIRST_DISK_SIZE)).toBe('1 KB')
   })
 
-  it('renders a fractional Byte below the 1-Byte (8-bit) threshold', () => {
-    expect(formatDiskSize(4)).toBe('0.5 B')
+  it('falls back to raw bits below the 1-Byte (8-bit) threshold, rather than a "0.xyz B" fraction', () => {
+    expect(formatDiskSize(4)).toBe('4 bits')
+    expect(formatDiskSize(1)).toBe('1 bit')
   })
 
   it('scales into KB/MB/… reusing TIER_DEFINITIONS\' own symbols', () => {
