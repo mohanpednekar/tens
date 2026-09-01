@@ -442,14 +442,16 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // more of a denomination than a single array of that size could ever physically produce. On top of
 // that physical ceiling, a lake's own actual capacity is a smaller, purchasable ladder (see
 // getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB" for
-// the KB lake), doubling per purchase EXCEPT once — level 6→7 (64→125, not 128) — the same SI
-// switchover pool Capacity's own ladder uses (see getNextSiDoubledValue in engine.js), so this
-// ladder also lands on a clean SI 1,000 units at its DATA_LAKE_CAPACITY_MAX_LEVEL (level 10) hard
-// cap, not a binary 1,024. Values are read from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit,
-// already-integer level index — unlike pool Capacity's raw-bit-value doubling, this needs no
-// float-precision handling). An earlier version instead made the cap fixed at the physical ceiling
-// with no purchasable lever at all — see docs/DESIGN_HISTORY.md for why a smaller, doublable,
-// explicitly-capped ladder replaced that, and for the SI-switchover correction.
+// the KB lake), doubling per purchase EXCEPT once — level 6→7 (64→125, not 128) — an SI switchover
+// unique to this ladder (unlike pool Capacity, which reverted to plain binary doubling — see
+// docs/DESIGN_HISTORY.md — since its own value also drives the Data Stream tile's binary display;
+// a lake's capacity is never shown via any binary unit, so this switchover has no such conflict
+// here), so this ladder lands on a clean SI 1,000 units at its DATA_LAKE_CAPACITY_MAX_LEVEL
+// (level 10) hard cap, not a binary 1,024. Values are read from DATA_LAKE_CAPACITY_BY_LEVEL
+// directly (an explicit, already-integer level index, so this needs no float-precision handling).
+// An earlier version instead made the cap fixed at the physical ceiling with no purchasable lever
+// at all — see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder
+// replaced that, and for the SI-switchover correction.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']

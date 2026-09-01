@@ -4025,3 +4025,58 @@ cover `public/*.png`/`favicon.ico`), so this was verified purely visually: rende
 size directly, and specifically the 16×16 favicon frame upscaled with nearest-neighbor sampling
 (to inspect true-resolution legibility rather than a browser's own smoothed preview) before and
 after the 2×2 simplification.
+
+### Pool Capacity's SI-clean doubling mechanic reverted — it broke the Data Stream tile's own binary display
+
+A direct follow-up correction, reported via screenshot: after the "Pool Capacity doubling mechanic
+itself corrected to land on SI-clean intermediate steps" entry above shipped, the Data Stream
+tile's own balance/capacity line started showing figures like "6,176 bits / 1.953 KiB" — a value
+that no longer lands on a clean binary figure the way it always had. The instruction: "Data stream
+should not use switchover to decimal. It should continue doubling normally."
+
+**Root cause: one value, two unit systems, one mechanic can't serve both.** `intro.capacity` is a
+single number that backs TWO independent displays: the Storage pool card's own Capacity/Bandwidth
+stats, rendered in **SI** units (`formatDiskSize`), and the Data Stream tile's own balance/capacity
+line, rendered in **binary** units (`formatBitsInNearestUnit`/`getMemoryUnit`) — a distinction this
+file documents repeatedly and treats as a firm convention (see "Bandwidth cap corrected to
+sqrt(Capacity in Bytes); Storage pools switched to SI display" and "Pool Capacity end bounds
+corrected to SI powers of 1000" above). The `getNextSiDoubledValue` mechanic made `intro.capacity`'s
+own intermediate values land cleanly in SI terms (1, 2, 4, …, 64, 125, 250, 500, 1,000, 2,000, …
+Bytes) — which is exactly what a value shown in BINARY units does NOT want: 2,000 Bytes is
+"1.953 KiB," not a round binary figure, whereas the plain-binary-doubling predecessor (…, 512, 1024,
+2048, … Bytes) always landed on a clean "1 KiB"/"2 KiB"/etc. Fixing the SI (pool-card) side
+necessarily un-fixed the binary (Data-Stream-tile) side, since both read off the identical number —
+there was no version of the mechanic that could satisfy both unit systems' idea of "round" at once.
+
+**Resolution: revert to plain binary doubling for pool Capacity, keep the SI-clean mechanic for
+Data Lake capacity only.** `upgradePoolCapacity` goes back to `capacity * INTRO_CAPACITY_DOUBLING_STEP`
+(exactly its pre-`getNextSiDoubledValue` form) — `intro.capacity` doubles cleanly in binary terms
+again, restoring the Data Stream tile's own clean "N KiB"/"N MiB" progression. `getNextSiDoubledValue`
+itself is deleted from `engine.js` entirely (dead code once its only caller reverts) rather than
+kept unused. This deliberately reopens the ORIGINAL complaint the SI-clean mechanic was written to
+fix — the Storage pool card's own Capacity/Bandwidth stats can again show non-round intermediate SI
+figures (e.g. "131.072 KB") while progressing toward a pool's own clean SI end boundary — but that
+trade was judged the right one on reflection: the Data Stream tile's own binary cleanliness is the
+one that actually matters here, not the pool card's SI cleanliness at every intermediate step (only
+each pool's own END boundary, which the pre-existing `POOL_CAPACITY_SI_STEP` boundary-constant fix
+already guarantees lands SI-round regardless of the doubling mechanic — see the earlier entry — was
+ever the load-bearing guarantee).
+
+**Why the Data Lake capacity ladder keeps its own SI-clean switchover, unaffected.** A Data Lake's
+own capacity (`DATA_LAKE_CAPACITY_BY_LEVEL`) is NEVER rendered through any binary unit anywhere in
+the app — `DataLakePanel` is SI-only, full stop — so there is no second display for its SI-clean
+intermediate values to conflict with. The scope split that closed out the earlier "Data Lake
+capacity ladder brought under the same SI-clean sequence" entry (bringing the Data Lake ladder INTO
+the SI-clean treatment, on top of an initial design decision that had excluded it) still stands;
+only pool Capacity's OWN mechanic — the one thing this entry reverts — turned out to have a
+same-value/different-unit-system conflict the Data Lake ladder was never exposed to.
+
+**Test fallout.** The `getNextSiDoubledValue` describe block and the `pickIntroCapacityMilestone`
+64→125 deviation test (both added by the entry above) are removed entirely; the surviving
+`pickIntroCapacityMilestone` tests (doubling from a fresh state, no-op at the pool end bound) needed
+no changes since they already exercised values in ranges the SI-clean deviation never touched,
+except the specific 64-Bytes test, which now asserts a plain doubling to 128 Bytes instead of the
+now-removed 125-Byte deviation. `CLAUDE.md`/`AGENTS.md`/`docs/ECONOMY_REFERENCE.md`'s prose was
+updated throughout to describe `upgradePoolCapacity` as plain binary doubling again, while keeping
+the Data Lake capacity ladder's own SI-clean description (and its now-standalone, no-longer-cross-
+referencing-`getNextSiDoubledValue` phrasing) intact.
