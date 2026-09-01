@@ -232,14 +232,19 @@ completing one tier01 level per call) sets `mainGameUnlocked: true`, and `App.js
 player was last on (typically `'game'`) the instant that flips — no button or handler needed here
 for that transition itself.
 
-Numbers are formatted via `formatMemoryBalance` (Memory — local helper in this file, calling into
-`engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports, shared with `StoragePage`): raw
+Numbers are formatted via `formatMemoryBalance` (`ByteFoundryPage`-local helper, calling into
+`engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports): raw
 bits below 1 Byte, then B/KiB/MiB/…/QiB by **1024** each step once above it (`getMemoryUnit`,
 extending `TIER_DEFINITIONS`' own tier symbols with an "i" — `1 KiB = 1024 Bytes = 1.024 KB`),
 floored (not rounded) at up to 3 decimal places once converted into a binary unit — same
 never-overstate rationale as `formatCurrency` in `engine.js`, so a balance never reads as a complete
 unit ("1 KiB") one tick before it actually is — a display-only convention, internal state always
-stores raw bits. Every standalone Memory-denominated cost (Sacrifice, Invest, the transfer block's
+stores raw bits. Capacity always renders in its own unit; the balance shares it unless that would
+floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into its
+own finer unit instead (e.g. "30.031 KiB / 1 MiB") — only a genuinely sub-Byte balance still falls
+back to a raw bit count, since neither unit ladder defines anything smaller than a whole Byte. See
+`docs/ECONOMY_REFERENCE.md` and `docs/DESIGN_HISTORY.md` for the full three-way breakdown. Every
+standalone Memory-denominated cost (Sacrifice, Invest, the transfer block's
 own dynamic cost) reuses this exact binary scale via `engine.js`'s own
 `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))` — calling
 `getMemoryUnit` with the cost itself (rather than a capacity paired with a balance) picks whichever

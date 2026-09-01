@@ -4346,7 +4346,7 @@ magnitude the review's finding was computed at — so a regression back toward t
 would fail this test rather than silently reappearing. `yarn test`: 1622/1622 green (+1 over the
 prior entry's 1621).
 
-### Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit
+### Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit; Pool Bandwidth moved beside its title
 
 A follow-up to "'0.xyz \<unit\>' fractions eliminated" above, prompted directly by a player looking
 at the rendered result: `formatMemoryBalance` (the `ByteFoundryPage`-local helper backing the Data
@@ -4363,25 +4363,48 @@ confusing on exactly that ground.
 of falling straight to raw bits the instant the shared (capacity-sized) unit would floor the
 balance below 1, `formatMemoryBalance` first tries a unit sized off the BALANCE's own magnitude
 (the same `getMemoryUnit(bits, byteCreated)` self-sizing `formatBitsInNearestUnit` already uses
-elsewhere) — always a strictly finer unit than capacity's own, since the balance is smaller. That
-turns `"246,016 bits / 1 MiB"` into `"30.031 KiB / 1 MiB"`: both sides read as real named
-magnitudes, and the balance never floors to a same-unit fraction since it's now sized specifically
-so it won't. Only when the self-sized unit ALSO floors below 1 — meaning the balance is genuinely
-sub-Byte, the one case with no named unit smaller than a Byte to fall back to — does it drop to the
-raw `"N bit(s)"` string, unchanged from before (e.g. `"4 bits / 1 MiB"`). This is a strict narrowing
-of when the fallback fires, not a reversal of the earlier fix: the balance still never renders a
-same-unit "0.xyz" fraction, it just reaches for a smaller *named* unit before giving up on one
-entirely.
+elsewhere) — a finer-or-equal unit relative to capacity's own, since the balance is smaller or
+equal. In the overwhelming majority of cases this really is strictly finer (e.g. `"246,016 bits /
+1 MiB"` becomes `"30.031 KiB / 1 MiB"`: both sides read as real named magnitudes, and the balance
+never floors to a same-unit fraction since it's now sized specifically so it won't) — but at the
+very floor of the ladder the two CAN coincide: right after `combineIntroByte`, `intro.capacity` is
+still `INTRO_STARTING_CAPACITY` (8 bits/1 Byte), so `getMemoryUnit` for both capacity and a small
+balance bottoms out at the same `{symbol: 'B', divisor: 8}` — no functional bug (the existing
+`scaled < 1` check inside `formatMemoryAmount` still catches this and falls back to raw bits
+exactly as before), just a reminder that "strictly finer" isn't literally guaranteed by the unit
+ladder's own floor. Only when the self-sized unit ALSO floors below 1 — meaning the balance is
+genuinely sub-Byte, the one case with no named unit smaller than a Byte to fall back to — does it
+drop to the raw `"N bit(s)"` string, unchanged from before (e.g. `"4 bits / 1 MiB"`). This is a
+strict narrowing of when the fallback fires, not a reversal of the earlier fix: the balance still
+never renders a same-unit "0.xyz" fraction, it just reaches for a smaller *named* unit before
+giving up on one entirely.
 
-While in the area, the Data Stream tile's production-rate line was also moved from its own row onto
-the same line as the "Data Stream" section label (a new `TitleRow` flex wrapper), compacting the
-card's vertical footprint — a purely cosmetic change with no formula behind it, bundled into the
-same PR since it was reported alongside the unit issue against the same card.
+**Layout, corrected mid-session.** The player's report also asked to move "the bandwidth" onto the
+same line as its card's title, alongside a screenshot of the Data Stream tile. The first
+implementation read this as the Data Stream tile's own production-rate line and moved it beside the
+"Data Stream" label (a new `TitleRow` flex wrapper) — plausible from the screenshot alone, since
+that's exactly what the screenshot showed, but wrong: the player clarified they meant each Storage
+**Pool card's** own Bandwidth line (`PoolCard`/`PoolHeaderRow`/`PoolTitle` — the "`<symbol>` Pool"
+cards below the Data Stream tile), not the Data Stream tile's production rate. The Data Stream
+tile's layout was reverted to its original three-line structure (label, balance, rate) — only the
+unit-formatting fix above stuck there — and instead each Pool card's Bandwidth (`StatusText`,
+previously the second line inside its `FillableStatCard` buffer block) now renders beside its
+"`<symbol>` Pool" title in the existing `PoolHeaderRow` flex container, e.g. "KB Pool +20 B/sec" on
+one line, with the `FillableStatCard` below it showing only the buffer/capacity fraction. Worth
+noting for future report-driven UI changes: a screenshot pins the FORMATTING issue precisely (it's
+the rendered pixels), but a layout instruction phrased about "the bandwidth"/"the title" is
+ambiguous across multiple similarly-styled cards on the same page — confirm which card before
+implementing, or be ready to redo it once corrected, as happened here.
 
-**Verification.** Two new `App.test.jsx` cases pin the fix directly: a balance of 246,016 bits
-against a 1 MiB capacity now renders `"30.031 KiB / 1 MiB"` (previously `"246,016 bits / 1 MiB"`),
-and a genuinely sub-Byte balance of 4 bits against the same capacity still renders `"4 bits / 1 MiB"`
-— confirming the bottom-rung fallback from the earlier entry survives unchanged. A third case pins
-the production-rate text sharing a DOM parent with the section label, guarding the layout change.
-Verified visually against `yarn dev` via a real Playwright/Chromium screenshot at the reported
-scenario's own values. `yarn test`: 1625/1625 green (+3 over the prior entry's 1622).
+**Verification.** Two new `App.test.jsx` cases pin the unit-formatting fix directly: a balance of
+246,016 bits against a 1 MiB capacity now renders `"30.031 KiB / 1 MiB"` (previously `"246,016
+bits / 1 MiB"`), and a genuinely sub-Byte balance of 4 bits against the same capacity still renders
+`"4 bits / 1 MiB"` — confirming the bottom-rung fallback from the earlier entry survives unchanged.
+A third case pins the Pool card's Bandwidth text sharing a DOM parent with its `<h3>` title,
+guarding the corrected layout change. Verified visually against `yarn dev` via real
+Playwright/Chromium screenshots — both for the initial (wrong-card) attempt and the corrected one,
+at the reported scenario's own values. `yarn test`: 1625/1625 green (+3 over the prior entry's
+1622). An adversarial review round against the first (Data-Stream-targeted) commit also caught
+`docs/ECONOMY_REFERENCE.md` and `docs/MAINPAGE_REFERENCE.md` describing the pre-fix two-branch
+`formatMemoryBalance` fallback and stale DOM-order prose; both were updated in the same PR to match
+the corrected three-branch behavior and the final Pool-card layout.

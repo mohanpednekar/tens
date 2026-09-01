@@ -689,11 +689,14 @@ Strict three-layer separation:
    size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
    see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
    `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
-   tile (fill-gradient background, `BalanceText`/`StatusText`, a hidden `role="progressbar"` for
-   a11y) rather than a bespoke bar — with the buffer/capacity fraction (equal to the pool's own
-   Capacity — see above) above and Bandwidth below, both unlabelled.
+   tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
+   a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
+   own Capacity — see above), unlabelled.
    Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
-   name — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
+   name — with the pool's own Bandwidth rendered beside it on the same `PoolHeaderRow` line (a
+   `StatusText`, unlabelled) rather than inside the `FillableStatCard` block below, so a pool's
+   throughput reads at a glance without expanding to the buffer detail — centered as a pair, since
+   the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
    unlocked pool in ascending order; only the largest unlocked pool is expanded initially, while

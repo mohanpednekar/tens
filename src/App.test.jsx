@@ -2886,13 +2886,14 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
   expect(balanceBar.closest('section')).toHaveTextContent('4 bits / 1 MiB')
 })
 
-test('Data Stream title row pairs the production rate with the section label on one line, not a separate row', () => {
-  seedIntroState({ byteCreated: true, capacity: 1000 }) // below INTRO_DISK_UNLOCK_CAPACITY — no pool cards to add a second "/sec" match
+test('Pool header row pairs the pool\'s own Bandwidth with its title on one line, not inside the Memory buffer block below', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
-  const label = screen.getByText('Data Stream')
-  const rateText = screen.getByText(/\/sec$/)
-  expect(rateText.parentElement).toBe(label.parentElement)
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  const heading = within(pool1).getByRole('heading', { level: 3 })
+  const bandwidthText = within(pool1).getByText(/\/sec$/)
+  expect(bandwidthText.parentElement).toBe(heading.parentElement)
 })
 
 test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {

@@ -940,12 +940,17 @@ largest unit that comfortably fits `capacity` — raw bits before the Byte gener
 meaningfully denominate in yet — a fractional Byte reads worse than the raw count for a range this
 small), then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own
 `KB`..`QB` symbols with an "i" (pool Memory Capacity end bounds are evenly divisible by
-`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Both numbers render in the
-*same* unit (picked off `capacity`, the larger of the two) so a balance never reads in a coarser
-unit than its own Buffer — EXCEPT when the balance alone would floor to a nonzero fraction below 1
-in that unit (e.g. "0.488 KiB"), which `formatMemoryAmount` instead renders as raw bits for that one
-number, diverging from Buffer's own unit rather than showing a bare fraction — see
-`docs/DESIGN_HISTORY.md`. Data Stream balance/Buffer (and the pool Memory Capacity
+`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Capacity always renders in its
+own unit (picked off `capacity` itself). The balance shares that SAME unit as long as doing so
+wouldn't floor it to a nonzero fraction below 1 (e.g. "0.488 KiB") — a balance never reads in a
+coarser unit than its own Buffer. When it WOULD floor below 1 in the shared unit, the balance instead
+self-sizes into its own finer unit (`getMemoryUnit` applied to the balance itself, the same
+self-sizing `formatBitsInNearestUnit` already uses below) — e.g. "30.031 KiB / 1 MiB" rather than a
+bare "0.488 KiB / 1 MiB" fraction. Only when even that self-sized unit still floors below 1 — a
+genuinely sub-Byte balance, since neither unit ladder defines anything smaller than a whole Byte —
+does it fall back to a raw `"N bit(s)"` count instead (`formatMemoryBalance` in
+`ByteFoundryPage/index.jsx`; see `docs/DESIGN_HISTORY.md` for both the original "0.xyz elimination"
+fix and this later narrowing of it). Data Stream balance/Buffer (and the pool Memory Capacity
 start–end label once `byteCreated`) render in **binary** units — `B`/`KiB`/`MiB`/…/`QiB`, step 1024
 (`getMemoryUnit`/`MEMORY_BINARY_UNIT_STEP`) — so `1 KiB = 1024 Bytes = 1.024 KB`, distinct from
 Disks/Data Lake/caches, which stay on the original SI (step 1000) scale (see below). The unit
