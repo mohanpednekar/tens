@@ -4272,3 +4272,76 @@ concurrent agent's own tool calls a wide window to interleave. The edits were re
 starting with this round, each file's edit was followed immediately by a fast, narrowly-scoped test
 run (or none at all when confidence was already high) and an immediate commit + push, rather than
 batching a full `yarn test` run before committing.
+
+### Precision loss at large magnitudes in the SI-clean transform — fixed with a closed-form computation
+
+A third round of adversarial review (against the Bandwidth formula fix above) found a genuine
+correctness bug in `getSiCleanEquivalentBits`'s implementation, independent of the formula
+questions the two earlier rounds settled. The reviewer computed it directly rather than merely
+inspecting the code: walking `getNextSiDoubledValue` iteratively past roughly step 86 (a magnitude
+around 6.4e25, well beyond `Number.MAX_SAFE_INTEGER` ≈ 9.007e15) silently picks the wrong decade
+multiplier — `getNextSiDoubledValue`'s own once-per-decade deviation detection
+(`mantissa % 1000 === 0`, checked after repeatedly dividing by 1000) relies on floating-point
+values being exactly divisible by 1000 at that magnitude, which IEEE-754 doubles can no longer
+represent reliably once the number's own precision (~15–17 significant decimal digits) is spent on
+digits above the ones-place. Concretely: at 90 doublings (pool 8's own Capacity boundary, reachable
+within a single Era — `intro.capacity` is no longer clamped to a pool ceiling, per the first entry
+in this chain, so it can and does keep growing toward pool 10's own N≈110 boundary), the buggy
+iterative walk landed on 8.192e27 bits instead of the correct 8e27 — a full extra undetected binary
+decade (ratio 1.024), directly falsifying the "no drift between the two sequences at a pool
+boundary" claim this whole mechanic's docs asserted in three places (`CLAUDE.md`,
+`docs/ECONOMY_REFERENCE.md`, and the previous entry in this file).
+
+Notably, this specific bug PRE-DATES this round's `getSiCleanEquivalentBits` refactor — `getNextSiDoubledValue`'s
+own body is unchanged since it was first written for the very first (`getNextSiDoubledValue`,
+PR #539) attempt at this feature, and both the old search-based helpers (`getSiCleanCapacityBits`/
+`getSiCleanValueAtMostBytes`, walking the same function) and this round's rounding-based
+`getSiCleanEquivalentBits` inherited it identically by iterating the same buggy primitive. It went
+undetected through every earlier round because none of the worked examples used to verify each
+attempt (2000 Bytes, 16,000 Bytes, 256→250, etc.) came anywhere near the ~1e17+ magnitude where the
+bug first manifests — it took an adversarial reviewer independently computing the function at scale
+to surface it, not inspection or the existing test suite (whose largest capacity value before this
+fix was `8 * 2 ** 21` ≈ 1.6e7, nowhere close).
+
+**Resolution: replace the iterative walk with an exact closed-form computation.** The switchover
+sequence has a clean mathematical structure that makes iteration unnecessary in the first place:
+every block of 10 doublings compounds to EXACTLY ×1000 (nine plain doublings and one ×(125/64)
+deviation: `2^9 × 125/64 = 512 × 1.953125 = 1000`), and the deviation always lands at the same
+local position (7) within every decade, because the decade-relative mantissa always restarts at 1
+after each `/1000` strip. This means the sequence factors exactly as
+`SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`, where
+`SI_CLEAN_LOCAL_SEQUENCE = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500]` — a single array lookup and one
+`Math.pow` call, computed directly from N rather than accumulated step by step. This has no
+detection logic to go wrong at any magnitude: there's nothing to misclassify, since the decade and
+local-position are derived directly from `N`'s own integer arithmetic (`% 10` / `Math.floor(N/10)`,
+both exact for any N representable at all), not from inspecting a large intermediate VALUE's own
+digits. The remaining imprecision at extreme magnitudes (`1000 ** floor(N/10)` itself loses exact
+integer representation past the same ~15–17 significant-digit limit) is the same ordinary
+floating-point fuzziness every other huge number in this codebase already carries (`GOOGOL = 1e100`
+and its arithmetic, for instance) — an accepted, pre-existing category, not a new LOGIC bug that
+picks an entirely wrong decade multiplier.
+
+As a side effect, this also eliminated a second, lower-severity finding from the same review round:
+the iterative `for` loop would hang forever on a `steps` value of `Infinity` (reachable in
+principle if `rawBits` were ever `Infinity` — the reviewer traced the two live Dev Mode injection
+paths and found both already self-heal before reaching this function, so this was "should-fix
+defensive insurance" rather than a proven live bug). The closed-form version has no loop to hang in
+at all; an explicit `Number.isFinite` guard at the top now returns `0` for non-finite input rather
+than relying on the loop's absence to save it.
+
+`getNextSiDoubledValue` itself is left unchanged and still exported/tested — it remains a correct,
+simple, directly-verifiable "next term" reference definition of the sequence for documentation and
+small-scale direct use (nothing else in the runtime path calls it iteratively any more), and
+rewriting its own detection logic to be large-N-safe would have meant re-deriving and re-verifying
+a well-established, already-reviewed function for no remaining caller that needs that robustness.
+
+**Verification.** Independently re-derived and ran the closed form against every previously
+hand-verified case (256→250 at N=8, 16,000 Bytes at N=14, the pool-1 ceiling at N=20) plus the
+reviewer's own three flagged large-N cases (N=90/100/110, matching pool 8/9/10's own SI-round
+ceilings exactly: 1e27/1e30/1e33 Bytes) and the edge cases (`NaN`, `Infinity`, `0`, a value below
+1 Byte) — all correct, none hang. A new regression test constructs a save with pools 1–8 fully
+unlocked (all 21 of their disk sizes fully built) and pins `getStoragePoolCapacity(state, 8)` at
+exactly pool 8's own SI-clean ceiling for a raw `intro.capacity` of `8 * 2 ** 90` — the same
+magnitude the review's finding was computed at — so a regression back toward the iterative approach
+would fail this test rather than silently reappearing. `yarn test`: 1622/1622 green (+1 over the
+prior entry's 1621).

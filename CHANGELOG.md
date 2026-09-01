@@ -93,9 +93,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
 - **Storage pool Capacity/Bandwidth showing non-round SI figures** (e.g. "16.384 KB" / "128 B/sec"
   instead of a clean "16 KB" / "250 B/sec") — each pool now derives its own SI-clean Capacity from
-  `intro.capacity`'s plain binary doubling count via a dedicated switchover sequence
-  (`getNextSiDoubledValue`, walked via a rounded-log2 lookup — `getSiCleanEquivalentBits`, robust to
-  floating-point drift — see `getStoragePoolCapacity`). Bandwidth simply follows that same raw
+  `intro.capacity`'s plain binary doubling count via a rounded-log2 lookup into the SI-clean
+  switchover sequence, computed in closed form (`getSiCleanEquivalentBits`) rather than iterated —
+  robust to floating-point drift both from chained purchases/boosts (the rounded log2) and at very
+  large doubling counts past `Number.MAX_SAFE_INTEGER` (the closed form; an iterative approach
+  would silently pick the wrong decade multiplier once reachable, around pool 8's own boundary
+  within a single Era — see `getStoragePoolCapacity`). Bandwidth simply follows that same raw
   production rate through the identical transform, with `sqrt(Capacity)` acting only as a bound on
   the raw rate before the transform (a guideline for bandwidth's bounds, not the formula — see
   `getStoragePoolBandwidth`). This is fully decoupled from `intro.capacity` itself, which keeps
