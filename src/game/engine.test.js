@@ -777,7 +777,9 @@ describe('storage pools', () => {
       byteCreated: true,
       capacity: 8 * 2 ** 90, // exactly pool 8's own ceiling in raw binary doubling terms
       disksBuiltTotal: Object.fromEntries(
-        // pools 1-8 each need their own 3 disk sizes fully built to be considered unlocked
+        // isStoragePoolUnlocked(state, poolIndex) checks the PRECEDING pool's own 3 disk sizes
+        // (completing pool N's arrays unlocks pool N+1) — sizes 1-21 covers pools 1-7's own three
+        // sizes each, satisfying pools 2 through 8's sequential unlock checks in turn
         [...Array(21)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
       ),
     })
