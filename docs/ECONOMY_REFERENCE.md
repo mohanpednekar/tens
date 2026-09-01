@@ -176,12 +176,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      (`B`/`KiB`/`MiB`/…, step 1024 via `MEMORY_BINARY_UNIT_STEP` —
      `getMemoryUnit`/`formatBitsInNearestUnit`), and it always lands on a clean binary figure.
    - Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) from that same doubling
-     count N, but by walking `getNextSiDoubledValue` N times from `INTRO_STARTING_CAPACITY` instead
-     (`getSiCleanCapacityBits`, a private helper) — the sequence 1, 2, 4, 8, …, 64, 125, 250, 500,
-     1000, … Bytes: doubles normally except once per decade of ten doublings, where a value's
-     mantissa (after stripping factors of 1000) lands on exactly 64 — there it goes to 125 instead
-     of 128, landing on a round SI figure a step earlier than a raw ×2 would. The result is clamped
-     to that pool's own start/end window (`getStoragePoolMemoryBounds`) — pool 1:
+     count N via a single shared helper, `getSiCleanEquivalentBits(rawBits)` — it finds
+     `N = round(log2(rawBits / BITS_PER_BYTE))` (a ROUNDED log2, not a discrete doubling-comparison
+     search, so floating-point drift from chained purchases/Compute Boosts/prestige bonuses can't
+     misclassify a value that's mathematically meant to sit exactly on a doubling boundary as one
+     step off) then walks `getNextSiDoubledValue` N times from 1 Byte — the sequence 1, 2, 4, 8, …,
+     64, 125, 250, 500, 1000, … Bytes: doubles normally except once per decade of ten doublings,
+     where a value's mantissa (after stripping factors of 1000) lands on exactly 64 — there it goes
+     to 125 instead of 128, landing on a round SI figure a step earlier than a raw ×2 would. The
+     result is clamped to that pool's own start/end window (`getStoragePoolMemoryBounds`) — pool 1:
      `INTRO_STARTING_CAPACITY` … `INTRO_CAPACITY_CAP_BITS`; each pool's end bound is
      `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`, an SI-round value (pool 1 → 1 MB,
      pool 2 → 1 GB, pool 3 → 1 TB, …). Every pool boundary sits at a whole multiple of 10 doublings
@@ -192,12 +195,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      `ByteFoundryPage`) render, in **SI units** (`formatDiskSize`), and it always lands on a clean SI
      figure (e.g. 14 doublings from the 1-Byte start renders "16 KiB" on the Data Stream card and a
      clean "16 KB" on the pool card, not "16.384 KB").
-   - Each pool's Bandwidth (`getStoragePoolBandwidth`) is hard-capped at
-     `sqrt(that pool's own Capacity in Bytes)` — but the switchover sequence's own square roots don't
-     land cleanly (e.g. `sqrt(16,000 Bytes) ≈ 126.5`), so the cap is additionally snapped DOWN to the
-     nearest SI-clean switchover term at or below it (`getSiCleanValueAtMostBytes`, a private helper
-     that walks the same sequence until it exceeds the target and returns the previous term) — a
-     16 KB-capacity pool caps Bandwidth at a clean 125 B/s, not a raw ~126.5 B/s.
+   - Each pool's Bandwidth (`getStoragePoolBandwidth`) simply follows the SAME raw production rate
+     the Data Stream tile's own rate figure uses (`getIntroProductionRate`), run through the
+     identical `getSiCleanEquivalentBits` transform Capacity uses above — it matches the raw rate up
+     to 64 B/s, then diverges the same way (125 instead of 128, repeating every decade — e.g. a raw
+     256 B/s rate reads as a clean 250 B/s). `sqrt(that pool's own Capacity in Bytes)` is only a
+     GUIDELINE for the bandwidth's lower/upper bounds, not the formula itself — a small early pool's
+     Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Booster transfer
+     pacing) could otherwise run far ahead of what its own tiny Memory window could plausibly move
+     through — so `getStoragePoolBandwidth` computes `min(rawRate, sqrt(Capacity))` in raw terms
+     FIRST, then applies the SI transform once to that bounded value; the sqrt bound still acts as
+     the real throughput ceiling once a pool's own (now fixed, maxed) Capacity can't keep up with an
+     ever-growing rate, but the number shown is always the SI-clean equivalent, never a raw `sqrt`
+     remainder.
    - `isMemoryCapacityAtCap` — the predicate `isMemoryCapacityUpgradeAvailable`/
      `upgradePoolCapacity` actually gate on — compares the highest unlocked pool's OWN derived
      Capacity (`getStoragePoolCapacity`) against that pool's `endBits`, not raw `intro.capacity`,
@@ -206,7 +216,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `capacityUpgradeQueued` / `tickQueuedCapacityUpgrade` preserve the queued-upgrade behavior and
    the historical Compute-token wipe; `normalizePoolMemoryCapacity` (load normalization) no longer
    clamps `intro.capacity` to any pool boundary — only sanitizes a missing/negative value to a floor
-   of 0 — for the same reason `upgradePoolCapacity` doesn't.
+   of 0 — for the same reason `upgradePoolCapacity` doesn't. One deliberate exception:
+   `getCoreEarnTimeSeconds` (Compute merge/boost pacing — "Compute Cores/Nodes" below) keeps reading
+   the RAW `intro.capacity`, since it describes the real Buffer's own refill time rather than a
+   pool-card display figure — an acknowledged, minor pacing consequence (~2.4% slower per full
+   decade of doublings past a pool boundary, compounding within an Era) of `intro.capacity` no
+   longer clamping to a pool ceiling; see `docs/DESIGN_HISTORY.md`.
 5. **Speed ×2** (was Bandwidth / Invest for Double Production — `pickIntroProductionMilestone`) runs
    on its own **independent cost ladder**, entirely decoupled from Capacity — a separate, permanent
    progression tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is
@@ -2285,8 +2300,9 @@ purchases were manual or automatic.
 | `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, unlockedCount) >= getStoragePoolMemoryBounds(unlockedCount).endBits` (`unlockedCount = getUnlockedStoragePoolCount(state)`) — compares the pool's own SI-clean DERIVED Capacity, not raw `intro.capacity`, since the raw value is no longer clamped to any pool ceiling |
 | `normalizePoolMemoryCapacity` | `state → state` | Clears legacy queued Capacity state and sanitizes a missing/negative `intro.capacity` to a floor of 0. No longer clamps `intro.capacity` to any pool boundary — only `getStoragePoolCapacity`'s own derived value does that |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Per-pool SI Capacity windows (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
-| `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own SI-clean Capacity — walks `getNextSiDoubledValue` in lockstep with `intro.capacity`'s plain-binary doubling count (private `getSiCleanCapacityBits` helper), then clamps to that pool's `getStoragePoolMemoryBounds` window. `0` for a locked/invalid pool |
-| `getStoragePoolBandwidth` | `(state, poolIndex) → bits/sec` | A pool's own throughput: the raw production rate, capped at `sqrt(getStoragePoolCapacity(...) in Bytes)` snapped DOWN to the nearest `getNextSiDoubledValue` term at or below it (private `getSiCleanValueAtMostBytes` helper). `0` for a locked/invalid pool |
+| `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own SI-clean Capacity — `getSiCleanEquivalentBits(intro.capacity)` (private helper), then clamps to that pool's `getStoragePoolMemoryBounds` window. `0` for a locked/invalid pool |
+| `getStoragePoolBandwidth` | `(state, poolIndex) → bits/sec` | A pool's own throughput — `getSiCleanEquivalentBits(min(rawProductionRate, sqrt(getStoragePoolCapacity(...) in Bytes)) in bits)`: the raw rate follows the SAME SI-clean transform Capacity uses, with `sqrt(Capacity)` only bounding the RAW value before that transform is applied (a guideline for bounds, not the formula). `0` for a locked/invalid pool |
+| `getSiCleanEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))`, then walks `getNextSiDoubledValue` N times from 1 Byte. Shared by `getStoragePoolCapacity`/`getStoragePoolBandwidth`; a rounded log2 (not a discrete search) avoids floating-point drift misclassifying a value right at a doubling boundary. Values below 1 Byte pass through unchanged |
 | `getNextSiDoubledValue` | `bits → bits` | The next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes — doubles normally except once per decade of ten doublings, where a value's mantissa (after stripping factors of 1000) lands on exactly 64, going to 125 instead of 128. Feeds `getStoragePoolCapacity`/`getStoragePoolBandwidth` above and the Data Lake capacity ladder below |
 | `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and doubles `intro.capacity` (plain `×2`, unclamped) via `upgradePoolCapacity` |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full and no higher-priority action blocks it |
