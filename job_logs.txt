@@ -1,0 +1,495 @@
+﻿2026-09-01T19:27:08.3449420Z Current runner version: '2.337.0'
+2026-09-01T19:27:08.3475110Z ##[group]Runner Image Provisioner
+2026-09-01T19:27:08.3476080Z Hosted Compute Agent
+2026-09-01T19:27:08.3476857Z Version: 20260819.586
+2026-09-01T19:27:08.3477575Z Commit: 3cc4a88dfa507ef76119ad1bb3eccc6378bb2b76
+2026-09-01T19:27:08.3478838Z Build Date: 2026-08-18T23:20:18Z
+2026-09-01T19:27:08.3479689Z Worker ID: {a87b4a08-4557-4b95-9344-4d7f99e58851}
+2026-09-01T19:27:08.3480564Z Azure Region: westus2
+2026-09-01T19:27:08.3481277Z ##[endgroup]
+2026-09-01T19:27:08.3483252Z ##[group]Operating System
+2026-09-01T19:27:08.3484138Z Ubuntu
+2026-09-01T19:27:08.3484750Z 24.04.4
+2026-09-01T19:27:08.3485339Z LTS
+2026-09-01T19:27:08.3485973Z ##[endgroup]
+2026-09-01T19:27:08.3486562Z ##[group]Runner Image
+2026-09-01T19:27:08.3487332Z Image: ubuntu-24.04
+2026-09-01T19:27:08.3487958Z Version: 20260823.283.1
+2026-09-01T19:27:08.3489646Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260823.283/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-01T19:27:08.3491648Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260823.283
+2026-09-01T19:27:08.3492871Z ##[endgroup]
+2026-09-01T19:27:08.3494129Z ##[group]GITHUB_TOKEN Permissions
+2026-09-01T19:27:08.3496608Z Deployments: write
+2026-09-01T19:27:08.3497440Z Metadata: read
+2026-09-01T19:27:08.3498067Z ##[endgroup]
+2026-09-01T19:27:08.3500850Z Secret source: AgentSecrets
+2026-09-01T19:27:08.3502186Z Prepare workflow directory
+2026-09-01T19:27:08.3966384Z Prepare all required actions
+2026-09-01T19:27:08.4015566Z Getting action download info
+2026-09-01T19:27:08.7688888Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-09-01T19:27:09.0559626Z Complete job name: github-advanced-security
+2026-09-01T19:27:09.1343271Z ##[group]Run NONCE=$(jq -r '.inputs.COPILOT_AGENT_INPUTS | fromjson | .COPILOT_JOB_NONCE' "$GITHUB_EVENT_PATH")
+2026-09-01T19:27:09.1344721Z [36;1mNONCE=$(jq -r '.inputs.COPILOT_AGENT_INPUTS | fromjson | .COPILOT_JOB_NONCE' "$GITHUB_EVENT_PATH")[0m
+2026-09-01T19:27:09.1345717Z [36;1mecho "::add-mask::$NONCE"[0m
+2026-09-01T19:27:09.1387617Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-01T19:27:09.1388793Z env:
+2026-09-01T19:27:09.1389264Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:09.1389762Z ##[endgroup]
+2026-09-01T19:27:09.1781664Z ##[group]Run if ! command -v npm &> /dev/null; then
+2026-09-01T19:27:09.1782467Z [36;1mif ! command -v npm &> /dev/null; then[0m
+2026-09-01T19:27:09.1783717Z [36;1m  echo "Warning: npm is not available on this runner. Skipping Playwright MCP pre-download. The MCP server may be installed later if needed."[0m
+2026-09-01T19:27:09.1784892Z [36;1m  exit 0[0m
+2026-09-01T19:27:09.1785342Z [36;1mfi[0m
+2026-09-01T19:27:09.1785969Z [36;1mecho "Starting background pre-cache of @playwright/mcp..."[0m
+2026-09-01T19:27:09.1786876Z [36;1mnpm cache add @playwright/mcp@0.0.40 > /dev/null 2>&1 & disown[0m
+2026-09-01T19:27:09.1787852Z [36;1mecho "Started pre-caching @playwright/mcp@0.0.40 in the background"[0m
+2026-09-01T19:27:09.1825417Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-01T19:27:09.1826134Z env:
+2026-09-01T19:27:09.1826581Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:09.1827094Z   PLAYWRIGHT_VERSION: 0.0.40
+2026-09-01T19:27:09.1827625Z ##[endgroup]
+2026-09-01T19:27:09.1892500Z Starting background pre-cache of @playwright/mcp...
+2026-09-01T19:27:09.1896886Z Started pre-caching @playwright/mcp@0.0.40 in the background
+2026-09-01T19:27:09.2051595Z ##[group]Run set -o pipefail
+2026-09-01T19:27:09.2052393Z [36;1mset -o pipefail[0m
+2026-09-01T19:27:09.2052957Z [36;1mecho "Preparing Copilot..." && \[0m
+2026-09-01T19:27:09.2053731Z [36;1mecho "Runtime version: $COPILOT_AGENT_RUNTIME_VERSION" && \[0m
+2026-09-01T19:27:09.2054638Z [36;1mecho "COPILOT_AGENT_START_TIME_SEC=$(date +%s)" >> $GITHUB_ENV[0m
+2026-09-01T19:27:09.2055489Z [36;1mecho "COPILOT_AGENT_TIMEOUT_MIN=59" >> $GITHUB_ENV[0m
+2026-09-01T19:27:09.2056625Z [36;1mmkdir -p "runtime-logs" "cca-mcp-debug-logs" && \[0m
+2026-09-01T19:27:09.2057339Z [36;1mMAX_RETRIES=3 && RETRY_COUNT=0 && \[0m
+2026-09-01T19:27:09.2058018Z [36;1mwhile [ $RETRY_COUNT -lt $MAX_RETRIES ]; do \[0m
+2026-09-01T19:27:09.2058971Z [36;1m  if [ -n "$GITHUB_COPILOT_ACTION_OVERRIDE_DOWNLOAD_URL" ]; then \[0m
+2026-09-01T19:27:09.2061125Z [36;1m    curl -f --max-time 600 -D "runtime-logs/download.log" -H "Authorization: ***" $GITHUB_COPILOT_ACTION_OVERRIDE_DOWNLOAD_URL 2>> "runtime-logs/download.log" | tar -zxv >> "runtime-logs/download.log" 2>&1; \[0m
+2026-09-01T19:27:09.2062617Z [36;1m  else \[0m
+2026-09-01T19:27:09.2063841Z [36;1m    curl -f --max-time 600 -D "runtime-logs/download.log" $GITHUB_COPILOT_ACTION_DOWNLOAD_URL 2>> "runtime-logs/download.log" | tar -zxv >> "runtime-logs/download.log" 2>&1; \[0m
+2026-09-01T19:27:09.2065239Z [36;1m  fi; \[0m
+2026-09-01T19:27:09.2065736Z [36;1m  if [ $? -eq 0 ]; then break; fi; \[0m
+2026-09-01T19:27:09.2066383Z [36;1m  RETRY_COUNT=$((RETRY_COUNT + 1)); \[0m
+2026-09-01T19:27:09.2067001Z [36;1m  sleep 1; \[0m
+2026-09-01T19:27:09.2067485Z [36;1mdone && \[0m
+2026-09-01T19:27:09.2068837Z [36;1mif [ $RETRY_COUNT -eq $MAX_RETRIES ]; then echo "Failed to download runtime after $MAX_RETRIES attempts"; exit 80; fi && \[0m
+2026-09-01T19:27:09.2070028Z [36;1mecho "Finished downloading and extracting runtime" && \[0m
+2026-09-01T19:27:09.2071638Z [36;1mif [ ! -d "***-action-main" ]; then mv ***-action-* ***-action-main >> "runtime-logs/download.log" 2>&1; fi && \[0m
+2026-09-01T19:27:09.2072984Z [36;1m./***-action-main/script/setup.sh "/home/runner/work/_temp/ghcca-node" && \[0m
+2026-09-01T19:27:09.2074154Z [36;1mecho "Copilot prepared successfully." 2>&1 | tee -a "runtime-logs/download.log"[0m
+2026-09-01T19:27:09.2113388Z shell: /usr/bin/bash -e {0}
+2026-09-01T19:27:09.2114024Z env:
+2026-09-01T19:27:09.2114476Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:09.2121896Z   GITHUB_COPILOT_ACTION_DOWNLOAD_URL: ***
+2026-09-01T19:27:09.2122596Z   COPILOT_AGENT_SOURCE_ENVIRONMENT: production
+2026-09-01T19:27:09.2123291Z   GITHUB_COPILOT_ACTION_OVERRIDE_DOWNLOAD_URL:
+2026-09-01T19:27:09.2124229Z   GITHUB_COPILOT_API_TOKEN: ***
+2026-09-01T19:27:09.2125404Z   COPILOT_AGENT_RUNTIME_VERSION: runtime-copilot-pull-request-reviewer-vendored-1bf569db83b9f141733299a4a48b4baedf23bdef
+2026-09-01T19:27:09.2126752Z ##[endgroup]
+2026-09-01T19:27:09.2194212Z Preparing Copilot...
+2026-09-01T19:27:09.2196056Z Runtime version: runtime-copilot-pull-request-reviewer-vendored-1bf569db83b9f141733299a4a48b4baedf23bdef
+2026-09-01T19:27:22.5072772Z Finished downloading and extracting runtime
+2026-09-01T19:27:22.5171544Z Using node from tool cache.
+2026-09-01T19:27:22.5837582Z v24.19.0
+2026-09-01T19:27:22.5943320Z Copilot prepared successfully.
+2026-09-01T19:27:22.6005485Z ##[group]Run if [ -z "$GITHUB_COPILOT_AUTOFIND_DOWNLOAD_URL" ]; then
+2026-09-01T19:27:22.6006080Z [36;1mif [ -z "$GITHUB_COPILOT_AUTOFIND_DOWNLOAD_URL" ]; then[0m
+2026-09-01T19:27:22.6006579Z [36;1m  echo "Autofind download URL not configured, skipping."[0m
+2026-09-01T19:27:22.6007016Z [36;1m  exit 0[0m
+2026-09-01T19:27:22.6007282Z [36;1mfi[0m
+2026-09-01T19:27:22.6007618Z [36;1mecho "Starting background download of Autofind..."[0m
+2026-09-01T19:27:22.6008010Z [36;1m[0m
+2026-09-01T19:27:22.6009009Z [36;1m# Download and extract in background, then move to ***-action-main[0m
+2026-09-01T19:27:22.6009499Z [36;1m([0m
+2026-09-01T19:27:22.6009785Z [36;1m  START_TIME=$(date +%s.%N)[0m
+2026-09-01T19:27:22.6010309Z [36;1m  echo "Starting Autofind download at $(date)" > runtime-logs/download-autofind.log[0m
+2026-09-01T19:27:22.6011290Z [36;1m  curl -f --max-time 300 "$GITHUB_COPILOT_AUTOFIND_DOWNLOAD_URL" 2>> runtime-logs/download-autofind.log | tar -zxv >> runtime-logs/download-autofind.log 2>&1[0m
+2026-09-01T19:27:22.6012277Z [36;1m  mv autofind ***-action-main/ >> runtime-logs/download-autofind.log 2>&1[0m
+2026-09-01T19:27:22.6012752Z [36;1m  END_TIME=$(date +%s.%N)[0m
+2026-09-01T19:27:22.6013366Z [36;1m  ELAPSED=$(echo "$END_TIME - $START_TIME" | bc)[0m
+2026-09-01T19:27:22.6013938Z [36;1m  echo "Autofind download completed in ${ELAPSED}s" >> runtime-logs/download-autofind.log[0m
+2026-09-01T19:27:22.6014464Z [36;1m) & disown[0m
+2026-09-01T19:27:22.6083708Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-01T19:27:22.6084137Z env:
+2026-09-01T19:27:22.6084400Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:22.6084722Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:22.6085096Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:22.6085435Z   GITHUB_COPILOT_AUTOFIND_DOWNLOAD_URL:
+2026-09-01T19:27:22.6085777Z ##[endgroup]
+2026-09-01T19:27:22.6145542Z Autofind download URL not configured, skipping.
+2026-09-01T19:27:22.6192797Z ##[group]Run if [ "$COPILOT_AGENT_FIREWALL_ENABLED" != "true" ]; then
+2026-09-01T19:27:22.6193417Z [36;1mif [ "$COPILOT_AGENT_FIREWALL_ENABLED" != "true" ]; then[0m
+2026-09-01T19:27:22.6193947Z [36;1m  echo "Firewall disabled, skipping mkcert CA pre-generation."[0m
+2026-09-01T19:27:22.6194398Z [36;1m  exit 0[0m
+2026-09-01T19:27:22.6194669Z [36;1mfi[0m
+2026-09-01T19:27:22.6195221Z [36;1mMKCERT_BIN="/home/runner/work/_temp/***-action-main/ebpf/in-path/mkcert"[0m
+2026-09-01T19:27:22.6195805Z [36;1mMKCERT_CA_DST="/home/runner/work/_temp/runtime-logs/mkcert"[0m
+2026-09-01T19:27:22.6196254Z [36;1mif [ ! -f "$MKCERT_BIN" ]; then[0m
+2026-09-01T19:27:22.6196682Z [36;1m  echo "mkcert binary not found, skipping background keygen."[0m
+2026-09-01T19:27:22.6197111Z [36;1m  exit 0[0m
+2026-09-01T19:27:22.6197373Z [36;1mfi[0m
+2026-09-01T19:27:22.6197691Z [36;1mif [ -f "$MKCERT_CA_DST/rootCA.pem" ]; then[0m
+2026-09-01T19:27:22.6198189Z [36;1m  echo "CA already exists, skipping background keygen."[0m
+2026-09-01T19:27:22.6198860Z [36;1m  exit 0[0m
+2026-09-01T19:27:22.6199169Z [36;1mfi[0m
+2026-09-01T19:27:22.6199452Z [36;1mmkdir -p "$MKCERT_CA_DST"[0m
+2026-09-01T19:27:22.6199861Z [36;1mecho "Starting mkcert CA keygen in background..."[0m
+2026-09-01T19:27:22.6200374Z [36;1m# Use setsid to fully detach from the Actions runner so the step[0m
+2026-09-01T19:27:22.6200948Z [36;1m# finishes immediately instead of waiting for the background process.[0m
+2026-09-01T19:27:22.6201504Z [36;1mMKCERT_LOCK="/home/runner/work/_temp/mkcert-install.lock"[0m
+2026-09-01T19:27:22.6202137Z [36;1msetsid bash -c 'flock "$1" bash -c "CAROOT=\"$2\" \"$3\" -install && touch \"$2/.mkcert-bg-done\""' \[0m
+2026-09-01T19:27:22.6202776Z [36;1m  _ "$MKCERT_LOCK" "$MKCERT_CA_DST" "$MKCERT_BIN" > /dev/null 2>&1 &[0m
+2026-09-01T19:27:22.6238260Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-01T19:27:22.6238917Z env:
+2026-09-01T19:27:22.6239198Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:22.6239535Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:22.6239889Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:22.6240218Z   COPILOT_AGENT_FIREWALL_ENABLED: false
+2026-09-01T19:27:22.6240561Z ##[endgroup]
+2026-09-01T19:27:22.6297907Z Firewall disabled, skipping mkcert CA pre-generation.
+2026-09-01T19:27:22.6365546Z ##[group]Run echo "Starting MCP servers..." && \
+2026-09-01T19:27:22.6366060Z [36;1mecho "Starting MCP servers..." && \[0m
+2026-09-01T19:27:22.6366475Z [36;1mexport HOME="$(realpath ~)"[0m
+2026-09-01T19:27:22.6366904Z [36;1mexport RUNNER_PATH="/home/runner/work/_temp"[0m
+2026-09-01T19:27:22.6367279Z [36;1m[0m
+2026-09-01T19:27:22.6367746Z [36;1m# Secrets listed here are piped via stdin so they never appear in /proc[0m
+2026-09-01T19:27:22.6368445Z [36;1msecrets=$("$RUNNER_PATH/ghcca-node/node/bin/node" -p "JSON.stringify({[0m
+2026-09-01T19:27:22.6369471Z [36;1m  GITHUB_COPILOT_GITHUB_TOKEN: process.env.GITHUB_COPILOT_GITHUB_TOKEN || '',[0m
+2026-09-01T19:27:22.6370215Z [36;1m  GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '',[0m
+2026-09-01T19:27:22.6370922Z [36;1m  GITHUB_COPILOT_API_TOKEN: process.env.GITHUB_COPILOT_API_TOKEN || '',[0m
+2026-09-01T19:27:22.6371691Z [36;1m  GITHUB_COPILOT_INTEGRATION_ID: process.env.GITHUB_COPILOT_INTEGRATION_ID || '',[0m
+2026-09-01T19:27:22.6372523Z [36;1m  COPILOT_JOB_NONCE: process.env.COPILOT_JOB_NONCE || ''[0m
+2026-09-01T19:27:22.6372935Z [36;1m})")[0m
+2026-09-01T19:27:22.6373712Z [36;1munset GITHUB_COPILOT_GITHUB_TOKEN GITHUB_PERSONAL_ACCESS_TOKEN GITHUB_COPILOT_API_TOKEN GITHUB_COPILOT_INTEGRATION_ID COPILOT_JOB_NONCE[0m
+2026-09-01T19:27:22.6374804Z [36;1mprintf '%s' "$secrets" | "$RUNNER_PATH/***-action-main/script/start-mcp-servers.sh"[0m
+2026-09-01T19:27:22.6375306Z [36;1m[0m
+2026-09-01T19:27:22.6375598Z [36;1mecho "Ending MCP step"[0m
+2026-09-01T19:27:22.6410513Z shell: /usr/bin/bash -e {0}
+2026-09-01T19:27:22.6410843Z env:
+2026-09-01T19:27:22.6411123Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:22.6411472Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:22.6411858Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:22.6412210Z   COPILOT_MCP_READ_ONLY_MODE: false
+2026-09-01T19:27:22.6412835Z   COPILOT_API_URL: https://api.individual.githubcopilot.com
+2026-09-01T19:27:22.6413618Z   GITHUB_COPILOT_GITHUB_TOKEN: ***
+2026-09-01T19:27:22.6414186Z   GITHUB_PERSONAL_ACCESS_TOKEN: ***
+2026-09-01T19:27:22.6414719Z   GITHUB_COPILOT_API_TOKEN: ***
+2026-09-01T19:27:22.6415085Z   GITHUB_COPILOT_3P_MCP_ENABLED: true
+2026-09-01T19:27:22.6415577Z   COPILOT_AGENT_MCP_SERVER_TEMP: /home/runner/work/_temp/mcp-server
+2026-09-01T19:27:22.6416150Z   GITHUB_COPILOT_MCP_JSON_FROM_INPUT: eyJtY3BTZXJ2ZXJzIjp7fX0=
+2026-09-01T19:27:22.6416634Z   GITHUB_COPILOT_REMOTE_MCP_ENABLED: true
+2026-09-01T19:27:22.6417128Z   GITHUB_COPILOT_INTERACTION_ID: 2d16643c-f834-4d0e-92c6-abbc60a0eb4d
+2026-09-01T19:27:22.6425483Z   COPILOT_FEATURE_FLAGS: copilot_inject_integration_headers,copilot_swe_agent_blackbird_tool_use,copilot_swe_agent_cap_claude_opus_token_limits,copilot_swe_agent_cleanup_partial_clone,copilot_swe_agent_clone_session_logging,copilot_swe_agent_failure_recovery_before_shutdown,copilot_swe_agent_firewall_enabled_by_default,copilot_swe_agent_vision,copilot_swe_agent_parallel_tool_execution,copilot_swe_agent_enable_security_tool,copilot_swe_agent_code_review,copilot_swe_agent_cca_session_attribution,copilot_swe_agent_validation_agent_dependencies,copilot_swe_agent_validation_tool_settings,copilot_swe_agent_secret_scanning_hook,copilot_swe_agent_new_out_proc_mcp,copilot_swe_agent_mcp_builtin_provenance,copilot_swe_agent_enable_dependabot_checker,copilot_swe_agent_use_non_blocking_callbacks,coding_agent_plan_tags,copilot_swe_agent_trivial_change,copilot_swe_agent_trivial_change_code_review_disable,copilot_swe_agent_trivial_change_skip,copilot_swe_agent_unified_task_tool,copilot_swe_agent_error_annotations,copilot_swe_agent_codex_error_classification,copilot_swe_agent_claude_error_classification,copilot_swe_agent_runtime_timing_telemetry,copilot_swe_agent_parallel_validation,copilot_swe_agent_parallel_validation_disable,copilot_swe_agent_3p_security_prompt,copilot_swe_agent_new_security_tools,copilot_swe_agent_oidc_token_exchange,copilot_swe_agent_logs_url_trailer,copilot_swe_agent_sandbox_server_token_cleanup,copilot_swe_agent_use_attachment_proxy,copilot_swe_agent_co_author_hook,copilot_feature_agentic_memory_user_scoped,copilot_feature_agentic_memory_user_scoped_cfi,copilot_swe_agent_chronicle,copilot-feature-agentic-memory
+2026-09-01T19:27:22.6431961Z   COPILOT_EXPERIMENTS: cca_use_new_auto_endpoint:true
+2026-09-01T19:27:22.6432431Z   COPILOT_EXPERIMENT_ASSIGNMENT_CONTEXT:
+2026-09-01T19:27:22.6433468Z   COPILOT_AGENT_REQUEST_HEADERS: {"X-Copilot-Client-Exp-Assignment-Context":"permission_prompt_control:1332567;ccr_pr_nudge_adoption:1319471;eh853263:1370294;auto_mode_treatment:1367907;"}
+2026-09-01T19:27:22.6434455Z   GITHUB_COPILOT_INTEGRATION_ID: ***
+2026-09-01T19:27:22.6434826Z   COPILOT_USE_SESSIONS: true
+2026-09-01T19:27:22.6435187Z   COPILOT_USE_ASYNC_SESSIONS: true
+2026-09-01T19:27:22.6435573Z   COPILOT_MCP_EMIT_PENDING_SETUP_LOGS: true
+2026-09-01T19:27:22.6436048Z   COPILOT_AGENT_SESSION_ID: 2d16643c-f834-4d0e-92c6-abbc60a0eb4d
+2026-09-01T19:27:22.6436508Z   COPILOT_AGENT_RESUME_SESSION_ID:
+2026-09-01T19:27:22.6437208Z   COPILOT_AGENT_MCP_DEBUG_LOGS_PATH: /home/runner/work/_temp/cca-mcp-debug-logs
+2026-09-01T19:27:22.6437952Z   COPILOT_AGENT_CALLBACK_URL: https://api.individual.githubcopilot.com/agents/swe/agent
+2026-09-01T19:27:22.6438862Z   COPILOT_AGENT_JOB_ID: 1738302-342028987-ee5bf7b7-f900-44cb-9144-dd906369b76c
+2026-09-01T19:27:22.6439579Z   COPILOT_JOB_NONCE: ***
+2026-09-01T19:27:22.6439916Z   GITHUB_REPOSITORY_ID: 342028987
+2026-09-01T19:27:22.6440288Z   GITHUB_REPOSITORY_OWNER_ID: 1738302
+2026-09-01T19:27:22.6440670Z   COPILOT_AGENT_INJECTED_SECRET_NAMES:
+2026-09-01T19:27:22.6441012Z ##[endgroup]
+2026-09-01T19:27:22.6498198Z Starting MCP servers...
+2026-09-01T19:27:22.7896532Z Waiting for MCP servers to be ready...
+2026-09-01T19:27:22.7954952Z MCP servers not ready yet. Retrying in 300ms... (1/200)
+2026-09-01T19:27:23.1046462Z MCP servers not ready yet. Retrying in 300ms... (2/200)
+2026-09-01T19:27:23.4121931Z MCP servers not ready yet. Retrying in 300ms... (3/200)
+2026-09-01T19:27:23.7257492Z MCP servers are ready.
+2026-09-01T19:27:23.7260191Z Ending MCP step
+2026-09-01T19:27:23.7357305Z ##[group]Run echo "Setting up the agent..."
+2026-09-01T19:27:23.7357763Z [36;1mecho "Setting up the agent..."[0m
+2026-09-01T19:27:23.7358132Z [36;1mnpm config get prefix[0m
+2026-09-01T19:27:23.7359045Z [36;1mnode ***-action-main/dist-autofind-ts/ts/autofind.js cca-setup[0m
+2026-09-01T19:27:23.7398202Z shell: /usr/bin/bash -e {0}
+2026-09-01T19:27:23.7398984Z env:
+2026-09-01T19:27:23.7399438Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:23.7399788Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:23.7400140Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:23.7400469Z ##[endgroup]
+2026-09-01T19:27:23.7464886Z Setting up the agent...
+2026-09-01T19:27:23.8573215Z /opt/hostedtoolcache/node/24.19.0/x64
+2026-09-01T19:27:25.2193915Z autofind.js version 0.1.122
+2026-09-01T19:27:25.2207971Z Found bundled copilot CLI, skipping npm installation
+2026-09-01T19:27:25.2209130Z Preparing environment variables for CCA...
+2026-09-01T19:27:25.2530095Z Starting octokit proxy...
+2026-09-01T19:27:26.1352726Z Setup complete.
+2026-09-01T19:27:26.1846129Z ##[group]Run set -euo pipefail
+2026-09-01T19:27:26.1846520Z [36;1mset -euo pipefail[0m
+2026-09-01T19:27:26.1846799Z [36;1mARCH=$(uname -m)[0m
+2026-09-01T19:27:26.1847057Z [36;1mcase "$ARCH" in[0m
+2026-09-01T19:27:26.1847370Z [36;1m  x86_64)  ARTIFACT="git-proxy-linux-x64.tar.gz" ;;[0m
+2026-09-01T19:27:26.1847823Z [36;1m  aarch64) ARTIFACT="git-proxy-linux-arm64.tar.gz" ;;[0m
+2026-09-01T19:27:26.1848256Z [36;1m  *) echo "Unsupported architecture: $ARCH"; exit 1 ;;[0m
+2026-09-01T19:27:26.1848879Z [36;1mesac[0m
+2026-09-01T19:27:26.1849103Z [36;1m[0m
+2026-09-01T19:27:26.1849316Z [36;1m[0m
+2026-09-01T19:27:26.1849549Z [36;1m[0m
+2026-09-01T19:27:26.1849938Z [36;1mecho "A matching pre-installed git-proxy was not found; falling through to download."[0m
+2026-09-01T19:27:26.1850453Z [36;1mecho "Downloading git-proxy ($ARTIFACT)..."[0m
+2026-09-01T19:27:26.1850795Z [36;1mMAX_RETRIES=3[0m
+2026-09-01T19:27:26.1851033Z [36;1mRETRY_COUNT=0[0m
+2026-09-01T19:27:26.1851341Z [36;1mwhile [ $RETRY_COUNT -lt $MAX_RETRIES ]; do[0m
+2026-09-01T19:27:26.1851976Z [36;1m  if curl -fsSL --max-time 60 -H "Authorization: ***" \[0m
+2026-09-01T19:27:26.1852603Z [36;1m    "https://api.individual.githubcopilot.com/agents/swe/runtime-artifacts/$ARTIFACT" | tar -xz; then[0m
+2026-09-01T19:27:26.1853173Z [36;1m    break[0m
+2026-09-01T19:27:26.1853392Z [36;1m  fi[0m
+2026-09-01T19:27:26.1853636Z [36;1m  RETRY_COUNT=$((RETRY_COUNT + 1))[0m
+2026-09-01T19:27:26.1853935Z [36;1m  sleep 1[0m
+2026-09-01T19:27:26.1854151Z [36;1mdone[0m
+2026-09-01T19:27:26.1854642Z [36;1mif [ $RETRY_COUNT -eq $MAX_RETRIES ]; then echo "Failed to download git-proxy after $MAX_RETRIES attempts"; exit 81; fi[0m
+2026-09-01T19:27:26.1855207Z [36;1mchmod +x git-proxy[0m
+2026-09-01T19:27:26.1893216Z shell: /usr/bin/bash -e {0}
+2026-09-01T19:27:26.1893501Z env:
+2026-09-01T19:27:26.1894062Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:26.1894348Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:26.1894670Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:26.1894936Z   NODE_USE_ENV_PROXY: 1
+2026-09-01T19:27:26.1895726Z   AUTOFIND_COPILOT_CLI_PATH: /home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/copilot-cli/node_modules/@github/copilot/npm-loader.js
+2026-09-01T19:27:26.1896504Z   COPILOT_AGENT_JOB_ID: 1738302-342028987-ee5bf7b7-f900-44cb-9144-dd906369b76c
+2026-09-01T19:27:26.1896961Z   COPILOT_AGENT_MODEL: sweagent-capi:claude-opus-4.6
+2026-09-01T19:27:26.1897377Z   COPILOT_API_URL: https://api.individual.githubcopilot.com
+2026-09-01T19:27:26.1897904Z   COPILOT_JOB_NONCE: ***
+2026-09-01T19:27:26.1898169Z   COPILOT_AGENT_ACTOR_ID: 1738302
+2026-09-01T19:27:26.1898462Z   COPILOT_ENABLE_SECRET_FILTERING: true
+2026-09-01T19:27:26.1899217Z   AUTOFIND_OCTOKIT_PROXY_URL: http://127.0.0.1:43993
+2026-09-01T19:27:26.1899697Z   AUTOFIND_OCTOKIT_PROXY_SECRET: ***
+2026-09-01T19:27:26.1900212Z   GITHUB_COPILOT_API_TOKEN: ***
+2026-09-01T19:27:26.1900489Z ##[endgroup]
+2026-09-01T19:27:26.1973419Z A matching pre-installed git-proxy was not found; falling through to download.
+2026-09-01T19:27:26.1974404Z Downloading git-proxy (git-proxy-linux-x64.tar.gz)...
+2026-09-01T19:27:27.0799655Z ##[group]Run set -euo pipefail
+2026-09-01T19:27:27.0800107Z [36;1mset -euo pipefail[0m
+2026-09-01T19:27:27.0800400Z [36;1mecho "RUNNER_TEMP=$RUNNER_TEMP"[0m
+2026-09-01T19:27:27.0800894Z [36;1mfind "$RUNNER_TEMP" -maxdepth 1 -type f -name 'git-credentials-*.config' -print -delete[0m
+2026-09-01T19:27:27.0801368Z [36;1m[0m
+2026-09-01T19:27:27.0801838Z [36;1m# Generate a unique token and stop processing workflow commands to prevent the runtime from injecting commands[0m
+2026-09-01T19:27:27.0802439Z [36;1mSTOP_TOKEN=$(cat /proc/sys/kernel/random/uuid)[0m
+2026-09-01T19:27:27.0802755Z [36;1m[0m
+2026-09-01T19:27:27.0803069Z [36;1m# Use a trap to ensure we always resume command processing and check for[0m
+2026-09-01T19:27:27.0803628Z [36;1m# fallback error annotations, even if the runtime exits with a non-zero code[0m
+2026-09-01T19:27:27.0804190Z [36;1m# (which would otherwise cause set -e to abort the shell before we get here).[0m
+2026-09-01T19:27:27.0804692Z [36;1m# The trap preserves the original exit code.[0m
+2026-09-01T19:27:27.0805026Z [36;1mcopilot_cleanup() {[0m
+2026-09-01T19:27:27.0805281Z [36;1m  [0m
+2026-09-01T19:27:27.0805612Z [36;1m  if [ -n "${GIT_PROXY_PID:-}" ] && kill -0 "$GIT_PROXY_PID" 2>/dev/null; then[0m
+2026-09-01T19:27:27.0806090Z [36;1m    echo "Stopping git-proxy (pid=$GIT_PROXY_PID)..."[0m
+2026-09-01T19:27:27.0806477Z [36;1m    kill "$GIT_PROXY_PID" 2>/dev/null || true[0m
+2026-09-01T19:27:27.0806788Z [36;1m    for _ in {1..25}; do[0m
+2026-09-01T19:27:27.0807133Z [36;1m      if ! kill -0 "$GIT_PROXY_PID" 2>/dev/null; then break; fi[0m
+2026-09-01T19:27:27.0807500Z [36;1m      sleep 0.2[0m
+2026-09-01T19:27:27.0807730Z [36;1m    done[0m
+2026-09-01T19:27:27.0808005Z [36;1m    if kill -0 "$GIT_PROXY_PID" 2>/dev/null; then[0m
+2026-09-01T19:27:27.0808446Z [36;1m      echo "git-proxy did not stop gracefully; forcing termination."[0m
+2026-09-01T19:27:27.0809139Z [36;1m      kill -KILL "$GIT_PROXY_PID" 2>/dev/null || true[0m
+2026-09-01T19:27:27.0809465Z [36;1m    fi[0m
+2026-09-01T19:27:27.0809720Z [36;1m    wait "$GIT_PROXY_PID" 2>/dev/null || true[0m
+2026-09-01T19:27:27.0810020Z [36;1m  fi[0m
+2026-09-01T19:27:27.0810223Z [36;1m  [0m
+2026-09-01T19:27:27.0810435Z [36;1m  echo "::$STOP_TOKEN::"[0m
+2026-09-01T19:27:27.0810793Z [36;1m  FALLBACK_FILE="${RUNNER_TEMP}/copilot-fallback-error.txt"[0m
+2026-09-01T19:27:27.0811182Z [36;1m  if [ -f "$FALLBACK_FILE" ]; then[0m
+2026-09-01T19:27:27.0811562Z [36;1m    FALLBACK_MSG=$(head -c 500 "$FALLBACK_FILE" | tr -d '\n\r')[0m
+2026-09-01T19:27:27.0811996Z [36;1m    echo "::error title=Copilot Error::${FALLBACK_MSG}"[0m
+2026-09-01T19:27:27.0812337Z [36;1m    rm -f "$FALLBACK_FILE"[0m
+2026-09-01T19:27:27.0812792Z [36;1m  fi[0m
+2026-09-01T19:27:27.0812992Z [36;1m}[0m
+2026-09-01T19:27:27.0813214Z [36;1mtrap copilot_cleanup EXIT[0m
+2026-09-01T19:27:27.0813480Z [36;1m[0m
+2026-09-01T19:27:27.0813706Z [36;1mecho "::stop-commands::$STOP_TOKEN"[0m
+2026-09-01T19:27:27.0814002Z [36;1m[0m
+2026-09-01T19:27:27.0814197Z [36;1m[0m
+2026-09-01T19:27:27.0814517Z [36;1m# Keep the proxy and runtime in one Actions step so their lifetimes[0m
+2026-09-01T19:27:27.0814983Z [36;1m# are coupled consistently on Linux and Windows.[0m
+2026-09-01T19:27:27.0815328Z [36;1mecho "Starting git-proxy..."[0m
+2026-09-01T19:27:27.0815666Z [36;1mGIT_PROXY_LOG="$RUNNER_TEMP/git-proxy.log"[0m
+2026-09-01T19:27:27.0816024Z [36;1mecho "git-proxy logs: $GIT_PROXY_LOG"[0m
+2026-09-01T19:27:27.0816352Z [36;1mprintf '%s\n' "$GITHUB_TOKEN" | env \[0m
+2026-09-01T19:27:27.0816724Z [36;1m  GITHUB_AGENT_ACTOR="$COPILOT_GIT_PROXY_ACTOR" \[0m
+2026-09-01T19:27:27.0817132Z [36;1m  GITHUB_REPOSITORY="$COPILOT_GIT_PROXY_REPOSITORY" \[0m
+2026-09-01T19:27:27.0817583Z [36;1m  GITHUB_AGENT_BRANCH_NAME="$COPILOT_GIT_PROXY_BRANCH_NAME" \[0m
+2026-09-01T19:27:27.0817997Z [36;1m  GITHUB_SERVER_URL="$GITHUB_SERVER_URL" \[0m
+2026-09-01T19:27:27.0818359Z [36;1m  GITHUB_GIT_PROXY_PORT="$COPILOT_GIT_PROXY_PORT" \[0m
+2026-09-01T19:27:27.0819166Z [36;1m  "$RUNNER_TEMP/git-proxy" > "$GIT_PROXY_LOG" 2>&1 &[0m
+2026-09-01T19:27:27.0819527Z [36;1mGIT_PROXY_PID=$![0m
+2026-09-01T19:27:27.0819762Z [36;1m[0m
+2026-09-01T19:27:27.0819973Z [36;1mPROXY_READY=false[0m
+2026-09-01T19:27:27.0820219Z [36;1mfor _ in {1..50}; do[0m
+2026-09-01T19:27:27.0820516Z [36;1m  if ! kill -0 "$GIT_PROXY_PID" 2>/dev/null; then[0m
+2026-09-01T19:27:27.0820839Z [36;1m    break[0m
+2026-09-01T19:27:27.0821047Z [36;1m  fi[0m
+2026-09-01T19:27:27.0821393Z [36;1m  if (exec 3&lt;>"/dev/tcp/127.0.0.1/${COPILOT_GIT_PROXY_PORT}") 2>/dev/null; then[0m
+2026-09-01T19:27:27.0821809Z [36;1m    PROXY_READY=true[0m
+2026-09-01T19:27:27.0822055Z [36;1m    break[0m
+2026-09-01T19:27:27.0822272Z [36;1m  fi[0m
+2026-09-01T19:27:27.0822473Z [36;1m  sleep 0.2[0m
+2026-09-01T19:27:27.0822691Z [36;1mdone[0m
+2026-09-01T19:27:27.0822919Z [36;1mif [ "$PROXY_READY" != "true" ]; then[0m
+2026-09-01T19:27:27.0823290Z [36;1m  if [ -f "$GIT_PROXY_LOG" ]; then cat "$GIT_PROXY_LOG"; fi[0m
+2026-09-01T19:27:27.0823679Z [36;1m  if ! kill -0 "$GIT_PROXY_PID" 2>/dev/null; then[0m
+2026-09-01T19:27:27.0824131Z [36;1m    echo "git-proxy exited before listening on port $COPILOT_GIT_PROXY_PORT"[0m
+2026-09-01T19:27:27.0824564Z [36;1m  else[0m
+2026-09-01T19:27:27.0824908Z [36;1m    echo "git-proxy did not start listening on port $COPILOT_GIT_PROXY_PORT"[0m
+2026-09-01T19:27:27.0825311Z [36;1m  fi[0m
+2026-09-01T19:27:27.0825511Z [36;1m  exit 1[0m
+2026-09-01T19:27:27.0825714Z [36;1mfi[0m
+2026-09-01T19:27:27.0825977Z [36;1mecho "git-proxy started (pid=$GIT_PROXY_PID)"[0m
+2026-09-01T19:27:27.0826282Z [36;1m[0m
+2026-09-01T19:27:27.0826586Z [36;1m# Keep proxy-only configuration out of the runtime environment.[0m
+2026-09-01T19:27:27.0827245Z [36;1munset COPILOT_GIT_PROXY_ACTOR COPILOT_GIT_PROXY_REPOSITORY COPILOT_GIT_PROXY_BRANCH_NAME COPILOT_GIT_PROXY_PORT[0m
+2026-09-01T19:27:27.0827786Z [36;1m[0m
+2026-09-01T19:27:27.0827976Z [36;1m[0m
+2026-09-01T19:27:27.0828167Z [36;1m[0m
+2026-09-01T19:27:27.0828353Z [36;1m[0m
+2026-09-01T19:27:27.0829129Z [36;1m# Secrets listed here are piped via stdin so they never appear in /proc[0m
+2026-09-01T19:27:27.0829840Z [36;1msecrets=$("/home/runner/work/_temp/ghcca-node/node/bin/node" -p "JSON.stringify({[0m
+2026-09-01T19:27:27.0830407Z [36;1m  [0m
+2026-09-01T19:27:27.0830860Z [36;1m  GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',[0m
+2026-09-01T19:27:27.0831484Z [36;1m  GITHUB_COPILOT_GITHUB_TOKEN: process.env.GITHUB_COPILOT_GITHUB_TOKEN || '',[0m
+2026-09-01T19:27:27.0832008Z [36;1m  [0m
+2026-09-01T19:27:27.0832445Z [36;1m  GITHUB_COPILOT_API_TOKEN: process.env.GITHUB_COPILOT_API_TOKEN || '',[0m
+2026-09-01T19:27:27.0833053Z [36;1m  [0m
+2026-09-01T19:27:27.0833665Z [36;1m  GITHUB_COPILOT_INFERENCE_TOKEN: process.env.GITHUB_COPILOT_INFERENCE_TOKEN || '',[0m
+2026-09-01T19:27:27.0834292Z [36;1m  [0m
+2026-09-01T19:27:27.0834737Z [36;1m  GITHUB_COPILOT_INTEGRATION_ID: process.env.GITHUB_COPILOT_INTEGRATION_ID || '',[0m
+2026-09-01T19:27:27.0835525Z [36;1m  COPILOT_INTEGRATION_ID_OVERRIDE: process.env.COPILOT_INTEGRATION_ID_OVERRIDE || '',[0m
+2026-09-01T19:27:27.0848439Z [36;1m  CAPI_HMAC_KEY_OVERRIDE: process.env.CAPI_HMAC_KEY_OVERRIDE || '',[0m
+2026-09-01T19:27:27.0849354Z [36;1m  COPILOT_JOB_NONCE: process.env.COPILOT_JOB_NONCE || ''[0m
+2026-09-01T19:27:27.0849726Z [36;1m})")[0m
+2026-09-01T19:27:27.0850542Z [36;1munset GITHUB_TOKEN GITHUB_COPILOT_GITHUB_TOKEN GITHUB_COPILOT_API_TOKEN GITHUB_COPILOT_INFERENCE_TOKEN GITHUB_COPILOT_INTEGRATION_ID COPILOT_INTEGRATION_ID_OVERRIDE CAPI_HMAC_KEY_OVERRIDE COPILOT_JOB_NONCE[0m
+2026-09-01T19:27:27.0851419Z [36;1m[0m
+2026-09-01T19:27:27.0851659Z [36;1mecho "Processing requests..." && \[0m
+2026-09-01T19:27:27.0851992Z [36;1mprintf '%s' "$secrets" | \[0m
+2026-09-01T19:27:27.0852743Z [36;1m"/home/runner/work/_temp/***-action-main/ebpf/launch.sh" \[0m
+2026-09-01T19:27:27.0853810Z [36;1m  "/home/runner/work/_temp/ghcca-node/node/bin/node --enable-source-maps /home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js" \[0m
+2026-09-01T19:27:27.0854541Z [36;1m  "/home/runner/work/_temp/runtime-logs" \[0m
+2026-09-01T19:27:27.0854854Z [36;1m  "false"[0m
+2026-09-01T19:27:27.0891002Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-01T19:27:27.0891350Z env:
+2026-09-01T19:27:27.0891560Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:27.0891825Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:27.0892117Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:27.0892382Z   NODE_USE_ENV_PROXY: 1
+2026-09-01T19:27:27.0893090Z   AUTOFIND_COPILOT_CLI_PATH: /home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/copilot-cli/node_modules/@github/copilot/npm-loader.js
+2026-09-01T19:27:27.0893845Z   COPILOT_AGENT_JOB_ID: 1738302-342028987-ee5bf7b7-f900-44cb-9144-dd906369b76c
+2026-09-01T19:27:27.0894298Z   COPILOT_AGENT_MODEL: sweagent-capi:claude-opus-4.6
+2026-09-01T19:27:27.0894737Z   COPILOT_API_URL: https://api.individual.githubcopilot.com
+2026-09-01T19:27:27.0895274Z   COPILOT_JOB_NONCE: ***
+2026-09-01T19:27:27.0895537Z   COPILOT_AGENT_ACTOR_ID: 1738302
+2026-09-01T19:27:27.0895828Z   COPILOT_ENABLE_SECRET_FILTERING: true
+2026-09-01T19:27:27.0896159Z   AUTOFIND_OCTOKIT_PROXY_URL: http://127.0.0.1:43993
+2026-09-01T19:27:27.0896585Z   AUTOFIND_OCTOKIT_PROXY_SECRET: ***
+2026-09-01T19:27:27.0899259Z   GITHUB_TOKEN: ***
+2026-09-01T19:27:27.0899547Z   COPILOT_GIT_PROXY_REPOSITORY: mohanpednekar/tens
+2026-09-01T19:27:27.0899899Z   COPILOT_GIT_PROXY_ACTOR: mohanpednekar
+2026-09-01T19:27:27.0900288Z   COPILOT_GIT_PROXY_BRANCH_NAME: claude/pool-bandwidth-layout-4qpeci
+2026-09-01T19:27:27.0900679Z   COPILOT_GIT_PROXY_PORT: 26831
+2026-09-01T19:27:27.0901082Z   GITHUB_COPILOT_GITHUB_TOKEN: ***
+2026-09-01T19:27:27.0901478Z   GITHUB_COPILOT_API_TOKEN: ***
+2026-09-01T19:27:27.0901745Z   GITHUB_COPILOT_INFERENCE_TOKEN:
+2026-09-01T19:27:27.0902093Z   COPILOT_AGENT_INFERENCE_IDENTITY: actor
+2026-09-01T19:27:27.0902460Z   GITHUB_COPILOT_INTEGRATION_ID: ***
+2026-09-01T19:27:27.0902757Z   COPILOT_AGENT_FIREWALL_ENABLED: false
+2026-09-01T19:27:27.0917261Z   COPILOT_AGENT_FIREWALL_RULESET_ALLOW_LIST: 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
+2026-09-01T19:27:27.0932308Z   COPILOT_AGENT_FIREWALL_ENABLE_RULESET_ALLOW_LIST: false
+2026-09-01T19:27:27.0942008Z   COPILOT_AGENT_FIREWALL_ALLOW_LIST: localhost,https://github.com/,githubusercontent.com,https://raw.githubusercontent.com/,https://objects.githubusercontent.com/,https://codeload.github.com/,https://uploads.github.com/user-attachments/assets/,https://api.github.com/internal/user-attachments/assets/,https://api.github.com/advisories,https://api.github.com/copilot_internal/user,https://api.github.com/copilot/mcp_registry,https://api.github.com/user,https://api.github.com/cmc_internal/api/agents/environments,https://api.github.com/repos/mohanpednekar/tens/copilot_internal/,https://api.github.com/repos/mohanpednekar/tens/compare/,https://api.github.com/repos/mohanpednekar/tens/code-scanning/codeql/databases/,https://api.github.com/embeddings/code/search,https://github.githubassets.com/assets,https://*.githubusercontent.com,https://uploads.github.com,172.18.0.1,168.63.129.16,host.docker.internal,https://lfs.github.com/,https://github-cloud.githubusercontent.com/,https://github-cloud.s3.amazonaws.com/,https://api.github.com/repos/github/codeql-action/releases/,https://api.github.com/repos/dependabot/cli/releases/,https://productionresultssa0.blob.core.windows.net/,https://productionresultssa1.blob.core.windows.net/,https://productionresultssa2.blob.core.windows.net/,https://productionresultssa3.blob.core.windows.net/,https://productionresultssa4.blob.core.windows.net/,https://productionresultssa5.blob.core.windows.net/,https://productionresultssa6.blob.core.windows.net/,https://productionresultssa7.blob.core.windows.net/,https://productionresultssa8.blob.core.windows.net/,https://productionresultssa9.blob.core.windows.net/,https://productionresultssa10.blob.core.windows.net/,https://productionresultssa11.blob.core.windows.net/,https://productionresultssa12.blob.core.windows.net/,https://productionresultssa13.blob.core.windows.net/,https://productionresultssa14.blob.core.windows.net/,https://productionresultssa15.blob.core.windows.net/,https://productionresultssa16.blob.core.windows.net/,https://productionresultssa17.blob.core.windows.net/,https://productionresultssa18.blob.core.windows.net/,https://productionresultssa19.blob.core.windows.net/,https://production-copilot-host.webpubsub.azure.com/,https://queryconsoleprod.blob.core.windows.net/github-codeql-query-console-prod/,https://api.githubcopilot.com/,https://api.githubcopilot.com/,api.individual.githubcopilot.com,,https://github.com
+2026-09-01T19:27:27.0951997Z   COPILOT_AGENT_BACKGROUND_MKCERT: true
+2026-09-01T19:27:27.0952326Z   COPILOT_AGENT_SOURCE_ENVIRONMENT: production
+2026-09-01T19:27:27.0952746Z   GITHUB_UPLOADS_URL: https://uploads.github.com/user-attachments/assets
+2026-09-01T19:27:27.0953276Z   GITHUB_DOWNLOADS_URL: https://api.github.com/internal/user-attachments/assets
+2026-09-01T19:27:27.0953820Z   SECRET_SCANNING_URL: https://scanning-api.github.com/api/v1/scan/multipart
+2026-09-01T19:27:27.0954692Z   COPILOT_AGENT_RUNTIME_VERSION: runtime-copilot-pull-request-reviewer-vendored-1bf569db83b9f141733299a4a48b4baedf23bdef
+2026-09-01T19:27:27.0955329Z   COPILOT_AGENT_DEBUG: false
+2026-09-01T19:27:27.0955588Z   COPILOT_MCP_ENABLED: true
+2026-09-01T19:27:27.0955851Z   COPILOT_MCP_READ_ONLY_MODE: false
+2026-09-01T19:27:27.0956231Z   COPILOT_AGENT_MCP_SERVER_TEMP: /home/runner/work/_temp/mcp-server
+2026-09-01T19:27:27.0956611Z   COPILOT_AGENT_INJECTED_SECRET_NAMES:
+2026-09-01T19:27:27.0957141Z   CPD_SAVE_TRAJECTORY_OUTPUT: /home/runner/work/_temp/***-action-main/dist/trajectory.md
+2026-09-01T19:27:27.0957626Z   COPILOT_AGENT_ONLINE_EVALUATION_DISABLED: true
+2026-09-01T19:27:27.0963634Z   COPILOT_FEATURE_FLAGS: copilot_inject_integration_headers,copilot_swe_agent_blackbird_tool_use,copilot_swe_agent_cap_claude_opus_token_limits,copilot_swe_agent_cleanup_partial_clone,copilot_swe_agent_clone_session_logging,copilot_swe_agent_failure_recovery_before_shutdown,copilot_swe_agent_firewall_enabled_by_default,copilot_swe_agent_vision,copilot_swe_agent_parallel_tool_execution,copilot_swe_agent_enable_security_tool,copilot_swe_agent_code_review,copilot_swe_agent_cca_session_attribution,copilot_swe_agent_validation_agent_dependencies,copilot_swe_agent_validation_tool_settings,copilot_swe_agent_secret_scanning_hook,copilot_swe_agent_new_out_proc_mcp,copilot_swe_agent_mcp_builtin_provenance,copilot_swe_agent_enable_dependabot_checker,copilot_swe_agent_use_non_blocking_callbacks,coding_agent_plan_tags,copilot_swe_agent_trivial_change,copilot_swe_agent_trivial_change_code_review_disable,copilot_swe_agent_trivial_change_skip,copilot_swe_agent_unified_task_tool,copilot_swe_agent_error_annotations,copilot_swe_agent_codex_error_classification,copilot_swe_agent_claude_error_classification,copilot_swe_agent_runtime_timing_telemetry,copilot_swe_agent_parallel_validation,copilot_swe_agent_parallel_validation_disable,copilot_swe_agent_3p_security_prompt,copilot_swe_agent_new_security_tools,copilot_swe_agent_oidc_token_exchange,copilot_swe_agent_logs_url_trailer,copilot_swe_agent_sandbox_server_token_cleanup,copilot_swe_agent_use_attachment_proxy,copilot_swe_agent_co_author_hook,copilot_feature_agentic_memory_user_scoped,copilot_feature_agentic_memory_user_scoped_cfi,copilot_swe_agent_chronicle,copilot-feature-agentic-memory
+2026-09-01T19:27:27.0969850Z   COPILOT_EXPERIMENTS: cca_use_new_auto_endpoint:true
+2026-09-01T19:27:27.0970196Z   COPILOT_EXPERIMENT_ASSIGNMENT_CONTEXT:
+2026-09-01T19:27:27.0970515Z   COPILOT_PERMISSION_GATE_REASON: not_assigned
+2026-09-01T19:27:27.0970827Z   COPILOT_PERMISSION_MODE:
+2026-09-01T19:27:27.0971591Z   COPILOT_AGENT_REQUEST_HEADERS: {"X-Copilot-Client-Exp-Assignment-Context":"permission_prompt_control:1332567;ccr_pr_nudge_adoption:1319471;eh853263:1370294;auto_mode_treatment:1367907;"}
+2026-09-01T19:27:27.0972600Z   COPILOT_AGENT_SESSION_ID: 2d16643c-f834-4d0e-92c6-abbc60a0eb4d
+2026-09-01T19:27:27.0972973Z   COPILOT_AGENT_RESUME_SESSION_ID:
+2026-09-01T19:27:27.0973252Z ##[endgroup]
+2026-09-01T19:27:27.1035135Z RUNNER_TEMP=/home/runner/work/_temp
+2026-09-01T19:27:27.1070247Z ::stop-commands::***
+2026-09-01T19:27:27.1070742Z Starting git-proxy...
+2026-09-01T19:27:27.1071307Z git-proxy logs: /home/runner/work/_temp/git-proxy.log
+2026-09-01T19:27:27.3110047Z git-proxy started (pid=2286)
+2026-09-01T19:27:27.3387282Z Processing requests...
+2026-09-01T19:27:27.3459415Z Launcher version: d8d5264d5b56cc276004c4f9ad382dd065bc95d4, 0.0.55, 1.4.4
+2026-09-01T19:27:27.5926290Z Firewall disabled.
+2026-09-01T19:27:28.3084266Z Loaded 5 secret(s) from stdin
+2026-09-01T19:27:29.0207515Z Using integration ID from job details: ghas-code-scanning-agentic
+2026-09-01T19:27:29.0209035Z Analyzing mohanpednekar/tens PR #546, request-id  (autofind.js version: 0.1.122)
+2026-09-01T19:27:29.0329928Z Fetching PR metadata for mohanpednekar/tens#546
+2026-09-01T19:27:29.9993105Z Fetched PR metadata for mohanpednekar/tens#546 (object format: sha1).
+2026-09-01T19:27:30.0004018Z [fork-gate] mohanpednekar/tens#546: isForked=false, loading instructions/skills from head checkout.
+2026-09-01T19:27:30.0010149Z Fetching diff a286a8c97396ecb3fcb9bfad03424d119067002a...265054b9be357a12c7311da2849d8bd8240929e1 for mohanpednekar/tens
+2026-09-01T19:27:30.0011211Z Preparing repository...
+2026-09-01T19:27:30.0203867Z Repository is not checked out at /home/runner/work/tens/tens. Checking out a fresh copy.
+2026-09-01T19:27:30.0211661Z Checking out mohanpednekar/tens at SHA 265054b9be357a12c7311da2849d8bd8240929e1 into /home/runner/work/tens/tens
+2026-09-01T19:27:30.8221671Z [customInstructions] Built 3 custom instruction(s) for mohanpednekar/tens; names=[".github/copilot-instructions.md","AGENTS.md","CLAUDE.md"]
+2026-09-01T19:27:30.8224824Z Running detector: ccr_security[EnableRestrictedResultPublication=false;SkipRegionFiltering=false;UseCliFileTools=true;FileExclusionPatterns=**/action.yaml,**/action.yml,*.c,*.c++,*.cc,*.cpp,*.cs,*.cshtml,*.csproj,*.cts,*.cxx,*.ejs,*.erb,*.es,*.es6,*.gemspec,*.github/workflows/*.yaml,*.github/workflows/*.yml,*.go,*.h,*.h++,*.hbs,*.hh,*.hpp,*.htm,*.html,*.hxx,*.java,*.js,*.json,*.jsx,*.kt,*.mjs,*.mts,*.njk,*.py,*.raml,*.rb,*.rs,*.sln,*.ts,*.tsx,*.vue,*.xaml,*.xhtm,*.xhtml,*.xml,*.yaml,*.yml,Cargo.toml,Gemfile;UseHighLowSeverities=true] (autofind.js version: 0.1.122)
+2026-09-01T19:27:30.8229275Z [memory] CCA path: building memoryApiConfig (pull_request_id=4414943477, job_id=1738302-342028987-ee5bf7b7-f900-44cb-9144-dd906369b76c, exp_flight_names_present=false)
+2026-09-01T19:27:30.8230275Z Resolved repo directory: /home/runner/work/tens/tens
+2026-09-01T19:27:30.8230918Z Running in CCA: true
+2026-09-01T19:27:30.8440734Z [debug] Using copilot CLI path: /home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/copilot-cli/node_modules/@github/copilot/npm-loader.js
+2026-09-01T19:27:30.8442280Z Using default CAPI authentication (token)
+2026-09-01T19:27:33.0577425Z Sessions disabled: not supported for code scanning yet.
+2026-09-01T19:27:34.1805763Z Built prompt with 30998 tokens
+2026-09-01T19:27:34.1826353Z Creating copilot-sdk session with model: claude-opus-4.6 and clientName: github/code-scanning
+2026-09-01T19:27:34.1827775Z [skills] session=github/code-scanning enabled=false source=disabled configuredDirectories=0
+2026-09-01T19:27:35.0601765Z Failed to read cca-setup error log: ENOENT: no such file or directory, open '/home/runner/work/_temp/autofind-cca-setup-error.txt'
+2026-09-01T19:27:35.0609093Z Error creating PR review request: Error: Request session.create failed with message: Model "claude-opus-4.6" is not available. (errorDetails: {"configurationError":false,"stack":"Error: Request session.create failed with message: Model \"claude-opus-4.6\" is not available.\n    at Al (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:30:228)\n    at bI (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:29:6239)\n    at QI (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:29:6362)\n    at Immediate.<anonymous> (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:29:6126)\n    at process.processImmediate (node:internal/timers:534:21)"}, autofind.js version: 0.1.122)
+2026-09-01T19:27:35.0614610Z Reporting error to sweagentd...
+2026-09-01T19:27:35.1727823Z Error successfully reported to sweagentd session.
+2026-09-01T19:27:35.3255687Z Error successfully reported to sweagentd backend.
+2026-09-01T19:27:35.3259294Z l [Error]: Request session.create failed with message: Model "claude-opus-4.6" is not available.
+2026-09-01T19:27:35.3261349Z     at Al (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:30:228)
+2026-09-01T19:27:35.3262871Z     at bI (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:29:6239)
+2026-09-01T19:27:35.3264408Z     at QI (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:29:6362)
+2026-09-01T19:27:35.3266347Z     at Immediate.<anonymous> (file:///home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/autofind.js:29:6126)
+2026-09-01T19:27:35.3268458Z     at process.processImmediate (node:internal/timers:534:21) {
+2026-09-01T19:27:35.3269375Z   code: -32603,
+2026-09-01T19:27:35.3269743Z   data: undefined
+2026-09-01T19:27:35.3270094Z }
+2026-09-01T19:27:35.3586798Z Stopping git-proxy (pid=2286)...
+2026-09-01T19:27:35.5605917Z ::***::
+2026-09-01T19:27:35.5620601Z ##[error]Process completed with exit code 1.
+2026-09-01T19:27:35.5687060Z ##[group]Run echo "Cleaning up..." && \
+2026-09-01T19:27:35.5687437Z [36;1mecho "Cleaning up..." && \[0m
+2026-09-01T19:27:35.5687816Z [36;1mmkdir -p "/home/runner/work/_temp/runtime-logs" && \[0m
+2026-09-01T19:27:35.5688877Z [36;1mcurl -L -H "Content-Type: application/json" -H "Accept: application/json" --data '{"oid":'$GITHUB_REPOSITORY_OWNER_ID',"rid":'$GITHUB_REPOSITORY_ID',"wid":'$GITHUB_RUN_ID'}' \[0m
+2026-09-01T19:27:35.5692640Z [36;1m  -H "Authorization: ***" -H "X-GitHub-Copilot-Cleanup-List: ***,***,***," \[0m
+2026-09-01T19:27:35.5693438Z [36;1m  "https://api.individual.githubcopilot.com/agents/swe/agent/cleanup" > "/home/runner/work/_temp/runtime-logs/clean.log" 2>&1[0m
+2026-09-01T19:27:35.5729688Z shell: /usr/bin/bash -e {0}
+2026-09-01T19:27:35.5729967Z env:
+2026-09-01T19:27:35.5730186Z   SHOULD_CONTINUE: true
+2026-09-01T19:27:35.5730457Z   COPILOT_AGENT_START_TIME_SEC: 1788290829
+2026-09-01T19:27:35.5730775Z   COPILOT_AGENT_TIMEOUT_MIN: 59
+2026-09-01T19:27:35.5731087Z   NODE_USE_ENV_PROXY: 1
+2026-09-01T19:27:35.5731816Z   AUTOFIND_COPILOT_CLI_PATH: /home/runner/work/_temp/***-action-main/dist-autofind-ts/ts/copilot-cli/node_modules/@github/copilot/npm-loader.js
+2026-09-01T19:27:35.5732640Z   COPILOT_AGENT_JOB_ID: 1738302-342028987-ee5bf7b7-f900-44cb-9144-dd906369b76c
+2026-09-01T19:27:35.5733124Z   COPILOT_AGENT_MODEL: sweagent-capi:claude-opus-4.6
+2026-09-01T19:27:35.5733560Z   COPILOT_API_URL: https://api.individual.githubcopilot.com
+2026-09-01T19:27:35.5734123Z   COPILOT_JOB_NONCE: ***
+2026-09-01T19:27:35.5734399Z   COPILOT_AGENT_ACTOR_ID: 1738302
+2026-09-01T19:27:35.5734707Z   COPILOT_ENABLE_SECRET_FILTERING: true
+2026-09-01T19:27:35.5735061Z   AUTOFIND_OCTOKIT_PROXY_URL: http://127.0.0.1:43993
+2026-09-01T19:27:35.5735515Z   AUTOFIND_OCTOKIT_PROXY_SECRET: ***
+2026-09-01T19:27:35.5735818Z ##[endgroup]
+2026-09-01T19:27:35.5792108Z Cleaning up...
+2026-09-01T19:27:36.1201784Z Cleaning up orphan processes
+2026-09-01T19:27:36.1532936Z Terminate orphan process: pid (2196) (MainThread)
+2026-09-01T19:27:36.1585478Z Terminate orphan process: pid (2215) (npm exec @playw)
+2026-09-01T19:27:36.1624755Z Terminate orphan process: pid (2257) (MainThread)
+2026-09-01T19:27:36.1685999Z Terminate orphan process: pid (2265) (sh)
+2026-09-01T19:27:36.1751118Z Terminate orphan process: pid (2266) (MainThread)

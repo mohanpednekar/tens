@@ -73,8 +73,9 @@ src/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
-    DataLakePanel/          ← one Data Lake's own row, embedded per pool on ByteFoundryPage (below
-                            that pool's own disks); see "Byte Foundry" below
+    DataLakePanel/          ← one Data Lake's own self-contained block (title + a big fillable
+                            deposited/capacity number, not a labelled table row), embedded per pool
+                            on ByteFoundryPage (below that pool's own disks); see "Byte Foundry" below
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
@@ -195,14 +196,20 @@ manual action — deferring to a still-redeemable disk first) as a prepaid buffe
 first/instantly, any remaining cost live-transfers off built Disks over time (10x the Byte Foundry's
 bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake never itself banks a spendable
 reserve beyond its deposits. A lake's own deposit capacity is a purchasable ladder: starts at 1
-unit, grows per purchase via its own SI-clean sequence (plain doubling except one 64→125 step — the
-same shape the Data Stream's own finer SI-clean values, e.g. pool Bandwidth, use — pool Capacity
-itself no longer does, see above; a lake's capacity is never binary-displayed, so this switchover
-carries none of the conflict that keeps `intro.capacity` itself — the Data Stream tile's own value
-— on plain binary doubling; spending the lake's current capacity in Bits, same current-value shape
-used by Capacity ×2),
-hard-capped at 1,000 units (`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the
-intentional limit a player actually experiences. Each sub-slot's own deposit count is
+unit, climbs a plain decade-power-of-10 step per purchase (1, 10, 100, 1,000) — the same coarse
+shape pool Capacity itself uses, replacing an earlier finer SI-clean sequence (plain doubling except
+one 64→125 step over 11 levels) that now only pool Bandwidth still uses (see above); a lake's
+capacity is never binary-displayed, so it never shared the conflict that keeps `intro.capacity`
+itself — the Data Stream tile's own value — on plain binary doubling. Advancing a level drains the
+lake's own current deposits back to zero (not Bits) — the same "requires a full Buffer, drains it"
+shape Capacity ×2 uses, just paid in the lake's own banked Disks instead — so each level's own cost
+is always exactly the level below it (1 unit to reach 10, 10 to reach 100, 100 to reach 1,000),
+hard-capped at 1,000 units (`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 3) — the
+intentional limit a player actually experiences. A save carrying a `capacityLevel` from the old,
+longer ladder is clamped back to `DATA_LAKE_CAPACITY_MAX_LEVEL` on load
+(`normalizePoolMemoryCapacity`), same as a saved pool buffer above the new, lower decade-power
+Capacity ceiling — both are load-time defenses against a formula that changed underneath an
+existing save, not everyday gameplay. Each sub-slot's own deposit count is
 separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever
 exist) purely so the counter can't exceed what's physically possible — not a second design cap, just
 incidental headroom (1,110 if ever fully filled) that sits well above the 1,000 ladder which is what
@@ -213,7 +220,10 @@ An always-on auto-convert turns Data Stream bits into free `tier01` units at tie
 per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
 was removed); the first successful conversion unlocks the main game. Storage pool cards also require
 `intro.capacity` to reach 1024^N Bytes (1 KiB/1 MiB/1 GiB/…, `getPoolCapacityUnlockThresholdBits`)
-on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`), and each
+on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
+own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
+so the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already
+showing a clean "1 KB" Capacity — and each
 unlocked pool's own read cache now starts filling from Memory the moment that pool unlocks, not only
 once a disk of that size has ever been built. The generator, Disks, Data Lakes, and Compute
 Cores/Nodes are permanent across every real Prestige; only Data Stream balance and the
