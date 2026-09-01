@@ -2093,12 +2093,12 @@ export const getUnlockedStoragePoolCount = state => {
 
 // Storage pools display Capacity/Bandwidth in SI units (formatDiskSize); intro.capacity itself
 // stays a plain binary doubling sequence (see upgradePoolCapacity) since it's ALSO the Data
-// Stream tile's own binary balance/capacity figure — see docs/DESIGN_HISTORY.md for two earlier,
+// Stream tile's own binary balance/capacity figure — see docs/DESIGN_HISTORY.md for earlier
 // reverted attempts at this (a shared value that made the SI-clean sequence break the Data
 // Stream's binary display, then a plain-binary-only revert that made pool Capacity/Bandwidth lose
-// their SI cleanliness). Pools instead derive their OWN SI-clean figures in lockstep with
-// intro.capacity's doubling count via getSiCleanCapacityBits, entirely independent of what
-// intro.capacity itself displays.
+// their SI cleanliness). Pools instead derive their OWN SI-clean figures — Capacity from
+// intro.capacity's own doubling count, Bandwidth from the raw production rate — via
+// getSiCleanEquivalentBits, entirely independent of what intro.capacity itself displays.
 //
 // getNextSiDoubledValue(bits) — the next term in the sequence 1,2,4,8,...,64,125,250,...: doubles
 // normally except once per decade of ten doublings, where a value's mantissa (after stripping
@@ -2116,35 +2116,21 @@ export const getNextSiDoubledValue = bits => {
   return nextBytes * BITS_PER_BYTE
 }
 
-// Walks the plain-binary sequence (from INTRO_STARTING_CAPACITY) and the SI-clean switchover
-// sequence in lockstep, doubling-count for doubling-count, until the binary side reaches
-// rawCapacityBits — then returns the SI-clean side's value at that same step. rawCapacityBits is
-// always an exact power-of-two multiple of INTRO_STARTING_CAPACITY (upgradePoolCapacity no longer
-// clamps it to any SI boundary), so this always lands exactly rather than overshooting; an odd
-// legacy value (from a save written before this scheme existed) just lands on the nearest step at
-// or above it instead of looping forever, since plainBits keeps growing without bound.
-const getSiCleanCapacityBits = rawCapacityBits => {
-  let plainBits = INTRO_STARTING_CAPACITY
-  let cleanBits = INTRO_STARTING_CAPACITY
-  while (plainBits < rawCapacityBits) {
-    plainBits *= INTRO_CAPACITY_DOUBLING_STEP
-    cleanBits = getNextSiDoubledValue(cleanBits)
-  }
+// Finds N = round(log2(rawBits / BITS_PER_BYTE)) — how many doublings-from-1-Byte rawBits sits at —
+// then returns the SI-clean switchover sequence's own value at that same step (walking
+// getNextSiDoubledValue N times from BITS_PER_BYTE/1 Byte). Values below 1 Byte pass through
+// unchanged — Bytes-vs-bits doesn't meaningfully distinguish "SI-clean" from "binary" below that
+// scale, and the game's own bit-scale displays never do either. A ROUNDED log2 is used rather
+// than a discrete doubling search so that a raw value carrying tiny floating-point drift (from
+// many chained multiplications/divisions across purchases, Compute Boosts, prestige bonuses, etc.)
+// still lands on the doubling step it was mathematically meant to be, instead of a
+// comparison-based search misclassifying it one step off right at a boundary.
+const getSiCleanEquivalentBits = rawBits => {
+  if (!(rawBits >= BITS_PER_BYTE)) return Math.max(0, rawBits)
+  const steps = Math.max(0, Math.round(Math.log2(rawBits / BITS_PER_BYTE)))
+  let cleanBits = BITS_PER_BYTE
+  for (let i = 0; i < steps; i += 1) cleanBits = getNextSiDoubledValue(cleanBits)
   return cleanBits
-}
-
-// Snaps a raw (possibly non-SI-clean) Bytes figure DOWN to the largest SI-clean switchover term at
-// or below it. Bandwidth is derived as sqrt(Capacity), and the switchover sequence's own square
-// roots don't land on clean values (e.g. sqrt(16,000) ≈ 126.5) — this keeps Bandwidth reading as a
-// clean SI figure (125) too, rather than a raw sqrt remainder.
-const getSiCleanValueAtMostBytes = targetBytes => {
-  if (targetBytes < 1) return 0
-  let currentBytes = 1
-  while (true) {
-    const nextBytes = getNextSiDoubledValue(currentBytes * BITS_PER_BYTE) / BITS_PER_BYTE
-    if (nextBytes > targetBytes) return currentBytes
-    currentBytes = nextBytes
-  }
 }
 
 export const getStoragePoolBandwidth = (state, poolIndex) => {
@@ -2155,23 +2141,23 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   // unlocked pools: a lake tier's transfer capacity requires its own arrays fully built, which
   // necessarily unlocks the matching storage pool.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
-  // Each unlocked pool paces at the full Byte Foundry production rate. The previous
-  // division by MEMORY_BINARY_UNIT_STEP ** (unlockedCount - poolIndex) made lower-pool
-  // throughput collapse as higher pools unlocked, which is not the intended behavior.
-  // Hard-capped at sqrt(that pool's own Capacity) — without this, every pool shares the
-  // single global production rate uncapped, so a small early pool's Bandwidth (and every rate
-  // derived from it: disk/cache fill and build speeds, Booster transfer pacing) could run far
-  // ahead of what its own tiny Memory window could ever plausibly move through. The cap grows
-  // with Capacity ×2 purchases just like the rate itself does, so it only ever binds while a
-  // pool's Capacity hasn't caught up yet.
-  // The sqrt operates on Capacity converted to Bytes (SI, ÷ BITS_PER_BYTE), not the raw bit
-  // count, then the result is converted back to bits/sec — Storage pools use SI units for all
-  // purposes, so the cap is then snapped down to the nearest SI-clean switchover term
-  // (getSiCleanValueAtMostBytes) so it lands on a clean figure (e.g. a 16 KB-capacity pool caps
-  // at 125 B/s, not a raw sqrt(16,000) ≈ 126.5 B/s).
+  // Each unlocked pool's Bandwidth simply follows the Data Stream's own Speed doublings — the
+  // same raw production rate the Data Stream tile itself uses — just re-expressed via the
+  // SI-clean switchover sequence instead of plain binary (getSiCleanEquivalentBits): it matches
+  // the raw rate up to 64 B/s, then diverges to 125 instead of 128, and repeats that pattern every
+  // decade (e.g. a raw 256 B/s rate reads as a clean 250 B/s). sqrt(that pool's own Capacity) is
+  // only a GUIDELINE for the bandwidth's lower/upper bounds, not the value itself — it still acts
+  // as the real throughput ceiling once a pool's own (now fixed, maxed-out) Capacity can no longer
+  // keep up with an ever-growing rate, but even then the number shown is the SI-clean equivalent
+  // of that bound, not a raw sqrt remainder. Without either half of this, a small early pool's
+  // Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Booster transfer
+  // pacing) could run far ahead of what its own tiny Memory window could ever plausibly move
+  // through.
   const capacityBytes = getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE
-  const cleanCapBytes = getSiCleanValueAtMostBytes(Math.sqrt(capacityBytes))
-  return Math.min(getIntroProductionRate(state.intro ?? {}), cleanCapBytes * BITS_PER_BYTE)
+  const sqrtCapBytes = Math.sqrt(capacityBytes)
+  const rawRateBytes = getIntroProductionRate(state.intro ?? {}) / BITS_PER_BYTE
+  const boundedBytes = Math.min(rawRateBytes, sqrtCapBytes)
+  return getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
 }
 
 export const getStoragePoolCapacity = (state, poolIndex) => {
@@ -2180,10 +2166,10 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
   // callers derive the pool from a built disk or a fully-built lake tier, both of which imply the
   // corresponding pool is unlocked.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
-  // Capacity is the SI-clean equivalent (getSiCleanCapacityBits) of the shared Memory doubling
+  // Capacity is the SI-clean equivalent (getSiCleanEquivalentBits) of the shared Memory doubling
   // count, clamped to this pool's own window. It does not scale down when higher pools unlock, so
   // pool 1 stays capped at 1 MB (SI) once maxed — see POOL_CAPACITY_SI_STEP in layers.js.
-  const rawCapacity = getSiCleanCapacityBits(state.intro?.capacity ?? 0)
+  const rawCapacity = getSiCleanEquivalentBits(state.intro?.capacity ?? 0)
   const floorBits = poolIndex === 1
     ? getStoragePoolMemoryBounds(1).startBits
     : getStoragePoolMemoryBounds(poolIndex - 1).endBits
@@ -2455,7 +2441,7 @@ export const rollbackComputeFundedBandwidth = state => {
 // `intro.capacity` value is also the Data Stream tile's own balance/capacity figure, which stays
 // binary-denominated (see "Economy model" in CLAUDE.md). Each storage pool derives its OWN
 // SI-clean Capacity from this raw doubling count instead (getStoragePoolCapacity/
-// getSiCleanCapacityBits), clamped to that pool's own window there — so the "moving ceiling of the
+// getSiCleanEquivalentBits), clamped to that pool's own window there — so the "moving ceiling of the
 // highest unlocked pool" is enforced by isMemoryCapacityAtCap gating availability (via the
 // pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
@@ -4349,7 +4335,14 @@ const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoF
 // Seconds to fill Memory once at the current Byte generator rate (capacity ÷ bits/sec). Uses
 // getIntroProductionRate — deliberately NOT including an active Compute Boost — so merge pacing
 // tracks permanent Invest/Sacrifice progress, not temporary boost windows. This is "Core earn
-// time": claiming a Core flushes the full capacity once Memory is full.
+// time": claiming a Core flushes the full capacity once Memory is full. Deliberately reads the
+// RAW intro.capacity (the real Buffer size — same value tapIntroBit/tickIntroProduction cap bits
+// at), not a Storage pool's own smaller SI-clean derived Capacity (getStoragePoolCapacity): this
+// is describing how long the actual Buffer takes to refill, not a pool-card display figure. Since
+// upgradePoolCapacity no longer clamps intro.capacity to a pool ceiling, this does mean Core-earn/
+// merge-boost pacing runs slightly slower (~2.4% per full decade of doublings past a pool
+// boundary, compounding within an Era) than it would if pinned to the pool's own bounded value —
+// an acknowledged, minor consequence of decoupling the two, not a bug — see docs/DESIGN_HISTORY.md.
 export const getCoreEarnTimeSeconds = state => {
   const intro = state.intro
   if (!intro) return 0

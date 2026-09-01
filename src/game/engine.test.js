@@ -833,14 +833,25 @@ describe('storage pools', () => {
     expect(getStoragePoolBandwidth(state, 1)).toBe(8_000)
   })
 
-  it('leaves Bandwidth at the raw production rate while it stays under sqrt(Capacity)', () => {
+  it('Bandwidth follows the SI-clean equivalent of the raw production rate while it stays under sqrt(Capacity)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: 4_000_000, // sqrt(4,000,000 / 8 Bytes) * 8 ≈ 5,656.85 bits/sec cap
-      productionMultiplier: 500, // under the cap
+      capacity: 4_000_000, // sqrt(500,000 Bytes) ≈ 707 Bytes/sec cap — well above the rate below
+      productionMultiplier: 500, // 500 bits/sec raw ≈ 62.5 Bytes/sec, rounds to the nearest doubling step
     })
-    expect(getStoragePoolBandwidth(state, 1)).toBe(getIntroProductionRate(state.intro))
-    expect(getStoragePoolBandwidth(state, 1)).toBe(500)
+    expect(getIntroProductionRate(state.intro)).toBe(500)
+    // 64 Bytes/sec (512 bits/sec) — still matches plain binary below the 64→125 deviation point
+    expect(getStoragePoolBandwidth(state, 1)).toBe(512)
+  })
+
+  it('Bandwidth diverges from the raw binary rate past 64 Bytes/sec, e.g. a raw 256 Bytes/sec rate reads as a clean 250', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: INTRO_CAPACITY_CAP_BITS, // pool 1 maxed — sqrt(1,000,000 Bytes) = 1,000 Bytes/sec cap, well above the rate below
+      productionMultiplier: 2048, // 2048 bits/sec raw = 256 Bytes/sec — 8 doublings from 1 Byte
+    })
+    expect(getIntroProductionRate(state.intro)).toBe(2048)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw 256
   })
 
   it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
@@ -881,9 +892,11 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1000,
-      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (8,388,608 bits =
-      // 1,048,576 Bytes) regardless of this seeded value; sqrt(1,048,576 Bytes) = 1,024
-      // Bytes/sec = 8,192 bits/sec pool 1 Bandwidth cap.
+      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (8,000,000 bits =
+      // 1,000,000 Bytes) regardless of this seeded value; sqrt(1,000,000 Bytes) = 1,000
+      // Bytes/sec = 8,000 bits/sec pool 1 Bandwidth cap — plenty above the 1,000-bit balance
+      // below, so it doesn't matter that this comment's own bound is only a guideline (see
+      // getStoragePoolBandwidth) rather than the exact number.
       capacity: 32_000_000,
       productionMultiplier: 999_999, // far above the cap, so the cap (not the rate) binds
     })
@@ -3418,6 +3431,19 @@ describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues
     const fast = withIntro(createInitialGameState(), { capacity: 8000, productionMultiplier: 2, tickSpeedSeconds: 1 })
     expect(getComputeMergeDurationSeconds(slow, 0)).toBe(8000 * COMPUTE_MERGE_CORE_EARN_MULTIPLIER)
     expect(getComputeMergeDurationSeconds(fast, 0)).toBe(getComputeMergeDurationSeconds(slow, 0) / 2)
+  })
+
+  it('uses the raw (unclamped) intro.capacity value, not a pool\'s own smaller SI-clean derived Capacity — a deliberate, documented pacing consequence of intro.capacity no longer clamping to a pool ceiling (see docs/DESIGN_HISTORY.md)', () => {
+    const state = withIntro(createInitialGameState(), {
+      // 20 doublings from 1 Byte: intro.capacity now grows past pool 1's own 1 MB SI ceiling
+      // (INTRO_CAPACITY_CAP_BITS) instead of clamping there, unlike getStoragePoolCapacity's own
+      // (smaller, SI-clean) derived value for the same pool.
+      capacity: 8 * 2 ** 20,
+      productionMultiplier: 1,
+      tickSpeedSeconds: 1,
+    })
+    expect(state.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS)
+    expect(getCoreEarnTimeSeconds(state)).toBe(state.intro.capacity)
   })
 
   it('upgrading Core→Node makes it ×5 of Core earn and cascades later layers', () => {
