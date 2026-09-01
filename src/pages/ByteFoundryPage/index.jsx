@@ -212,8 +212,7 @@ const PoolTitleName = styled.span`
 `
 
 // Three equal-width columns (Bandwidth / Capacity / Memory) so the row fills the card's full
-// width instead of clustering at the left with a large blank gap beside it (the layout this
-// replaced left roughly half the card empty — see this feature's own PR).
+// width instead of clustering at the left with a large blank gap beside it.
 const PoolStatsRow = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
