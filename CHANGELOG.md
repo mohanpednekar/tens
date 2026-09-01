@@ -108,6 +108,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   both displays.
 
 ### Changed
+- **Data Stream card: production rate moved onto the title line; balance no longer drops to raw
+  bits next to a named capacity unit** — the "+N bits/sec"/"+N Bytes/sec" rate now renders beside
+  the "Data Stream" label instead of on its own row, compacting the card. The balance/capacity pair
+  (`formatMemoryBalance`) previously fell all the way back to a raw bit count whenever the balance
+  would floor below 1 in capacity's shared unit (e.g. "246,016 bits / 1 MiB"); it now self-sizes
+  into its own finer named unit instead (e.g. "30.031 KiB / 1 MiB"), only falling back to raw bits
+  for a genuinely sub-Byte balance where no named unit exists. See `docs/DESIGN_HISTORY.md`.
 - **Compute merge/boost pacing (Core earn time) runs slightly slower once `intro.capacity` grows
   past a pool's own ceiling** — `intro.capacity` no longer clamps to a pool's SI boundary (see the
   Storage pool Capacity/Bandwidth fix above), and `getCoreEarnTimeSeconds` deliberately keeps

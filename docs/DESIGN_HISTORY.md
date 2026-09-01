@@ -4345,3 +4345,43 @@ exactly pool 8's own SI-clean ceiling for a raw `intro.capacity` of `8 * 2 ** 90
 magnitude the review's finding was computed at — so a regression back toward the iterative approach
 would fail this test rather than silently reappearing. `yarn test`: 1622/1622 green (+1 over the
 prior entry's 1621).
+
+### Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit
+
+A follow-up to "'0.xyz \<unit\>' fractions eliminated" above, prompted directly by a player looking
+at the rendered result: `formatMemoryBalance` (the `ByteFoundryPage`-local helper backing the Data
+Stream tile) shares ONE unit between the balance and capacity, sized off capacity — so a balance
+that's a small fraction of a much larger capacity (right after a Capacity ×2 purchase, or early in
+a fresh cycle) fell all the way back to a raw bit count, e.g. `"246,016 bits / 1 MiB"`. That fallback
+was itself the deliberate fix from the earlier entry — chosen specifically because a same-unit
+fraction (`"0.235 MiB / 1 MiB"`) was judged to read worse than a divergent-but-legible pair. In
+practice, though, a large raw bit count sitting directly beside a named unit ("bits" next to "MiB")
+reads as two different KINDS of number, not just two different magnitudes, and was reported as
+confusing on exactly that ground.
+
+**The fix keeps the "no 0.xyz" rule intact but narrows what counts as "no finer option."** Instead
+of falling straight to raw bits the instant the shared (capacity-sized) unit would floor the
+balance below 1, `formatMemoryBalance` first tries a unit sized off the BALANCE's own magnitude
+(the same `getMemoryUnit(bits, byteCreated)` self-sizing `formatBitsInNearestUnit` already uses
+elsewhere) — always a strictly finer unit than capacity's own, since the balance is smaller. That
+turns `"246,016 bits / 1 MiB"` into `"30.031 KiB / 1 MiB"`: both sides read as real named
+magnitudes, and the balance never floors to a same-unit fraction since it's now sized specifically
+so it won't. Only when the self-sized unit ALSO floors below 1 — meaning the balance is genuinely
+sub-Byte, the one case with no named unit smaller than a Byte to fall back to — does it drop to the
+raw `"N bit(s)"` string, unchanged from before (e.g. `"4 bits / 1 MiB"`). This is a strict narrowing
+of when the fallback fires, not a reversal of the earlier fix: the balance still never renders a
+same-unit "0.xyz" fraction, it just reaches for a smaller *named* unit before giving up on one
+entirely.
+
+While in the area, the Data Stream tile's production-rate line was also moved from its own row onto
+the same line as the "Data Stream" section label (a new `TitleRow` flex wrapper), compacting the
+card's vertical footprint — a purely cosmetic change with no formula behind it, bundled into the
+same PR since it was reported alongside the unit issue against the same card.
+
+**Verification.** Two new `App.test.jsx` cases pin the fix directly: a balance of 246,016 bits
+against a 1 MiB capacity now renders `"30.031 KiB / 1 MiB"` (previously `"246,016 bits / 1 MiB"`),
+and a genuinely sub-Byte balance of 4 bits against the same capacity still renders `"4 bits / 1 MiB"`
+— confirming the bottom-rung fallback from the earlier entry survives unchanged. A third case pins
+the production-rate text sharing a DOM parent with the section label, guarding the layout change.
+Verified visually against `yarn dev` via a real Playwright/Chromium screenshot at the reported
+scenario's own values. `yarn test`: 1625/1625 green (+3 over the prior entry's 1622).

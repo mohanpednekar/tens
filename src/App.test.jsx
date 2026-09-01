@@ -2863,6 +2863,38 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
   expect(balanceText).not.toMatch(/(?:^|[^\d.])976\.562 KiB \/ 976\.562 KiB/)
 })
 
+test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
+  // A balance that's a small fraction of a much larger capacity (e.g. right after a Capacity ×2
+  // purchase) would floor to "0.234 MiB" — a bare fraction the "never 0.xyz" rule forbids. Instead
+  // of dropping all the way to a raw bit count ("246,016 bits / 1 MiB"), the balance now self-sizes
+  // into its own finer named unit (KiB), keeping both sides real named magnitudes.
+  const capacity = 1024 * 1024 * BITS_PER_BYTE // 1 MiB
+  const bits = 246_016 // 30.031 KiB
+  seedIntroState({ bits, capacity, byteCreated: true })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('30.031 KiB / 1 MiB')
+})
+
+test('Data Stream balance still falls back to raw bits when genuinely below 1 Byte — no named unit exists that small', () => {
+  const capacity = 1024 * 1024 * BITS_PER_BYTE // 1 MiB
+  seedIntroState({ bits: 4, capacity, byteCreated: true })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar.closest('section')).toHaveTextContent('4 bits / 1 MiB')
+})
+
+test('Data Stream title row pairs the production rate with the section label on one line, not a separate row', () => {
+  seedIntroState({ byteCreated: true, capacity: 1000 }) // below INTRO_DISK_UNLOCK_CAPACITY — no pool cards to add a second "/sec" match
+  render(<App />)
+
+  const label = screen.getByText('Data Stream')
+  const rateText = screen.getByText(/\/sec$/)
+  expect(rateText.parentElement).toBe(label.parentElement)
+})
+
 test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
   seedIntroState({ bits: 4500, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)

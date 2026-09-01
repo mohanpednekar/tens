@@ -49,6 +49,16 @@ const SectionLabel = styled.p`
   letter-spacing: 0.04em;
 `
 
+// Pairs SectionLabel with the production-rate StatusText on one line instead of two separate
+// centered rows — compacts the FillableStatCard's vertical footprint.
+const TitleRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+`
+
 const BalanceText = styled.p`
   margin: 0;
   font-family: ${props => props.theme.font.display};
@@ -328,11 +338,19 @@ const TransferBlock = styled.button`
   }
 `
 
-// Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit in
-// game/engine).
+// Renders "<bits> / <capacity>". Capacity always renders in its own unit (picked off capacity —
+// see getMemoryUnit in game/engine). The balance shares that same unit UNLESS doing so would put
+// it below 1 (e.g. "0.234 MiB / 1 MiB" territory) — in that case it self-sizes into its own finer
+// unit instead (e.g. "30.031 KiB / 1 MiB"), which still reads as a real magnitude rather than
+// falling all the way back to a raw bit count. Only a genuinely sub-Byte balance (no named unit
+// finer than a Byte exists) still falls back to raw bits, via formatMemoryAmount's own bottom-rung
+// handling — see docs/DESIGN_HISTORY.md.
 const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
-  const unit = getMemoryUnit(capacityBits, byteCreated)
-  return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
+  const capacityUnit = getMemoryUnit(capacityBits, byteCreated)
+  const balanceUnit = capacityUnit && bits > 0 && bits < capacityUnit.divisor
+    ? getMemoryUnit(bits, byteCreated)
+    : capacityUnit
+  return `${formatMemoryAmount(bits, balanceUnit)} / ${formatMemoryAmount(capacityBits, capacityUnit)}`
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -447,7 +465,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
-          <SectionLabel>Data Stream</SectionLabel>
+          <TitleRow>
+            <SectionLabel>Data Stream</SectionLabel>
+            {intro.byteCreated && (
+              productionRate < BITS_PER_BYTE ? (
+                <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
+              ) : (
+                <StatusText>
+                  +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
+                </StatusText>
+              )
+            )}
+          </TitleRow>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <VisuallyHidden
             role="progressbar"
@@ -456,21 +485,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             aria-valuemin={0}
             aria-valuemax={intro.capacity}
           />
-          {intro.byteCreated && (
-            productionRate < BITS_PER_BYTE ? (
-              <>
-                <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
-                <RateBlocksRow role="progressbar" aria-label="data stream production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
-                  {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
-                    <RateBlock key={index} $filled={index < productionRate} />
-                  ))}
-                </RateBlocksRow>
-              </>
-            ) : (
-              <StatusText>
-                +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
-              </StatusText>
-            )
+          {intro.byteCreated && productionRate < BITS_PER_BYTE && (
+            <RateBlocksRow role="progressbar" aria-label="data stream production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
+              {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
+                <RateBlock key={index} $filled={index < productionRate} />
+              ))}
+            </RateBlocksRow>
           )}
         </FillableStatCard>
 
