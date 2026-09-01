@@ -117,6 +117,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   going forward: the SI-clean switchover sequence is for storage-pool-scoped values only. See
   `docs/DESIGN_HISTORY.md` for earlier reverted attempts that instead shared one raw value between
   both displays.
+- **A save from before the decade-power Capacity ladder could carry an over-cap pool buffer or an
+  out-of-bounds Data Lake capacity level** — `getStoragePoolCapacity` moving to a coarser
+  decade-power ladder (see above) meant an existing save's `intro.poolBuffers` entry could sit above
+  its pool's new, lower ceiling and stay fully spendable on Provision Disk despite the pool card
+  showing a lower cap; separately, narrowing the Data Lake capacity ladder from 11 levels to 4 (see
+  below) meant an existing save's `capacityLevel` could index past the new, shorter
+  `DATA_LAKE_CAPACITY_BY_LEVEL` array and return `undefined`, breaking deposit/doubling/idle-liquidation
+  checks against it. `normalizePoolMemoryCapacity` (runs on every load) now clamps both back into
+  range. Found by an automated review pass on the merged PR that introduced the decade-power
+  Capacity ladder.
 
 ### Changed
 - **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
@@ -189,6 +199,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   is always exactly far enough ahead to afford its own next disk the moment the threshold is
   crossed. Bandwidth is unaffected — it still uses the finer SI-clean sequence. See
   `docs/DESIGN_HISTORY.md`.
+- **Data Lake capacity ladder switched from its own finer SI-clean sequence to the same
+  decade-power-of-10 shape pool Capacity uses** — a lake's own deposit capacity previously climbed
+  1, 2, 4, 8, …, 64, 125, 250, 500, 1,000 over 11 levels; it now climbs 1 → 10 → 100 → 1,000 over 4
+  levels, matching how a pool's own Capacity now derives (see above). Each level's own upgrade cost
+  is unchanged in shape — always exactly the capacity of the level below it (1 unit to reach 10, 10
+  to reach 100, 100 to reach 1,000) — only the values themselves changed. The button's visible
+  label/tooltip moved from "⚡ ×2"/"double…capacity" to "⚡ ×10"/"increase…capacity ×10" to match.
+  See `docs/DESIGN_HISTORY.md`.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)

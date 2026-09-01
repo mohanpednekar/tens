@@ -698,6 +698,52 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     const state = withIntro(createInitialGameState(), { byteCreated: false, capacity: INTRO_STARTING_CAPACITY })
     expect(normalizePoolMemoryCapacity(state)).toBe(state)
   })
+
+  it('normalizePoolMemoryCapacity clamps a pool buffer saved above the new decade-power Capacity ceiling', () => {
+    // At 14 doublings, pool 1's OLD SI-clean Capacity was 128,000 bits (16,000 Bytes); the current
+    // decade-power Capacity is 80,000 bits (10,000 Bytes) — see the pool-1-decade-ladder test above.
+    // A save written before that formula changed could carry a poolBuffers[1] value in that gap
+    // (fully valid then, over-cap now); without a load-time clamp it stays spendable on Provision
+    // Disk despite the pool card now displaying the lower cap.
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: BITS_PER_BYTE * (2 ** 14),
+      poolBuffers: { 1: 100_000 },
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.poolBuffers[1]).toBe(getStoragePoolCapacity(state, 1))
+    expect(after.intro.poolBuffers[1]).toBe(80_000)
+  })
+
+  it('normalizePoolMemoryCapacity leaves a pool buffer within the current Capacity ceiling untouched', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: BITS_PER_BYTE * (2 ** 14),
+      poolBuffers: { 1: 50_000 },
+    })
+    expect(normalizePoolMemoryCapacity(state)).toBe(state)
+  })
+
+  it('normalizePoolMemoryCapacity clamps a Data Lake capacityLevel saved past the new, shorter ladder\'s array bounds', () => {
+    // The Data Lake capacity ladder narrowed from 11 SI-clean levels (0-10) to 4 decade-power ones
+    // (0-3) — a save written under the old ladder could carry a capacityLevel of, say, 7, which
+    // would index DATA_LAKE_CAPACITY_BY_LEVEL (now length 4) out of bounds and return undefined.
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: 7 } },
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.dataLakes[1].capacityLevel).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)
+    expect(getDataLakeCapacity(after, 1)).toBe(1000)
+  })
+
+  it('normalizePoolMemoryCapacity leaves a Data Lake capacityLevel within the new ladder\'s bounds untouched', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      dataLakes: { 1: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: 2 } },
+    })
+    expect(normalizePoolMemoryCapacity(state)).toBe(state)
+  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
@@ -8917,8 +8963,8 @@ describe('Data Lakes', () => {
     expect(after.intro.bits).toBe(42)
     expect(getDataLakeDepositedUnits(1)(after)).toBe(0)
     expect(getDataLakeCapacityLevel(after, 1)).toBe(1)
-    expect(getDataLakeCapacity(after, 1)).toBe(2)
-    expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(2 * 8000)
+    expect(getDataLakeCapacity(after, 1)).toBe(10)
+    expect(getDataLakeCapacityDoublingCost(after, 1)).toBe(10 * 8000)
     // Doesn't disturb other lakes.
     expect(getDataLakeCapacityLevel(after, 2)).toBe(0)
   })
@@ -8944,7 +8990,7 @@ describe('Data Lakes', () => {
     expect(doubleDataLakeCapacity(1)(state)).toBe(state) // no-op once maxed, even while full
   })
 
-  it('follows the same SI-clean sequence as Memory Capacity: doubles through level 6 (64), then deviates to 125 at level 7 instead of 128, then doubles again to the 1,000 cap', () => {
+  it('follows the same decade-power-of-10 ladder as pool Capacity: 1 -> 10 -> 100 -> 1,000, one decade per level, each level costing exactly the level below it', () => {
     let state = withIntro(createInitialGameState(), {
       disksBuiltTotal: Object.fromEntries(
         [...Array(30)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
@@ -8953,7 +8999,8 @@ describe('Data Lakes', () => {
       productionMilestoneTier: 100,
       productionMilestoneTierClaims: 1,
     })
-    const expectedByLevel = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]
+    const expectedByLevel = [1, 10, 100, 1000]
+    expect(expectedByLevel.length - 1).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)
     expect(getDataLakeCapacity(state, 1)).toBe(expectedByLevel[0])
     for (let level = 1; level <= DATA_LAKE_CAPACITY_MAX_LEVEL; level += 1) {
       state = withFullLake(state)

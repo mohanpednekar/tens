@@ -1049,10 +1049,11 @@ mechanic decouples them entirely instead:
   decade of doublings past a pool boundary, compounding within an Era) rather than a bug — see
   `docs/DESIGN_HISTORY.md`.
 
-The Data Lake capacity ladder (below) is a separate, always-independent doubling ladder — it also
-uses an SI-clean sequence (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at 1,000 units) since a lake's own
-capacity is never shown via any binary unit, so it never shared this conflict in the first place —
-see "Data Lakes" below. **Speed ×2** (was Bandwidth/Invest) steps by
+The Data Lake capacity ladder (below) is a separate, always-independent ladder — it now uses the
+same plain DECADE-POWER-OF-10 shape pool Capacity uses (`DATA_LAKE_CAPACITY_BY_LEVEL`, 1/10/100/1000,
+capped at 1,000 units), replacing an earlier finer SI-clean sequence — see "Data Lakes" below and
+`docs/DESIGN_HISTORY.md`. A lake's own capacity is never shown via any binary unit, so it never
+shared the Data Stream-display conflict pool Capacity itself once had (see above). **Speed ×2** (was Bandwidth/Invest) steps by
 `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling effect
 (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
@@ -1147,16 +1148,25 @@ QB.
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
 purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB
 lake, in that lake's own Byte-scale currency) and climbing by 1 level per
-`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` (plain doubling
-except one 64→125 SI-switchover step — a lake's own capacity is never shown via a binary unit, so
-this switchover carries none of the Data Stream-display conflict that reverted the analogous
-mechanic for pool Capacity itself — see above), permanently hard-capped at
-`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB"
-for the KB lake) via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
+`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` — a plain
+DECADE-POWER-OF-10 ladder (1, 10, 100, 1,000), the same coarse shape pool Capacity itself uses
+(`getDecadePowerEquivalentBits`), replacing an earlier finer SI-clean sequence (1, 2, 4, …, 64, 125,
+250, 500, 1,000 over 11 levels) — see `docs/DESIGN_HISTORY.md` — permanently hard-capped at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 3 — 1,000 units, "1000 KB"
+for the KB lake) via `isDataLakeCapacityMaxed`. Advancing a level is funded by **draining the lake itself**, not Bits: it requires
 the lake to be completely full (`isDataLakeCapacityDoublingAvailable` — deposited units at least the
 lake's own current capacity) and empties every deposit back to zero on purchase — the same
 "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the
-lake's own banked Disks instead of Data Stream Buffer bits.
+lake's own banked Disks instead of Data Stream Buffer bits; each level's own cost is therefore
+always exactly the level below it (1 unit to reach 10, 10 units to reach 100, 100 units to reach
+1,000). The `doubleDataLakeCapacity`/`isDataLakeCapacityDoubling*` function and predicate names
+still say "doubling" even though the ladder itself now climbs a decade-power step per level, not a
+literal ×2 — a value-only change, not worth renaming every call site for. `normalizePoolMemoryCapacity`
+(save load) clamps a saved `capacityLevel` back down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if it's
+above it — a save written under the old, longer ladder could otherwise index
+`DATA_LAKE_CAPACITY_BY_LEVEL` (now length 4) out of bounds and return `undefined`; it likewise
+clamps a saved `intro.poolBuffers` entry down to its pool's current `getPoolBufferCapacity` if the
+now-lower decade-power Capacity formula (see above) leaves it above the new ceiling.
 `getDataLakeCapacityDoublingCost` is kept only as a display-only helper (that same current-capacity
 figure converted into real bits via `getDataLakeUnitBits(tierIndex)`, for the button's own tooltip)
 — no code path spends it out of `intro.bits`. Gated by the same forced priority order every other
@@ -1335,7 +1345,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1624 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1628 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

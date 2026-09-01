@@ -16,7 +16,7 @@ import {
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
 } from 'game/engine'
-import { COMPUTE_TIER_LABELS, DATA_LAKE_TIER_COUNT } from 'game/layers'
+import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
 // A single grid shared across every visible lake row (rather than one flex row per lake) so the
@@ -106,7 +106,7 @@ const getVisibleLakeTierIndexes = state => {
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     const deposited = getDataLakeDepositedUnits(tierIndex)(state)
     const lake = getDataLakeTier(state, tierIndex)
-    // A lake whose capacity was already doubled at least once (before ever holding a deposit) is
+    // A lake whose capacity was already grown at least once (before ever holding a deposit) is
     // just as worth showing as one with activity — its own level has moved off the starting value.
     const capacityGrown = getDataLakeCapacityLevel(state, tierIndex) > 0
     if (deposited > 0 || (lake?.purchased ?? 0) > 0 || (lake?.transfers?.length ?? 0) > 0 || capacityGrown) {
@@ -160,6 +160,12 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
         const canDouble = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
         const maxed = isDataLakeCapacityMaxed(state, tierIndex)
+        // The ladder is a plain decade-power-of-10 step (1, 10, 100, 1,000 — see layers.js), not a
+        // literal ×2, so the next value is read off the ladder directly rather than computed as
+        // capacity * 2 (only accurate under the earlier SI-clean sequence's own 64->125 exception
+        // aside, doubling — see docs/DESIGN_HISTORY.md). Only read while !maxed, so level + 1 always
+        // stays within DATA_LAKE_CAPACITY_BY_LEVEL's bounds.
+        const nextCapacity = maxed ? capacity : DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex) + 1]
         const depositedSize = formatDiskSize(deposited * unitBits)
         const capacitySize = formatDiskSize(capacity * unitBits)
         const nextCostSize = formatDiskSize(nextCost * unitBits)
@@ -172,14 +178,14 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               {capacitySize}
               {!maxed && (
                 <DoubleCapacityButton
-                  aria-label={`double the ${label} Data Lake's capacity`}
+                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
                   disabled={!canDouble}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} deposited) to double its capacity to ${formatDiskSize(capacity * 2 * unitBits)} — needs it completely full first`}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} deposited) to grow its capacity to ${formatDiskSize(nextCapacity * unitBits)} — needs it completely full first`}
                   type="button"
                   variant={canDouble ? 'prestige' : 'neutral'}
                 >
-                  <ButtonContent>⚡ ×2</ButtonContent>
+                  <ButtonContent>⚡ ×10</ButtonContent>
                 </DoubleCapacityButton>
               )}
             </CapacityCell>

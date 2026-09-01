@@ -199,8 +199,11 @@ each wrapping independently as a concatenated string; each lake's cells are wrap
 has to a `<table>`). Each row's visible name is the terser `"{label} → {boosterLabel}"` (e.g. "KB →
 Cores"), with the fuller `"{label} Data Lake → {boosterLabel}"` phrase moved into a `title`
 attribute instead of crowding the compact grid cell; the Capacity column stacks that lake's current
-capacity figure over a compact "⚡ ×2" `DoubleCapacityButton` (hidden once the lake's own
-1,024-unit hard cap is reached — `isDataLakeCapacityMaxed`), and the remaining two columns show
+capacity figure over a compact "⚡ ×10" `DoubleCapacityButton` (aria-label "increase the … Data
+Lake's capacity ×10" — the capacity ladder itself is now a plain decade-power-of-10 step per level,
+not a literal doubling; the styled component/action names still say "double" since only the ladder's
+VALUES changed — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section) — hidden once the lake's own
+1,000-unit hard cap is reached (`isDataLakeCapacityMaxed`), and the remaining two columns show
 Boosters bought and the next purchase's cost (see
 docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic).
 

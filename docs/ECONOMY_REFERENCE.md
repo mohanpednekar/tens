@@ -574,31 +574,38 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    read cache already follows, so a disk whose own fixed corresponding tier is still at the
    required level stays available for a manual/auto redeem instead of being swept into the lake out
    from under it.
-   **Capacity doubling** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
-   `doubleDataLakeCapacity(tierIndex)`) is the one intentional, explicit cap on a lake's deposits:
-   `getDataLakeCapacity` looks up `DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`
-   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7, the same
-   `getNextSiDoubledValue` SI-clean switchover shape the Data Stream's own finer SI-clean values
-   (e.g. pool Bandwidth — see "Pool Memory Capacity" above) use — pool Capacity itself no longer
-   does, see below — a lake's own capacity is never rendered via any binary unit, so unlike `intro.capacity`
-   itself (the Data Stream tile's own value — see "Byte Foundry" above and `docs/DESIGN_HISTORY.md`
-   for the two earlier, reverted attempts at sharing one raw value between both displays) there's no
-   conflicting binary display for the switchover to break here — then 125→250→500→1,000 — starting
-   at level 0 (1 unit — "1 KB" for the KB lake, in
+   **Capacity ladder** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
+   `doubleDataLakeCapacity(tierIndex)` — the function/predicate names still say "doubling" even
+   though the ladder itself no longer is one, see below) is the one intentional, explicit cap on a
+   lake's deposits: `getDataLakeCapacity` looks up
+   `DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]` — a plain
+   DECADE-POWER-OF-10 ladder, `[1, 10, 100, 1000]`, the SAME coarse shape pool Capacity itself uses
+   (`getDecadePowerEquivalentBits` — see "Pool Memory Capacity" above), replacing an earlier finer
+   SI-clean sequence (1, 2, 4, …, 64, 125, 250, 500, 1,000 over 11 levels, the `getNextSiDoubledValue`
+   shape pool Bandwidth still uses) that no longer matched pool Capacity's own derivation once THAT
+   moved off it — starting at level 0 (1 unit — "1 KB" for the KB lake, in
    that lake's own Byte-scale denomination) and permanently hard-capped at
-   `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB" for the KB lake) via
+   `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 3 — 1,000 units, "1000 KB" for the KB lake) via
    `isDataLakeCapacityMaxed`. Unlike pool Capacity's raw continuously-doubled bit value, a lake's
-   level is an explicit small integer (0–10) already tracked in state, so this lookup needs no
-   float-precision handling. Doubling is funded by **draining the
+   level is an explicit small integer (0–3) already tracked in state, so this lookup needs no
+   float-precision handling — but IS vulnerable to an out-of-bounds `undefined` read if a saved
+   `capacityLevel` predates this narrower array (see the migration note below). Advancing a level is
+   funded by **draining the
    lake itself**, not Data
    Stream Bits: `isDataLakeCapacityDoublingAvailable` requires the lake to be completely full
    (deposited units at least its own current capacity), and `doubleDataLakeCapacity` empties every
    deposit back to zero on purchase — the same "requires a full Buffer, drains it" shape Memory's
-   own Capacity ×2 ladder uses, just paid in the lake's own banked Disks instead of Buffer bits.
+   own Capacity ×2 ladder uses, just paid in the lake's own banked Disks instead of Buffer bits — so
+   each level's own cost is always exactly the level below it (1 unit to reach 10, 10 units to reach
+   100, 100 units to reach 1,000).
    `getDataLakeCapacityDoublingCost` (current capacity converted into real bits via
    `getDataLakeUnitBits(tierIndex)` — one deposit-unit's own bit face value, exactly its lake's ×1
    sub-size Disk's size, e.g. 8,000 bits for the KB lake) is kept only as a display-only helper for
-   the button's own tooltip; no code path spends it out of `intro.bits`. Gated by the same forced
+   the button's own tooltip; no code path spends it out of `intro.bits`. `DataLakePanel`'s own button
+   reads the NEXT level's capacity directly off `DATA_LAKE_CAPACITY_BY_LEVEL[level + 1]` for its
+   tooltip/label (always ×10 from the current level, not `capacity * 2`, which was only ever
+   accurate under the old sequence) — labelled "⚡ ×10" and `aria-label="increase the <label> Data
+   Lake's capacity ×10"` (was "double the … capacity" / "⚡ ×2"). Gated by the same forced
    priority chain as every other Byte Foundry milestone action
    (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill, Speed, Disk
    Build, and Compute are all currently unavailable; sits at the former Sacrifice rank, not
@@ -608,7 +615,17 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    (spending the lake's own capacity expressed in real-bit currency, the "spend the current value to
    double it" shape Capacity ×2 uses); a later correction switched the step sequence itself from
    plain `2 ** level` to `DATA_LAKE_CAPACITY_BY_LEVEL`'s SI-clean sequence, moving the max-level cap
-   from 1,024 to 1,000 — see `docs/DESIGN_HISTORY.md` for all three.
+   from 1,024 to 1,000; most recently the sequence itself moved from that 11-level SI-clean shape to
+   the current 4-level decade-power one, to match pool Capacity's own decade-power derivation — see
+   `docs/DESIGN_HISTORY.md` for all four.
+
+   **Migration.** A save written under the old, longer ladder can carry a `capacityLevel` above the
+   new array's own bounds (e.g. level 7, valid under the 11-level ladder, out of range on the new
+   4-level one) — left unclamped, `getDataLakeCapacity` would index past the array and return
+   `undefined`, breaking every downstream comparison against it (deposit eligibility, the doubling
+   gate, idle-disk liquidation) rather than just showing a lower cap. `normalizePoolMemoryCapacity`
+   (run on every load, see "Pool Memory Capacity" above) clamps any `dataLakes[tier].capacityLevel`
+   found above `DATA_LAKE_CAPACITY_MAX_LEVEL` back down to it.
 
    `canDepositDiskToDataLake` itself requires not just a currently-full disk but that size's disk
    array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
@@ -2299,13 +2316,13 @@ purchases were manual or automatic.
 | `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
 | `isMemoryCapacityUpgradeAvailable` | `state → bool` | Shared Data Stream Capacity ×2 predicate: requires a full Buffer and the highest-unlocked-pool's own derived Capacity below its ceiling (`!isMemoryCapacityAtCap`); Capacity ×2 drains the Buffer and doubles `intro.capacity` |
 | `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, unlockedCount) >= getStoragePoolMemoryBounds(unlockedCount).endBits` (`unlockedCount = getUnlockedStoragePoolCount(state)`) — compares the pool's own decade-power DERIVED Capacity, not raw `intro.capacity`, since the raw value is no longer clamped to any pool ceiling |
-| `normalizePoolMemoryCapacity` | `state → state` | Clears legacy queued Capacity state and sanitizes a missing/negative `intro.capacity` to a floor of 0. No longer clamps `intro.capacity` to any pool boundary — only `getStoragePoolCapacity`'s own derived value does that |
+| `normalizePoolMemoryCapacity` | `state → state` | Clears legacy queued Capacity state and sanitizes a missing/negative `intro.capacity` to a floor of 0 (does not clamp `intro.capacity` to any pool boundary — only `getStoragePoolCapacity`'s own derived value does that). Also runs on every load: clamps each unlocked pool's `intro.poolBuffers` entry down to that pool's current `getPoolBufferCapacity` if a save predates the decade-power Capacity formula and now sits above it, and clamps each `intro.dataLakes[tier].capacityLevel` down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if a save predates the Data Lake ladder's own narrowing (prevents an out-of-bounds `DATA_LAKE_CAPACITY_BY_LEVEL` read) |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Per-pool SI Capacity windows (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
 | `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own decade-power Capacity — `getDecadePowerEquivalentBits(intro.capacity)` (private helper), then clamps to that pool's `getStoragePoolMemoryBounds` window. `0` for a locked/invalid pool |
 | `getStoragePoolBandwidth` | `(state, poolIndex) → bits/sec` | A pool's own throughput — `getSiCleanEquivalentBits(min(rawProductionRate, sqrt(getStoragePoolCapacity(...) in Bytes)) in bits)`: the raw rate follows its OWN finer SI-clean transform (distinct from Capacity's decade-power one), with `sqrt(Capacity)` only bounding the RAW value before that transform is applied (a guideline for bounds, not the formula). `0` for a locked/invalid pool |
 | `getDecadePowerEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))` (the SAME doubling-step calculation `getSiCleanEquivalentBits` below uses), then `decadeExponent = floor(N * log10(2))`, returning `10 ** decadeExponent` Bytes — a single closed-form computation. Used ONLY by `getStoragePoolCapacity`, not Bandwidth. `log10(2)` is irrational, so `N * log10(2)` is never exactly an integer for `N > 0` — unlike the SI-clean sequence below, which was deliberately constructed to land exactly on decade boundaries, there's no analogous boundary ambiguity here to guard against with rounding instead of flooring. Non-finite input returns `0`; values below 1 Byte pass through unchanged |
 | `getSiCleanEquivalentBits` | `rawBits → bits` (private) | `N = round(log2(rawBits / BITS_PER_BYTE))`, then `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)` — a closed-form computation, not an iterative walk of `getNextSiDoubledValue` (which would drift at very large N — see "Pool Memory Capacity" above). Used ONLY by `getStoragePoolBandwidth` now — `getStoragePoolCapacity` uses the separate `getDecadePowerEquivalentBits` above instead (see `docs/DESIGN_HISTORY.md`); a rounded log2 (not a discrete search) avoids floating-point drift misclassifying a value right at a doubling boundary. Non-finite input returns `0`; values below 1 Byte pass through unchanged |
-| `getNextSiDoubledValue` | `bits → bits` | The next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes — doubles normally except once per decade of ten doublings, where a value's mantissa (after stripping factors of 1000) lands on exactly 64, going to 125 instead of 128. Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolBandwidth` actually calls at runtime (it uses the closed-form `getSiCleanEquivalentBits` instead — see its own row above; `getStoragePoolCapacity` doesn't use this sequence at all any more, see `getDecadePowerEquivalentBits` above) — nor a runtime call site for the Data Lake capacity ladder, whose own `DATA_LAKE_CAPACITY_BY_LEVEL` is a hardcoded array of the same shape, not computed via this function |
+| `getNextSiDoubledValue` | `bits → bits` | The next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes — doubles normally except once per decade of ten doublings, where a value's mantissa (after stripping factors of 1000) lands on exactly 64, going to 125 instead of 128. Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolBandwidth` actually calls at runtime (it uses the closed-form `getSiCleanEquivalentBits` instead — see its own row above; `getStoragePoolCapacity` doesn't use this sequence at all any more, see `getDecadePowerEquivalentBits` above) — nor is it used by the Data Lake capacity ladder, whose own `DATA_LAKE_CAPACITY_BY_LEVEL` moved off this same SI-clean shape onto a plain decade-power-of-10 one (`[1, 10, 100, 1000]`, a hardcoded array, not computed via this function) to match `getStoragePoolCapacity`'s own derivation |
 | `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and doubles `intro.capacity` (plain `×2`, unclamped) via `upgradePoolCapacity` |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full and no higher-priority action blocks it |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears a legacy `capacityUpgradeQueued` flag. Same-reference no-op when already false |

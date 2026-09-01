@@ -442,24 +442,23 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // more of a denomination than a single array of that size could ever physically produce. On top of
 // that physical ceiling, a lake's own actual capacity is a smaller, purchasable ladder (see
 // getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB" for
-// the KB lake), doubling per purchase EXCEPT once — level 6→7 (64→125, not 128) — an SI switchover
-// unique to this ladder (unlike pool Capacity, which reverted to plain binary doubling — see
-// docs/DESIGN_HISTORY.md — since its own value also drives the Data Stream tile's binary display;
-// a lake's capacity is never shown via any binary unit, so this switchover has no such conflict
-// here), so this ladder lands on a clean SI 1,000 units at its DATA_LAKE_CAPACITY_MAX_LEVEL
-// (level 10) hard cap, not a binary 1,024. Values are read from DATA_LAKE_CAPACITY_BY_LEVEL
-// directly (an explicit, already-integer level index, so this needs no float-precision handling).
-// An earlier version instead made the cap fixed at the physical ceiling with no purchasable lever
-// at all — see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder
-// replaced that, and for the SI-switchover correction.
+// the KB lake), climbing a plain DECADE-POWER-OF-10 ladder per purchase — 1, 10, 100, 1,000 —
+// the same coarse shape pool Capacity itself uses (getDecadePowerEquivalentBits), replacing an
+// earlier finer SI-clean sequence (1, 2, 4, …, 64, 125, 250, 500, 1,000 over 11 levels) that no
+// longer matches pool Capacity's own derivation — see docs/DESIGN_HISTORY.md. Doubling (now really
+// "×10-ing") is funded by draining the lake ITSELF, so the nth level's own upgrade cost is always
+// exactly the (n-1)th level's own capacity value (1 unit to reach 10, 10 units to reach 100, 100
+// units to reach 1,000). Values are read from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit,
+// already-integer level index, so this needs no float-precision handling). An earlier version
+// instead made the cap fixed at the physical ceiling with no purchasable lever at all — see
+// docs/DESIGN_HISTORY.md for why a smaller, purchasable, explicitly-capped ladder replaced that.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
-export const DATA_LAKE_CAPACITY_MAX_LEVEL = 10
-// Index i = capacity at capacityLevel i. Plain doubling (1, 2, 4, 8, 16, 32, 64) except the level
-// 6->7 step, which goes to 125 instead of 128 — see the comment above.
-export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]
+export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3
+// Index i = capacity at capacityLevel i. Plain decade-power-of-10 ladder — see the comment above.
+export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 
 // --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
 // tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and

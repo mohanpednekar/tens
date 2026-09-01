@@ -2316,8 +2316,11 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
 // Clears any stale queued-Capacity-upgrade flag on save load and sanitizes a missing/negative
 // intro.capacity back to a sane floor. No longer clamps capacity to any pool boundary here —
 // intro.capacity itself isn't bound by a pool's window any more (see upgradePoolCapacity);
-// getStoragePoolCapacity derives each pool's own SI-clean Capacity from it and clamps THAT to the
-// pool's own window instead.
+// getStoragePoolCapacity derives each pool's own decade-power Capacity from it and clamps THAT to
+// the pool's own window instead. Also runs two defensive clamps against stale saves from before a
+// capacity-ladder formula narrowed (see the comments further down this function): pool buffers
+// above the new Capacity ceiling, and Data Lake capacityLevel values past the new ladder's own
+// array bounds.
 export const normalizePoolMemoryCapacity = state => {
   if (!state?.intro) return state
   let changed = state.intro.capacityUpgradeQueued ?? false
@@ -2326,6 +2329,55 @@ export const normalizePoolMemoryCapacity = state => {
   if (capacity !== nextIntro.capacity) {
     changed = true
     nextIntro.capacity = capacity
+  }
+  // Clamp each unlocked pool's own buffer down to its CURRENT Capacity ceiling. A save written
+  // before the pool Capacity formula moved from the finer SI-clean sequence to the coarser
+  // decade-power one (see docs/DESIGN_HISTORY.md) can carry a poolBuffers entry above the new,
+  // lower ceiling — tickPoolBufferFill's own room = Math.max(0, capacity - current) only ever
+  // stops TOPPING UP an over-capacity buffer, it never brings the excess back down, so without
+  // this clamp that excess stays fully spendable on Provision Disk even though the pool card
+  // displays a lower cap.
+  const stateForBufferClamp = { ...state, intro: nextIntro }
+  const unlockedCount = getUnlockedStoragePoolCount(stateForBufferClamp)
+  if (unlockedCount >= 1 && nextIntro.poolBuffers) {
+    const poolBuffers = { ...nextIntro.poolBuffers }
+    let buffersChanged = false
+    for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
+      const current = poolBuffers[poolIndex] ?? 0
+      const cap = getPoolBufferCapacity(stateForBufferClamp, poolIndex)
+      if (current > cap) {
+        poolBuffers[poolIndex] = cap
+        buffersChanged = true
+      }
+    }
+    if (buffersChanged) {
+      changed = true
+      nextIntro.poolBuffers = poolBuffers
+    }
+  }
+  // Clamp each Data Lake's own capacityLevel down to the current DATA_LAKE_CAPACITY_MAX_LEVEL. A
+  // save written before that ladder narrowed from 11 SI-clean levels to 4 decade-power ones (see
+  // docs/DESIGN_HISTORY.md) could carry a capacityLevel past the new, shorter
+  // DATA_LAKE_CAPACITY_BY_LEVEL array's end — without this clamp, getDataLakeCapacity would index
+  // past the array and return undefined, breaking every downstream comparison against it (deposit
+  // eligibility, doubling availability, idle-disk liquidation) rather than just displaying a lower
+  // cap.
+  if (nextIntro.dataLakes) {
+    const dataLakes = { ...nextIntro.dataLakes }
+    let lakesChanged = false
+    for (const tierKey of Object.keys(dataLakes)) {
+      const lake = dataLakes[tierKey]
+      if (!lake) continue
+      const level = lake.capacityLevel ?? 0
+      if (level > DATA_LAKE_CAPACITY_MAX_LEVEL) {
+        dataLakes[tierKey] = { ...lake, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL }
+        lakesChanged = true
+      }
+    }
+    if (lakesChanged) {
+      changed = true
+      nextIntro.dataLakes = dataLakes
+    }
   }
   return changed ? { ...state, intro: nextIntro } : state
 }
@@ -3787,9 +3839,9 @@ export const getDataLakeDepositedUnits = tierIndex => state => {
 const DATA_LAKE_SUB_SIZE_TOTAL = DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize, 0)
 
 // A lake's own deposit capacity is THE explicit, purchasable ladder a player actually interacts
-// with: starts at 1 unit (level 0), climbs via DATA_LAKE_CAPACITY_BY_LEVEL (plain doubling except
-// one 64->125 SI-switchover step — see layers.js), permanently hard-capped at
-// DATA_LAKE_CAPACITY_MAX_LEVEL (1,000 units at level 10).
+// with: starts at 1 unit (level 0), climbs via DATA_LAKE_CAPACITY_BY_LEVEL (a plain
+// decade-power-of-10 ladder — 1, 10, 100, 1,000, see layers.js), permanently hard-capped at
+// DATA_LAKE_CAPACITY_MAX_LEVEL (1,000 units at level 3).
 export const getDataLakeCapacityLevel = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.capacityLevel ?? 0
 
@@ -3947,13 +3999,16 @@ const getDataLakeSubSizeStep = (tierIndex, subSize) =>
 export const getDataLakeUnitBits = tierIndex =>
   getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[0]))
 
-// Doubling a lake's own capacity (see getDataLakeCapacity above) is funded by the lake ITSELF, not
-// Bits: it requires the lake to be completely full (deposited units at its own current capacity)
-// and doubling drains every deposit back to zero — the same "requires a full Buffer, drains it"
-// shape Memory's own Capacity ×2 ladder already uses, just paid in the lake's own banked Disks
-// instead of Data Stream Buffer bits. getDataLakeCapacityDoublingCost is kept as a display-only
-// helper (the real-bit face value of what gets drained, via getDataLakeUnitBits) for the button's
-// own tooltip; no code path spends it out of intro.bits any more.
+// Advancing a lake's own capacity ladder (see getDataLakeCapacity above) is funded by the lake
+// ITSELF, not Bits: it requires the lake to be completely full (deposited units at its own current
+// capacity) and advancing drains every deposit back to zero — the same "requires a full Buffer,
+// drains it" shape Memory's own Capacity ×2 ladder already uses, just paid in the lake's own banked
+// Disks instead of Data Stream Buffer bits (the function/predicate names below still say
+// "doubling" even though the ladder itself now climbs by a decade-power-of-10 step per level, not
+// a literal ×2 — renaming every call site was judged not worth the extra diff for a value-only
+// change). getDataLakeCapacityDoublingCost is kept as a display-only helper (the real-bit face
+// value of what gets drained, via getDataLakeUnitBits) for the button's own tooltip; no code path
+// spends it out of intro.bits any more.
 export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
 

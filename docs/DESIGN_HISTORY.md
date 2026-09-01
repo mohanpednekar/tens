@@ -4566,3 +4566,105 @@ exact disk-cost-alignment property above. `yarn test`: 1624/1624 green. Verified
 `yarn dev` + Playwright/Chromium screenshots: Provision Disk renders inside the active pool's card,
 and the fallback copy appears/disappears correctly as the ladder outruns and is caught up by pool
 visibility.
+
+### Load-time migration clamps for the decade-power Capacity change; Data Lake capacity ladder moved onto the same shape
+
+Shipped in two parts, both following directly from the entry above (moving pool Capacity from an
+SI-clean sequence to a decade-power-of-10 one): an automated review pass caught two migration gaps
+the PR that shipped that change had left open, and the maintainer separately asked for the Data
+Lake capacity ladder to follow the same decade-power shape pool Capacity now uses.
+
+**The migration gaps.** A `Devin Review` pass against the just-merged PR flagged, correctly, that
+lowering `getStoragePoolCapacity`'s output (the decade-power ladder is generally LOWER than the old
+SI-clean one at every point except exact decade boundaries, where both coincide) meant an EXISTING
+save's `intro.poolBuffers[poolIndex]` — filled and persisted under the old, higher ceiling — could
+now sit above the new one. Nothing had ever validated that value against the live Capacity formula
+before spending it: `tickPoolBufferFill`'s own `room = Math.max(0, capacity - current)` only ever
+stops TOPPING UP an over-capacity buffer (clamped to 0, never negative), it never brings existing
+excess back down, and `provisionDisk`'s own affordability check is a plain `buffer >= cost`
+comparison with no upper bound at all. The practical effect: a real player's save, untouched by
+anything they did, could suddenly hold more spendable Storage currency than the new formula would
+ever let a fresh buffer accumulate — not a crash, but a real, unintended one-time advantage handed
+out by a formula change the player never asked for. Confirmed by reproducing it directly: even this
+session's OWN `App.test.jsx` test suite had a test (`'starting a build spends the cost from its own
+pool buffer immediately...'`) that seeded `poolBuffers: { 1: currentBankCost }` alongside
+`capacity: currentBankCost` — a pairing that was only ever valid before this exact PR's own
+decade-power change, since seeding the raw Data Stream capacity equal to the disk cost no longer
+derives a pool Capacity of that same size (it derives one decade LOWER instead, per the "one decade
+behind" cost-alignment property the previous entry documents). That test was silently relying on
+the exact latent gap Devin flagged and needed its own seed corrected (`capacity: BITS_PER_BYTE * (2
+** 14)`, the smallest doubling count whose derived Capacity actually covers `currentBankCost`) once
+the new migration clamp started (correctly) enforcing the invariant even against test fixtures.
+
+The second finding was more severe in kind, if narrower in likely reach: the SAME review, reading
+`getStoragePoolCapacity`'s own decade-power derivation, is what prompted asking whether the Data
+Lake capacity ladder (a structurally similar "purchasable level → array lookup" mechanic,
+`DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`) had an equivalent gap —
+and it did, worse: narrowing that array's length (see below) meant a save with a `capacityLevel`
+from the old, longer ladder could index straight past the new array's end and get back `undefined`,
+which would then poison every downstream comparison against it (`canDepositDiskToDataLake`,
+`isDataLakeCapacityDoublingAvailable`, idle-disk liquidation eligibility) — a real correctness bug,
+not just a minor economy quirk, the first time any of those paths ran against an affected save.
+
+**Resolution: two defensive clamps in `normalizePoolMemoryCapacity`**, the same "runs on every
+load, sanitizes state a stale formula could leave inconsistent" function that already handled
+`intro.capacity` itself. Extending it rather than adding a second, separately-called normalizer kept
+every "fix up state a formula change left invalid" concern in one place a future session would
+naturally think to check first. Both clamps are pure floor/ceiling operations, no attempt at a
+"fair" recomputation of what the player would have had under the new formula the whole time — that
+would need reconstructing a plausible history the save doesn't record, for a one-time transitional
+edge case that's fundamentally about preventing a crash/over-cap-spend, not about being generous or
+stingy to a save from before the change:
+- Each currently-unlocked pool's `poolBuffers[poolIndex]` is clamped down to
+  `getPoolBufferCapacity(state, poolIndex)` (the SAME value `getStoragePoolCapacity` now derives)
+  whenever it's found above it.
+- Each Data Lake's `capacityLevel` is clamped down to `DATA_LAKE_CAPACITY_MAX_LEVEL` whenever it's
+  found above it — this is the one that actually matters for correctness (prevents the `undefined`
+  read), not just fairness; a level clamped this way can, for some old levels, land HIGHER than
+  before (e.g. old level 5 → new level 3, whose capacity 1,000 exceeds old level 5's capacity 32) —
+  judged an acceptable, harmless side effect of a hard array-bounds fix in a solo hobby project with
+  no real economic stakes, not worth a more elaborate "closest equivalent old value" remap.
+
+**The Data Lake capacity ladder request.** Separately, the maintainer asked for the Data Lake
+capacity ladder itself to follow the exact shape pool Capacity now uses: 1 KB when unlocked, then
+10 KB (cost 1 KB), 100 KB (cost 10 KB), 1,000 KB (cost 100 KB) — a plain decade-power-of-10 step per
+level, each level's own upgrade cost exactly the level below it. This mapped directly onto the
+existing mechanic with almost no logic change at all: `getDataLakeCapacity` was already a bare array
+lookup (`DATA_LAKE_CAPACITY_BY_LEVEL[level]`), `doubleDataLakeCapacity` was already funded by
+draining the lake itself back to zero on advance (never Bits) — the "cost = current capacity" shape
+the request describes was already exactly how it worked, just with a different (SI-clean,
+11-level) VALUE sequence behind it. The entire change was two constants in `layers.js`:
+`DATA_LAKE_CAPACITY_BY_LEVEL` from `[1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]` (11 levels) to
+`[1, 10, 100, 1000]` (4 levels), and `DATA_LAKE_CAPACITY_MAX_LEVEL` from `10` to `3` to match. The
+absolute ceiling is unchanged (both sequences top out at exactly 1,000 units) — only the
+intermediate levels got coarser, mirroring the same "fewer, bigger jumps" shape pool Capacity's own
+decade-power change introduced. This is also why the migration clamp above (added moments earlier
+in the same session, for the pool Capacity change) turned out to matter again here: narrowing an
+array from 11 entries to 4 is exactly the kind of change that needs the same defensive clamp, and
+having just built it for pool buffers made adding the Data Lake one immediate rather than a second
+investigation.
+
+**UI copy fallout.** The capacity-ladder button (`components/DataLakePanel`) had hardcoded "×2"
+language throughout — visible label `⚡ ×2`, `aria-label="double the … Data Lake's capacity"`, and a
+tooltip computing the next value as `capacity * 2` — all accurate only under the OLD sequence's
+literal doubling. Under the new ladder every step is a flat ×10, so all three were corrected: label
+`⚡ ×10`, `aria-label="increase the … Data Lake's capacity ×10"`, and the tooltip now reads the next
+value directly off `DATA_LAKE_CAPACITY_BY_LEVEL[level + 1]` rather than computing it, since a
+"current value × N" formula has no single correct N once the ladder isn't a pure geometric doubling
+in the first place (it happens to be here, but reading the array directly needs no such assumption
+and stays correct if the shape ever changes again). The underlying `doubleDataLakeCapacity`/
+`isDataLakeCapacityDoubling*` function and predicate names were deliberately LEFT as "doubling" —
+renaming every call site for a value-only change was judged not worth the diff; only user-facing
+copy needed to be accurate. A parallel, pre-existing staleness was caught and fixed in the same
+pass while touching this exact area: `docs/MAINPAGE_REFERENCE.md` and `InfoPage`'s own Guide prose
+both still described the Data Lake capacity mechanic as spending "Data Stream Bits" and referenced a
+"1,024-unit hard cap" — both wrong since an EARLIER correction (see the "Data Lake capacity ladder
+brought under the same SI-clean sequence" entry above) had already moved this mechanic to
+draining-the-lake-itself and a 1,000-unit cap; neither doc had been updated at the time.
+
+**Verification.** `yarn test`: 1628/1628 green (+4 over the prior entry's 1624 — 2 new
+`normalizePoolMemoryCapacity` clamp tests for the pool-buffer case, 2 for the Data-Lake-level case).
+3 pre-existing tests hardcoding old Data Lake capacity values (`layers.test.js`'s constants tests,
+one `engine.test.js` assertion) were updated to the new decade-power sequence; the one App.test.jsx
+seed-data inconsistency described above was corrected rather than papered over. `yarn build`
+succeeds.
