@@ -460,6 +460,12 @@ The following records *why* specific MainPage/component behaviors were built the
   `GoldText` styled component (only ever used inside this panel) were all deleted together. Any
   information a player might want (prestige count, unspent PP, production speed bonus, Auto-Prestige
   status) remains visible via the sticky PP header display and the PP Upgrades page.
+- **`DiskArrayRow` extracted into a shared component so ByteFoundryPage doesn't settle for a text
+  summary.** ByteFoundryPage's Storage section used to show a lifeless `<size> <full>/<built>` text
+  chip for the current disk array — the actual cache-blocks/disk-squares detail (releasing,
+  redeeming) only ever lived on StoragePage. That detail was extracted into `components/DiskArrayRow`
+  (taking `{ actions, size, state }`) and rendered on both pages: ByteFoundryPage for the single
+  currently-active/buildable size, StoragePage for every size ever reached (unchanged).
 - **Offline notice extracted into `components/OfflineProgressNotice` so ByteFoundryPage can show it
   too.** A request to "enable offline progress for the Byte Foundry" turned out, on investigation, to
   already be satisfied at the engine level: `applyOfflineProgress` replays `tickGame` once per
@@ -2618,6 +2624,23 @@ secrets, or ongoing manual review — at the cost of no real app-store listing. 
 becomes a real requirement later, Capacitor is the natural next step (it can wrap the same built
 `dist/` output), but that's a deliberate, human-initiated escalation, not something this repo's
 automation should reach for on its own.
+
+### Old create-react-app-era `public/` files removed when PWA support landed
+
+Adding installable-PWA support (`vite-plugin-pwa`, a generated manifest, and generated icons) meant
+`public/index.html`, `manifest.json`, `logo192.png`, and `logo512.png` — leftovers from the app's
+original Create React App scaffold, unused ever since the migration to Vite (whose own root
+`index.html` is what's actually served) — would otherwise sit alongside, and potentially confuse, the
+new generated manifest. They were deleted rather than left in place.
+
+### `viteConfigFactory.js` extracted out of `vite.config.js` for Capacitor test coverage
+
+Landing the Capacitor web foundation (`CAPACITOR=1` build path — relative base, no PWA plugin) needed
+a regression test (`capacitorConfig.test.js`) pinning that behavior. `vite.config.js` itself can't be
+safely loaded under Vitest, since its `import.meta.url`-based logic doesn't resolve to a `file:` URL
+in that environment. The real config logic was pulled out into a `createViteConfig` factory function
+(in the new `viteConfigFactory.js`), leaving `vite.config.js` a thin
+`defineConfig(createViteConfig({ srcPath }))` wrapper the test file never needs to import.
 
 ## Documentation
 

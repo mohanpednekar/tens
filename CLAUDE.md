@@ -428,11 +428,10 @@ src/
                                the pool's smallest size, see `isDiskReadCacheEligible` — disk
                                squares, releasing, redeeming; no deposit control, Data Lake feeding
                                is fully automatic) for a single size, taking `{ actions, size,
-                               state }`; extracted so both ByteFoundryPage (the single currently-
-                               active/buildable size only) and StoragePage (every size ever reached)
-                               render identical, fully interactive detail rather than StoragePage
-                               alone owning it and ByteFoundryPage settling for a text summary.
-                               Full contract: `docs/COMPONENTS_REFERENCE.md`
+                               state }`; shared by ByteFoundryPage (the single currently-
+                               active/buildable size only) and StoragePage (every size ever reached).
+                               See `docs/DESIGN_HISTORY.md` for why it's a shared component. Full
+                               contract: `docs/COMPONENTS_REFERENCE.md`
     DataLakePanel/index.jsx ← one Data Lake's own row (deposited units / capacity, next Booster
                                cost, in-flight transfers), taking `{ actions, state, bare, tierIndex }`
                                — `tierIndex` scopes rendering to that one lake, embedded (`bare`,
@@ -447,10 +446,9 @@ src/
                                SettingsPage's Era ascension action. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     OfflineProgressNotice/index.jsx ← the "Welcome back!" offline-progress notice (`.jsx` — needs
-                               JSX), extracted so both MainPage and ByteFoundryPage can render it —
-                               offline progress already applies to the Byte Foundry mechanically
-                               regardless of page, this just makes the notice itself page-agnostic
-                               too. Full contract: `docs/COMPONENTS_REFERENCE.md`
+                               JSX), shared by MainPage and ByteFoundryPage — see
+                               `docs/DESIGN_HISTORY.md` for why it was extracted out of MainPage.
+                               Full contract: `docs/COMPONENTS_REFERENCE.md`
     IncompatibleSaveNotice/index.jsx ← blocking overlay when an on-disk save was cleared on load
                                because it predates the current schema; single **Start fresh**
                                acknowledge action. Rendered by `App.jsx` when
@@ -511,9 +509,9 @@ src/
     index.jsx               ← <ThemeProvider mode> wrapper (styled-components ThemeProvider) + re-exports;
                                imports `./fonts` as a side effect; `mode` defaults to dark, driven from
                                system pref + Settings → Appearance toggle (#140)
-  App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
-                               from MainPage so ByteFoundryPage can share the same save/tick loop) and
-                               wraps <ThemeProvider><GlobalStyle/>, switching between
+  App.jsx                   ← root component; owns the single `useIncrementalGame()` call (see
+                               "Architecture" below) and wraps <ThemeProvider><GlobalStyle/>,
+                               switching between
                                <ByteFoundryPage/>/<MainPage/>/<InfoPage/>/<ComputePage/>/
                                <ComputeFlopsPage/>/<MilestonesPage/>/<SettingsPage/>/<DevModePage/> via a local `page` useState
                                (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`,
@@ -547,11 +545,9 @@ capacitor.config.json        ← Capacitor app id/name + `webDir: dist` (foundat
 vite.config.js               ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
 viteConfigFactory.js          ← the real Vite config — path aliases, dev/test server config, and the
                                VitePWA plugin (skipped when `CAPACITOR=1`, along with the GitHub
-                               Pages `/tens/` base — see "Repo layout"'s Capacitor note below).
-                               Extracted out of `vite.config.js` so `capacitorConfig.test.js` can pin
-                               the CAPACITOR=1 behavior without loading Vite's config entry point
-                               (whose `import.meta.url` isn't a `file:` URL under Vitest). Full PWA
-                               reference: `docs/PWA_REFERENCE.md`
+                               Pages `/tens/` base — see "Repo layout"'s Capacitor note below);
+                               extracted out of `vite.config.js` (see `docs/DESIGN_HISTORY.md` for
+                               why). Full PWA reference: `docs/PWA_REFERENCE.md`
 playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
                                "Testing" below) — separate from vite.config.js's own `test` block, which
                                only configures Vitest
@@ -590,9 +586,8 @@ public/
   pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png
                                ← generated PWA icon assets (see `docs/PWA_REFERENCE.md`); the old
                                create-react-app-era `index.html`/`manifest.json`/`logo192.png`/
-                               `logo512.png` in this directory were unused dead weight (this is a Vite
-                               app — Vite's own root `index.html` is what's actually served) and were
-                               removed rather than left to confuse the new PWA manifest
+                               `logo512.png` files that used to live in this directory were removed
+                               (see `docs/DESIGN_HISTORY.md`)
   favicon.ico, robots.txt     ← unchanged, still served as-is from this directory
 ```
 
@@ -625,25 +620,12 @@ Strict three-layer separation:
    removed player-facing ×1/×10 "Bulk" toggle — no persisted preference to manage). On mount, a
    one-time `computeInitialGame` helper calls `discardIncompatibleActiveSaveIfNeeded()` (clears the
    active slot when its on-disk payload fails `getSaveIncompatibilityReason`), then loads any saved
-   state, reads `loadLastSaveTimestamp()`, and —
-   if elapsed real time registers at least one simulated second — folds in offline progress via
-   `applyOfflineProgress` before the first render, always applied to `state` at whichever speed
-   applies (100% at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` — 10 minutes — 50% beyond
-   it). Only past that same threshold does it also record a `{ elapsedRealSeconds, effectiveSeconds }`
-   summary as `offlineProgress` for the "Welcome back!" notice to render — a short absence updates the
-   game silently, with `offlineProgress` staying `null`; `dismissOfflineProgress` (and `resetGame`)
-   clear it back to `null` too. This mount-time check only ever covers time the app was fully torn down
-   (a real page load/PWA cold start) — it runs once, before the tick timer starts, and never again for
-   the life of that mount. Since a backgrounded/suspended tab or PWA (the far more common case on
-   mobile — the OS routinely throttles or fully pauses a background page's `setInterval` without ever
-   tearing the page down) never remounts, `offlineProgress` is **not** a one-shot value: the live tick
-   loop itself also tracks the real wall-clock time of its own most recent firing and, on any firing
-   (from `setInterval` or from a `visibilitychange` listener that fires the same check immediately on
-   resume) whose gap since the previous one exceeds `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s — far
-   past ordinary `setInterval` jitter), replays that gap through the identical `applyOfflineProgress`
-   path instead of an ordinary tick, producing a fresh `offlineProgress` object mid-session (subject to
-   the same full-speed-threshold notice suppression as the mount-time check). See
-   `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section for the full detection/threshold detail.
+   state and, if elapsed real time registers at least one simulated second, folds in offline progress
+   via `applyOfflineProgress` before the first render. The live tick loop separately re-checks for a
+   background/suspended gap on every firing (including a `visibilitychange`-triggered resume check),
+   so `offlineProgress` is **not** a mount-only, one-shot value — it can produce a fresh "Welcome
+   back!" notice any number of times in one session. See `docs/ECONOMY_REFERENCE.md`'s "Offline
+   progress" section for the full detection mechanism, thresholds, and speed multiplier.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
    each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
@@ -667,27 +649,19 @@ Strict three-layer separation:
    shared Combine/Speed/Capacity actions and the common Provision Disk control. Storage pools 1–10
    are derived views over the one Data Stream: each unlocked pool's own Bandwidth is the Data
    Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
-   **converted to Bytes** (`getStoragePoolBandwidth` —
-   `Math.min(rate, Math.sqrt(capacity / BITS_PER_BYTE) * BITS_PER_BYTE)`, both sides still in
-   bits/sec for internal consistency — a 1 MB-capacity pool caps at 1 KB/s, a 1 GB-capacity pool at
-   ~32 KB/s, a 1 TB-capacity pool at 1 MB/s), so a pool with a small Capacity window can lag behind
-   the raw rate once production outgrows it. **Storage pools display in SI units for all purposes**
-   (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike Memory
-   Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below); while
-   each pool's displayed Capacity is the shared Memory ceiling clamped to its own binary bounds. Each pool also
-   owns a small local **buffer** (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/
+   converted to Bytes (`getStoragePoolBandwidth`), so a pool with a small Capacity window can lag
+   behind the raw rate once production outgrows it. **Storage pools display in SI units for all
+   purposes** (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike
+   Memory Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below).
+   Each pool also owns a small local **buffer** (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/
    `getPoolBufferCapacity`) that every bit-costing Storage action for that pool — Provision Disk's
    build cost, the read-cache fill-from-Memory pass — spends from exclusively; the shared Data
    Stream Buffer no longer funds these directly. `tickPoolBufferFill` tops the buffer up from
-   `intro.bits`, ascending pool-by-pool (pool 1 first), each pool reserving fill-rate up to its own
-   Bandwidth cap off the top of the Data Stream's rate — whatever's left ("leftover speed") goes to
-   the next pool. Runs AFTER tier01's own bootstrap conversion (`tickIntroAutoInvest`) and Queued
-   Capacity each tick, so pool funding never competes with unlocking the main game or a Capacity
-   doubling in flight. `getPoolBufferCapacity` equals the pool's own Capacity exactly (not some
-   smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
-   an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
-   size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
-   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
+   `intro.bits`, ascending pool-by-pool, each pool reserving fill-rate up to its own Bandwidth cap
+   off the top of the Data Stream's rate before the next pool sees any. `getPoolBufferCapacity`
+   equals the pool's own Capacity exactly, not some smaller fraction — see `docs/DESIGN_HISTORY.md`
+   for why. Full formulas: `docs/ECONOMY_REFERENCE.md`'s "Pool buffers" entry. `ByteFoundryPage`'s
+   pool summary shows this buffer as a full-width
    `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
    tile (fill-gradient background, `BalanceText`/`StatusText`, a hidden `role="progressbar"` for
    a11y) rather than a bespoke bar — with the buffer/capacity fraction (equal to the pool's own
