@@ -559,7 +559,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
         {storageRevealed && (
           <>
-            <Divider />
+            <SectionLabel>Storage Pools</SectionLabel>
             <Button
               aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
               disabled={!canStartDiskBuild || !!diskBuildInProgress}
@@ -618,7 +618,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <PoolHeaderRow>
                 <PoolTitle>
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
-                  <span>Pool</span>
                 </PoolTitle>
               </PoolHeaderRow>
               <FillableStatCard role="group" aria-label={`pool ${poolIndex} memory`} $progress={poolBufferPercent}>
@@ -645,51 +644,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         )
       })}
 
-      {showTransferSection && (<>
-        <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
-        <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
-          {Array.from({ length: purchaseBlockSize }, (_, index) => {
-            const isConsumed = index < blocksTransferred
-            const isActive = index === blocksTransferred
-            return (
-              <TransferBlock
-                key={index}
-                aria-label={
-                  isConsumed
-                    ? `transferred block ${index + 1}`
-                    : isActive
-                      ? `convert ${formatBitsInNearestUnit(transferBlockCost)} into 1 Kilobyte`
-                      : `locked transfer block ${index + 1}`
-                }
-                disabled={isConsumed || !isActive || !canTransferBlock}
-                onClick={isActive ? actions.convertIntroBitsToKilobytes : undefined}
-                title={
-                  isConsumed
-                    ? 'Already transferred'
-                    : isActive
-                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Data Stream to ${formatBitsInNearestUnit(transferBlockCost)} first`)
-                      : 'Transfer the block to your left first'
-                }
-                type="button"
-                $active={isActive}
-                $consumed={isConsumed}
-                $progress={isActive ? activeBlockProgress : undefined}
-              >
-                {isActive && (
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="byte foundry convert progress"
-                    aria-valuenow={intro.bits}
-                    aria-valuemin={0}
-                    aria-valuemax={transferBlockCost}
-                  />
-                )}
-              </TransferBlock>
-            )
-          })}
-        </TransferBlocksRow>
-      </>)}
-
+      
       {!intro.mainGameUnlocked && (
         <TapArea
           aria-label="tap to generate a bit"

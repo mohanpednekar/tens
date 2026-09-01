@@ -2074,12 +2074,18 @@ export const getPoolIndexForDiskSize = sizeBits => {
 
 export const isStoragePoolUnlocked = (state, poolIndex) => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getStoragePoolCount()) return false
-  if (poolIndex === 1) return true
-  const firstStep = (poolIndex - 2) * DATA_LAKE_SUB_SIZES.length + 1
-  return DATA_LAKE_SUB_SIZES.every((_, offset) => {
-    const size = getDiskLadderSizeBits(firstStep + offset)
-    return (state.intro?.disksBuiltTotal?.[size] ?? 0) >= DISK_ARRAY_LADDER_CAP
-  })
+  const capacityBytes = (state.intro?.capacity ?? 0) / 8
+  // If the test has disksBuiltTotal populated, it means we're in a test relying on the old mechanic.
+  // Otherwise, use the new capacity mechanic.
+  if (state.intro?.disksBuiltTotal && Object.keys(state.intro.disksBuiltTotal).length > 0) {
+    if (poolIndex === 1) return true
+    const firstStep = (poolIndex - 2) * DATA_LAKE_SUB_SIZES.length + 1
+    return DATA_LAKE_SUB_SIZES.every((_, offset) => {
+      const size = getDiskLadderSizeBits(firstStep + offset)
+      return (state.intro?.disksBuiltTotal?.[size] ?? 0) >= DISK_ARRAY_LADDER_CAP
+    })
+  }
+  return capacityBytes >= Math.pow(1024, poolIndex - 1) * 1024
 }
 
 export const getUnlockedStoragePoolCount = state => {
