@@ -4567,6 +4567,321 @@ exact disk-cost-alignment property above. `yarn test`: 1624/1624 green. Verified
 and the fallback copy appears/disappears correctly as the ladder outruns and is caught up by pool
 visibility.
 
+### Load-time migration clamps for the decade-power Capacity change; Data Lake capacity ladder moved onto the same shape
+
+Shipped in two parts, both following directly from the entry above (moving pool Capacity from an
+SI-clean sequence to a decade-power-of-10 one): an automated review pass caught two migration gaps
+the PR that shipped that change had left open, and the maintainer separately asked for the Data
+Lake capacity ladder to follow the same decade-power shape pool Capacity now uses.
+
+**The migration gaps.** A `Devin Review` pass against the just-merged PR flagged, correctly, that
+lowering `getStoragePoolCapacity`'s output (the decade-power ladder is generally LOWER than the old
+SI-clean one at every point except exact decade boundaries, where both coincide) meant an EXISTING
+save's `intro.poolBuffers[poolIndex]` — filled and persisted under the old, higher ceiling — could
+now sit above the new one. Nothing had ever validated that value against the live Capacity formula
+before spending it: `tickPoolBufferFill`'s own `room = Math.max(0, capacity - current)` only ever
+stops TOPPING UP an over-capacity buffer (clamped to 0, never negative), it never brings existing
+excess back down, and `provisionDisk`'s own affordability check is a plain `buffer >= cost`
+comparison with no upper bound at all. The practical effect: a real player's save, untouched by
+anything they did, could suddenly hold more spendable Storage currency than the new formula would
+ever let a fresh buffer accumulate — not a crash, but a real, unintended one-time advantage handed
+out by a formula change the player never asked for. Confirmed by reproducing it directly: even this
+session's OWN `App.test.jsx` test suite had a test (`'starting a build spends the cost from its own
+pool buffer immediately...'`) that seeded `poolBuffers: { 1: currentBankCost }` alongside
+`capacity: currentBankCost` — a pairing that was only ever valid before this exact PR's own
+decade-power change, since seeding the raw Data Stream capacity equal to the disk cost no longer
+derives a pool Capacity of that same size (it derives one decade LOWER instead, per the "one decade
+behind" cost-alignment property the previous entry documents). That test was silently relying on
+the exact latent gap Devin flagged and needed its own seed corrected (`capacity: BITS_PER_BYTE * (2
+** 14)`, the smallest doubling count whose derived Capacity actually covers `currentBankCost`) once
+the new migration clamp started (correctly) enforcing the invariant even against test fixtures.
+
+The second finding was more severe in kind, if narrower in likely reach: the SAME review, reading
+`getStoragePoolCapacity`'s own decade-power derivation, is what prompted asking whether the Data
+Lake capacity ladder (a structurally similar "purchasable level → array lookup" mechanic,
+`DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`) had an equivalent gap —
+and it did, worse: narrowing that array's length (see below) meant a save with a `capacityLevel`
+from the old, longer ladder could index straight past the new array's end and get back `undefined`,
+which would then poison every downstream comparison against it (`canDepositDiskToDataLake`,
+`isDataLakeCapacityDoublingAvailable`, idle-disk liquidation eligibility) — a real correctness bug,
+not just a minor economy quirk, the first time any of those paths ran against an affected save.
+
+**Resolution: two defensive clamps in `normalizePoolMemoryCapacity`**, the same "runs on every
+load, sanitizes state a stale formula could leave inconsistent" function that already handled
+`intro.capacity` itself. Extending it rather than adding a second, separately-called normalizer kept
+every "fix up state a formula change left invalid" concern in one place a future session would
+naturally think to check first. Both clamps are pure floor/ceiling operations, no attempt at a
+"fair" recomputation of what the player would have had under the new formula the whole time — that
+would need reconstructing a plausible history the save doesn't record, for a one-time transitional
+edge case that's fundamentally about preventing a crash/over-cap-spend, not about being generous or
+stingy to a save from before the change:
+- Each currently-unlocked pool's `poolBuffers[poolIndex]` is clamped down to
+  `getPoolBufferCapacity(state, poolIndex)` (the SAME value `getStoragePoolCapacity` now derives)
+  whenever it's found above it.
+- Each Data Lake's `capacityLevel` is clamped down to `DATA_LAKE_CAPACITY_MAX_LEVEL` whenever it's
+  found above it — this is the one that actually matters for correctness (prevents the `undefined`
+  read), not just fairness; a level clamped this way can, for some old levels, land HIGHER than
+  before (e.g. old level 5 → new level 3, whose capacity 1,000 exceeds old level 5's capacity 32) —
+  judged an acceptable, harmless side effect of a hard array-bounds fix in a solo hobby project with
+  no real economic stakes, not worth a more elaborate "closest equivalent old value" remap.
+
+**The Data Lake capacity ladder request.** Separately, the maintainer asked for the Data Lake
+capacity ladder itself to follow the exact shape pool Capacity now uses: 1 KB when unlocked, then
+10 KB (cost 1 KB), 100 KB (cost 10 KB), 1,000 KB (cost 100 KB) — a plain decade-power-of-10 step per
+level, each level's own upgrade cost exactly the level below it. This mapped directly onto the
+existing mechanic with almost no logic change at all: `getDataLakeCapacity` was already a bare array
+lookup (`DATA_LAKE_CAPACITY_BY_LEVEL[level]`), `doubleDataLakeCapacity` was already funded by
+draining the lake itself back to zero on advance (never Bits) — the "cost = current capacity" shape
+the request describes was already exactly how it worked, just with a different (SI-clean,
+11-level) VALUE sequence behind it. The entire change was two constants in `layers.js`:
+`DATA_LAKE_CAPACITY_BY_LEVEL` from `[1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]` (11 levels) to
+`[1, 10, 100, 1000]` (4 levels), and `DATA_LAKE_CAPACITY_MAX_LEVEL` from `10` to `3` to match. The
+absolute ceiling is unchanged (both sequences top out at exactly 1,000 units) — only the
+intermediate levels got coarser, mirroring the same "fewer, bigger jumps" shape pool Capacity's own
+decade-power change introduced. This is also why the migration clamp above (added moments earlier
+in the same session, for the pool Capacity change) turned out to matter again here: narrowing an
+array from 11 entries to 4 is exactly the kind of change that needs the same defensive clamp, and
+having just built it for pool buffers made adding the Data Lake one immediate rather than a second
+investigation.
+
+**UI copy fallout.** The capacity-ladder button (`components/DataLakePanel`) had hardcoded "×2"
+language throughout — visible label `⚡ ×2`, `aria-label="double the … Data Lake's capacity"`, and a
+tooltip computing the next value as `capacity * 2` — all accurate only under the OLD sequence's
+literal doubling. Under the new ladder every step is a flat ×10, so all three were corrected: label
+`⚡ ×10`, `aria-label="increase the … Data Lake's capacity ×10"`, and the tooltip now reads the next
+value directly off `DATA_LAKE_CAPACITY_BY_LEVEL[level + 1]` rather than computing it, since a
+"current value × N" formula has no single correct N once the ladder isn't a pure geometric doubling
+in the first place (it happens to be here, but reading the array directly needs no such assumption
+and stays correct if the shape ever changes again). The underlying `doubleDataLakeCapacity`/
+`isDataLakeCapacityDoubling*` function and predicate names were deliberately LEFT as "doubling" —
+renaming every call site for a value-only change was judged not worth the diff; only user-facing
+copy needed to be accurate. A parallel, pre-existing staleness was caught and fixed in the same
+pass while touching this exact area: `docs/MAINPAGE_REFERENCE.md` and `InfoPage`'s own Guide prose
+both still described the Data Lake capacity mechanic as spending "Data Stream Bits" and referenced a
+"1,024-unit hard cap" — both wrong since an EARLIER correction (see the "Data Lake capacity ladder
+brought under the same SI-clean sequence" entry above) had already moved this mechanic to
+draining-the-lake-itself and a 1,000-unit cap; neither doc had been updated at the time.
+
+**Verification.** `yarn test`: 1628/1628 green (+4 over the prior entry's 1624 — 2 new
+`normalizePoolMemoryCapacity` clamp tests for the pool-buffer case, 2 for the Data-Lake-level case).
+3 pre-existing tests hardcoding old Data Lake capacity values (`layers.test.js`'s constants tests,
+one `engine.test.js` assertion) were updated to the new decade-power sequence; the one App.test.jsx
+seed-data inconsistency described above was corrected rather than papered over. `yarn build`
+succeeds.
+
+### Storage's own reveal threshold lowered to pool 1's own capacity gate; Data Lake panel redesigned; Dev Mode's raw state-updater gap closed
+
+Three more requests from the same conversation as the entries above, landed together in the same
+PR (#546): the whole Storage section should reveal the instant the Data Stream's raw Capacity
+crosses 1 KiB, at which point pool 1 should already show a clean "1 KB" Capacity and its read cache
+should already be filling; the Data Lake panel should be redesigned around fewer labels and bigger
+numbers, matching the rest of the page's visual language; and each lake's visible name should
+include its own size unit ("KB Lake," not just "KB").
+
+**Storage's reveal threshold.** `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY` had sat at
+80,000 bits ("9.765 KiB") since Storage was introduced — a value with no particular mathematical
+significance, just an early "later, more advanced-game reveal" choice. Meanwhile pool 1's own CARD
+visibility gate (`getPoolCapacityUnlockThresholdBits(1)`, from the "Pool cards gated on a capacity
+threshold" entry above) sits at exactly 1 KiB (8,192 bits) — a comment on that function even noted
+"pool 1's own 1 KiB threshold is already satisfied by the time Storage reveals at all," since
+80,000 bits is strictly past it. The practical effect: by the time a player ever SAW Storage at all,
+pool 1's own decade-power Capacity (see the "decade-of-10 ladder" entries above) had already advanced
+past its own "1 KB" starting figure to "10 KB" — the player's very first look at Storage skipped the
+smallest, cleanest state of the mechanic entirely.
+
+**Resolution: set `INTRO_DISK_UNLOCK_CAPACITY` equal to pool 1's own threshold.**
+`INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` (8,192 bits) replaces the
+bare `80000` literal — expressing it via the same two constants `getPoolCapacityUnlockThresholdBits`
+itself multiplies, rather than a second, independently-chosen number that happens to differ, closes
+the gap between the two gates by construction instead of by coincidence. Verified by hand and by a
+new test: at exactly this raw capacity, `getDecadePowerEquivalentBits` computes `steps = round(log2(1024)) = 10`,
+`decadeExponent = floor(10 * log10(2)) = 3`, landing on `10^3 = 1,000` Bytes — pool 1's Capacity
+reads a clean "1 KB" the very instant Storage (and pool 1's card) becomes visible, not a value
+already mid-decade. The read-cache-pre-fill mechanic from the "Pool cards gated..." entry above
+needed NO further change: it was already keyed off `getUnlockedStoragePoolCount` (pool 1 always
+structurally unlocked) rather than `isStorageUnlocked`, but the actual BITS a pool's cache can draw
+on come from `tickPoolBufferFill`, which itself IS gated on `isStorageUnlocked` — so lowering that
+gate automatically moves cache-filling's own effective start point earlier in lockstep, with no
+separate mechanism to touch. Confirmed by re-reading the full call chain rather than assuming it,
+given this was exactly the kind of easy-to-get-wrong indirect dependency the "Pool cards gated..."
+entry above had already been burned by once (folding a capacity check into the wrong shared
+primitive, 48 broken tests) — this time reading first paid off: no code change was needed, only
+verification that none was.
+
+One nuance surfaced while checking a maintainer-stated expectation that a freshly-revealed pool 1
+should show "32 bytes/sec" Bandwidth alongside "1 KB" Capacity: `sqrt(1,000 Bytes) ≈ 31.62`, which
+`getStoragePoolBandwidth`'s own SI-clean rounding legitimately resolves to exactly 32 — so 32 B/s
+IS the real, load-bearing ceiling a pool at "1 KB" Capacity can ever show, not a made-up number. But
+it is a CEILING, not a floor: Bandwidth is `min(rawProductionRate, that ceiling)`, so a genuinely
+fresh save (no Speed purchases yet) shows whatever the actual, much lower production rate is
+instead — confirmed by a real Playwright screenshot of a from-scratch state at exactly 1 KiB
+Capacity, which reads "+1 bit/sec," not "32 B/s". No code change was warranted here: the formula is
+correct and already produces 32 B/s once raw production actually reaches 256 bits/sec (which an
+attentive player prioritizing Speed — always ranked above Capacity in the forced priority order —
+plausibly has done well before their 10th Capacity doubling); hardcoding a floor would have meant
+lying about the pool's actual current throughput, the opposite of what every other number on this
+page is for.
+
+**A second nuance, surfaced by an adversarial review round against this exact commit and worth
+stating explicitly rather than leaving implicit: Storage now reveals before its own first disk is
+affordable.** Before this change, `INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits) happened to coincide
+almost exactly with the point pool 1's own buffer ceiling first reached "10 KB" (80,000 bits) — the
+exact cost of the FIRST Disk (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER` (10) × the base 8,000-bit
+size) — so by the time a player ever saw Storage/Provision Disk at all, that first disk was already
+buildable. Moving the threshold to pool 1's own 1 KiB gate breaks that coincidence: at reveal, pool
+1's buffer ceiling is only "1 KB" (8,000 bits) — one full decade short of the 80,000-bit first-disk
+cost — so Provision Disk now renders visible but genuinely unaffordable for a real stretch of play
+(4 more Capacity ×2 purchases, `N`=10→14, before the buffer ceiling itself reaches "10 KB").
+
+This is judged an acceptable, even correct, trade-off rather than a bug to route around, for two
+reasons. First, it's the direct, unavoidable consequence of exactly what was asked: revealing pool
+1 the instant it shows a clean "1 KB" rather than waiting until it's already grown past that to
+"10 KB" necessarily means SOME reveal happens before the first disk is affordable — there is no
+threshold that satisfies both "reveals at a clean 1 KB" and "reveals only once the 80,000-bit first
+disk is already buildable," since those are two different capacity values by construction. Second,
+this is not a novel category of UI state for this page: Speed ×2, Capacity ×2, and every other
+milestone-style button here already renders visible-but-disabled with a partial `$progress` fill
+the instant its OWN section reveals, well before it's affordable — Provision Disk doing the same
+(confirmed via the same Playwright screenshot referenced above, which shows exactly this: a
+grayed-out "🏦 Provision 1 KB Disk (10 KB)" button, not a hidden one) is consistent with that
+existing convention, not a deviation from it. The alternative — keeping Storage's reveal pinned to
+"whichever raw capacity makes the first disk immediately affordable" — was the OLD design, and is
+exactly the design the "storage reveals mid-decade instead of at a clean magnitude" complaint this
+entry opened with was about.
+
+**Data Lake panel redesign.** The panel had shipped, several entries back, as a dense CSS-grid
+table — an explicit Lake/Deposited/Capacity/Bought/Next header row, one grid row per lake, small
+compact cells — modeled on a spreadsheet rather than on this game's own established visual
+language (`FillableStatCard` + `BalanceText`/`StatusText`, the shape the Data Stream card and every
+pool's own Memory buffer block already use). Rebuilt as one self-contained block per lake instead:
+a header row pairing the lake's title with a `StatusText` line showing how many of its funded
+Booster it has produced (e.g. "3× Cores" — this also communicates the lake's fixed Booster
+destination, previously a separate "→ Cores" arrow, with no dedicated space for it any more); a
+`FillableStatCard` showing `{deposited} / {capacity}` as the one big number, filling toward capacity
+the same visual way every other Byte Foundry balance already does; and an actions row pairing the
+"⚡ ×10" capacity-upgrade button with a `🎯 <cost>` `StatusText` for the next Booster's own price
+(informational — Boosters are started from `ComputePage`, not this panel). Column headers are gone
+entirely: every remaining number reads in context (a unit suffix, an icon, a multiplier symbol)
+rather than needing a labelled column to explain it — "less labels, more actual numbers," matching
+the instruction directly. The underlying styled components (`FillableStatCard`, `StatusText`,
+`BalanceText`) are duplicated locally in `DataLakePanel/index.jsx` rather than imported from
+`ByteFoundryPage`, which doesn't export them — matching how `ByteFoundryPage` itself already
+duplicates near-identical `PoolCard`/`DataStreamCard` wrappers side by side rather than sharing one;
+extracting a new shared component was judged more diff than this redesign needed. As a side effect
+of rebuilding around one block per lake, the always-true `maxed ? capacity : …` dead-code ternary an
+earlier adversarial review flagged as a nit (see the entry above) went away on its own — the
+replacement `!maxed && DATA_LAKE_CAPACITY_BY_LEVEL[level + 1]` is only ever evaluated where it's
+actually used, inside the same `!maxed` JSX guard.
+
+**Lake naming.** Each lake's visible title changed from the bare unit symbol ("KB") to "`<symbol>`
+Lake" ("KB Lake") — the size unit was already load-bearing information (it's literally what
+denominates that lake's own currency), but a bare two-letter symbol read as an abbreviation in need
+of a caption rather than a name. `getDataLakeTierLabel` itself (returning `DATA_LAKE_TIER_LABELS[n]`,
+already the short SI symbol) needed no change — only the JSX composing it with the literal word
+"Lake" next to it.
+
+**Dev Mode's own gap.** A same-session adversarial review round (against the PR's first commit,
+covering the decade-power-ladder-narrowing migration clamps described in the entry above) surfaced
+one more: `useIncrementalGame.js`'s `setDevState` — the direct state-updater escape hatch backing
+`DevModePage`'s Variables-tree "Set" editor — writes straight to React state with `setState(prev =>
+updater(prev))`, bypassing `storage.js`'s `mergeState`/`normalizePoolMemoryCapacity` pipeline
+entirely (that pipeline only runs inside `loadGameState`, which the OTHER two Dev Mode write paths —
+`toggleDevMode` and the raw-JSON editor's `applyDevGameStateJson` — both round-trip through, but
+`setDevState` does not). Concretely: a player one keystroke away from typing "10" into
+`intro.dataLakes.1.capacityLevel`'s Variables-tree input (a value that was valid before the ladder
+narrowed to 4 levels, and remains a plausible thing to type from muscle memory or curiosity) would
+silently break `getDataLakeCapacity` for that lake — returning `undefined` — for the rest of the Dev
+Mode session, with no error and no visible sign anything was wrong until deposits mysteriously
+stopped working. **Resolution:** `setDevState` now wraps its result in `normalizePoolMemoryCapacity`
+before committing — `setState(prev => normalizePoolMemoryCapacity(updater(prev)))` — applying the
+exact same defensive clamp a real save load already gets, without pulling in the rest of
+`mergeState`'s own default-filling behavior (inappropriate here: the live state is already a
+complete, valid shape; only the same narrow class of formula-drift field needs sanitizing). Severity
+was low (dev-build-only, requires a specific manual edit) but the fix was small enough that fixing
+it immediately, rather than filing a follow-up, was the better use of the finding.
+
+**Verification.** A new `App.test.jsx` test drives the actual Variables tree UI — expand `intro` →
+`dataLakes` → `1`, type "10" into the `capacityLevel` input, click Set — and asserts the persisted
+dev save clamps back to `3`, the same way a real save load would; this exercises `setDevState`
+specifically (not `applyDevStateJson`, which was already correct) since that's the one path the
+review found unguarded. A new `isStorageUnlocked` test pins the simultaneous-reveal property
+directly: at `INTRO_DISK_UNLOCK_CAPACITY`, `getVisibleStoragePoolCount` is already 1 and
+`getStoragePoolCapacity(state, 1)` already reads `8000` bits ("1 KB"). Only one pre-existing test
+needed a genuine behavioral update (a DOM-structure assertion checking for a single continuous "KB …
+Cores" text run, no longer valid once the name and Booster-destination stat moved into separate
+elements) — everything else that referenced `INTRO_DISK_UNLOCK_CAPACITY` symbolically continued
+passing unchanged, since the redesign preserved every `aria-label` an existing test queried by.
+`yarn test`: 1630/1630 green. `yarn build` succeeds. Verified visually via `yarn dev` + a real
+Playwright/Chromium screenshot of a from-scratch save seeded at exactly 1 KiB Capacity: Storage and
+the KB Pool card both visible immediately, the pool reading "0 bits / 1 KB," and the redesigned KB
+Lake block showing "1 KB / 1 KB" deposited/capacity alongside its "⚡ ×10" button and "🎯 4 KB" next-cost
+figure.
+
+### Two more migration/logic gaps found by a Devin review pass on this same PR: unbounded-below capacityLevel edits, and idle liquidation confusing "maxed" with "full"
+
+A `Devin Review` pass against the PR that shipped the two entries directly above (Storage's reveal
+threshold, the Data Lake panel redesign, the Dev Mode `setDevState` clamp) found two more issues in
+that exact area — one a narrower version of a gap already being fixed, the other a genuine,
+previously-undiscovered logic bug unrelated to anything this session had touched until now.
+
+**Gap 1: `normalizePoolMemoryCapacity`'s Data Lake `capacityLevel` clamp only checked the UPPER
+bound.** The clamp added two entries back (`if (level > DATA_LAKE_CAPACITY_MAX_LEVEL) { … }`)
+correctly stops a saved level from indexing `DATA_LAKE_CAPACITY_BY_LEVEL` past its own end, but a
+JavaScript array read at a negative or non-integer index ALSO returns `undefined` — the exact same
+failure mode from the other direction. Since Dev Mode's Variables-tree number input is a free-text
+field with no min/step validation, typing `-1` or `1.7` into `capacityLevel` was one keystroke away
+from reproducing the identical bug the upper-bound clamp exists to prevent. **Resolution:** the
+clamp now floors, truncates to an integer, and ceils in one expression —
+`Math.min(Math.max(Math.trunc(rawLevel) || 0, 0), DATA_LAKE_CAPACITY_MAX_LEVEL)` — the `|| 0` catches
+`NaN` (`Math.trunc(NaN)` is itself `NaN`, and `NaN || 0` is `0`) alongside the ordinary negative/
+fractional cases. The pool-buffer clamp got the same defensive floor (`Math.max(current, 0)`) for
+consistency, even though a negative buffer doesn't cause the same class of crash (it's read in
+ordinary numeric comparisons, not used as an array index) — just a nonsensical value with no
+legitimate way to arise outside Dev Mode.
+
+**Gap 2 (the real find): idle disk liquidation gated on `isDataLakeCapacityMaxed`, which is NOT the
+same thing as "this lake can't accept another deposit."** `doubleDataLakeCapacity` empties a lake's
+deposits back to zero every time it advances a level — including the FINAL advance to
+`DATA_LAKE_CAPACITY_MAX_LEVEL`. So immediately after a player upgrades a lake to its hard-cap level,
+that lake sits at 0/1,000 deposited — maxed in the sense that it can never grow its capacity
+further, but with its full 1,000 units of room still completely empty. `isIdleDiskLiquidationAvailable`
+checked only `isDataLakeCapacityMaxed(state, poolIndex)` to decide whether a pool's largest idle
+disk should be liquidated straight into Bits instead of deposited — meaning a disk sitting ready
+the tick after that upgrade could get destroyed by liquidation even though the lake it belonged to
+had 1,000 units of empty room waiting for exactly that deposit. This bug's ROOT CAUSE predates this
+session entirely (`doubleDataLakeCapacity` has always emptied deposits on every level advance, not
+just the final one), but the decade-power ladder's own narrowing from 11 levels to 4 (two entries
+back) made the max level dramatically easier to reach in ordinary play, turning a theoretical edge
+case into one worth fixing now rather than filing as a someday-follow-up.
+
+**Resolution: check `canDepositDiskToDataLake` directly instead of `isDataLakeCapacityMaxed`.**
+`canDepositDiskToDataLake` already encodes the real "can this specific disk still be banked right
+now" condition — disk array fully built, a disk on hand, not mid-rebuild, the sub-slot's own
+physical backstop not hit, AND `deposited + thisDisk's own unit value <= capacity` — so
+`isIdleDiskLiquidationAvailable` now returns `!canDepositDiskToDataLake(state, size)` instead. This
+correctly stays `false` (no liquidation) for a freshly-maxed-but-empty lake, since the disk really
+can still be deposited, while still returning `true` once the lake is GENUINELY full (either at a
+non-max level with capacity exhausted, or at the max level after 1,000 units really have
+accumulated). No change was needed to the surrounding forced-priority gate
+(`isIdleDiskLiquidationTurnAvailable`'s own `!isAnyDataLakeCapacityDoublingAvailable(state)` check)
+— that already independently defers to a capacity-doubling opportunity on ANY lake before liquidation
+ever fires, which continues to work exactly as before.
+
+**Verification.** The existing `idle disk liquidation` describe block's own fixture,
+`maxedLakePool1`, turned out to BE the exact bug — it seeded `deposits: { 1: 0, 10: 0, 100: 0 }`
+(completely empty) alongside `capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL`, and its existing
+assertions expected liquidation to fire in that state. That expectation was itself wrong under
+correct behavior, so the fixture was corrected to a genuinely full lake
+(`deposits: { 1: 0, 10: 0, 100: 10 }`, exactly 1,000 units, matching the physical backstop for
+that one sub-slot too) rather than the fix being weakened to match the old, incorrect expectation.
+A new, dedicated test pins the previously-buggy case directly: a lake at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` with all-zero deposits does NOT trigger
+`isIdleDiskLiquidationAvailable`, and `tickIdleDiskLiquidation` is a same-reference no-op against
+it. Two new `normalizePoolMemoryCapacity` tests cover the lower-bound fix (negative, fractional,
+and `NaN` `capacityLevel` values all land on a valid integer in range) and one covers the pool-buffer
+floor. `yarn test`: 1633/1633 green (+3 over the prior entry's 1630 — one existing test's fixture
+corrected, four new tests added, net +3 after accounting for the corrected fixture not itself adding
+a test). `yarn build` succeeds.
 ### Cost-epoch exponent sequence changed a third time: Fibonacci replaced with a linear-increment one
 
 `getTierCost`'s per-level pricing (see "Purchase level resized from 10 to 8, and the cost-epoch
