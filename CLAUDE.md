@@ -989,14 +989,22 @@ decouples them entirely instead:
   of 10 doublings from the 1-Byte floor, which is exactly where the switchover sequence itself lands
   on a clean `1000^d` figure, so a pool's derived Capacity reaches its own ceiling at precisely the
   same N where the underlying binary value would have reached it too — no drift between the two.
-  `getStoragePoolCount`/`isMemoryCapacityAtCap` (below) both key off this SAME derived value, not
-  the raw `intro.capacity`, so the "moving ceiling" purchase gate tracks what the pool actually shows.
-- Each pool's Bandwidth (`getStoragePoolBandwidth`) is hard-capped at
-  `sqrt(that pool's own Capacity in Bytes)` — Storage pools use SI units for all purposes — but the
-  switchover sequence's own square roots don't land cleanly (e.g. `sqrt(16,000 Bytes) ≈ 126.5`), so
-  the cap is additionally snapped DOWN to the nearest SI-clean switchover term at or below it
-  (`getSiCleanValueAtMostBytes`) — a 16 KB-capacity pool caps Bandwidth at a clean 125 B/s, not a raw
-  ~126.5 B/s.
+  `getUnlockedStoragePoolCount`/`isMemoryCapacityAtCap` (below) both key off this SAME derived
+  value, not the raw `intro.capacity`, so the "moving ceiling" purchase gate tracks what the pool
+  actually shows.
+- Each pool's Bandwidth (`getStoragePoolBandwidth`) simply follows the raw production rate — the
+  SAME rate the Data Stream tile's own `+N Bytes/sec` figure uses — through the identical
+  SI-clean-switchover transform Capacity uses above (`getSiCleanEquivalentBits`, a single helper
+  shared by both: `round(log2(rawBits / BITS_PER_BYTE))` finds the doubling step, then walks
+  `getNextSiDoubledValue` that many times from 1 Byte — a ROUNDED log2 rather than a discrete
+  doubling search, so floating-point drift from chained purchases/Compute Boosts/prestige bonuses
+  can't misclassify a value that's mathematically meant to sit exactly on a doubling boundary as
+  one step off). It matches the raw rate up to 64 B/s, then diverges the same way Capacity does
+  (125 instead of 128, repeating every decade) — e.g. a raw 256 B/s rate reads as a clean 250 B/s.
+  `sqrt(that pool's own Capacity in Bytes)` is only a GUIDELINE for the lower/upper bounds this
+  should land in, not the formula itself — it still acts as the real throughput ceiling once a
+  pool's own (now fixed, maxed) Capacity can't keep up with an ever-growing rate, but even then the
+  transform is applied to that bound, not a raw `sqrt` remainder.
 - `isMemoryCapacityAtCap` compares the highest unlocked pool's OWN derived Capacity
   (`getStoragePoolCapacity`) against that pool's `endBits`, not raw `intro.capacity` — this is what
   actually gates `isMemoryCapacityUpgradeAvailable`/`upgradePoolCapacity`, since the raw value no
@@ -1005,6 +1013,12 @@ decouples them entirely instead:
 - `INTRO_CAPACITY_CAP_BITS` is retained as the pool-1 alias (unchanged value, 8,000,000 bits/1 MB
   SI) and the active highest pool's end bound is still the authoritative moving ceiling — just
   evaluated against the pool's own derived Capacity now, not the raw one.
+- `getCoreEarnTimeSeconds` (Compute merge/boost pacing, see "Compute Cores/Nodes" below)
+  deliberately keeps reading the RAW `intro.capacity` — it describes the real Buffer's own refill
+  time, not a pool-card display figure. Since `intro.capacity` no longer clamps to a pool ceiling,
+  this is an acknowledged, minor Compute merge/boost pacing consequence (~2.4% slower per full
+  decade of doublings past a pool boundary, compounding within an Era) rather than a bug — see
+  `docs/DESIGN_HISTORY.md`.
 
 The Data Lake capacity ladder (below) is a separate, always-independent doubling ladder — it also
 uses an SI-clean sequence (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at 1,000 units) since a lake's own
@@ -1286,7 +1300,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1619 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1621 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
