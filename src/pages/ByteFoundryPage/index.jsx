@@ -202,14 +202,6 @@ const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
-// A thin visual break between the Data Stream controls and its common Provision Disk operation.
-const Divider = styled.hr`
-  width: 100%;
-  border: none;
-  border-top: 1px solid ${props => props.theme.color.border};
-  margin: 0;
-`
-
 // Reuses Button's own progressFill gradient (see components/Button) so Memory's tile fills toward
 // its capacity the same visual way every actionable control on this page already does, rather
 // than introducing a second, differently-styled meter convention. `align-items: center` centers
@@ -355,6 +347,48 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     ? clampPercent(((intro[computeBandwidthField] ?? 0) / COMPUTE_ENTITY_CAP) * 100)
     : clampPercent((intro.bits / investCost) * 100)
 
+  // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
+  // inside whichever pool card diskPoolIndex currently belongs to, with a fallback slot right
+  // after the Data Stream card for the rare case that pool's own card isn't visible yet (its
+  // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
+  // disk-build-driven, independent of capacity — has already moved past it).
+  const provisionDiskButton = (
+    <Button
+      aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
+      disabled={!canStartDiskBuild || !!diskBuildInProgress}
+      onClick={actions.provisionDisk}
+      title={
+        diskBuildInProgress
+          ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
+          : diskLadderExhausted
+            ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+            : diskBuildBlockedByPriority
+              ? 'Take Speed (or redeem a full Disk) first'
+              : diskRedeemTierName
+                ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+      }
+      type="button"
+      variant={canStartDiskBuild ? 'info' : 'neutral'}
+      $progress={diskBuildProgress}
+    >
+      <ButtonContent>
+        {diskBuildInProgress
+          ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+          : diskLadderExhausted
+            ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
+            : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+      </ButtonContent>
+      <VisuallyHidden
+        role="progressbar"
+        aria-label="byte foundry disk build progress"
+        aria-valuenow={Math.round(diskBuildProgress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      />
+    </Button>
+  )
+
   return (
     <RootDiv>
       <OfflineProgressNotice offlineProgress={offlineProgress} dismissOfflineProgress={dismissOfflineProgress} />
@@ -481,48 +515,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           )}
 
         </ActionsRow>
-
-        {storageRevealed && (
-          <>
-            <Divider />
-            <Button
-              aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-              disabled={!canStartDiskBuild || !!diskBuildInProgress}
-              onClick={actions.provisionDisk}
-              title={
-                diskBuildInProgress
-                  ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-                  : diskLadderExhausted
-                    ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-                    : diskBuildBlockedByPriority
-                      ? 'Take Speed (or redeem a full Disk) first'
-                      : diskRedeemTierName
-                        ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                        : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
-              }
-              type="button"
-              variant={canStartDiskBuild ? 'info' : 'neutral'}
-              $progress={diskBuildProgress}
-            >
-              <ButtonContent>
-                {diskBuildInProgress
-                  ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-                  : diskLadderExhausted
-                    ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
-                    : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-              </ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry disk build progress"
-                aria-valuenow={Math.round(diskBuildProgress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </Button>
-
-          </>
-        )}
       </DataStreamCard>
+
+      {/* Fallback for when the disk ladder has already advanced past the last VISIBLE pool card
+          (its own capacity-unlock threshold not yet reached) — keeps the button reachable rather
+          than disappearing until that pool's card catches up. */}
+      {storageRevealed && diskPoolIndex > unlockedPoolCount && provisionDiskButton}
 
       {storageRevealed && Array.from({ length: unlockedPoolCount }, (_, offset) => {
         const poolIndex = offset + 1
@@ -532,6 +530,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
+        // The shared Provision Disk control always targets whichever size the disk ladder
+        // currently offers (getDiskSize) — a single ladder spanning every pool, not a per-pool
+        // one — so it renders inside whichever ONE pool card that size currently belongs to,
+        // outside the isExpanded disclosure so it stays visible/usable without expanding. See the
+        // fallback render below the loop for when that pool's own CARD isn't visible yet (its
+        // capacity-unlock threshold not yet reached, even though the disk ladder — a purely
+        // disk-build-driven progression, independent of capacity — has already moved past it).
+        const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             <PoolSummaryButton
@@ -558,6 +564,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 />
               </FillableStatCard>
             </PoolSummaryButton>
+            {isActiveDiskPool && provisionDiskButton}
             {isExpanded && (
               <>
                 {poolSizes.map(size => (

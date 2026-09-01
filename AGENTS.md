@@ -136,19 +136,24 @@ B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines 
 permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
 cost ladder now ×4/tier) and **Capacity ×2**.
 
-**Standing rule: the SI-clean switchover sequence is for storage-pool-scoped values only —
-`intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data Stream tile's
-own balance/capacity figure. Capacity requires a full Buffer, drains it, and doubles `intro.capacity`
-with a plain `×2` (`INTRO_CAPACITY_DOUBLING_STEP`) — unclamped to any pool boundary now, so it can
-grow past a pool's own ceiling once reached. Each Storage pool instead derives its OWN SI-clean
-Capacity (`getStoragePoolCapacity`) from that same doubling count via a separate switchover sequence
-(1, 2, 4, …, 64, 125, 250, 500, 1000, … Bytes — the same shape the Data Lake ladder below uses,
-conceptually `getNextSiDoubledValue`, though `getStoragePoolCapacity` actually computes it in
-closed form via `getSiCleanEquivalentBits` to avoid floating-point drift at very large doubling
-counts an iterative walk would hit), clamped to that pool's own window; a pool's Bandwidth
-(`getStoragePoolBandwidth`) simply follows the same raw production rate the Data Stream tile's own
-rate figure uses, through the identical transform (`getSiCleanEquivalentBits`, shared by both
-Capacity and Bandwidth: rounds `log2(raw / 1 Byte)` to find the doubling step, robust to
+**Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
+values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
+Stream tile's own balance/capacity figure. Capacity requires a full Buffer, drains it, and doubles
+`intro.capacity` with a plain `×2` (`INTRO_CAPACITY_DOUBLING_STEP`) — unclamped to any pool boundary
+now, so it can grow past a pool's own ceiling once reached. Each Storage pool instead derives its
+OWN Capacity (`getStoragePoolCapacity`) from that same doubling count via a DECADE-POWER-OF-10
+ladder — deliberately coarser than Bandwidth's own finer SI-clean sequence below — 1 KB, 10 KB,
+100 KB, 1000 KB (pool 1's own ceiling), and so on for higher pools (`getDecadePowerEquivalentBits`,
+closed-form: `10 ** floor(N * log10(2))` Bytes off the same robust doubling-step `N` count
+`getSiCleanEquivalentBits` computes), clamped to that pool's own window — flat within a decade,
+jumping straight to the next decade the instant `intro.capacity` crosses it, with no intermediate
+steps. Each decade step exactly funds the disk-build cost one step behind it (e.g. crossing into
+"10 KB" Capacity funds a 1 KB disk's own 80,000-bit build cost) — deliberate, so a pool's buffer is
+always exactly far enough ahead to afford its own next disk the moment the threshold is crossed. A
+pool's Bandwidth (`getStoragePoolBandwidth`) is unaffected — it still follows the same raw
+production rate the Data Stream tile's own rate figure uses, through the finer SI-clean transform
+(`getSiCleanEquivalentBits`, its own closed-form helper, distinct from Capacity's decade-power one
+though both share the same `N = round(log2(raw / 1 Byte))` doubling-step calculation, robust to
 floating-point drift from chained purchases/boosts) — `sqrt(pool Capacity in Bytes)` is only a
 guideline for the bandwidth's bounds, not the formula, though it still caps the real ceiling once a
 pool's own fixed Capacity can't keep up with an ever-growing rate. `isMemoryCapacityAtCap`
@@ -169,7 +174,9 @@ ascending pool-by-pool, after tier01's own bootstrap conversion and Queued Capac
 buffer's own ceiling matches that pool's Capacity exactly (not a smaller fraction — see
 `docs/DESIGN_HISTORY.md` for why). The common **Provision Disk**
 operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
-targets the next disk size. Only the largest unlocked pool is expanded; earlier pools remain as
+targets the next disk size and renders INSIDE the pool card matching that size (not standalone in
+the Data Stream section), with a fallback copy below the Data Stream card for the rare case where
+the disk ladder has outrun the last currently-visible pool card. Only the largest unlocked pool is expanded; earlier pools remain as
 compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a
 fresh disk takes exactly the time to fill it at 1x Memory bandwidth (current production rate), ×N
 for the array's Nth disk; only the pool's smallest size gets an always-full **read cache** (Data
@@ -188,10 +195,12 @@ manual action — deferring to a still-redeemable disk first) as a prepaid buffe
 first/instantly, any remaining cost live-transfers off built Disks over time (10x the Byte Foundry's
 bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake never itself banks a spendable
 reserve beyond its deposits. A lake's own deposit capacity is a purchasable ladder: starts at 1
-unit, grows per purchase via its own SI-clean sequence (plain doubling except one 64→125 step — a
-lake's capacity is never binary-displayed, so this switchover carries none of the conflict that
-keeps `intro.capacity` itself — the Data Stream tile's own value — on plain binary doubling;
-spending the lake's current capacity in Bits, same current-value shape used by Capacity ×2),
+unit, grows per purchase via its own SI-clean sequence (plain doubling except one 64→125 step — the
+same shape the Data Stream's own finer SI-clean values, e.g. pool Bandwidth, use — pool Capacity
+itself no longer does, see above; a lake's capacity is never binary-displayed, so this switchover
+carries none of the conflict that keeps `intro.capacity` itself — the Data Stream tile's own value
+— on plain binary doubling; spending the lake's current capacity in Bits, same current-value shape
+used by Capacity ×2),
 hard-capped at 1,000 units (`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 10) — the
 intentional limit a player actually experiences. Each sub-slot's own deposit count is
 separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever

@@ -2172,6 +2172,32 @@ const getSiCleanEquivalentBits = rawBits => {
   return cleanBytes * BITS_PER_BYTE
 }
 
+// Pool Capacity's own ladder (distinct from Bandwidth's finer SI-clean sequence above): plain
+// powers of 10 — 1 KB, 10 KB, 100 KB, 1000 KB (= 1 MB, pool 1's own ceiling) — jumping the instant
+// intro.capacity's own binary doublings cross each threshold, rather than climbing through every
+// intermediate SI-clean value (…,64,125,250,500,1000,…) the way it used to. Each step exactly
+// matches the disk-build COST one step behind it (e.g. reaching "10 KB" capacity funds a 1 KB
+// disk's own 80,000-bit build cost — DISK_BUILD_COST_MULTIPLIER × size), so a pool's buffer is
+// always exactly far enough ahead to afford its own next disk once intro.capacity crosses that
+// threshold — see docs/DESIGN_HISTORY.md.
+//
+// Finds the decade exponent via `steps` (the SAME round(log2(...)) doubling count above, reused
+// rather than taking log10 of the raw, potentially astronomically large byte value directly) times
+// the constant log10(2) — multiplying a modest integer by a precise constant stays far more
+// numerically stable at large magnitudes than computing log10 of an already-huge float would.
+// log10(2) is irrational, so `steps * LOG10_2` is never exactly an integer for steps > 0 — unlike
+// the SI-clean sequence above, this ladder was never deliberately constructed to land exactly on a
+// floating-point boundary, so there's no analogous "which side of the boundary" ambiguity to guard
+// against with rounding instead of flooring here.
+const LOG10_2 = Math.log10(2)
+const getDecadePowerEquivalentBits = rawBits => {
+  if (!Number.isFinite(rawBits)) return 0
+  if (rawBits < BITS_PER_BYTE) return Math.max(0, rawBits)
+  const steps = Math.max(0, Math.round(Math.log2(rawBits / BITS_PER_BYTE)))
+  const decadeExponent = Math.floor(steps * LOG10_2)
+  return (10 ** decadeExponent) * BITS_PER_BYTE
+}
+
 export const getStoragePoolBandwidth = (state, poolIndex) => {
   const unlockedCount = getUnlockedStoragePoolCount(state)
   // Locked or invalid pools return 0. Callers must treat that as no available throughput:
@@ -2205,10 +2231,11 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
   // callers derive the pool from a built disk or a fully-built lake tier, both of which imply the
   // corresponding pool is unlocked.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
-  // Capacity is the SI-clean equivalent (getSiCleanEquivalentBits) of the shared Memory doubling
-  // count, clamped to this pool's own window. It does not scale down when higher pools unlock, so
-  // pool 1 stays capped at 1 MB (SI) once maxed — see POOL_CAPACITY_SI_STEP in layers.js.
-  const rawCapacity = getSiCleanEquivalentBits(state.intro?.capacity ?? 0)
+  // Capacity is the decade-power equivalent (getDecadePowerEquivalentBits) of the shared Memory
+  // doubling count, clamped to this pool's own window. It does not scale down when higher pools
+  // unlock, so pool 1 stays capped at 1 MB (SI) once maxed — see POOL_CAPACITY_SI_STEP in
+  // layers.js.
+  const rawCapacity = getDecadePowerEquivalentBits(state.intro?.capacity ?? 0)
   const floorBits = poolIndex === 1
     ? getStoragePoolMemoryBounds(1).startBits
     : getStoragePoolMemoryBounds(poolIndex - 1).endBits

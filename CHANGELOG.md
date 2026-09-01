@@ -173,6 +173,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses
   the restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
   the shared Disk Build control is now labeled **Provision Disk**.
+- **Provision Disk button moved back inside its pool card** — the button now renders inside the
+  pool card matching the disk ladder's current offer, right after that pool's title, instead of
+  standalone in the Data Stream section — pulling it back out had separated the control from the
+  pool it actually builds into. A fallback copy still renders just below the Data Stream card for
+  the rare case where the disk ladder has already advanced past the last pool card currently
+  visible (capacity-threshold-gated — see the "Storage Pool cards now also require a capacity
+  threshold to appear" entry above), so the button never disappears.
+- **Storage pool Capacity now climbs in plain decade-of-10 steps, not the finer SI-clean sequence**
+  — a pool's own Capacity (`getStoragePoolCapacity`) previously grew through the same 1, 2, 4, 8,
+  …, 64, 125, 250, 500, 1000 SI-clean sequence Bandwidth still uses; it now jumps straight from one
+  power of 10 to the next (1 KB → 10 KB → 100 KB → 1000 KB for pool 1, and so on for higher pools)
+  the instant the Data Stream's raw Capacity crosses that decade threshold, holding flat in between.
+  Each decade step lines up exactly with the disk-build cost one step behind it, so a pool's buffer
+  is always exactly far enough ahead to afford its own next disk the moment the threshold is
+  crossed. Bandwidth is unaffected — it still uses the finer SI-clean sequence. See
+  `docs/DESIGN_HISTORY.md`.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)

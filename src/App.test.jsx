@@ -2923,6 +2923,30 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
+  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk falling back outside any pool card', () => {
+    const size10kb = currentBankSize * 10
+    const size100kb = currentBankSize * 100
+    seedIntroState({
+      bits: 0,
+      // Pool 1's disk-build condition is met (unlocks pool 2 via getUnlockedStoragePoolCount), but
+      // capacity stays below pool 2's own 1 MiB capacity-unlock threshold (getVisibleStoragePoolCount)
+      // — pool 2's own card must stay hidden even though the disk ladder has already moved on to it.
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP, [size10kb]: DISK_ARRAY_LADDER_CAP, [size100kb]: DISK_ARRAY_LADDER_CAP },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'pool 2' })).not.toBeInTheDocument()
+    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk falls
+    // back to rendering outside any pool card (see ByteFoundryPage's provisionDiskButton fallback)
+    // rather than disappearing until pool 2's own card catches up.
+    const provisionButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(provisionButton).toHaveTextContent('1 MB')
+    expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
+  })
+
   test('Provision Disk stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
     render(<App />)
@@ -3146,9 +3170,14 @@ describe('Byte Foundry Storage', () => {
     // of SIMULATED game time, but only 6 real 100ms ticks (600ms) since each tick only ever advances
     // elapsedSeconds by TICK_RATE_MS/1000 regardless of the underlying rate.
     const bandwidthCapBits = 2000
-    // capacityBytes = (bandwidthCapBits / BITS_PER_BYTE) ** 2, so
-    // sqrt(capacityBytes) * BITS_PER_BYTE === bandwidthCapBits exactly.
-    const bandwidthCapCapacityBits = (bandwidthCapBits / 8) ** 2 * 8
+    // Pool Capacity now advances in plain decade-power-of-10 steps (getDecadePowerEquivalentBits),
+    // so it's no longer possible to solve directly for a capacity whose sqrt lands on an exact
+    // bandwidth value the way the old SI-clean formula allowed — instead, 2**17 bits happens to
+    // land on decade step 10**5 Bytes (800,000 bits), whose sqrt (≈316.23 Bytes/sec) rounds via the
+    // SAME SI-clean step getStoragePoolBandwidth's own outer rounding already uses to exactly
+    // bandwidthCapBits (2,000) — verified numerically, not just algebraically, since this formula
+    // has no closed-form inverse any more.
+    const bandwidthCapCapacityBits = (2 ** 17) * 8
     seedIntroState(
       {
         poolBuffers: { 1: currentBankSize * 2 },

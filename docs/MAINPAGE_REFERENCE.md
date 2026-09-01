@@ -109,10 +109,17 @@ live-transfers off built Disks over time), not minted from Data Stream — the e
 Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the shared Data Stream
 section.
 
-Storage is continuous on this same page: **Provision Disk** — the common Data Stream operation,
-alongside
-Speed above — hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
-scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above). Its
+Storage is continuous on this same page: **Provision Disk** — the common disk-build operation —
+hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
+scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above).
+Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
+poolIndex`, right after that pool's summary/title row), not alongside Speed in the Data Stream
+section — an earlier layout had it there, standalone, but that separated the button from the pool
+it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
+card) for the rare case where the disk ladder has already advanced past the last pool card
+currently VISIBLE (`getVisibleStoragePoolCount`, capacity-threshold-gated — see
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — keeping the button reachable rather than
+letting it disappear until that pool's card catches up. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1

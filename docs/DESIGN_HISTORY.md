@@ -4496,3 +4496,73 @@ Verified visually via `yarn dev` + a real Playwright/Chromium screenshot: a pool
 condition satisfied but capacity below its own threshold correctly stays hidden (a "GB Pool" that
 would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
 manual transfer-block row is confirmed gone from every state that used to show it.
+
+### Provision Disk moved back inside its pool card; pool Capacity switched from SI-clean to a plain decade-of-10 ladder
+
+Two more requests from the same conversation as the three entries above, landed together since both
+touch the same pool-card region: the shared Provision Disk button — pulled out of the pool cards
+during the earlier restyle above ("Byte Foundry pool cards restyled to match the Data Stream card")
+and left standalone in the Data Stream section — should move back inside the pool it actually builds
+into; and a pool's own Capacity value should climb in plain, coarse decade-of-10 steps (1 KB → 10 KB
+→ 100 KB → 1000 KB for pool 1) rather than the finer SI-clean sequence it shared with Bandwidth,
+jumping to the next step the instant the Data Stream's raw Capacity crosses that threshold.
+
+**Provision Disk relocation.** The button (`provisionDiskButton`, a JSX value now built once ahead of
+the component's `return`) renders inside the `PoolCard` whose `poolIndex` matches
+`diskPoolIndex = getPoolIndexForDiskSize(getDiskSize(state))` — the pool the ladder's CURRENT offer
+actually belongs to — right after that pool's summary/title row, so it sits with the disk arrays it
+funds instead of a separate section elsewhere on the page. This reintroduced a real edge case:
+pool-card VISIBILITY is capacity-threshold-gated (`getVisibleStoragePoolCount`, from the entry above)
+while the disk ladder's own progression is disk-build-only (`getUnlockedStoragePoolCount`), so the
+ladder can advance to a pool whose card isn't visible yet — the button would otherwise vanish
+entirely until that pool's card caught up. A fallback copy of the same button renders just below the
+Data Stream card, gated on `diskPoolIndex > unlockedPoolCount` (the visible count), so it stays
+reachable in that gap rather than disappearing.
+
+**Pool Capacity's decade-of-10 ladder.** `getStoragePoolCapacity` previously derived a pool's own
+Capacity from the shared Data Stream doubling count via the same SI-clean switchover sequence
+Bandwidth uses (`getSiCleanEquivalentBits` — 1, 2, 4, 8, …, 64, 125, 250, 500, 1000 × 1000^decade).
+The request asked for something deliberately coarser: flat within a decade, jumping straight from one
+power of 10 to the next the moment the raw Capacity crosses it — no intermediate SI-clean steps in
+between. A new closed-form helper, `getDecadePowerEquivalentBits`, reuses the exact same robust
+`N = round(log2(rawBits / BITS_PER_BYTE))` doubling-step calculation `getSiCleanEquivalentBits`
+already computes (for the same reason: a discrete iterative search would be vulnerable to the same
+large-N floating-point misclassification the precision-loss entry above fixed), then takes
+`10 ** Math.floor(N * Math.log10(2))` Bytes. Flooring rather than rounding is safe here specifically
+BECAUSE `log10(2)` is irrational — unlike the SI-clean sequence, which was deliberately constructed
+so certain doubling counts land EXACTLY on a decade boundary (needing `round` to avoid misclassifying
+which side of that boundary floating-point error put it on), `N * log10(2)` is never exactly an
+integer for `N > 0`, so there's no equivalent boundary-straddling case for `floor` to get wrong.
+
+Only `getStoragePoolCapacity` (and, through it, `getPoolBufferCapacity`, a direct alias) switched to
+the new helper. `getStoragePoolBandwidth` deliberately stays on `getSiCleanEquivalentBits` — the
+request was specifically about the Capacity FIGURE a pool card displays and gates its next Disk
+purchase on, not the finer-grained throughput number; conflating the two would have made Bandwidth
+jump in the same coarse decade steps too, which nothing asked for and would have made a pool's
+throughput look artificially chunky. This is a deliberate divergence between two values that used to
+share one formula, mirrored in code by two now-distinct closed-form helpers rather than one
+parameterized by a "clean or decade" flag — the two sequences have different mathematical shapes
+(one factors into `1000 ** floor(N/10)` times a 10-term local lookup, the other into a single
+`10 ** exponent` with no lookup at all), so a shared parameterization would have bought no real code
+reuse, just an extra branch neither caller needs.
+
+**A property the request didn't explicitly ask for, but that falls out of the formula and is worth
+noting:** each decade step exactly funds the disk-build cost one step *behind* it. Crossing into
+"10 KB" Capacity (10^4 Bytes = 80,000 bits) exactly equals `getDiskCost` for a 1 KB disk
+(`DISK_BUILD_COST_MULTIPLIER × 8000 bits`); crossing into "100 KB" exactly funds the 10 KB disk's own
+cost, and so on. Under the old SI-clean sequence this alignment was only approximate (the SI-clean
+steps and the disk-cost ladder don't share a common mathematical structure); under the decade ladder
+it's exact, since `getPoolBufferCapacity` is a direct alias of `getStoragePoolCapacity` and disk costs
+are themselves `DISK_BUILD_COST_MULTIPLIER (10) × size`, i.e. also decade-scaled. This means a pool's
+buffer is now always exactly far enough ahead to afford its own very next disk the instant the
+threshold is crossed — never a moment early, never left short.
+
+**Verification.** 6 existing `engine.test.js`/`App.test.jsx` assertions that pinned specific
+SI-clean-derived Capacity/buffer values were recalculated by hand and updated to their new
+decade-power equivalents (e.g. a Capacity previously expected at `4,000,000` bits now lands on the
+decade step `800,000`). 2 new tests pin the decade ladder itself directly (Capacity holding flat
+across several doubling counts within a decade, then jumping exactly at the crossing point) and the
+exact disk-cost-alignment property above. `yarn test`: 1624/1624 green. Verified visually via
+`yarn dev` + Playwright/Chromium screenshots: Provision Disk renders inside the active pool's card,
+and the fallback copy appears/disappears correctly as the ladder outruns and is caught up by pool
+visibility.
