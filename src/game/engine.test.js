@@ -183,6 +183,7 @@ import {
   isUnboundedPrestigeUnlocked,
   isTierUnlocked,
   mergeComputeClustersIntoNetwork,
+  mergeFoundryUpgradeCaps,
   mergeComputeCloudsIntoDatacenter,
   mergeComputeCoresIntoNode,
   mergeComputeDatacentersIntoSupercomputer,
@@ -1197,6 +1198,15 @@ describe('resetByteFoundry', () => {
     expect(second.intro.foundryResetCaps.disksBuiltTotal['8000']).toBe(3)
     expect(second.intro.foundryResetCaps.disksBuiltTotal['80000']).toBe(2)
     expect(second.intro.foundryResetCaps.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
+  })
+
+  it('mergeFoundryUpgradeCaps never regresses Invest progress when the right side is behind', () => {
+    const ahead = { productionMilestoneTier: 5, productionMilestoneTierClaims: 2, disksBuiltTotal: {}, byteCreated: true, capacity: INTRO_DISK_UNLOCK_CAPACITY }
+    const behind = { productionMilestoneTier: 1, productionMilestoneTierClaims: 0, disksBuiltTotal: {}, byteCreated: false, capacity: INTRO_STARTING_CAPACITY }
+    const merged = mergeFoundryUpgradeCaps(ahead, behind)
+    expect(merged.productionMilestoneTier).toBe(5)
+    expect(merged.productionMilestoneTierClaims).toBe(2)
+    expect(merged.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
   })
 
   it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {
@@ -3506,6 +3516,13 @@ describe.each([
 })
 
 describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues #377/#380)', () => {
+  it('returns 0 for an out-of-range boundaryIndex', () => {
+    const state = createInitialGameState()
+    expect(getComputeMergeDurationSeconds(state, -1)).toBe(0)
+    expect(getComputeMergeDurationSeconds(state, COMPUTE_MERGE_DURATION_UPGRADE_COUNT)).toBe(0)
+    expect(getComputeMergeDurationSeconds(state, 1.5)).toBe(0)
+  })
+
   it('Core→Node is COMPUTE_MERGE_CORE_EARN_MULTIPLIER × getCoreEarnTimeSeconds; each next step is ×10', () => {
     const state = createInitialGameState()
     const coreEarn = getCoreEarnTimeSeconds(state)
@@ -7193,6 +7210,17 @@ describe('prestigeGame', () => {
     expect(pinMuseumEntry('missing')(withHistory)).toBe(withHistory)
   })
 
+  it('is a no-op re-pinning an already-pinned entry', () => {
+    const withHistory = {
+      ...createInitialGameState(),
+      prestigeMuseum: {
+        history: [{ id: 'a', at: 1, prestigeNumber: 1, pointsAwarded: 1, moneyBits: 1 }],
+        pinnedIds: ['a'],
+      },
+    }
+    expect(pinMuseumEntry('a')(withHistory)).toBe(withHistory)
+  })
+
   it('refuses to pin past MUSEUM_PIN_CAP, leaving state unchanged', () => {
     const history = Array.from({ length: 11 }, (_, i) => ({
       id: `entry${i}`,
@@ -8767,6 +8795,18 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     const after = tickGame(0.1)(state)
     expect(after.computeFlops.owned[flopId]).toBe(0)
     expect(after.prestige.points).toBe(5000)
+  })
+
+  it('setComputeFlopsAutobuyerEnabled is a no-op for an unknown flopId', () => {
+    const state = createInitialGameState()
+    expect(setComputeFlopsAutobuyerEnabled('not_a_real_flop', true)(state)).toBe(state)
+  })
+
+  it('setComputeFlopsAutobuyerEnabled is a no-op while the Flops autobuyer is still locked', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+    const state = createInitialGameState()
+    expect(state.computeFlopsAutobuyers[flopId]).toBeNull()
+    expect(setComputeFlopsAutobuyerEnabled(flopId, false)(state)).toBe(state)
   })
 })
 
