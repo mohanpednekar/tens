@@ -4566,3 +4566,38 @@ exact disk-cost-alignment property above. `yarn test`: 1624/1624 green. Verified
 `yarn dev` + Playwright/Chromium screenshots: Provision Disk renders inside the active pool's card,
 and the fallback copy appears/disappears correctly as the ladder outruns and is caught up by pool
 visibility.
+
+### Cost-epoch exponent sequence changed a third time: Fibonacci replaced with a linear-increment one
+
+`getTierCost`'s per-level pricing (see "Purchase level resized from 10 to 8, and the cost-epoch
+sequence changed from Fibonacci to triangular" and "Fibonacci cost curve... reinstated" above) had
+settled on the Fibonacci-driven exponent sequence — `1, 2, 3, 5, 8, 13, 21, …` for epochs
+`0, 1, 2, 3, 4, 5, 6, …`, i.e. each epoch's exponent grows over the previous one by
+`1, 1, 2, 3, 5, 8, 13, …` — with the maintainer's explicit instruction (recorded above) to keep it
+going forward rather than let it drift back to the triangular sequence again.
+
+This session, the maintainer explicitly asked to change it a third time: initially to increments of
+`1, 1, 2, 4, 7, 11, 16, 22, 29, …` (a quadratic, "central-polygonal-number" progression diverging
+from Fibonacci at epoch 4), then — mid-session, after being shown the resulting exponent curve and
+asked for something slower-growing that still opened with the same first three increases (`1, 1,
+2`) — settled on plain **linear increments**: `1` at epoch 0, and the epoch number itself
+(`n`) from epoch 1 on, i.e. `1, 1, 2, 3, 4, 5, 6, 7, 8, …`. Cumulatively, this gives:
+
+| epoch (e) | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|---|
+| Fibonacci exponent (previous) | 1 | 2 | 3 | 5 | 8 | 13 | 21 | 34 | 55 |
+| linear-increment exponent (current) | 1 | 2 | 3 | 5 | 8 | 12 | 17 | 23 | 30 |
+
+The two sequences are identical through epoch 4 (level 5) — coincidentally the same divergence
+point the earlier Fibonacci-vs-triangular swap had — and diverge from epoch 5 (level 6) on, with
+the new sequence growing quadratically in the epoch (`~e²/2`) rather than Fibonacci's exponential
+growth, so late-game tier levels get noticeably cheaper/faster to reach than before. Because
+`getTierCost`'s and `App.test.jsx`'s own existing assertions only ever exercised levels 1-5, none
+of their expected VALUES needed to change — only `getCostEpochExponent`'s own test
+(`engine.test.js`) was extended out to epoch 7 to actually pin the new, now-different behavior past
+the point where the two sequences used to agree. `docs/ECONOMY_REFERENCE.md`'s function-reference
+table entry was updated to the new sequence and history note.
+
+As with the earlier swap, this is the maintainer's own deliberate, direct instruction — recorded
+here specifically so a later automated session doesn't read the still-present Fibonacci-vs-
+triangular history above and "helpfully" revert this one too.

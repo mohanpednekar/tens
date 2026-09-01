@@ -119,6 +119,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   both displays.
 
 ### Changed
+- **Tier per-level costs now grow more slowly from level 6 onward** — `getCostEpochExponent`'s
+  per-epoch increment changed from a Fibonacci progression (`1, 1, 2, 3, 5, 8, 13, …`) to a linear
+  one (`1, 1, 2, 3, 4, 5, 6, …`), giving exponents `1, 2, 3, 5, 8, 12, 17, 23, 30, …` instead of
+  `1, 2, 3, 5, 8, 13, 21, 34, 55, …` for epochs 0-8. Levels 1-5 are priced identically to before;
+  every tier's level 6 and beyond (and PP Compute/Flops tiers, which reuse the same formula) now
+  cost noticeably less as levels climb, since the sequence grows quadratically rather than
+  exponentially. See `docs/DESIGN_HISTORY.md`.
 - **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
   built** — `tickDiskAutoFill`'s cache eligibility used to key off `disksBuiltTotal` having an entry
   for a size; now it's keyed off which pools are currently unlocked (`getUnlockedStoragePoolCount`),

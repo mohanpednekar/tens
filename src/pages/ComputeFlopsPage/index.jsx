@@ -108,7 +108,7 @@ const ComputeFlopsPage = ({ game }) => {
         )}
         {' '}Each owned unit adds {(COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC * 100).toFixed(2)}% per
         second to the matching Factory tier (linear in owned count). Per-unit PP cost rises every
-        purchase on the same triangular power-of-ten curve as Factory tiers (not every 8 buys).
+        purchase on the same linear-increment power-of-ten curve as Factory tiers (not every 8 buys).
         Boost resets each Prestige; owned units are permanent.
       </Hint>
 

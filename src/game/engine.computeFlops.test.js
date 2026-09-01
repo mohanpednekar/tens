@@ -44,7 +44,7 @@ describe('Compute Flops screen', () => {
     expect(after.prestige.points).toBe(0)
   })
 
-  it('raises KFlops cost after every purchase on the triangular power-of-ten curve', () => {
+  it('raises KFlops cost after every purchase on the linear-increment power-of-ten curve', () => {
     const flopTier = { baseCostPP: COMPUTE_FLOPS_FIRST_TIER_COST_PP }
     expect(getComputeFlopsTierCost(flopTier, 0)).toBe(1_000)
     expect(getComputeFlopsTierCost(flopTier, 1)).toBe(10_000)
