@@ -4176,3 +4176,99 @@ its own derived one at the ceiling. `CLAUDE.md`/`AGENTS.md`/`docs/ECONOMY_REFERE
 throughout to describe the decoupled mechanic, stating the standing rule directly: the SI-clean
 switchover sequence is for storage-pool-scoped values only, never for a value that also has a binary
 display.
+
+### Pool Bandwidth's formula corrected — follows the raw Speed doublings via the SI transform, not sqrt(Capacity)
+
+A direct follow-up correction on the same feature (see the previous entry). After the decoupled
+Capacity/Bandwidth mechanic shipped, the player clarified the Bandwidth half specifically was still
+wrong: "In pool only. Others are now correct[.] Bandwidth as square root was only a guideline for
+understanding the lower and upper bounds. The actual bandwidth upgrade simply follows the data
+stream speed upgrades but in SI instead of binary. So it matches till 64 bytes/sec and then starts
+diverging as 125 instead of 128 and continues this pattern for every unit[.] Example, if data
+stream speed is 256 MiB/s then the largest pool bandwidth will be 250 MB/s[.] Use rounding to
+nearest value to prevent glitches due to javascript floating errors as seen in your screenshots."
+
+**What was wrong.** The previous entry's `getStoragePoolBandwidth` computed `sqrt(Capacity in
+Bytes)`, then snapped that sqrt result DOWN to the nearest SI-clean switchover term via a
+search-based helper (`getSiCleanValueAtMostBytes`, walking the sequence from 1 Byte until a term
+exceeded the target). Two things were wrong with this: (1) `sqrt(Capacity)` was never the intended
+FORMULA for Bandwidth's value — it was only ever meant as a rough description of the bounds
+Bandwidth should stay within (a small pool's throughput shouldn't run far ahead of its own tiny
+Memory window) — the actual number should track the Data Stream's own raw Speed/production-rate
+doublings directly, converted through the SAME SI-clean transform Capacity uses, not a derived
+sqrt-of-a-different-quantity; (2) the search-based snap-down, while mathematically sound, walked a
+sequence of floating-point multiplications and comparisons that could misclassify a value sitting
+very close to (but not exactly on) a doubling boundary — the kind of drift that accumulates from
+chained multiplications across many purchases, Compute Boosts, and prestige bonuses — landing one
+step off from where the value "should" have been.
+
+**Worked example that pinned the fix.** The player's own example is exact and directly verifiable:
+a raw Data Stream rate of 256 (any Bytes-scale unit — the relationship is scale-invariant) is 8
+doublings from 1 Byte (`2^8 = 256`). Walking the SI-clean switchover sequence 8 steps from 1 Byte —
+1, 2, 4, 8, 16, 32, 64, 125, **250** — lands exactly on 250, matching "256 MiB/s → 250 MB/s"
+precisely. This confirmed Bandwidth should be `getSiCleanEquivalentBits` applied DIRECTLY to the
+raw production rate, the same way Capacity already applies it to `intro.capacity`'s doubling count
+— not a value derived from Capacity via `sqrt` at all.
+
+**Resolution.**
+
+- The two search-based helpers (`getSiCleanCapacityBits`, used for Capacity; `getSiCleanValueAtMostBytes`,
+  used for Bandwidth's snap-down) are replaced with a single, shared, rounding-based helper:
+  `getSiCleanEquivalentBits(rawBits)` finds `N = round(log2(rawBits / BITS_PER_BYTE))` — how many
+  doublings-from-1-Byte the raw value sits at — then walks `getNextSiDoubledValue` N times from
+  1 Byte. A ROUNDED log2 rather than a discrete doubling-comparison search directly addresses "use
+  rounding to nearest value to prevent glitches": a raw value carrying tiny floating-point noise
+  (from many chained multiplications/divisions) still rounds to the doubling step it was
+  mathematically meant to be, rather than a comparison-based search misclassifying it one step off
+  right at a boundary. Values below 1 Byte pass through unchanged (the "SI-clean vs. binary"
+  distinction doesn't apply meaningfully at bit-scale, and the game's own bit-scale displays never
+  make that distinction either).
+- `getStoragePoolCapacity` now calls `getSiCleanEquivalentBits(intro.capacity)` directly — since
+  `intro.capacity` is always an exact power of two from `INTRO_STARTING_CAPACITY` (never clamped to
+  a non-power-of-two boundary — see the previous entry), `round(log2(...))` lands on the exact same
+  integer step count a discrete search would have found, so this is a behavior-preserving
+  refactor for Capacity specifically.
+- `getStoragePoolBandwidth` now computes `Math.min(rawRateBytes, sqrtCapBytes)` in RAW (unrounded)
+  terms first — `sqrt(Capacity)` still acts as the real throughput ceiling once a pool's own fixed,
+  maxed-out Capacity can't keep up with an ever-growing rate, satisfying "only a guideline for
+  understanding the lower and upper bounds" — then applies `getSiCleanEquivalentBits` ONCE to
+  whichever of the two bounded the result. Since the transform is monotonic (a strictly increasing
+  sequence), transforming the min of two raw values gives the identical result as transforming each
+  separately and taking the min of the transformed values — so this doesn't change which case
+  (rate-bound vs. capacity-bound) is chosen, only how the final displayed number is derived from it.
+
+**A second, real issue surfaced by adversarial review of the previous commit before this one
+landed.** The reviewer flagged that `getCoreEarnTimeSeconds` (Compute merge/Boost preset duration
+pacing — "seconds to fill Memory once at the current rate") reads raw `intro.capacity` directly,
+and since that value is no longer clamped to a pool ceiling (per the previous entry), it now
+permanently runs ~2.4% larger per full decade of doublings past a pool boundary within the same
+Era than it would have under the old clamped regime — silently lengthening every Compute merge
+timer and Boost preset duration derived from it. Two directions were possible: reroute the formula
+through a pool's own bounded `getStoragePoolCapacity` (eliminating the drift, but introducing a
+NEW, unrequested economy-balance change beyond the display-only scope this whole feature was about
+— and picking WHICH pool to reference is itself ambiguous before any pool is unlocked), or keep
+reading the raw value (preserving the property that Core-earn-time describes the REAL Buffer's own
+refill time — the same value `tapIntroBit`/`tickIntroProduction` cap `bits` at — rather than a
+pool-card display figure) and acknowledge the resulting pacing drift explicitly. The second was
+chosen: it avoids scope-creeping an unrequested balance change into a pure display fix, and the
+effect is small (a few percent, only within a single Era, reset by Era ascension) rather than
+something that needed a design decision from the player. `getCoreEarnTimeSeconds`'s own doc comment
+and `CLAUDE.md`/`docs/ECONOMY_REFERENCE.md`/`CHANGELOG.md` now state this explicitly, and a
+regression test pins the raw-capacity-reading behavior at a pool-boundary-crossing capacity value
+so it can't silently drift further without a test failure flagging it.
+
+**A concurrent-agent hazard recurred, twice, mid-session.** The adversarial review agent spawned
+against the prior commit ran with Bash access in the same shared working directory this session
+was actively editing in. Partway through its own analysis it encountered this session's
+in-progress, uncommitted Bandwidth-formula edits, mistook them for unrelated stray contamination,
+and ran `git checkout -- .` to get a "clean" view for its own diff — discarding those uncommitted
+edits from the working tree. This happened twice before the review agent finished (each time, per
+its own final report, it re-verified against `git log` showing the last real commit before
+continuing its own review — so the review's own findings were never contaminated by the discarded
+content, only this session's local progress was lost). The mitigation adopted after the first two
+such incidents earlier in this session — commit soon after editing — wasn't sufficient on its own
+here, since a ~110-second full `yarn test` run sat between the edit and the commit, giving the
+concurrent agent's own tool calls a wide window to interleave. The edits were re-applied and,
+starting with this round, each file's edit was followed immediately by a fast, narrowly-scoped test
+run (or none at all when confidence was already high) and an immediate commit + push, rather than
+batching a full `yarn test` run before committing.
