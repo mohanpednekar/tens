@@ -4080,3 +4080,99 @@ now-removed 125-Byte deviation. `CLAUDE.md`/`AGENTS.md`/`docs/ECONOMY_REFERENCE.
 updated throughout to describe `upgradePoolCapacity` as plain binary doubling again, while keeping
 the Data Lake capacity ladder's own SI-clean description (and its now-standalone, no-longer-cross-
 referencing-`getNextSiDoubledValue` phrasing) intact.
+
+### Pool Capacity's SI-clean mechanic restored — decoupled from the Data Stream's binary value instead of shared with it
+
+A third round on the same feature. After the previous entry's revert shipped (plain binary doubling
+for `intro.capacity`, no SI-clean mechanic anywhere in the Storage pool path), the player reported —
+via screenshot of a "KB Pool" card reading "6.964 KB / 16.384 KB" and "128 B/sec" — that the pool
+card itself should show clean SI figures again: "Speed should have been 125. Capacity should have
+been 16 KB." A follow-up standing rule then clarified the general principle rather than re-litigating
+case by case: **"The switchover is applicable only in the storage pools. Everything that switches
+over, uses SI units. Everything that doubles normally, uses binary units."**
+
+**The previous two attempts both made the same category error: one raw value serving two displays
+with incompatible "roundness."** Attempt 1 (`getNextSiDoubledValue` growing `intro.capacity` itself)
+fixed the pool card's SI cleanliness by breaking the Data Stream tile's binary cleanliness. Attempt 2
+(the prior entry, reverting to plain binary doubling entirely) fixed the Data Stream tile's binary
+cleanliness by breaking the pool card's SI cleanliness right back. Neither attempt tried decoupling
+the two displays onto genuinely separate values — each treated `intro.capacity` as the single source
+of truth for both, when the fix that actually satisfies the standing rule requires the pool's own
+Capacity to be computed independently of `intro.capacity`, not merely formatted differently from it.
+
+**The arithmetic obstacle that blocked a naive "just apply the switchover to the pool card's number"
+fix:** the pool card shows two numbers, Capacity and Bandwidth, where Bandwidth is `sqrt(Capacity in
+Bytes)`. If Capacity is set to a clean SI switchover term (e.g. 16,000 Bytes, "16 KB"), its square
+root is ~126.49 — not the clean 125 the player expected. If instead Bandwidth is defined as the clean
+switchover term (125) and Capacity is defined as its square (15,625, "15.625 KB"), Capacity itself
+stops being clean. The two numbers can't both land on their own clean switchover value under a single
+shared `sqrt` formula — this was surfaced to the player directly (via `AskUserQuestion`, with the
+exact numbers above) rather than guessing a third time, given the first two attempts had already
+each cost a revert. The player picked "both independently snap to clean values": Capacity follows
+its own switchover sequence, and Bandwidth is separately snapped down to the nearest clean value at
+or below the raw `sqrt(Capacity)`, rather than requiring an exact algebraic relationship between them.
+
+**Resolution — decoupled derivation, not a shared value:**
+
+- `intro.capacity` (the Data Stream tile's own binary balance/capacity figure) keeps doubling
+  plainly via `INTRO_CAPACITY_DOUBLING_STEP` — `INTRO_STARTING_CAPACITY * 2^N` for N purchases — but
+  `upgradePoolCapacity` no longer clamps it to any pool's `endBits` ceiling. Previously this clamp
+  was necessary because the SAME value was directly read by the pool card; now that the pool derives
+  its own separate figure, clamping the raw value would just make it non-power-of-two (breaking its
+  own binary cleanliness) for no remaining reason. It can and does grow past a pool's SI ceiling once
+  reached; further purchases keep doubling it in the background until a higher pool unlocks.
+- Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) by walking the restored
+  `getNextSiDoubledValue` helper (identical logic to attempt 1, unchanged: doubles normally except
+  once per decade of ten doublings, where a value's mantissa — after stripping factors of 1000 —
+  hits exactly 64, going to 125 instead of 128) the SAME number of times N as `intro.capacity` has
+  doubled, via a private `getSiCleanCapacityBits` helper that walks both sequences in lockstep until
+  the plain-binary side reaches `intro.capacity`, then returns the SI-clean side's value at that
+  step. This is the key structural difference from attempt 1: N is *read off* `intro.capacity`'s
+  doubling count, but the pool's own Capacity is a *separate computed value*, not `intro.capacity`
+  itself — the two numbers only ever share a step count, never a representation. The pool boundaries
+  (`getStoragePoolMemoryBounds`) sit at whole multiples of 10 doublings from the 1-Byte floor, which
+  is exactly where `getNextSiDoubledValue`'s own sequence lands on a clean `1000^d` figure by
+  construction — so a pool's derived Capacity reaches its ceiling at precisely the N a raw binary
+  doubling would have crossed an equivalent milestone at too; there's no drift between the two
+  sequences specifically at a pool boundary, even though they diverge everywhere in between.
+- Each pool's Bandwidth (`getStoragePoolBandwidth`) keeps its existing `sqrt(Capacity in Bytes)` cap
+  formula, but the result is now additionally snapped DOWN to the nearest `getNextSiDoubledValue`
+  term at or below it (a private `getSiCleanValueAtMostBytes` helper: walks the sequence from 1 Byte
+  until a term exceeds the target, returning the previous one) — implementing the "both independently
+  snap to clean values" choice: Capacity and Bandwidth are each independently clean, without an exact
+  algebraic relationship holding between them (a 16 KB-capacity pool caps Bandwidth at a clean
+  125 B/s, not the raw ~126.49 B/s `sqrt(16,000)` would give).
+- `isMemoryCapacityAtCap` — the predicate that actually gates `isMemoryCapacityUpgradeAvailable` and
+  therefore `upgradePoolCapacity` — now compares the highest unlocked pool's own derived Capacity
+  (`getStoragePoolCapacity`) against that pool's `endBits`, not raw `intro.capacity`. This had to
+  change in lockstep with removing the raw clamp above: since `intro.capacity` no longer self-limits
+  at a pool's ceiling, something else has to stop the player from buying past it, and that something
+  is now the pool's own derived value reaching its ceiling — exactly mirroring what the player
+  actually sees on the pool card, rather than an internal number they never see directly.
+  `normalizePoolMemoryCapacity` (save-load) lost its matching clamp-to-ceiling step for the same
+  reason — it now only sanitizes a missing/negative value to a floor of 0.
+
+**Why this isn't the same mistake a third time.** The load-bearing difference from both earlier
+attempts is that `intro.capacity` and `getStoragePoolCapacity(state, poolIndex)` are now two
+genuinely different numbers with two genuinely different growth sequences (plain ×2 vs. the 64→125
+switchover), connected only by sharing a purchase-count N — never by literally being the same stored
+value read through different formatters. Attempt 1's bug was using one number for both jobs and
+optimizing its growth for the SI side; attempt 2's bug was using one number for both jobs and
+optimizing its growth for the binary side. This entry stops trying to find a single growth sequence
+that's clean in both unit systems at once — because none exists — and instead computes two.
+
+**Verification.** Seeded `intro.capacity` at exactly 16,384 Bytes (14 doublings from 1 Byte — the
+same magnitude as the original bug report) and screenshotted both the Data Stream tile and the KB
+Pool card side by side: the Data Stream tile reads "8.077 KiB / 16 KiB" (clean binary — `16,384
+Bytes = 16 KiB` exactly), while the KB Pool card reads "100 B / 16 KB" and "125 B/sec" (clean SI —
+matching the player's exact expected figures from the bug report). `yarn test` is green at 1619
+(+8 over the prior entry's 1611): a restored `getNextSiDoubledValue` describe block (5 tests, one
+fewer than attempt 1's original 6 — the "operates on bits vs Bytes" distinction collapsed into the
+"converts internally" test since there's no longer a second caller needing that boundary spelled out
+separately), plus 3 new tests directly exercising the decoupled derivation — a pool's Capacity
+differing from raw `intro.capacity`'s own binary value, Bandwidth's snap-down behavior, and
+`upgradePoolCapacity` no longer clamping the raw value while `getStoragePoolCapacity` still clamps
+its own derived one at the ceiling. `CLAUDE.md`/`AGENTS.md`/`docs/ECONOMY_REFERENCE.md` were rewritten
+throughout to describe the decoupled mechanic, stating the standing rule directly: the SI-clean
+switchover sequence is for storage-pool-scoped values only, never for a value that also has a binary
+display.

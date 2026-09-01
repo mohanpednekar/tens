@@ -963,40 +963,55 @@ action stays
 live indefinitely, every cycle.
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
-`isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds` in
-`engine.js`/`layers.js`, `INTRO_CAPACITY_CAP_BITS`/`INTRO_BANDWIDTH_COST_MULTIPLIER`/
-`MEMORY_BINARY_UNIT_STEP`/`POOL_CAPACITY_SI_STEP`) — the Data Stream card's own balance/Buffer
-figure still RENDERS in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024
-(`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
-Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). But each pool's
-own Capacity end bound VALUE itself (not just its Storage-pool-card display) is now SI-aligned
-(`POOL_CAPACITY_SI_STEP` = 1000, not `MEMORY_BINARY_UNIT_STEP`): `getStoragePoolMemoryBounds(poolIndex).endBits`
-is exactly `BITS_PER_BYTE * 1000 ** (poolIndex + 1)` — pool 1 → 1 MB (SI), pool 2 → 1 GB, pool 3 →
-1 TB, … — so a pool's own Capacity/Bandwidth stats (SI-displayed on its `PoolCard`, see above) land
-on genuinely clean SI figures rather than binary ones converted to SI units after the fact. The
-Data Stream card's OWN binary rendering of this same underlying value is therefore no longer a
-round binary figure either (pool 1's 8,000,000-bit cap reads "976.562 KiB," not "1 MiB") — an
-accepted, deliberate side effect of decoupling the value's true magnitude (now SI-round) from its
-one remaining binary display surface (the Data Stream card only). Pool Memory Capacity uses the
-shared start/end bounds from `getStoragePoolMemoryBounds`; the Data Stream's own value is the
-shared Memory ceiling, and each pool's displayed Capacity is that value clamped to its own bounds.
-Earlier pools no longer derive a step down from the highest unlocked pool, so pool 1 stays capped
-at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder
-(plain `×2` per purchase via `INTRO_CAPACITY_DOUBLING_STEP` — deliberately NOT the SI-clean
-64→125-deviation sequence the Data Lake capacity ladder below uses, since `intro.capacity` is also
-the Data Stream tile's own balance/capacity figure, which stays binary-denominated; an SI-clean
-mechanic that makes intermediate values land cleanly for the pool card's SI display makes the SAME
-values land un-cleanly for the Data Stream's own binary display instead — e.g. "1.953 KiB" rather
-than "2 KiB" — so the mechanic was reverted to plain doubling after shipping briefly; see
-`docs/DESIGN_HISTORY.md`), so the ladder's last purchase before a new pool's cap simply clamps a
-little earlier than a raw double would land, same clamp shape as always. `INTRO_CAPACITY_CAP_BITS`
-is retained as the pool-1 alias and the active highest pool's end bound is the authoritative moving
-ceiling. The Data Lake capacity ladder (below) is a separate, deliberately-different-mechanic
-doubling ladder — it DOES use the SI-clean sequence (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at 1,000
-units), since a lake's own capacity is never shown via any binary unit, so no such conflict exists
-for it — see "Data Lakes" below. **Speed ×2** (was
-Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
-effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
+`isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/
+`getStoragePoolCapacity`/`getStoragePoolBandwidth`/`getNextSiDoubledValue` in `engine.js`/
+`layers.js`, `INTRO_CAPACITY_CAP_BITS`/`INTRO_BANDWIDTH_COST_MULTIPLIER`/`MEMORY_BINARY_UNIT_STEP`/
+`POOL_CAPACITY_SI_STEP`) — **standing rule: the SI-clean switchover sequence is for storage-pool-
+scoped values only; `intro.capacity` itself keeps doubling plainly in binary**, since it's also the
+Data Stream tile's own balance/capacity figure. Two earlier attempts got this wrong by sharing one
+raw value between both displays (see `docs/DESIGN_HISTORY.md` for both); the current mechanic
+decouples them entirely instead:
+
+- `intro.capacity` (the Data Stream card's own balance/Buffer figure, RENDERED in binary — IEC-style
+  `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024 via `MEMORY_BINARY_UNIT_STEP`, so `1 KiB = 1024 Bytes`) is
+  a plain `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP^N` doubling sequence, where N is
+  however many times Capacity ×2 has been purchased — `upgradePoolCapacity` no longer clamps this
+  raw value to any pool boundary, so it can and does grow past a pool's own SI ceiling once that
+  ceiling is reached (further purchases just keep doubling it in the background, unclamped, until a
+  higher pool unlocks and needs the growth). It always renders a clean binary figure.
+- Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) from that same doubling
+  count N, but via the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes
+  instead of a plain ×2 (`getNextSiDoubledValue`: doubles normally except once per decade of ten
+  doublings, where a value's mantissa — after stripping factors of 1000 — lands on exactly 64, and
+  it goes to 125 instead of 128), then clamps the result to that pool's own
+  `getStoragePoolMemoryBounds` window (pool 1 → 1 MB SI, pool 2 → 1 GB, pool 3 → 1 TB, …
+  `endBits = BITS_PER_BYTE * 1000 ** (poolIndex + 1)`). Every pool boundary sits at a whole multiple
+  of 10 doublings from the 1-Byte floor, which is exactly where the switchover sequence itself lands
+  on a clean `1000^d` figure, so a pool's derived Capacity reaches its own ceiling at precisely the
+  same N where the underlying binary value would have reached it too — no drift between the two.
+  `getStoragePoolCount`/`isMemoryCapacityAtCap` (below) both key off this SAME derived value, not
+  the raw `intro.capacity`, so the "moving ceiling" purchase gate tracks what the pool actually shows.
+- Each pool's Bandwidth (`getStoragePoolBandwidth`) is hard-capped at
+  `sqrt(that pool's own Capacity in Bytes)` — Storage pools use SI units for all purposes — but the
+  switchover sequence's own square roots don't land cleanly (e.g. `sqrt(16,000 Bytes) ≈ 126.5`), so
+  the cap is additionally snapped DOWN to the nearest SI-clean switchover term at or below it
+  (`getSiCleanValueAtMostBytes`) — a 16 KB-capacity pool caps Bandwidth at a clean 125 B/s, not a raw
+  ~126.5 B/s.
+- `isMemoryCapacityAtCap` compares the highest unlocked pool's OWN derived Capacity
+  (`getStoragePoolCapacity`) against that pool's `endBits`, not raw `intro.capacity` — this is what
+  actually gates `isMemoryCapacityUpgradeAvailable`/`upgradePoolCapacity`, since the raw value no
+  longer self-limits. `normalizePoolMemoryCapacity` (save load) no longer clamps `intro.capacity` to
+  any pool boundary either — only sanitizes a missing/negative value — for the same reason.
+- `INTRO_CAPACITY_CAP_BITS` is retained as the pool-1 alias (unchanged value, 8,000,000 bits/1 MB
+  SI) and the active highest pool's end bound is still the authoritative moving ceiling — just
+  evaluated against the pool's own derived Capacity now, not the raw one.
+
+The Data Lake capacity ladder (below) is a separate, always-independent doubling ladder — it also
+uses an SI-clean sequence (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at 1,000 units) since a lake's own
+capacity is never shown via any binary unit, so it never shared this conflict in the first place —
+see "Data Lakes" below. **Speed ×2** (was Bandwidth/Invest) steps by
+`INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling effect
+(`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
 the first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md` and
 epic #456 / tracking #506.
@@ -1271,7 +1286,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1611 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1619 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

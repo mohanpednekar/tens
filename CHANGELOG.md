@@ -91,6 +91,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
   Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
+- **Storage pool Capacity/Bandwidth showing non-round SI figures** (e.g. "16.384 KB" / "128 B/sec"
+  instead of a clean "16 KB" / "125 B/sec") — each pool now derives its own SI-clean Capacity from
+  `intro.capacity`'s plain binary doubling count via a dedicated switchover sequence
+  (`getNextSiDoubledValue`, walked in lockstep with the doubling — see `getStoragePoolCapacity`),
+  with Bandwidth's `sqrt(Capacity)` cap additionally snapped down to the nearest clean term. This is
+  fully decoupled from `intro.capacity` itself, which keeps doubling plainly and unclamped in binary
+  for the Data Stream tile's own display — standing rule going forward: the SI-clean switchover
+  sequence is for storage-pool-scoped values only. See `docs/DESIGN_HISTORY.md` for two earlier,
+  reverted attempts that instead shared one raw value between both displays.
 
 ### Changed
 - **App icon redesigned** — the favicon/PWA/apple-touch icons move from a plain serif "10" text
