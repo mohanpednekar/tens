@@ -162,27 +162,30 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 4. **Pool Memory Capacity** is delimited by start/end bounds on the shared ladder
    (`getStoragePoolMemoryBounds`) — pool 1: `INTRO_STARTING_CAPACITY` … `INTRO_CAPACITY_CAP_BITS`.
    Each pool's end bound is `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)` — an
-   SI-round value (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …), NOT a binary one — so a pool's
-   own Capacity/Bandwidth land on genuinely clean SI figures rather than binary values merely
-   displayed in SI units. Capacity ×2 requires a full Buffer, drains it, and grows the shared Data
-   Stream Capacity via `getNextSiDoubledValue` — a plain `×2` per purchase that deviates from 64
-   to 125 Bytes (not 128) once per "decade" of 10 doublings, so intermediate Capacity values land
-   on SI-clean figures too (1, 2, 4, …, 64, 125, 250, 500, 1,000, … Bytes), not just each pool's
-   own end boundary — clamped to `Math.min(…, endBits)` as before, so the ladder's last purchase
-   before a new pool's cap still lands exactly on that boundary; see `docs/DESIGN_HISTORY.md` for
-   why an earlier fix left the mechanic itself as plain binary doubling, and what that missed. It
-   stops at the active highest-unlocked-pool end bound, which moves upward as pools
-   unlock. The Data Stream CARD's own balance/Buffer display still uses **binary units**
-   (`B`/`KiB`/`MiB`/…, step 1024 via `MEMORY_BINARY_UNIT_STEP` —
-   `getMemoryUnit`/`formatBitsInNearestUnit`), distinct from Disks/Data Lake/caches (SI, step
-   1000) — this is now the ONLY remaining binary display surface for this value, since its own
-   magnitude is SI-round rather than binary-round: pool 1's 8,000,000-bit cap renders on the Data
-   Stream card as "976.562 KiB," not a round "1 MiB." Storage pool cards (`PoolCard` in
-   `ByteFoundryPage`) render Bandwidth/Capacity/Memory buffer figures in **SI units**
-   (`formatDiskSize`), which — unlike the earlier sqrt-Bandwidth-cap correction (see the "Bandwidth
-   cap corrected to sqrt(Capacity in Bytes)" entry in `docs/DESIGN_HISTORY.md`) — is no longer just
-   a binary value passed through an SI formatter, since the underlying Capacity value itself is now
-   SI-round too. `capacityUpgradeQueued` / `tickQueuedCapacityUpgrade` preserve the queued-upgrade behavior and
+   SI-round value (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …), NOT a binary one — so each
+   pool's own Capacity/Bandwidth land on a genuinely clean SI figure at that END boundary. Capacity
+   ×2 requires a full Buffer, drains it, and doubles the shared Data Stream Capacity by a plain `×2`
+   (`INTRO_CAPACITY_DOUBLING_STEP`) — clamped to `Math.min(…, endBits)`, so the ladder's last
+   purchase before a new pool's cap still lands exactly on that SI-round boundary regardless of the
+   mechanic's own binary intermediate steps. A brief later revision tried making the intermediate
+   steps themselves SI-clean too (a `getNextSiDoubledValue` helper deviating 64→125 Bytes once per
+   decade), but that was reverted: `intro.capacity` also drives the Data Stream tile's own **binary**
+   display (see below), and an SI-clean mechanic makes intermediate values read cleanly through the
+   Storage pool card's SI units at the direct cost of reading UN-cleanly through the Data Stream
+   tile's own binary units instead (e.g. a would-be-clean "2 KiB" becomes "1.953 KiB") — see
+   `docs/DESIGN_HISTORY.md` for the full back-and-forth. It stops at the active highest-unlocked-pool
+   end bound, which moves upward as pools unlock. The Data Stream CARD's own balance/Buffer display
+   uses **binary units** (`B`/`KiB`/`MiB`/…, step 1024 via `MEMORY_BINARY_UNIT_STEP` —
+   `getMemoryUnit`/`formatBitsInNearestUnit`), distinct from Disks/Data Lake/caches (SI, step 1000):
+   pool 1's 8,000,000-bit END cap renders on the Data Stream card as "976.562 KiB," not a round
+   "1 MiB" (the one deliberately-accepted non-round reading — only the boundary VALUE is SI-round,
+   not its binary-unit rendering). Storage pool cards (`PoolCard` in `ByteFoundryPage`) render
+   Bandwidth/Capacity/Memory buffer figures in **SI units** (`formatDiskSize`) — a binary
+   intermediate value passed through an SI formatter, same shape the earlier sqrt-Bandwidth-cap
+   correction fixed for the boundary case (see "Bandwidth cap corrected to sqrt(Capacity in Bytes)"
+   in `docs/DESIGN_HISTORY.md`) but which intermediate Capacity/Bandwidth readings still exhibit —
+   an accepted trade-off now that the doubling mechanic itself stays plain binary.
+   `capacityUpgradeQueued` / `tickQueuedCapacityUpgrade` preserve the queued-upgrade behavior and
    the historical Compute-token wipe; load normalization clamps over-capacity values but does not
    force Capacity to an endpoint.
 5. **Speed ×2** (was Bandwidth / Invest for Double Production — `pickIntroProductionMilestone`) runs
@@ -547,13 +550,16 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    **Capacity doubling** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
    `doubleDataLakeCapacity(tierIndex)`) is the one intentional, explicit cap on a lake's deposits:
    `getDataLakeCapacity` looks up `DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`
-   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7 (the same
-   SI-clean switchover pool Capacity's own `getNextSiDoubledValue` uses — see "Byte Foundry" above),
-   then 125→250→500→1,000 — starting at level 0 (1 unit — "1 KB" for the KB lake, in that lake's own
-   Byte-scale denomination) and permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 —
-   1,000 units, "1000 KB" for the KB lake) via `isDataLakeCapacityMaxed`. Unlike pool Capacity's raw
-   continuously-doubled bit value, a lake's level is an explicit small integer (0–10) already tracked
-   in state, so this lookup needs no float-precision handling. Doubling is funded by **draining the
+   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7, an
+   SI-clean switchover unique to this ladder — a lake's own capacity is never rendered via any
+   binary unit, so (unlike pool Capacity itself, which reverted this same idea — see "Byte Foundry"
+   above and `docs/DESIGN_HISTORY.md`) there's no conflicting binary display for the switchover to
+   break here — then 125→250→500→1,000 — starting at level 0 (1 unit — "1 KB" for the KB lake, in
+   that lake's own Byte-scale denomination) and permanently hard-capped at
+   `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB" for the KB lake) via
+   `isDataLakeCapacityMaxed`. Unlike pool Capacity's raw continuously-doubled bit value, a lake's
+   level is an explicit small integer (0–10) already tracked in state, so this lookup needs no
+   float-precision handling. Doubling is funded by **draining the
    lake itself**, not Data
    Stream Bits: `isDataLakeCapacityDoublingAvailable` requires the lake to be completely full
    (deposited units at least its own current capacity), and `doubleDataLakeCapacity` empties every
@@ -2258,7 +2264,7 @@ purchases were manual or automatic.
 | `isMemoryCapacityAtCap` | `state → bool` | `intro.capacity >= getStoragePoolMemoryBounds(getUnlockedStoragePoolCount(state)).endBits` — the active ceiling is the highest unlocked pool's end bound |
 | `normalizePoolMemoryCapacity` | `state → state` | Clamps shared `intro.capacity` to the highest unlocked pool's end bound and clears legacy queued Capacity state; it does not force-raise Capacity on load |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Shared binary Capacity windows for each unlocked storage pool (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
-| `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and grows `intro.capacity` via `getNextSiDoubledValue` up to the highest unlocked pool's ceiling (via `upgradePoolCapacity`) |
+| `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and doubles `intro.capacity` (plain `×2`) up to the highest unlocked pool's ceiling (via `upgradePoolCapacity`) |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full and no higher-priority action blocks it |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears a legacy `capacityUpgradeQueued` flag. Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
@@ -2443,8 +2449,7 @@ purchases were manual or automatic.
 
 **Byte Foundry** (see its own section below for the full mechanic):
 - `INTRO_STARTING_CAPACITY = 8` — starting Buffer / pool Memory Capacity start bound (1 Byte)
-- `INTRO_CAPACITY_DOUBLING_STEP = 2` — named constant for the shared Capacity ladder's spacing (docs/tests only; `upgradePoolCapacity` itself no longer multiplies by this directly — see `getNextSiDoubledValue` below); Capacity ×2 requires a full Buffer, drains it, and grows Capacity via `getNextSiDoubledValue` (clamped to the active pool's own end bound — see `POOL_CAPACITY_SI_STEP` below)
-- `getNextSiDoubledValue(val)` (`engine.js`, not a `layers.js` constant) — `upgradePoolCapacity`'s own per-purchase growth function: converts `val` (bits) to Bytes, then returns a plain `×2` EXCEPT once per "decade" of 10 doublings, where a mantissa of 64 Bytes deviates to 125 Bytes (not 128) instead — so intermediate Capacity values land on SI-clean figures (1, 2, 4, …, 64, 125, 250, 500, 1,000, … Bytes), not just each pool's own end boundary. Decade detection loses exactness past `Number`'s ~2^53 safe-integer range (empirically around pool 8+), degrading to plain doubling there — see `docs/DESIGN_HISTORY.md`
+- `INTRO_CAPACITY_DOUBLING_STEP = 2` — Capacity ×2 doubling multiplier per purchase; `upgradePoolCapacity` multiplies `intro.capacity` by this directly (clamped to the active pool's own end bound — see `POOL_CAPACITY_SI_STEP` below). Deliberately plain binary doubling, not the SI-clean switchover sequence the Data Lake capacity ladder uses — `intro.capacity` also drives the Data Stream tile's own binary display, so an SI-clean mechanic here would read cleanly through the Storage pool card's SI units at the cost of reading un-cleanly through the Data Stream tile's binary ones; a `getNextSiDoubledValue` helper implementing that trade was tried and reverted — see `docs/DESIGN_HISTORY.md`
 - `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`), so pool boundaries land on clean SI values (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation
 - `INTRO_CAPACITY_CAP_BITS = 8,000,000` (exactly 1 MB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
 - `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — Speed ×2 (Invest) cost ladder steps by this per tier

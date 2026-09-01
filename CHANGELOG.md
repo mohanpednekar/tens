@@ -91,12 +91,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
   Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
-- **Pool Capacity progression showing non-round intermediate figures** (e.g. "131.072 KB" Capacity /
-  "362.038 B/sec" Bandwidth mid-progression) — `upgradePoolCapacity`'s per-purchase growth now uses
-  `getNextSiDoubledValue` (deviates 64→125 Bytes, not 128, once per decade of 10 doublings) instead
-  of a plain `×2`, so intermediate Capacity values land on SI-clean figures too, not just each pool's
-  own end boundary. See `docs/DESIGN_HISTORY.md` for why the earlier SI-boundary fix left this case
-  uncorrected.
 
 ### Changed
 - **App icon redesigned** — the favicon/PWA/apple-touch icons move from a plain serif "10" text
@@ -118,9 +112,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   panel after every pool card (hidden entirely until a lake had any deposit/purchase/capacity
   activity).
 - **Data Lake capacity ladder now lands on 1,000 units at max, not 1,024** — `getDataLakeCapacity`
-  grows via the same SI-clean sequence pool Capacity's own `getNextSiDoubledValue` uses (plain
-  doubling except a 64→125 deviation), matching pool Capacity's own end-boundary convention. Only
-  the max-level value changes (1,024 → 1,000); the number of purchasable levels (0–10) is unchanged.
+  grows via an SI-clean sequence (plain doubling except a 64→125 deviation), matching pool
+  Capacity's own end-boundary convention. Only the max-level value changes (1,024 → 1,000); the
+  number of purchasable levels (0–10) is unchanged.
 - **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
   "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
   Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,
