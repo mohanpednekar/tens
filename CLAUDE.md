@@ -51,7 +51,7 @@ yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--
                   # already covers dependencies/devDependencies/optionalDependencies by default)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
-yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
+yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
 ```
 
 Run a single test file or test name with Vitest's own filtering:
@@ -569,9 +569,12 @@ scripts/
                                dated ## [x.y.z] section and bump package.json (minor if
                                Added/Removed entries, else patch; no-op if empty) — Part of #52;
                                post-merge tag/Release workflow still deferred
-  generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
-                               PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
-                               not part of the build — only re-run it if the icon design/palette changes
+  generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes an
+                               inline "byte grid" SVG (see `docs/PWA_REFERENCE.md`) with `sharp` into
+                               public/pwa-*.png + apple-touch-icon.png, and hand-assembles
+                               public/favicon.ico (a minimal ICO container of PNG frames, no extra
+                               dependency); not part of the build — only re-run it if the icon
+                               design/palette changes
   adversarialReviewMarker.js (+ `.test.js`) ← pure helpers for the `<!-- adversarial-review sha=…
                                verdict=… -->` marker (see "Pull requests" above)
   pr-low-risk-eligible.sh (+ `.test.js`) ← shared low-risk-auto-merge eligibility bar, used by
@@ -1269,7 +1272,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1614 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1617 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

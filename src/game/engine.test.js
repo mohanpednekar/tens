@@ -1698,6 +1698,22 @@ describe('formatMemoryAmount', () => {
     // a fallback to raw bits, since there's no nonzero fraction being hidden.
     expect(formatMemoryAmount(3, mib)).toBe('0 MiB')
   })
+
+  it('floors a fractional raw bit count instead of ever showing it as a fraction — bits are this game\'s atomic unit', () => {
+    // A genuinely fractional `bits` isn't hypothetical: tickPoolBufferFill's own transfer amount
+    // (elapsedSeconds x fillRate, both real numbers) is never floored before being subtracted from
+    // intro.bits / added to a pool buffer, so a balance can sit at e.g. 0.3 bits mid-tick while
+    // filling up from near zero. Without flooring here, the below-1-in-its-unit fallback above would
+    // just relabel "0.012 B" as the equally rule-violating "0.3 bits".
+    expect(formatMemoryAmount(0.3, null)).toBe('0 bits')
+    expect(formatMemoryAmount(0.9, null)).toBe('0 bits')
+    expect(formatMemoryAmount(1.9, null)).toBe('1 bit')
+    // Same fix, reached via the below-1-in-its-unit fallback rather than the null-unit branch: a
+    // divisor of 1 (the bit-scale ladder's own bottom "b" unit — see getBitUnit) makes `scaled`
+    // equal `bits` itself, so 0.3 lands in the fallback and must floor the same way.
+    const bitUnit = { symbol: 'b', divisor: 1 }
+    expect(formatMemoryAmount(0.3, bitUnit)).toBe('0 bits')
+  })
 })
 
 describe('formatBitsInNearestUnit', () => {
@@ -4167,6 +4183,21 @@ describe('formatCurrency', () => {
     expect(formatCurrency(1.6)).toBe('1 b')
     expect(formatCurrency(1.999)).toBe('1 b')
     expect(formatCurrency(2)).toBe('2 b')
+  })
+
+  it('renders an exponential-range amount with a mantissa of exactly 8 (BITS_PER_BYTE) converted to Bytes instead of bits', () => {
+    // 8e6 bits is exactly 1e6 Bytes — no precision lost dividing by 8 — so it reads as "1e6 B"
+    // rather than the arbitrary-looking "8e6 b". PRESTIGE_THRESHOLD (8e100) is a real live example
+    // of this exact pattern — see docs/DESIGN_HISTORY.md.
+    expect(formatCurrency(8e6)).toBe('1e6 B')
+    expect(formatCurrency(8e21)).toBe('1e21 B')
+    expect(formatCurrency(8e100)).toBe('1e100 B')
+  })
+
+  it('leaves any other exponential-range mantissa in bits — only an exact 8 converts', () => {
+    expect(formatCurrency(2e6)).toBe('2e6 b')
+    expect(formatCurrency(4e6)).toBe('4e6 b')
+    expect(formatCurrency(1.6e6)).toBe('1.6e6 b')
   })
 })
 

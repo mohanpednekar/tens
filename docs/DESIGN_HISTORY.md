@@ -3900,3 +3900,128 @@ eliminates — retitled and updated to assert the new `"4 bits"`/`"1 bit"` fallb
 capacity-sized unit (not just a self-sized bottom-rung one), and one confirming a true zero is
 unaffected. Verified visually against the exact reported scenario (a pool Bandwidth of `1 bit/sec`,
 previously `"0.125 B/sec"`) via Playwright/Chromium against `yarn dev`.
+
+**Follow-up, found by adversarial review before merge: the raw-bits fallback itself assumed `bits`
+was always a whole number.** The fallback above renders `` `${formatAmount(bits)} bit${bits === 1 ?
+'' : 's'}` `` — reusing `bits` exactly as given. That's the game's true bit count for every ordinary
+caller, but not for the ones actually feeding the two live displays this fix targets:
+`tickPoolBufferFill`'s own transfer amount (`Math.min(fillRate * elapsedSeconds, room, bits)`) is
+never floored before being added to a pool buffer or subtracted from `intro.bits`, and neither are
+the analogous cache-fill transfers — both real numbers, not integers, since `fillRate` and
+`elapsedSeconds` (a tick's fractional-second duration) rarely multiply to a whole number. So while a
+pool's buffer (or the Data Stream balance itself) fills up from near-zero — a fresh pool unlock, or
+right after a Capacity-doubling/lake-doubling purchase drains it to 0 — `bits` can genuinely sit at,
+say, `0.3` for a tick, and the fallback would render `"0.3 bits"`: the identical "0.xyz" pattern this
+whole fix exists to eliminate, just relabeled from a Byte-scale unit onto the bit count itself. No
+test added alongside the original fix exercised a fractional `bits` input (all used integers), so
+nothing caught it before review.
+
+Fixed by flooring `bits` immediately before building the `"N bit(s)"` string (a new
+`flooredBitsLabel` helper used by both the `unit === null` branch and the below-1-in-its-unit
+fallback), rather than floor it further upstream in `tickPoolBufferFill`/the cache-fill transfers
+themselves — flooring the accumulators would change actual game-state precision (fill amounts,
+timing) for what is fundamentally a display-only defect; flooring only at the point of rendering
+keeps the fix scoped to formatting, matching the rest of this entry's own "catch this at render
+time" reasoning. `0.3`/`0.9` bits now floor to a clean `"0 bits"`; `1.9` floors to `"1 bit"` — same
+"never overstate" rounding direction every other amount in this file already uses. Three new test
+cases cover the null-unit branch and the fallback branch (via a `divisor: 1` unit, the bit-scale
+ladder's own bottom rung, so `scaled` equals `bits` itself and a fractional input reliably lands in
+the fallback path being tested).
+
+### Whole-Byte tier costs converted from an arbitrary-looking bit count to Bytes in scientific notation
+
+A follow-up in the same conversation as the "0.xyz" entry above, but at the opposite end of the
+number line: MainPage tier Buy buttons price everything in Bits (`MONEY_ID = 'base'`), and once a
+level cost crosses `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000), `formatCurrency` switches to
+scientific notation — e.g. Megabytes' own full-block cost (8,000,000 bits) read `"8e6 b"`. The
+report: this specific figure is not an arbitrary bit count at all — it's exactly 1,000,000 Bytes
+(a Byte being 8 bits), and should read `"1e6 B"` to make that explicit.
+
+**Why this is common, not a one-off.** A scientific-notation mantissa of exactly `BITS_PER_BYTE`
+(8) turns up regularly in this game's cost ladders because so many of them are built on
+Byte-denominated real-world quantities multiplied by 8 to get their Bits price — Kilobytes' whole
+tier concept, and `PRESTIGE_THRESHOLD` itself (`GOOGOL * BITS_PER_BYTE` = `8e100`, already
+documented elsewhere as "1 Googol Bytes, expressed in Bits since a Byte is 8 Bits" — see the
+`PRESTIGE_THRESHOLD` history entry). The Prestige-threshold overlay was, before this fix, silently
+inconsistent with its own documented meaning: displaying `"8e100 b"` while every comment describing
+the constant already called it "1 Googol Bytes."
+
+**The fix, and why it's narrower than "always divide by 8."** `formatCurrency` now checks, in the
+exponential range only, whether the value's scientific-notation mantissa is exactly 8 (computed as
+`value / 10 ** Math.floor(Math.log10(value))`, compared against `BITS_PER_BYTE` within a small
+float-tolerance epsilon) — not merely whether the value is evenly divisible by 8. Divisibility alone
+isn't sufficient: an arbitrary divisible value like `2.4e41` (`24 × 10^40`, divisible by 8) would
+convert to `3e40`, a mantissa unrelated to the original's own "shape" and no more illuminating than
+the bits figure was. Only an EXACT mantissa of 8 guarantees the Bytes conversion produces an
+equally-clean round number (mantissa exactly 1) with zero information lost — the narrow, literal
+case the request actually described (`"8eN b"` → `"1eN B"`), not a broader unit-conversion policy
+applied speculatively to every divisible value.
+
+**Scope: `formatCurrency`, not just the tier-cost UI element the report mentioned.** The same
+mantissa-8 pattern is a property of the NUMBER, not of which button happens to display it —
+`formatCurrency` is the single shared formatter behind every Bits-denominated display in the game
+(tier costs, tickspeed/autobuyer costs, the Prestige-threshold overlay), so fixing it there applies
+the rule everywhere consistently rather than special-casing just the Buy button. `formatMoneyBalance`
+(MainPage's own `MoneyHero` headline) is unaffected — it already does its own independent Bytes
+conversion at a much lower threshold (`MONEY_BYTES_DISPLAY_THRESHOLD` = 8000 bits, far below the
+1,000,000 exponential threshold) via a separate code path that never calls `formatCurrency` in the
+exponential range, so there's no double-conversion or interaction between the two.
+
+**Test fallout.** `App.test.jsx`'s Megabytes-tier test had directly pinned the old `"8e6 b"` button
+text (with a comment explaining the exponential-threshold math) — updated to `"1e6 B"` with the
+Bytes-conversion reasoning added. Two new `formatCurrency` tests were added: one confirming the
+conversion fires correctly across several magnitudes (`8e6`, `8e21`, and `8e100` — the last matching
+`PRESTIGE_THRESHOLD` exactly), and one confirming other mantissas (`2e6`, `4e6`, `1.6e6`) are left
+in Bits, proving the fix doesn't over-trigger on merely-divisible-by-8 values.
+
+### App icon redesigned from a plain "10" text glyph to an 8-cell "byte" grid
+
+A third, independent follow-up: propose a distinctive icon for the game and put it in place across
+every icon surface (favicon, PWA install icons, apple-touch-icon). The existing icon
+(`scripts/generate-pwa-icons.mjs`, since the app's original PWA setup) was a centered serif "10"
+glyph in the brand accent color on the dark page background — functional but generic, reading as a
+placeholder rather than a mark specific to this game.
+
+**Concept.** An 8-cell grid (4 columns × 2 rows) of rounded squares, each filled with a diagonal
+gradient sweeping through three of the app's own existing semantic color tokens (`accent` indigo →
+`violet` → `good` green — the same hues already used throughout the real UI, `src/theme/tokens.js`)
+on the same dark `page` background the old icon used. This was chosen over other candidates
+(an ascending-bar "growth chart" glyph; a redrawn, more graphic "10" logomark) specifically because
+it ties directly to the one mechanic every player encounters first and universally, regardless of
+how far a run progresses: the Byte Foundry's own tap-to-earn loop, where exactly 8 tapped bits
+combine into 1 Byte. A generic "10" numeral describes the game's *name*; the byte grid describes
+what a player actually *does* in it. The gradient itself doubles as a nod to the game's other
+throughline — exponential growth across powers of ten — without needing literal digits at all.
+
+**Small-size legibility required a second, simplified variant.** Rendering the full 8-cell grid down
+to a true 16×16 favicon (checked by rasterizing at 16px and inspecting a nearest-neighbor upscale
+for review, not just eyeballing the 512px source) produced an illegible plaid — the cell gaps and
+rounded corners blur together at that resolution, a well-known failure mode for detailed marks at
+favicon sizes. Rather than simplify the ONE shared design for every consumer (losing the byte-count
+specificity at every larger size too, where 8 cells render perfectly clearly), `gridSvg` was
+parameterized by `cols`/`rows`: the 512px/192px/180px PWA and apple-touch icons keep the full
+4×2/8-cell grid, while `favicon.ico`'s three embedded frames (16/32/48px) use a simplified 2×2/
+4-cell version of the identical gradient/style — confirmed legible at true 16×16 via the same
+render-and-upscale check. This is the same "coarser glyph at small sizes" pattern many established
+app icons use (a simplified mark at favicon scale, the full mark everywhere larger), not a
+compromise unique to this game.
+
+**`favicon.ico` didn't exist as a build output before this change** — the repo's checked-in
+`favicon.ico` predated `scripts/generate-pwa-icons.mjs` entirely (the script only ever wrote the
+PWA/apple-touch PNGs) and was presumably hand-produced once, out of band, and never regenerated
+since. Bringing it into the same generation script (rather than hand-editing a binary `.ico` file,
+which isn't practically possible in an editing session) required constructing one from scratch:
+`sharp` can rasterize the SVG to PNG frames but has no ICO writer, so a minimal ICO container
+(6-byte header + one 16-byte directory entry per frame + the raw PNG bytes themselves) is
+hand-assembled directly in the script — deliberately using the modern "PNG-frame" ICO variant
+(supported since Windows Vista, and what every current browser expects) rather than the legacy
+BMP+AND-mask encoding, which needs uncompressed pixel data and a separate transparency mask per
+frame — avoiding a new dependency for what's a one-off, infrequently-run script (this repo already
+treats `sharp` itself as acceptable exactly because icon generation is dev-tooling, not part of the
+production build).
+
+**No test changes** — icon files aren't exercised by the Vitest suite (no snapshot/pixel tests
+cover `public/*.png`/`favicon.ico`), so this was verified purely visually: rendering each generated
+size directly, and specifically the 16×16 favicon frame upscaled with nearest-neighbor sampling
+(to inspect true-resolution legibility rather than a browser's own smoothed preview) before and
+after the 2×2 simplification.

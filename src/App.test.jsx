@@ -484,10 +484,12 @@ test('Megabytes tier appears and is purchasable once Kilobytes has fully purchas
   const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
   expect(megabytesLayer).toBeInTheDocument()
   // Megabytes' baseCost is 1E6 — level 1, blockSize 8: per-unit cost 1,000,000, full block
-  // 8,000,000 — both at/above the 1,000,000 exponential-notation threshold, so they render as "1e6"/"8e6".
+  // 8,000,000 bits — at/above the 1,000,000 exponential-notation threshold, so it renders as "1e6";
+  // the full block (8,000,000, an exact whole-Byte multiple of 8) renders converted to Bytes as
+  // "1e6 B" rather than "8e6 b" (see formatCurrency in engine.js/docs/DESIGN_HISTORY.md).
   // Scoped to the Megabytes row: Kilobytes' own level-3 buy button happens to render the same
-  // "8e6" text (its per-unit cost coincidentally matches Megabytes' level-1 cost at this balance).
-  expect(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 8e6 b\b/i })).toBeEnabled()
+  // "1e6 B" text (its per-unit cost coincidentally matches Megabytes' level-1 cost at this balance).
+  expect(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 1e6 B\b/i })).toBeEnabled()
 })
 
 test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
@@ -500,7 +502,7 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
   render(<App />)
 
   const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
-  await user.click(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 8e6 b\b/i }))
+  await user.click(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 1e6 B\b/i }))
 
   expect(megabytesLayer).toHaveTextContent(/owned: 8/i)
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 16/i)

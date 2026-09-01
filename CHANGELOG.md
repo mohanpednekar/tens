@@ -54,6 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
+- **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
+  "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
+  amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
+  it's an exact whole-Byte figure with no precision lost dividing by 8. `PRESTIGE_THRESHOLD`
+  (`8e100`) is a real example this also affects.
 - **"0.xyz `<unit>`" fractions in Byte/bit-denominated displays** (e.g. "0.125 B/sec" Bandwidth,
   "0.5 B" Disk sizes) — `formatMemoryAmount` (backing `formatDiskSize`/`formatBitsInNearestUnit`/
   `formatCacheSize`) now falls back to a raw bit count whenever the value would floor to a nonzero
@@ -94,6 +99,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   uncorrected.
 
 ### Changed
+- **App icon redesigned** — the favicon/PWA/apple-touch icons move from a plain serif "10" text
+  glyph to an 8-cell "byte" grid (4×2 rounded squares, a diagonal accent → violet → good gradient)
+  evoking the Byte Foundry's own core mechanic (combining 8 bits into 1 Byte) rather than a generic
+  numeral. `favicon.ico`'s small embedded frames use a simplified 2×2/4-cell version of the same
+  grid for legibility at true 16×16 size.
 - **Byte Foundry pool cards restyled to match the Data Stream card** — the Bandwidth/Capacity/Memory
   three-column stat row (each a labelled value, Memory alone carrying its own thin fill bar) is
   replaced by one full-width fillable block reusing the Data Stream card's own component/style: the

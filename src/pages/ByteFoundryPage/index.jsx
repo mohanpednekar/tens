@@ -188,7 +188,6 @@ const PoolHeaderRow = styled.div`
 const PoolTitle = styled.h3`
   display: flex;
   align-items: baseline;
-  justify-content: center;
   gap: ${props => props.theme.space.xs};
   margin: 0;
   min-width: 0;

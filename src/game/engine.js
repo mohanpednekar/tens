@@ -611,18 +611,33 @@ export const formatAmount = value => {
   return formatScientific(safeValue)
 }
 
+// A Bits amount at/above the exponential threshold whose scientific mantissa is exactly
+// BITS_PER_BYTE (8) is an exact whole-Byte figure at a clean power of ten — e.g. 8e6 bits is
+// exactly 1e6 Bytes, no precision lost dividing by 8 — so it reads more naturally converted to
+// Bytes ("1e6 B") than left as an arbitrary-looking bit count ("8e6 b"). Any other mantissa is
+// left in Bits as-is, since dividing an arbitrary mantissa by 8 wouldn't land on an equally clean
+// figure. See docs/DESIGN_HISTORY.md.
+const EXPONENTIAL_BYTE_MANTISSA_TOLERANCE = 1e-9
+const formatAsCleanBytesIfExactMultiple = safeValue => {
+  const exponent = Math.floor(Math.log10(safeValue))
+  const mantissa = safeValue / 10 ** exponent
+  if (Math.abs(mantissa - BITS_PER_BYTE) > EXPONENTIAL_BYTE_MANTISSA_TOLERANCE) return null
+  return `${formatScientific(safeValue / BITS_PER_BYTE)} ${RESOURCE_SYMBOL(BYTES_ID)}`
+}
+
 // Comma-grouped currency string below the threshold, exponential above it (same threshold and
 // notation as formatAmount) — money can reach 100+ digit balances near the Googol prestige
 // requirement, so it can't stay full-digit forever. Floors rather than rounds so a displayed
 // amount never overstates the actual spendable balance (e.g. a fractional 1.6 balance from a
 // non-integer tick shows as "1 b", not a misleading "2 b"). Suffixed with the base currency's own
-// symbol (RESOURCE_SYMBOL(MONEY_ID), "b") rather than a hardcoded "$" prefix.
+// symbol (RESOURCE_SYMBOL(MONEY_ID), "b") rather than a hardcoded "$" prefix — except in the
+// exponential range, where an exact-multiple-of-8 mantissa renders converted to Bytes instead (see
+// formatAsCleanBytesIfExactMultiple above).
 export const formatCurrency = value => {
   const safeValue = Math.floor(clampNonNegative(value))
   const symbol = RESOURCE_SYMBOL(MONEY_ID)
-  return safeValue < EXPONENTIAL_NOTATION_THRESHOLD
-    ? `${currencyNumberFormatter.format(safeValue)} ${symbol}`
-    : `${formatScientific(safeValue)} ${symbol}`
+  if (safeValue < EXPONENTIAL_NOTATION_THRESHOLD) return `${currencyNumberFormatter.format(safeValue)} ${symbol}`
+  return formatAsCleanBytesIfExactMultiple(safeValue) ?? `${formatScientific(safeValue)} ${symbol}`
 }
 
 // Whole-Byte amounts (Factory Bytes pool — see BYTES_ID) — same rounding/exponential rules as
@@ -2666,6 +2681,18 @@ export const getMemoryUnit = (capacityBits, byteCreated) => {
 // full.
 const floorToDecimals = (value, decimals) => Math.floor(value * 10 ** decimals) / 10 ** decimals
 
+// Bits are this game's atomic, indivisible unit — a raw bit count should never itself show a
+// fraction. `bits` isn't always already a whole number by the time it reaches here: mid-tick
+// accumulators (e.g. tickPoolBufferFill's transfer, cache-fill transfers) advance in unflored
+// fractional steps, so a caller can pass e.g. 0.3 while a buffer is still filling up from near
+// zero. Flooring here (not rounding — same "never overstate" rule every other amount in this file
+// follows) keeps every "N bit(s)" string clean, whether reached directly (no `unit`) or via the
+// below-1-in-its-unit fallback.
+const flooredBitsLabel = bits => {
+  const flooredBits = Math.floor(bits)
+  return `${formatAmount(flooredBits)} bit${flooredBits === 1 ? '' : 's'}`
+}
+
 export const formatMemoryAmount = (bits, unit) => {
   if (unit) {
     const scaled = floorToDecimals(bits / unit.divisor, 3)
@@ -2674,10 +2701,10 @@ export const formatMemoryAmount = (bits, unit) => {
     // (both bottom out at whole Bytes, B, with no smaller SI/binary unit defined below it) — see
     // docs/DESIGN_HISTORY.md. A true zero (`scaled === 0`) is unaffected: "0 <unit>" already has no
     // decimal to violate the rule.
-    if (scaled > 0 && scaled < 1) return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+    if (scaled > 0 && scaled < 1) return flooredBitsLabel(bits)
     return `${formatAmount(scaled)} ${unit.symbol}`
   }
-  return `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+  return flooredBitsLabel(bits)
 }
 
 // Any Memory-denominated amount (capacity, balance, Invest cost, transfer-block cost, the
