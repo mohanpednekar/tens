@@ -200,10 +200,15 @@ incidental headroom (1,110 if ever fully filled) that sits well above the 1,000 
 actually gates deposits. Deposited/capacity/next-cost/doubling-cost all display in Byte-scale
 (KB/MB/GB), matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
-Manual transfer blocks (plus an always-on auto-convert) turn Data Stream bits into free `tier01`
-units at tier01's own current per-unit cost, with **no per-cycle cap**; the first successful transfer
-unlocks the main game. The generator, Disks, Data Lakes, and Compute Cores/Nodes are permanent
-across every real Prestige; only Data Stream balance and the main-game-unlock gate reset each cycle.
+An always-on auto-convert turns Data Stream bits into free `tier01` units at tier01's own current
+per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
+was removed); the first successful conversion unlocks the main game. Storage pool cards also require
+`intro.capacity` to reach 1024^N Bytes (1 KiB/1 MiB/1 GiB/…, `getPoolCapacityUnlockThresholdBits`)
+on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`), and each
+unlocked pool's own read cache now starts filling from Memory the moment that pool unlocks, not only
+once a disk of that size has ever been built. The generator, Disks, Data Lakes, and Compute
+Cores/Nodes are permanent across every real Prestige; only Data Stream balance and the
+main-game-unlock gate reset each cycle.
 After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
 upgrades on the Upgrades tab.

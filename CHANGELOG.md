@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   unlocked per completed sub-size Disk array (the same staged gate the deposit buffer uses). Foundry
   disk rows expose deposit-to-lake actions; a Data Lake summary shows deposited stock, next cost,
   and any in-flight transfers.
+- **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
+  (`getVisibleStoragePoolCount`) needs the Data Stream's raw Capacity (`intro.capacity`) to have
+  reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on — on top of
+  its existing disk-build condition before it renders. In practice this rarely changes pool 1's own
+  reveal timing (Storage's own reveal threshold is already stricter), but it adds a real gate for
+  pools 2 and up. See `docs/DESIGN_HISTORY.md`.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
@@ -52,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
   all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
   fires immediately" entry under Changed below).
+- **Manual transfer-block row on the Byte Foundry screen** — the row of clickable blocks that let a
+  player manually convert Data Stream bits into `tier01` (Kilobyte) units is gone. The always-on
+  auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
+  it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
+  functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
@@ -108,6 +119,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   both displays.
 
 ### Changed
+- **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
+  built** — `tickDiskAutoFill`'s cache eligibility used to key off `disksBuiltTotal` having an entry
+  for a size; now it's keyed off which pools are currently unlocked (`getUnlockedStoragePoolCount`),
+  so each pool's smallest size starts filling from Memory as soon as the pool unlocks and is already
+  waiting (full, or filling) by the time the player's first disk of that size finishes provisioning.
 - **Pool cards: Bandwidth moved onto the title line, compacting each card** — each pool's own
   Bandwidth figure ("+N/sec") now renders beside its "`<symbol>` Pool" title instead of inside the
   Memory buffer block below, saving a row per pool card.

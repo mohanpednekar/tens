@@ -699,7 +699,16 @@ Strict three-layer separation:
    the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
-   unlocked pool in ascending order; only the largest unlocked pool is expanded initially, while
+   VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
+   `getUnlockedStoragePoolCount`'s own disk-build-based count and how many pools' own capacity
+   threshold `getPoolCapacityUnlockThresholdBits` the Data Stream's raw Capacity (`intro.capacity`)
+   has reached: 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on by powers of 1024 —
+   both conditions required). This capacity gate is deliberately kept separate from
+   `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` themselves, which stay disk-build-only and
+   keep driving the disk ladder's own progression (`getMaxActiveDiskLadderStep`), read-cache
+   eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing — folding the capacity
+   rule into that shared primitive directly was tried first and reverted for exactly this reason (a
+   much wider blast radius than intended) — see `docs/DESIGN_HISTORY.md`. Only the largest unlocked pool is expanded initially, while
    earlier pools remain visible as compact disclosure summaries that reveal their three disk-array
    rows when opened. `components/DataLakePanel` is embedded per pool (`bare` mode, a `tierIndex` prop
    scoping it to that one lake, always shown regardless of activity) directly below that pool's own
@@ -945,17 +954,15 @@ once far enough along — Disks
 Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk >
 Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
-reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
-always-on auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current
-per-unit cost; the first successful transfer unlocks the main game, and there's no per-cycle cap
-on further ones. ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the
-main game is already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point
-Disk redemption offers an alternative path to tier units, making the manual row redundant; the
-always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
-through the mandatory pre-unlock gate even past Storage's own reveal threshold, since Buffer
-can reach that threshold without the main game ever having
-been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
-never hidden while it's still the only way out of the gate.
+reducer itself) whenever a higher one is currently available. An always-on auto-convert
+(`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
+units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
+cap; the first successful conversion unlocks the main game. `ByteFoundryPage` no longer renders a
+manual transfer-block row for this at all (removed — see `docs/DESIGN_HISTORY.md`): once Storage
+Pool cards start appearing, Disk redemption (below) is the player-facing path to tier units, and
+before that, auto-convert alone carries the player through the mandatory gate with no click needed.
+`convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
+was removed.
 The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
 `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
@@ -1072,7 +1079,13 @@ released or the size was just unlocked (so Memory visibly fills between transfer
 itself is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) times the current
 production rate (a CACHE filling FROM Memory), so even a large banked balance sitting behind a
 block/tier claim drains into the cache at a real, continuous, bounded rate once unblocked — not
-instantly — rather than the fixed rate/tier check alone gating it. Read cache flushes into an empty
+instantly — rather than the fixed rate/tier check alone gating it. `tickDiskAutoFill`'s cache
+eligibility (which sizes it tries to fill) is keyed off `getUnlockedStoragePoolCount` — every
+currently-unlocked pool's own smallest size — NOT off `disksBuiltTotal` having an entry for that
+size: a pool's read cache starts filling from Memory the instant that pool unlocks, so it's already
+waiting full (or filling) by the time the player's first disk of that size finishes provisioning,
+rather than starting from empty only once a disk has ever been built — see
+`docs/DESIGN_HISTORY.md`. Read cache flushes into an empty
 disk over the time to fill one cache block at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) times
 the current Byte Foundry production rate (a DISK filling FROM a cache) when all 8 blocks are full
 and no tier claim blocks that size (pauses while a tier matches). Every size above the pool's
@@ -1192,7 +1205,7 @@ every lake's own Capacity doubling all unavailable — so it never competes with
 higher-ranked action. The lowest rank in the whole forced priority chain.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
-loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
+loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
 Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock,
@@ -1307,7 +1320,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1625 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1618 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

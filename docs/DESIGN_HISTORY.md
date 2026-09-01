@@ -4408,3 +4408,91 @@ at the reported scenario's own values. `yarn test`: 1625/1625 green (+3 over the
 `docs/ECONOMY_REFERENCE.md` and `docs/MAINPAGE_REFERENCE.md` describing the pre-fix two-branch
 `formatMemoryBalance` fallback and stale DOM-order prose; both were updated in the same PR to match
 the corrected three-branch behavior and the final Pool-card layout.
+
+### Pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock; manual transfer-block UI removed
+
+Three related requests from the same conversation, landed in the same PR as the two entries above:
+Storage Pool cards should require the Data Stream's raw Capacity to reach a power-of-1024 threshold
+(1 KiB for pool 1, 1 MiB for pool 2, and so on) before they appear, in addition to their existing
+disk-build condition; a pool's read cache should start filling from Memory the instant that pool
+unlocks rather than waiting for a disk of that size to actually be built; and the manual
+transfer-block row on the Byte Foundry screen — redundant now that both changes make the Disk path
+to the first tier01 units fast and automatic — should be removed.
+
+**The capacity-threshold request: first attempt folded it into the wrong primitive, with a much
+wider blast radius than intended.** The first implementation added the capacity check directly
+inside `isStoragePoolUnlocked` (removing its old unconditional `poolIndex === 1` return and adding
+`if (capacity < threshold) return false` up front). This looked like the obviously correct insertion
+point — `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` are THE shared primitive answering "is
+pool N unlocked" everywhere in the codebase — but that breadth turned out to be exactly the problem:
+`getMaxActiveDiskLadderStep` (`getUnlockedStoragePoolCount(state) * DATA_LAKE_SUB_SIZES.length`)
+drives the entire disk-build ladder's own progression (which size `provisionDisk` currently offers),
+and `getStoragePoolBandwidth`/`getStoragePoolCapacity`/Data Lake idle-disk-liquidation
+eligibility/Booster transfer pacing all key off the same function too. Since pool 1 had always been
+unconditionally unlocked before this change, dozens of existing tests across `engine.test.js` and
+`storage.test.js` — none of them about pool visibility at all, just ordinary disk-build/cache/Data
+Lake mechanics — had never needed to seed a Data Stream Capacity high enough to satisfy a threshold
+that didn't previously exist, and broke: `provisionDisk` timings went to `Infinity` (dividing by a
+now-zero locked-pool bandwidth), `getDiskSize`/`isDiskLadderExhaustedForActivePools`/
+`getDiskSizesToShow` all misbehaved since `getMaxActiveDiskLadderStep` collapsed toward 0, and one
+existing test (a pool buffer capacity deliberately seeded below one cache block, to test a "dump the
+remainder" edge case) became mathematically unreachable, since a pool's own derived buffer capacity
+at exactly its new unlock threshold is provably always at least one whole cache block. 28 test
+failures on the first full run, most of them not even visible in the initial tail of the output
+(only a fraction of them fit in the terminal scrollback actually reviewed at first), and after fixing
+what was visible, re-running surfaced 20 MORE previously-unseen failures in core disk-ladder tests —
+a strong signal the approach itself, not just the fixes, needed reconsidering.
+
+**Resolution: keep the capacity threshold entirely separate from `isStoragePoolUnlocked`.**
+`isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` were reverted to their exact original,
+disk-build-only form (pool 1 always true; pool N+1 requires pool N's three sizes fully built) — this
+alone fixed every one of the 28+20 test failures with no further changes needed to any of them. A new,
+separate function, `getPoolCapacityUnlockThresholdBits(poolIndex) = BITS_PER_BYTE *
+(MEMORY_BINARY_UNIT_STEP ** poolIndex)`, computes the 1024^N-Bytes threshold, and a new
+`getVisibleStoragePoolCount(state)` combines it with the unchanged `getUnlockedStoragePoolCount`
+(the smaller of the two counts) — this is the ONLY function `ByteFoundryPage` now calls to decide how
+many pool cards to render. Every other consumer of pool-unlock status (the disk ladder, read cache,
+Data Lake idle liquidation, Booster transfer pacing) is completely unaffected by the new capacity
+rule, exactly as before this change. The general lesson: a widely-shared "is X unlocked" primitive is
+not automatically the right insertion point for a NEW, UI-scoped gate just because it's the most
+obvious place to add a condition — check every consumer first, not just the one you're trying to
+change.
+
+**The cache-instant-fill request was more straightforward.** `tickDiskAutoFill`'s `sizes` list
+(which sizes it tries to top up from Memory) was keyed off `Object.keys(state.intro.disksBuiltTotal)`
+— a size only became cache-eligible once at least one disk of that size had ever been built (or
+attempted). It's now built from `getUnlockedStoragePoolCount(state)` directly: every currently
+unlocked pool's own smallest (read-cache-eligible) size, via the existing `getDataLakeUnitBits`
+helper, regardless of whether `disksBuiltTotal` has an entry for it yet. Passes 2/3 (which actually
+flush a full cache into an empty disk) already guarded on `hasEmptyContainer =
+builtTotal[size] > disks[size]`, so this required no further change — a size with zero disks built
+simply accumulates cache and waits, ready to flush the instant the player's first disk of that size
+finishes provisioning, rather than starting the fill from scratch only after.
+
+**Removing the manual transfer-block UI was the most mechanically simple of the three, but touched
+the most test surface** — roughly a dozen `App.test.jsx` tests existed solely to exercise the
+removed row (clicking blocks, checking block count/labels/visibility-toggling), and were deleted
+outright rather than patched, since the UI they tested no longer exists; two more tests had a single
+trailing assertion about the row bolted onto an otherwise-still-valid test (Disk redemption, AppNav
+navigation) and were trimmed rather than deleted wholesale. `convertIntroBitsToKilobytes` itself —
+the actual conversion reducer — was deliberately left untouched in `engine.js`/`useIncrementalGame.js`
+and its own dedicated `engine.test.js` describe block: it's still called by `tickIntroAutoInvest`
+every tick, just with no UI trigger of its own any more. `isIntroConversionUnlocked`/
+`INTRO_CONVERSION_UNLOCK_CAPACITY` were left in place too (still exported, still tested) even though
+nothing calls them any more — deleting a still-correct, still-tested pure predicate whose only sin is
+having lost its one caller was judged not worth the extra diff for this PR; a future cleanup pass can
+remove them if they're still unused then. One genuinely flaky test surfaced as a side effect of the
+cache-instant-fill change: a real-timer test tapping the Data Stream tile could have a real tick land
+between the click and the assertion, and — now that pool 1's cache-fill runs unconditionally instead
+of only after a disk has been built — that tick had a new path to siphon a fractional bit out of
+`intro.bits` before the assertion read it. Fixed by switching that one test to fake timers, the same
+remedy this codebase already uses for the analogous `tickPoolBufferFill` fragility elsewhere.
+
+**Verification.** All three changes landed together since they were requested together and are
+functionally related (all touch what "reaching a pool" means for the player). `yarn test`: 1618/1618
+green (down from 1625 — net removal of ~7 now-meaningless UI tests, offset by no new tests needed for
+the capacity gate itself beyond the reverted primitive already being covered). `yarn build` succeeds.
+Verified visually via `yarn dev` + a real Playwright/Chromium screenshot: a pool with its disk-build
+condition satisfied but capacity below its own threshold correctly stays hidden (a "GB Pool" that
+would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
+manual transfer-block row is confirmed gone from every state that used to show it.

@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -275,59 +275,6 @@ const RateBlock = styled.span`
   background: ${props => (props.$filled ? props.theme.color.good : props.theme.color.surfaceSunken)};
 `
 
-// `flex-wrap: nowrap` is deliberate — with `wrap`, once `blockCount` blocks (each `flex: 1 1
-// 2.5rem`, growable) no longer fit on one line at a narrow (mobile) width, the leftover blocks
-// spill onto a second row where they grow to fill ITS leftover space instead, ending up far wider
-// than the blocks on the row above — a visibly broken, misaligned grid. `nowrap` keeps every
-// block on one row and lets `flex-shrink` (already implied by `flex: 1 1 2.5rem`) narrow them
-// together instead, so the row always reads as one evenly-sized strip regardless of viewport
-// width or how large `blockCount` has grown.
-const TransferBlocksRow = styled.div`
-  display: flex;
-  flex-wrap: nowrap;
-  gap: ${props => props.theme.space.xs};
-  width: 100%;
-`
-
-// One block per unit of tier01's (Kilobytes') own current purchase block size (getPurchaseBlockSize)
-// — this row is just a live mirror of purchaseLevelProgress[tier01], the same value the "Kilobytes'
-// current block" tracker above already shows, so it rolls over to a fresh, empty row the instant a
-// level completes rather than ever running out. Three visual states, read together as one continuous
-// progress bar: $consumed (already transferred this level — solid muted fill, permanently disabled),
-// $active (the sole clickable one — accent border, partial progressFill gradient toward its own
-// 1000-bit threshold), and plain/upcoming (neither prop set — empty outline, disabled placeholder).
-// Only the active block is ever passed a $progress value — progressFill returns null without one, so
-// the plain `background` rule below (transparent, or surfaceSunken once $consumed) applies instead.
-const TransferBlock = styled.button`
-  flex: 1 1 2.5rem;
-  min-width: 0;
-  aspect-ratio: 1;
-  border: 1.5px solid ${props => (props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  border-radius: ${props => props.theme.radius.sm};
-  background: ${props => (props.$consumed ? props.theme.color.surfaceSunken : 'transparent')};
-  color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
-  cursor: pointer;
-  transition: filter 0.15s ease, transform 0.05s ease;
-  ${progressFill}
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.2);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.95);
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-`
-
 // Renders "<bits> / <capacity>". Capacity always renders in its own unit (picked off capacity —
 // see getMemoryUnit in game/engine). The balance shares that same unit UNLESS doing so would put
 // it below 1 (e.g. "0.234 MiB / 1 MiB" territory) — in that case it self-sizes into its own finer
@@ -356,9 +303,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
-  const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
-  const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  const unlockedPoolCount = getVisibleStoragePoolCount(state)
   // Null follows the largest unlocked pool by default; 0 is an explicit "all collapsed" choice.
   const [expandedPoolIndex, setExpandedPoolIndex] = useState(null)
   useEffect(() => {
@@ -402,41 +348,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
 
-  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
-  // from the main game's Buy button/autobuyer, redeemDisk (once tier01 is at one of its own fixed
-  // disk sizes' required level), or convertIntroBitsToKilobytes/
-  // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
-  // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
-  // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
-  // completes rather than ever running dry.
-  const purchaseBlockSize = getPurchaseBlockSize(state)
-  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
-  const blocksTransferred = tier01PurchaseProgress
-  const blocksRemaining = purchaseBlockSize - tier01PurchaseProgress
-  // tier01's own CURRENT per-unit cost — what one transfer block actually costs right now, not a
-  // fixed rate (see getIntroKilobyteConversionCost in engine.js).
-  const transferBlockCost = getIntroKilobyteConversionCost(state)
-  const canTransferBlock = intro.bits >= transferBlockCost
-
-  // Once Storage unlocks, Disk redemption offers an alternative path to tier units, making this
-  // block-row redundant for a player who's already past the mandatory gate — hidden from then on.
-  // The `|| !intro.mainGameUnlocked` fallback exists only for a narrow edge case: Storage's own
-  // reveal threshold (Buffer / pool Memory Capacity) is independent of ever having transferred at
-  // all, so a player could in principle reach it without ever unlocking the main game —
-  // redeemDisk never flips mainGameUnlocked, only this section's own convert action does
-  // (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js), so this stays visible
-  // through the mandatory gate regardless of Storage's own reveal state.
-  const showTransferSection = revealed && (!storageRevealed || !intro.mainGameUnlocked)
-
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const computeBandwidthField = getComputeBandwidthSacrificeField(state)
   const investProgress = computeFundedInvest && computeBandwidthField
     ? clampPercent(((intro[computeBandwidthField] ?? 0) / COMPUTE_ENTITY_CAP) * 100)
     : clampPercent((intro.bits / investCost) * 100)
-  const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
-
-
 
   return (
     <RootDiv>
@@ -652,51 +569,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           </PoolCard>
         )
       })}
-
-      {showTransferSection && (<>
-        <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
-        <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
-          {Array.from({ length: purchaseBlockSize }, (_, index) => {
-            const isConsumed = index < blocksTransferred
-            const isActive = index === blocksTransferred
-            return (
-              <TransferBlock
-                key={index}
-                aria-label={
-                  isConsumed
-                    ? `transferred block ${index + 1}`
-                    : isActive
-                      ? `convert ${formatBitsInNearestUnit(transferBlockCost)} into 1 Kilobyte`
-                      : `locked transfer block ${index + 1}`
-                }
-                disabled={isConsumed || !isActive || !canTransferBlock}
-                onClick={isActive ? actions.convertIntroBitsToKilobytes : undefined}
-                title={
-                  isConsumed
-                    ? 'Already transferred'
-                    : isActive
-                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Data Stream to ${formatBitsInNearestUnit(transferBlockCost)} first`)
-                      : 'Transfer the block to your left first'
-                }
-                type="button"
-                $active={isActive}
-                $consumed={isConsumed}
-                $progress={isActive ? activeBlockProgress : undefined}
-              >
-                {isActive && (
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="byte foundry convert progress"
-                    aria-valuenow={intro.bits}
-                    aria-valuemin={0}
-                    aria-valuemax={transferBlockCost}
-                  />
-                )}
-              </TransferBlock>
-            )
-          })}
-        </TransferBlocksRow>
-      </>)}
 
       {!intro.mainGameUnlocked && (
         <TapArea

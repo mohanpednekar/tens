@@ -2570,7 +2570,11 @@ describe('tickDiskAutoFill', () => {
       diskCache: { [level2Size]: level2Size },
       diskReadCacheFlush: { [level2Size]: { remainingSeconds: 5, totalSeconds: 10 } },
     })
-    const after = tickDiskAutoFill(1)(state)
+    // elapsedSeconds=0 — FIRST_DISK_SIZE (pool 1's own smallest size, always cache-eligible once
+    // pool 1 unlocks, whether or not any disk of that size has ever been built) would otherwise
+    // siphon a few bits out of the just-refunded pool 1 buffer in this same tick, which isn't what
+    // this test is about.
+    const after = tickDiskAutoFill(0)(state)
     expect(after.intro.diskReadCacheFlush?.[level2Size]).toBeUndefined()
     // The stale cache itself is still refunded to its pool buffer (same as the sibling test above)
     // — the flush entry is just the timer wrapped around it, dropped alongside.
@@ -2613,7 +2617,10 @@ describe('tickDiskAutoFill', () => {
 
   it('dumps a full-but-sub-block pool buffer balance into cache when its own capacity cannot hold one block', () => {
     // 512 = 8 * 2**6, an exact SI-clean pool capacity (no switchover deviation below term 7) —
-    // still below one FIRST_DISK_SIZE cache block (blockBits = 1000).
+    // still below one FIRST_DISK_SIZE cache block (blockBits = 1000). Note: the pool-card
+    // capacity-unlock threshold (getPoolCapacityUnlockThresholdBits) deliberately does NOT gate
+    // isStoragePoolUnlocked/tickDiskAutoFill's own cache eligibility — only which pool CARDS
+    // ByteFoundryPage renders (getVisibleStoragePoolCount) — so this scenario stays reachable here.
     const state = withIntro(withPoolBuffer(createInitialGameState(), 512), {
       capacity: 512,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },

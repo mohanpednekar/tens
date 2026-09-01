@@ -2091,6 +2091,36 @@ export const getUnlockedStoragePoolCount = state => {
   return count
 }
 
+// Pool N's own DISPLAY capacity gate: the Data Stream's raw binary capacity (intro.capacity) must
+// have reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on —
+// before that pool's own CARD renders, on top of (not instead of) isStoragePoolUnlocked's own
+// disk-build requirement above. Deliberately kept separate from isStoragePoolUnlocked/
+// getUnlockedStoragePoolCount rather than folded into them: those two feed the disk ladder's own
+// progression (getMaxActiveDiskLadderStep — which size is currently buildable), read-cache
+// eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing, none of which this
+// capacity rule was meant to touch — see docs/DESIGN_HISTORY.md for the wider blast radius an
+// earlier attempt at folding this into isStoragePoolUnlocked directly caused. In practice pool 1's
+// own 1 KiB (8,192-bit) threshold is already satisfied by the time Storage reveals at all
+// (isStorageUnlocked's own INTRO_DISK_UNLOCK_CAPACITY = 80,000 bits is stricter), so this rarely
+// changes pool 1's own reveal timing — it mainly bites pools 2+, whose thresholds grow past what
+// disk-build progress alone guarantees.
+export const getPoolCapacityUnlockThresholdBits = poolIndex =>
+  BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** poolIndex)
+
+// The number of pool CARDS ByteFoundryPage should actually render — the smaller of how many pools
+// disk-build progress has unlocked (getUnlockedStoragePoolCount) and how many pools' own capacity
+// threshold (getPoolCapacityUnlockThresholdBits) intro.capacity has reached. Thresholds grow
+// strictly with poolIndex, so the first one intro.capacity fails already bounds every pool after it.
+export const getVisibleStoragePoolCount = state => {
+  const diskUnlockedCount = getUnlockedStoragePoolCount(state)
+  let count = 0
+  for (let poolIndex = 1; poolIndex <= diskUnlockedCount; poolIndex += 1) {
+    if ((state.intro?.capacity ?? 0) < getPoolCapacityUnlockThresholdBits(poolIndex)) break
+    count = poolIndex
+  }
+  return count
+}
+
 // Storage pools display Capacity/Bandwidth in SI units (formatDiskSize); intro.capacity itself
 // stays a plain binary doubling sequence (see upgradePoolCapacity) since it's ALSO the Data
 // Stream tile's own binary balance/capacity figure — see docs/DESIGN_HISTORY.md for earlier
@@ -3294,10 +3324,17 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     changed = true
   }
 
-  const sizes = Object.keys(builtTotal)
-    .map(Number)
+  // Read cache eligibility is keyed off which POOLS are unlocked, not which sizes have ever had a
+  // disk built — each unlocked pool's own smallest (×1) size starts filling from Memory the instant
+  // that pool unlocks, so the cache is already there waiting the moment the player's first disk of
+  // that size finishes provisioning, rather than starting empty and refilling from scratch after.
+  const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  const readCacheEligibleSizes = []
+  for (let poolIndex = 1; poolIndex <= unlockedPoolCount; poolIndex += 1) {
+    readCacheEligibleSizes.push(getDataLakeUnitBits(poolIndex))
+  }
+  const sizes = readCacheEligibleSizes
     .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
-    .filter(isDiskReadCacheEligible)
     .sort((a, b) => a - b)
 
   // Drop flushes for sizes that can no longer complete (mid-build, or no empty container left).

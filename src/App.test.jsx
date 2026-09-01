@@ -23,7 +23,6 @@ import {
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-  INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_MIN_TICK_SPEED_SECONDS,
   INTRO_STARTING_CAPACITY,
@@ -2468,125 +2467,26 @@ test('Capacity ×2 remains visible after Combine and is capped at the active poo
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
 })
 
-test('the manual convert button appears once Buffer reaches the conversion-unlock threshold, and clicking it unlocks the main game', async () => {
-  const user = userEvent.setup()
+test('the manual transfer-block row is gone — the always-on auto-convert is now the only path through the gate, regardless of Buffer/Storage state', () => {
+  // Covers every state the removed manual row used to render in (fresh/pre-Combine, past the
+  // conversion-unlock threshold, past Storage's own reveal threshold, and post-unlock) — none of
+  // them should ever show a "convert" button or the transfer-blocks group any more.
+  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  const { unmount } = render(<App />)
+  expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/transfer to main game/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^convert /i })).not.toBeInTheDocument()
+  unmount()
 
-  // This fixture starts with Capacity at the pool-1 ceiling, so conversion is unlocked immediately.
-  seedIntroState({
-    bits: INTRO_BITS_PER_KILOBYTE_CONVERSION,
-    capacity: INTRO_CAPACITY_CAP_BITS,
-    byteCreated: true,
-  })
-  render(<App />)
-
-  // 8000 bits = 1000 Bytes, below the 1024-Byte KiB threshold — still raw Bytes under binary-unit formatting.
-  const convertButton = screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })
-  expect(convertButton).toBeEnabled()
-
-  await user.click(convertButton)
-
-  // Grants 1 free Kilobyte unit in the main game's save data, from the separate intro bit pool,
-  // and — unlike the old design — this first conversion alone unlocks the main game, so <App />
-  // navigates straight to MainPage instead of staying on the Byte Foundry.
-  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
-  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.owned.tier01).toBe(1)
-  expect(saved.intro.mainGameUnlocked).toBe(true)
-})
-
-test('the convert button stays hidden before Combine (Buffer still at starting capacity)', () => {
-  seedIntroState({ capacity: INTRO_STARTING_CAPACITY, byteCreated: false })
-  render(<App />)
-
-  expect(screen.queryByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).not.toBeInTheDocument()
-})
-
-test('after Combine, conversion remains locked when a low Capacity was seeded', () => {
-  seedIntroState({ capacity: INTRO_CONVERSION_UNLOCK_CAPACITY / 10, byteCreated: true })
-  render(<App />)
-
-  expect(screen.queryByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })).not.toBeInTheDocument()
-  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CONVERSION_UNLOCK_CAPACITY / 10))
-})
-
-test('the transfer section hides once Storage unlocks, once the main game is already unlocked', () => {
   seedMainGameState({
     intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true },
   })
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-
   expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
-  expect(screen.queryByText(/transfer to main game/i)).not.toBeInTheDocument()
 })
 
-test('the transfer section stays visible through the mandatory gate even past Storage\'s own reveal threshold, since it\'s still the only way to ever unlock the main game', () => {
-  // mainGameUnlocked defaults to false (the mandatory gate) via seedIntroState — this fixture's
-  // Capacity is at the pool end so Storage is revealed, but redeemDisk never sets mainGameUnlocked
-  // — only convertIntroBitsToKilobytes/tickIntroAutoInvest do — so this row stays visible
-  // through the gate.
-  seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
-  render(<App />)
-
-  expect(screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).toBeInTheDocument()
-})
-
-test('the transfer block\'s own cost scales with tier01\'s CURRENT per-unit level cost, not a flat rate', () => {
-  // This fixture starts at the pool end → Storage unlocked. Transfer stays visible only while
-  // still gated (mainGameUnlocked false).
-  seedIntroState(
-    { bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, mainGameUnlocked: false },
-    { purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 } },
-  )
-  render(<App />)
-
-  // tier01 is at level 2 — its own current per-unit cost is 10,000 bits; the transfer block
-  // spends BITS_PER_BYTE × that (80,000 bits, "9.765 KiB" in Data Stream's binary-unit scale).
-  const activeBlock = screen.getByRole('button', { name: /convert 9\.765 KiB into 1 Kilobyte/i })
-  expect(activeBlock).toBeDisabled()
-  const progressbar = within(activeBlock).getByRole('progressbar', { name: /byte foundry convert progress/i })
-  expect(progressbar).toHaveAttribute('aria-valuemax', '80000')
-})
-
-test('shows one transfer block per remaining unit of the Kilobyte tier\'s (default 8) current purchase block, only the leftmost clickable, and clicking it unlocks the main game', () => {
-  // Fake timers so the live tick loop can't fire — and silently drain the pre-seeded balance —
-  // between mount and this test's own manual click below. This fixture starts at the pool end so
-  // Storage is revealed; transfer stays visible only while still gated. The first convert
-  // unlocks the main game (and then hides the transfer row once Storage + unlocked).
-  vi.useFakeTimers()
-
-  seedIntroState({
-    mainGameUnlocked: false,
-    bits: INTRO_BITS_PER_KILOBYTE_CONVERSION * 2,
-    capacity: INTRO_CAPACITY_CAP_BITS,
-    byteCreated: true,
-  })
-  const { unmount } = render(<App />)
-
-  const transferGroup = screen.getByRole('group', { name: /byte foundry kilobyte transfer blocks/i })
-  const activeBlock = screen.getByRole('button', { name: /convert 1,000 B into 1 Kilobyte/i })
-  const lockedBlocks = screen.getAllByRole('button', { name: /^locked transfer block/i })
-  expect(activeBlock).toBeEnabled()
-  expect(lockedBlocks).toHaveLength(7)
-  lockedBlocks.forEach(block => expect(block).toBeDisabled())
-  expect(within(transferGroup).getAllByRole('button')).toHaveLength(8)
-  expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
-
-  fireEvent.click(activeBlock)
-
-  // First transfer unlocks the main game and navigates to Byte Factory.
-  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
-  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.owned.tier01).toBe(1)
-  expect(saved.intro.mainGameUnlocked).toBe(true)
-  expect(saved.purchaseLevelProgress.tier01).toBe(1)
-
-  unmount()
-  vi.useRealTimers()
-})
-
-test('auto-transfers a full block once the threshold is reached, then hides the transfer row once unlocked with Storage revealed', () => {
+test('auto-converts a full block once the threshold is reached — the sole remaining path through the gate now the manual row is gone', () => {
   vi.useFakeTimers()
 
   // A big jump — passive production or a large offline-progress catch-up — that skips straight
@@ -2600,41 +2500,43 @@ test('auto-transfers a full block once the threshold is reached, then hides the 
   })
   const { unmount } = render(<App />)
 
-  expect(screen.getAllByRole('button', { name: /transfer block|convert 1,000 B|convert 1 KB/i }).length).toBeGreaterThan(0)
-
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Transitioned to MainPage (mainGameUnlocked flips on the bulk auto-invest) with all 8 Kilobytes
-  // granted at once, completing tier01's first level.
+  // granted at once, completing tier01's first level — with no manual click at all.
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 8\b/i)
 
-  // Navigating back to the Byte Foundry: Storage is revealed (this fixture has Buffer at pool end) and the main
-  // game is unlocked, so the manual transfer row hides — Disk redemption is the alternate path.
+  // Navigating back to the Byte Foundry: Storage is revealed (this fixture has Buffer at pool end)
+  // and the main game is unlocked — Disk redemption is the path from here on.
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-  expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /provision disk/i })).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
 })
 
-test('tapping still increments Data Stream (still tappable) after the Byte generator exists', async () => {
-  const user = userEvent.setup()
+test('tapping still increments Data Stream (still tappable) after the Byte generator exists', () => {
+  // Fake timers so the live tick loop can't fire between mount and the click below — pool 1's
+  // cache-fill (tickDiskAutoFill) now starts draining bits into its own buffer/cache the instant
+  // it's unlocked (see ByteFoundryPage's Pool cache-fill change), not just once a disk has been
+  // built for it, so a real tick landing here could otherwise siphon a fractional bit out of
+  // intro.bits before this test's own assertion reads it.
+  vi.useFakeTimers()
 
-  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (80,000) — this test uses real timers, so
-  // a real tick landing between mount and the assertion could otherwise let tickPoolBufferFill
-  // siphon a fractional bit out of intro.bits into pool 1's own (irrelevant here) buffer.
   seedIntroState({ bits: 0, capacity: 1000, byteCreated: true })
-  render(<App />)
+  const { unmount } = render(<App />)
 
   const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
 
-  await user.click(tapButton)
+  fireEvent.click(tapButton)
 
   expect(balanceBar).toHaveAttribute('aria-valuenow', '1')
+
+  unmount()
+  vi.useRealTimers()
 })
 
 test('shows the offline-progress notice on the Byte Foundry screen too, not just MainPage', () => {
@@ -2775,17 +2677,6 @@ test('the Combine button shows fill progress toward INTRO_BYTE_COMBINE_COST', ()
   const combineProgress = screen.getByRole('progressbar', { name: /byte foundry combine progress/i })
   expect(combineProgress).toHaveAttribute('aria-valuenow', String(INTRO_BYTE_COMBINE_COST))
   expect(combineProgress).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-})
-
-test('the Convert button shows fill progress toward INTRO_BITS_PER_KILOBYTE_CONVERSION', () => {
-  // Same "only observable at 100%" constraint as the Combine button above — canConvert requires
-  // bits >= INTRO_BITS_PER_KILOBYTE_CONVERSION for the button to render at all.
-  seedIntroState({ bits: INTRO_CONVERSION_UNLOCK_CAPACITY, capacity: INTRO_CONVERSION_UNLOCK_CAPACITY, byteCreated: true })
-  render(<App />)
-
-  const convertProgress = screen.getByRole('progressbar', { name: /byte foundry convert progress/i })
-  expect(convertProgress).toHaveAttribute('aria-valuenow', String(INTRO_CONVERSION_UNLOCK_CAPACITY))
-  expect(convertProgress).toHaveAttribute('aria-valuemax', String(INTRO_CONVERSION_UNLOCK_CAPACITY))
 })
 
 test('the intro auto-transitions into the main game once the bit balance crosses the auto-invest threshold', () => {
@@ -2986,7 +2877,11 @@ describe('Byte Foundry Storage', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
     seedIntroState({
-      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      bits: 0,
+      // Above pool 2's own capacity-unlock threshold (1 MiB/8,388,608 bits — getVisibleStoragePoolCount)
+      // in addition to INTRO_DISK_UNLOCK_CAPACITY, so pool 2's own card actually renders.
+      capacity: 1024 * 1024 * BITS_PER_BYTE,
+      byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP, [size10kb]: DISK_ARRAY_LADDER_CAP, [size100kb]: DISK_ARRAY_LADDER_CAP },
     })
     render(<App />)
@@ -3024,7 +2919,7 @@ describe('Byte Foundry Storage', () => {
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
-      formatBitsInNearestUnit(INTRO_DISK_UNLOCK_CAPACITY)
+      formatBitsInNearestUnit(1024 * 1024 * BITS_PER_BYTE)
     )
   })
 
@@ -3371,20 +3266,13 @@ describe('Byte Foundry Storage', () => {
     fireEvent.click(redeemButton)
 
     // Still on the mandatory Byte Foundry gate (mainGameUnlocked stays false — redeeming doesn't
-    // touch it, unlike convertIntroBitsToKilobytes) — assert against saved state directly, same
-    // convention as "the manual convert button appears..." above.
+    // touch it, unlike convertIntroBitsToKilobytes/tickIntroAutoInvest) — assert against saved
+    // state directly.
     expect(screen.queryByRole('button', { name: /redeem 10 kb disk/i })).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     // Completes tier01's whole level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
     expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks[futureBankSize]).toBeUndefined()
-
-    // Redeeming completes tier01's whole level 2 in one shot (see redeemDisk's own doc comment),
-    // rolling it straight into a fresh level 3 with no progress yet — visible on ByteFoundryPage's
-    // own transfer-block row (a live mirror of the same purchaseLevelProgress) as zero transferred
-    // blocks, not a partial 1/8, once navigated back there via AppNav.
-    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-    expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   })
 
   test('Data Lake renders bare (no separate "Data Lakes" card) inside its own pool\'s card, below the disk arrays', () => {
@@ -4077,8 +3965,6 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /sacrifice all bits for 2x capacity/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /invest bits for double production/i })).toHaveTextContent('⚡ Speed ×2')
-  // Storage revealed + main game unlocked → manual transfer row is hidden.
-  expect(screen.queryByRole('group', { name: /byte foundry kilobyte transfer blocks/i })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /provision disk/i })).toBeInTheDocument()
 
   await user.click(screen.getByRole('button', { name: /open byte factory/i }))
