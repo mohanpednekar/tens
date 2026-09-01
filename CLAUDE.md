@@ -433,11 +433,14 @@ src/
                                render identical, fully interactive detail rather than StoragePage
                                alone owning it and ByteFoundryPage settling for a text summary.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
-                               next Booster cost, in-flight transfers) rendered inside ByteFoundryPage's
-                               the standalone ByteFoundryPage panel, taking `{ state, bare }` —
-                               `bare` is retained for reuse/legacy composition and drops its own
-                               StatCard chrome. See "Economy model" below for the Data Lake mechanic.
+    DataLakePanel/index.jsx ← one Data Lake's own row (deposited units / capacity, next Booster
+                               cost, in-flight transfers), taking `{ actions, state, bare, tierIndex }`
+                               — `tierIndex` scopes rendering to that one lake, embedded (`bare`,
+                               dropping its own StatCard chrome) inside each `ByteFoundryPage` pool
+                               card below that pool's own disk-array rows, always shown regardless of
+                               activity; omitting `tierIndex` falls back to the original every-visible-
+                               lake grid (retained for reuse, unused by any current caller). See
+                               "Economy model" below for the Data Lake mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -686,10 +689,17 @@ Strict three-layer separation:
    tile (fill-gradient background, `BalanceText`/`StatusText`, a hidden `role="progressbar"` for
    a11y) rather than a bespoke bar — with the buffer/capacity fraction (equal to the pool's own
    Capacity — see above) above and Bandwidth below, both unlabelled.
-   One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
-   expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
-   their three disk-array rows when opened. The single `components/DataLakePanel` remains after the
-   pool cards and renders all ten lake rows once. Starting the next Disk's
+   Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
+   name — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
+   `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
+   the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
+   unlocked pool in ascending order; only the largest unlocked pool is expanded initially, while
+   earlier pools remain visible as compact disclosure summaries that reveal their three disk-array
+   rows when opened. `components/DataLakePanel` is embedded per pool (`bare` mode, a `tierIndex` prop
+   scoping it to that one lake, always shown regardless of activity) directly below that pool's own
+   disk-array rows, inside the same expanded disclosure — not a single shared panel listing every
+   lake after all the pool cards, as an earlier iteration had it (see `docs/DESIGN_HISTORY.md`).
+   Starting the next Disk's
    build (its own core-loop action, alongside Speed) and every shown size's full
    interactive detail — read cache blocks (only on the pool's smallest size — see
    "Economy model" below), disk squares, releasing (Disk Fill's manual-release half →

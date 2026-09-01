@@ -75,10 +75,14 @@ specific size's own array being mid-build.
 
 `ByteFoundryPage` keeps one shared Data Stream section containing Speed ×2, Capacity ×2, and the
 common Provision Disk control. It renders one derived `PoolCard` per unlocked storage pool in
-ascending order (`aria-label="pool N"`). Only the largest unlocked pool is expanded initially;
-earlier pools remain visible as compact summary disclosure buttons with `aria-expanded` and reveal
-their three `DiskArrayRow`s when opened. `DataLakePanel` remains a single panel after the pool cards
-and renders all ten lake rows once; it is not split into per-pool panels.
+ascending order (`aria-label="pool N"`), titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number
+or tier name, centered), with a full-width buffer/Bandwidth block (reusing `FillableStatCard`/
+`BalanceText`/`StatusText`, the same components the Data Stream card's own tile uses) below the
+title. Only the largest unlocked pool is expanded initially; earlier pools remain visible as
+compact summary disclosure buttons with `aria-expanded` and reveal, when opened, their three
+`DiskArrayRow`s followed by that pool's own `DataLakePanel` row (`bare`, `tierIndex={poolIndex}`) —
+each pool's Lake lives inside that pool's own card, directly below its disks, not in a separate
+panel after all the pool cards.
 
 ## `ConfirmDialog/index.jsx`
 

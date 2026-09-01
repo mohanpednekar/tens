@@ -73,7 +73,8 @@ src/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
-    DataLakePanel/          ← the 10 Data Lake rows on ByteFoundryPage; see "Byte Foundry" below
+    DataLakePanel/          ← one Data Lake's own row, embedded per pool on ByteFoundryPage (below
+                            that pool's own disks); see "Byte Foundry" below
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below

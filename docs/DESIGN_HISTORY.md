@@ -3761,3 +3761,71 @@ text — the bandwidth figure and the buffer/capacity fraction — computed via 
 `getStoragePoolCapacity`. Verified visually via a real Playwright/Chromium screenshot against
 `yarn dev` (seeded to the exact 125,000-Byte/67,382-Byte scenario from the reported screenshot)
 before considering the change done, per this repo's own "test UI changes in a browser" convention.
+
+### Pool titles simplified to "<symbol> Pool"; each pool's Data Lake moved inside its own card
+
+Two more follow-up UI requests in the same conversation as the entry above, both scoped purely to
+`ByteFoundryPage`/`DataLakePanel` presentation — no economy logic changed.
+
+**Pool title.** Each `PoolCard`'s title previously read "`<symbol>` Pool `<n>` · `<Tier name>`" (e.g.
+"KB Pool 1 · Kilobytes"), left-aligned. Requested: rename to just "`<symbol>` Pool" (e.g. "KB Pool")
+and center it. The reasoning holds up on inspection — the symbol (KB/MB/GB/…) already uniquely
+identifies which pool this is among the ten, so both the numeric index and the spelled-out tier name
+were redundant with it. `PoolTitleName` (the styled span holding "Pool `<n>` · `<Tier name>`") was
+deleted; `PoolTitle` now renders just the symbol plus a plain "Pool" span, and `PoolHeaderRow`/
+`PoolTitle` both switched from left/`space-between` alignment to `justify-content: center`. The
+`aria-label`s that actually distinguish pools for accessibility/tests (`"pool <n>"` on the card,
+`"expand/collapse pool <n>"` on the summary button) are untouched — they never displayed to sighted
+users in the first place, so dropping the index from the *visible* title doesn't remove it from
+anywhere assistive tech or tests actually read it from.
+
+**Data Lake relocated into its own pool's card.** Previously `DataLakePanel` rendered once, after
+every `PoolCard`, showing every lake with any activity (deposits, a purchase, capacity growth) as a
+row in one shared grid — a design explicitly separate from any one pool's own card. Requested: move
+each lake's own row inside its corresponding pool's card, positioned below that pool's disk-array
+rows. This is, notably, exactly what `DataLakePanel`'s own pre-existing doc comment already
+described ("`bare` skips the own StatCard wrapper... used when a caller (e.g. ByteFoundryPage's
+single pool card) already provides that chrome") — the component was seemingly designed with this
+embedding in mind from early on, but the actual call site had never been wired that way; the global,
+un-scoped `<DataLakePanel actions={actions} state={state} />` after the pool-card loop was the only
+caller before this change.
+
+**Implementation.** `DataLakePanel` gained an optional `tierIndex` prop: when set, `visibleTiers`
+becomes the single-element `[tierIndex]` instead of `getVisibleLakeTierIndexes(state)`'s
+activity-filtered list — meaning a lake embedded this way is **always** shown once its pool is
+unlocked and expanded, not conditionally hidden until it has activity, since it's now a permanent
+structural part of that pool's own card rather than an entry in a rarity-filtered global list. The
+existing multi-tier (`tierIndex` omitted) code path was left completely intact for API
+compatibility/potential reuse, even though no caller currently exercises it — the component's own
+doc comment already flagged this as a deliberately-reusable shape. `ByteFoundryPage` moved the
+`<DataLakePanel .../>` call from after the whole pool-card `.map()` loop to inside each pool's own
+`isExpanded` block, right after that pool's `DiskArrayRow` list, passing `bare` (skip the outer
+StatCard — the surrounding `PoolCard` already supplies that chrome) and `tierIndex={poolIndex}`.
+
+**Test fallout.** `App.test.jsx`'s "Data Lake renders bare" test previously asserted a global
+`aria-label="Data Lakes"` region existed; that region no longer renders anywhere (there's no more
+un-scoped multi-lake caller), so the test now asserts the opposite (`queryByLabelText` returns
+nothing) and instead checks the lake's own text renders `within` its specific pool's own
+`aria-label="pool 1"` region. Two disk-array-detail tests (`'ByteFoundryPage renders the current
+size's full interactive Disk array detail inline...'` and `'cache squares and disk circles carry
+bit-scale vs Byte-scale size labels...'`) previously counted every `'1 KB'` text node on the whole
+page to assert exactly `DISK_ARRAY_LADDER_CAP` (10) disk circles — now that the pool's own embedded
+Lake row can ALSO show a `'1 KB'` figure (its own Capacity or next-Booster-cost, both plausible at a
+fresh lake's starting values), the raw counts inflated to 12. Both were narrowed to query `within`
+the specific `role="group"` disk/cache elements instead of the whole document, which both fixes the
+count and is arguably the more correct scope for what each test is actually about (this size's own
+rendered cells, not incidental same-text matches elsewhere on the page). The pool-advance test's
+`'Kilobytes'`/`'Megabytes'` text assertions (checking the now-removed tier name) were replaced with
+checks for the pool's own symbol immediately followed by "Pool" (`` `${TIER_DEFINITIONS[n].symbol}Pool` ``
+— no literal space in the DOM text between the two spans, only CSS `gap`).
+
+A small, unrelated accessibility nit surfaced by the same review round was folded in here too: the
+pool's own `FillableStatCard` block (the memory/capacity/Bandwidth bar from the entry above) carried
+an `aria-label` on a plain `<div>`, which per the accessible-name computation spec is inert without an
+explicit ARIA role. Added `role="group"` so the label actually attaches; the Data Stream card's own
+`FillableStatCard` instance was unaffected since it already renders `as="button"`/`as="section"`
+(both roled elements) once `intro.byteCreated`.
+
+Verified visually via Playwright/Chromium against `yarn dev` for both changes together — a fresh
+pool card reads "KB Pool" / "MB Pool" (centered) with the KB lake's own row appearing directly below
+its disk squares once expanded, matching the request.

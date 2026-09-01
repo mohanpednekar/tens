@@ -2960,8 +2960,9 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 2' })).toBeInTheDocument()
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
     const pool2 = screen.getByRole('region', { name: 'pool 2' })
-    expect(pool1).toHaveTextContent('Kilobytes')
-    expect(pool2).toHaveTextContent('Megabytes')
+    // Pool titles read "<symbol> Pool" (e.g. "KB Pool") — no index number or tier name.
+    expect(pool1).toHaveTextContent(`${TIER_DEFINITIONS[0].symbol}Pool`)
+    expect(pool2).toHaveTextContent(`${TIER_DEFINITIONS[1].symbol}Pool`)
     // Bandwidth and the memory/capacity fraction render unlabelled, reusing the same Data
     // Stream-style fillable block (see FillableStatCard/BalanceText/StatusText in
     // ByteFoundryPage/index.jsx) rather than a labelled Bandwidth/Capacity/Memory stat row.
@@ -3006,11 +3007,15 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    // Size identity is painted inside each cell; no external header / Cache/Disks titles.
-    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
-    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    // Size identity is painted inside each cell; no external header / Cache/Disks titles. Scoped to
+    // the disk/cache groups themselves (via `within`) since the pool's own embedded Data Lake row
+    // below the arrays can also show a "1 KB" figure (its own Capacity/Next-cost, unrelated here).
+    const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
+    const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
+    expect(diskGroup).toBeInTheDocument()
+    expect(cacheGroup).toBeInTheDocument()
+    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
@@ -3029,11 +3034,14 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
-    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale).
-    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
-    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale). Scoped to the
+    // disk/cache groups themselves (see the test above for why).
+    const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
+    const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
+    expect(diskGroup).toBeInTheDocument()
+    expect(cacheGroup).toBeInTheDocument()
+    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
   test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
@@ -3344,7 +3352,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   })
 
-  test('Data Lake renders bare (no separate "Data Lakes" card) as part of the same pool card once a lake has any deposit', () => {
+  test('Data Lake renders bare (no separate "Data Lakes" card) inside its own pool\'s card, below the disk arrays', () => {
     seedIntroState({
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3354,9 +3362,10 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    expect(screen.getByText(/^KB.*Cores$/i)).toBeInTheDocument()
-    // DataLakePanel remains one shared panel after the pool cards, rendering all ten rows once.
-    expect(screen.getByLabelText(/^Data Lakes$/i)).toBeInTheDocument()
+    // Embedded per-pool now (see ByteFoundryPage/index.jsx) — no separate global "Data Lakes" panel.
+    expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    expect(within(pool1).getByText(/^KB.*Cores$/i)).toBeInTheDocument()
   })
 
   test('Data Lake capacity can be doubled by clicking its ⚡×2 button', () => {

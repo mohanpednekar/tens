@@ -94,7 +94,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   replaced by one full-width fillable block reusing the Data Stream card's own component/style: the
   buffer/capacity fraction above, Bandwidth below, both unlabelled, with the fill percentage driving
   the block's background gradient the way the old Memory-only bar did. The redundant "Arrays in
-  progress"/"Arrays complete" status text is removed.
+  progress"/"Arrays complete" status text is removed. Each pool's title is renamed from "Pool `<n>`
+  · `<Tier name>`" (e.g. "Pool 1 · Kilobytes") to just "`<symbol>` Pool" (e.g. "KB Pool") and centered
+  — the symbol alone already uniquely identifies the pool.
+- **Data Lake moved inside its own pool's card** — each of the ten Data Lake rows now renders
+  directly below that pool's own disk-array rows (inside the same expand/collapse disclosure),
+  always visible once that pool is unlocked, instead of all ten lakes listing together in one shared
+  panel after every pool card (hidden entirely until a lake had any deposit/purchase/capacity
+  activity).
 - **Data Lake capacity ladder now lands on 1,000 units at max, not 1,024** — `getDataLakeCapacity`
   grows via the same SI-clean sequence pool Capacity's own `getNextSiDoubledValue` uses (plain
   doubling except a 64→125 deviation), matching pool Capacity's own end-boundary convention. Only

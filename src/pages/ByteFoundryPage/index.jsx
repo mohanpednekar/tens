@@ -181,13 +181,14 @@ const PoolSummaryButton = styled.button`
 const PoolHeaderRow = styled.div`
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: center;
   gap: ${props => props.theme.space.sm};
 `
 
 const PoolTitle = styled.h3`
   display: flex;
   align-items: baseline;
+  justify-content: center;
   gap: ${props => props.theme.space.xs};
   margin: 0;
   min-width: 0;
@@ -200,15 +201,6 @@ const PoolTitle = styled.h3`
 
 const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
-`
-
-const PoolTitleName = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  font-weight: 500;
-  font-size: ${props => props.theme.type.scale.sm.size};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `
 
 // A thin visual break between the Data Stream controls and its common Provision Disk operation.
@@ -627,10 +619,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <PoolHeaderRow>
                 <PoolTitle>
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
-                  <PoolTitleName>Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`}</PoolTitleName>
+                  <span>Pool</span>
                 </PoolTitle>
               </PoolHeaderRow>
-              <FillableStatCard aria-label={`pool ${poolIndex} memory`} $progress={poolBufferPercent}>
+              <FillableStatCard role="group" aria-label={`pool ${poolIndex} memory`} $progress={poolBufferPercent}>
                 <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
                 <VisuallyHidden
                   role="progressbar"
@@ -647,13 +639,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 {poolSizes.map(size => (
                   <DiskArrayRow key={size} actions={actions} size={size} state={state} />
                 ))}
+                <DataLakePanel actions={actions} state={state} bare tierIndex={poolIndex} />
               </>
             )}
           </PoolCard>
         )
       })}
-
-      {storageRevealed && <DataLakePanel actions={actions} state={state} />}
 
       {showTransferSection && (<>
         <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
