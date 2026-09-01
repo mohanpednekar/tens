@@ -3610,3 +3610,418 @@ text as the full capacity (their absolute difference is below the display's deci
 that scale) — the property the test verifies (a nearly-full balance never *reads* complete) still
 holds for any gap large enough to actually move the 3rd decimal place, so the test uses a deliberately
 larger (still small) deficit instead of a single bit.
+
+### Pool Capacity doubling mechanic itself corrected to land on SI-clean intermediate steps
+
+The entry above ("Pool Capacity end bounds corrected to SI powers of 1000") fixed each pool's own
+*end* boundary to a clean SI figure (1 MB, 1 GB, 1 TB, …) but deliberately left the per-purchase
+`upgradePoolCapacity` mechanic as plain binary `×2`, reasoning that a `Math.min(doubled, endBits)`
+clamp already lands exactly on the SI boundary on the *final* purchase regardless of what the
+intermediate steps look like. That reasoning holds for the boundary value itself, but it left a
+real, visible gap: every Capacity value *before* that final purchase is still a pure binary power
+(1, 2, 4, …, 64, 128, 256, …, 131,072, … Bytes), and the Storage pool card displays Capacity (and
+therefore Bandwidth, `sqrt(Capacity in Bytes)`) in SI units — so mid-progression, the card showed
+figures like "131.072 KB" Capacity / "362.038 B/sec" Bandwidth, which read as broken even though
+they were arithmetically correct outputs of a binary sequence rendered through an SI formatter. A
+screenshot of exactly this ("KB Pool 1 · Kilobytes", Capacity 131.072 KB, Bandwidth 362.038 B/sec)
+is what surfaced the gap.
+
+An external agent (Jules, PR #533) independently identified the same underlying idea documented in
+the entry above — deviate the doubling sequence from 64 to 125 once per decade of 10 doublings, the
+same technique already used to derive the SI end-boundary constants — but applied it as a **new
+helper called inside the doubling mechanic itself** rather than only in the boundary-constant
+derivation, and got two things wrong in the process: (1) the switchover check compared the raw bit
+value against a mantissa of `64`, but `intro.capacity` is stored in *bits* while the switchover
+point ("64 Bytes → 125 Bytes") is defined in *Bytes* — so the deviation could never actually fire at
+the intended point; (2) it additionally applied the same treatment to the Data Lake capacity ladder
+(`getDataLakeCapacity`), changing its hard cap from 1,024 to 1,000 units — but the Data Lake ladder
+was the *other* candidate this same design decision explicitly considered and rejected earlier (see
+"Scope: which ladder did this apply to?" in the entry above — the user confirmed Memory/Pool
+Capacity only), so re-applying it there was an unauthorized, out-of-scope economy change (no linked
+issue, silently nerfing a value players actually see and rely on) rather than a bug fix. PR #533 was
+closed rather than merged for these reasons, and this entry documents the corrected, narrower fix
+that replaced it.
+
+**The corrected fix:** `getNextSiDoubledValue(val)` (in `engine.js`, `val` in bits) converts to
+Bytes first, then walks the value down by whole factors of 1000 to find its current "decade"
+mantissa; if that mantissa is exactly `64`, the next value is `125 * (that decade's power of 1000)`
+Bytes — otherwise it's a plain `bytes * 2` — converted back to bits before returning.
+`upgradePoolCapacity` calls this instead of `capacity * INTRO_CAPACITY_DOUBLING_STEP`, still passed
+through the same `Math.min(…, endBits)` clamp as before, so the boundary-landing behavior from the
+entry above is unchanged — only the *shape* of the steps leading up to it changed. `getDataLakeCapacity`
+was left exactly as it was (`2 ** getDataLakeCapacityLevel(...)`, cap 1,024) — this fix's scope is
+the Memory/Pool Capacity ladder only, matching the original, still-standing scope decision.
+
+**Precision at extreme scale.** `getNextSiDoubledValue`'s decade-mantissa detection relies on exact
+integer division/modulo, which loses exactness once a pool's magnitude exceeds `Number`'s ~2^53
+safe-integer range — empirically around pool 8 and beyond (confirmed by tracing the real function
+through the full pool 1–10 progression: decade-boundary detection stays exact through pool 7's
+1e24-Byte magnitude and only starts silently reverting to plain doubling partway into pool 8, at
+`bytes = 6.4e25`, where `6.4e25 % 1000 !== 0` due to float rounding despite being mathematically an
+exact multiple). Past that point the helper silently falls back to plain doubling rather than risking
+a wrong mantissa match. This wasn't treated as a blocking bug: the game already represents astronomically
+large figures (`GOOGOL` = 1e100, `PRESTIGE_THRESHOLD` = 8e100, and pool Capacity/Data Lake values at
+the higher pools already exceed safe-integer range under the *existing*, pre-this-fix formulas too)
+as plain JS `Number`s throughout, accepting the same float-precision ceiling everywhere else — adding
+exact-precision handling (BigInt or a decimal library) solely for this one helper would be
+inconsistent with how the rest of the economy already works, and the cosmetic payoff (SI-clean
+*intermediate* display) matters most in the early-to-mid pools a player actually watches tick by
+tick, not the deep pools whose numbers already read as "big and approximate" regardless.
+
+**An explicit step-counter was considered and rejected.** Precisely tracking "which decade doubling
+we're on" would be trivial with a new persisted counter field (mirroring how Data Lake tracks
+`capacityLevel`), sidestepping the precision question entirely. This was rejected as disproportionate
+to the fix: it would require a new `intro` state field, `createInitialGameState`/`mergeState`
+defaults, and reasoning through Era-ascension reset and save-migration interactions for a field whose
+entire purpose is cosmetic (making a displayed number look rounder at high pools where the game
+already tolerates approximation) — the deriving-from-current-value approach above is stateless, needs
+no migration, and is exact in the range that actually matters.
+
+**Test/doc fallout.** `engine.test.js` gained a `getNextSiDoubledValue` unit-test suite (the
+below-64 case, the 64→125 deviation, resumed doubling through a full decade, the deviation repeating
+at the next decade, the bits-vs-Bytes distinction, and a 17-step replay from the 1-Byte floor landing
+on a clean 125,000 Bytes where pure binary doubling would land on 131,072) plus one
+`pickIntroCapacityMilestone` integration test pinning the 64→125 Bytes step through the real action.
+`CLAUDE.md`/`AGENTS.md`'s Economy model sections were updated to describe `upgradePoolCapacity`'s
+step-shape change (previously documented as "plain ×2, unchanged").
+
+### Data Lake capacity ladder brought under the same SI-clean sequence; pool Memory UI restyled to match the Data Stream card
+
+The entry above deliberately excluded the Data Lake capacity ladder from the SI-switchover
+treatment, citing an earlier, explicit design decision (see "Pool Capacity end bounds corrected to
+SI powers of 1000") where the maintainer was asked which of the two candidate ladders — Memory/Pool
+Capacity or Data Lake capacity — should get it, and confirmed only the Memory/Pool ladder. That
+same PR closed #533 partly *because* it applied the treatment to the Data Lake ladder without that
+authorization.
+
+Shortly after #539 merged, the maintainer explicitly asked to include the Data Lake ladder in "the
+same logic" after all — a direct, in-conversation instruction, which is exactly the authorization
+that was missing from #533. This entry documents implementing that request correctly, plus a
+companion UI request from the same conversation.
+
+**Data Lake capacity: `DATA_LAKE_CAPACITY_BY_LEVEL` lookup table, not a derived helper.** Unlike
+`intro.capacity` (a raw bit value doubled repeatedly, with no explicit step counter — see
+`getNextSiDoubledValue` above), a Data Lake's own capacity level is already an explicit small
+integer (`capacityLevel`, 0–`DATA_LAKE_CAPACITY_MAX_LEVEL`/10) tracked directly in state. This makes
+a plain lookup table strictly better than reusing `getNextSiDoubledValue`'s derive-from-value
+approach: `DATA_LAKE_CAPACITY_BY_LEVEL = [1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]` (`layers.js`)
+needs no float-precision handling at all, at any level, since every entry is a small hardcoded
+integer rather than something computed from a potentially-imprecise accumulated value.
+`getDataLakeCapacity` (`engine.js`) changed from `2 ** getDataLakeCapacityLevel(state, tierIndex)` to
+`DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]` — a one-line change.
+`DATA_LAKE_CAPACITY_MAX_LEVEL` itself stays 10 (11 table entries, levels 0–10); only the VALUE at
+the max level changed, from a binary 1,024 units to a clean SI 1,000. This is, functionally, exactly
+PR #533's original `getDataLakeCapacity` change — it was correct in isolation the first time; only
+its scope was wrong, and now the scope is authorized.
+
+Downstream: `getDataLakeCapacityDoublingCost`/`isDataLakeCapacityMaxed`/`canDepositDiskToDataLake`
+all read `getDataLakeCapacity`'s return value already, so needed no changes of their own — only their
+own doc comments citing "1,024" were updated to "1,000." The Guide (`InfoPage`) previously hardcoded
+`2 ** DATA_LAKE_CAPACITY_MAX_LEVEL` to describe the max cap in prose; since that's no longer the
+correct formula, it now reads `DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]`
+instead — still a pure derivation from the same exported constant table the engine uses, keeping the
+Guide's "reads no live state, only pure constants/formulas" property (see "Architecture" in
+`CLAUDE.md`) intact rather than hardcoding the literal `1000`.
+
+**Test fallout.** The two `engine.test.js` tests pinning the old 1,024 max (`doubleDataLakeCapacity`
+hard-cap; the "1,024 hard-caps the total below 1,110" deposit test) were updated to 1,000, with the
+deposit test's own worked-example arithmetic corrected: at a 1,000 cap, filling the ×1 and ×10
+sub-slots first (10 + 100 = 110 units) leaves room for exactly 8 full ×100 deposits (800 units,
+total 910) before a 9th would push the total to 1,010 > 1,000 and get blocked — two ×100 disks stay
+undeposited, not one (the 1,024-cap version left room for 9). A new test walks the full level 0→10
+progression through the real `doubleDataLakeCapacity` action, asserting the sequence matches
+`[1, 2, 4, 8, 16, 32, 64, 125, 250, 500, 1000]` exactly — mirroring the equivalent step-by-step
+coverage `getNextSiDoubledValue`'s own test suite already has for the Memory ladder.
+
+**Pool Memory UI: reuse the Data Stream card's own block, not a bespoke bar.** Separately, a
+screenshot-driven request: the pool card's "Bandwidth / Capacity / Memory" three-column stat row
+(each a labelled `PoolStatLabel`/`PoolStatValue` pair, Memory alone carrying a thin
+`PoolBufferMeter` fill bar) read as visually inconsistent with the Data Stream card immediately
+above it on the same screen, which shows its own balance as one full-width fillable block
+(`FillableStatCard` — a gradient fill background sized to the current percentage, with a bold
+balance line and a muted status line, no visible label). The fix was to reuse that same block
+verbatim for the pool's own Memory/Capacity/Bandwidth display, rather than inventing a second,
+parallel meter convention: `PoolStatsRow`/`PoolStat`/`PoolStatLabel`/`PoolStatValue`/
+`PoolBufferMeter` were deleted from `ByteFoundryPage/index.jsx` entirely, replaced by one
+`FillableStatCard` (the exact same styled component the Data Stream card already used) per pool,
+containing a `BalanceText` line reading `<buffer bits> / <buffer capacity>` (the pool's own small
+local buffer over its own Capacity — which `getPoolBufferCapacity` already equals exactly, per
+"Per-pool Memory buffers" further up this file, so no new value needed fetching) above a
+`StatusText` line reading `<bandwidth>/sec` below — both unlabelled, matching the Data Stream
+card's own convention of conveying the figure's meaning through position and styling rather than a
+caption. The fill percentage (`poolBufferPercent`, unchanged) drives the block's background exactly
+as it drove the old `PoolBufferMeter`'s. `getStoragePoolCapacity` was dropped from this file
+entirely — it was fetched solely to render the old, separate "Capacity" stat, which the new fraction
+already covers via the equal `poolBufferCapacity` value.
+
+`App.test.jsx`'s pool-advance test, which previously asserted on the literal strings `'Bandwidth'`
+and `'Capacity'` as separate labelled elements, was updated to assert on the actual rendered
+text — the bandwidth figure and the buffer/capacity fraction — computed via `getPoolBufferBits`/
+`getPoolBufferCapacity` (newly imported into the test file) rather than the no-longer-rendered
+`getStoragePoolCapacity`. Verified visually via a real Playwright/Chromium screenshot against
+`yarn dev` (seeded to the exact 125,000-Byte/67,382-Byte scenario from the reported screenshot)
+before considering the change done, per this repo's own "test UI changes in a browser" convention.
+
+### Pool titles simplified to "<symbol> Pool"; each pool's Data Lake moved inside its own card
+
+Two more follow-up UI requests in the same conversation as the entry above, both scoped purely to
+`ByteFoundryPage`/`DataLakePanel` presentation — no economy logic changed.
+
+**Pool title.** Each `PoolCard`'s title previously read "`<symbol>` Pool `<n>` · `<Tier name>`" (e.g.
+"KB Pool 1 · Kilobytes"), left-aligned. Requested: rename to just "`<symbol>` Pool" (e.g. "KB Pool")
+and center it. The reasoning holds up on inspection — the symbol (KB/MB/GB/…) already uniquely
+identifies which pool this is among the ten, so both the numeric index and the spelled-out tier name
+were redundant with it. `PoolTitleName` (the styled span holding "Pool `<n>` · `<Tier name>`") was
+deleted; `PoolTitle` now renders just the symbol plus a plain "Pool" span, and `PoolHeaderRow`/
+`PoolTitle` both switched from left/`space-between` alignment to `justify-content: center`. The
+`aria-label`s that actually distinguish pools for accessibility/tests (`"pool <n>"` on the card,
+`"expand/collapse pool <n>"` on the summary button) are untouched — they never displayed to sighted
+users in the first place, so dropping the index from the *visible* title doesn't remove it from
+anywhere assistive tech or tests actually read it from.
+
+**Data Lake relocated into its own pool's card.** Previously `DataLakePanel` rendered once, after
+every `PoolCard`, showing every lake with any activity (deposits, a purchase, capacity growth) as a
+row in one shared grid — a design explicitly separate from any one pool's own card. Requested: move
+each lake's own row inside its corresponding pool's card, positioned below that pool's disk-array
+rows. This is, notably, exactly what `DataLakePanel`'s own pre-existing doc comment already
+described ("`bare` skips the own StatCard wrapper... used when a caller (e.g. ByteFoundryPage's
+single pool card) already provides that chrome") — the component was seemingly designed with this
+embedding in mind from early on, but the actual call site had never been wired that way; the global,
+un-scoped `<DataLakePanel actions={actions} state={state} />` after the pool-card loop was the only
+caller before this change.
+
+**Implementation.** `DataLakePanel` gained an optional `tierIndex` prop: when set, `visibleTiers`
+becomes the single-element `[tierIndex]` instead of `getVisibleLakeTierIndexes(state)`'s
+activity-filtered list — meaning a lake embedded this way is **always** shown once its pool is
+unlocked and expanded, not conditionally hidden until it has activity, since it's now a permanent
+structural part of that pool's own card rather than an entry in a rarity-filtered global list. The
+existing multi-tier (`tierIndex` omitted) code path was left completely intact for API
+compatibility/potential reuse, even though no caller currently exercises it — the component's own
+doc comment already flagged this as a deliberately-reusable shape. `ByteFoundryPage` moved the
+`<DataLakePanel .../>` call from after the whole pool-card `.map()` loop to inside each pool's own
+`isExpanded` block, right after that pool's `DiskArrayRow` list, passing `bare` (skip the outer
+StatCard — the surrounding `PoolCard` already supplies that chrome) and `tierIndex={poolIndex}`.
+
+**Test fallout.** `App.test.jsx`'s "Data Lake renders bare" test previously asserted a global
+`aria-label="Data Lakes"` region existed; that region no longer renders anywhere (there's no more
+un-scoped multi-lake caller), so the test now asserts the opposite (`queryByLabelText` returns
+nothing) and instead checks the lake's own text renders `within` its specific pool's own
+`aria-label="pool 1"` region. Two disk-array-detail tests (`'ByteFoundryPage renders the current
+size's full interactive Disk array detail inline...'` and `'cache squares and disk circles carry
+bit-scale vs Byte-scale size labels...'`) previously counted every `'1 KB'` text node on the whole
+page to assert exactly `DISK_ARRAY_LADDER_CAP` (10) disk circles — now that the pool's own embedded
+Lake row can ALSO show a `'1 KB'` figure (its own Capacity or next-Booster-cost, both plausible at a
+fresh lake's starting values), the raw counts inflated to 12. Both were narrowed to query `within`
+the specific `role="group"` disk/cache elements instead of the whole document, which both fixes the
+count and is arguably the more correct scope for what each test is actually about (this size's own
+rendered cells, not incidental same-text matches elsewhere on the page). The pool-advance test's
+`'Kilobytes'`/`'Megabytes'` text assertions (checking the now-removed tier name) were replaced with
+checks for the pool's own symbol immediately followed by "Pool" (`` `${TIER_DEFINITIONS[n].symbol}Pool` ``
+— no literal space in the DOM text between the two spans, only CSS `gap`).
+
+A small, unrelated accessibility nit surfaced by the same review round was folded in here too: the
+pool's own `FillableStatCard` block (the memory/capacity/Bandwidth bar from the entry above) carried
+an `aria-label` on a plain `<div>`, which per the accessible-name computation spec is inert without an
+explicit ARIA role. Added `role="group"` so the label actually attaches; the Data Stream card's own
+`FillableStatCard` instance was unaffected since it already renders `as="button"`/`as="section"`
+(both roled elements) once `intro.byteCreated`.
+
+Verified visually via Playwright/Chromium against `yarn dev` for both changes together — a fresh
+pool card reads "KB Pool" / "MB Pool" (centered) with the KB lake's own row appearing directly below
+its disk squares once expanded, matching the request.
+
+### "0.xyz <unit>" fractions eliminated from every Byte/bit-denominated display
+
+A follow-up rule from the same conversation: never render a number as "0.xyz" — a fraction below 1
+with a bare "0" in front of the decimal reads as noise rather than a magnitude, and there's almost
+always a smaller unit (down to the raw bit count, the finest unit this game has) that would show the
+same underlying value with at least one meaningful significant digit before the decimal instead.
+
+**Where this actually occurs.** Every Byte/bit-scale display in the game ultimately routes through
+`formatMemoryAmount(bits, unit)`, which divides `bits` by `unit.divisor` and floors to 3 decimal
+places. The two unit ladders it's fed (`getSiByteUnit` for Disks/Data Lake/Bandwidth — SI, step
+1000; `getMemoryUnit` for the Data Stream Buffer/pool Memory Capacity — binary, step 1024) both
+bottom out at whole Bytes ("B", divisor `BITS_PER_BYTE` = 8) — neither defines any unit smaller than
+a Byte. A self-sized call (each ladder picks its OWN unit off the value it's about to display) can
+therefore only ever produce a sub-1 fraction at that one bottom rung — e.g. `formatDiskSize(4)`
+(4 bits = half a Byte) previously rendered `"0.5 B"`, and the reported live-game symptom,
+`getStoragePoolBandwidth` returning a sub-1-Byte-per-second rate, rendered `"0.125 B/sec"` on the
+Storage pool card. A second, less obvious source: `formatMemoryBalance` (`ByteFoundryPage`'s own
+local helper backing the Data Stream tile) deliberately sizes ONE shared unit off `capacity` (the
+larger of a bits/capacity pair) so both numbers read in the same unit — but the smaller `bits` value,
+shown through that SAME (capacity-sized) unit, can land anywhere below 1 whenever it's a small
+fraction of capacity — not just at the ladder's bottom rung. A balance of 500 bits shown through a
+capacity-derived KiB unit (divisor 1024) floors to `0.488`, a clear "0.xyz" violation despite the
+unit itself being nowhere near the bottom of the ladder.
+
+**The fix: catch this at render time, in the one shared function both ladders funnel through** —
+not at unit-selection time, and not by adding a third, sub-Byte unit rung to either ladder (there
+isn't a sensible name for one; a Byte is already this game's smallest *named* unit). After computing
+the floored `scaled = bits / unit.divisor`, `formatMemoryAmount` now checks `scaled > 0 && scaled < 1`
+— a genuine nonzero fraction below one whole unit — and if so, falls back to the exact same raw
+`"N bit(s)"` string the function already renders when `unit` itself is `null` (the pre-`byteCreated`
+case; see the `getMemoryUnit` doc comment for that earlier, narrower instance of the same underlying
+principle — "a fractional Byte reads worse than the raw count for a range this small"). A `scaled`
+that floors to exactly `0` is deliberately left alone (renders `"0 <unit>"`, e.g. `"0 MiB"`) — there's
+no fraction to hide since nothing after the decimal point would ever show.
+
+**Why render-time, not unit-selection-time.** Fixing this inside `getSiByteUnit`/`getMemoryUnit`
+themselves (e.g. having them return `null` whenever the INPUT value is below `BITS_PER_BYTE`, mirroring
+`getMemoryUnit`'s existing `byteCreated` gate) would correctly handle every SELF-sized call, but not
+the `formatMemoryBalance` shared-unit case above — there the unit is sized off `capacity` (always well
+above the ladder's bottom rung once `byteCreated`), while the problem value is the DIFFERENT, smaller
+`bits` argument sharing that same unit. Only a check at the point where a specific value is actually
+being rendered through whatever unit it was given catches both shapes with one change, regardless of
+which value (or whose reasoning) picked that unit.
+
+**Why the `formatMemoryBalance` pairing rule was knowingly relaxed, not preserved.** The existing,
+documented convention for that helper is "both numbers always render in the same unit... so a balance
+never reads in a coarser unit than its own Buffer" — explicitly to avoid a *different* kind of
+confusing mismatch (e.g. "512 B / 1 KiB"). This fix can now produce exactly the kind of mismatch that
+rule was written to prevent — e.g. "500 bits / 1 KiB" — whenever the balance alone would otherwise
+show a bare fraction. This was a deliberate trade-off, not an oversight: the newer, explicit,
+unconditional "never 0.xyz" instruction is more specific and postdates the original same-unit
+convention, and a divergent-but-legible pair ("500 bits / 1 KiB") reads more clearly than a
+same-unit-but-fractional one ("0.488 KiB / 1 KiB") — especially since the divergence is rare and
+self-correcting: it only ever triggers while the balance is a genuinely tiny fraction of a much
+larger capacity (e.g. right after a Capacity ×2 purchase drains it to near-zero), and resolves back
+to a shared unit as soon as the balance climbs high enough to floor to a value at least 1 in that
+unit. `getMemoryUnit`'s own pre-`byteCreated` gate was deliberately left untouched rather than
+removed as now-redundant: removing it would let a fresh cycle's tap-phase balance/capacity pair
+diverge into e.g. "3 bits / 1 B" (via this same fallback) instead of the current, still-preferred
+"3 bits / 8 bits" — keeping both sides in raw bits together reads better than a divergent pair for
+that specific, very-small-magnitude window, so the gate's pre-existing behavior stands on its own
+merits independent of this more general fix.
+
+**Test fallout.** `engine.test.js`'s `formatDiskSize` test suite had a test literally titled "renders
+a fractional Byte below the 1-Byte (8-bit) threshold," pinning the exact `"0.5 B"` output this fix
+eliminates — retitled and updated to assert the new `"4 bits"`/`"1 bit"` fallback instead. Two new
+`formatMemoryAmount` tests were added: one confirming the fallback fires for a value sharing a
+capacity-sized unit (not just a self-sized bottom-rung one), and one confirming a true zero is
+unaffected. Verified visually against the exact reported scenario (a pool Bandwidth of `1 bit/sec`,
+previously `"0.125 B/sec"`) via Playwright/Chromium against `yarn dev`.
+
+**Follow-up, found by adversarial review before merge: the raw-bits fallback itself assumed `bits`
+was always a whole number.** The fallback above renders `` `${formatAmount(bits)} bit${bits === 1 ?
+'' : 's'}` `` — reusing `bits` exactly as given. That's the game's true bit count for every ordinary
+caller, but not for the ones actually feeding the two live displays this fix targets:
+`tickPoolBufferFill`'s own transfer amount (`Math.min(fillRate * elapsedSeconds, room, bits)`) is
+never floored before being added to a pool buffer or subtracted from `intro.bits`, and neither are
+the analogous cache-fill transfers — both real numbers, not integers, since `fillRate` and
+`elapsedSeconds` (a tick's fractional-second duration) rarely multiply to a whole number. So while a
+pool's buffer (or the Data Stream balance itself) fills up from near-zero — a fresh pool unlock, or
+right after a Capacity-doubling/lake-doubling purchase drains it to 0 — `bits` can genuinely sit at,
+say, `0.3` for a tick, and the fallback would render `"0.3 bits"`: the identical "0.xyz" pattern this
+whole fix exists to eliminate, just relabeled from a Byte-scale unit onto the bit count itself. No
+test added alongside the original fix exercised a fractional `bits` input (all used integers), so
+nothing caught it before review.
+
+Fixed by flooring `bits` immediately before building the `"N bit(s)"` string (a new
+`flooredBitsLabel` helper used by both the `unit === null` branch and the below-1-in-its-unit
+fallback), rather than floor it further upstream in `tickPoolBufferFill`/the cache-fill transfers
+themselves — flooring the accumulators would change actual game-state precision (fill amounts,
+timing) for what is fundamentally a display-only defect; flooring only at the point of rendering
+keeps the fix scoped to formatting, matching the rest of this entry's own "catch this at render
+time" reasoning. `0.3`/`0.9` bits now floor to a clean `"0 bits"`; `1.9` floors to `"1 bit"` — same
+"never overstate" rounding direction every other amount in this file already uses. Three new test
+cases cover the null-unit branch and the fallback branch (via a `divisor: 1` unit, the bit-scale
+ladder's own bottom rung, so `scaled` equals `bits` itself and a fractional input reliably lands in
+the fallback path being tested).
+
+### Whole-Byte tier costs converted from an arbitrary-looking bit count to Bytes in scientific notation
+
+A follow-up in the same conversation as the "0.xyz" entry above, but at the opposite end of the
+number line: MainPage tier Buy buttons price everything in Bits (`MONEY_ID = 'base'`), and once a
+level cost crosses `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000), `formatCurrency` switches to
+scientific notation — e.g. Megabytes' own full-block cost (8,000,000 bits) read `"8e6 b"`. The
+report: this specific figure is not an arbitrary bit count at all — it's exactly 1,000,000 Bytes
+(a Byte being 8 bits), and should read `"1e6 B"` to make that explicit.
+
+**Why this is common, not a one-off.** A scientific-notation mantissa of exactly `BITS_PER_BYTE`
+(8) turns up regularly in this game's cost ladders because so many of them are built on
+Byte-denominated real-world quantities multiplied by 8 to get their Bits price — Kilobytes' whole
+tier concept, and `PRESTIGE_THRESHOLD` itself (`GOOGOL * BITS_PER_BYTE` = `8e100`, already
+documented elsewhere as "1 Googol Bytes, expressed in Bits since a Byte is 8 Bits" — see the
+`PRESTIGE_THRESHOLD` history entry). The Prestige-threshold overlay was, before this fix, silently
+inconsistent with its own documented meaning: displaying `"8e100 b"` while every comment describing
+the constant already called it "1 Googol Bytes."
+
+**The fix, and why it's narrower than "always divide by 8."** `formatCurrency` now checks, in the
+exponential range only, whether the value's scientific-notation mantissa is exactly 8 (computed as
+`value / 10 ** Math.floor(Math.log10(value))`, compared against `BITS_PER_BYTE` within a small
+float-tolerance epsilon) — not merely whether the value is evenly divisible by 8. Divisibility alone
+isn't sufficient: an arbitrary divisible value like `2.4e41` (`24 × 10^40`, divisible by 8) would
+convert to `3e40`, a mantissa unrelated to the original's own "shape" and no more illuminating than
+the bits figure was. Only an EXACT mantissa of 8 guarantees the Bytes conversion produces an
+equally-clean round number (mantissa exactly 1) with zero information lost — the narrow, literal
+case the request actually described (`"8eN b"` → `"1eN B"`), not a broader unit-conversion policy
+applied speculatively to every divisible value.
+
+**Scope: `formatCurrency`, not just the tier-cost UI element the report mentioned.** The same
+mantissa-8 pattern is a property of the NUMBER, not of which button happens to display it —
+`formatCurrency` is the single shared formatter behind every Bits-denominated display in the game
+(tier costs, tickspeed/autobuyer costs, the Prestige-threshold overlay), so fixing it there applies
+the rule everywhere consistently rather than special-casing just the Buy button. `formatMoneyBalance`
+(MainPage's own `MoneyHero` headline) is unaffected — it already does its own independent Bytes
+conversion at a much lower threshold (`MONEY_BYTES_DISPLAY_THRESHOLD` = 8000 bits, far below the
+1,000,000 exponential threshold) via a separate code path that never calls `formatCurrency` in the
+exponential range, so there's no double-conversion or interaction between the two.
+
+**Test fallout.** `App.test.jsx`'s Megabytes-tier test had directly pinned the old `"8e6 b"` button
+text (with a comment explaining the exponential-threshold math) — updated to `"1e6 B"` with the
+Bytes-conversion reasoning added. Two new `formatCurrency` tests were added: one confirming the
+conversion fires correctly across several magnitudes (`8e6`, `8e21`, and `8e100` — the last matching
+`PRESTIGE_THRESHOLD` exactly), and one confirming other mantissas (`2e6`, `4e6`, `1.6e6`) are left
+in Bits, proving the fix doesn't over-trigger on merely-divisible-by-8 values.
+
+### App icon redesigned from a plain "10" text glyph to an 8-cell "byte" grid
+
+A third, independent follow-up: propose a distinctive icon for the game and put it in place across
+every icon surface (favicon, PWA install icons, apple-touch-icon). The existing icon
+(`scripts/generate-pwa-icons.mjs`, since the app's original PWA setup) was a centered serif "10"
+glyph in the brand accent color on the dark page background — functional but generic, reading as a
+placeholder rather than a mark specific to this game.
+
+**Concept.** An 8-cell grid (4 columns × 2 rows) of rounded squares, each filled with a diagonal
+gradient sweeping through three of the app's own existing semantic color tokens (`accent` indigo →
+`violet` → `good` green — the same hues already used throughout the real UI, `src/theme/tokens.js`)
+on the same dark `page` background the old icon used. This was chosen over other candidates
+(an ascending-bar "growth chart" glyph; a redrawn, more graphic "10" logomark) specifically because
+it ties directly to the one mechanic every player encounters first and universally, regardless of
+how far a run progresses: the Byte Foundry's own tap-to-earn loop, where exactly 8 tapped bits
+combine into 1 Byte. A generic "10" numeral describes the game's *name*; the byte grid describes
+what a player actually *does* in it. The gradient itself doubles as a nod to the game's other
+throughline — exponential growth across powers of ten — without needing literal digits at all.
+
+**Small-size legibility required a second, simplified variant.** Rendering the full 8-cell grid down
+to a true 16×16 favicon (checked by rasterizing at 16px and inspecting a nearest-neighbor upscale
+for review, not just eyeballing the 512px source) produced an illegible plaid — the cell gaps and
+rounded corners blur together at that resolution, a well-known failure mode for detailed marks at
+favicon sizes. Rather than simplify the ONE shared design for every consumer (losing the byte-count
+specificity at every larger size too, where 8 cells render perfectly clearly), `gridSvg` was
+parameterized by `cols`/`rows`: the 512px/192px/180px PWA and apple-touch icons keep the full
+4×2/8-cell grid, while `favicon.ico`'s three embedded frames (16/32/48px) use a simplified 2×2/
+4-cell version of the identical gradient/style — confirmed legible at true 16×16 via the same
+render-and-upscale check. This is the same "coarser glyph at small sizes" pattern many established
+app icons use (a simplified mark at favicon scale, the full mark everywhere larger), not a
+compromise unique to this game.
+
+**`favicon.ico` didn't exist as a build output before this change** — the repo's checked-in
+`favicon.ico` predated `scripts/generate-pwa-icons.mjs` entirely (the script only ever wrote the
+PWA/apple-touch PNGs) and was presumably hand-produced once, out of band, and never regenerated
+since. Bringing it into the same generation script (rather than hand-editing a binary `.ico` file,
+which isn't practically possible in an editing session) required constructing one from scratch:
+`sharp` can rasterize the SVG to PNG frames but has no ICO writer, so a minimal ICO container
+(6-byte header + one 16-byte directory entry per frame + the raw PNG bytes themselves) is
+hand-assembled directly in the script — deliberately using the modern "PNG-frame" ICO variant
+(supported since Windows Vista, and what every current browser expects) rather than the legacy
+BMP+AND-mask encoding, which needs uncompressed pixel data and a separate transparency mask per
+frame — avoiding a new dependency for what's a one-off, infrequently-run script (this repo already
+treats `sharp` itself as acceptable exactly because icon generation is dev-tooling, not part of the
+production build).
+
+**No test changes** — icon files aren't exercised by the Vitest suite (no snapshot/pixel tests
+cover `public/*.png`/`favicon.ico`), so this was verified purely visually: rendering each generated
+size directly, and specifically the 16×16 favicon frame upscaled with nearest-neighbor sampling
+(to inspect true-resolution legibility rather than a browser's own smoothed preview) before and
+after the 2×2 simplification.

@@ -164,11 +164,14 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Each pool's end bound is `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)` — an
    SI-round value (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …), NOT a binary one — so a pool's
    own Capacity/Bandwidth land on genuinely clean SI figures rather than binary values merely
-   displayed in SI units. Capacity ×2 requires a full Buffer, drains it, and doubles the shared
-   Data Stream Capacity by `INTRO_CAPACITY_DOUBLING_STEP` (plain `×2` per purchase — the SI
-   alignment lives in the boundary CONSTANTS, not the doubling mechanic itself, so the ladder's
-   last purchase before a new pool's cap simply clamps a little earlier than a raw double would
-   land); it stops at the active highest-unlocked-pool end bound, which moves upward as pools
+   displayed in SI units. Capacity ×2 requires a full Buffer, drains it, and grows the shared Data
+   Stream Capacity via `getNextSiDoubledValue` — a plain `×2` per purchase that deviates from 64
+   to 125 Bytes (not 128) once per "decade" of 10 doublings, so intermediate Capacity values land
+   on SI-clean figures too (1, 2, 4, …, 64, 125, 250, 500, 1,000, … Bytes), not just each pool's
+   own end boundary — clamped to `Math.min(…, endBits)` as before, so the ladder's last purchase
+   before a new pool's cap still lands exactly on that boundary; see `docs/DESIGN_HISTORY.md` for
+   why an earlier fix left the mechanic itself as plain binary doubling, and what that missed. It
+   stops at the active highest-unlocked-pool end bound, which moves upward as pools
    unlock. The Data Stream CARD's own balance/Buffer display still uses **binary units**
    (`B`/`KiB`/`MiB`/…, step 1024 via `MEMORY_BINARY_UNIT_STEP` —
    `getMemoryUnit`/`formatBitsInNearestUnit`), distinct from Disks/Data Lake/caches (SI, step
@@ -543,10 +546,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    from under it.
    **Capacity doubling** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
    `doubleDataLakeCapacity(tierIndex)`) is the one intentional, explicit cap on a lake's deposits:
-   `getDataLakeCapacity` returns `2 ** getDataLakeCapacityLevel(state, tierIndex)`, starting at level
-   0 (1 unit — "1 KB" for the KB lake, in that lake's own Byte-scale denomination) and permanently
-   hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake)
-   via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Data
+   `getDataLakeCapacity` looks up `DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]`
+   — plain doubling (1, 2, 4, 8, 16, 32, 64) except a single 64→125 deviation at level 6→7 (the same
+   SI-clean switchover pool Capacity's own `getNextSiDoubledValue` uses — see "Byte Foundry" above),
+   then 125→250→500→1,000 — starting at level 0 (1 unit — "1 KB" for the KB lake, in that lake's own
+   Byte-scale denomination) and permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 —
+   1,000 units, "1000 KB" for the KB lake) via `isDataLakeCapacityMaxed`. Unlike pool Capacity's raw
+   continuously-doubled bit value, a lake's level is an explicit small integer (0–10) already tracked
+   in state, so this lookup needs no float-precision handling. Doubling is funded by **draining the
+   lake itself**, not Data
    Stream Bits: `isDataLakeCapacityDoublingAvailable` requires the lake to be completely full
    (deposited units at least its own current capacity), and `doubleDataLakeCapacity` empties every
    deposit back to zero on purchase — the same "requires a full Buffer, drains it" shape Memory's
@@ -562,7 +570,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    An earlier version fixed this cap at a value derived directly from the Disk arrays themselves,
    with no purchasable lever at all; a version after that funded doubling from Data Stream Bits
    (spending the lake's own capacity expressed in real-bit currency, the "spend the current value to
-   double it" shape Capacity ×2 uses) — see `docs/DESIGN_HISTORY.md` for both.
+   double it" shape Capacity ×2 uses); a later correction switched the step sequence itself from
+   plain `2 ** level` to `DATA_LAKE_CAPACITY_BY_LEVEL`'s SI-clean sequence, moving the max-level cap
+   from 1,024 to 1,000 — see `docs/DESIGN_HISTORY.md` for all three.
 
    `canDepositDiskToDataLake` itself requires not just a currently-full disk but that size's disk
    array to be COMPLETELY built — `disksBuiltTotal[sizeBits] >= DISK_ARRAY_LADDER_CAP` (all 10 disks
@@ -571,13 +581,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    cap above. Each lake's 3 sub-slots (`DATA_LAKE_SUB_SIZES = [1, 10, 100]`) are ALSO each backstopped
    at `DISK_ARRAY_LADDER_CAP` (10) — not a second design cap, just keeping the deposits counter from
    exceeding how many disks of that size could ever exist (an array permanently stops growing at
-   exactly `DISK_ARRAY_LADDER_CAP` disks). Since the 1,024-unit capacity-level cap sits below what
+   exactly `DISK_ARRAY_LADDER_CAP` disks). Since the 1,000-unit capacity-level cap sits below what
    this backstop alone would allow if every sub-slot were somehow filled to it (`DISK_ARRAY_LADDER_CAP
    × DATA_LAKE_SUB_SIZE_TOTAL`, 10 × 111 = 1,110 — an incidental sum, not a target), the
    capacity-level cap is always the one that actually binds: a fully-built pool at max level can
-   still never fill its largest (×100) sub-slot to its own full backstop of 10 (1,024 leaves room
-   for only 9 full ×100 deposits once the ×1/×10 sub-slots are also full: 10 + 100 + 9×100 = 1,010,
-   one shy of 1,110). `decomposeDataLakeDeposits` caps each sub-size's own place at this same
+   still never fill its largest (×100) sub-slot to its own full backstop of 10 (1,000 leaves room
+   for only 8 full ×100 deposits once the ×1/×10 sub-slots are also full: 10 + 100 + 8×100 = 910;
+   a 9th ×100 deposit would push the total to 1,010, past the 1,000 cap). `decomposeDataLakeDeposits` caps each sub-size's own place at this same
    backstop value (`Math.min(DISK_ARRAY_LADDER_CAP, Math.floor(remainder / subSize))`), so the
    greedy largest-denomination-first re-decomposition after a spend is always exact (proven correct
    for any total in `[0, 1110]` once the per-slot cap is `>= 9`, comfortably true at 10) — this
@@ -882,9 +892,12 @@ largest unit that comfortably fits `capacity` — raw bits before the Byte gener
 meaningfully denominate in yet — a fractional Byte reads worse than the raw count for a range this
 small), then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own
 `KB`..`QB` symbols with an "i" (pool Memory Capacity end bounds are evenly divisible by
-`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Both numbers always render in
-the *same* unit (picked off `capacity`, the larger of the two), so a balance never reads in a
-coarser unit than its own Buffer. Data Stream balance/Buffer (and the pool Memory Capacity
+`BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Both numbers render in the
+*same* unit (picked off `capacity`, the larger of the two) so a balance never reads in a coarser
+unit than its own Buffer — EXCEPT when the balance alone would floor to a nonzero fraction below 1
+in that unit (e.g. "0.488 KiB"), which `formatMemoryAmount` instead renders as raw bits for that one
+number, diverging from Buffer's own unit rather than showing a bare fraction — see
+`docs/DESIGN_HISTORY.md`. Data Stream balance/Buffer (and the pool Memory Capacity
 start–end label once `byteCreated`) render in **binary** units — `B`/`KiB`/`MiB`/…/`QiB`, step 1024
 (`getMemoryUnit`/`MEMORY_BINARY_UNIT_STEP`) — so `1 KiB = 1024 Bytes = 1.024 KB`, distinct from
 Disks/Data Lake/caches, which stay on the original SI (step 1000) scale (see below). The unit
@@ -2245,7 +2258,7 @@ purchases were manual or automatic.
 | `isMemoryCapacityAtCap` | `state → bool` | `intro.capacity >= getStoragePoolMemoryBounds(getUnlockedStoragePoolCount(state)).endBits` — the active ceiling is the highest unlocked pool's end bound |
 | `normalizePoolMemoryCapacity` | `state → state` | Clamps shared `intro.capacity` to the highest unlocked pool's end bound and clears legacy queued Capacity state; it does not force-raise Capacity on load |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Shared binary Capacity windows for each unlocked storage pool (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
-| `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and doubles `intro.capacity` up to the highest unlocked pool's ceiling (via `upgradePoolCapacity`) |
+| `pickIntroCapacityMilestone` | `state → state` | Capacity ×2 action: drains a full Buffer and grows `intro.capacity` via `getNextSiDoubledValue` up to the highest unlocked pool's ceiling (via `upgradePoolCapacity`) |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full and no higher-priority action blocks it |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears a legacy `capacityUpgradeQueued` flag. Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
@@ -2259,7 +2272,7 @@ purchases were manual or automatic.
 | `isIntroConversionUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_CONVERSION_UNLOCK_CAPACITY` (8000) — drives whether `ByteFoundryPage` shows the transfer-block row at all |
 | `isStorageUnlocked` | `state → bool` | Byte Foundry predicate (not a reducer): `intro.capacity >= INTRO_DISK_UNLOCK_CAPACITY` (80,000 bits, "9.765 KiB" in Memory's own binary display scale) — reveals Foundry's Provision Disk control and continuous DiskArrayRow sections |
 | `getMemoryUnit` | `(capacityBits, byteCreated) → { symbol, divisor } \| null` | Byte Foundry Memory Capacity's own **binary** unit ladder (`engine.js`, shared by ByteFoundryPage/StoragePage): the single B/KiB/MiB/…/QiB unit (step `MEMORY_BINARY_UNIT_STEP`, 1024) a `bits`/`capacity` pair should both render in, sized off `capacityBits`; `null` before `byteCreated` (nothing to denominate in yet — render raw bits). Distinct from `getSiByteUnit` (internal, SI/step-1000, backs `formatDiskSize`) |
-| `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit` or `getSiByteUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null` |
+| `formatMemoryAmount` | `(bits, unit) → string` | Byte Foundry (`engine.js`): formats `bits` in `unit` (from `getMemoryUnit` or `getSiByteUnit`), floored to 3 decimals; falls back to a raw `"N bit(s)"` string when `unit` is `null`, and ALSO when `unit` is given but the floored value would be a nonzero fraction below 1 (e.g. `0.5`/`0.003`) — never renders a "0.xyz `<unit>`" string with no significant digit before the decimal; a floored value of exactly `0` still renders as `"0 <unit>"` (no fraction to hide). See `docs/DESIGN_HISTORY.md` |
 | `formatBitsInNearestUnit` | `bits → string` | Byte Foundry (`engine.js`): `formatMemoryAmount(bits, getMemoryUnit(bits, true))` — any Data Stream–denominated cost (Speed / Disk build) in whichever **binary** unit best fits that specific amount |
 | `getIntroKilobyteConversionCost` | `state → number` | Byte Foundry: `BITS_PER_BYTE * getTierCost(TIER_DEFINITIONS[0], purchaseLevels.tier01 ?? 1)` — `BITS_PER_BYTE` times tier01's own CURRENT per-unit level cost, the exact same underlying value `getDiskSize`/`isDiskRedeemable` key off (before the `BITS_PER_BYTE` scaling). Exactly `INTRO_BITS_PER_KILOBYTE_CONVERSION` (8000) at a fresh cycle's level 1, growing in lockstep with tier01's own price from then on. An earlier version stayed flat at `INTRO_BITS_PER_KILOBYTE_CONVERSION` forever — see `docs/DESIGN_HISTORY.md` |
 | `convertIntroBitsToKilobytes` | `state → state` | Byte Foundry: spends `getIntroKilobyteConversionCost(state)` bits (tier01's own CURRENT per-unit level cost, not the fixed `INTRO_BITS_PER_KILOBYTE_CONVERSION` rate) from `intro.bits`, grants 1 free `TIER_DEFINITIONS[0]` (Kilobytes) unit via the internal `grantTierUnits` helper — bypasses `isTierUnlocked`/`isProductionFrozen` entirely (separate currency pool). No-op only below cost — **no per-cycle cap**. Sets `mainGameUnlocked: true` on success. Called once per transfer-block click in `ByteFoundryPage`, and once per unit by `tickIntroAutoInvest` below |
@@ -2365,7 +2378,7 @@ purchases were manual or automatic.
 | `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not currently `isLastTierTickspeedXpUnlocked`, if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 plus the Money balance (`resources[MONEY_ID]`) to 0 — `purchased` and the last tier's own `owned`/`resources` are untouched (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Called both manually (the "🧬 {XP} XP" button, always passing the tier's entire current XP balance) and automatically by `tickGame`, once per tick, for a tier whose `tierTickspeedAutobuyer` flag is bought while `isLastTierTickspeedXpUnlocked` holds — same self-no-op behavior either way |
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above, exponent marker lowercased to `e` (e.g. `6.5e13` — `Intl.NumberFormat`'s scientific notation always renders an uppercase `E` with no formatting option to override it, so a shared `formatScientific` helper lowercases it after formatting) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing the base currency which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
-| `formatCurrency` | `value → string` | Full comma-grouped string below `EXPONENTIAL_NOTATION_THRESHOLD`, suffixed with `RESOURCE_SYMBOL(MONEY_ID)` (`b`), floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `6.5e13 b`) — used for every Money amount (costs, production rates, the Prestige-threshold overlay), except `MainPage`'s own headline balance readout once it grows large enough — see `formatMoneyBalance` below |
+| `formatCurrency` | `value → string` | Full comma-grouped string below `EXPONENTIAL_NOTATION_THRESHOLD`, suffixed with `RESOURCE_SYMBOL(MONEY_ID)` (`b`), floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `6.5e13 b`) — EXCEPT when the exponential-range mantissa is exactly `BITS_PER_BYTE` (8), an exact whole-Byte figure at a clean power of ten (e.g. `8e6` bits = `1e6` Bytes exactly), which renders converted to Bytes instead (`1e6 B`, `RESOURCE_SYMBOL(BYTES_ID)`) rather than the arbitrary-looking bit count — `PRESTIGE_THRESHOLD` (`8e100`) is a real live example. Used for every Money amount (costs, production rates, the Prestige-threshold overlay), except `MainPage`'s own headline balance readout once it grows large enough — see `formatMoneyBalance` below. See `docs/DESIGN_HISTORY.md` |
 | `formatMoneyBalance` | `value → string` | `MainPage`'s `MoneyHero` headline balance only: below `MONEY_BYTES_DISPLAY_THRESHOLD` (8000 bits — module-scoped in `engine.js`, not exported; exactly 1000 Bytes, the same Byte-scale threshold `formatDiskSize`'s SI scale considers "1 KB") renders identically to `formatCurrency`; at/above it, converts into whole Bytes (`÷ BITS_PER_BYTE`, floored, same never-overstate rounding `formatCurrency` itself uses) and renders with a trailing `B` instead of `b`, exponential notation at/above the same `EXPONENTIAL_NOTATION_THRESHOLD` (applied to the converted Byte count). Below the threshold a Bytes reading would round to 0 or read as an unhelpfully tiny fraction, so Bits stays the more legible unit until there's at least a full Byte's worth of KB to show. Every other Money display in the app keeps using `formatCurrency` unchanged |
 | `getOfflineEffectiveSeconds` | `elapsedRealSeconds → number` | Caps `elapsedRealSeconds` at `MAX_OFFLINE_SECONDS`, then floors it as-is (100% speed) if at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS`, otherwise scales the entire capped duration by `OFFLINE_PROGRESS_SPEED_MULTIPLIER` (50%) before flooring — the number of simulated 1-second ticks `applyOfflineProgress` will replay |
 | `applyOfflineProgress` | `(elapsedRealSeconds, autobuyerBatchSize = 1) → state → state` | Replays `tickGame(1, autobuyerBatchSize)` once per simulated second from `getOfflineEffectiveSeconds` |
@@ -2430,7 +2443,8 @@ purchases were manual or automatic.
 
 **Byte Foundry** (see its own section below for the full mechanic):
 - `INTRO_STARTING_CAPACITY = 8` — starting Buffer / pool Memory Capacity start bound (1 Byte)
-- `INTRO_CAPACITY_DOUBLING_STEP = 2` — Capacity ×2 doubling multiplier per purchase; Capacity ×2 requires a full Buffer, drains it, and doubles Capacity (clamped to the active pool's own end bound — see `POOL_CAPACITY_SI_STEP` below)
+- `INTRO_CAPACITY_DOUBLING_STEP = 2` — named constant for the shared Capacity ladder's spacing (docs/tests only; `upgradePoolCapacity` itself no longer multiplies by this directly — see `getNextSiDoubledValue` below); Capacity ×2 requires a full Buffer, drains it, and grows Capacity via `getNextSiDoubledValue` (clamped to the active pool's own end bound — see `POOL_CAPACITY_SI_STEP` below)
+- `getNextSiDoubledValue(val)` (`engine.js`, not a `layers.js` constant) — `upgradePoolCapacity`'s own per-purchase growth function: converts `val` (bits) to Bytes, then returns a plain `×2` EXCEPT once per "decade" of 10 doublings, where a mantissa of 64 Bytes deviates to 125 Bytes (not 128) instead — so intermediate Capacity values land on SI-clean figures (1, 2, 4, …, 64, 125, 250, 500, 1,000, … Bytes), not just each pool's own end boundary. Decade detection loses exactness past `Number`'s ~2^53 safe-integer range (empirically around pool 8+), degrading to plain doubling there — see `docs/DESIGN_HISTORY.md`
 - `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`), so pool boundaries land on clean SI values (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation
 - `INTRO_CAPACITY_CAP_BITS = 8,000,000` (exactly 1 MB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
 - `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — Speed ×2 (Invest) cost ladder steps by this per tier

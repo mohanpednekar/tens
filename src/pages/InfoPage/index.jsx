@@ -25,7 +25,7 @@ import {
   COMPUTE_FLOPS_REVEAL_PP,
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
   CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
-  DATA_LAKE_CAPACITY_MAX_LEVEL,
+  DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
@@ -318,12 +318,13 @@ const InfoPage = () => {
             (redeeming always comes first).
           </li>
           <li>
-            A lake's own deposit capacity is purchasable: it starts at 1 unit and doubles each
+            A lake's own deposit capacity is purchasable: it starts at 1 unit and grows each
             purchase (spending the lake's own current capacity, converted into Data Stream Bits —
-            the same current-value doubling shape used by Capacity ×2), permanently
-            hard-capped at {2 ** DATA_LAKE_CAPACITY_MAX_LEVEL} units once fully doubled — shown on
-            the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures Disks use, not
-            these raw unit counts.
+            the same current-value doubling shape used by Capacity ×2, including the same SI-clean
+            deviation partway through), permanently hard-capped at{' '}
+            {DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]} units once fully
+            grown — shown on the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures
+            Disks use, not these raw unit counts.
           </li>
           <li>
             Each denomination can also never hold more disks of a size than {DISK_ARRAY_LADDER_CAP}{' '}

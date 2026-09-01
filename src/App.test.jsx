@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, getStoragePoolBandwidth, getStoragePoolCapacity, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -484,10 +484,12 @@ test('Megabytes tier appears and is purchasable once Kilobytes has fully purchas
   const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
   expect(megabytesLayer).toBeInTheDocument()
   // Megabytes' baseCost is 1E6 — level 1, blockSize 8: per-unit cost 1,000,000, full block
-  // 8,000,000 — both at/above the 1,000,000 exponential-notation threshold, so they render as "1e6"/"8e6".
+  // 8,000,000 bits — at/above the 1,000,000 exponential-notation threshold, so it renders as "1e6";
+  // the full block (8,000,000, an exact whole-Byte multiple of 8) renders converted to Bytes as
+  // "1e6 B" rather than "8e6 b" (see formatCurrency in engine.js/docs/DESIGN_HISTORY.md).
   // Scoped to the Megabytes row: Kilobytes' own level-3 buy button happens to render the same
-  // "8e6" text (its per-unit cost coincidentally matches Megabytes' level-1 cost at this balance).
-  expect(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 8e6 b\b/i })).toBeEnabled()
+  // "1e6 B" text (its per-unit cost coincidentally matches Megabytes' level-1 cost at this balance).
+  expect(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 1e6 B\b/i })).toBeEnabled()
 })
 
 test('buying a higher tier does not deduct the tier below\'s owned count', async () => {
@@ -500,7 +502,7 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
   render(<App />)
 
   const megabytesLayer = screen.getByLabelText(/^megabytes layer$/i)
-  await user.click(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 8e6 b\b/i }))
+  await user.click(within(megabytesLayer).getByRole('button', { name: /buy ×8 for 1e6 B\b/i }))
 
   expect(megabytesLayer).toHaveTextContent(/owned: 8/i)
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent(/owned: 16/i)
@@ -2960,18 +2962,21 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 2' })).toBeInTheDocument()
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
     const pool2 = screen.getByRole('region', { name: 'pool 2' })
-    expect(pool1).toHaveTextContent('Kilobytes')
-    expect(pool2).toHaveTextContent('Megabytes')
-    // Label and value render as separate stat-block elements (see PoolStatLabel/PoolStatValue),
-    // not one concatenated sentence, so each is asserted on its own rather than as one joined string.
-    expect(pool1).toHaveTextContent('Bandwidth')
-    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 1))}/sec`)
-    expect(pool2).toHaveTextContent('Bandwidth')
-    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(JSON.parse(localStorage.getItem('tens_game_state')), 2))}/sec`)
-    expect(pool1).toHaveTextContent('Capacity')
-    expect(pool1).toHaveTextContent(formatDiskSize(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 1)))
-    expect(pool2).toHaveTextContent('Capacity')
-    expect(pool2).toHaveTextContent(formatDiskSize(getStoragePoolCapacity(JSON.parse(localStorage.getItem('tens_game_state')), 2)))
+    // Pool titles read "<symbol> Pool" (e.g. "KB Pool") — no index number or tier name.
+    expect(pool1).toHaveTextContent(`${TIER_DEFINITIONS[0].symbol}Pool`)
+    expect(pool2).toHaveTextContent(`${TIER_DEFINITIONS[1].symbol}Pool`)
+    // Bandwidth and the memory/capacity fraction render unlabelled, reusing the same Data
+    // Stream-style fillable block (see FillableStatCard/BalanceText/StatusText in
+    // ByteFoundryPage/index.jsx) rather than a labelled Bandwidth/Capacity/Memory stat row.
+    const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/sec`)
+    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/sec`)
+    expect(pool1).toHaveTextContent(
+      `${formatDiskSize(getPoolBufferBits(savedState, 1))} / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`
+    )
+    expect(pool2).toHaveTextContent(
+      `${formatDiskSize(getPoolBufferBits(savedState, 2))} / ${formatDiskSize(getPoolBufferCapacity(savedState, 2))}`
+    )
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 mb disks$/i })).toBeInTheDocument()
@@ -3004,11 +3009,15 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    // Size identity is painted inside each cell; no external header / Cache/Disks titles.
-    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
-    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    // Size identity is painted inside each cell; no external header / Cache/Disks titles. Scoped to
+    // the disk/cache groups themselves (via `within`) since the pool's own embedded Data Lake row
+    // below the arrays can also show a "1 KB" figure (its own Capacity/Next-cost, unrelated here).
+    const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
+    const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
+    expect(diskGroup).toBeInTheDocument()
+    expect(cacheGroup).toBeInTheDocument()
+    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
@@ -3027,11 +3036,14 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
-    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale).
-    expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: /^1 kb read cache$/i })).toBeInTheDocument()
-    expect(screen.getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(screen.getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale). Scoped to the
+    // disk/cache groups themselves (see the test above for why).
+    const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
+    const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
+    expect(diskGroup).toBeInTheDocument()
+    expect(cacheGroup).toBeInTheDocument()
+    expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
+    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
   test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
@@ -3342,7 +3354,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryAllByRole('button', { name: /^transferred block/i })).toHaveLength(0)
   })
 
-  test('Data Lake renders bare (no separate "Data Lakes" card) as part of the same pool card once a lake has any deposit', () => {
+  test('Data Lake renders bare (no separate "Data Lakes" card) inside its own pool\'s card, below the disk arrays', () => {
     seedIntroState({
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3352,9 +3364,10 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    expect(screen.getByText(/^KB.*Cores$/i)).toBeInTheDocument()
-    // DataLakePanel remains one shared panel after the pool cards, rendering all ten rows once.
-    expect(screen.getByLabelText(/^Data Lakes$/i)).toBeInTheDocument()
+    // Embedded per-pool now (see ByteFoundryPage/index.jsx) — no separate global "Data Lakes" panel.
+    expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    expect(within(pool1).getByText(/^KB.*Cores$/i)).toBeInTheDocument()
   })
 
   test('Data Lake capacity can be doubled by clicking its ⚡×2 button', () => {

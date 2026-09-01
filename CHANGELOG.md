@@ -54,6 +54,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fires immediately" entry under Changed below).
 
 ### Fixed
+- **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
+  "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
+  amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
+  it's an exact whole-Byte figure with no precision lost dividing by 8. `PRESTIGE_THRESHOLD`
+  (`8e100`) is a real example this also affects.
+- **"0.xyz `<unit>`" fractions in Byte/bit-denominated displays** (e.g. "0.125 B/sec" Bandwidth,
+  "0.5 B" Disk sizes) — `formatMemoryAmount` (backing `formatDiskSize`/`formatBitsInNearestUnit`/
+  `formatCacheSize`) now falls back to a raw bit count whenever the value would floor to a nonzero
+  fraction below 1 in its chosen unit, so every such figure always has at least one significant
+  digit before the decimal point (a true zero still renders as a clean "0 `<unit>`", unaffected).
 - **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
   tooltips matching their `aria-label`s and the global automation toggles.
 - **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
@@ -81,12 +91,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
   Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
+- **Pool Capacity progression showing non-round intermediate figures** (e.g. "131.072 KB" Capacity /
+  "362.038 B/sec" Bandwidth mid-progression) — `upgradePoolCapacity`'s per-purchase growth now uses
+  `getNextSiDoubledValue` (deviates 64→125 Bytes, not 128, once per decade of 10 doublings) instead
+  of a plain `×2`, so intermediate Capacity values land on SI-clean figures too, not just each pool's
+  own end boundary. See `docs/DESIGN_HISTORY.md` for why the earlier SI-boundary fix left this case
+  uncorrected.
 
 ### Changed
-- **Byte Foundry pool cards tightened up** — Bandwidth/Capacity/Memory now render as three equal
-  columns spanning the card's full width (was two stats bunched at the left with a large empty
-  gap beside them, plus Memory trailing below as its own separate row); the redundant "Arrays in
-  progress"/"Arrays complete" status text is removed.
+- **App icon redesigned** — the favicon/PWA/apple-touch icons move from a plain serif "10" text
+  glyph to an 8-cell "byte" grid (4×2 rounded squares, a diagonal accent → violet → good gradient)
+  evoking the Byte Foundry's own core mechanic (combining 8 bits into 1 Byte) rather than a generic
+  numeral. `favicon.ico`'s small embedded frames use a simplified 2×2/4-cell version of the same
+  grid for legibility at true 16×16 size.
+- **Byte Foundry pool cards restyled to match the Data Stream card** — the Bandwidth/Capacity/Memory
+  three-column stat row (each a labelled value, Memory alone carrying its own thin fill bar) is
+  replaced by one full-width fillable block reusing the Data Stream card's own component/style: the
+  buffer/capacity fraction above, Bandwidth below, both unlabelled, with the fill percentage driving
+  the block's background gradient the way the old Memory-only bar did. The redundant "Arrays in
+  progress"/"Arrays complete" status text is removed. Each pool's title is renamed from "Pool `<n>`
+  · `<Tier name>`" (e.g. "Pool 1 · Kilobytes") to just "`<symbol>` Pool" (e.g. "KB Pool") and centered
+  — the symbol alone already uniquely identifies the pool.
+- **Data Lake moved inside its own pool's card** — each of the ten Data Lake rows now renders
+  directly below that pool's own disk-array rows (inside the same expand/collapse disclosure),
+  always visible once that pool is unlocked, instead of all ten lakes listing together in one shared
+  panel after every pool card (hidden entirely until a lake had any deposit/purchase/capacity
+  activity).
+- **Data Lake capacity ladder now lands on 1,000 units at max, not 1,024** — `getDataLakeCapacity`
+  grows via the same SI-clean sequence pool Capacity's own `getNextSiDoubledValue` uses (plain
+  doubling except a 64→125 deviation), matching pool Capacity's own end-boundary convention. Only
+  the max-level value changes (1,024 → 1,000); the number of purchasable levels (0–10) is unchanged.
 - **Ladder screen renamed to Byte Factory (nav short label "Factory")** — reverses #399/#431's
   "Factory → Ladder" rename: AppNav label/accessible name, the MainPage `<h1>`, the Factory |
   Upgrades peer tabs, cache-transfer hints, Settings danger-zone copy, confirm dialogs, the Guide,

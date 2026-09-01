@@ -1,4 +1,28 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers'
+
+// Deviates a pure binary-doubling sequence from 64 to 125 (not 128) once per "decade" of 10
+// doublings, so pool Capacity's own progression lands on SI-clean intermediate values (1, 2, 4,
+// 8, 16, 32, 64, 125, 250, 500, 1000, 2000, …) instead of binary ones (…, 64, 128, 256, …,
+// 131072, …) that read oddly once displayed through the Storage pool card's own SI units (e.g.
+// "131.072 KB" instead of "125 KB"). See docs/DESIGN_HISTORY.md ("Pool Capacity doubling
+// mechanic itself corrected to land on SI-clean intermediate steps") for the derivation and why
+// an earlier fix left this case uncorrected. `val` is in BITS (intro.capacity's own unit); the
+// 64→125 switchover point is defined in BYTES, so this converts before checking the mantissa.
+// Decade detection loses exactness once a pool's magnitude exceeds Number's ~2^53 safe-integer
+// range (empirically around pool 8+) — the same floating-point tolerance every other astronomically-scaled
+// figure in this file (GOOGOL, PRESTIGE_THRESHOLD, …) already accepts; past that point this
+// degrades to plain doubling rather than drifting off the intended sequence.
+export const getNextSiDoubledValue = val => {
+  const bytes = val / BITS_PER_BYTE
+  let mantissa = bytes
+  let power = 1
+  while (mantissa >= 1000 && mantissa % 1000 === 0) {
+    mantissa /= 1000
+    power *= 1000
+  }
+  const nextBytes = mantissa === 64 ? 125 * power : bytes * 2
+  return nextBytes * BITS_PER_BYTE
+}
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -587,18 +611,33 @@ export const formatAmount = value => {
   return formatScientific(safeValue)
 }
 
+// A Bits amount at/above the exponential threshold whose scientific mantissa is exactly
+// BITS_PER_BYTE (8) is an exact whole-Byte figure at a clean power of ten — e.g. 8e6 bits is
+// exactly 1e6 Bytes, no precision lost dividing by 8 — so it reads more naturally converted to
+// Bytes ("1e6 B") than left as an arbitrary-looking bit count ("8e6 b"). Any other mantissa is
+// left in Bits as-is, since dividing an arbitrary mantissa by 8 wouldn't land on an equally clean
+// figure. See docs/DESIGN_HISTORY.md.
+const EXPONENTIAL_BYTE_MANTISSA_TOLERANCE = 1e-9
+const formatAsCleanBytesIfExactMultiple = safeValue => {
+  const exponent = Math.floor(Math.log10(safeValue))
+  const mantissa = safeValue / 10 ** exponent
+  if (Math.abs(mantissa - BITS_PER_BYTE) > EXPONENTIAL_BYTE_MANTISSA_TOLERANCE) return null
+  return `${formatScientific(safeValue / BITS_PER_BYTE)} ${RESOURCE_SYMBOL(BYTES_ID)}`
+}
+
 // Comma-grouped currency string below the threshold, exponential above it (same threshold and
 // notation as formatAmount) — money can reach 100+ digit balances near the Googol prestige
 // requirement, so it can't stay full-digit forever. Floors rather than rounds so a displayed
 // amount never overstates the actual spendable balance (e.g. a fractional 1.6 balance from a
 // non-integer tick shows as "1 b", not a misleading "2 b"). Suffixed with the base currency's own
-// symbol (RESOURCE_SYMBOL(MONEY_ID), "b") rather than a hardcoded "$" prefix.
+// symbol (RESOURCE_SYMBOL(MONEY_ID), "b") rather than a hardcoded "$" prefix — except in the
+// exponential range, where an exact-multiple-of-8 mantissa renders converted to Bytes instead (see
+// formatAsCleanBytesIfExactMultiple above).
 export const formatCurrency = value => {
   const safeValue = Math.floor(clampNonNegative(value))
   const symbol = RESOURCE_SYMBOL(MONEY_ID)
-  return safeValue < EXPONENTIAL_NOTATION_THRESHOLD
-    ? `${currencyNumberFormatter.format(safeValue)} ${symbol}`
-    : `${formatScientific(safeValue)} ${symbol}`
+  if (safeValue < EXPONENTIAL_NOTATION_THRESHOLD) return `${currencyNumberFormatter.format(safeValue)} ${symbol}`
+  return formatAsCleanBytesIfExactMultiple(safeValue) ?? `${formatScientific(safeValue)} ${symbol}`
 }
 
 // Whole-Byte amounts (Factory Bytes pool — see BYTES_ID) — same rounding/exponential rules as
@@ -2373,7 +2412,11 @@ export const rollbackComputeFundedBandwidth = state => {
 }
 
 // Capacity ×2 drains the full Data Stream balance. Its ceiling follows the highest unlocked
-// storage pool, while lower pools derive their displayed Capacity from this one value.
+// storage pool, while lower pools derive their displayed Capacity from this one value. The
+// per-step growth itself follows getNextSiDoubledValue (a plain ×2 that deviates 64→125 once per
+// decade), not a literal INTRO_CAPACITY_DOUBLING_STEP multiply, so intermediate Capacity values —
+// not just each pool's own end boundary — land on SI-clean figures once displayed via the pool
+// card's own SI units.
 export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
   const afterWipe = isComputeCoreConversionUnlocked(state)
@@ -2385,7 +2428,7 @@ export const upgradePoolCapacity = state => {
     intro: {
       ...afterWipe.intro,
       bits: 0,
-      capacity: Math.min(afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP, endBits),
+      capacity: Math.min(getNextSiDoubledValue(afterWipe.intro.capacity), endBits),
       capacityUpgradeQueued: false,
     },
   }
@@ -2638,10 +2681,31 @@ export const getMemoryUnit = (capacityBits, byteCreated) => {
 // full.
 const floorToDecimals = (value, decimals) => Math.floor(value * 10 ** decimals) / 10 ** decimals
 
-export const formatMemoryAmount = (bits, unit) =>
-  unit
-    ? `${formatAmount(floorToDecimals(bits / unit.divisor, 3))} ${unit.symbol}`
-    : `${formatAmount(bits)} bit${bits === 1 ? '' : 's'}`
+// Bits are this game's atomic, indivisible unit — a raw bit count should never itself show a
+// fraction. `bits` isn't always already a whole number by the time it reaches here: mid-tick
+// accumulators (e.g. tickPoolBufferFill's transfer, cache-fill transfers) advance in unflored
+// fractional steps, so a caller can pass e.g. 0.3 while a buffer is still filling up from near
+// zero. Flooring here (not rounding — same "never overstate" rule every other amount in this file
+// follows) keeps every "N bit(s)" string clean, whether reached directly (no `unit`) or via the
+// below-1-in-its-unit fallback.
+const flooredBitsLabel = bits => {
+  const flooredBits = Math.floor(bits)
+  return `${formatAmount(flooredBits)} bit${flooredBits === 1 ? '' : 's'}`
+}
+
+export const formatMemoryAmount = (bits, unit) => {
+  if (unit) {
+    const scaled = floorToDecimals(bits / unit.divisor, 3)
+    // Never show a "0.xyz <unit>" fraction — no significant digit before the decimal. Falls back
+    // to the raw bit count instead, the one unit finer than anything either unit ladder offers
+    // (both bottom out at whole Bytes, B, with no smaller SI/binary unit defined below it) — see
+    // docs/DESIGN_HISTORY.md. A true zero (`scaled === 0`) is unaffected: "0 <unit>" already has no
+    // decimal to violate the rule.
+    if (scaled > 0 && scaled < 1) return flooredBitsLabel(bits)
+    return `${formatAmount(scaled)} ${unit.symbol}`
+  }
+  return flooredBitsLabel(bits)
+}
 
 // Any Memory-denominated amount (capacity, balance, Invest cost, transfer-block cost, the
 // Sacrifice confirm line — NOT Disk build cost, which renders via formatDiskSize/SI instead, since
@@ -3619,12 +3683,13 @@ export const getDataLakeDepositedUnits = tierIndex => state => {
 // ever be built — see isDiskArrayFullyBuilt), so the resulting 1,110-unit sum a lake could
 // theoretically ever bank is just an incidental consequence of that limit, not a separately
 // designed or enforced ceiling — the real, explicit, intentional cap is the doubling ladder below,
-// which sits far under it (1,024 max) and is the one that actually binds in practice.
+// which sits far under it (1,000 max) and is the one that actually binds in practice.
 const DATA_LAKE_SUB_SIZE_TOTAL = DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize, 0)
 
-// A lake's own deposit capacity is THE explicit, purchasable, doubling ladder a player actually
-// interacts with: starts at 1 unit (level 0) and doubles per doubleDataLakeCapacity purchase below,
-// permanently hard-capped at DATA_LAKE_CAPACITY_MAX_LEVEL (1,024 units at level 10).
+// A lake's own deposit capacity is THE explicit, purchasable ladder a player actually interacts
+// with: starts at 1 unit (level 0), climbs via DATA_LAKE_CAPACITY_BY_LEVEL (plain doubling except
+// one 64->125 SI-switchover step — see layers.js), permanently hard-capped at
+// DATA_LAKE_CAPACITY_MAX_LEVEL (1,000 units at level 10).
 export const getDataLakeCapacityLevel = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.capacityLevel ?? 0
 
@@ -3632,12 +3697,12 @@ export const isDataLakeCapacityMaxed = (state, tierIndex) =>
   getDataLakeCapacityLevel(state, tierIndex) >= DATA_LAKE_CAPACITY_MAX_LEVEL
 
 export const getDataLakeCapacity = (state, tierIndex) =>
-  2 ** getDataLakeCapacityLevel(state, tierIndex)
+  DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]
 
 // A lake's `deposits` (sub-slot counts, each 0..DISK_ARRAY_LADDER_CAP) are exactly the
 // base-(DISK_ARRAY_LADDER_CAP+1) hundreds/tens/ones digit decomposition of its own deposited
 // total, since the total is always 0..1,110 (in practice bounded far under that by
-// getDataLakeCapacity's own 1,024 hard cap) and each digit place caps at DISK_ARRAY_LADDER_CAP. The
+// getDataLakeCapacity's own 1,000 hard cap) and each digit place caps at DISK_ARRAY_LADDER_CAP. The
 // greedy top-down cap-at-DISK_ARRAY_LADDER_CAP decomposition is exact because DISK_ARRAY_LADDER_CAP
 // (10) is at least DATA_LAKE_SUB_SIZE_TOTAL / DATA_LAKE_SUB_SIZES[1] (111 / 10 = 11.1 rounded down
 // to the nearest whole unit each place can actually hold) — below that threshold a capped-off

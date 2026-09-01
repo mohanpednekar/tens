@@ -117,11 +117,15 @@ const getVisibleLakeTierIndexes = state => {
 }
 
 // `bare` skips the own StatCard wrapper (background/border/shadow/padding) and renders just the
-// grid — used when a caller (e.g. ByteFoundryPage's single pool card) already provides that chrome
-// and nesting a second card here would double-box the same content. `actions` is only needed for
-// the capacity-doubling button below.
-const DataLakePanel = ({ actions, state, bare = false }) => {
-  const visibleTiers = getVisibleLakeTierIndexes(state)
+// grid — used when a caller (e.g. ByteFoundryPage's own pool cards, via `tierIndex` below) already
+// provides that chrome and nesting a second card here would double-box the same content. `actions`
+// is only needed for the capacity-doubling button below.
+// `tierIndex`, when set, scopes rendering to exactly that one lake — always shown regardless of
+// activity (it's a permanent part of that pool's own card now, not a rarity-filtered global list
+// entry) — instead of the default every-lake-with-any-activity behavior `getVisibleLakeTierIndexes`
+// still drives when `tierIndex` is omitted.
+const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
+  const visibleTiers = tierIndex != null ? [tierIndex] : getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
   const list = (

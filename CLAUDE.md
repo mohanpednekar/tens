@@ -51,7 +51,7 @@ yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--
                   # already covers dependencies/devDependencies/optionalDependencies by default)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
-yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png from scripts/generate-pwa-icons.mjs
+yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
 ```
 
 Run a single test file or test name with Vitest's own filtering:
@@ -433,11 +433,14 @@ src/
                                render identical, fully interactive detail rather than StoragePage
                                alone owning it and ByteFoundryPage settling for a text summary.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DataLakePanel/index.jsx ← the ten per-denomination Data Lake rows (deposited units / capacity,
-                               next Booster cost, in-flight transfers) rendered inside ByteFoundryPage's
-                               the standalone ByteFoundryPage panel, taking `{ state, bare }` —
-                               `bare` is retained for reuse/legacy composition and drops its own
-                               StatCard chrome. See "Economy model" below for the Data Lake mechanic.
+    DataLakePanel/index.jsx ← one Data Lake's own row (deposited units / capacity, next Booster
+                               cost, in-flight transfers), taking `{ actions, state, bare, tierIndex }`
+                               — `tierIndex` scopes rendering to that one lake, embedded (`bare`,
+                               dropping its own StatCard chrome) inside each `ByteFoundryPage` pool
+                               card below that pool's own disk-array rows, always shown regardless of
+                               activity; omitting `tierIndex` falls back to the original every-visible-
+                               lake grid (retained for reuse, unused by any current caller). See
+                               "Economy model" below for the Data Lake mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -566,9 +569,12 @@ scripts/
                                dated ## [x.y.z] section and bump package.json (minor if
                                Added/Removed entries, else patch; no-op if empty) — Part of #52;
                                post-merge tag/Release workflow still deferred
-  generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes the
-                               PWA icon SVGs with `sharp` into public/pwa-*.png + apple-touch-icon.png;
-                               not part of the build — only re-run it if the icon design/palette changes
+  generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes an
+                               inline "byte grid" SVG (see `docs/PWA_REFERENCE.md`) with `sharp` into
+                               public/pwa-*.png + apple-touch-icon.png, and hand-assembles
+                               public/favicon.ico (a minimal ICO container of PNG frames, no extra
+                               dependency); not part of the build — only re-run it if the icon
+                               design/palette changes
   adversarialReviewMarker.js (+ `.test.js`) ← pure helpers for the `<!-- adversarial-review sha=…
                                verdict=… -->` marker (see "Pull requests" above)
   pr-low-risk-eligible.sh (+ `.test.js`) ← shared low-risk-auto-merge eligibility bar, used by
@@ -681,12 +687,22 @@ Strict three-layer separation:
    smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
    an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
    size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
-   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a small
-   `PoolBufferMeter` bar (label "Memory") alongside the Bandwidth/Capacity stats.
-   One `PoolCard` renders for each unlocked pool in ascending order; only the largest unlocked pool is
-   expanded initially, while earlier pools remain visible as compact disclosure summaries that reveal
-   their three disk-array rows when opened. The single `components/DataLakePanel` remains after the
-   pool cards and renders all ten lake rows once. Starting the next Disk's
+   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
+   `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
+   tile (fill-gradient background, `BalanceText`/`StatusText`, a hidden `role="progressbar"` for
+   a11y) rather than a bespoke bar — with the buffer/capacity fraction (equal to the pool's own
+   Capacity — see above) above and Bandwidth below, both unlabelled.
+   Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
+   name — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
+   `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
+   the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
+   unlocked pool in ascending order; only the largest unlocked pool is expanded initially, while
+   earlier pools remain visible as compact disclosure summaries that reveal their three disk-array
+   rows when opened. `components/DataLakePanel` is embedded per pool (`bare` mode, a `tierIndex` prop
+   scoping it to that one lake, always shown regardless of activity) directly below that pool's own
+   disk-array rows, inside the same expanded disclosure — not a single shared panel listing every
+   lake after all the pool cards, as an earlier iteration had it (see `docs/DESIGN_HISTORY.md`).
+   Starting the next Disk's
    build (its own core-loop action, alongside Speed) and every shown size's full
    interactive detail — read cache blocks (only on the pool's smallest size — see
    "Economy model" below), disk squares, releasing (Disk Fill's manual-release half →
@@ -965,12 +981,23 @@ one remaining binary display surface (the Data Stream card only). Pool Memory Ca
 shared start/end bounds from `getStoragePoolMemoryBounds`; the Data Stream's own value is the
 shared Memory ceiling, and each pool's displayed Capacity is that value clamped to its own bounds.
 Earlier pools no longer derive a step down from the highest unlocked pool, so pool 1 stays capped
-at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder
-(plain `×2` per purchase, unchanged — the SI alignment lives entirely in the pool boundary
-CONSTANTS above, not in the doubling mechanic itself, so the ladder's last purchase before a new
-pool's cap simply clamps a little earlier than a raw double would land, same clamp shape as before
-this change), with `INTRO_CAPACITY_CAP_BITS` retained as the pool-1 alias and the active highest
-pool's end bound as the authoritative moving ceiling. **Speed ×2** (was
+at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder,
+but the per-step growth itself is no longer a literal `×2` multiply: `upgradePoolCapacity` grows
+via `getNextSiDoubledValue` (a helper that deviates 64→125 Bytes, not 128, once per "decade" of 10
+doublings), so intermediate Capacity values — not just each pool's own end boundary — land on
+SI-clean figures (1, 2, 4, …, 64, 125, 250, 500, 1,000, 2,000, … Bytes) once shown through the
+Storage pool card's own SI units, rather than binary intermediates (…, 64, 128, 256, …, 131,072,
+…) reading oddly next to a clean SI end bound. `getNextSiDoubledValue` operates on Bytes (the
+switchover point is 64 *Bytes*) even though `intro.capacity` itself is stored in bits, and its
+decade detection loses exactness once a pool's magnitude exceeds `Number`'s ~2^53 safe-integer
+range (empirically around pool 8+), degrading to plain doubling past that point — the same floating-point
+tolerance every other astronomically-scaled figure here (`GOOGOL`, `PRESTIGE_THRESHOLD`, …) already
+accepts. `INTRO_CAPACITY_CAP_BITS` is retained as the pool-1 alias and the active highest pool's
+end bound is the authoritative moving ceiling that `Math.min` still clamps every step against —
+same clamp shape as before this change; see `docs/DESIGN_HISTORY.md` for why an earlier fix left
+the doubling mechanic itself untouched, and what made that insufficient. The Data Lake capacity
+ladder (below) now follows the same SI-clean sequence too (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at
+1,000 units) — see "Data Lakes" below. **Speed ×2** (was
 Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
 effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
@@ -1057,11 +1084,12 @@ inventory, not a second stockpile. Disk ladder steps 1–3 map to the KB lake, 4
 QB.
 
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
-purchasable, doubling ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for
-the KB lake, in that lake's own Byte-scale currency) and doubling by 1 level per
-`doubleDataLakeCapacity(tierIndex)` purchase, permanently hard-capped at
-`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,024 units, "1024 KB" for the KB lake) via
-`isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
+purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB
+lake, in that lake's own Byte-scale currency) and climbing by 1 level per
+`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` (plain doubling
+except one 64→125 SI-switchover step, mirroring pool Capacity's own `getNextSiDoubledValue` — see
+above), permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB"
+for the KB lake) via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
 the lake to be completely full (`isDataLakeCapacityDoublingAvailable` — deposited units at least the
 lake's own current capacity) and empties every deposit back to zero on purchase — the same
 "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the
@@ -1087,7 +1115,7 @@ being swept into the lake. A sub-slot's own deposit count naturally never exceed
 `DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever be built) — this was never
 a separate design cap, just a backstop that keeps the deposits counter from exceeding what's
 physically possible; `canDepositDiskToDataLake` enforces it alongside the real, intentional limit
-above, the lake's own capacity level, which is far smaller (1,024 max vs. an incidental 1,110-unit
+above, the lake's own capacity level, which is far smaller (1,000 max vs. an incidental 1,110-unit
 sum if every sub-slot were somehow filled to that backstop) and is what actually gates deposits in
 practice. `decomposeDataLakeDeposits` still caps each digit place at that same backstop value
 regardless of the current level — deposits stay fungible, not tracked per physical disk, so spending
@@ -1244,7 +1272,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1603 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1617 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
