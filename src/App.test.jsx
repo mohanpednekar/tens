@@ -2566,19 +2566,15 @@ test('the "Data Stream" label is shown on the balance card', () => {
   expect(screen.getByText('Data Stream')).toBeInTheDocument()
 })
 
-test('the production rate shows a segmented block bar below 1 Byte/sec, and switches to a Byte/sec label at/above it', () => {
+test('the Data Stream header shows a plain bits/sec rate below 1 Byte/sec, and switches to a Byte/sec label at/above it', () => {
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
   const { unmount } = render(<App />)
 
-  const rateBar = screen.getByRole('progressbar', { name: /data stream production rate/i })
-  expect(rateBar).toHaveAttribute('aria-valuenow', '4')
-  expect(rateBar).toHaveAttribute('aria-valuemax', '8')
   expect(screen.getByText(/\+4 bits\/sec/i)).toBeInTheDocument()
   unmount()
 
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
   render(<App />)
-  expect(screen.queryByRole('progressbar', { name: /data stream production rate/i })).not.toBeInTheDocument()
   expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
 })
 
@@ -3389,7 +3385,7 @@ describe('Byte Foundry Storage', () => {
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
-      dataLakes: { 1: { deposits: { 1: 3, 10: 0, 100: 0 }, purchased: 0 } },
+      dataLakes: { 1: { depositedUnits: 3, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 1 } },
     })
     render(<App />)
     openStorage()
@@ -3402,24 +3398,25 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByText(/Cores/)).toBeInTheDocument()
   })
 
-  test('Data Lake capacity can be increased ×10 by clicking its ⚡×10 button', () => {
+  test('Data Lake capacity can be increased ×10 by clicking its ⚡ Upgrade button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another
     // forced-priority input out from under the click before it's processed.
     vi.useFakeTimers()
 
-    // The KB lake is holding exactly its own level-0 capacity (1 unit) — full, so the increase is
-    // funded by draining the lake itself, not Bits; bits (8000) is included only to prove it
-    // never touches it. Provision Disk's own cost (80,000) stays out of reach either way, so it
-    // never outranks this action; Invest's current-tier claims are already used up
-    // (productionMilestoneTierClaims: 2) — the same higher-priority-action neutralization the
-    // Sacrifice tests above use, since Data Lake capacity sits at the same forced-priority rank.
+    // The next Booster (purchased: 1 => cost 2) already exceeds the KB lake's own level-0 capacity
+    // (1 unit) — the new "upgrade available" condition — regardless of how full the lake currently
+    // is; draining whatever it holds (here, nothing) funds the advance, not Bits. bits (8000) is
+    // included only to prove it never touches it. Provision Disk's own cost (80,000) stays out of
+    // reach either way, so it never outranks this action; Invest's current-tier claims are already
+    // used up (productionMilestoneTierClaims: 2) — the same higher-priority-action neutralization
+    // the Sacrifice tests above use, since Data Lake capacity sits at the same forced-priority rank.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       productionMilestoneTierClaims: 2,
-      dataLakes: { 1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 0, capacityLevel: 0 } },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 1, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
     })
     const { unmount } = render(<App />)
     openStorage()
@@ -3431,7 +3428,7 @@ describe('Byte Foundry Storage', () => {
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.dataLakes['1'].capacityLevel).toBe(1)
-    expect(saved.intro.dataLakes['1'].deposits).toEqual({ 1: 0, 10: 0, 100: 0 })
+    expect(saved.intro.dataLakes['1'].depositedUnits).toBe(0)
     expect(saved.intro.bits).toBe(8000)
 
     unmount()
@@ -3443,7 +3440,7 @@ describe('Byte Foundry Storage', () => {
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
-      dataLakes: { 1: { deposits: { 1: 1, 10: 0, 100: 0 }, purchased: 0, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
     })
     render(<App />)
     openStorage()

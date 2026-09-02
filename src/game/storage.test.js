@@ -845,8 +845,8 @@ describe('Dev Mode', () => {
         ...createInitialGameState().intro,
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
-          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5, transfers: [], capacityLevel: 0 },
-          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 },
+          1: { depositedUnits: 53, fillBits: 0, purchased: 5, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 2 },
+          2: { depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 },
         },
       },
     }
@@ -857,10 +857,10 @@ describe('Dev Mode', () => {
     expect(result.ok).toBe(true)
     // The edited field applied...
     expect(result.state.intro.dataLakes['1'].purchased).toBe(6)
-    // ...and every sibling at every depth survives untouched: tier 1's own deposits (a sibling of
-    // the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
-    expect(result.state.intro.dataLakes['1'].deposits).toEqual({ 1: 50, 10: 3, 100: 0 })
-    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 })
+    // ...and every sibling at every depth survives untouched: tier 1's own depositedUnits (a
+    // sibling of the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
+    expect(result.state.intro.dataLakes['1'].depositedUnits).toBe(53)
+    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

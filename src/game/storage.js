@@ -401,16 +401,13 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
 
+// Every field on a lake tier is now a scalar (depositedUnits/fillBits/purchased/
+// boostersUnlocked/autoBuyEnabled/capacityLevel) — no nested container needing its own deep
+// merge any more, so a plain shallow overlay per tier is sufficient.
 const mergeDataLakes = (fresh, saved) => {
   const merged = createEmptyDataLakes()
   for (const tier of Object.keys(merged)) {
-    const f = merged[tier]
-    const s = saved?.[tier]
-    merged[tier] = {
-      ...f,
-      ...(s ?? {}),
-      deposits: { ...f.deposits, ...(s?.deposits ?? {}) },
-    }
+    merged[tier] = { ...merged[tier], ...(saved?.[tier] ?? {}) }
   }
   return merged
 }

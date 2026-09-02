@@ -457,56 +457,61 @@ export const COMPUTE_BOOST_TIER_FIELDS = [
 // compounds from stacking.
 export const COMPUTE_BOOST_MAX_STACKS = 10
 
-// --- Data Lakes (Foundry Storage ↔ Booster funding) --- see depositDiskToDataLake/
-// startBoosterTransfer in engine.js. Each of the 10 storage denominations (KB … QB) has a Data
-// Lake that can hold up to getDataLakeCapacity() units of PREPAID deposits, filled automatically
-// (`tickDiskAutoDeposit`, no manual action) by depositing built Disks (up to DISK_ARRAY_LADDER_CAP
-// (10) each of that tier's ×1/×10/×100 denominations — 10 each, 1110 total) — a convenience
-// stockpile, not the lake's only source of Boosters (see "Data Lake Booster transfers" below).
-// Starting a Booster at tier N spends units genuinely OUT of lake N's own current deposits FIRST
-// (not against a separate ledger, real capacity that only returns once more Disks get deposited),
-// then sources any remaining cost live from the raw built Disk inventory via a timed transfer. The
-// nth Booster ever started (completed or still in flight) at a tier costs n units — see
-// getBoosterPurchaseCost in engine.js, which now also counts in-flight transfers so starting
-// several concurrently (see DATA_LAKE_TRANSFER_CAPACITY_MAX below) still charges the correct
-// escalating cost rather than letting concurrency dodge it.
+// --- Data Lakes (Foundry pool overflow ↔ Booster funding) --- see tickDataLakeOverflowFill/
+// buyBooster in engine.js. Each of the 10 storage denominations (KB … QB) has a Data Lake, fed
+// directly by its OWN matching Storage pool's overflow (production beyond that pool's Memory
+// buffer once that buffer is completely full — see FILL_MULTIPLIER-adjacent
+// DATA_LAKE_OVERFLOW_*_PERCENT below) rather than by depositing completed physical Storage Disks —
+// Storage Disks and Data Lakes are fully decoupled mechanics now (see docs/DESIGN_HISTORY.md for
+// the earlier deposit-based design this replaced). A lake fills its own disk ladder — the same
+// ×1/×10/×100 sub-size shape Storage Disks use, continuously (bit-by-bit, like a Memory buffer),
+// smallest denomination first — and each completed disk counts toward that lake's own deposited
+// total, which is what a Booster purchase spends against. The nth Booster ever bought at a tier
+// costs n units — see getBoosterPurchaseCost in engine.js.
 //
-// Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP — a lake can never be asked to hold
-// more of a denomination than a single array of that size could ever physically produce. On top of
-// that physical ceiling, a lake's own actual capacity is a smaller, purchasable ladder (see
-// getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB" for
-// the KB lake), climbing a plain DECADE-POWER-OF-10 ladder per purchase — 1, 10, 100, 1,000 —
-// the same coarse shape pool Capacity itself uses (getDecadePowerEquivalentBits), replacing an
-// earlier finer SI-clean sequence (1, 2, 4, …, 64, 125, 250, 500, 1,000 over 11 levels) that no
-// longer matches pool Capacity's own derivation — see docs/DESIGN_HISTORY.md. Doubling (now really
-// "×10-ing") is funded by draining the lake ITSELF, so the nth level's own upgrade cost is always
-// exactly the (n-1)th level's own capacity value (1 unit to reach 10, 10 units to reach 100, 100
-// units to reach 1,000). Values are read from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit,
-// already-integer level index, so this needs no float-precision handling). An earlier version
-// instead made the cap fixed at the physical ceiling with no purchasable lever at all — see
-// docs/DESIGN_HISTORY.md for why a smaller, purchasable, explicitly-capped ladder replaced that.
+// A lake's own actual capacity is a purchasable ladder (see getDataLakeCapacity/
+// doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB" for the KB lake),
+// climbing a plain DECADE-POWER-OF-10 ladder per purchase — 1, 10, 100, 1,000 — the same coarse
+// shape pool Capacity itself uses (getDecadePowerEquivalentBits). Advancing a level is available
+// once the next Booster's own cost would exceed the lake's CURRENT capacity (rather than requiring
+// the lake to be completely full first, as an earlier version did — see docs/DESIGN_HISTORY.md),
+// and — like before — is funded by draining whatever the lake currently holds. Values are read
+// from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit, already-integer level index, so this
+// needs no float-precision handling).
+//
+// At each capacity level, that level's own total is represented as up to DATA_LAKE_SUB_SIZE_DISK_
+// CAPS disks per sub-size (10 × ×1, 9 × ×10, 9 × ×100 — 10 + 90 + 900 = 1,000, exactly the maxed
+// level's own capacity) rather than a flat 10-per-size physical ceiling: fewer ×10/×100 slots than
+// ×1 slots so the three denominations' own maximums sum to precisely 1,000 with no leftover/
+// overlap, instead of an incidental 1,110 a flat 10-per-size cap would allow. A lake's disks always
+// fill smallest denomination first — every ×1 slot before any ×10 slot, every ×10 slot before any
+// ×100 slot — so "how many of each size are currently full" is a pure function of the lake's own
+// deposited total (see getDataLakeDiskCounts in engine.js), the same way DiskArrayRow's own built/
+// full counts are a pure function of state.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
+export const DATA_LAKE_SUB_SIZE_DISK_CAPS = [10, 9, 9]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
 export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3
 // Index i = capacity at capacityLevel i. Plain decade-power-of-10 ladder — see the comment above.
 export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 
-// --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
-// tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and
-// instantly when a Booster is started — it's already "at the lake." Any cost still remaining
-// beyond what's deposited is instead sourced live from built, undeposited Disks and transferred
-// into the lake over time, at DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER (10x) the Byte Foundry's
-// current bits/sec production rate (getIntroProductionRate) — (bits transferred) / (10 x rate)
-// seconds — only converting into 1 Booster once that transfer completes. The Data Lake itself
-// never banks a second spendable reserve beyond what's already deposited; past that, it's a
-// throughput pipe onto the live disk inventory, not a stockpile. A lake can run up to
-// DATA_LAKE_TRANSFER_CAPACITY_MAX (3) of these live transfers at once, one concurrency slot
-// unlocked per completed sub-size disk array (×1/×10/×100 — the same staged gate the deposited-
-// capacity progression above already uses).
-export const DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER = 10
-export const DATA_LAKE_TRANSFER_CAPACITY_MAX = DATA_LAKE_SUB_SIZES.length
+// --- Data Lake overflow feed --- see tickDataLakeOverflowFill in engine.js, folded into
+// tickPoolBufferFill. Once a pool's own local Memory buffer is completely full, its reserved
+// share of the Data Stream's production rate has nowhere left to go — rather than that share
+// going to waste, a percentage of it feeds that pool's own matching Data Lake instead. That
+// percentage itself is fill-based on the LAKE's own current fill fraction (mirroring the
+// FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape): DATA_LAKE_OVERFLOW_MAX_PERCENT
+// when the lake is completely empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT (0 — no more
+// feed at all) once the lake is completely full, so a lake's own fill rate naturally tapers off
+// as it approaches capacity rather than stopping abruptly. Deliberately independent of the pool's
+// own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) — these are two separate
+// dials on the same gauge (see ByteFoundryPage's pool MultiplierGauge, extended into a full circle
+// for pools: the top half stays the existing pool fill multiplier, the bottom half is this lake
+// overflow rate), not compounded into one.
+export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
+export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
