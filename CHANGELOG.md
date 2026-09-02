@@ -65,6 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **Idle disk liquidation could destroy a disk from a still-mid-build array** —
+  `isIdleDiskLiquidationAvailable` now requires the array itself to be fully built
+  (`isDiskArrayFullyBuilt`) in addition to the lake genuinely having no room, instead of inferring
+  "array not finished" and "lake is full" from the same `!canDepositDiskToDataLake` check, which
+  can't tell those two apart. A disk mid-array (e.g. 3 of 10 built) is no longer eligible for
+  liquidation just because Provision Disk happens to be momentarily unaffordable.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since

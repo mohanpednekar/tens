@@ -4916,3 +4916,31 @@ table entry was updated to the new sequence and history note.
 As with the earlier swap, this is the maintainer's own deliberate, direct instruction — recorded
 here specifically so a later automated session doesn't read the still-present Fibonacci-vs-
 triangular history above and "helpfully" revert this one too.
+
+### Idle disk liquidation could destroy a disk from a still-mid-build array, not just a genuinely full lake
+
+The prior entry above ("`isIdleDiskLiquidationAvailable` mistakenly checked `isDataLakeCapacityMaxed`
+instead of the real deposit condition") fixed liquidation to gate on
+`!canDepositDiskToDataLake(state, size)` instead of the weaker maxed check. A Devin bot review pass
+on that same PR (after it had already merged, following this repo's merged-PR branch-restart
+convention) found a second, distinct gap in that fix: `canDepositDiskToDataLake` itself returns
+`false` for TWO unrelated reasons — either the lake genuinely has no room (the case the fix above
+was written for), or the disk's own array simply isn't finished being built yet
+(`isDiskArrayFullyBuilt` internally gates it). `!canDepositDiskToDataLake` alone can't tell those two
+apart, so a pool whose LAST (largest, ×100) size was still mid-build — say 3 of the eventual 10
+disks built, one of them currently idle and on hand — would read as "can't deposit" and become
+liquidation-eligible, even though the array had a real destination once it finished (redemption, or
+its own eventual deposit) and nothing was actually wrong with the lake's capacity at all. In
+practice this only fires past the full forced-priority gate (Disk Fill/Speed/Provision
+Disk/Compute/every lake's Capacity doubling all unavailable first) — but Provision Disk being
+UNAFFORDABLE for a moment mid-array is exactly the kind of transient state that gate doesn't rule
+out, so the bug was real and reachable, not merely theoretical.
+
+**Fix**: added `isDiskArrayFullyBuilt(state, size)` as its own explicit, separate check in
+`isIdleDiskLiquidationAvailable`, ahead of the `canDepositDiskToDataLake` check — liquidation now
+requires BOTH "the array is actually finished" and "the lake genuinely can't take another one," never
+inferring the first from the second's `false` result. A new regression test seeds
+`disksBuiltTotal[kb100]` at 3 (mid-build) against the same maxed-lake fixture the earlier fix's own
+tests use, confirms `canDepositDiskToDataLake` is `false` for the array-not-finished reason, and
+pins that `isIdleDiskLiquidationAvailable` stays `false` regardless (rather than reading that
+`false` as "lake is full"). `yarn test`: 1634/1634 green (+1). `yarn build` succeeds.
