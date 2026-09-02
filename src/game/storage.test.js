@@ -640,6 +640,10 @@ describe('supporter unlock + save slots', () => {
     expect(listSaveSlots().find(s => s.id === '0').name).toBe(originalName)
   })
 
+  it('refuses to rename a slot id that does not exist', () => {
+    expect(renameSaveSlot('does-not-exist', 'New Name')).toEqual({ ok: false, reason: 'missing' })
+  })
+
   it('clearSaveSlot wipes one slot and leaves others + unlock intact', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     saveGameState({
