@@ -51,6 +51,7 @@ import {
   isEraEligible,
   isIntroConversionUnlocked,
   isStorageUnlocked,
+  latchMainGameUnlocked,
   pickIntroCapacityMilestone,
   pickIntroProductionMilestone,
   tickIntroProduction,
@@ -836,6 +837,40 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
     it('is a same-reference no-op when there is nothing to decay', () => {
       const state = createInitialGameState()
       expect(tickFillMultiplierDecay(1)(state)).toBe(state)
+    })
+
+    // "Effect beyond 200% should always be lost instantly" — a stored bonus that's already
+    // contributing nothing beyond the cap (because the base value has since risen) must be
+    // truncated down to the cap's current headroom on every tick, not merely left to decay away
+    // at the flat per-second rate. This is independent of elapsedSeconds itself — even a
+    // non-positive tick still discards the excess, since a base-only rise (no time passing) can
+    // still leave a stored bonus over-large.
+    it('truncates the Data Stream bonus down to the cap\'s CURRENT headroom the instant the base rises, even with elapsedSeconds=0', () => {
+      // Base at capacity/2 (full Buffer) => FILL_MULTIPLIER_MIN_PERCENT (50). A stored bonus of
+      // 150 was legitimate when the base was much lower (e.g. tapped while nearly empty), but is
+      // now 100 points more than the cap's headroom (200 - 50 = 150 is actually exactly the
+      // headroom here — use a bonus ABOVE that to force truncation).
+      const state = withIntro(createInitialGameState(), {
+        bits: 1000, capacity: 1000, dataStreamTapBonusPercent: 170,
+      })
+      const after = tickFillMultiplierDecay(0)(state)
+      expect(after.intro.dataStreamTapBonusPercent).toBe(150)
+      expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
+    })
+
+    it('truncates a pool\'s own bonus down to ITS cap headroom independently of the Data Stream\'s', () => {
+      const baseState = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 170 } })
+      const fullBufferBits = getPoolBufferCapacity(baseState, 1)
+      const state = withIntro(baseState, { poolBuffers: { 1: fullBufferBits } })
+      const after = tickFillMultiplierDecay(0)(state)
+      // Pool 1's buffer is full => FILL_MULTIPLIER_MIN_PERCENT (50) base, same headroom math as
+      // the Data Stream case above.
+      expect(after.intro.poolTapBonusPercents[1]).toBe(150)
+    })
+
+    it('never truncates a bonus that already fits within the current headroom', () => {
+      const state = withIntro(createInitialGameState(), { dataStreamTapBonusPercent: 5 })
+      expect(tickFillMultiplierDecay(0)(state)).toBe(state)
     })
   })
 
@@ -2219,10 +2254,10 @@ describe('convertIntroBitsToKilobytes', () => {
     expect(convertIntroBitsToKilobytes(state)).toBe(state)
   })
 
-  it('flips mainGameUnlocked on a successful convert', () => {
+  it('does not itself touch mainGameUnlocked — that is latchMainGameUnlocked\'s job now, keyed off Storage\'s own capacity threshold', () => {
     const state = withIntro(createInitialGameState(), { bits: level1Cost, capacity: level1Cost })
     const after = convertIntroBitsToKilobytes(state)
-    expect(after.intro.mainGameUnlocked).toBe(true)
+    expect(after.intro.mainGameUnlocked).toBe(false)
   })
 
   // Regression test for a past design: the conversion cost used to be a flat
@@ -2307,6 +2342,25 @@ describe('tickIntroProduction', () => {
   })
 })
 
+describe('latchMainGameUnlocked', () => {
+  it('is a same-reference no-op below the Storage-reveal capacity threshold', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY - 1 })
+    expect(latchMainGameUnlocked(state)).toBe(state)
+  })
+
+  it('flips mainGameUnlocked true the instant capacity reaches INTRO_DISK_UNLOCK_CAPACITY — the same threshold isStorageUnlocked uses', () => {
+    const state = withIntro(createInitialGameState(), { capacity: INTRO_DISK_UNLOCK_CAPACITY })
+    expect(isStorageUnlocked(state)).toBe(true)
+    const after = latchMainGameUnlocked(state)
+    expect(after.intro.mainGameUnlocked).toBe(true)
+  })
+
+  it('is a same-reference no-op once already true, regardless of capacity', () => {
+    const state = withIntro(createInitialGameState(), { mainGameUnlocked: true, capacity: INTRO_STARTING_CAPACITY })
+    expect(latchMainGameUnlocked(state)).toBe(state)
+  })
+})
+
 describe('tickIntroAutoInvest', () => {
   const firstTierId = TIER_DEFINITIONS[0].id
 
@@ -2325,7 +2379,8 @@ describe('tickIntroAutoInvest', () => {
     const after = tickIntroAutoInvest(state)
     expect(after.owned[firstTierId]).toBe(1)
     expect(after.intro.bits).toBe(500)
-    expect(after.intro.mainGameUnlocked).toBe(true)
+    // Does not itself touch mainGameUnlocked any more — see latchMainGameUnlocked.
+    expect(after.intro.mainGameUnlocked).toBe(false)
   })
 
   it('converts every complete unit that fits in a single call, not just one, when several are affordable at once', () => {
@@ -7862,7 +7917,7 @@ describe('prestigeGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('resets the Byte Foundry\'s Memory/gate across prestige, but keeps the generator and its upgrades permanent', () => {
+  it('resets the Byte Foundry\'s Memory across prestige, but keeps the generator/its upgrades AND mainGameUnlocked permanent', () => {
     const state = withIntro(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), {
       bits: 500,
       capacity: 8000,
@@ -7875,10 +7930,12 @@ describe('prestigeGame', () => {
       mainGameUnlocked: true,
     })
     const after = prestigeGame(state)
-    // Memory + the gate reset to fresh.
+    // Memory resets to fresh.
     expect(after.intro.bits).toBe(0)
     expect(after.intro.productionAccumulator).toBe(0)
-    expect(after.intro.mainGameUnlocked).toBe(false)
+    // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — a real Prestige never
+    // re-gates it once it's ever been true.
+    expect(after.intro.mainGameUnlocked).toBe(true)
     // The generator and every upgrade to it are permanent — carried over unchanged.
     expect(after.intro.capacity).toBe(8000)
     expect(after.intro.byteCreated).toBe(true)
@@ -7896,7 +7953,8 @@ describe('prestigeGame', () => {
     const after = prestigeGame(state)
     expect(after.owned[tensTier.id]).toBe(0)
     expect(after.intro.bits).toBe(0)
-    expect(after.intro.mainGameUnlocked).toBe(false)
+    // mainGameUnlocked is permanent now — see latchMainGameUnlocked.
+    expect(after.intro.mainGameUnlocked).toBe(true)
     // capacity/byteCreated (the generator) are untouched by this same reset — no stale bits, but
     // no stale/wiped generator progress either.
     expect(after.intro.capacity).toBe(8000)
@@ -8973,11 +9031,13 @@ describe('eraGame', () => {
     expect(after.prestigeDoublePpLevel).toBe(0)
   })
 
-  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and resets Buffer', () => {
+  it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and mainGameUnlocked permanent, and resets Buffer', () => {
     const state = eraEligibleState()
     const after = eraGame(state)
     expect(after.intro.byteCreated).toBe(true)
-    expect(after.intro.mainGameUnlocked).toBe(false)
+    // mainGameUnlocked is PERMANENT now (see latchMainGameUnlocked) — even Era ascension, a much
+    // bigger reset than an ordinary Prestige, never re-gates it once it's ever been true.
+    expect(after.intro.mainGameUnlocked).toBe(true)
     expect(after.intro.bits).toBe(0)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
     expect(isIntroConversionUnlocked(after)).toBe(false)
