@@ -1020,17 +1020,25 @@ extend how long the effective (capped) total stays pinned at 200% once decay sta
 revealed, tapping the Data Stream keeps its original flat "one second's worth of bits" direct-credit
 effect (`tapIntroBit`'s pre-reveal branch) — this multiplier has no bearing pre-reveal. `intro.bits`
 is no longer always an integer as a result (see its own field comment in `createInitialGameState`).
-`ByteFoundryPage` shows the live multiplier percent, plus a two-tone `MultiplierBar` (own component
-in `ByteFoundryPage/index.jsx`, scaled to `FILL_MULTIPLIER_TAP_CAP_PERCENT` as its full width so a
-tap bonus has room to visibly extend past the fill-based portion), next to both the Data Stream's
-Speed figure and each pool's own Bandwidth figure — the fill-based portion fills in
-`theme.color.accent`, any live tap bonus on top of it extends the bar in `theme.color.warn` (the
-existing gold/caution token, the closest semantic stand-in for orange) so the two are visually
-distinguishable. A pool's own Memory buffer tile is a real tap target (a sibling of
-`PoolSummaryButton`, not nested inside it — two `<button>`s can't nest). Every tap target's own
-`disabled` mirrors BOTH of the underlying action's no-op conditions, not just the full-Buffer one —
-a `<button>` that stayed enabled once the multiplier hit its 200% cap would silently no-op on click
-with no feedback.
+`ByteFoundryPage` shows the live multiplier via a compact two-tone `MultiplierGauge` (own component
+in `ByteFoundryPage/index.jsx`) — a half-circle speedometer needle-gauge, 0% at the left through
+100% straight up to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) at the right, with its own rounded
+percent readout printed beneath the dial — pinned to the top-right corner of the Data Stream card
+and each pool's own card (`position: relative` on `DataStreamCard`/`PoolCard`, the gauge itself
+`position: absolute` + `pointer-events: none` so it never intercepts a click meant for the tap
+button/expand-toggle it's layered on top of), replacing the earlier full-width linear bar plus a
+separate "NN% Speed"/"· NN%" text line. The fill-based portion of the arc (and the needle position
+up to it) reads in `theme.color.accent`; any live tap bonus on top of it extends the arc in
+`theme.color.warn` (the existing gold/caution token, the closest semantic stand-in for orange) so
+the two are visually distinguishable, same semantics the old bar used. A pool's own Memory buffer
+tile is a real tap target (a sibling of `PoolSummaryButton`, not nested inside it — two `<button>`s
+can't nest); its gauge is a sibling of both, a direct child of `PoolCard`, not nested inside either
+button. Every tap target's own `disabled` mirrors BOTH of the underlying action's no-op conditions,
+not just the full-Buffer one — a `<button>` that stayed enabled once the multiplier hit its 200%
+cap would silently no-op on click with no feedback. The gauge keeps the exact same
+`role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract the old
+bar used, so it remains screen-reader-accessible and existing tests asserting on that contract are
+unaffected by the visual swap.
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
 `isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/

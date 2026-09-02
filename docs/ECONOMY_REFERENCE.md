@@ -293,18 +293,28 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      delivery is now continuous (`getDataStreamEffectMultiplier` is rarely exactly 1); every existing
      consumer of `intro.bits` only ever compares (`>=`/`<`) or subtracts/floor-divides it, so this is
      safe.
-   - `ByteFoundryPage` displays the live multiplier percent, plus a `MultiplierBar` (own component in
-     that file), next to both the Data Stream's own Speed figure and each pool's own Bandwidth figure
-     (`PoolHeaderRow`'s `StatusText`, and inside `PoolSummaryButton` below it for the bar). The bar's
-     own full width is `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%), not the fill-based value's own
-     50–150% range, so a live tap bonus has room to visibly extend past the base segment; the
-     fill-based portion fills in `theme.color.accent`, the tap-bonus portion (capped, same as the
-     multiplier itself) extends it in `theme.color.warn` (the existing gold/caution token — the
-     closest semantic stand-in for orange) so the two read as visually distinct at a glance. Each
-     pool's own Memory buffer tile is now always a real tap target (`FillableStatCard` rendered
-     `as="button"`, calling `tapPoolBuffer(poolIndex)`) — pulled out as a sibling of
+   - `ByteFoundryPage` displays the live multiplier via a compact `MultiplierGauge` (own component in
+     that file) — a half-circle speedometer needle-gauge, sweeping 0% (left) through 100% (straight
+     up) to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%, right), with its own rounded percent readout
+     printed beneath the dial — pinned via `position: absolute` to the top-right corner of the Data
+     Stream card and each pool card (`DataStreamCard`/`PoolCard` are `position: relative` for this;
+     the gauge itself is `pointer-events: none` so it never intercepts a click meant for the tap
+     button/expand-toggle it's layered on top of, verified by clicking directly on the gauge's own
+     screen position and confirming the underlying control still fires). This replaced an earlier
+     full-width linear two-tone bar plus a separate "NN% Speed"/"· NN%" text line; the fill-based
+     portion of the arc (and the needle position up to it) still fills in `theme.color.accent`, any
+     live tap bonus on top of it still extends the arc in `theme.color.warn` (the existing
+     gold/caution token — the closest semantic stand-in for orange) so the two read as visually
+     distinct at a glance — same color semantics as the bar it replaced. The gauge keeps the bar's
+     exact `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract
+     (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still screen-reader-visible
+     as a progress indicator and every test asserting on that contract is unaffected by the visual
+     swap. Each pool's own Memory buffer tile is now always a real tap target (`FillableStatCard`
+     rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — pulled out as a sibling of
      `PoolSummaryButton` rather than nested inside it, since a `<button>` can't nest inside another
-     `<button>` (the same constraint `ComputePage`'s own `TierSelectButton` already works around).
+     `<button>` (the same constraint `ComputePage`'s own `TierSelectButton` already works around); the
+     pool's own gauge is a further sibling of both, a direct child of `PoolCard`, not nested inside
+     either button.
 5. **Speed ×2** (was Bandwidth / Invest for Double Production — `pickIntroProductionMilestone`) runs
    on its own **independent cost ladder**, entirely decoupled from Capacity — a separate, permanent
    progression tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is

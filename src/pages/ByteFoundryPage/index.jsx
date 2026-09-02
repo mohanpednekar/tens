@@ -145,14 +145,18 @@ const MilestoneCostLine = styled.span`
 
 // Data Stream has one shared control surface; each unlocked storage pool gets its own compact
 // derived Bandwidth/Capacity card with its three disk-array rows below it.
+// position: relative so the corner-anchored MultiplierGauge (see below) positions against this
+// card's own box, not some further-out ancestor.
 const PoolCard = styled(StatCard)`
   width: 100%;
   gap: ${props => props.theme.space.md};
+  position: relative;
 `
 
 const DataStreamCard = styled(StatCard)`
   width: 100%;
   gap: ${props => props.theme.space.md};
+  position: relative;
 `
 
 // Structured header + stats block, replacing the earlier single concatenated text line — matches
@@ -290,47 +294,124 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-// Fill-based Speed/Bandwidth multiplier bar (see FILL_MULTIPLIER_* in game/layers and
-// getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine): the bar's own full
-// width is FILL_MULTIPLIER_TAP_CAP_PERCENT (200%), not the fill-based value's own 50–150% range,
-// so a live tap bonus has room to visibly extend past the base segment. The base (fill-based)
-// portion fills in the ordinary accent color; any live tap bonus on top of it — capped, same as
-// the multiplier itself, at the bar's own 200% ceiling — extends the bar in `theme.color.warn`
-// (the app's existing gold/caution token, the closest semantic stand-in for "orange") right after
-// the base segment, so the two are visually distinguishable at a glance.
-const MultiplierBarTrack = styled.div`
-  position: relative;
-  width: 100%;
-  max-width: 220px;
-  height: 0.4rem;
-  border-radius: 999px;
-  background: ${props => props.theme.color.surfaceSunken};
-  overflow: hidden;
-`
+// Fill-based Speed/Bandwidth multiplier gauge (see FILL_MULTIPLIER_* in game/layers and
+// getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact speedometer
+// pinned to its card's own top-right corner (see PoolCard/DataStreamCard's `position: relative`
+// above), replacing the earlier full-width linear bar + separate "NN% Speed"/"· NN%" text. A half-
+// circle dial sweeping left (0%) through straight-up (100%) to right (FILL_MULTIPLIER_TAP_CAP_PERCENT,
+// 200%) — the same needle-gauge convention as a car speedometer, just halved to fit a corner badge.
+// The base (fill-based) arc/needle position reads in the ordinary accent color; when a live tap
+// bonus pushes the total past the base value, a second arc segment extends in `theme.color.warn`
+// (the app's existing gold/caution token, the closest semantic stand-in for "orange") so the two
+// contributions stay visually distinguishable, same as the bar did. `pointer-events: none` on the
+// wrapper keeps it purely decorative — it must never intercept a click meant for the tap
+// button/expand-toggle it's layered on top of. Keeps the exact same role="progressbar"/aria-label/
+// aria-valuenow/min/max contract the old bar used, so existing tests asserting on that contract are
+// unaffected by the visual swap.
+const GAUGE_SIZE = 52
+const GAUGE_STROKE_WIDTH = 5
+const GAUGE_CENTER = GAUGE_SIZE / 2
+const GAUGE_RADIUS = GAUGE_CENTER - GAUGE_STROKE_WIDTH
+const GAUGE_NEEDLE_RADIUS = GAUGE_RADIUS - 3
+const GAUGE_LABEL_GAP = 11
+const GAUGE_HEIGHT = GAUGE_CENTER + GAUGE_LABEL_GAP
+// -90deg = left (0%), 0deg = straight up (100%), +90deg = right (FILL_MULTIPLIER_TAP_CAP_PERCENT).
+const GAUGE_MIN_ANGLE = -90
+const GAUGE_MAX_ANGLE = 90
 
-const MultiplierBarFill = styled.span`
+const clampGaugeValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.max(0, value))
+
+const percentToGaugeAngle = percent =>
+  GAUGE_MIN_ANGLE + (clampGaugeValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * (GAUGE_MAX_ANGLE - GAUGE_MIN_ANGLE)
+
+const gaugePoint = (radius, angleDeg) => {
+  const angleRad = (angleDeg * Math.PI) / 180
+  return { x: GAUGE_CENTER + radius * Math.sin(angleRad), y: GAUGE_CENTER - radius * Math.cos(angleRad) }
+}
+
+// A single SVG arc segment (never more than a 180deg sweep here, so largeArcFlag is always 0).
+const gaugeArcPath = (radius, startAngle, endAngle) => {
+  if (endAngle <= startAngle) return ''
+  const start = gaugePoint(radius, startAngle)
+  const end = gaugePoint(radius, endAngle)
+  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`
+}
+
+const GaugeWrap = styled.div`
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: ${props => props.$offset}%;
-  width: ${props => props.$width}%;
-  background: ${props => (props.$bonus ? props.theme.color.warn : props.theme.color.accent)};
+  top: ${props => props.theme.space.xs};
+  right: ${props => props.theme.space.xs};
+  pointer-events: none;
+  z-index: 1;
 `
 
-const MultiplierBar = ({ basePercent, totalPercent, ariaLabel }) => {
-  const baseWidth = clampPercent((basePercent / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100)
-  const bonusWidth = clampPercent(((totalPercent - basePercent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100)
+const GaugeTrack = styled.path`
+  fill: none;
+  stroke: ${props => props.theme.color.surfaceSunken};
+  stroke-width: ${GAUGE_STROKE_WIDTH};
+  stroke-linecap: round;
+`
+
+const GaugeBaseArc = styled.path`
+  fill: none;
+  stroke: ${props => props.theme.color.accent};
+  stroke-width: ${GAUGE_STROKE_WIDTH};
+  stroke-linecap: round;
+`
+
+const GaugeBonusArc = styled.path`
+  fill: none;
+  stroke: ${props => props.theme.color.warn};
+  stroke-width: ${GAUGE_STROKE_WIDTH};
+  stroke-linecap: round;
+`
+
+const GaugeNeedle = styled.line`
+  stroke: ${props => props.theme.color.text};
+  stroke-width: 2;
+  stroke-linecap: round;
+`
+
+const GaugeHub = styled.circle`
+  fill: ${props => props.theme.color.text};
+`
+
+const GaugeLabel = styled.text`
+  font-family: ${props => props.theme.font.body};
+  font-size: 8px;
+  font-weight: 700;
+  fill: ${props => props.theme.color.textMuted};
+  text-anchor: middle;
+`
+
+const MultiplierGauge = ({ basePercent, totalPercent, ariaLabel }) => {
+  const clampedBase = clampGaugeValue(basePercent)
+  const clampedTotal = clampGaugeValue(totalPercent)
+  const baseAngle = percentToGaugeAngle(clampedBase)
+  const totalAngle = percentToGaugeAngle(clampedTotal)
+  const needleTip = gaugePoint(GAUGE_NEEDLE_RADIUS, totalAngle)
+  const hasBonus = clampedTotal > clampedBase
+
   return (
-    <MultiplierBarTrack
-      role="progressbar"
-      aria-label={ariaLabel}
-      aria-valuenow={Math.round(totalPercent)}
-      aria-valuemin={0}
-      aria-valuemax={FILL_MULTIPLIER_TAP_CAP_PERCENT}
-    >
-      <MultiplierBarFill $offset={0} $width={baseWidth} />
-      {bonusWidth > 0 && <MultiplierBarFill $offset={baseWidth} $width={bonusWidth} $bonus />}
-    </MultiplierBarTrack>
+    <GaugeWrap>
+      <svg
+        role="progressbar"
+        aria-label={ariaLabel}
+        aria-valuenow={Math.round(clampedTotal)}
+        aria-valuemin={0}
+        aria-valuemax={FILL_MULTIPLIER_TAP_CAP_PERCENT}
+        width={GAUGE_SIZE}
+        height={GAUGE_HEIGHT}
+        viewBox={`0 0 ${GAUGE_SIZE} ${GAUGE_HEIGHT}`}
+      >
+        <GaugeTrack d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, GAUGE_MAX_ANGLE)} />
+        {clampedBase > 0 && <GaugeBaseArc d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, baseAngle)} />}
+        {hasBonus && <GaugeBonusArc d={gaugeArcPath(GAUGE_RADIUS, baseAngle, totalAngle)} />}
+        <GaugeNeedle x1={GAUGE_CENTER} y1={GAUGE_CENTER} x2={needleTip.x} y2={needleTip.y} />
+        <GaugeHub cx={GAUGE_CENTER} cy={GAUGE_CENTER} r={2} />
+        <GaugeLabel x={GAUGE_CENTER} y={GAUGE_HEIGHT - 2}>{Math.round(clampedTotal)}%</GaugeLabel>
+      </svg>
+    </GaugeWrap>
   )
 }
 
@@ -456,6 +537,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       </Header>
 
       <DataStreamCard aria-label="Data Stream">
+        {intro.byteCreated && (
+          <MultiplierGauge
+            basePercent={dataStreamBaseMultiplierPercent}
+            totalPercent={dataStreamMultiplierPercent}
+            ariaLabel="data stream fill-based speed multiplier"
+          />
+        )}
         <FillableStatCard
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
@@ -491,12 +579,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
                 </StatusText>
               )}
-              <StatusText>{Math.round(dataStreamMultiplierPercent)}% Speed</StatusText>
-              <MultiplierBar
-                basePercent={dataStreamBaseMultiplierPercent}
-                totalPercent={dataStreamMultiplierPercent}
-                ariaLabel="data stream fill-based speed multiplier"
-              />
             </>
           )}
         </FillableStatCard>
@@ -617,6 +699,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
+            <MultiplierGauge
+              basePercent={poolBaseMultiplierPercent}
+              totalPercent={poolMultiplierPercent}
+              ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
+            />
             <PoolSummaryButton
               aria-expanded={isExpanded}
               aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
@@ -628,13 +715,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
                   <span>Pool</span>
                 </PoolTitle>
-                <StatusText>{formatDiskSize(poolBandwidth)}/sec · {Math.round(poolMultiplierPercent)}%</StatusText>
+                <StatusText>{formatDiskSize(poolBandwidth)}/sec</StatusText>
               </PoolHeaderRow>
-              <MultiplierBar
-                basePercent={poolBaseMultiplierPercent}
-                totalPercent={poolMultiplierPercent}
-                ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
-              />
             </PoolSummaryButton>
             {/* A separate control from PoolSummaryButton above (not nested inside it — two
                 buttons can't nest) so tapping Memory to boost this pool's own multiplier bonus

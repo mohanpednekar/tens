@@ -198,8 +198,9 @@ const InfoPage = () => {
             +{FILL_MULTIPLIER_TAP_BONUS_PERCENT}% to that one Data Stream/pool’s own multiplier,
             decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The combined
             total (base multiplier plus any live tap bonus) is capped at{' '}
-            {FILL_MULTIPLIER_TAP_CAP_PERCENT}% — the bar next to each figure shows this, with the
-            tap bonus portion extending past the base fill in a distinct color.
+            {FILL_MULTIPLIER_TAP_CAP_PERCENT}% — the speedometer gauge in each card’s top-right
+            corner shows this, with the tap bonus portion extending past the base needle position in
+            a distinct color.
           </li>
           <li>
             <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost

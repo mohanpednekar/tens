@@ -146,9 +146,12 @@ the Data Stream (once Storage pools reveal at 1 KiB) or a pool's own Memory buff
 one Data Stream/pool's own bonus, decaying at 1%/sec (`tickFillMultiplierDecay`); before reveal, a
 Data Stream tap keeps its original flat one-second direct-credit effect instead. The CUMULATIVE
 total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TAP_CAP_PERCENT`) —
-both tap actions no-op once already at that cap. `ByteFoundryPage` shows a two-tone `MultiplierBar`
-next to each Speed/Bandwidth figure — the fill-based portion in the accent color, any live tap bonus
-extending it in `theme.color.warn` (gold/caution — the closest existing token to orange).
+both tap actions no-op once already at that cap. `ByteFoundryPage` shows a compact two-tone
+`MultiplierGauge` — a half-circle 0–200% speedometer with a percent readout — pinned to the
+top-right corner of the Data Stream card and each pool card (`pointer-events: none` so it never
+blocks the tap button/expand-toggle underneath); the fill-based arc/needle position reads in the
+accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution — the closest
+existing token to orange).
 
 **Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
 values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data

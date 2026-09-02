@@ -59,9 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Stream/pool's own multiplier, decaying back down at 1%/sec; before Storage pools are revealed, a
   Data Stream tap still credits its original flat "one second's worth of bits." The combined total
   (fill-based value plus any live tap bonus) is capped at 200%, at which point tapping becomes a
-  no-op. Each Speed/Bandwidth figure is paired with a two-tone bar showing the split — the base
-  fill-based portion in the usual accent color, any live tap bonus extending it in a distinct
-  orange/gold tone.
+  no-op. Each Speed/Bandwidth figure is paired with a compact speedometer gauge pinned to the
+  top-right corner of its own card, sweeping 0% to 200% with a percent readout below the dial and
+  showing the same split as a two-tone arc — the base fill-based portion in the usual accent color,
+  any live tap bonus extending it in a distinct orange/gold tone.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
