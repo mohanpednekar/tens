@@ -714,10 +714,11 @@ Strict three-layer separation:
    Speed/Bandwidth multiplier" below); it's rendered as a sibling of `PoolSummaryButton`, not nested
    inside it, since a `<button>` can't nest inside another `<button>`.
    Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
-   name — with the pool's own Bandwidth AND its live fill-based multiplier percent rendered beside it
-   on the same `PoolHeaderRow` line (a `StatusText`, unlabelled) rather than inside the
-   `FillableStatCard` block below, so a pool's throughput reads at a glance without expanding to the
-   buffer detail — centered as a pair, since the symbol alone already uniquely identifies the pool (`aria-label="pool
+   name — with the pool's own Bandwidth rendered beside it on the same `PoolHeaderRow` line (a
+   `StatusText`, unlabelled), so a pool's throughput reads at a glance without expanding to the
+   buffer detail; the live fill-based multiplier percent is no longer text on this line — it's the
+   `MultiplierGauge` inside the `FillableStatCard` block below instead (see "Fill-based
+   Speed/Bandwidth multiplier" below) — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
    VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
@@ -1051,14 +1052,17 @@ is no longer always an integer as a result (see its own field comment in `create
 `ByteFoundryPage` shows the live multiplier via a compact two-tone `MultiplierGauge` (own component
 in `ByteFoundryPage/index.jsx`) — a half-circle speedometer needle-gauge, 0% at the left through
 100% straight up to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) at the right, with its own rounded
-percent readout printed beneath the dial — pinned to the top-right corner of the Data Stream card
-and each pool's own card (`position: relative` on `DataStreamCard`/`PoolCard`, the gauge itself
+percent readout printed beneath the dial — pinned to the top-right corner of the shared
+`FillableStatCard` tile itself (`position: relative` on `FillableStatCard`, the gauge itself
 `position: absolute` + `pointer-events: none` so it never intercepts a click meant for the tap
-button/expand-toggle it's layered on top of), replacing the earlier full-width linear bar plus a
-separate "NN% Speed"/"· NN%" text line. The fill-based portion of the arc (and the needle position
-up to it) reads in `theme.color.accent`; any live tap bonus on top of it extends the arc in
-`theme.color.warn` (the existing gold/caution token, the closest semantic stand-in for orange) so
-the two are visually distinguishable, same semantics the old bar used. A pool's own Memory buffer
+button/expand-toggle it's layered on top of), rendered INSIDE that same tile for both the Data
+Stream and every pool's own Memory buffer in identical layout, replacing the earlier full-width
+linear bar plus a separate "NN% Speed"/"· NN%" text line. The fill-based portion of the arc reads
+in `theme.color.accent`; any live tap bonus on top of it extends the arc in `theme.color.warn` (the
+existing gold/caution token, the closest semantic stand-in for orange) so the two are visually
+distinguishable, same semantics the old bar used. The needle itself is a separate, neutral
+`theme.color.text` pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to the
+accent/warn split. A pool's own Memory buffer
 tile is a real tap target (a sibling of `PoolSummaryButton`, not nested inside it — two `<button>`s
 can't nest); its gauge is a sibling of both, a direct child of `PoolCard`, not nested inside either
 button. Every tap target's own `disabled` mirrors BOTH of the underlying action's no-op conditions,

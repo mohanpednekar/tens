@@ -340,13 +340,15 @@ export const createInitialGameState = () => ({
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
   // Three distinct groups, per prestigeGame (see there): Data Stream balance (bits/
-  // productionAccumulator/mainGameUnlocked) reset to fresh every real Prestige — a new cycle
-  // always starts this screen's balance from 0 and re-shows it before MainPage. The Byte generator
-  // itself and every upgrade to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
-  // productionMilestoneTier/productionMilestoneTierClaims) are PERMANENT, carried over unchanged
-  // exactly like an unlocked autobuyer — so each cycle's gate reopens with whatever production
-  // strength was already built, not from scratch. speedUpGame/overclockGame carry the whole object
-  // through untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
+  // productionAccumulator) resets to fresh every real Prestige — a new cycle always starts this
+  // screen's balance from 0. mainGameUnlocked itself, despite living in this same object, is a
+  // PERMANENT one-time-ever latch (see latchMainGameUnlocked below) — once ever set true by
+  // reaching Storage-unlock capacity, no real Prestige or Era ascension ever resets it again, so
+  // Factory stays permanently reachable from then on. The Byte generator itself and every upgrade
+  // to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/productionMilestoneTier/
+  // productionMilestoneTierClaims) are likewise PERMANENT, carried over unchanged exactly like an
+  // unlocked autobuyer. speedUpGame/overclockGame carry the whole object through untouched either
+  // way (see there) — they're intra-cycle soft resets, not new cycles.
   //
   // Naming (#506): the fillable intake is the Data Stream (bits vs Buffer = capacity). Storage
   // pools are derived views with Capacity start/end (getStoragePoolMemoryBounds) and Bandwidth
@@ -5772,9 +5774,10 @@ export const speedUpGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike prestigeGame (which resets Memory/the gate every cycle but keeps the generator itself
-    // permanent — see there), this is an intra-cycle soft reset and carries the whole intro object
-    // through completely untouched, Memory included.
+    // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
+    // generator itself and the mainGameUnlocked latch permanent — see there), this is an
+    // intra-cycle soft reset and carries the whole intro object through completely untouched,
+    // Memory included.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as prestigeGame gives these two "enabled" flags — see there.
@@ -5847,9 +5850,10 @@ export const overclockGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike prestigeGame (which resets Memory/the gate every cycle but keeps the generator itself
-    // permanent — see there), this is an intra-cycle soft reset and carries the whole intro object
-    // through completely untouched, same as speedUpGame.
+    // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
+    // generator itself and the mainGameUnlocked latch permanent — see there), this is an
+    // intra-cycle soft reset and carries the whole intro object through completely untouched,
+    // same as speedUpGame.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as speedUpGame/prestigeGame give these two "enabled" flags — see there.

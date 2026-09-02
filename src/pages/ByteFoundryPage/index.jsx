@@ -296,18 +296,20 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 
 // Fill-based Speed/Bandwidth multiplier gauge (see FILL_MULTIPLIER_* in game/layers and
 // getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact speedometer
-// pinned to its card's own top-right corner (see PoolCard/DataStreamCard's `position: relative`
+// pinned to its own tile's top-right corner (see FillableStatCard's own `position: relative`
 // above), replacing the earlier full-width linear bar + separate "NN% Speed"/"· NN%" text. A half-
 // circle dial sweeping left (0%) through straight-up (100%) to right (FILL_MULTIPLIER_TAP_CAP_PERCENT,
 // 200%) — the same needle-gauge convention as a car speedometer, just halved to fit a corner badge.
-// The base (fill-based) arc/needle position reads in the ordinary accent color; when a live tap
-// bonus pushes the total past the base value, a second arc segment extends in `theme.color.warn`
-// (the app's existing gold/caution token, the closest semantic stand-in for "orange") so the two
-// contributions stay visually distinguishable, same as the bar did. `pointer-events: none` on the
-// wrapper keeps it purely decorative — it must never intercept a click meant for the tap
-// button/expand-toggle it's layered on top of. Keeps the exact same role="progressbar"/aria-label/
-// aria-valuenow/min/max contract the old bar used, so existing tests asserting on that contract are
-// unaffected by the visual swap.
+// The base (fill-based) arc reads in the ordinary accent color; when a live tap bonus pushes the
+// total past the base value, a second arc segment extends in `theme.color.warn` (the app's
+// existing gold/caution token, the closest semantic stand-in for "orange") so the two contributions
+// stay visually distinguishable, same as the bar did. The needle itself is a separate, neutral
+// `theme.color.text` pointer swept to the current TOTAL (fill + tap bonus) reading — not tied to
+// the accent/warn split, so it never mismatches whichever arc zone it happens to point into.
+// `pointer-events: none` on the wrapper keeps it purely decorative — it must never intercept a
+// click meant for the tap button/expand-toggle it's layered on top of. Keeps the exact same
+// role="progressbar"/aria-label/aria-valuenow/min/max contract the old bar used, so existing tests
+// asserting on that contract are unaffected by the visual swap.
 const GAUGE_SIZE = 52
 const GAUGE_STROKE_WIDTH = 5
 const GAUGE_CENTER = GAUGE_SIZE / 2

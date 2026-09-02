@@ -23,7 +23,10 @@ test('ascending an Era from Settings awards Eons and resets the Foundry gate', a
   const saved = await page.evaluate(() => JSON.parse(window.localStorage.getItem('tens_game_state')))
   expect(saved.era.count).toBe(1)
   expect(saved.eons.balance).toBeGreaterThanOrEqual(1)
-  expect(saved.intro.mainGameUnlocked).toBe(false)
+  // intro.mainGameUnlocked is now a permanent, one-time-ever latch (see engine.js's
+  // latchMainGameUnlocked/buildEraIntroReset) — Era ascension resets the rest of the Foundry but
+  // carries this flag forward once it's ever been set.
+  expect(saved.intro.mainGameUnlocked).toBe(true)
   expect(saved.intro.capacity).toBe(8)
 
   await page.getByRole('button', { name: /open byte foundry/i }).click()

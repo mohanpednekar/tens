@@ -330,11 +330,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      `pointer-events: none` so it never intercepts a click meant for the tap button it's layered on
      top of, verified by clicking directly on the gauge's own screen position and confirming the
      underlying tap still fires). This replaced an earlier full-width linear two-tone bar plus a
-     separate "NN% Speed"/"· NN%" text line; the fill-based portion of the arc (and the needle
-     position up to it) still fills in `theme.color.accent`, any live tap bonus on top of it still
-     extends the arc in `theme.color.warn` (the existing gold/caution token — the closest semantic
-     stand-in for orange) so the two read as visually distinct at a glance — same color semantics as
-     the bar it replaced. The gauge keeps the bar's exact
+     separate "NN% Speed"/"· NN%" text line; the fill-based portion of the arc still fills in
+     `theme.color.accent`, any live tap bonus on top of it still extends the arc in
+     `theme.color.warn` (the existing gold/caution token — the closest semantic stand-in for
+     orange) so the two read as visually distinct at a glance — same color semantics as the bar it
+     replaced. The needle itself is a separate, neutral `theme.color.text` pointer swept to the
+     current TOTAL (fill + tap bonus) reading — not tied to the accent/warn split, so it never
+     mismatches whichever arc zone it happens to point into. The gauge keeps the bar's exact
      `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract
      (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still screen-reader-visible
      as a progress indicator and every test asserting on that contract is unaffected by the visual
