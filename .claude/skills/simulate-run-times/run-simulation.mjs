@@ -69,7 +69,7 @@ import {
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierSpendableAmount,
-  getUnlockedStoragePoolCount,
+  getVisibleStoragePoolCount,
   isBandwidthAvailable,
   isDiskFillAvailable,
   isDiskRedeemable,
@@ -139,10 +139,13 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   s = tapIntroBit(s)
   // Fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js): tapping keeps a
   // Buffer's own multiplier boosted above its natural fill-based value. tapIntroBit above already
-  // covers the Data Stream; each unlocked pool's own local buffer needs its own tap too, since a
-  // pool's own multiplier is entirely independent of the Data Stream's — an attentive player taps
-  // every tappable target, not just the Data Stream tile.
-  for (let poolIndex = 1; poolIndex <= getUnlockedStoragePoolCount(s); poolIndex += 1) {
+  // covers the Data Stream; each pool's own local buffer needs its own tap too, since a pool's own
+  // multiplier is entirely independent of the Data Stream's — an attentive player taps every
+  // tappable target, not just the Data Stream tile. Only VISIBLE pools (ByteFoundryPage's own
+  // getVisibleStoragePoolCount gate — capacity-threshold AND disk-build-unlocked) actually render a
+  // Memory tile to tap; getUnlockedStoragePoolCount alone is disk-build-only and can run ahead of
+  // what's on screen, so using it here would let the bot tap pools no real player could reach yet.
+  for (let poolIndex = 1; poolIndex <= getVisibleStoragePoolCount(s); poolIndex += 1) {
     s = tapPoolBuffer(poolIndex)(s)
   }
   s = combineIntroByte(s)
