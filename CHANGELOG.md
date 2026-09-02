@@ -44,6 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   unlocked per completed sub-size Disk array (the same staged gate the deposit buffer uses). Foundry
   disk rows expose deposit-to-lake actions; a Data Lake summary shows deposited stock, next cost,
   and any in-flight transfers.
+- **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
+  (`getVisibleStoragePoolCount`) needs the Data Stream's raw Capacity (`intro.capacity`) to have
+  reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on — on top of
+  its existing disk-build condition before it renders. In practice this rarely changes pool 1's own
+  reveal timing (Storage's own reveal threshold is already stricter), but it adds a real gate for
+  pools 2 and up. See `docs/DESIGN_HISTORY.md`.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
@@ -52,8 +58,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   will cost more" warning is also gone (no longer true) — the dialog itself, including its "wipes
   all held Compute tokens" warning, was later removed entirely (see the "Memory ×2 (Sacrifice)
   fires immediately" entry under Changed below).
+- **Manual transfer-block row on the Byte Foundry screen** — the row of clickable blocks that let a
+  player manually convert Data Stream bits into `tier01` (Kilobyte) units is gone. The always-on
+  auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
+  it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
+  functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **Idle disk liquidation could destroy a disk from a still-mid-build array** —
+  `isIdleDiskLiquidationAvailable` now requires the array itself to be fully built
+  (`isDiskArrayFullyBuilt`) in addition to the lake genuinely having no room, instead of inferring
+  "array not finished" and "lake is full" from the same `!canDepositDiskToDataLake` check, which
+  can't tell those two apart. A disk mid-array (e.g. 3 of 10 built) is no longer eligible for
+  liquidation just because Provision Disk happens to be momentarily unaffordable.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
@@ -91,8 +108,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `getStoragePoolBandwidth` and `getStoragePoolCapacity` in `engine.js` now use the full Byte
   Foundry production rate and the shared Memory ceiling clamped to each pool's own bounds, so pool 1
   stays fixed once maxed instead of being scaled down when pools 2+ unlock. Tests and docs updated.
+- **Storage pool Capacity/Bandwidth showing non-round SI figures** (e.g. "16.384 KB" / "128 B/sec"
+  instead of a clean "16 KB" / "250 B/sec") — each pool now derives its own SI-clean Capacity from
+  `intro.capacity`'s plain binary doubling count via a rounded-log2 lookup into the SI-clean
+  switchover sequence, computed in closed form (`getSiCleanEquivalentBits`) rather than iterated —
+  robust to floating-point drift both from chained purchases/boosts (the rounded log2) and at very
+  large doubling counts past `Number.MAX_SAFE_INTEGER` (the closed form; an iterative approach
+  would silently pick the wrong decade multiplier once reachable, around pool 8's own boundary
+  within a single Era — see `getStoragePoolCapacity`). Bandwidth simply follows that same raw
+  production rate through the identical transform, with `sqrt(Capacity)` acting only as a bound on
+  the raw rate before the transform (a guideline for bandwidth's bounds, not the formula — see
+  `getStoragePoolBandwidth`). This is fully decoupled from `intro.capacity` itself, which keeps
+  doubling plainly and unclamped in binary for the Data Stream tile's own display — standing rule
+  going forward: the SI-clean switchover sequence is for storage-pool-scoped values only. See
+  `docs/DESIGN_HISTORY.md` for earlier reverted attempts that instead shared one raw value between
+  both displays.
+- **A save from before the decade-power Capacity ladder could carry an over-cap pool buffer or an
+  out-of-bounds Data Lake capacity level** — `getStoragePoolCapacity` moving to a coarser
+  decade-power ladder (see above) meant an existing save's `intro.poolBuffers` entry could sit above
+  its pool's new, lower ceiling and stay fully spendable on Provision Disk despite the pool card
+  showing a lower cap; separately, narrowing the Data Lake capacity ladder from 11 levels to 4 (see
+  below) meant an existing save's `capacityLevel` could index past the new, shorter
+  `DATA_LAKE_CAPACITY_BY_LEVEL` array and return `undefined`, breaking deposit/doubling/idle-liquidation
+  checks against it. `normalizePoolMemoryCapacity` (runs on every load) now clamps both back into
+  range. Found by an automated review pass on the merged PR that introduced the decade-power
+  Capacity ladder.
+- **Dev Mode's Variables-tree "Set" editor could leave a Data Lake `capacityLevel` past the ladder's
+  own bounds** — `setDevState` (the direct state-updater `DevModePage`'s per-field editor uses)
+  bypassed `normalizePoolMemoryCapacity` entirely, unlike the other two Dev Mode write paths
+  (toggling Dev Mode on, and the raw state-JSON editor), which both round-trip through it via
+  `loadGameState`. Typing an out-of-range `capacityLevel` value directly into the Variables tree
+  (e.g. `10`, valid under the ladder's old 11-level shape) would silently break `getDataLakeCapacity`
+  for that lake for the rest of the Dev Mode session. `setDevState` now runs its result through
+  `normalizePoolMemoryCapacity` before committing, same as a real save load. Dev-build-only.
+- **A negative or fractional Data Lake `capacityLevel` (Dev Mode only) could also break
+  `getDataLakeCapacity`** — the clamp above only checked the upper bound; a JS array read at a
+  negative or non-integer index also returns `undefined`, the same failure mode from the other
+  direction. `normalizePoolMemoryCapacity` now floors, truncates, and caps `capacityLevel` in one
+  step; a negative pool buffer gets the same defensive floor for consistency.
+- **Idle disk liquidation could destroy a disk its own Data Lake still had 1,000 units of room
+  for** — `isIdleDiskLiquidationAvailable` gated on `isDataLakeCapacityMaxed`, which isn't the same
+  as "this lake can't accept another deposit": advancing a Data Lake to its hard-cap level always
+  drains its deposits to zero, so a lake can sit maxed with its full capacity completely empty for
+  exactly one tick right after that upgrade. It now checks `canDepositDiskToDataLake` directly — the
+  real "can this specific disk still be banked" condition — so a freshly-maxed-but-empty lake
+  correctly waits for the deposit instead of losing the disk to liquidation.
 
 ### Changed
+- **Tier per-level costs now grow more slowly from level 6 onward** — `getCostEpochExponent`'s
+  per-epoch increment changed from a Fibonacci progression (`1, 1, 2, 3, 5, 8, 13, …`) to a linear
+  one (`1, 1, 2, 3, 4, 5, 6, …`), giving exponents `1, 2, 3, 5, 8, 12, 17, 23, 30, …` instead of
+  `1, 2, 3, 5, 8, 13, 21, 34, 55, …` for epochs 0-8. Levels 1-5 are priced identically to before;
+  every tier's level 6 and beyond (and PP Compute/Flops tiers, which reuse the same formula) now
+  cost noticeably less as levels climb, since the sequence grows quadratically rather than
+  exponentially. See `docs/DESIGN_HISTORY.md`.
+- **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
+  built** — `tickDiskAutoFill`'s cache eligibility used to key off `disksBuiltTotal` having an entry
+  for a size; now it's keyed off which pools are currently unlocked (`getUnlockedStoragePoolCount`),
+  so each pool's smallest size starts filling from Memory as soon as the pool unlocks and is already
+  waiting (full, or filling) by the time the player's first disk of that size finishes provisioning.
+- **Pool cards: Bandwidth moved onto the title line, compacting each card** — each pool's own
+  Bandwidth figure ("+N/sec") now renders beside its "`<symbol>` Pool" title instead of inside the
+  Memory buffer block below, saving a row per pool card.
+- **Data Stream balance no longer drops to raw bits next to a named capacity unit** — the
+  balance/capacity pair (`formatMemoryBalance`) previously fell all the way back to a raw bit count
+  whenever the balance would floor below 1 in capacity's shared unit (e.g. "246,016 bits / 1 MiB");
+  it now self-sizes into its own finer named unit instead (e.g. "30.031 KiB / 1 MiB"), only falling
+  back to raw bits for a genuinely sub-Byte balance where no named unit exists. See
+  `docs/DESIGN_HISTORY.md`.
+- **Compute merge/boost pacing (Core earn time) runs slightly slower once `intro.capacity` grows
+  past a pool's own ceiling** — `intro.capacity` no longer clamps to a pool's SI boundary (see the
+  Storage pool Capacity/Bandwidth fix above), and `getCoreEarnTimeSeconds` deliberately keeps
+  reading that raw, now-larger value rather than a pool's own bounded Capacity, since it describes
+  the real Buffer's own refill time. A minor, acknowledged consequence (~2.4% slower per full
+  decade of doublings past a pool boundary, compounding within an Era) — see
+  `docs/DESIGN_HISTORY.md`.
 - **App icon redesigned** — the favicon/PWA/apple-touch icons move from a plain serif "10" text
   glyph to an 8-cell "byte" grid (4×2 rounded squares, a diagonal accent → violet → good gradient)
   evoking the Byte Foundry's own core mechanic (combining 8 bits into 1 Byte) rather than a generic
@@ -126,6 +216,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   available as compact summaries and no longer scale down from higher unlocked pools. Capacity ×2 uses
   the restored full-Buffer doubling ladder with a ceiling that follows the highest unlocked pool, and
   the shared Disk Build control is now labeled **Provision Disk**.
+- **Provision Disk button moved back inside its pool card** — the button now renders inside the
+  pool card matching the disk ladder's current offer, right after that pool's title, instead of
+  standalone in the Data Stream section — pulling it back out had separated the control from the
+  pool it actually builds into. A fallback copy still renders just below the Data Stream card for
+  the rare case where the disk ladder has already advanced past the last pool card currently
+  visible (capacity-threshold-gated — see the "Storage Pool cards now also require a capacity
+  threshold to appear" entry above), so the button never disappears.
+- **Storage pool Capacity now climbs in plain decade-of-10 steps, not the finer SI-clean sequence**
+  — a pool's own Capacity (`getStoragePoolCapacity`) previously grew through the same 1, 2, 4, 8,
+  …, 64, 125, 250, 500, 1000 SI-clean sequence Bandwidth still uses; it now jumps straight from one
+  power of 10 to the next (1 KB → 10 KB → 100 KB → 1000 KB for pool 1, and so on for higher pools)
+  the instant the Data Stream's raw Capacity crosses that decade threshold, holding flat in between.
+  Each decade step lines up exactly with the disk-build cost one step behind it, so a pool's buffer
+  is always exactly far enough ahead to afford its own next disk the moment the threshold is
+  crossed. Bandwidth is unaffected — it still uses the finer SI-clean sequence. See
+  `docs/DESIGN_HISTORY.md`.
+- **Data Lake capacity ladder switched from its own finer SI-clean sequence to the same
+  decade-power-of-10 shape pool Capacity uses** — a lake's own deposit capacity previously climbed
+  1, 2, 4, 8, …, 64, 125, 250, 500, 1,000 over 11 levels; it now climbs 1 → 10 → 100 → 1,000 over 4
+  levels, matching how a pool's own Capacity now derives (see above). Each level's own upgrade cost
+  is unchanged in shape — always exactly the capacity of the level below it (1 unit to reach 10, 10
+  to reach 100, 100 to reach 1,000) — only the values themselves changed. The button's visible
+  label/tooltip moved from "⚡ ×2"/"double…capacity" to "⚡ ×10"/"increase…capacity ×10" to match.
+  See `docs/DESIGN_HISTORY.md`.
+- **Storage reveals a full decade earlier — right when the Data Stream hits 1 KiB, matching pool
+  1's own capacity-threshold gate** — `INTRO_DISK_UNLOCK_CAPACITY` moves from 80,000 bits ("9.765
+  KiB") to 8,192 bits ("1 KiB"), now expressed as `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` — the
+  same product `getPoolCapacityUnlockThresholdBits(1)` computes — so the whole Storage section and
+  pool 1's own card reveal at the exact same instant, with pool 1 already showing a clean "1 KB"
+  Capacity rather than one that had already advanced to "10 KB" by the time a player first saw it.
+  See `docs/DESIGN_HISTORY.md`.
+- **Data Lake panel redesigned around fewer labels and bigger numbers, matching the rest of the
+  page** — each lake now renders as a self-contained block (title + a big fillable
+  deposited/capacity number + a compact actions row) instead of a dense grid table with explicit
+  Lake/Deposited/Capacity/Bought/Next column headers, mirroring the same `FillableStatCard`/
+  `BalanceText`/`StatusText` shape every other Byte Foundry balance already uses. A lake's visible
+  name now includes its own size unit — "KB Lake," not just "KB". See `docs/DESIGN_HISTORY.md`.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)

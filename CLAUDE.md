@@ -428,18 +428,24 @@ src/
                                the pool's smallest size, see `isDiskReadCacheEligible` — disk
                                squares, releasing, redeeming; no deposit control, Data Lake feeding
                                is fully automatic) for a single size, taking `{ actions, size,
-                               state }`; shared by ByteFoundryPage (the single currently-
-                               active/buildable size only) and StoragePage (every size ever reached).
-                               See `docs/DESIGN_HISTORY.md` for why it's a shared component. Full
-                               contract: `docs/COMPONENTS_REFERENCE.md`
-    DataLakePanel/index.jsx ← one Data Lake's own row (deposited units / capacity, next Booster
-                               cost, in-flight transfers), taking `{ actions, state, bare, tierIndex }`
-                               — `tierIndex` scopes rendering to that one lake, embedded (`bare`,
-                               dropping its own StatCard chrome) inside each `ByteFoundryPage` pool
-                               card below that pool's own disk-array rows, always shown regardless of
-                               activity; omitting `tierIndex` falls back to the original every-visible-
-                               lake grid (retained for reuse, unused by any current caller). See
-                               "Economy model" below for the Data Lake mechanic.
+
+                               state }`; extracted so both ByteFoundryPage (the single currently-
+                               active/buildable size only) and StoragePage (every size ever reached)
+                               render identical, fully interactive detail rather than StoragePage
+                               alone owning it and ByteFoundryPage settling for a text summary.
+                               Full contract: `docs/COMPONENTS_REFERENCE.md`
+    DataLakePanel/index.jsx ← one Data Lake's own self-contained block (title row + a
+                               FillableStatCard showing deposited/capacity as one big number, mirroring
+                               PoolCard's own layout — not a labelled table row; the size unit is part
+                               of the visible name, e.g. "KB Lake"), taking `{ actions, state, bare,
+                               tierIndex }` — `tierIndex` scopes rendering to that one lake, embedded
+                               (`bare`, dropping its own StatCard chrome) inside each `ByteFoundryPage`
+                               pool card below that pool's own disk-array rows, always shown regardless
+                               of activity; omitting `tierIndex` falls back to the original
+                               every-visible-lake list (retained for reuse, unused by any current
+                               caller). Full contract: `docs/COMPONENTS_REFERENCE.md`. See "Economy
+                               model" below for the Data Lake mechanic.
+
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -663,14 +669,26 @@ Strict three-layer separation:
    for why. Full formulas: `docs/ECONOMY_REFERENCE.md`'s "Pool buffers" entry. `ByteFoundryPage`'s
    pool summary shows this buffer as a full-width
    `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
-   tile (fill-gradient background, `BalanceText`/`StatusText`, a hidden `role="progressbar"` for
-   a11y) rather than a bespoke bar — with the buffer/capacity fraction (equal to the pool's own
-   Capacity — see above) above and Bandwidth below, both unlabelled.
+   tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
+   a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
+   own Capacity — see above), unlabelled.
    Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
-   name — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
+   name — with the pool's own Bandwidth rendered beside it on the same `PoolHeaderRow` line (a
+   `StatusText`, unlabelled) rather than inside the `FillableStatCard` block below, so a pool's
+   throughput reads at a glance without expanding to the buffer detail — centered as a pair, since
+   the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
-   unlocked pool in ascending order; only the largest unlocked pool is expanded initially, while
+   VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
+   `getUnlockedStoragePoolCount`'s own disk-build-based count and how many pools' own capacity
+   threshold `getPoolCapacityUnlockThresholdBits` the Data Stream's raw Capacity (`intro.capacity`)
+   has reached: 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on by powers of 1024 —
+   both conditions required). This capacity gate is deliberately kept separate from
+   `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` themselves, which stay disk-build-only and
+   keep driving the disk ladder's own progression (`getMaxActiveDiskLadderStep`), read-cache
+   eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing — folding the capacity
+   rule into that shared primitive directly was tried first and reverted for exactly this reason (a
+   much wider blast radius than intended) — see `docs/DESIGN_HISTORY.md`. Only the largest unlocked pool is expanded initially, while
    earlier pools remain visible as compact disclosure summaries that reveal their three disk-array
    rows when opened. `components/DataLakePanel` is embedded per pool (`bare` mode, a `tierIndex` prop
    scoping it to that one lake, always shown regardless of activity) directly below that pool's own
@@ -683,9 +701,18 @@ Strict three-layer separation:
    Factory Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
    on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
    layout" above), ascending smallest→largest with Cache of a row immediately above that row's
-   Disks. The Provision Disk button always stays visible/usable once Storage is revealed, regardless
-   of eligibility (building ahead of
-   every tier's current cost is a deliberate strategy — see "Economy model" below); each
+   Disks. The Provision Disk button is a single shared control (one disk ladder spans every pool,
+   not a per-pool one — see "Economy model" below) but renders INSIDE whichever ONE `PoolCard` the
+   disk ladder's current offer (`getDiskSize`) currently belongs to (`getPoolIndexForDiskSize`),
+   just below that pool's own buffer block and outside its `isExpanded` disclosure, so it stays
+   visible/usable without expanding that pool — previously a single control living in the shared
+   Data Stream section above all pool cards; moved per player feedback. Building ahead of every
+   tier's current cost is a deliberate strategy, so it always stays visible/usable once Storage is
+   revealed regardless of eligibility — including a fallback render right after the Data Stream card
+   (`ByteFoundryPage`'s own `provisionDiskButton` variable, reused in both spots) for the rare case
+   the disk ladder has advanced to a pool whose own card isn't visible yet (its capacity-unlock
+   threshold — see above — not yet reached, even though the ladder itself is purely disk-build-driven
+   and independent of capacity); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
    slots in one unbroken row. Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
@@ -916,17 +943,15 @@ once far enough along — Disks
 Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk >
 Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
-reducer itself) whenever a higher one is currently available. Manual transfer blocks (plus an
-always-on auto-convert) turn Data Stream bits into free `tier01` units at tier01's own current
-per-unit cost; the first successful transfer unlocks the main game, and there's no per-cycle cap
-on further ones. ByteFoundryPage's own manual transfer-block ROW hides once Storage unlocks and the
-main game is already unlocked (`isStorageUnlocked(state) && intro.mainGameUnlocked`) — at that point
-Disk redemption offers an alternative path to tier units, making the manual row redundant; the
-always-on auto-convert keeps running regardless of whether the row is shown. It stays visible
-through the mandatory pre-unlock gate even past Storage's own reveal threshold, since Buffer
-can reach that threshold without the main game ever having
-been unlocked — `redeemDisk` never flips `mainGameUnlocked`, only a transfer does, so this row is
-never hidden while it's still the only way out of the gate.
+reducer itself) whenever a higher one is currently available. An always-on auto-convert
+(`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
+units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
+cap; the first successful conversion unlocks the main game. `ByteFoundryPage` no longer renders a
+manual transfer-block row for this at all (removed — see `docs/DESIGN_HISTORY.md`): once Storage
+Pool cards start appearing, Disk redemption (below) is the player-facing path to tier units, and
+before that, auto-convert alone carries the player through the mandatory gate with no click needed.
+`convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
+was removed.
 The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
 `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
@@ -937,40 +962,80 @@ action stays
 live indefinitely, every cycle.
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
-`isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds` in
-`engine.js`/`layers.js`, `INTRO_CAPACITY_CAP_BITS`/`INTRO_BANDWIDTH_COST_MULTIPLIER`/
-`MEMORY_BINARY_UNIT_STEP`/`POOL_CAPACITY_SI_STEP`) — the Data Stream card's own balance/Buffer
-figure still RENDERS in binary (IEC-style) units — `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024
-(`MEMORY_BINARY_UNIT_STEP`), so `1 KiB = 1024 Bytes = 1.024 KB` — distinct from Disks/Data
-Lake/caches, which stay SI (`formatDiskSize`/`formatCacheSize`, unchanged, step 1000). But each pool's
-own Capacity end bound VALUE itself (not just its Storage-pool-card display) is now SI-aligned
-(`POOL_CAPACITY_SI_STEP` = 1000, not `MEMORY_BINARY_UNIT_STEP`): `getStoragePoolMemoryBounds(poolIndex).endBits`
-is exactly `BITS_PER_BYTE * 1000 ** (poolIndex + 1)` — pool 1 → 1 MB (SI), pool 2 → 1 GB, pool 3 →
-1 TB, … — so a pool's own Capacity/Bandwidth stats (SI-displayed on its `PoolCard`, see above) land
-on genuinely clean SI figures rather than binary ones converted to SI units after the fact. The
-Data Stream card's OWN binary rendering of this same underlying value is therefore no longer a
-round binary figure either (pool 1's 8,000,000-bit cap reads "976.562 KiB," not "1 MiB") — an
-accepted, deliberate side effect of decoupling the value's true magnitude (now SI-round) from its
-one remaining binary display surface (the Data Stream card only). Pool Memory Capacity uses the
-shared start/end bounds from `getStoragePoolMemoryBounds`; the Data Stream's own value is the
-shared Memory ceiling, and each pool's displayed Capacity is that value clamped to its own bounds.
-Earlier pools no longer derive a step down from the highest unlocked pool, so pool 1 stays capped
-at `INTRO_CAPACITY_CAP_BITS` once maxed. Capacity remains a full-Buffer **Capacity ×2** ladder
-(plain `×2` per purchase via `INTRO_CAPACITY_DOUBLING_STEP` — deliberately NOT the SI-clean
-64→125-deviation sequence the Data Lake capacity ladder below uses, since `intro.capacity` is also
-the Data Stream tile's own balance/capacity figure, which stays binary-denominated; an SI-clean
-mechanic that makes intermediate values land cleanly for the pool card's SI display makes the SAME
-values land un-cleanly for the Data Stream's own binary display instead — e.g. "1.953 KiB" rather
-than "2 KiB" — so the mechanic was reverted to plain doubling after shipping briefly; see
-`docs/DESIGN_HISTORY.md`), so the ladder's last purchase before a new pool's cap simply clamps a
-little earlier than a raw double would land, same clamp shape as always. `INTRO_CAPACITY_CAP_BITS`
-is retained as the pool-1 alias and the active highest pool's end bound is the authoritative moving
-ceiling. The Data Lake capacity ladder (below) is a separate, deliberately-different-mechanic
-doubling ladder — it DOES use the SI-clean sequence (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at 1,000
-units), since a lake's own capacity is never shown via any binary unit, so no such conflict exists
-for it — see "Data Lakes" below. **Speed ×2** (was
-Bandwidth/Invest) steps by `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling
-effect (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
+`isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/
+`getStoragePoolCapacity`/`getStoragePoolBandwidth`/`getNextSiDoubledValue` in `engine.js`/
+`layers.js`, `INTRO_CAPACITY_CAP_BITS`/`INTRO_BANDWIDTH_COST_MULTIPLIER`/`MEMORY_BINARY_UNIT_STEP`/
+`POOL_CAPACITY_SI_STEP`) — **standing rule: non-binary (SI-clean or decade-power) transforms are for
+storage-pool-scoped values only; `intro.capacity` itself keeps doubling plainly in binary**, since
+it's also the Data Stream tile's own balance/capacity figure. Two earlier attempts got this wrong by
+sharing one raw value between both displays (see `docs/DESIGN_HISTORY.md` for both); the current
+mechanic decouples them entirely instead:
+
+- `intro.capacity` (the Data Stream card's own balance/Buffer figure, RENDERED in binary — IEC-style
+  `B`/`KiB`/`MiB`/`GiB`/…/`QiB`, step 1024 via `MEMORY_BINARY_UNIT_STEP`, so `1 KiB = 1024 Bytes`) is
+  a plain `INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP^N` doubling sequence, where N is
+  however many times Capacity ×2 has been purchased — `upgradePoolCapacity` no longer clamps this
+  raw value to any pool boundary, so it can and does grow past a pool's own SI ceiling once that
+  ceiling is reached (further purchases just keep doubling it in the background, unclamped, until a
+  higher pool unlocks and needs the growth). It always renders a clean binary figure.
+- Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) from that same doubling
+  count N, but via a plain DECADE-POWER-OF-10 ladder — 1 KB, 10 KB, 100 KB, 1000 KB (= 1 MB, pool
+  1's own ceiling), and so on for higher pools — rather than the finer SI-clean switchover sequence
+  Bandwidth below still uses. `getDecadePowerEquivalentBits` finds the decade exponent as
+  `Math.floor(steps * Math.log10(2))`, reusing the SAME `steps = round(log2(rawBits /
+  BITS_PER_BYTE))` doubling count `getSiCleanEquivalentBits` computes (multiplying a modest integer
+  by a precise constant stays far more numerically stable at large magnitudes than taking log10 of
+  an already-huge float directly), then returns `10 ** decadeExponent` Bytes — a single closed-form
+  computation, no iteration. Capacity therefore holds FLAT within a decade (e.g. still exactly
+  "1 KB" at 2×, 4×, or 8× the raw doubling count that first crossed into it) and jumps straight to
+  the next decade the instant `intro.capacity` crosses it — no intermediate SI-clean steps (2 KB,
+  4 KB, …) in between — then clamps to that pool's own `getStoragePoolMemoryBounds` window (pool 1 →
+  1 MB, pool 2 → 1 GB, pool 3 → 1 TB, … `endBits = BITS_PER_BYTE * 1000 ** (poolIndex + 1)`), which
+  is itself always a power of 10, so clamping never fights the decade-power ladder. Each decade step
+  exactly matches the disk-build COST one step behind it (e.g. crossing into "10 KB" Capacity funds
+  a 1 KB disk's own 80,000-bit `getDiskCost` — `DISK_BUILD_COST_MULTIPLIER` × size) — deliberate, not
+  coincidental, so a pool's buffer is always exactly far enough ahead to afford its own next disk
+  the moment `intro.capacity` crosses that threshold; see `docs/DESIGN_HISTORY.md`.
+  `getUnlockedStoragePoolCount`/`isMemoryCapacityAtCap` (below)
+  both key off this SAME derived value, not the raw `intro.capacity`, so the "moving ceiling"
+  purchase gate tracks what the pool actually shows.
+- Each pool's Bandwidth (`getStoragePoolBandwidth`) simply follows the raw production rate — the
+  SAME rate the Data Stream tile's own `+N Bytes/sec` figure uses — through the finer SI-clean
+  switchover transform (`getSiCleanEquivalentBits`, its OWN closed-form helper, distinct from
+  Capacity's decade-power one above though both share the same `N = round(log2(rawBits /
+  BITS_PER_BYTE))` doubling-step calculation): `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N /
+  10)` — a ROUNDED log2 rather than a discrete doubling search, so floating-point drift from chained
+  purchases/Compute Boosts/prestige bonuses can't misclassify a value that's mathematically meant to
+  sit exactly on a doubling boundary as one step off. It matches the raw rate up to 64 B/s, then
+  diverges (125 instead of 128, repeating every decade) — e.g. a raw 256 B/s rate reads as a clean
+  250 B/s — deliberately finer-grained than Capacity's own decade-only steps, since Bandwidth is a
+  continuously-read display figure, not a funding threshold meant to hold flat between jumps.
+  `sqrt(that pool's own Capacity in Bytes)` is only a GUIDELINE for the lower/upper bounds this
+  should land in, not the formula itself — it still acts as the real throughput ceiling once a
+  pool's own (now fixed, maxed) Capacity can't keep up with an ever-growing rate, but even then the
+  SI-clean transform is applied to that bound, not a raw `sqrt` remainder.
+- `isMemoryCapacityAtCap` compares the highest unlocked pool's OWN derived Capacity
+  (`getStoragePoolCapacity`) against that pool's `endBits`, not raw `intro.capacity` — this is what
+  actually gates `isMemoryCapacityUpgradeAvailable`/`upgradePoolCapacity`, since the raw value no
+  longer self-limits. `normalizePoolMemoryCapacity` (save load) no longer clamps `intro.capacity` to
+  any pool boundary either — only sanitizes a missing/negative value — for the same reason.
+- `INTRO_CAPACITY_CAP_BITS` is retained as the pool-1 alias (unchanged value, 8,000,000 bits/1 MB
+  SI) and the active highest pool's end bound is still the authoritative moving ceiling — just
+  evaluated against the pool's own derived Capacity now, not the raw one.
+- `getCoreEarnTimeSeconds` (Compute merge/boost pacing, see "Compute Cores/Nodes" below)
+  deliberately keeps reading the RAW `intro.capacity` — it describes the real Buffer's own refill
+  time, not a pool-card display figure. Since `intro.capacity` no longer clamps to a pool ceiling,
+  this is an acknowledged, minor Compute merge/boost pacing consequence (~2.4% slower per full
+  decade of doublings past a pool boundary, compounding within an Era) rather than a bug — see
+  `docs/DESIGN_HISTORY.md`.
+
+The Data Lake capacity ladder (below) is a separate, always-independent ladder — it now uses the
+same plain DECADE-POWER-OF-10 shape pool Capacity uses (`DATA_LAKE_CAPACITY_BY_LEVEL`, 1/10/100/1000,
+capped at 1,000 units), replacing an earlier finer SI-clean sequence — see "Data Lakes" below and
+`docs/DESIGN_HISTORY.md`. A lake's own capacity is never shown via any binary unit, so it never
+shared the Data Stream-display conflict pool Capacity itself once had (see above). **Speed ×2** (was Bandwidth/Invest) steps by
+`INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling effect
+(`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
 the first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md` and
 epic #456 / tracking #506.
@@ -1010,7 +1075,13 @@ released or the size was just unlocked (so Memory visibly fills between transfer
 itself is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) times the current
 production rate (a CACHE filling FROM Memory), so even a large banked balance sitting behind a
 block/tier claim drains into the cache at a real, continuous, bounded rate once unblocked — not
-instantly — rather than the fixed rate/tier check alone gating it. Read cache flushes into an empty
+instantly — rather than the fixed rate/tier check alone gating it. `tickDiskAutoFill`'s cache
+eligibility (which sizes it tries to fill) is keyed off `getUnlockedStoragePoolCount` — every
+currently-unlocked pool's own smallest size — NOT off `disksBuiltTotal` having an entry for that
+size: a pool's read cache starts filling from Memory the instant that pool unlocks, so it's already
+waiting full (or filling) by the time the player's first disk of that size finishes provisioning,
+rather than starting from empty only once a disk has ever been built — see
+`docs/DESIGN_HISTORY.md`. Read cache flushes into an empty
 disk over the time to fill one cache block at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) times
 the current Byte Foundry production rate (a DISK filling FROM a cache) when all 8 blocks are full
 and no tier claim blocks that size (pauses while a tier matches). Every size above the pool's
@@ -1057,16 +1128,25 @@ QB.
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
 purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB
 lake, in that lake's own Byte-scale currency) and climbing by 1 level per
-`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` (plain doubling
-except one 64→125 SI-switchover step — a lake's own capacity is never shown via a binary unit, so
-this switchover carries none of the Data Stream-display conflict that reverted the analogous
-mechanic for pool Capacity itself — see above), permanently hard-capped at
-`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB"
-for the KB lake) via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
+`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` — a plain
+DECADE-POWER-OF-10 ladder (1, 10, 100, 1,000), the same coarse shape pool Capacity itself uses
+(`getDecadePowerEquivalentBits`), replacing an earlier finer SI-clean sequence (1, 2, 4, …, 64, 125,
+250, 500, 1,000 over 11 levels) — see `docs/DESIGN_HISTORY.md` — permanently hard-capped at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 3 — 1,000 units, "1000 KB"
+for the KB lake) via `isDataLakeCapacityMaxed`. Advancing a level is funded by **draining the lake itself**, not Bits: it requires
 the lake to be completely full (`isDataLakeCapacityDoublingAvailable` — deposited units at least the
 lake's own current capacity) and empties every deposit back to zero on purchase — the same
 "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the
-lake's own banked Disks instead of Data Stream Buffer bits.
+lake's own banked Disks instead of Data Stream Buffer bits; each level's own cost is therefore
+always exactly the level below it (1 unit to reach 10, 10 units to reach 100, 100 units to reach
+1,000). The `doubleDataLakeCapacity`/`isDataLakeCapacityDoubling*` function and predicate names
+still say "doubling" even though the ladder itself now climbs a decade-power step per level, not a
+literal ×2 — a value-only change, not worth renaming every call site for. `normalizePoolMemoryCapacity`
+(save load) clamps a saved `capacityLevel` back down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if it's
+above it — a save written under the old, longer ladder could otherwise index
+`DATA_LAKE_CAPACITY_BY_LEVEL` (now length 4) out of bounds and return `undefined`; it likewise
+clamps a saved `intro.poolBuffers` entry down to its pool's current `getPoolBufferCapacity` if the
+now-lower decade-power Capacity formula (see above) leaves it above the new ceiling.
 `getDataLakeCapacityDoublingCost` is kept only as a display-only helper (that same current-capacity
 figure converted into real bits via `getDataLakeUnitBits(tierIndex)`, for the button's own tooltip)
 — no code path spends it out of `intro.bits`. Gated by the same forced priority order every other
@@ -1117,9 +1197,17 @@ indefinitely). No separate inventory cap on the Booster path itself (merge/UI sl
 `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate paths. Boost
 preset multipliers/durations are unchanged.
 
-*Idle disk liquidation* — once a pool's Lake is maxed (`isDataLakeCapacityMaxed`), its deposits can
-never absorb another disk, so a completed pool's LAST (largest, ×100) disk array would otherwise
-just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
+*Idle disk liquidation* — once a pool's LAST (largest, ×100) disk array is fully built
+(`isDiskArrayFullyBuilt` — a REQUIRED, separate check, not implied by the deposit check below: that
+check also returns false while the array is still mid-build, for an entirely different reason than
+"no room," and conflating the two would liquidate a genuinely reusable disk from an unfinished array
+the moment Provision Disk happened to be momentarily unaffordable) AND its Lake genuinely can't
+absorb another one of those disks (`!canDepositDiskToDataLake` — NOT just `isDataLakeCapacityMaxed`:
+a maxed lake was just DRAINED to reach that level, by `doubleDataLakeCapacity`'s own "requires full,
+drains it" shape, so a lake can sit at its hard-cap LEVEL with 1,000 units of totally empty room for
+exactly one tick right after that upgrade — checking `canDepositDiskToDataLake` directly is what
+correctly lets that deposit happen instead of destroying the disk), a completed pool's LAST disk
+array would otherwise just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
 after auto-deposit/auto-release-cache) liquidates that idle output straight into Bits — the same
 Data Stream currency Provision Disk spends from — automatically funding whatever Provision Disk
 needs next (in practice, the next pool's first disk). Gated by the full forced priority order,
@@ -1130,7 +1218,7 @@ every lake's own Capacity doubling all unavailable — so it never competes with
 higher-ranked action. The lowest rank in the whole forced priority chain.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
-loop, transfer-block conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
+loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
 Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
 per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock,
@@ -1245,7 +1333,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1611 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1634 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
