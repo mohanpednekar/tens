@@ -252,7 +252,7 @@ import {
   getDataLakeDiskCounts,
   getDataLakeDiskSlotCounts,
   getDataLakeFillBits,
-  getDataLakeFillFraction,
+  getDataLakeCurrentDiskFillFraction,
   getDataLakeOverflowRatePercent,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
@@ -9343,20 +9343,34 @@ describe('Data Lakes', () => {
       expect(tickPoolBufferFill(5)(state)).toBe(state)
     })
 
-    it('getDataLakeFillFraction/getDataLakeOverflowRatePercent scale linearly between empty (max rate) and full (min rate)', () => {
-      let state = createInitialGameState()
-      state = {
-        ...state,
-        intro: {
-          ...state.intro,
-          dataLakes: { ...state.intro.dataLakes, 1: { ...getDataLakeTier(state, 1), capacityLevel: 1, depositedUnits: 5 } }, // capacity 10, half full
+    it('getDataLakeCurrentDiskFillFraction/getDataLakeOverflowRatePercent track ONLY the disk currently being filled, not the lake\'s overall total', () => {
+      const withCurrentFill = depositedUnits => withIntro(createInitialGameState(), {
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          // capacityLevel 1 => capacity 10, slot counts {1: 10, 10: 0, 100: 0} — with depositedUnits
+          // below 10, the current open slot is always a ×1 disk, sized exactly unitBits1.
+          1: { capacityLevel: 1, depositedUnits, fillBits: unitBits1 * 0.5, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 },
         },
-      }
-      expect(getDataLakeFillFraction(state, 1)).toBeCloseTo(0.5)
-      expect(getDataLakeOverflowRatePercent(state, 1)).toBeCloseTo(
-        DATA_LAKE_OVERFLOW_MAX_PERCENT - 0.5 * (DATA_LAKE_OVERFLOW_MAX_PERCENT - DATA_LAKE_OVERFLOW_MIN_PERCENT),
-      )
-      expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty
+      })
+      // Same half-filled CURRENT disk whether the lake already holds 0 or 3 completed disks — the
+      // reading must be identical either way, since it tracks only the disk in progress, not the
+      // lake's own running total.
+      const empty = withCurrentFill(0)
+      const partial = withCurrentFill(3)
+      expect(getDataLakeCurrentDiskFillFraction(empty, 1)).toBeCloseTo(0.5)
+      expect(getDataLakeCurrentDiskFillFraction(partial, 1)).toBeCloseTo(0.5)
+      const expectedRate = DATA_LAKE_OVERFLOW_MAX_PERCENT - 0.5 * (DATA_LAKE_OVERFLOW_MAX_PERCENT - DATA_LAKE_OVERFLOW_MIN_PERCENT)
+      expect(getDataLakeOverflowRatePercent(empty, 1)).toBeCloseTo(expectedRate)
+      expect(getDataLakeOverflowRatePercent(partial, 1)).toBeCloseTo(expectedRate)
+      expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty disk
+
+      // Once maxed at the current level (no open slot left), reads as a fully "done" disk -> min rate.
+      const maxed = withIntro(createInitialGameState(), {
+        dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 } },
+      })
+      expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
+      expect(getDataLakeCurrentDiskFillFraction(maxed, 1)).toBe(1)
+      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_MIN_PERCENT)
     })
   })
 

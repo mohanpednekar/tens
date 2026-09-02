@@ -4124,16 +4124,26 @@ export const getDataLakeCurrentFillSubSize = (state, tierIndex) =>
 export const getDataLakeFillBits = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.fillBits ?? 0
 
-export const getDataLakeFillFraction = (state, tierIndex) => {
-  const capacity = getDataLakeCapacity(state, tierIndex)
-  if (!(capacity > 0)) return 0
-  return Math.min(1, getDataLakeDepositedUnits(tierIndex)(state) / capacity)
+// The fraction (0..1) of progress on the CURRENTLY-OPEN disk slot only (see
+// getDataLakeCurrentFillSubSize) — fillBits out of that one slot's own full size — not the lake's
+// overall total. Resets to (near) 0 the instant that slot completes and the next one opens, so this
+// reads as a genuine per-disk progress bar rather than a slowly-creeping lake-wide fraction. A
+// lake with nothing left to fill at its current capacity level (no open slot) reads as fully done
+// (1) — there's no disk left to show progress on.
+export const getDataLakeCurrentDiskFillFraction = (state, tierIndex) => {
+  const subSize = getDataLakeCurrentFillSubSize(state, tierIndex)
+  if (subSize === null) return 1
+  const slotSizeBits = getDataLakeUnitBits(tierIndex) * subSize
+  if (!(slotSizeBits > 0)) return 1
+  return Math.min(1, Math.max(0, getDataLakeFillBits(state, tierIndex) / slotSizeBits))
 }
 
-// See DATA_LAKE_OVERFLOW_*_PERCENT in layers.js: DATA_LAKE_OVERFLOW_MAX_PERCENT when this lake is
-// completely empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT once completely full.
+// See DATA_LAKE_OVERFLOW_*_PERCENT in layers.js: DATA_LAKE_OVERFLOW_MAX_PERCENT when the disk
+// CURRENTLY being filled is empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT once that one
+// disk is about to complete — then back up to MAX the instant it completes and the next one opens
+// (see getDataLakeCurrentDiskFillFraction above), not a slow lake-wide taper.
 export const getDataLakeOverflowRatePercent = (state, tierIndex) => {
-  const fraction = getDataLakeFillFraction(state, tierIndex)
+  const fraction = getDataLakeCurrentDiskFillFraction(state, tierIndex)
   return DATA_LAKE_OVERFLOW_MAX_PERCENT - fraction * (DATA_LAKE_OVERFLOW_MAX_PERCENT - DATA_LAKE_OVERFLOW_MIN_PERCENT)
 }
 

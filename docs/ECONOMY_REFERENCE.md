@@ -688,20 +688,23 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    waiting.
 
    **Overflow fill** (`tickPoolBufferFill`'s own overflow branch, `fillDataLakeDisks`/
-   `getDataLakeOverflowRatePercent`/`getDataLakeFillFraction` internally) — once a pool's own local
-   Memory buffer is completely full (`room <= 0` inside `tickPoolBufferFill`'s per-pool loop), that
-   pool's reserved share of the tick's rate (`fillRate * elapsedSeconds`, the exact same reservation
-   `tickPoolBufferFill` already computes for buffer-filling) has nowhere left to go. Rather than
-   wasting it, a percentage of it feeds that pool's own matching lake instead — `poolIndex ===
-   tierIndex`, one lake per pool, the same 1:1 mapping the lake's own KB/MB/GB/… naming already
-   implies. That percentage is itself fill-based on the LAKE's own current fill fraction
-   (`getDataLakeFillFraction` — `depositedUnits / capacity`), mirroring the FILL_MULTIPLIER_*
-   mechanic's own "higher when emptier" shape: `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50) when the lake
-   is completely empty, linearly down to `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0 — no more feed at all)
-   once the lake is completely full — `getDataLakeOverflowRatePercent`. The resulting `overflowBits`
-   (`fillRate * elapsedSeconds * (ratePercent / 100)`, bounded by whatever `intro.bits` actually
-   holds) is consumed from `intro.bits` exactly like an ordinary buffer transfer, then handed to
-   `fillDataLakeDisks`. Deliberately independent of the pool's own fill-based Speed/Bandwidth
+   `getDataLakeOverflowRatePercent`/`getDataLakeCurrentDiskFillFraction` internally) — once a pool's
+   own local Memory buffer is completely full (`room <= 0` inside `tickPoolBufferFill`'s per-pool
+   loop), that pool's reserved share of the tick's rate (`fillRate * elapsedSeconds`, the exact same
+   reservation `tickPoolBufferFill` already computes for buffer-filling) has nowhere left to go.
+   Rather than wasting it, a percentage of it feeds that pool's own matching lake instead —
+   `poolIndex === tierIndex`, one lake per pool, the same 1:1 mapping the lake's own KB/MB/GB/…
+   naming already implies. That percentage is itself fill-based on the fraction of progress on the
+   ONE disk CURRENTLY being filled in that lake — NOT the lake's overall total
+   (`getDataLakeCurrentDiskFillFraction` — `fillBits / (unitBits × the current open sub-size)`),
+   mirroring the FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape:
+   `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50) when that current disk is completely empty, linearly down
+   to `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0 — no more feed at all) as it approaches completion, then
+   straight back up to 50 the instant it completes and the next disk opens — a repeating per-disk
+   taper, not one slow lake-wide ramp — `getDataLakeOverflowRatePercent`. The resulting
+   `overflowBits` (`fillRate * elapsedSeconds * (ratePercent / 100)`, bounded by whatever
+   `intro.bits` actually holds) is consumed from `intro.bits` exactly like an ordinary buffer
+   transfer, then handed to `fillDataLakeDisks`. Deliberately independent of the pool's own fill-based Speed/Bandwidth
    multiplier (`getPoolEffectMultiplier`) — these are two separate dials on the same
    `MultiplierGauge` (see `ByteFoundryPage`, extended into a full circle for pools: the top half
    stays the existing pool fill multiplier, the bottom half is this lake overflow rate, rendered in

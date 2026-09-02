@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeCurrentDiskFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -286,12 +286,14 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // zone it happens to point into.
 //
 // For a POOL specifically (see the optional `lake` prop), the SAME dial continues downward into a
-// second, BOTTOM half arc — literally the same speedometer, not a separate gauge — showing that
-// pool's own Data Lake overflow rate (DATA_LAKE_OVERFLOW_MAX_PERCENT at empty, down to
-// DATA_LAKE_OVERFLOW_MIN_PERCENT once full; see getDataLakeOverflowRatePercent/
-// getDataLakeFillFraction in game/engine): the arc's own length tracks the lake's fill fraction (a
-// sliver near empty, a full bottom semicircle once the lake is full — the same "grows as it fills"
-// reading the top arc already uses), in `theme.color.info` to stay visually distinct from both the
+// second, BOTTOM half arc — literally the same speedometer, not a separate gauge — showing progress
+// on the ONE disk currently being filled in that lake (DATA_LAKE_OVERFLOW_MAX_PERCENT at empty,
+// down to DATA_LAKE_OVERFLOW_MIN_PERCENT once that disk is about to complete; see
+// getDataLakeOverflowRatePercent/getDataLakeCurrentDiskFillFraction in game/engine — NOT the
+// lake's overall total): the arc's own length tracks that current disk's own fill fraction (a
+// sliver near empty, a full bottom semicircle once it's about to complete, then snapping back to a
+// sliver the instant it completes and the next disk opens — the same "grows as it fills" reading
+// the top arc uses, just per-disk rather than lake-wide), in `theme.color.info` to stay visually distinct from both the
 // top arc's accent/warn tones. The Data Stream card has no lake of its own, so it always renders
 // the plain top-half-only dial. Keeps the exact same role="progressbar"/aria-label/aria-valuenow/
 // min/max contract the original bar used for the top reading, plus a second hidden progressbar for
@@ -711,8 +713,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolMultiplierCapped = poolMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
         // The gauge's own bottom half (see MultiplierGauge's `lake` prop) — this pool's own Data
-        // Lake overflow rate/fill (poolIndex === that lake's own tierIndex, one lake per pool).
-        const lakeFillFraction = getDataLakeFillFraction(state, poolIndex)
+        // Lake's CURRENT disk fill progress (poolIndex === that lake's own tierIndex, one lake per
+        // pool), not the lake's overall total.
+        const lakeFillFraction = getDataLakeCurrentDiskFillFraction(state, poolIndex)
         const lakeRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex

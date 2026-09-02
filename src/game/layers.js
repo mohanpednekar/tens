@@ -501,15 +501,16 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // tickPoolBufferFill. Once a pool's own local Memory buffer is completely full, its reserved
 // share of the Data Stream's production rate has nowhere left to go — rather than that share
 // going to waste, a percentage of it feeds that pool's own matching Data Lake instead. That
-// percentage itself is fill-based on the LAKE's own current fill fraction (mirroring the
+// percentage itself is fill-based on progress of the ONE disk currently being filled in that lake
+// (getDataLakeCurrentDiskFillFraction — NOT the lake's overall total; mirroring the
 // FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape): DATA_LAKE_OVERFLOW_MAX_PERCENT
-// when the lake is completely empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT (0 — no more
-// feed at all) once the lake is completely full, so a lake's own fill rate naturally tapers off
-// as it approaches capacity rather than stopping abruptly. Deliberately independent of the pool's
-// own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) — these are two separate
-// dials on the same gauge (see ByteFoundryPage's pool MultiplierGauge, extended into a full circle
-// for pools: the top half stays the existing pool fill multiplier, the bottom half is this lake
-// overflow rate), not compounded into one.
+// when that current disk is empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT (0) as it
+// approaches completion — then straight back up to MAX the instant it completes and the next disk
+// opens, a repeating per-disk taper rather than one slow lake-wide ramp. Deliberately independent
+// of the pool's own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) — these are two
+// separate dials on the same gauge (see ByteFoundryPage's pool MultiplierGauge, extended into a
+// full circle for pools: the top half stays the existing pool fill multiplier, the bottom half is
+// this lake overflow rate/current-disk progress), not compounded into one.
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 

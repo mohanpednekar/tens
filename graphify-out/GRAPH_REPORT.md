@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-09-02)
 
 ## Corpus Check
-- 107 files · ~377,381 words
+- 107 files · ~377,932 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1542 nodes · 3899 edges · 92 communities (68 shown, 16 thin omitted)
+- 1542 nodes · 3900 edges · 95 communities (71 shown, 16 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 82 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `49c5c5a9`
+- Built from commit: `89e20262`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -61,17 +61,20 @@
 - useIncrementalGame
 - dependencies
 - ComputePage/index.jsx
-- engine.test.js
+- useIncrementalGame.js
 - DevModePage/index.jsx
 - App.test.jsx
 - MilestonesPage/index.jsx
 - development
 - SettingsPage/index.jsx
+- engine.test.js
 - Button/index.jsx
 - scripts
 - DiskArrayRow/index.jsx
 - StatCard/index.js
 - bump-version.mjs
+- isMemoryCapacityUpgradeAvailable
+- getDiskSizesToShow
 - engine.computeFlops.test.js
 - resetByteFoundry
 - DataLakePanel/index.jsx
@@ -127,7 +130,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (92 total, 16 thin omitted)
+## Communities (95 total, 16 thin omitted)
 
 ### Community 0 - "engine.js"
 Cohesion: 0.08
@@ -258,8 +261,8 @@ Cohesion: 0.50
 Nodes (3): Documentation, Summary, Test plan
 
 ### Community 39 - "getStoragePoolBandwidth"
-Cohesion: 0.12
-Nodes (27): canStartDiskWriteCacheMerge(), decrementFullDiskCount(), getDecadePowerEquivalentBits(), getDiskReadCacheFlushSeconds(), getDiskWriteCacheFlushSeconds(), getDiskWriteCacheSegmentSeconds(), getPoolBufferBits(), getPoolBufferCapacity() (+19 more)
+Cohesion: 0.15
+Nodes (22): canStartDiskWriteCacheMerge(), decrementFullDiskCount(), getCoreEarnTimeSeconds(), getDecadePowerEquivalentBits(), getDiskReadCacheFlushSeconds(), getDiskWriteCacheFlushSeconds(), getDiskWriteCacheSegmentSeconds(), getIntroProductionRate() (+14 more)
 
 ### Community 48 - "useIncrementalGame"
 Cohesion: 0.06
@@ -271,11 +274,11 @@ Nodes (17): @capacitor/core, @fontsource/inter, @fontsource/space-grotesk, depen
 
 ### Community 50 - "ComputePage/index.jsx"
 Cohesion: 0.05
-Nodes (58): activateComputeBoost(), canActivateComputeBoost(), canForfeitComputeBoost(), canReclaimComputeBoost(), canStackComputeBoost(), forfeitComputeBoost(), getBiggestComputeTierWaitingOnMerge(), getComputeBoostTierDurationSeconds() (+50 more)
+Nodes (57): activateComputeBoost(), canActivateComputeBoost(), canReclaimComputeBoost(), canStackComputeBoost(), getBiggestComputeTierWaitingOnMerge(), getComputeBoostTierDurationSeconds(), getComputeBoostTierField(), getComputeBoostTierMultiplier() (+49 more)
 
-### Community 51 - "engine.test.js"
-Cohesion: 0.04
-Nodes (51): applyOfflineProgress(), clearIntroCapacityUpgradeQueue(), enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric (+43 more)
+### Community 51 - "useIncrementalGame.js"
+Cohesion: 0.05
+Nodes (41): applyOfflineProgress(), enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid (+33 more)
 
 ### Community 52 - "DevModePage/index.jsx"
 Cohesion: 0.12
@@ -297,6 +300,10 @@ Nodes (9): browserslist, development, production, >0.2%, last 1 chrome version, 
 Cohesion: 0.12
 Nodes (24): formatAsCleanBytesIfExactMultiple(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEonsAwarded(), RESOURCE_SYMBOL(), formatCost() (+16 more)
 
+### Community 58 - "engine.test.js"
+Cohesion: 0.05
+Nodes (14): canForfeitComputeBoost(), clearIntroCapacityUpgradeQueue(), forfeitComputeBoost(), getNextSiDoubledValue(), isAnyComputeMergeInFlight(), isUpgradeComputeMergeDurationAvailable(), eraEligibleState(), noOtherUpgradesLeft (+6 more)
+
 ### Community 59 - "Button/index.jsx"
 Cohesion: 0.14
 Nodes (18): Button, ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB, progressFill() (+10 more)
@@ -306,8 +313,8 @@ Cohesion: 0.17
 Nodes (12): scripts, audit, build, build:capacitor, bump-version, cap:sync, dev, gen-pwa-icons (+4 more)
 
 ### Community 61 - "DiskArrayRow/index.jsx"
-Cohesion: 0.08
-Nodes (44): CacheBlock, CacheBlocksRow, CacheFlushFill, CellLabel, DiskArrayRow(), DiskSizeRow, DiskSquare, manualPulse (+36 more)
+Cohesion: 0.11
+Nodes (31): CacheBlock, CacheBlocksRow, CacheFlushFill, CellLabel, DiskArrayRow(), DiskSizeRow, DiskSquare, manualPulse (+23 more)
 
 ### Community 62 - "StatCard/index.js"
 Cohesion: 0.15
@@ -316,6 +323,14 @@ Nodes (12): Actions, Body, Card, ConfirmDialog(), Overlay, Title, Body, Card (+4
 ### Community 63 - "bump-version.mjs"
 Cohesion: 0.18
 Nodes (20): assertUnreleasedWellFormed(), buildReleasedBody(), bumpSemver(), determineBumpType(), EMPTY_UNRELEASED, EMPTY_UNRELEASED_BODY, extractVersionSection(), formatChangelogDate() (+12 more)
+
+### Community 64 - "isMemoryCapacityUpgradeAvailable"
+Cohesion: 0.22
+Nodes (10): eraseAllComputeTokens(), isMemoryCapacityAtCap(), isMemoryCapacityUpgradeAvailable(), isPoolCapacityUpgradeAvailable(), latchMainGameUnlocked(), queueIntroCapacityUpgrade(), rewindOneIntroProductionClaim(), rollbackComputeFundedBandwidth() (+2 more)
+
+### Community 65 - "getDiskSizesToShow"
+Cohesion: 0.29
+Nodes (7): getDiskRedeemTierName(), getDiskSizesToShow(), getRelevantDiskSizesForFoundry(), Header, RootDiv, StoragePage(), Title
 
 ### Community 68 - "engine.computeFlops.test.js"
 Cohesion: 0.25
@@ -330,12 +345,12 @@ Cohesion: 0.09
 Nodes (46): ActionButton, BareDivider, clampFraction(), DataLakePanel(), getVisibleLakeTierIndexes(), LakeActionsRow, LakeBlock, LakeHeaderRow (+38 more)
 
 ### Community 72 - "ByteFoundryPage"
-Cohesion: 0.26
-Nodes (15): applyIntroProductionDoublingToIntro(), getComputeBandwidthSacrificeField(), getComputeBandwidthSacrificeLabel(), getEffectiveComputeBandwidthSacrificeIndex(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBandwidthAvailable(), isBandwidthTurnAvailable() (+7 more)
+Cohesion: 0.32
+Nodes (13): applyIntroProductionDoublingToIntro(), getComputeBandwidthSacrificeField(), getComputeBandwidthSacrificeLabel(), getEffectiveComputeBandwidthSacrificeIndex(), getIntroProductionMilestoneCost(), getIntroProductionMilestoneMaxClaims(), isBandwidthAvailable(), isBandwidthTurnAvailable() (+5 more)
 
 ### Community 73 - "getDataStreamBaseMultiplierPercent"
-Cohesion: 0.50
-Nodes (5): getDataStreamBaseMultiplierPercent(), getDataStreamFillFraction(), getFillMultiplierPercent(), getPoolBaseMultiplierPercent(), tickFillMultiplierDecay()
+Cohesion: 0.22
+Nodes (10): getComputeBoostMultiplier(), getDataStreamBaseMultiplierPercent(), getDataStreamEffectMultiplier(), getDataStreamFillFraction(), getDataStreamMultiplierPercent(), getFillMultiplierPercent(), getPoolBaseMultiplierPercent(), getPoolBufferFillFraction() (+2 more)
 
 ### Community 74 - "Testing"
 Cohesion: 0.05
@@ -354,8 +369,8 @@ Cohesion: 0.15
 Nodes (13): Architecture / MainPage UI decisions, Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, Data Stream / Buffer rename; Capacity Sacrifice removed (#506; superseded by #456) — 2026-08-27, Design history & rationale, Distribution, Documentation, Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31, Migration in `src/save-migration/`, runs on every load — 2026-08-22 (+5 more)
 
 ### Community 79 - "navAttention.js"
-Cohesion: 0.06
-Nodes (70): enableAutoMerge(), eraseAllComputeTokens(), getAutobuyerUnlockCost(), getGlobalTickspeedMultiplierCost(), getIntroKilobyteConversionCost(), getSmartAutobuyerCost(), isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable() (+62 more)
+Cohesion: 0.07
+Nodes (65): enableAutoMerge(), getAutobuyerUnlockCost(), getGlobalTickspeedMultiplierCost(), getIntroKilobyteConversionCost(), getSmartAutobuyerCost(), isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable(), isAutoMergeCoresIntoNodeUnlockAvailable() (+57 more)
 
 ### Community 81 - "backlog-issue-hygiene.sh"
 Cohesion: 0.49
@@ -370,8 +385,8 @@ Cohesion: 0.18
 Nodes (10): name, packageManager, private, resolutions, **/fast-uri, **/filelist/minimatch/brace-expansion, **/glob/minimatch/brace-expansion, **/nanoid (+2 more)
 
 ### Community 87 - "getDiskSize"
-Cohesion: 0.32
-Nodes (8): getDataLakeTierIndex(), getDiskLadderSizeBits(), getDiskLadderStep(), getDiskSize(), getMaxActiveDiskLadderStep(), getNextDiskLadderSize(), isDiskBuildBelowCap(), isDiskLadderExhaustedForActivePools()
+Cohesion: 0.19
+Nodes (14): getDataLakeSubSize(), getDataLakeTierIndex(), getDiskLadderSizeBits(), getDiskLadderStep(), getDiskRequiredTierLevel(), getDiskSize(), getMatchingTierForDiskSize(), getMaxActiveDiskLadderStep() (+6 more)
 
 ### Community 88 - "sync-release-milestones.sh"
 Cohesion: 0.67
@@ -382,8 +397,8 @@ Cohesion: 0.80
 Nodes (3): formatAdversarialReviewMarker(), hasAdversarialApproveForHead(), parseAdversarialReviewMarker()
 
 ### Community 90 - "tickComputeMergeBoundary"
-Cohesion: 0.13
-Nodes (16): getComputeMergeDurationSeconds(), getCoreEarnTimeSeconds(), getIntroProductionRate(), startComputeMergeReserve(), startComputeMergeReserveAtBoundary(), tickAutoMergeCloudsIntoDatacenter(), tickAutoMergeClustersIntoNetwork(), tickAutoMergeCoresIntoNode() (+8 more)
+Cohesion: 0.18
+Nodes (11): tickAutoMergeCloudsIntoDatacenter(), tickAutoMergeClustersIntoNetwork(), tickAutoMergeCoresIntoNode(), tickAutoMergeDatacentersIntoSupercomputer(), tickAutoMergeFabricsIntoCloud(), tickAutoMergeGridsIntoFabric(), tickAutoMergeNetworksIntoGrid(), tickAutoMergeNodesIntoCluster() (+3 more)
 
 ### Community 99 - "Era ascension and Eons (#407)"
 Cohesion: 0.25
@@ -394,8 +409,8 @@ Cohesion: 0.67
 Nodes (3): Cursor Cloud GitHub access, GitHub Milestones (release grouping), Issue tracking for interactive sessions
 
 ### Community 102 - "actFoundry"
-Cohesion: 0.16
-Nodes (15): actFoundry(), combineIntroByte(), getComputeBoostMultiplier(), getDataStreamEffectMultiplier(), getDataStreamMultiplierPercent(), getPoolCapacityUnlockThresholdBits(), getProvisionDiskSeconds(), getVisibleStoragePoolCount() (+7 more)
+Cohesion: 0.20
+Nodes (14): actFoundry(), combineIntroByte(), getPoolBufferBits(), getPoolCapacityUnlockThresholdBits(), getPoolMultiplierPercent(), getPoolTapBonusPercent(), getVisibleStoragePoolCount(), isInvestProgressBelowCap() (+6 more)
 
 ### Community 105 - "Tier production tickspeed"
 Cohesion: 0.67

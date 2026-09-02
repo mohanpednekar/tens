@@ -1063,11 +1063,13 @@ distinguishable. The needle itself is a separate, neutral `theme.color.text` poi
 current TOTAL (fill + tap bonus) reading, not tied to the accent/warn split.
 
 For a POOL specifically, the SAME dial continues downward into a BOTTOM half arc — the `lake` prop
-on `MultiplierGauge` — showing that pool's own Data Lake overflow rate/fill (see "Data Lakes"
-below): `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) at the lake empty, down to
-`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) once full, with the arc's own LENGTH tracking the lake's fill
-FRACTION (a sliver near empty, a full bottom semicircle once full — the same "grows as it fills"
-reading the top arc uses), rendered in `theme.color.info` to stay visually distinct from the top
+on `MultiplierGauge` — showing progress on the ONE disk CURRENTLY being filled in that pool's own
+Data Lake (see "Data Lakes" below), NOT the lake's overall total: `DATA_LAKE_OVERFLOW_MAX_PERCENT`
+(50%) when that current disk is empty, down to `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) as it
+approaches completion, with the arc's own LENGTH tracking that same current-disk fill FRACTION (a
+sliver near empty, a full bottom semicircle once it's about to complete — then snapping back to a
+sliver the instant it completes and the next disk opens, the same "grows as it fills" reading the
+top arc uses, just per-disk rather than lake-wide), rendered in `theme.color.info` to stay visually distinct from the top
 arc's accent/warn tones, plus its own small percent label inside the bottom half and a hidden
 second `role="progressbar"` for a11y. The Data Stream card has no lake of its own, so it always
 renders the plain top-half-only dial (`lake` omitted). `PoolCard`'s summary button (title/gauge/
@@ -1249,17 +1251,22 @@ anything to do with Storage Disk builds.
 *Overflow fill* — once a pool's own local Memory buffer is completely full, its reserved share of
 that tick's production rate has nowhere left to go; rather than wasting it, a percentage of it
 feeds that pool's own matching lake instead (`tickPoolBufferFill`'s own overflow branch,
-`poolIndex === tierIndex`). That percentage is itself fill-based on the LAKE's own current fill
-fraction (`getDataLakeFillFraction`), mirroring the FILL_MULTIPLIER_* mechanic's own shape:
-`DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when the lake is empty, linearly down to
-`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) once full (`getDataLakeOverflowRatePercent`) — deliberately
-independent of the pool's own fill-based Speed/Bandwidth multiplier; these are two separate dials
-on the same gauge (see "Fill-based Speed/Bandwidth multiplier" above), not compounded. The
-resulting overflow bits feed `fillDataLakeDisks`, which completes the lake's own ×1/×10/×100 disks
-SMALLEST-first (see "Disk breakdown" below), tracking raw-bit progress toward the current open
-slot in `lake.fillBits`. The very FIRST disk any lake ever completes (always ×1) permanently
-latches `boostersUnlocked` true — a lake's Buy button (below) only ever shows once that's happened,
-even though `depositedUnits` itself can later drop back down as Boosters get bought.
+`poolIndex === tierIndex`). That percentage is itself fill-based on progress of the ONE disk
+CURRENTLY being filled in that lake — NOT the lake's overall total
+(`getDataLakeCurrentDiskFillFraction`, mirroring the FILL_MULTIPLIER_* mechanic's own shape):
+`DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when that current disk is empty, linearly down to
+`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) as it approaches completion, then straight back up to 50% the
+instant it completes and the next disk opens — a repeating per-disk taper, not one slow lake-wide
+ramp (`getDataLakeOverflowRatePercent`) — deliberately independent of the pool's own fill-based
+Speed/Bandwidth multiplier; these are two separate dials on the same gauge (see "Fill-based
+Speed/Bandwidth multiplier" above), not compounded. The resulting overflow bits feed
+`fillDataLakeDisks`, which completes the lake's own ×1/×10/×100 disks SMALLEST-first (see "Disk
+breakdown" below), tracking raw-bit progress toward the current open slot in `lake.fillBits` — the
+same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above and the
+pool gauge's own bottom-half progress arc (see "Fill-based Speed/Bandwidth multiplier" above). The
+very FIRST disk any lake ever completes (always ×1) permanently latches `boostersUnlocked` true — a
+lake's Buy button (below) only ever shows once that's happened, even though `depositedUnits` itself
+can later drop back down as Boosters get bought.
 
 *Disk breakdown* — a lake's own banked total (`depositedUnits`, a whole-unit integer) decomposes
 into `DATA_LAKE_SUB_SIZES` (`[1, 10, 100]`) disk counts smallest-first, each capped per

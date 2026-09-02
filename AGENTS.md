@@ -155,8 +155,9 @@ is always lost instantly rather than banked for later. `ByteFoundryPage` shows a
 `MultiplierGauge` in the middle column of a shared header row (title top-left, gauge top-middle,
 Speed/Bandwidth top-right — above the balance tile, not overlaid on it) for both the Data Stream
 and every pool: a 0–200% speedometer with a percent readout, top half only for the Data Stream, but
-a FULL circle for a pool — its bottom half showing that pool's own Data Lake overflow rate/fill
-(50%→0% as the lake fills, in `theme.color.info`; see "Data Lakes" below). The fill-based top arc
+a FULL circle for a pool — its bottom half showing progress on the ONE disk currently being filled
+in that pool's own Data Lake, not the lake's overall total (50%→0% as that disk fills, back to 50%
+once it completes, in `theme.color.info`; see "Data Lakes" below). The fill-based top arc
 reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
 the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
 pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
@@ -217,8 +218,10 @@ the whole level in one shot rather than granting 1 unit) and Compute Cores/Nodes
 (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund Boosters, escalating cost (nth = n
 units) — fully decoupled from Storage Disks now: each lake is fed directly and continuously by its
 own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full),
-at a fill-based rate (`DATA_LAKE_OVERFLOW_MAX_PERCENT` 50% at empty down to 0% full — the SAME
-`MultiplierGauge`'s own bottom half, see above), completing the lake's ×1/×10/×100 disks
+at a rate based on the ONE disk currently being filled, not the lake's overall total
+(`DATA_LAKE_OVERFLOW_MAX_PERCENT` 50% at that disk empty down to 0% as it's about to complete, then
+back to 50% once it completes and the next opens — the SAME `MultiplierGauge`'s own bottom half,
+see above), completing the lake's ×1/×10/×100 disks
 smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
 the maxed level's 1,000-unit capacity). A lake's first-ever completed disk permanently unlocks
 Boosters for it (`boostersUnlocked`); buying (`buyBooster`, manual or auto-buy via
