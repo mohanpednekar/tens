@@ -9089,6 +9089,21 @@ describe('Data Lakes', () => {
       expect(isIdleDiskLiquidationTurnAvailable(diskFillBlocks, 1)).toBe(false)
     })
 
+    it('an idle full disk from a STILL-MID-BUILD array does NOT liquidate, even though it can\'t deposit either — not-finished-yet isn\'t the same as no-room-left', () => {
+      // Only 3 of the 10 ×100 disks this array will eventually hold have been built so far — the
+      // array itself isn't finished. canDepositDiskToDataLake already returns false here too (it
+      // requires isDiskArrayFullyBuilt internally), but for a DIFFERENT reason than "the lake has
+      // no room" — isIdleDiskLiquidationAvailable must not conflate the two, or a genuinely
+      // reusable disk mid-array would get destroyed into Bits the moment Provision Disk happened to
+      // be momentarily unaffordable. See docs/DESIGN_HISTORY.md.
+      const midBuildArray = withIntro(maxedLakePool1, {
+        disksBuiltTotal: { ...maxedLakePool1.intro.disksBuiltTotal, [kb100]: 3 },
+      })
+      expect(canDepositDiskToDataLake(midBuildArray, kb100)).toBe(false)
+      expect(isIdleDiskLiquidationAvailable(midBuildArray, 1)).toBe(false)
+      expect(tickIdleDiskLiquidation(midBuildArray)).toBe(midBuildArray)
+    })
+
     it('a lake AT the max LEVEL but just drained (0 deposited, 1,000 units of room) does NOT liquidate — being "maxed" isn\'t the same as being full', () => {
       // doubleDataLakeCapacity always empties deposits back to zero on advancing a level,
       // including the final advance to DATA_LAKE_CAPACITY_MAX_LEVEL — so a lake can sit at the max

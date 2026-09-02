@@ -4064,6 +4064,17 @@ export const doubleDataLakeCapacity = tierIndex => state => {
 // Byte Foundry action follows, with Lake Capacity doubling (any tier, not just this pool's own)
 // ranked directly above it: liquidation only ever kicks in once the Foundry would otherwise be
 // completely idle, so it never competes with or bypasses a higher-ranked action.
+//
+// isDiskArrayFullyBuilt(state, size) is a REQUIRED first check here, not redundant with
+// canDepositDiskToDataLake's own internal check of the same thing: canDepositDiskToDataLake
+// returns false both when the array isn't finished yet AND when it's finished but the lake has no
+// room, and !canDepositDiskToDataLake can't tell those two apart. Without gating on
+// isDiskArrayFullyBuilt directly, a mid-build array's already-full disk (e.g. 3 of 10 built, still
+// mid-array) would read as "can't deposit" for the wrong reason — not-yet-finished, not
+// lake-is-full — and get liquidated into Bits the moment Provision Disk happens to be momentarily
+// unaffordable, destroying a disk that still has a real destination (redemption, or the finished
+// array's own deposit) once the array completes or affordability returns. See
+// docs/DESIGN_HISTORY.md.
 const getPoolLastDiskSize = poolIndex => getDiskLadderSizeBits(poolIndex * DATA_LAKE_SUB_SIZES.length)
 
 export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
@@ -4071,6 +4082,7 @@ export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
   const size = getPoolLastDiskSize(poolIndex)
   if ((state.intro.disks?.[size] ?? 0) < 1) return false
   if (state.intro.diskBuild?.size === size) return false
+  if (!isDiskArrayFullyBuilt(state, size)) return false
   return !canDepositDiskToDataLake(state, size)
 }
 
