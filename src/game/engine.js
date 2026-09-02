@@ -661,24 +661,22 @@ export const formatMoneyBalance = value => {
     : `${formatScientific(bytes)} B`
 }
 
-// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 13, 21, …
-// for epochs 0, 1, 2, 3, 4, 5, 6, … — the classic Fibonacci sequence (exponent(e) = fib(e+2) in
-// the canonical 0-indexed fib(0)=0, fib(1)=1 numbering), computed iteratively rather than via a
-// closed form (Fibonacci has no simple integer one) or naive recursion (which is exponential-time
-// for larger epochs — see docs/DESIGN_HISTORY.md for the regression that came from getting this
-// wrong). A negative epoch is clamped to 0 rather than throwing, and getTierCost below separately
-// clamps level 0/negative levels to level 1 (epoch 0) before this is ever called, so this function
-// itself never needs to handle a negative epoch from that caller.
+// The exponent driving a cost epoch's multiplier (see getTierCost): 1, 2, 3, 5, 8, 12, 17, 23, 30,
+// … for epochs 0, 1, 2, 3, 4, 5, 6, 7, 8, … — each epoch's exponent grows over the previous one by
+// a linear increment (1, 1, 2, 3, 4, 5, 6, …: 1 at epoch 0, the epoch number itself from epoch 1
+// on), computed iteratively. This matches the Fibonacci-driven sequence it replaces (see
+// docs/DESIGN_HISTORY.md) through epoch 4, then grows quadratically in the epoch rather than
+// exponentially — a deliberately gentler long-term cost curve. A negative epoch is clamped to 0
+// rather than throwing, and getTierCost below separately clamps level 0/negative levels to level 1
+// (epoch 0) before this is ever called, so this function itself never needs to handle a negative
+// epoch from that caller.
 export const getCostEpochExponent = epoch => {
   const e = clampNonNegative(epoch)
-  let a = 1 // exponent at epoch 0
-  let b = 2 // exponent at epoch 1
-  for (let i = 0; i < e; i++) {
-    const next = a + b
-    a = b
-    b = next
+  let exponent = 1 // exponent at epoch 0
+  for (let n = 0; n < e; n++) {
+    exponent += Math.max(n, 1)
   }
-  return a
+  return exponent
 }
 
 // The purchase block size every tier's current level currently requires to complete — a single
@@ -2166,11 +2164,11 @@ export const getUnlockedStoragePoolCount = state => {
 // progression (getMaxActiveDiskLadderStep — which size is currently buildable), read-cache
 // eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing, none of which this
 // capacity rule was meant to touch — see docs/DESIGN_HISTORY.md for the wider blast radius an
-// earlier attempt at folding this into isStoragePoolUnlocked directly caused. In practice pool 1's
-// own 1 KiB (8,192-bit) threshold is already satisfied by the time Storage reveals at all
-// (isStorageUnlocked's own INTRO_DISK_UNLOCK_CAPACITY = 80,000 bits is stricter), so this rarely
-// changes pool 1's own reveal timing — it mainly bites pools 2+, whose thresholds grow past what
-// disk-build progress alone guarantees.
+// earlier attempt at folding this into isStoragePoolUnlocked directly caused. Pool 1's own 1 KiB
+// (8,192-bit) threshold here is deliberately equal to isStorageUnlocked's own
+// INTRO_DISK_UNLOCK_CAPACITY, so pool 1's card and the whole Storage section reveal at the same
+// instant — this rule mainly bites pools 2+, whose thresholds grow past what disk-build progress
+// alone guarantees.
 export const getPoolCapacityUnlockThresholdBits = poolIndex =>
   BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** poolIndex)
 
@@ -2464,8 +2462,11 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
 // Clears any stale queued-Capacity-upgrade flag on save load and sanitizes a missing/negative
 // intro.capacity back to a sane floor. No longer clamps capacity to any pool boundary here —
 // intro.capacity itself isn't bound by a pool's window any more (see upgradePoolCapacity);
-// getStoragePoolCapacity derives each pool's own SI-clean Capacity from it and clamps THAT to the
-// pool's own window instead.
+// getStoragePoolCapacity derives each pool's own decade-power Capacity from it and clamps THAT to
+// the pool's own window instead. Also runs two defensive clamps against stale saves from before a
+// capacity-ladder formula narrowed (see the comments further down this function): pool buffers
+// above the new Capacity ceiling, and Data Lake capacityLevel values past the new ladder's own
+// array bounds.
 export const normalizePoolMemoryCapacity = state => {
   if (!state?.intro) return state
   let changed = state.intro.capacityUpgradeQueued ?? false
@@ -2474,6 +2475,60 @@ export const normalizePoolMemoryCapacity = state => {
   if (capacity !== nextIntro.capacity) {
     changed = true
     nextIntro.capacity = capacity
+  }
+  // Clamp each unlocked pool's own buffer down to its CURRENT Capacity ceiling. A save written
+  // before the pool Capacity formula moved from the finer SI-clean sequence to the coarser
+  // decade-power one (see docs/DESIGN_HISTORY.md) can carry a poolBuffers entry above the new,
+  // lower ceiling — tickPoolBufferFill's own room = Math.max(0, capacity - current) only ever
+  // stops TOPPING UP an over-capacity buffer, it never brings the excess back down, so without
+  // this clamp that excess stays fully spendable on Provision Disk even though the pool card
+  // displays a lower cap.
+  const stateForBufferClamp = { ...state, intro: nextIntro }
+  const unlockedCount = getUnlockedStoragePoolCount(stateForBufferClamp)
+  if (unlockedCount >= 1 && nextIntro.poolBuffers) {
+    const poolBuffers = { ...nextIntro.poolBuffers }
+    let buffersChanged = false
+    for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
+      const current = poolBuffers[poolIndex] ?? 0
+      const cap = getPoolBufferCapacity(stateForBufferClamp, poolIndex)
+      const floored = Math.max(current, 0)
+      const clamped = Math.min(floored, cap)
+      if (clamped !== current) {
+        poolBuffers[poolIndex] = clamped
+        buffersChanged = true
+      }
+    }
+    if (buffersChanged) {
+      changed = true
+      nextIntro.poolBuffers = poolBuffers
+    }
+  }
+  // Clamp each Data Lake's own capacityLevel into [0, DATA_LAKE_CAPACITY_MAX_LEVEL] and to a whole
+  // integer. A save written before that ladder narrowed from 11 SI-clean levels to 4 decade-power
+  // ones (see docs/DESIGN_HISTORY.md) could carry a capacityLevel past the new, shorter
+  // DATA_LAKE_CAPACITY_BY_LEVEL array's end; a negative or fractional value (only reachable via Dev
+  // Mode's Variables-tree free-text number input, which accepts anything `Number()` parses) hits
+  // the same class of bug from the other direction — a JS array index that isn't a non-negative
+  // integer also reads back `undefined`. Either way, without this clamp `getDataLakeCapacity` would
+  // return `undefined`, breaking every downstream comparison against it (deposit eligibility,
+  // doubling availability, idle-disk liquidation) rather than just displaying a lower cap.
+  if (nextIntro.dataLakes) {
+    const dataLakes = { ...nextIntro.dataLakes }
+    let lakesChanged = false
+    for (const tierKey of Object.keys(dataLakes)) {
+      const lake = dataLakes[tierKey]
+      if (!lake) continue
+      const rawLevel = lake.capacityLevel ?? 0
+      const level = Math.min(Math.max(Math.trunc(rawLevel) || 0, 0), DATA_LAKE_CAPACITY_MAX_LEVEL)
+      if (level !== rawLevel) {
+        dataLakes[tierKey] = { ...lake, capacityLevel: level }
+        lakesChanged = true
+      }
+    }
+    if (lakesChanged) {
+      changed = true
+      nextIntro.dataLakes = dataLakes
+    }
   }
   return changed ? { ...state, intro: nextIntro } : state
 }
@@ -2849,9 +2904,10 @@ export const isIntroConversionUnlocked = state => (state.intro?.capacity ?? 0) >
 
 // Predicate, not a reducer: whether ByteFoundryPage's whole Storage section (Provision Disk button, disk
 // squares rows) should be shown at all — true once capacity has grown enough to ever hold
-// INTRO_DISK_UNLOCK_CAPACITY (80,000 bits, "9.765 KiB" in Memory's own binary display scale) at
-// once. A later, more deliberate reveal than isIntroConversionUnlocked's own 1000-bit gate above —
-// see layers.js.
+// INTRO_DISK_UNLOCK_CAPACITY (8,192 bits, "1 KiB" in Memory's own binary display scale — deliberately
+// equal to pool 1's own getPoolCapacityUnlockThresholdBits(1), so Storage and its first pool card
+// reveal at the same instant) at once. A later, more deliberate reveal than
+// isIntroConversionUnlocked's own 1000-bit gate above — see layers.js.
 export const isStorageUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_DISK_UNLOCK_CAPACITY
 
 // Byte-scale (SI) unit ladder — B/KB/MB/… scaling by 1000 each step, reusing TIER_DEFINITIONS' own
@@ -3939,9 +3995,9 @@ export const getDataLakeDepositedUnits = tierIndex => state => {
 const DATA_LAKE_SUB_SIZE_TOTAL = DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize, 0)
 
 // A lake's own deposit capacity is THE explicit, purchasable ladder a player actually interacts
-// with: starts at 1 unit (level 0), climbs via DATA_LAKE_CAPACITY_BY_LEVEL (plain doubling except
-// one 64->125 SI-switchover step — see layers.js), permanently hard-capped at
-// DATA_LAKE_CAPACITY_MAX_LEVEL (1,000 units at level 10).
+// with: starts at 1 unit (level 0), climbs via DATA_LAKE_CAPACITY_BY_LEVEL (a plain
+// decade-power-of-10 ladder — 1, 10, 100, 1,000, see layers.js), permanently hard-capped at
+// DATA_LAKE_CAPACITY_MAX_LEVEL (1,000 units at level 3).
 export const getDataLakeCapacityLevel = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.capacityLevel ?? 0
 
@@ -4099,13 +4155,16 @@ const getDataLakeSubSizeStep = (tierIndex, subSize) =>
 export const getDataLakeUnitBits = tierIndex =>
   getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[0]))
 
-// Doubling a lake's own capacity (see getDataLakeCapacity above) is funded by the lake ITSELF, not
-// Bits: it requires the lake to be completely full (deposited units at its own current capacity)
-// and doubling drains every deposit back to zero — the same "requires a full Buffer, drains it"
-// shape Memory's own Capacity ×2 ladder already uses, just paid in the lake's own banked Disks
-// instead of Data Stream Buffer bits. getDataLakeCapacityDoublingCost is kept as a display-only
-// helper (the real-bit face value of what gets drained, via getDataLakeUnitBits) for the button's
-// own tooltip; no code path spends it out of intro.bits any more.
+// Advancing a lake's own capacity ladder (see getDataLakeCapacity above) is funded by the lake
+// ITSELF, not Bits: it requires the lake to be completely full (deposited units at its own current
+// capacity) and advancing drains every deposit back to zero — the same "requires a full Buffer,
+// drains it" shape Memory's own Capacity ×2 ladder already uses, just paid in the lake's own banked
+// Disks instead of Data Stream Buffer bits (the function/predicate names below still say
+// "doubling" even though the ladder itself now climbs by a decade-power-of-10 step per level, not
+// a literal ×2 — renaming every call site was judged not worth the extra diff for a value-only
+// change). getDataLakeCapacityDoublingCost is kept as a display-only helper (the real-bit face
+// value of what gets drained, via getDataLakeUnitBits) for the button's own tooltip; no code path
+// spends it out of intro.bits any more.
 export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeCapacity(state, tierIndex) * getDataLakeUnitBits(tierIndex)
 
@@ -4144,16 +4203,30 @@ export const doubleDataLakeCapacity = tierIndex => state => {
   }
 }
 
-// Once a pool's Lake is maxed (DATA_LAKE_CAPACITY_MAX_LEVEL — see isDataLakeCapacityMaxed), its
-// deposits can never absorb another disk, so a completed pool's LAST (largest, ×100) disk array
-// would otherwise just pile up full disks with nowhere to go. Rather than let that output sit
-// permanently idle, it liquidates straight into Bits — the same Data Stream currency Provision
-// Disk spends from — automatically funding whatever Provision Disk still needs next (in practice,
-// the next pool's first disk, since that's typically what's left blocking "nothing else to do").
-// Gated by the same forced priority order every other Byte Foundry action follows, with Lake
-// Capacity doubling (any tier, not just this pool's own) ranked directly above it: liquidation
-// only ever kicks in once the Foundry would otherwise be completely idle, so it never competes
-// with or bypasses a higher-ranked action.
+// Once a pool's Lake genuinely CAN'T absorb another one of its own LAST (largest, ×100) disks —
+// checked via canDepositDiskToDataLake itself, not just isDataLakeCapacityMaxed (a maxed lake was
+// just DRAINED to reach that level, by doubleDataLakeCapacity's own "requires full, drains it"
+// shape, so "maxed" and "actually full" are two different things for exactly one tick right after
+// the level-3 upgrade — checking maxed alone would liquidate a disk the lake still had 1,000 units
+// of empty room for) — a completed pool's own idle output would otherwise just pile up full disks
+// with nowhere to go. Rather than let that output sit permanently idle, it liquidates straight into
+// Bits — the same Data Stream currency Provision Disk spends from — automatically funding whatever
+// Provision Disk still needs next (in practice, the next pool's first disk, since that's typically
+// what's left blocking "nothing else to do"). Gated by the same forced priority order every other
+// Byte Foundry action follows, with Lake Capacity doubling (any tier, not just this pool's own)
+// ranked directly above it: liquidation only ever kicks in once the Foundry would otherwise be
+// completely idle, so it never competes with or bypasses a higher-ranked action.
+//
+// isDiskArrayFullyBuilt(state, size) is a REQUIRED first check here, not redundant with
+// canDepositDiskToDataLake's own internal check of the same thing: canDepositDiskToDataLake
+// returns false both when the array isn't finished yet AND when it's finished but the lake has no
+// room, and !canDepositDiskToDataLake can't tell those two apart. Without gating on
+// isDiskArrayFullyBuilt directly, a mid-build array's already-full disk (e.g. 3 of 10 built, still
+// mid-array) would read as "can't deposit" for the wrong reason — not-yet-finished, not
+// lake-is-full — and get liquidated into Bits the moment Provision Disk happens to be momentarily
+// unaffordable, destroying a disk that still has a real destination (redemption, or the finished
+// array's own deposit) once the array completes or affordability returns. See
+// docs/DESIGN_HISTORY.md.
 const getPoolLastDiskSize = poolIndex => getDiskLadderSizeBits(poolIndex * DATA_LAKE_SUB_SIZES.length)
 
 export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
@@ -4161,7 +4234,8 @@ export const isIdleDiskLiquidationAvailable = (state, poolIndex) => {
   const size = getPoolLastDiskSize(poolIndex)
   if ((state.intro.disks?.[size] ?? 0) < 1) return false
   if (state.intro.diskBuild?.size === size) return false
-  return isDataLakeCapacityMaxed(state, poolIndex)
+  if (!isDiskArrayFullyBuilt(state, size)) return false
+  return !canDepositDiskToDataLake(state, size)
 }
 
 const isAnyDataLakeCapacityDoublingAvailable = state => {

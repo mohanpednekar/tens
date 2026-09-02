@@ -433,14 +433,17 @@ src/
                                render identical, fully interactive detail rather than StoragePage
                                alone owning it and ByteFoundryPage settling for a text summary.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DataLakePanel/index.jsx ← one Data Lake's own row (deposited units / capacity, next Booster
-                               cost, in-flight transfers), taking `{ actions, state, bare, tierIndex }`
-                               — `tierIndex` scopes rendering to that one lake, embedded (`bare`,
-                               dropping its own StatCard chrome) inside each `ByteFoundryPage` pool
-                               card below that pool's own disk-array rows, always shown regardless of
-                               activity; omitting `tierIndex` falls back to the original every-visible-
-                               lake grid (retained for reuse, unused by any current caller). See
-                               "Economy model" below for the Data Lake mechanic.
+    DataLakePanel/index.jsx ← one Data Lake's own self-contained block (title row + a
+                               FillableStatCard showing deposited/capacity as one big number, mirroring
+                               PoolCard's own layout — not a labelled table row; the size unit is part
+                               of the visible name, e.g. "KB Lake"), taking `{ actions, state, bare,
+                               tierIndex }` — `tierIndex` scopes rendering to that one lake, embedded
+                               (`bare`, dropping its own StatCard chrome) inside each `ByteFoundryPage`
+                               pool card below that pool's own disk-array rows, always shown regardless
+                               of activity; omitting `tierIndex` falls back to the original
+                               every-visible-lake list (retained for reuse, unused by any current
+                               caller). Full contract: `docs/COMPONENTS_REFERENCE.md`. See "Economy
+                               model" below for the Data Lake mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
@@ -1092,10 +1095,11 @@ mechanic decouples them entirely instead:
   decade of doublings past a pool boundary, compounding within an Era) rather than a bug — see
   `docs/DESIGN_HISTORY.md`.
 
-The Data Lake capacity ladder (below) is a separate, always-independent doubling ladder — it also
-uses an SI-clean sequence (`DATA_LAKE_CAPACITY_BY_LEVEL`, capped at 1,000 units) since a lake's own
-capacity is never shown via any binary unit, so it never shared this conflict in the first place —
-see "Data Lakes" below. **Speed ×2** (was Bandwidth/Invest) steps by
+The Data Lake capacity ladder (below) is a separate, always-independent ladder — it now uses the
+same plain DECADE-POWER-OF-10 shape pool Capacity uses (`DATA_LAKE_CAPACITY_BY_LEVEL`, 1/10/100/1000,
+capped at 1,000 units), replacing an earlier finer SI-clean sequence — see "Data Lakes" below and
+`docs/DESIGN_HISTORY.md`. A lake's own capacity is never shown via any binary unit, so it never
+shared the Data Stream-display conflict pool Capacity itself once had (see above). **Speed ×2** (was Bandwidth/Invest) steps by
 `INTRO_BANDWIDTH_COST_MULTIPLIER` (4) per tier; production-doubling effect
 (`INTRO_PRODUCTION_MULTIPLIER_STEP`) is unchanged.
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the end bound (4,000,000 bits / 500 KB SI). This is
@@ -1190,16 +1194,25 @@ QB.
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
 purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB
 lake, in that lake's own Byte-scale currency) and climbing by 1 level per
-`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` (plain doubling
-except one 64→125 SI-switchover step — a lake's own capacity is never shown via a binary unit, so
-this switchover carries none of the Data Stream-display conflict that reverted the analogous
-mechanic for pool Capacity itself — see above), permanently hard-capped at
-`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 10 — 1,000 units, "1000 KB"
-for the KB lake) via `isDataLakeCapacityMaxed`. Doubling is funded by **draining the lake itself**, not Bits: it requires
+`doubleDataLakeCapacity(tierIndex)` purchase via `DATA_LAKE_CAPACITY_BY_LEVEL` — a plain
+DECADE-POWER-OF-10 ladder (1, 10, 100, 1,000), the same coarse shape pool Capacity itself uses
+(`getDecadePowerEquivalentBits`), replacing an earlier finer SI-clean sequence (1, 2, 4, …, 64, 125,
+250, 500, 1,000 over 11 levels) — see `docs/DESIGN_HISTORY.md` — permanently hard-capped at
+`DATA_LAKE_CAPACITY_MAX_LEVEL` (level 3 — 1,000 units, "1000 KB"
+for the KB lake) via `isDataLakeCapacityMaxed`. Advancing a level is funded by **draining the lake itself**, not Bits: it requires
 the lake to be completely full (`isDataLakeCapacityDoublingAvailable` — deposited units at least the
 lake's own current capacity) and empties every deposit back to zero on purchase — the same
 "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the
-lake's own banked Disks instead of Data Stream Buffer bits.
+lake's own banked Disks instead of Data Stream Buffer bits; each level's own cost is therefore
+always exactly the level below it (1 unit to reach 10, 10 units to reach 100, 100 units to reach
+1,000). The `doubleDataLakeCapacity`/`isDataLakeCapacityDoubling*` function and predicate names
+still say "doubling" even though the ladder itself now climbs a decade-power step per level, not a
+literal ×2 — a value-only change, not worth renaming every call site for. `normalizePoolMemoryCapacity`
+(save load) clamps a saved `capacityLevel` back down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if it's
+above it — a save written under the old, longer ladder could otherwise index
+`DATA_LAKE_CAPACITY_BY_LEVEL` (now length 4) out of bounds and return `undefined`; it likewise
+clamps a saved `intro.poolBuffers` entry down to its pool's current `getPoolBufferCapacity` if the
+now-lower decade-power Capacity formula (see above) leaves it above the new ceiling.
 `getDataLakeCapacityDoublingCost` is kept only as a display-only helper (that same current-capacity
 figure converted into real bits via `getDataLakeUnitBits(tierIndex)`, for the button's own tooltip)
 — no code path spends it out of `intro.bits`. Gated by the same forced priority order every other
@@ -1250,9 +1263,17 @@ indefinitely). No separate inventory cap on the Booster path itself (merge/UI sl
 `COMPUTE_ENTITY_CAP`). Memory→Core conversion and 8:1 merging remain as alternate paths. Boost
 preset multipliers/durations are unchanged.
 
-*Idle disk liquidation* — once a pool's Lake is maxed (`isDataLakeCapacityMaxed`), its deposits can
-never absorb another disk, so a completed pool's LAST (largest, ×100) disk array would otherwise
-just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
+*Idle disk liquidation* — once a pool's LAST (largest, ×100) disk array is fully built
+(`isDiskArrayFullyBuilt` — a REQUIRED, separate check, not implied by the deposit check below: that
+check also returns false while the array is still mid-build, for an entirely different reason than
+"no room," and conflating the two would liquidate a genuinely reusable disk from an unfinished array
+the moment Provision Disk happened to be momentarily unaffordable) AND its Lake genuinely can't
+absorb another one of those disks (`!canDepositDiskToDataLake` — NOT just `isDataLakeCapacityMaxed`:
+a maxed lake was just DRAINED to reach that level, by `doubleDataLakeCapacity`'s own "requires full,
+drains it" shape, so a lake can sit at its hard-cap LEVEL with 1,000 units of totally empty room for
+exactly one tick right after that upgrade — checking `canDepositDiskToDataLake` directly is what
+correctly lets that deposit happen instead of destroying the disk), a completed pool's LAST disk
+array would otherwise just pile up full disks with nowhere to go. `tickIdleDiskLiquidation` (called from `tickStorage`,
 after auto-deposit/auto-release-cache) liquidates that idle output straight into Bits — the same
 Data Stream currency Provision Disk spends from — automatically funding whatever Provision Disk
 needs next (in practice, the next pool's first disk). Gated by the full forced priority order,

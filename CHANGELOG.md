@@ -77,6 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **Idle disk liquidation could destroy a disk from a still-mid-build array** —
+  `isIdleDiskLiquidationAvailable` now requires the array itself to be fully built
+  (`isDiskArrayFullyBuilt`) in addition to the lake genuinely having no room, instead of inferring
+  "array not finished" and "lake is full" from the same `!canDepositDiskToDataLake` check, which
+  can't tell those two apart. A disk mid-array (e.g. 3 of 10 built) is no longer eligible for
+  liquidation just because Provision Disk happens to be momentarily unaffordable.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
@@ -129,8 +135,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   going forward: the SI-clean switchover sequence is for storage-pool-scoped values only. See
   `docs/DESIGN_HISTORY.md` for earlier reverted attempts that instead shared one raw value between
   both displays.
+- **A save from before the decade-power Capacity ladder could carry an over-cap pool buffer or an
+  out-of-bounds Data Lake capacity level** — `getStoragePoolCapacity` moving to a coarser
+  decade-power ladder (see above) meant an existing save's `intro.poolBuffers` entry could sit above
+  its pool's new, lower ceiling and stay fully spendable on Provision Disk despite the pool card
+  showing a lower cap; separately, narrowing the Data Lake capacity ladder from 11 levels to 4 (see
+  below) meant an existing save's `capacityLevel` could index past the new, shorter
+  `DATA_LAKE_CAPACITY_BY_LEVEL` array and return `undefined`, breaking deposit/doubling/idle-liquidation
+  checks against it. `normalizePoolMemoryCapacity` (runs on every load) now clamps both back into
+  range. Found by an automated review pass on the merged PR that introduced the decade-power
+  Capacity ladder.
+- **Dev Mode's Variables-tree "Set" editor could leave a Data Lake `capacityLevel` past the ladder's
+  own bounds** — `setDevState` (the direct state-updater `DevModePage`'s per-field editor uses)
+  bypassed `normalizePoolMemoryCapacity` entirely, unlike the other two Dev Mode write paths
+  (toggling Dev Mode on, and the raw state-JSON editor), which both round-trip through it via
+  `loadGameState`. Typing an out-of-range `capacityLevel` value directly into the Variables tree
+  (e.g. `10`, valid under the ladder's old 11-level shape) would silently break `getDataLakeCapacity`
+  for that lake for the rest of the Dev Mode session. `setDevState` now runs its result through
+  `normalizePoolMemoryCapacity` before committing, same as a real save load. Dev-build-only.
+- **A negative or fractional Data Lake `capacityLevel` (Dev Mode only) could also break
+  `getDataLakeCapacity`** — the clamp above only checked the upper bound; a JS array read at a
+  negative or non-integer index also returns `undefined`, the same failure mode from the other
+  direction. `normalizePoolMemoryCapacity` now floors, truncates, and caps `capacityLevel` in one
+  step; a negative pool buffer gets the same defensive floor for consistency.
+- **Idle disk liquidation could destroy a disk its own Data Lake still had 1,000 units of room
+  for** — `isIdleDiskLiquidationAvailable` gated on `isDataLakeCapacityMaxed`, which isn't the same
+  as "this lake can't accept another deposit": advancing a Data Lake to its hard-cap level always
+  drains its deposits to zero, so a lake can sit maxed with its full capacity completely empty for
+  exactly one tick right after that upgrade. It now checks `canDepositDiskToDataLake` directly — the
+  real "can this specific disk still be banked" condition — so a freshly-maxed-but-empty lake
+  correctly waits for the deposit instead of losing the disk to liquidation.
 
 ### Changed
+- **Tier per-level costs now grow more slowly from level 6 onward** — `getCostEpochExponent`'s
+  per-epoch increment changed from a Fibonacci progression (`1, 1, 2, 3, 5, 8, 13, …`) to a linear
+  one (`1, 1, 2, 3, 4, 5, 6, …`), giving exponents `1, 2, 3, 5, 8, 12, 17, 23, 30, …` instead of
+  `1, 2, 3, 5, 8, 13, 21, 34, 55, …` for epochs 0-8. Levels 1-5 are priced identically to before;
+  every tier's level 6 and beyond (and PP Compute/Flops tiers, which reuse the same formula) now
+  cost noticeably less as levels climb, since the sequence grows quadratically rather than
+  exponentially. See `docs/DESIGN_HISTORY.md`.
 - **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
   built** — `tickDiskAutoFill`'s cache eligibility used to key off `disksBuiltTotal` having an entry
   for a size; now it's keyed off which pools are currently unlocked (`getUnlockedStoragePoolCount`),
@@ -201,6 +244,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   is always exactly far enough ahead to afford its own next disk the moment the threshold is
   crossed. Bandwidth is unaffected — it still uses the finer SI-clean sequence. See
   `docs/DESIGN_HISTORY.md`.
+- **Data Lake capacity ladder switched from its own finer SI-clean sequence to the same
+  decade-power-of-10 shape pool Capacity uses** — a lake's own deposit capacity previously climbed
+  1, 2, 4, 8, …, 64, 125, 250, 500, 1,000 over 11 levels; it now climbs 1 → 10 → 100 → 1,000 over 4
+  levels, matching how a pool's own Capacity now derives (see above). Each level's own upgrade cost
+  is unchanged in shape — always exactly the capacity of the level below it (1 unit to reach 10, 10
+  to reach 100, 100 to reach 1,000) — only the values themselves changed. The button's visible
+  label/tooltip moved from "⚡ ×2"/"double…capacity" to "⚡ ×10"/"increase…capacity ×10" to match.
+  See `docs/DESIGN_HISTORY.md`.
+- **Storage reveals a full decade earlier — right when the Data Stream hits 1 KiB, matching pool
+  1's own capacity-threshold gate** — `INTRO_DISK_UNLOCK_CAPACITY` moves from 80,000 bits ("9.765
+  KiB") to 8,192 bits ("1 KiB"), now expressed as `BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` — the
+  same product `getPoolCapacityUnlockThresholdBits(1)` computes — so the whole Storage section and
+  pool 1's own card reveal at the exact same instant, with pool 1 already showing a clean "1 KB"
+  Capacity rather than one that had already advanced to "10 KB" by the time a player first saw it.
+  See `docs/DESIGN_HISTORY.md`.
+- **Data Lake panel redesigned around fewer labels and bigger numbers, matching the rest of the
+  page** — each lake now renders as a self-contained block (title + a big fillable
+  deposited/capacity number + a compact actions row) instead of a dense grid table with explicit
+  Lake/Deposited/Capacity/Bought/Next column headers, mirroring the same `FillableStatCard`/
+  `BalanceText`/`StatusText` shape every other Byte Foundry balance already uses. A lake's visible
+  name now includes its own size unit — "KB Lake," not just "KB". See `docs/DESIGN_HISTORY.md`.
 - **O(1) tier lookups** (#510) — `layers.js` exports null-prototype `TIER_BY_ID` /
   `TIER_INDEX_BY_ID` / `COMPUTE_FLOPS_TIER_BY_ID` / `COMPUTE_FLOPS_TIER_INDEX_BY_ID` dictionaries,
   and `engine.js`'s hot paths (tier purchases, tickspeed costs, autobuyer milestones, Flops tiers)

@@ -2358,7 +2358,7 @@ test('tapping increments the bit balance and stops once capacity is reached', as
 test('once mainGameUnlocked, the standalone Tap button is gone and Data Stream itself is the tap target', async () => {
   const user = userEvent.setup()
 
-  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (80,000) — this test uses real timers, so
+  // Capacity stays well under INTRO_DISK_UNLOCK_CAPACITY (8,192) — this test uses real timers, so
   // a real tick landing between mount and the assertion could otherwise let tickPoolBufferFill
   // siphon a fractional bit out of intro.bits into pool 1's own (irrelevant here) buffer.
   seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: 1000, byteCreated: true } })
@@ -3175,7 +3175,17 @@ describe('Byte Foundry Storage', () => {
   test('starting a build spends the cost from its own pool buffer immediately, then constructs an EMPTY disk once the timed build completes', () => {
     vi.useFakeTimers()
 
-    seedIntroState({ poolBuffers: { 1: currentBankCost }, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
+    // Raw Data Stream capacity must derive (via the decade-power pool Capacity ladder) at least
+    // currentBankCost — 2**14 doublings is the smallest step whose derived pool 1 Capacity (80,000
+    // bits) exactly covers it; seeding `capacity: currentBankCost` directly would derive a pool
+    // Capacity one decade LOWER (8,000 bits, see docs/DESIGN_HISTORY.md), which the normalization
+    // pass would then clamp the seeded poolBuffers value down to.
+    seedIntroState({
+      poolBuffers: { 1: currentBankCost },
+      capacity: BITS_PER_BYTE * (2 ** 14),
+      byteCreated: true,
+      productionMilestoneTierClaims: 2,
+    })
     const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
@@ -3378,21 +3388,23 @@ describe('Byte Foundry Storage', () => {
     // Embedded per-pool now (see ByteFoundryPage/index.jsx) — no separate global "Data Lakes" panel.
     expect(screen.queryByLabelText(/^Data Lakes$/i)).not.toBeInTheDocument()
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
-    expect(within(pool1).getByText(/^KB.*Cores$/i)).toBeInTheDocument()
+    const lakeBlock = within(pool1).getByLabelText('KB lake')
+    expect(within(lakeBlock).getByText('Lake')).toBeInTheDocument()
+    expect(within(lakeBlock).getByText(/Cores/)).toBeInTheDocument()
   })
 
-  test('Data Lake capacity can be doubled by clicking its ⚡×2 button', () => {
+  test('Data Lake capacity can be increased ×10 by clicking its ⚡×10 button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another
     // forced-priority input out from under the click before it's processed.
     vi.useFakeTimers()
 
-    // The KB lake is holding exactly its own level-0 capacity (1 unit) — full, so doubling is
-    // funded by draining the lake itself, not Bits; bits (8000) is included only to prove doubling
+    // The KB lake is holding exactly its own level-0 capacity (1 unit) — full, so the increase is
+    // funded by draining the lake itself, not Bits; bits (8000) is included only to prove it
     // never touches it. Provision Disk's own cost (80,000) stays out of reach either way, so it
-    // never outranks doubling; Invest's current-tier claims are already used up
+    // never outranks this action; Invest's current-tier claims are already used up
     // (productionMilestoneTierClaims: 2) — the same higher-priority-action neutralization the
-    // Sacrifice tests above use, since capacity doubling sits at the same forced-priority rank.
+    // Sacrifice tests above use, since Data Lake capacity sits at the same forced-priority rank.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3403,10 +3415,10 @@ describe('Byte Foundry Storage', () => {
     const { unmount } = render(<App />)
     openStorage()
 
-    const doubleButton = screen.getByRole('button', { name: /double the KB Data Lake's capacity/i })
-    expect(doubleButton).toBeEnabled()
+    const increaseButton = screen.getByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })
+    expect(increaseButton).toBeEnabled()
 
-    fireEvent.click(doubleButton)
+    fireEvent.click(increaseButton)
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.dataLakes['1'].capacityLevel).toBe(1)
@@ -3417,7 +3429,7 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Data Lake capacity-doubling button disappears once the lake hits its hard cap', () => {
+  test('Data Lake capacity-increase button disappears once the lake hits its hard cap', () => {
     seedIntroState({
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3427,7 +3439,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    expect(screen.queryByRole('button', { name: /double the KB Data Lake's capacity/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
   })
 
   test('a full disk above 1 KB auto-redeems once the matching tier\'s own autobuyer is unlocked and enabled — there is no separate storage-specific pause toggle any more', () => {
@@ -4361,6 +4373,28 @@ describe('Dev Mode', () => {
 
     expect(screen.getByText(/777 b\b/)).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).resources.base).toBe(777)
+  })
+
+  it('setDevState clamps a Data Lake capacityLevel set past the ladder\'s own bounds via the Variables tree, same as a real save load would', async () => {
+    const user = userEvent.setup()
+    seedMainGameState()
+    render(<App />)
+    await openDevMode(user)
+    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+
+    await user.click(screen.getByText(/^intro \(\d+\)$/))
+    await user.click(screen.getByText(/^dataLakes \(\d+\)$/))
+    await user.click(screen.getByText(/^1 \(\d+\)$/))
+    const levelInput = screen.getByLabelText('intro.dataLakes.1.capacityLevel')
+    await user.clear(levelInput)
+    await user.type(levelInput, '10') // valid under the old 11-level ladder, out of range on the current 4-level one
+    await user.click(screen.getByRole('button', { name: /^set intro\.dataLakes\.1\.capacityLevel$/i }))
+
+    // setDevState (the Variables tree's own write path) bypasses the engine's action reducers
+    // entirely, so without routing it through normalizePoolMemoryCapacity this would silently
+    // leave capacityLevel at 10 — past DATA_LAKE_CAPACITY_BY_LEVEL's own bounds — breaking every
+    // downstream getDataLakeCapacity read for the rest of the Dev Mode session.
+    expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.dataLakes['1'].capacityLevel).toBe(3)
   })
 
   it('boolean leaves in the Variables tree toggle on click', async () => {
