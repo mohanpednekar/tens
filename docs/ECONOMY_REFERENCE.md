@@ -695,7 +695,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    below also returns false while the array is still mid-build, for a completely different reason
    than "the lake has no room," and treating those two as one condition would liquidate a genuinely
    reusable disk from an unfinished array the instant Provision Disk happened to be momentarily
-   unaffordable — a real bug caught by review before merge) **and** its Lake genuinely CAN'T absorb
+   unaffordable — a real bug caught by a Devin bot review pass on the PR that introduced the
+   maxed-vs-full fix, after that PR had already merged) **and** its Lake genuinely CAN'T absorb
    another one of those disks (`!canDepositDiskToDataLake(state, size)` — deliberately NOT just
    `isDataLakeCapacityMaxed`: `doubleDataLakeCapacity` always DRAINS a lake's deposits to zero on
    advancing a level, including the final advance to the hard-cap level, so a lake can sit maxed with
