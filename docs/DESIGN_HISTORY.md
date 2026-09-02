@@ -2425,6 +2425,13 @@ the job, the manual row really is the redundant piece being described.
 
 ### Era ascension and Eons — meta-prestige above Unbounded (#407 / #405)
 
+> **2026-09-02 update:** the "reuses the Byte Foundry gate as a familiar rhythm" framing below, and
+> the "Skip the Foundry gate after Era — rejected" call, both describe the ORIGINAL design and no
+> longer hold — see the "Byte Foundry gate made permanent, one-time-ever" entry at the top of this
+> file. `intro.mainGameUnlocked` is now a permanent one-time-ever latch; Era ascension (like
+> ordinary Prestige) no longer sends the player back through the Byte Foundry gate, though it still
+> resets Foundry Capacity and everything else this entry describes as wiped.
+
 After **Unbounded Prestige** (#405) removed the production freeze at 100 lifetime prestiges, the
 endgame needed a deeper reset layer that still felt voluntary rather than another hard wall.
 **Era ascension** is that layer: when unspent Prestige Points reach **1 Googol PP**
@@ -2458,9 +2465,9 @@ generator’s *existence* (`intro.byteCreated`) is the permanent “you’ve com
 it would force re-tapping through the very first combine on every Era, which reads as a tutorial
 replay rather than a meta reset. Everything *built on top* of that generator — capacity/production
 tracks, Disk arrays, compute entities, Flops owned counts, `foundryResetCaps` convenience state — is
-cycle-scoped progress that Era is meant to clear. Ordinary Prestige already reset Memory and the
-main-game gate each cycle while keeping those Foundry assets; Era extends that wipe to the assets
-Prestige had made permanent.
+cycle-scoped progress that Era is meant to clear. Ordinary Prestige already reset Memory each cycle
+while keeping those Foundry assets (see 2026-09-02 update above re: the main-game gate); Era extends
+that wipe to the assets Prestige had made permanent.
 
 **What persists vs. resets (shipped in #410 / UI in #411).** Automation unlock flags and pause
 states, tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum,
@@ -2471,9 +2478,10 @@ Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s aut
 `applyFlopsAutobuyerMilestones` — a permanent unlock track that survives the wipe.
 
 **Rejected alternatives.**
-- **Skip the Foundry gate after Era** — rejected; the gate is the pacing rhythm every Prestige cycle
-  already uses, and bypassing it would make Era ascension feel like a cheat code rather than a deeper
-  cycle.
+- **Skip the Foundry gate after Era** — rejected at the time (the gate was still the pacing rhythm
+  every Prestige cycle used); later reversed for BOTH Prestige and Era ascension by the 2026-09-02
+  permanent-gate change noted above, on explicit maintainer instruction, not a revival of this
+  rejection.
 - **Keep unspent PP balance across Era** — rejected; Googol PP is the eligibility key; carrying the
   bank forward would collapse Era into a label with no economic reset.
 - **Reset `prestige.count` without latching Unbounded** — rejected; `prestige.unboundedUnlocked` is
