@@ -102,10 +102,12 @@ Foundry") — rendered as an ordinary button paired with a hidden `role="progres
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
-INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained there by starting Boosters from
-the matching Data Lake (`startBoosterTransfer` — deposits spend instantly, any remaining cost
-live-transfers off built Disks over time), not minted from Data Stream — the earlier manual
-"Claim Core" button/auto-claim mechanic on this page was removed once Data Lakes superseded it.
+INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained via `buyBooster`, bought
+instantly from the matching Data Lake's own banked units on the Byte Foundry screen's
+`DataLakePanel` (manually, or automatically once that lake's own Auto toggle is on) — not minted
+from Data Stream, and no longer via any Storage Disk deposit or live transfer (an earlier
+Disk-deposit-funded Booster mechanic, and before that a manual "Claim Core" button/auto-claim
+mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section).
 Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the shared Data Stream
 section.
 
@@ -198,25 +200,31 @@ supported, retained for reuse/tests — no current caller uses it), which only s
 has a nonzero deposit, at least one Booster already purchased, or its own capacity already grown
 past the starting level (`getVisibleLakeTierIndexes`).
 
-A lake's own block deliberately mirrors `PoolCard`'s own title-row-plus-`FillableStatCard` shape
-rather than a labelled table row — "less labels, more actual numbers," matching the rest of the
-page: a header row pairs the lake's title, "`<symbol>` Lake" (e.g. "KB Lake" — the size unit is
-always part of the visible name, per the fuller `"{label} Data Lake — funds {boosterLabel}"` phrase
-tucked into a `title` attribute instead of crowding the compact header), with a `StatusText` showing
-how many of the funded Booster it's produced so far (e.g. "3× Cores" — this also communicates the
-lake's fixed Booster destination, without a separate arrow/label for it). Below that, a
-`FillableStatCard` (the SAME fill-gradient tile shape the Data Stream card and each pool's own
-Memory buffer already use) shows `{deposited} / {capacity}` as the one big number, filling toward
-capacity visually the same way. An actions row underneath pairs the compact "⚡ ×10" `UpgradeButton`
-(aria-label "increase the … Data Lake's capacity ×10" — the capacity ladder itself is a plain
-decade-power-of-10 step per level, not a literal doubling; the underlying action name
-(`actions.doubleDataLakeCapacity`) still says "double" since only the ladder's VALUES changed — see
-docs/ECONOMY_REFERENCE.md's "Data Lakes" section) — hidden entirely once the lake's own 1,000-unit
-hard cap is reached (`isDataLakeCapacityMaxed`) — with a `🎯 <cost>` `StatusText` showing the next
-Booster's own purchase cost (informational only; Boosters are started from `ComputePage`, not here).
-While a live transfer is in flight, one more `StatusText` line shows the transfer count/capacity and
-time remaining. See docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic,
-and `docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
+A lake's own block deliberately mirrors `PoolCard`'s own title-row-plus-disk-array shape rather than
+a labelled table row — "less labels, more actual numbers," matching the rest of the page: a header
+row pairs the lake's title, "`<symbol>` Lake" (e.g. "KB Lake" — the size unit is always part of the
+visible name, per the fuller `"{label} Data Lake — funds {boosterLabel}"` phrase tucked into a
+`title` attribute instead of crowding the compact header), with a `StatusText` showing how many of
+the funded Booster it's produced so far (e.g. "3× Cores"). Below that, one `LakeSizeRow` of round
+`LakeSquare`s per non-empty sub-size (×1/×10/×100, smallest first) — the same disk-array visual
+language `DiskArrayRow` uses for Storage's own Disks — showing every completed disk filled, plus a
+live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeCurrentFillSubSize`/
+`getDataLakeFillBits`) on whichever ONE slot is actively filling right now; a hidden
+`role="progressbar"` (`aria-label="… lake deposits"`) still exposes the lake's overall
+deposited-units/capacity fraction for a11y. An actions row underneath repurposes ONE button slot
+between two mutually-exclusive modes (`isDataLakeCapacityDoublingAvailable` — never both at once,
+see engine.js): "⚡ Upgrade" (`actions.doubleDataLakeCapacity`) once the next Booster's own cost
+would exceed the lake's current capacity — the capacity ladder itself is a plain decade-power-of-10
+step per level, not a literal doubling; the action name still says "double" since only the ladder's
+VALUES changed, see docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden once the lake's own
+1,000-unit hard cap is reached (`isDataLakeCapacityMaxed`); otherwise a `🎯 <cost>` "Buy" button
+(`actions.buyBooster`) once that lake's Boosters have ever unlocked (`isDataLakeBoosterUnlocked` —
+permanently latched the first time the lake fills even one disk), or the same `🎯 <cost>` text alone,
+non-interactive, before that first disk ever completes. Boosters buy instantly out of the lake's own
+banked units — there is no live transfer or waiting period any more — with a second "🔁 Auto"/
+"🔁 Manual" toggle (`actions.toggleDataLakeAutoBuy`) next to it once unlocked, buying automatically
+the instant the next Booster is affordable. See docs/ECONOMY_REFERENCE.md's "Data Lakes" section for
+the underlying mechanic, and `docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
 
 There is no manual transfer-block UI any more (removed — see `docs/DESIGN_HISTORY.md`;
 `isIntroConversionUnlocked`/`getIntroKilobyteConversionCost` still exist as pure, tested exports but

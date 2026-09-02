@@ -313,11 +313,13 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked in engine.js and
 // intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic
 // costed a Compute Core at a fixed 10 MB of Memory (gated on every Disk size being built and full),
-// then at a dynamic, capacity-tied Memory flush ("Claim Core") — both superseded by
-// startBoosterTransfer in engine.js, which spends the matching Data Lake's deposited Disk stock
-// first, then a live timed transfer off the raw Disk inventory for any remaining cost (see
-// "Data Lake Booster transfers" below), and has no relationship to Memory/Storage at all; see
-// docs/DESIGN_HISTORY.md for why.
+// then at a dynamic, capacity-tied Memory flush ("Claim Core"), then a Data-Lake-Booster mechanic
+// funded by depositing completed Storage Disks and, for any cost beyond what was deposited, a live
+// timed transfer off the raw Disk inventory (startBoosterTransfer) — all three superseded by
+// buyBooster in engine.js, which instead spends a lake's OWN banked units (filled by that pool's
+// own Memory overflow, not Storage Disk deposits — see "Data Lakes" in CLAUDE.md) instantly, with
+// no live transfer step and no relationship to Storage Disks at all; see docs/DESIGN_HISTORY.md
+// for why.
 //
 // Capacity threshold at which Boosters / ComputePage reveal — historically a later gate than
 // Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, now 8,192 bits), matching the same

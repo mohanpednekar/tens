@@ -1,5 +1,5 @@
 import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
+import { COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Drop __proto__/constructor at parse time so localStorage/Dev JSON cannot pollute merges.
@@ -401,13 +401,54 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
 
-// Every field on a lake tier is now a scalar (depositedUnits/fillBits/purchased/
+// A save written before the pool-overflow Data Lake rework (still live on GitHub Pages) shaped a
+// lake tier as `{ deposits: { 1, 10, 100 }, purchased, transfers: [...], capacityLevel }` — none of
+// those field names exist on the current shape, so a saved tier carrying `deposits` or `transfers`
+// is legacy and needs translating rather than a plain overlay (which would silently keep every
+// field at its fresh-state default, discarding real banked disks/Boosters/capacity progress).
+const isLegacyDataLakeTier = tier =>
+  tier != null && typeof tier === 'object' && !('depositedUnits' in tier) &&
+  ('deposits' in tier || 'transfers' in tier)
+
+// deposits[subSize] counted whole disks of that sub-size banked in the lake — the same "abstract
+// unit" total depositedUnits now tracks directly, just expressed as a disk count per denomination
+// instead of one running total. `sum(deposits[subSize] * subSize)` recovers that same total.
+// fillBits (progress on the disk currently filling) has no legacy analogue — old deposits were
+// discrete, already-complete disks, never a partial one — so it starts at 0. boostersUnlocked is a
+// new permanent latch; a legacy lake that already banked units or bought a Booster had already
+// crossed the equivalent milestone under the old (unlocked-by-default) mechanic, so it carries
+// forward unlocked rather than re-locking a lake the player was already using. autoBuyEnabled is a
+// new opt-in toggle with no legacy equivalent, so it starts off. In-flight `transfers` (live Disk
+// funding for a Booster already spent) have no equivalent under the new instant-buy mechanic and
+// are simply dropped — the Disks they were draining stay in `intro.disks`/`disksBuiltTotal`
+// untouched by this migration, so nothing is destroyed, just no longer mid-transfer.
+const migrateLegacyDataLakeTier = legacy => {
+  const deposits = legacy.deposits ?? {}
+  const depositedUnits = DATA_LAKE_SUB_SIZES.reduce(
+    (sum, subSize) => sum + (Number(deposits[subSize]) || 0) * subSize,
+    0,
+  )
+  const purchased = Math.max(0, Number(legacy.purchased) || 0)
+  return {
+    depositedUnits,
+    fillBits: 0,
+    purchased,
+    boostersUnlocked: depositedUnits > 0 || purchased > 0,
+    autoBuyEnabled: false,
+    capacityLevel: Math.max(0, Number(legacy.capacityLevel) || 0),
+  }
+}
+
+// Every field on a CURRENT-shape lake tier is a scalar (depositedUnits/fillBits/purchased/
 // boostersUnlocked/autoBuyEnabled/capacityLevel) — no nested container needing its own deep
-// merge any more, so a plain shallow overlay per tier is sufficient.
+// merge, so a plain shallow overlay per tier is sufficient once any legacy tier has already been
+// translated above.
 const mergeDataLakes = (fresh, saved) => {
   const merged = createEmptyDataLakes()
   for (const tier of Object.keys(merged)) {
-    merged[tier] = { ...merged[tier], ...(saved?.[tier] ?? {}) }
+    const savedTier = saved?.[tier]
+    const normalizedTier = isLegacyDataLakeTier(savedTier) ? migrateLegacyDataLakeTier(savedTier) : savedTier
+    merged[tier] = { ...merged[tier], ...(normalizedTier ?? {}) }
   }
   return merged
 }

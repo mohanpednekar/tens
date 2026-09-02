@@ -9557,6 +9557,21 @@ describe('Data Lakes', () => {
       expect(tickIdleDiskLiquidation(state)).toBe(state)
     })
 
+    it('a fully-built size built AHEAD of its own tier\'s progress ("too early") does NOT liquidate — only a size the tier has already moved PAST is stranded', () => {
+      // kb10 requires tier01 level 2, but tier01 is still at its default level 1 — kb10 hasn't
+      // been reached yet ("too early"), NOT already passed, so this disk still has real future
+      // redemption use once tier01 catches up and must never be destroyed. No other size holds a
+      // full disk, so isDiskFillAvailable is false too (nothing anywhere is redeemable right now).
+      const state = withIntro(createInitialGameState(), {
+        ...noOtherUpgradesLeft,
+        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP },
+        disks: { [kb10]: 1 },
+      })
+      expect(isDiskFillAvailable(state)).toBe(false)
+      expect(isIdleDiskLiquidationAvailable(state)).toBe(false)
+      expect(tickIdleDiskLiquidation(state)).toBe(state)
+    })
+
     it('a redeemable full disk (Disk Fill) elsewhere outranks liquidation', () => {
       const state = withIntro(createInitialGameState(), {
         ...noOtherUpgradesLeft,

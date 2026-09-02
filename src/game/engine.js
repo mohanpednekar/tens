@@ -3855,6 +3855,22 @@ const getMatchingTierForDiskSize = (state, capacityBits) => {
 export const isDiskRedeemable = (state, capacityBits) =>
   getMatchingTierForDiskSize(state, capacityBits) !== undefined
 
+// True only for the "already past it" half of getMatchingTierForDiskSize's two non-redeemable
+// cases — this size's own corresponding tier has moved on to a LATER level than this size
+// requires, so this disk can never be redeemed again this cycle. False both when the tier is
+// exactly at the required level (isDiskRedeemable already covers that) and when the tier hasn't
+// reached the required level YET ("too early" — a disk built ahead of the tier's own progress,
+// which still has real future use and must never be liquidated). Used by
+// getIdleDiskLiquidationSizes below to liquidate only genuinely stranded output.
+const isDiskSizeStrandedByAdvancedTier = (state, capacityBits) => {
+  const tierIndex = getDataLakeTierIndex(capacityBits)
+  const requiredLevel = getDiskRequiredTierLevel(capacityBits)
+  if (!tierIndex || !requiredLevel) return false
+  const tier = TIER_DEFINITIONS[tierIndex - 1]
+  if (!tier) return false
+  return (state.purchaseLevels?.[tier.id] ?? 1) > requiredLevel
+}
+
 // Byte Foundry pages call this directly (rather than getMatchingTierForDiskSize, kept internal) to
 // name which tier a disk would actually redeem into right now, or null if none currently matches —
 // e.g. "Redeems 1 10 KB disk for 1 free Megabyte."
@@ -4349,23 +4365,28 @@ export const doubleDataLakeCapacity = tierIndex => state => {
   }
 }
 
-// Once ANY size's disk array is fully built, a full disk of that size that's no longer redeemable
-// (its own fixed corresponding tier has already moved past the level that size requires) has
-// nowhere left to go — Storage Disks and Data Lakes are fully decoupled now (see the "Data Lakes"
-// section above), so there's no lake to defer to any more, for any size, not just a pool's own
-// last one. Rather than let that output sit permanently idle (and its slot never recycle back to
-// empty for cache to refill), it liquidates straight into Bits — the same Data Stream currency
-// Provision Disk spends from — automatically funding whatever Provision Disk still needs next.
-// Gated by the same forced priority order every other Byte Foundry action follows, with Lake
-// Capacity doubling (any tier) ranked directly above it: liquidation only ever kicks in once the
-// Foundry would otherwise be completely idle, so it never destroys a disk that's still currently
-// redeemable — isDiskFillAvailable (top of the priority chain) is already true whenever any size
+// Once ANY size's disk array is fully built, a full disk of that size whose corresponding tier has
+// already moved PAST the level that size requires (isDiskSizeStrandedByAdvancedTier — genuinely
+// stranded, never redeemable again this cycle; a size the tier hasn't reached YET is excluded, see
+// that helper's own comment) has nowhere left to go — Storage Disks and Data Lakes are fully
+// decoupled now (see the "Data Lakes" section above), so there's no lake to defer to any more, for
+// any size, not just a pool's own last one. Rather than let that output sit permanently idle (and
+// its slot never recycle back to empty for cache to refill), it liquidates straight into Bits —
+// the same Data Stream currency Provision Disk spends from — automatically funding whatever
+// Provision Disk still needs next. Gated by the same forced priority order every other Byte
+// Foundry action follows, with Lake Capacity doubling (any tier) ranked directly above it:
+// liquidation only ever kicks in once the Foundry would otherwise be completely idle, so it never
+// destroys a disk that's still currently redeemable — isDiskFillAvailable (top of the priority
+// chain) is already true whenever any size
 // anywhere has a redeemable full disk, which blocks this entirely until that's no longer the case.
 const isDiskArrayFullyBuilt = (state, sizeBits) =>
   (state.intro?.disksBuiltTotal?.[sizeBits] ?? 0) >= DISK_ARRAY_LADDER_CAP
 
 // Ascending (smallest first) — every size that's ever been built out, still holds at least 1 full
-// disk, and isn't itself mid-rebuild right now.
+// disk, isn't itself mid-rebuild right now, AND whose corresponding tier has already moved past
+// the level this size requires (isDiskSizeStrandedByAdvancedTier) — a size built ahead of its own
+// tier's progress ("too early") is excluded: it still has real future redemption use once the
+// tier catches up, and must never be liquidated out from under it.
 const getIdleDiskLiquidationSizes = state => {
   const buildingSize = state.intro?.diskBuild?.size
   return Object.keys(state.intro.disksBuiltTotal ?? {})
@@ -4373,6 +4394,7 @@ const getIdleDiskLiquidationSizes = state => {
     .filter(size => size !== buildingSize)
     .filter(size => (state.intro.disks?.[size] ?? 0) >= 1)
     .filter(size => isDiskArrayFullyBuilt(state, size))
+    .filter(size => isDiskSizeStrandedByAdvancedTier(state, size))
     .sort((a, b) => a - b)
 }
 

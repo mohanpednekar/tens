@@ -457,6 +457,40 @@ describe('schema merge on load', () => {
     expect(loaded.intro).toEqual(state.intro)
   })
 
+  it('migrates a pre-rework Data Lake tier (deposits/transfers-shaped) into the current depositedUnits/fillBits/boostersUnlocked shape instead of silently discarding it', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          // A legacy KB lake: 2 banked ×1 disks, 3 banked ×10 disks, 1 in-flight transfer, already
+          // bought 4 Boosters, capacity doubled twice.
+          1: { deposits: { 1: 2, 10: 3, 100: 0 }, purchased: 4, transfers: [{ remainingSeconds: 12 }], capacityLevel: 2 },
+          // A legacy lake that was created but never actually used — no banked disks, no Boosters.
+          2: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: 0 },
+        },
+      },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.intro.dataLakes['1']).toEqual({
+      depositedUnits: 2 * 1 + 3 * 10, // 32 — deposits translated to the same abstract-unit total
+      fillBits: 0,
+      purchased: 4,
+      boostersUnlocked: true,
+      autoBuyEnabled: false,
+      capacityLevel: 2,
+    })
+    expect(loaded.intro.dataLakes['2']).toEqual({
+      depositedUnits: 0,
+      fillBits: 0,
+      purchased: 0,
+      boostersUnlocked: false,
+      autoBuyEnabled: false,
+      capacityLevel: 0,
+    })
+  })
+
   it('preserves fully built KB arrays so pool 2 unlocks from an old save', () => {
     const state = {
       ...createInitialGameState(),
