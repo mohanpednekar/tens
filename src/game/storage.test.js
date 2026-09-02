@@ -257,7 +257,9 @@ describe('schema merge on load', () => {
     expect(loaded.eons.balance).toBe(1)
     expect(loaded.autobuyers[tier0]).toBe(1)
     expect(loaded.autobuyersEnabled[tier0]).toBe(false)
-    expect(loaded.intro.mainGameUnlocked).toBe(false)
+    // mainGameUnlocked is permanent now (see latchMainGameUnlocked in engine.js) — Era ascension
+    // never resets it once it's ever been true.
+    expect(loaded.intro.mainGameUnlocked).toBe(true)
   })
 
   it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {

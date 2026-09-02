@@ -25,14 +25,14 @@ Play it live at [mohanpednekar.github.io/tens](https://mohanpednekar.github.io/t
 
 - Base currency is **Bits** (resource id `base`, symbol `b`).
 - Ten tiers — **Kilobytes** through **Quettabytes** — are bought with Bits; each produces the tier below it (Kilobytes both costs and produces Bits).
-- Bytes are **not** a purchasable tier. Every fresh save (and every Prestige) earns its first Kilobytes via the **Byte Foundry** tap screen.
+- Bytes are **not** a purchasable tier. Every fresh save earns its first Kilobytes via the **Byte Foundry** tap screen; once that happens, Factory stays permanently reachable for every future Prestige/Era ascension in that save — no per-cycle re-gate.
 - Reaching **1 Googol Bytes** (8×10^100 Bits) freezes production until Prestige.
 
 Full formulas, Prestige Points, Storage, Compute, tickspeed, Speed Up, Overclock, and offline progress: [`docs/ECONOMY_REFERENCE.md`](docs/ECONOMY_REFERENCE.md). Current behavior summary: [`CLAUDE.md`](CLAUDE.md). Design rationale / superseded ideas: [`docs/DESIGN_HISTORY.md`](docs/DESIGN_HISTORY.md).
 
 ### Byte Foundry
 
-Tap to fill Memory, combine into a permanent Byte generator, grow via Sacrifice / Invest, then transfer Memory into free Kilobytes. Later: Disks (Storage) and Compute Cores → Megacomputer plus Compute Boost. Generator / Disks / Compute are permanent across Prestige; Memory and the unlock gate reset each cycle.
+Tap to fill Memory, combine into a permanent Byte generator, grow via Sacrifice / Invest, then transfer Memory into free Kilobytes. Later: Disks (Storage) and Compute Cores → Megacomputer plus Compute Boost. Generator / Disks / Compute are permanent across Prestige; so is the main-game-unlock gate itself once ever triggered — only Memory (the Data Stream balance) resets each cycle.
 
 ### Guide
 
