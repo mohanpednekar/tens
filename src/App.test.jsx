@@ -2819,6 +2819,35 @@ test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplie
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
 })
 
+test('the Data Stream tap target disables once its own multiplier is already at the 200% cap', () => {
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      dataStreamTapBonusPercent: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT,
+    },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
+  expect(tapTarget).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+})
+
+test('a pool\'s own Memory tap target disables once that pool\'s own multiplier is already at the 200% cap', () => {
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT },
+  })
+  render(<App />)
+
+  const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
+  expect(poolTapTarget).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+})
+
 test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
   seedIntroState({ bits: 4500, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
   render(<App />)

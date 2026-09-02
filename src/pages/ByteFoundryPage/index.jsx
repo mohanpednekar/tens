@@ -359,6 +359,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // instead (see getDataStreamEffectMultiplier in game/engine).
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
   const dataStreamBaseMultiplierPercent = getDataStreamBaseMultiplierPercent(intro)
+  // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
+  // pools are revealed (unlockedPoolCount >= 1), the same condition that switches the tap itself
+  // from a direct bit credit into a multiplier-bonus tap.
+  const dataStreamMultiplierCapped = unlockedPoolCount >= 1 && dataStreamMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
@@ -456,8 +460,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
           onClick={intro.mainGameUnlocked ? actions.tapIntroBit : undefined}
-          disabled={intro.mainGameUnlocked ? isFull : undefined}
+          disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
           aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
+          title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap` : undefined}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
@@ -597,6 +602,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // this percent instead (see getPoolEffectMultiplier in game/engine).
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
         const poolBaseMultiplierPercent = getPoolBaseMultiplierPercent(state, poolIndex)
+        // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
+        // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
+        const poolMultiplierCapped = poolMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -636,8 +644,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               as="button"
               type="button"
               onClick={() => actions.tapPoolBuffer(poolIndex)}
-              disabled={poolBufferFull}
+              disabled={poolBufferFull || poolMultiplierCapped}
               aria-label={`tap pool ${poolIndex} memory`}
+              title={
+                poolBufferFull
+                  ? undefined
+                  : poolMultiplierCapped
+                    ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap`
+                    : undefined
+              }
               $progress={poolBufferPercent}
               $tappable
             >
@@ -666,7 +681,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       {!intro.mainGameUnlocked && (
         <TapArea
           aria-label="tap to generate a bit"
-          disabled={isFull}
+          disabled={isFull || dataStreamMultiplierCapped}
+          title={!isFull && dataStreamMultiplierCapped ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap` : undefined}
           onClick={actions.tapIntroBit}
           type="button"
         >

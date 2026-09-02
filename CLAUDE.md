@@ -1019,7 +1019,10 @@ Speed figure and each pool's own Bandwidth figure — the fill-based portion fil
 `theme.color.accent`, any live tap bonus on top of it extends the bar in `theme.color.warn` (the
 existing gold/caution token, the closest semantic stand-in for orange) so the two are visually
 distinguishable. A pool's own Memory buffer tile is a real tap target (a sibling of
-`PoolSummaryButton`, not nested inside it — two `<button>`s can't nest).
+`PoolSummaryButton`, not nested inside it — two `<button>`s can't nest). Every tap target's own
+`disabled` mirrors BOTH of the underlying action's no-op conditions, not just the full-Buffer one —
+a `<button>` that stayed enabled once the multiplier hit its 200% cap would silently no-op on click
+with no feedback.
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
 `isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/
@@ -1375,7 +1378,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1657 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1659 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

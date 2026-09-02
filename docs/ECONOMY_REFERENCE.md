@@ -138,8 +138,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Byte exists (or at the starting rate) this is still the same flat 1 bit it's always been, since the
    starting rate is exactly 1 bit/sec. **Once Storage pools are revealed**, this direct-credit effect
    is replaced: a tap instead adds `FILL_MULTIPLIER_TAP_BONUS_PERCENT` to the Data Stream's own
-   decaying fill-based multiplier bonus — see point 4a below — crediting no bits directly. Either
-   mode, the only no-op condition is the Buffer already being full. The tap TARGET changes once
+   decaying fill-based multiplier bonus — see point 4a below — crediting no bits directly. Both
+   modes no-op once the Buffer is already full; the post-reveal mode additionally no-ops once the
+   combined multiplier is already at `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%, point 4a below). The
+   tap TARGET changes once
    `intro.mainGameUnlocked`: the
    standalone Tap button (`ByteFoundryPage`'s `TapArea`) is removed entirely, and the Data Stream tile
    (`FillableStatCard`, rendered `as="button"` in that state) becomes clickable instead, calling the

@@ -4,7 +4,10 @@
 //
 // Bot strategy (ideal attentive player, held constant across runs):
 //   Foundry (every tick):
-//     - Tap Memory when not full; Combine into a Byte when affordable.
+//     - Tap Memory when not full; tap every unlocked pool's own local buffer too (the fill-based
+//       Speed/Bandwidth multiplier — FILL_MULTIPLIER_* in layers.js — is independent per Data
+//       Stream/pool, so an attentive player keeps every one of them boosted, not just the Data
+//       Stream tile); Combine into a Byte when affordable.
 //     - While mainGameUnlocked is false: pause every unlocked tier autobuyer (so
 //       tickDiskAutoRedeem cannot advance tier01's cost), skip Disk Fill/Build, Invest/Sacrifice
 //       as gated, and convert Memory → Kilobytes until the gate opens. Redeeming permanent full
@@ -66,6 +69,7 @@ import {
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierSpendableAmount,
+  getUnlockedStoragePoolCount,
   isBandwidthAvailable,
   isDiskFillAvailable,
   isDiskRedeemable,
@@ -83,6 +87,7 @@ import {
   startBoosterTransfer,
   provisionDisk,
   tapIntroBit,
+  tapPoolBuffer,
   tickGame,
   tickQueuedCapacityUpgrade,
 } from '../../../src/game/engine.js'
@@ -132,6 +137,14 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   let s = state
 
   s = tapIntroBit(s)
+  // Fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js): tapping keeps a
+  // Buffer's own multiplier boosted above its natural fill-based value. tapIntroBit above already
+  // covers the Data Stream; each unlocked pool's own local buffer needs its own tap too, since a
+  // pool's own multiplier is entirely independent of the Data Stream's — an attentive player taps
+  // every tappable target, not just the Data Stream tile.
+  for (let poolIndex = 1; poolIndex <= getUnlockedStoragePoolCount(s); poolIndex += 1) {
+    s = tapPoolBuffer(poolIndex)(s)
+  }
   s = combineIntroByte(s)
 
   const canGrowCapacity =
