@@ -1064,8 +1064,9 @@ distinguishable, same semantics the old bar used. The needle itself is a separat
 `theme.color.text` pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to the
 accent/warn split. A pool's own Memory buffer
 tile is a real tap target (a sibling of `PoolSummaryButton`, not nested inside it — two `<button>`s
-can't nest); its gauge is a sibling of both, a direct child of `PoolCard`, not nested inside either
-button. Every tap target's own `disabled` mirrors BOTH of the underlying action's no-op conditions,
+can't nest); its gauge is a child of that same Memory tile (`FillableStatCard`), not of
+`PoolSummaryButton` or `PoolCard` directly — same nesting the Data Stream's own gauge uses. Every
+tap target's own `disabled` mirrors BOTH of the underlying action's no-op conditions,
 not just the full-Buffer one — a `<button>` that stayed enabled once the multiplier hit its 200%
 cap would silently no-op on click with no feedback. The gauge keeps the exact same
 `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract the old
