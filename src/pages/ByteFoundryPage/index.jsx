@@ -3,8 +3,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroKilobyteConversionCost, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPurchaseBlockSize, getStoragePoolBandwidth, getStoragePoolCapacity, getStoragePoolCount, getUnlockedStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isIntroConversionUnlocked, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_ARRAY_LADDER_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -181,7 +181,7 @@ const PoolSummaryButton = styled.button`
 const PoolHeaderRow = styled.div`
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: center;
   gap: ${props => props.theme.space.sm};
 `
 
@@ -200,75 +200,6 @@ const PoolTitle = styled.h3`
 
 const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
-`
-
-const PoolTitleName = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  font-weight: 500;
-  font-size: ${props => props.theme.type.scale.sm.size};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`
-
-// Text-only status indicator (color carries the state), matching MilestonesPage's own Badge
-// convention elsewhere in the app rather than introducing a new pill/chip shape.
-const PoolStatusBadge = styled.span`
-  flex-shrink: 0;
-  font-size: ${props => props.theme.type.scale.xs.size};
-  font-weight: 600;
-  color: ${props => (props.$complete ? props.theme.color.good : props.theme.color.textMuted)};
-`
-
-const PoolStatsRow = styled.div`
-  display: flex;
-  gap: ${props => props.theme.space.md};
-`
-
-const PoolStat = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-`
-
-const PoolStatLabel = styled.span`
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-`
-
-const PoolStatValue = styled.span`
-  font-size: ${props => props.theme.type.scale.sm.size};
-  font-weight: 500;
-  color: ${props => props.theme.color.text};
-  font-variant-numeric: tabular-nums;
-`
-
-// Each pool's own small local buffer (see intro.poolBuffers) — a lightweight throughput
-// reservoir the pool spends from directly, distinct from the big Capacity ladder shown in
-// PoolStatsRow above. A slim bar reusing the same progressFill gradient mixin every other fill
-// meter on this page already uses, paired with a compact label/value line.
-const PoolBufferRow = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  width: 100%;
-`
-
-const PoolBufferMeter = styled.div`
-  width: 100%;
-  height: 0.4rem;
-  border-radius: ${props => props.theme.radius.sm};
-  ${progressFill}
-`
-
-// A thin visual break between the Data Stream controls and its common Provision Disk operation.
-const Divider = styled.hr`
-  width: 100%;
-  border: none;
-  border-top: 1px solid ${props => props.theme.color.border};
-  margin: 0;
 `
 
 // Reuses Button's own progressFill gradient (see components/Button) so Memory's tile fills toward
@@ -336,64 +267,19 @@ const RateBlock = styled.span`
   background: ${props => (props.$filled ? props.theme.color.good : props.theme.color.surfaceSunken)};
 `
 
-// `flex-wrap: nowrap` is deliberate — with `wrap`, once `blockCount` blocks (each `flex: 1 1
-// 2.5rem`, growable) no longer fit on one line at a narrow (mobile) width, the leftover blocks
-// spill onto a second row where they grow to fill ITS leftover space instead, ending up far wider
-// than the blocks on the row above — a visibly broken, misaligned grid. `nowrap` keeps every
-// block on one row and lets `flex-shrink` (already implied by `flex: 1 1 2.5rem`) narrow them
-// together instead, so the row always reads as one evenly-sized strip regardless of viewport
-// width or how large `blockCount` has grown.
-const TransferBlocksRow = styled.div`
-  display: flex;
-  flex-wrap: nowrap;
-  gap: ${props => props.theme.space.xs};
-  width: 100%;
-`
-
-// One block per unit of tier01's (Kilobytes') own current purchase block size (getPurchaseBlockSize)
-// — this row is just a live mirror of purchaseLevelProgress[tier01], the same value the "Kilobytes'
-// current block" tracker above already shows, so it rolls over to a fresh, empty row the instant a
-// level completes rather than ever running out. Three visual states, read together as one continuous
-// progress bar: $consumed (already transferred this level — solid muted fill, permanently disabled),
-// $active (the sole clickable one — accent border, partial progressFill gradient toward its own
-// 1000-bit threshold), and plain/upcoming (neither prop set — empty outline, disabled placeholder).
-// Only the active block is ever passed a $progress value — progressFill returns null without one, so
-// the plain `background` rule below (transparent, or surfaceSunken once $consumed) applies instead.
-const TransferBlock = styled.button`
-  flex: 1 1 2.5rem;
-  min-width: 0;
-  aspect-ratio: 1;
-  border: 1.5px solid ${props => (props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken)};
-  border-radius: ${props => props.theme.radius.sm};
-  background: ${props => (props.$consumed ? props.theme.color.surfaceSunken : 'transparent')};
-  color: ${props => (props.disabled ? props.theme.color.disabled : props.theme.color.accent)};
-  cursor: pointer;
-  transition: filter 0.15s ease, transform 0.05s ease;
-  ${progressFill}
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.2);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.95);
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-`
-
-// Renders "<bits> / <capacity>", both in the same unit (picked off capacity — see getMemoryUnit in
-// game/engine).
+// Renders "<bits> / <capacity>". Capacity always renders in its own unit (picked off capacity —
+// see getMemoryUnit in game/engine). The balance shares that same unit UNLESS doing so would put
+// it below 1 (e.g. "0.234 MiB / 1 MiB" territory) — in that case it self-sizes into its own finer
+// unit instead (e.g. "30.031 KiB / 1 MiB"), which still reads as a real magnitude rather than
+// falling all the way back to a raw bit count. Only a genuinely sub-Byte balance (no named unit
+// finer than a Byte exists) still falls back to raw bits, via formatMemoryAmount's own bottom-rung
+// handling — see docs/DESIGN_HISTORY.md.
 const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
-  const unit = getMemoryUnit(capacityBits, byteCreated)
-  return `${formatMemoryAmount(bits, unit)} / ${formatMemoryAmount(capacityBits, unit)}`
+  const capacityUnit = getMemoryUnit(capacityBits, byteCreated)
+  const balanceUnit = capacityUnit && bits > 0 && bits < capacityUnit.divisor
+    ? getMemoryUnit(bits, byteCreated)
+    : capacityUnit
+  return `${formatMemoryAmount(bits, balanceUnit)} / ${formatMemoryAmount(capacityBits, capacityUnit)}`
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -409,15 +295,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
-  const revealed = isIntroConversionUnlocked(state)
   const storageRevealed = isStorageUnlocked(state)
-  const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  const visiblePoolCount = getVisibleStoragePoolCount(state)
   // Null follows the largest unlocked pool by default; 0 is an explicit "all collapsed" choice.
   const [expandedPoolIndex, setExpandedPoolIndex] = useState(null)
   useEffect(() => {
     setExpandedPoolIndex(null)
-  }, [unlockedPoolCount])
-  const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? unlockedPoolCount
+  }, [visiblePoolCount])
+  const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? visiblePoolCount
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
@@ -455,41 +340,54 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
 
-  // tier01's (Kilobytes') own live purchase-block progress — advances identically whether units come
-  // from the main game's Buy button/autobuyer, redeemDisk (once tier01 is at one of its own fixed
-  // disk sizes' required level), or convertIntroBitsToKilobytes/
-  // tickIntroAutoInvest here, since every path updates purchaseLevelProgress via the same bookkeeping
-  // (see grantTierUnits/buyTier). Conversion itself is unlimited — no per-cycle cap — so this row is
-  // just a continuous mirror of that progress, rolling over to a fresh row the instant a level
-  // completes rather than ever running dry.
-  const purchaseBlockSize = getPurchaseBlockSize(state)
-  const tier01PurchaseProgress = state.purchaseLevelProgress?.[TIER_DEFINITIONS[0].id] ?? 0
-  const blocksTransferred = tier01PurchaseProgress
-  const blocksRemaining = purchaseBlockSize - tier01PurchaseProgress
-  // tier01's own CURRENT per-unit cost — what one transfer block actually costs right now, not a
-  // fixed rate (see getIntroKilobyteConversionCost in engine.js).
-  const transferBlockCost = getIntroKilobyteConversionCost(state)
-  const canTransferBlock = intro.bits >= transferBlockCost
-
-  // Once Storage unlocks, Disk redemption offers an alternative path to tier units, making this
-  // block-row redundant for a player who's already past the mandatory gate — hidden from then on.
-  // The `|| !intro.mainGameUnlocked` fallback exists only for a narrow edge case: Storage's own
-  // reveal threshold (Buffer / pool Memory Capacity) is independent of ever having transferred at
-  // all, so a player could in principle reach it without ever unlocking the main game —
-  // redeemDisk never flips mainGameUnlocked, only this section's own convert action does
-  // (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js), so this stays visible
-  // through the mandatory gate regardless of Storage's own reveal state.
-  const showTransferSection = revealed && (!storageRevealed || !intro.mainGameUnlocked)
-
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const computeBandwidthField = getComputeBandwidthSacrificeField(state)
   const investProgress = computeFundedInvest && computeBandwidthField
     ? clampPercent(((intro[computeBandwidthField] ?? 0) / COMPUTE_ENTITY_CAP) * 100)
     : clampPercent((intro.bits / investCost) * 100)
-  const activeBlockProgress = clampPercent((intro.bits / transferBlockCost) * 100)
 
-
+  // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
+  // inside whichever pool card diskPoolIndex currently belongs to, with a fallback slot right
+  // after the Data Stream card for the rare case that pool's own card isn't visible yet (its
+  // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
+  // disk-build-driven, independent of capacity — has already moved past it).
+  const provisionDiskButton = (
+    <Button
+      aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
+      disabled={!canStartDiskBuild || !!diskBuildInProgress}
+      onClick={actions.provisionDisk}
+      title={
+        diskBuildInProgress
+          ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
+          : diskLadderExhausted
+            ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+            : diskBuildBlockedByPriority
+              ? 'Take Speed (or redeem a full Disk) first'
+              : diskRedeemTierName
+                ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+      }
+      type="button"
+      variant={canStartDiskBuild ? 'info' : 'neutral'}
+      $progress={diskBuildProgress}
+    >
+      <ButtonContent>
+        {diskBuildInProgress
+          ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+          : diskLadderExhausted
+            ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
+            : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+      </ButtonContent>
+      <VisuallyHidden
+        role="progressbar"
+        aria-label="byte foundry disk build progress"
+        aria-valuenow={Math.round(diskBuildProgress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      />
+    </Button>
+  )
 
   return (
     <RootDiv>
@@ -617,61 +515,29 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           )}
 
         </ActionsRow>
-
-        {storageRevealed && (
-          <>
-            <Divider />
-            <Button
-              aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-              disabled={!canStartDiskBuild || !!diskBuildInProgress}
-              onClick={actions.provisionDisk}
-              title={
-                diskBuildInProgress
-                  ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-                  : diskLadderExhausted
-                    ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-                    : diskBuildBlockedByPriority
-                      ? 'Take Speed (or redeem a full Disk) first'
-                      : diskRedeemTierName
-                        ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                        : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
-              }
-              type="button"
-              variant={canStartDiskBuild ? 'info' : 'neutral'}
-              $progress={diskBuildProgress}
-            >
-              <ButtonContent>
-                {diskBuildInProgress
-                  ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-                  : diskLadderExhausted
-                    ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
-                    : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-              </ButtonContent>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label="byte foundry disk build progress"
-                aria-valuenow={Math.round(diskBuildProgress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </Button>
-
-          </>
-        )}
       </DataStreamCard>
 
-      {storageRevealed && Array.from({ length: unlockedPoolCount }, (_, offset) => {
+      {/* Fallback for when the disk ladder has already advanced past the last VISIBLE pool card
+          (its own capacity-unlock threshold not yet reached) — keeps the button reachable rather
+          than disappearing until that pool's card catches up. */}
+      {storageRevealed && diskPoolIndex > visiblePoolCount && provisionDiskButton}
+
+      {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
         const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
-        const poolCapacity = getStoragePoolCapacity(state, poolIndex)
         const poolBufferBits = getPoolBufferBits(state, poolIndex)
         const poolBufferCapacity = getPoolBufferCapacity(state, poolIndex)
         const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
-        const arraysComplete = poolSizes.length > 0 && poolSizes.every(size =>
-          (intro.disksBuiltTotal?.[size] ?? 0) >= DISK_ARRAY_LADDER_CAP
-        )
+        // The shared Provision Disk control always targets whichever size the disk ladder
+        // currently offers (getDiskSize) — a single ladder spanning every pool, not a per-pool
+        // one — so it renders inside whichever ONE pool card that size currently belongs to,
+        // outside the isExpanded disclosure so it stays visible/usable without expanding. See the
+        // fallback render below the loop for when that pool's own CARD isn't visible yet (its
+        // capacity-unlock threshold not yet reached, even though the disk ladder — a purely
+        // disk-build-driven progression, independent of capacity — has already moved past it).
+        const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             <PoolSummaryButton
@@ -683,95 +549,33 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               <PoolHeaderRow>
                 <PoolTitle>
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
-                  <PoolTitleName>Pool {poolIndex} · {TIER_DEFINITIONS[poolIndex - 1]?.name ?? `Tier ${poolIndex}`}</PoolTitleName>
+                  <span>Pool</span>
                 </PoolTitle>
-                <PoolStatusBadge $complete={arraysComplete}>
-                  {arraysComplete ? 'Arrays complete' : 'Arrays in progress'}
-                </PoolStatusBadge>
+                <StatusText>{formatDiskSize(poolBandwidth)}/sec</StatusText>
               </PoolHeaderRow>
-              <PoolStatsRow>
-                <PoolStat>
-                  <PoolStatLabel>Bandwidth</PoolStatLabel>
-                  <PoolStatValue>{formatDiskSize(poolBandwidth)}/sec</PoolStatValue>
-                </PoolStat>
-                <PoolStat>
-                  <PoolStatLabel>Capacity</PoolStatLabel>
-                  <PoolStatValue>{formatDiskSize(poolCapacity)}</PoolStatValue>
-                </PoolStat>
-              </PoolStatsRow>
-              <PoolBufferRow>
-                <PoolStatLabel>Memory</PoolStatLabel>
-                <PoolBufferMeter
-                  $progress={poolBufferPercent}
+              <FillableStatCard role="group" aria-label={`pool ${poolIndex} memory`} $progress={poolBufferPercent}>
+                <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
+                <VisuallyHidden
                   role="progressbar"
                   aria-label={`pool ${poolIndex} memory buffer`}
                   aria-valuenow={Math.round(poolBufferPercent)}
                   aria-valuemin={0}
                   aria-valuemax={100}
                 />
-                {/* No "/ max" here — the buffer's own ceiling always equals the Capacity stat
-                    already shown above (see getPoolBufferCapacity), so restating it would just
-                    repeat the same number a second time in the same card. */}
-                <PoolStatValue>{formatDiskSize(poolBufferBits)}</PoolStatValue>
-              </PoolBufferRow>
+              </FillableStatCard>
             </PoolSummaryButton>
+            {isActiveDiskPool && provisionDiskButton}
             {isExpanded && (
               <>
                 {poolSizes.map(size => (
                   <DiskArrayRow key={size} actions={actions} size={size} state={state} />
                 ))}
+                <DataLakePanel actions={actions} state={state} bare tierIndex={poolIndex} />
               </>
             )}
           </PoolCard>
         )
       })}
-
-      {storageRevealed && <DataLakePanel actions={actions} state={state} />}
-
-      {showTransferSection && (<>
-        <SectionLabel>Transfer to Main Game ({blocksRemaining} left)</SectionLabel>
-        <TransferBlocksRow role="group" aria-label="byte foundry kilobyte transfer blocks">
-          {Array.from({ length: purchaseBlockSize }, (_, index) => {
-            const isConsumed = index < blocksTransferred
-            const isActive = index === blocksTransferred
-            return (
-              <TransferBlock
-                key={index}
-                aria-label={
-                  isConsumed
-                    ? `transferred block ${index + 1}`
-                    : isActive
-                      ? `convert ${formatBitsInNearestUnit(transferBlockCost)} into 1 Kilobyte`
-                      : `locked transfer block ${index + 1}`
-                }
-                disabled={isConsumed || !isActive || !canTransferBlock}
-                onClick={isActive ? actions.convertIntroBitsToKilobytes : undefined}
-                title={
-                  isConsumed
-                    ? 'Already transferred'
-                    : isActive
-                      ? (canTransferBlock ? `${formatBitsInNearestUnit(transferBlockCost)} → 1 Kilobyte` : `Fill Data Stream to ${formatBitsInNearestUnit(transferBlockCost)} first`)
-                      : 'Transfer the block to your left first'
-                }
-                type="button"
-                $active={isActive}
-                $consumed={isConsumed}
-                $progress={isActive ? activeBlockProgress : undefined}
-              >
-                {isActive && (
-                  <VisuallyHidden
-                    role="progressbar"
-                    aria-label="byte foundry convert progress"
-                    aria-valuenow={intro.bits}
-                    aria-valuemin={0}
-                    aria-valuemax={transferBlockCost}
-                  />
-                )}
-              </TransferBlock>
-            )
-          })}
-        </TransferBlocksRow>
-      </>)}
 
       {!intro.mainGameUnlocked && (
         <TapArea

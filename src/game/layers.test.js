@@ -13,6 +13,7 @@ import {
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
   DATA_LAKE_TIER_COUNT,
   DATA_LAKE_TIER_LABELS,
@@ -336,9 +337,9 @@ describe('constants', () => {
     expect(COMPUTE_AUTO_BOOST_UNLOCK_COST).toBe(30)
   })
 
-  it('INTRO_DISK_UNLOCK_CAPACITY is 80,000 bits ("9.765 KiB" in Memory\'s own binary display scale)', () => {
-    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(80000)
-    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(10 * 1000 * BITS_PER_BYTE)
+  it('INTRO_DISK_UNLOCK_CAPACITY is 8,192 bits ("1 KiB" in Memory\'s own binary display scale) — deliberately equal to pool 1\'s own capacity-unlock threshold (BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP), see engine.js\'s getPoolCapacityUnlockThresholdBits(1)', () => {
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(8192)
+    expect(INTRO_DISK_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP)
   })
 
   it('DISK_BUILD_COST_MULTIPLIER is 10 (a disk costs 10x its own Byte-accurate size to build)', () => {
@@ -388,9 +389,15 @@ describe('constants', () => {
     ])
   })
 
-  it('DATA_LAKE constants define 10 KB…QB lakes with a level-10 hard cap on doubling capacity', () => {
+  it('DATA_LAKE constants define 10 KB…QB lakes with a level-3 hard cap on capacity-ladder advances', () => {
     expect(DATA_LAKE_TIER_COUNT).toBe(10)
     expect(DATA_LAKE_TIER_LABELS).toEqual(['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB'])
-    expect(DATA_LAKE_CAPACITY_MAX_LEVEL).toBe(10)
+    expect(DATA_LAKE_CAPACITY_MAX_LEVEL).toBe(3)
+  })
+
+  it('DATA_LAKE_CAPACITY_BY_LEVEL climbs a plain decade-power-of-10 ladder — 1, 10, 100, 1,000 — matching pool Capacity\'s own decade-power shape (getDecadePowerEquivalentBits)', () => {
+    expect(DATA_LAKE_CAPACITY_BY_LEVEL).toEqual([1, 10, 100, 1000])
+    expect(DATA_LAKE_CAPACITY_BY_LEVEL).toHaveLength(DATA_LAKE_CAPACITY_MAX_LEVEL + 1)
+    expect(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]).toBe(1000)
   })
 })

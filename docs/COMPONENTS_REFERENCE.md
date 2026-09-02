@@ -74,11 +74,35 @@ specific size's own array being mid-build.
 ## `ByteFoundryPage` pool layout
 
 `ByteFoundryPage` keeps one shared Data Stream section containing Speed ×2, Capacity ×2, and the
-common Provision Disk control. It renders one derived `PoolCard` per unlocked storage pool in
-ascending order (`aria-label="pool N"`). Only the largest unlocked pool is expanded initially;
-earlier pools remain visible as compact summary disclosure buttons with `aria-expanded` and reveal
-their three `DiskArrayRow`s when opened. `DataLakePanel` remains a single panel after the pool cards
-and renders all ten lake rows once; it is not split into per-pool panels.
+common Provision Disk control. It renders one derived `PoolCard` per VISIBLE storage pool
+(`getVisibleStoragePoolCount` — disk-build progress AND the Data Stream's own raw Capacity having
+crossed that pool's `getPoolCapacityUnlockThresholdBits`, in ascending order, `aria-label="pool N"`),
+titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name, centered), with a full-width
+buffer/Bandwidth block (reusing `FillableStatCard`/`BalanceText`/`StatusText`, the same components
+the Data Stream card's own tile uses) below the title. Pool 1's own threshold — 1 KiB — is
+deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
+the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
+a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded
+initially; earlier pools remain visible as compact summary disclosure buttons with `aria-expanded`
+and reveal, when opened, their three `DiskArrayRow`s followed by that pool's own `DataLakePanel`
+block (`bare`, `tierIndex={poolIndex}`) — each pool's Lake lives inside that pool's own card,
+directly below its disks, not in a separate panel after all the pool cards.
+
+`DataLakePanel` (`bare tierIndex={poolIndex}`) renders one lake as a single self-contained block —
+not a labelled table row — mirroring `PoolCard`'s own title-row-plus-`FillableStatCard` shape rather
+than a dense grid: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" — the
+size unit is always part of the visible name) with a compact `StatusText` showing how many of the
+funded Booster it's produced so far (e.g. "3× Cores"); a `FillableStatCard` showing
+`{deposited} / {capacity}` as the one big number, filling toward capacity the same visual way every
+other Byte Foundry balance does; then an actions row with the "⚡ ×10" capacity-upgrade button
+(hidden once maxed) beside a `🎯 <next Booster cost>` `StatusText` (the next Booster's own cost from
+this lake, informational only — Boosters are started from `ComputePage`, not here); and, only while
+a live transfer is in flight, one more `StatusText` line with the transfer count/capacity and time
+remaining. Every figure is a real, minimally-labelled number — no "Deposited"/"Capacity"/"Bought"/
+"Next" column headers — matching the rest of the page's "big number, few words" convention. Omitting
+`tierIndex` falls back to every visible-with-activity lake (`getVisibleLakeTierIndexes`), each
+rendered as its own block stacked in a `LakesList`, optionally wrapped in one shared `StatCard`
+(`bare = false`) — retained for reuse/tests; no current caller uses this mode.
 
 ## `ConfirmDialog/index.jsx`
 

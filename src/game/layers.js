@@ -213,14 +213,17 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
 // The whole Storage section stays hidden on ByteFoundryPage (see isStorageUnlocked in engine.js)
-// until Buffer / pool Memory Capacity reaches this many bits — 80,000 bits, "9.765 KiB" in binary
-// display scale (getMemoryUnit in engine.js) — NOT the same scale Disk sizes render in
+// until Buffer / pool Memory Capacity reaches this many bits — deliberately set to EQUAL pool 1's
+// own display-capacity-threshold gate (getPoolCapacityUnlockThresholdBits(1) in engine.js — 1024
+// Bytes, "1 KiB" in binary display scale, getMemoryUnit) — NOT the same scale Disk sizes render in
 // (getDiskSize/formatDiskSize stay SI; see the "Byte-denominated display units" section further
 // down). Well under pool 1's INTRO_CAPACITY_CAP_BITS end bound. Storage reveals once the Capacity ×2
-// ladder reaches this threshold; it is not forced to the pool end on Combine. Historically this was
-// a later-game reveal once the player had grown capacity past the Kilobyte-transfer row via
-// Capacity doublings.
-export const INTRO_DISK_UNLOCK_CAPACITY = 80000
+// ladder reaches this threshold; it is not forced to the pool end on Combine. At exactly this
+// threshold, pool 1's own decade-power Capacity (getDecadePowerEquivalentBits) is already a clean
+// "1 KB" (1,000 Bytes) — so Storage reveals with its first pool already showing a round number, not
+// mid-decade. An earlier version gated this much later (80,000 bits, by which point pool 1's own
+// Capacity had already advanced past "1 KB" to "10 KB") — see docs/DESIGN_HISTORY.md.
+export const INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP
 // A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
 // 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
 // bits ("100 KB"), and so on; see getDiskCost in engine.js. This cost only ever pays for the empty
@@ -287,7 +290,7 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // docs/DESIGN_HISTORY.md for why.
 //
 // Capacity threshold at which Boosters / ComputePage reveal — historically a later gate than
-// Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, 80,000 bits), matching the same
+// Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, now 8,192 bits), matching the same
 // "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
 // 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
 // Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, now a clean SI 1 MB — see
@@ -440,17 +443,25 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 //
 // Each sub-slot's own PHYSICAL ceiling is DISK_ARRAY_LADDER_CAP — a lake can never be asked to hold
 // more of a denomination than a single array of that size could ever physically produce. On top of
-// that physical ceiling, a lake's own actual capacity is a smaller, purchasable, doubling ladder
-// (see getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB"
-// for the KB lake) and doubling per purchase, permanently hard-capped at
-// DATA_LAKE_CAPACITY_MAX_LEVEL (level 10, 1,024 units — "1024 KB" for the KB lake). An earlier
-// version instead made the cap fixed at the physical ceiling with no purchasable lever at all —
-// see docs/DESIGN_HISTORY.md for why a smaller, doublable, explicitly-capped ladder replaced that.
+// that physical ceiling, a lake's own actual capacity is a smaller, purchasable ladder (see
+// getDataLakeCapacity/doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB" for
+// the KB lake), climbing a plain DECADE-POWER-OF-10 ladder per purchase — 1, 10, 100, 1,000 —
+// the same coarse shape pool Capacity itself uses (getDecadePowerEquivalentBits), replacing an
+// earlier finer SI-clean sequence (1, 2, 4, …, 64, 125, 250, 500, 1,000 over 11 levels) that no
+// longer matches pool Capacity's own derivation — see docs/DESIGN_HISTORY.md. Doubling (now really
+// "×10-ing") is funded by draining the lake ITSELF, so the nth level's own upgrade cost is always
+// exactly the (n-1)th level's own capacity value (1 unit to reach 10, 10 units to reach 100, 100
+// units to reach 1,000). Values are read from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit,
+// already-integer level index, so this needs no float-precision handling). An earlier version
+// instead made the cap fixed at the physical ceiling with no purchasable lever at all — see
+// docs/DESIGN_HISTORY.md for why a smaller, purchasable, explicitly-capped ladder replaced that.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
-export const DATA_LAKE_CAPACITY_MAX_LEVEL = 10
+export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3
+// Index i = capacity at capacityLevel i. Plain decade-power-of-10 ladder — see the comment above.
+export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 
 // --- Data Lake Booster transfers --- see getBoosterTransferPlan/startBoosterTransfer/
 // tickDataLakeTransfers in engine.js. A lake's own deposited stock (above) is spent FIRST and
@@ -692,8 +703,8 @@ export const COMPUTE_FLOPS_LAST_TIER_COST_PP = 1E30
 export const COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001
 // Ten Flops tiers (KFlops → QFlops), 1:1 with main-game tiers. Each tier's base PP cost matches
 // TIER_DEFINITIONS' baseCost ladder (1000 PP … 10^30 PP); per-unit price then scales on every
-// purchase via the same triangular 10-power epoch as Factory tiers (getCostEpochExponent), not
-// Factory's 8-purchase level blocks.
+// purchase via the same linear-increment 10-power epoch as Factory tiers (getCostEpochExponent),
+// not Factory's 8-purchase level blocks.
 export const COMPUTE_FLOPS_TIER_DEFINITIONS = [
   { id: 'flop01', name: 'KFlops', symbol: 'KF', baseCostPP: 1E3,  boostsTierId: 'tier01' },
   { id: 'flop02', name: 'MFlops', symbol: 'MF', baseCostPP: 1E6,  boostsTierId: 'tier02' },

@@ -1,4 +1,4 @@
-import Button, { ButtonContent } from 'components/Button'
+import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
   formatAmount,
@@ -16,79 +16,99 @@ import {
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
 } from 'game/engine'
-import { COMPUTE_TIER_LABELS, DATA_LAKE_TIER_COUNT } from 'game/layers'
+import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
-// A single grid shared across every visible lake row (rather than one flex row per lake) so the
-// Deposited/Capacity/Bought/Next columns line up vertically instead of each row wrapping/aligning
-// independently — the polish pass this panel needed once it stopped being a one-line-per-lake
-// afterthought.
-const LakeGrid = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
-  column-gap: ${props => props.theme.space.md};
-  row-gap: ${props => props.theme.space.xs};
-  width: 100%;
-  font-size: ${props => props.theme.type.scale.sm.size};
-`
-
-const LakeHeaderRow = styled.span`
-  font-size: ${props => props.theme.type.scale.xs.size};
-  font-weight: 600;
-  color: ${props => props.theme.color.textMuted};
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  text-align: right;
-  white-space: nowrap;
-
-  &:first-child {
-    text-align: left;
-  }
-`
-
-// display: contents lets each lake's own cells become direct children of LakeGrid above (so its
-// columns actually line up across rows) without this wrapper adding an extra box of its own —
-// the same "invisible grouping" a <tbody>/<tr> pair gets for free in a real <table>.
-const LakeRow = styled.div`
-  display: contents;
-`
-
-const LakeName = styled.span`
-  font-weight: 600;
-  color: ${props => props.theme.color.text};
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`
-
-const LakeStat = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  white-space: nowrap;
-`
-
-// Stacks the capacity figure over its own doubling control, right-aligned like every other numeric
-// column, rather than widening the grid with a separate always-empty header column for it.
-const CapacityCell = styled.span`
+// Stacks multiple lake blocks (list mode — see getVisibleLakeTierIndexes below) with breathing
+// room between them; a no-op single-child wrapper in the common tierIndex-scoped mode.
+const LakesList = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 0.15rem;
+  align-items: stretch;
+  gap: ${props => props.theme.space.md};
+  width: 100%;
 `
 
-// Compact — icon + multiplier only, cost tucked into the title/aria-label rather than a second
-// visible line, matching this panel's already-terse per-row layout.
-const DoubleCapacityButton = styled(Button)`
-  padding: 0.1rem 0.4rem;
-  font-size: ${props => props.theme.type.scale.xs.size};
+// One lake's own block — title row, fillable balance tile, action row — deliberately mirroring
+// ByteFoundryPage's PoolCard-internal layout (PoolHeaderRow + FillableStatCard) rather than a
+// dense label/value grid, so a lake reads the same "big number, few words" way every other panel
+// on this page already does.
+const LakeBlock = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 `
 
-const LakeTransferNote = styled.span`
-  grid-column: 1 / -1;
+const LakeHeaderRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: ${props => props.theme.space.sm};
+`
+
+const LakeTitle = styled.h4`
+  display: flex;
+  align-items: baseline;
+  gap: ${props => props.theme.space.xs};
+  margin: 0;
+  min-width: 0;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.md.size};
+  line-height: ${props => props.theme.type.scale.md.lineHeight};
+  font-weight: 700;
+  color: ${props => props.theme.color.text};
+`
+
+const LakeTitleSymbol = styled.span`
+  flex-shrink: 0;
+`
+
+const StatusText = styled.p`
+  margin: 0;
   color: ${props => props.theme.color.textMuted};
-  font-size: ${props => props.theme.type.scale.xs.size};
+  text-align: center;
   font-variant-numeric: tabular-nums;
+`
+
+const BalanceText = styled.p`
+  margin: 0;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.lg.size};
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+`
+
+// Same fill-gradient tile every other Byte Foundry balance uses (Data Stream card, pool Memory
+// buffer) — reused here (duplicated locally, matching how ByteFoundryPage's own PoolCard/
+// DataStreamCard duplicate near-identical StatCard wrappers rather than sharing one) so a lake's
+// deposited/capacity figure reads as the same kind of thing at a glance, not a bespoke table cell.
+const FillableStatCard = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: ${props => props.theme.radius.sm};
+  color: ${props => props.theme.color.text};
+  ${progressFill}
+`
+
+const LakeActionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${props => props.theme.space.sm};
+`
+
+// Icon + multiplier only, cost tucked into the title/aria-label rather than a second visible
+// line — matches every other milestone-style action button on this page (Speed ×2, Capacity ×2,
+// Provision Disk).
+const UpgradeButton = styled(Button)`
+  padding: 0.1rem 0.5rem;
+  font-size: ${props => props.theme.type.scale.sm.size};
 `
 
 // Only rendered in `bare` mode, and only once there's actually a list below it to separate from
@@ -106,7 +126,7 @@ const getVisibleLakeTierIndexes = state => {
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     const deposited = getDataLakeDepositedUnits(tierIndex)(state)
     const lake = getDataLakeTier(state, tierIndex)
-    // A lake whose capacity was already doubled at least once (before ever holding a deposit) is
+    // A lake whose capacity was already grown at least once (before ever holding a deposit) is
     // just as worth showing as one with activity — its own level has moved off the starting value.
     const capacityGrown = getDataLakeCapacityLevel(state, tierIndex) > 0
     if (deposited > 0 || (lake?.purchased ?? 0) > 0 || (lake?.transfers?.length ?? 0) > 0 || capacityGrown) {
@@ -116,21 +136,22 @@ const getVisibleLakeTierIndexes = state => {
   return tiers
 }
 
-// `bare` skips the own StatCard wrapper (background/border/shadow/padding) and renders just the
-// grid — used when a caller (e.g. ByteFoundryPage's single pool card) already provides that chrome
-// and nesting a second card here would double-box the same content. `actions` is only needed for
-// the capacity-doubling button below.
-const DataLakePanel = ({ actions, state, bare = false }) => {
-  const visibleTiers = getVisibleLakeTierIndexes(state)
+const clampPercent = value => Math.min(100, Math.max(0, value))
+
+// `bare` skips the own StatCard wrapper (background/border/shadow/padding) — used when a caller
+// (e.g. ByteFoundryPage's own pool cards, via `tierIndex` below) already provides that chrome and
+// nesting a second card here would double-box the same content. `actions` is only needed for the
+// capacity-upgrade button below.
+// `tierIndex`, when set, scopes rendering to exactly that one lake — always shown regardless of
+// activity (it's a permanent part of that pool's own card now, not a rarity-filtered global list
+// entry) — instead of the default every-lake-with-activity behavior `getVisibleLakeTierIndexes`
+// still drives when `tierIndex` is omitted.
+const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
+  const visibleTiers = tierIndex != null ? [tierIndex] : getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
   const list = (
-    <LakeGrid>
-      <LakeHeaderRow>Lake</LakeHeaderRow>
-      <LakeHeaderRow>Deposited</LakeHeaderRow>
-      <LakeHeaderRow>Capacity</LakeHeaderRow>
-      <LakeHeaderRow>Bought</LakeHeaderRow>
-      <LakeHeaderRow>Next</LakeHeaderRow>
+    <LakesList>
       {visibleTiers.map(tierIndex => {
         const label = getDataLakeTierLabel(tierIndex)
         // Deposited stock is a prepaid convenience buffer, spent FIRST (instantly) toward a
@@ -154,42 +175,62 @@ const DataLakePanel = ({ actions, state, bare = false }) => {
         const unitBits = getDataLakeUnitBits(tierIndex)
         const capacity = getDataLakeCapacity(state, tierIndex)
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
-        const canDouble = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
+        const canUpgrade = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
         const maxed = isDataLakeCapacityMaxed(state, tierIndex)
+        // The ladder is a plain decade-power-of-10 step (1, 10, 100, 1,000 — see layers.js), not a
+        // literal ×2, so the next value is read off the ladder directly rather than computed as
+        // capacity * 2 (only accurate under the earlier SI-clean sequence's own doubling shape —
+        // see docs/DESIGN_HISTORY.md). Only read while !maxed, so level + 1 always stays within
+        // DATA_LAKE_CAPACITY_BY_LEVEL's bounds.
+        const nextCapacity = !maxed && DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex) + 1]
         const depositedSize = formatDiskSize(deposited * unitBits)
         const capacitySize = formatDiskSize(capacity * unitBits)
         const nextCostSize = formatDiskSize(nextCost * unitBits)
+        const depositedPercent = capacity > 0 ? clampPercent((deposited / capacity) * 100) : 0
 
         return (
-          <LakeRow key={tierIndex}>
-            <LakeName title={`${label} Data Lake → ${boosterLabel}`}>{`${label} → ${boosterLabel}`}</LakeName>
-            <LakeStat>{depositedSize}</LakeStat>
-            <CapacityCell>
-              {capacitySize}
+          <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
+            <LakeHeaderRow>
+              <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
+                <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
+                <span>Lake</span>
+              </LakeTitle>
+              <StatusText>{formatAmount(purchased)}× {boosterLabel}</StatusText>
+            </LakeHeaderRow>
+            <FillableStatCard role="group" aria-label={`${label} lake deposits`} $progress={depositedPercent}>
+              <BalanceText>{depositedSize} / {capacitySize}</BalanceText>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label={`${label} lake deposits`}
+                aria-valuenow={Math.round(depositedPercent)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </FillableStatCard>
+            <LakeActionsRow>
               {!maxed && (
-                <DoubleCapacityButton
-                  aria-label={`double the ${label} Data Lake's capacity`}
-                  disabled={!canDouble}
+                <UpgradeButton
+                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
+                  disabled={!canUpgrade}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} deposited) to double its capacity to ${formatDiskSize(capacity * 2 * unitBits)} — needs it completely full first`}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} deposited) to grow its capacity to ${formatDiskSize(nextCapacity * unitBits)} — needs it completely full first`}
                   type="button"
-                  variant={canDouble ? 'prestige' : 'neutral'}
+                  variant={canUpgrade ? 'prestige' : 'neutral'}
                 >
-                  <ButtonContent>⚡ ×2</ButtonContent>
-                </DoubleCapacityButton>
+                  <ButtonContent>⚡ ×10</ButtonContent>
+                </UpgradeButton>
               )}
-            </CapacityCell>
-            <LakeStat>{formatAmount(purchased)}</LakeStat>
-            <LakeStat>{nextCostSize}</LakeStat>
+              <StatusText title={`Next Booster from this lake costs ${nextCostSize}`}>🎯 {nextCostSize}</StatusText>
+            </LakeActionsRow>
             {transfers.length > 0 && (
-              <LakeTransferNote>
+              <StatusText>
                 {`${formatAmount(transfers.length)}/${formatAmount(transferCapacity)} transferring · ${formatOfflineDuration(soonestTransferSeconds)} left`}
-              </LakeTransferNote>
+              </StatusText>
             )}
-          </LakeRow>
+          </LakeBlock>
         )
       })}
-    </LakeGrid>
+    </LakesList>
   )
 
   if (bare) {

@@ -29,10 +29,17 @@ icon, standalone display with no browser chrome, offline-capable after a first v
   `public/pwa-maskable-512x512.png` (`purpose: 'maskable'`, with extra interior padding so the glyph
   survives an OS's own icon-mask cropping), plus `public/apple-touch-icon.png` (180×180, iOS's own
   convention, referenced directly from `index.html` rather than the web manifest since iOS Safari
-  doesn't fully respect the manifest icons list). All four are generated PNGs — see
-  `scripts/generate-pwa-icons.mjs` — rasterized via `sharp` from small inline SVG sources (a centered
-  "10" glyph in the dark theme's `accent` color, `#7c9bff`, on the `page` background, `#0c0d11`) rather
-  than hand-crafted per size.
+  doesn't fully respect the manifest icons list), plus `public/favicon.ico` (browser-tab icon,
+  served from the implicit `/favicon.ico` convention — no explicit `<link rel="icon">` in
+  `index.html`). All five are generated — see `scripts/generate-pwa-icons.mjs` — rasterized via
+  `sharp` from a small inline SVG source: an 8-cell "byte" grid (4 columns × 2 rows of rounded
+  squares, each filled with a diagonal gradient sweeping through the dark theme's `accent` →
+  `violet` → `good` tokens, `#7c9bff` → `#b39bff` → `#57d98a`, on the `page` background, `#0c0d11`)
+  — replacing an earlier plain serif "10" text glyph; see `docs/DESIGN_HISTORY.md` for the redesign
+  and why `favicon.ico`'s three embedded frames (16/32/48px) use a simplified 2×2/4-cell version of
+  the same grid instead of the full 8-cell one (illegible at a true 16×16 render). `favicon.ico` is
+  hand-assembled by the same script (a minimal ICO container embedding modern-format PNG frames
+  directly — no extra dependency beyond `sharp`, already required for the PNG rasterization).
 - **`index.html`** carries the iOS-specific meta tags `vite-plugin-pwa` doesn't inject on its own:
   `apple-touch-icon` link, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`
   (`black-translucent`), `apple-mobile-web-app-title`, plus a `theme-color` meta tag (browser-chrome
