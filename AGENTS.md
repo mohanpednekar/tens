@@ -246,8 +246,10 @@ so the whole Storage section and pool 1's card reveal at the same instant, with 
 showing a clean "1 KB" Capacity — and each
 unlocked pool's own read cache now starts filling from Memory the moment that pool unlocks, not only
 once a disk of that size has ever been built. The generator, Disks, Data Lakes, and Compute
-Cores/Nodes are permanent across every real Prestige; only Data Stream balance and the
-main-game-unlock gate reset each cycle.
+Cores/Nodes are permanent across every real Prestige; so is `intro.mainGameUnlocked` itself, a
+one-time-ever latch (`latchMainGameUnlocked`) — once Storage-unlock capacity is ever reached, no
+real Prestige or Era ascension resets it again, so Factory stays permanently reachable from then on.
+Only the Data Stream balance itself resets each cycle.
 After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
 upgrades on the Upgrades tab.

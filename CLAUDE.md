@@ -1004,9 +1004,9 @@ The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight tran
 `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
-permanent across every real Prestige; only Data Stream balance itself, the main-game-unlock gate,
-and tier01's own purchase-block progress reset each cycle. Nothing here ever fully freezes — every
-action stays
+permanent across every real Prestige — as is the main-game-unlock gate itself once ever latched (see
+`latchMainGameUnlocked` above); only Data Stream balance itself and tier01's own purchase-block
+progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.
 
 **Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`;
@@ -1495,7 +1495,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   without being silently relocked), `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
   prestiging from the first-time `FullScreenOverlay`, and confirming resources reset and Prestige Points
   are awarded), and `e2e/meta-prestige.e2e.js` (seed at 1 Googol PP → Settings Era ascension → assert
-  `era.count`, Eons award, and Foundry gate reset).
+  `era.count`, Eons award, and the permanent `intro.mainGameUnlocked` latch carrying forward).
 - **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on
   the runner, adding a job/step) is real follow-up work, but it means editing `ci.yml`, which is off-limits
   to `autonomous-maintenance.yml` (see docs/AUTOMATION.md) — a human needs to do that wiring
