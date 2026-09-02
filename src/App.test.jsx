@@ -3949,12 +3949,14 @@ describe('Compute auto-merge automation', () => {
 
 })
 
-// --- The Byte Foundry resets and reappears after every real Prestige ---
-// A real Prestige now sends the player back through the intro every cycle (see engine.js's
-// prestigeGame and App.jsx's bidirectional page-sync effect) — it's no longer a one-time-ever gate.
-// But the Byte generator itself (capacity/byteCreated/tickSpeedSeconds/productionMultiplier) is
-// PERMANENT — only Memory (bits/productionAccumulator) and the completion gate reset. Speed
-// Up/Overclock remain unaffected (covered at the engine.test.js level, not here).
+// --- The Byte Foundry gate is a permanent, one-time-ever unlock ---
+// intro.mainGameUnlocked latches permanently true the first time Storage's own capacity threshold
+// is crossed (see engine.js's latchMainGameUnlocked) — a real Prestige no longer sends the player
+// back through the intro; App.jsx's own routing derives off mainGameUnlocked, which simply stays
+// true from then on. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
+// productionMultiplier) is likewise PERMANENT — only the Data Stream balance (bits/
+// productionAccumulator) resets each cycle. Speed Up/Overclock remain unaffected (covered at the
+// engine.test.js level, not here).
 
 test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {
   const user = userEvent.setup()
