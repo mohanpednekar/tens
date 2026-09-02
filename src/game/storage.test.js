@@ -623,6 +623,27 @@ describe('supporter unlock + save slots', () => {
     expect(listSaveSlots().filter(s => s.unlocked)).toHaveLength(FREE_SLOT_COUNT)
   })
 
+  it('sanitizes a corrupted tens_saves_meta payload on load', () => {
+    localStorage.setItem(
+      'tens_saves_meta',
+      JSON.stringify({
+        activeSlotId: '99',
+        slots: [
+          { id: 'abc', name: 'Not a number' },
+          { id: '5', name: 'Out of range' },
+          { id: '0', name: '   ' },
+        ],
+      }),
+    )
+    const meta = loadSavesMeta()
+    // Non-numeric and out-of-range ids are dropped; only slot 0 survives.
+    expect(meta.slots.map(s => s.id)).toEqual(['0'])
+    // A whitespace-only name falls back to the default slot name.
+    expect(meta.slots[0].name).toBe('Save 1')
+    // An activeSlotId that doesn't match any surviving slot falls back to '0'.
+    expect(meta.activeSlotId).toBe('0')
+  })
+
   it('rejects an invalid unlock code', () => {
     expect(redeemSupporterUnlockCode('nope').ok).toBe(false)
     expect(isSupporterUnlocked()).toBe(false)
@@ -675,6 +696,14 @@ describe('supporter unlock + save slots', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     expect(renameSaveSlot('1', 'Alt run').ok).toBe(true)
     expect(listSaveSlots().find(s => s.id === '1').name).toBe('Alt run')
+  })
+
+  it('truncates a rename to 40 characters', () => {
+    const longName = 'x'.repeat(50)
+    expect(renameSaveSlot('0', longName).ok).toBe(true)
+    const storedName = listSaveSlots().find(s => s.id === '0').name
+    expect(storedName).toBe('x'.repeat(40))
+    expect(storedName).toHaveLength(40)
   })
 
   it('refuses to rename a slot to an empty/whitespace-only name', () => {
@@ -909,6 +938,18 @@ describe('Dev Mode', () => {
     const result = applyDevGameStateJson('{}', createInitialGameState())
     expect(result.ok).toBe(true)
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).saveSchemaVersion).toBe(SAVE_SCHEMA_VERSION)
+  })
+
+  it('applyDevGameStateJson fails with storage_error (rather than throwing) when localStorage.setItem throws', () => {
+    setDevModeActive(true)
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+    let result
+    expect(() => {
+      result = applyDevGameStateJson('{}', createInitialGameState())
+    }).not.toThrow()
+    expect(result).toEqual({ ok: false, reason: 'storage_error' })
   })
 
   // Regression coverage for a real bug an adversarial review caught: these real-slot helpers
