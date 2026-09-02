@@ -37,10 +37,13 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 
 **Bot strategy** (ideal attentive player, fixed across every row):
 
-- **Foundry every tick:** Tap Memory when not full, and tap every unlocked pool's own local buffer
-  too (the fill-based Speed/Bandwidth multiplier — `FILL_MULTIPLIER_*` in `layers.js` — is
-  independent per Data Stream/pool, so an attentive player keeps every one of them boosted, not
-  just the Data Stream tile); Combine into a Byte when affordable. While
+- **Foundry every tick:** Tap Memory when not full, and tap every VISIBLE pool's own local buffer
+  too (`getVisibleStoragePoolCount` — the same capacity-threshold-AND-disk-build-unlocked gate
+  `ByteFoundryPage` uses to decide which pool cards actually render a Memory tile; a merely
+  disk-build-unlocked pool with no card on screen yet isn't tappable by a real player, so the bot
+  must not tap it either) — the fill-based Speed/Bandwidth multiplier — `FILL_MULTIPLIER_*` in
+  `layers.js` — is independent per Data Stream/pool, so an attentive player keeps every VISIBLE one
+  of them boosted, not just the Data Stream tile; Combine into a Byte when affordable. While
   `mainGameUnlocked` is false, pause every unlocked tier autobuyer (so `tickDiskAutoRedeem` cannot
   advance tier01's cost), skip Disk Fill/Build, and convert Memory → Kilobytes until the gate
   opens — redeeming permanent full Disks before that convert advances purchase levels without
