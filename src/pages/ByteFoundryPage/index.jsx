@@ -360,9 +360,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
   const dataStreamBaseMultiplierPercent = getDataStreamBaseMultiplierPercent(intro)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
-  // pools are revealed (unlockedPoolCount >= 1), the same condition that switches the tap itself
+  // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
-  const dataStreamMultiplierCapped = unlockedPoolCount >= 1 && dataStreamMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
+  const dataStreamMultiplierCapped = visiblePoolCount >= 1 && dataStreamMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []

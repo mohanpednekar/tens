@@ -677,6 +677,19 @@ describe('tapIntroBit', () => {
     })
     expect(tapIntroBit(state)).toBe(state)
   })
+
+  it('clamps the stored bonus to the cap\'s remaining headroom rather than banking a hidden excess', () => {
+    // Empty Buffer (base 150%) plus a bonus already 2 points short of the 200% cap (198% total) —
+    // a full +FILL_MULTIPLIER_TAP_BONUS_PERCENT (5) would overshoot the cap by 3; only the 2
+    // points of actual headroom should be stored.
+    const state = withIntro(createInitialGameState(), {
+      bits: 0, capacity: 10_000,
+      dataStreamTapBonusPercent: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT - 2,
+    })
+    const after = tapIntroBit(state)
+    expect(after.intro.dataStreamTapBonusPercent).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT)
+    expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
+  })
 })
 
 describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)', () => {
@@ -781,6 +794,16 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
         poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT },
       })
       expect(tapPoolBuffer(1)(state)).toBe(state)
+    })
+
+    it('clamps the stored bonus to the cap\'s remaining headroom rather than banking a hidden excess', () => {
+      // Pool 1's buffer is empty (base 150%) with a bonus already 2 points short of the 200% cap.
+      const state = withIntro(createInitialGameState(), {
+        poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT - 2 },
+      })
+      const after = tapPoolBuffer(1)(state)
+      expect(after.intro.poolTapBonusPercents[1]).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT)
+      expect(getPoolMultiplierPercent(after, 1)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
     })
   })
 

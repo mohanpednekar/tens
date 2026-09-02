@@ -2096,12 +2096,19 @@ export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPer
 export const tapIntroBit = state => {
   if (state.intro.bits >= state.intro.capacity) return state
   if (getVisibleStoragePoolCount(state) >= 1) {
-    if (getDataStreamMultiplierPercent(state.intro) >= FILL_MULTIPLIER_TAP_CAP_PERCENT) return state
+    const currentMultiplierPercent = getDataStreamMultiplierPercent(state.intro)
+    if (currentMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT) return state
+    // Clamped to the cap's remaining headroom, not a flat +FILL_MULTIPLIER_TAP_BONUS_PERCENT — a
+    // tap within less than one bonus's worth of the cap (e.g. at 198%) must not bank the unused
+    // remainder (2 of the 5 points) into dataStreamTapBonusPercent, or that hidden excess would
+    // silently extend how long the effective (capped) total stays pinned at the cap once it starts
+    // decaying, undermining the cap's own "instantaneous ceiling" intent.
+    const bonusIncrement = Math.min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - currentMultiplierPercent)
     return {
       ...state,
       intro: {
         ...state.intro,
-        dataStreamTapBonusPercent: (state.intro.dataStreamTapBonusPercent ?? 0) + FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+        dataStreamTapBonusPercent: (state.intro.dataStreamTapBonusPercent ?? 0) + bonusIncrement,
       },
     }
   }
@@ -2362,14 +2369,18 @@ export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPe
 export const tapPoolBuffer = poolIndex => state => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getUnlockedStoragePoolCount(state)) return state
   if (getPoolBufferBits(state, poolIndex) >= getPoolBufferCapacity(state, poolIndex)) return state
-  if (getPoolMultiplierPercent(state, poolIndex) >= FILL_MULTIPLIER_TAP_CAP_PERCENT) return state
+  const currentMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
+  if (currentMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT) return state
+  // Clamped to the cap's remaining headroom — see tapIntroBit's own identical guard above for why
+  // a flat +FILL_MULTIPLIER_TAP_BONUS_PERCENT would bank hidden excess past the cap.
+  const bonusIncrement = Math.min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - currentMultiplierPercent)
   return {
     ...state,
     intro: {
       ...state.intro,
       poolTapBonusPercents: {
         ...(state.intro.poolTapBonusPercents ?? {}),
-        [poolIndex]: getPoolTapBonusPercent(state, poolIndex) + FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+        [poolIndex]: getPoolTapBonusPercent(state, poolIndex) + bonusIncrement,
       },
     },
   }

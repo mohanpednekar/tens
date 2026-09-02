@@ -1011,7 +1011,12 @@ per tick ahead of production) — never crediting bits directly in this mode. Th
 `getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` clamp their combined result there, and
 `tapIntroBit`'s post-reveal branch / `tapPoolBuffer` both additionally no-op once that cap is
 already reached (on top of their existing "buffer already full" no-op), so a bonus can't accumulate
-indefinitely past what the cap can ever apply. Before Storage pools are
+indefinitely past what the cap can ever apply. Below the cap, each tap's own increment is further
+clamped to the cap's remaining headroom (`Math.min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, cap -
+currentMultiplierPercent)`) rather than always adding a flat 5 points — a tap within less than one
+bonus's worth of the cap (e.g. at 198%) must not bank the unused remainder into the stored
+`dataStreamTapBonusPercent`/`poolTapBonusPercents` field, or that hidden excess would silently
+extend how long the effective (capped) total stays pinned at 200% once decay starts. Before Storage pools are
 revealed, tapping the Data Stream keeps its original flat "one second's worth of bits" direct-credit
 effect (`tapIntroBit`'s pre-reveal branch) — this multiplier has no bearing pre-reveal. `intro.bits`
 is no longer always an integer as a result (see its own field comment in `createInitialGameState`).
@@ -1399,7 +1404,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1659 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1671 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
