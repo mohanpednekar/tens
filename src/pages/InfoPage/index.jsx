@@ -213,20 +213,22 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at
-            {firstTierName}’ current per-unit cost. The first transfer unlocks the main game;
-            there’s no per-cycle cap after that. Auto-convert keeps running even when the manual
-            row is hidden.
+            {firstTierName}’ current per-unit cost, with no per-cycle cap, every cycle. Auto-convert
+            keeps running even when the manual row is hidden — it doesn’t itself gate the main game;
+            crossing Storage’s own capacity threshold does that (next section), a one-time-ever
+            unlock on your very first cycle.
           </li>
         </ul>
 
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Prestige:</strong> Data Stream balance and the main-game unlock gate.
+            <strong>Resets each Prestige:</strong> Data Stream balance.
           </li>
           <li>
             <strong>Permanent:</strong> the Byte generator, Buffer/production upgrades, Disks,
-            and every Compute entity.
+            every Compute entity, and the main-game unlock gate itself — once it has ever
+            triggered, no Prestige re-gates you behind the Byte Foundry again.
           </li>
           <li>Later cycles are a fast pit-stop, not a full replay.</li>
         </ul>
@@ -642,15 +644,15 @@ const InfoPage = () => {
             and eligibility.
           </li>
           <li>
-            <strong>Resets:</strong> Foundry generator upgrades, Memory and the main-game gate,
-            Disks, Compute entities, ordinary Factory cycle (resources, owned tiers, Double PP
-            level), unspent PP and prestige count, and Compute owned units.
+            <strong>Resets:</strong> Foundry generator upgrades, Memory (Capacity), Disks, Compute
+            entities, ordinary Factory cycle (resources, owned tiers, Double PP level), unspent PP
+            and prestige count, and Compute owned units.
           </li>
           <li>
             <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
-            museum, Compute page reveal, Flops autobuyer unlock flags, Eons (+ award), and
-            hyperscalers. Era <em>N</em> free-unlocks the <em>N</em>th Compute tier&apos;s
-            autobuyer.
+            the main-game unlock gate (once it has ever triggered), museum, Compute page reveal,
+            Flops autobuyer unlock flags, Eons (+ award), and hyperscalers. Era <em>N</em>
+            free-unlocks the <em>N</em>th Compute tier&apos;s autobuyer.
           </li>
         </ul>
       </Section>

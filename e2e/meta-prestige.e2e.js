@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload()
 })
 
-test('ascending an Era from Settings awards Eons and resets the Foundry gate', async ({ page }) => {
+test('ascending an Era from Settings awards Eons and resets Foundry Capacity, but keeps the gate permanently unlocked', async ({ page }) => {
   await page.getByRole('button', { name: /open more menu/i }).click()
   await page.getByRole('button', { name: /open settings/i }).click()
   await page.getByRole('button', { name: /ascend an era — open confirmation/i }).click()

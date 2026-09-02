@@ -153,9 +153,10 @@ excess down to the cap's current headroom every tick (not just at tap time), so 
 is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
 `MultiplierGauge` — a half-circle 0–200% speedometer with a percent readout — inside the same
 tappable tile (`FillableStatCard`) for both the Data Stream and every pool, identically
-(`pointer-events: none` so it never blocks the tap/expand-toggle underneath); the fill-based arc/needle position reads in the
-accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution — the closest
-existing token to orange).
+(`pointer-events: none` so it never blocks the tap/expand-toggle underneath); the fill-based arc
+reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
+the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
+pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
 
 **Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
 values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
@@ -238,7 +239,9 @@ actually gates deposits. Deposited/capacity/next-cost/doubling-cost all display 
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 An always-on auto-convert turns Data Stream bits into free `tier01` units at tier01's own current
 per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
-was removed); the first successful conversion unlocks the main game. Storage pool cards also require
+was removed) — it funds `tier01` purchases continuously, every cycle, but doesn't itself touch
+`intro.mainGameUnlocked` any more; that's `latchMainGameUnlocked`'s job (see above), keyed off
+Storage's own capacity threshold instead. Storage pool cards also require
 `intro.capacity` to reach 1024^N Bytes (1 KiB/1 MiB/1 GiB/…, `getPoolCapacityUnlockThresholdBits`)
 on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
 own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
