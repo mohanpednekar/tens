@@ -12,8 +12,9 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between top-level screens via a plain `useState` toggle in `App.jsx` plus a shared bottom
 `AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture" below):
-`ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
-then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
+`ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first
+cycle, until Storage's own capacity threshold is reached — never again after that, permanently
+revisitable from then on), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
 `StoragePage` is not an AppNav destination — disk arrays live under Foundry as continuous Memory +
 Storage sections on the same screen (no second-level tabs).
@@ -536,11 +537,16 @@ src/
                                any time via AppNav's Foundry item (`page = 'foundry'`) to review the
                                current cycle's stats — it no longer disappears once passed.
                                Gate-exempt pages stay reachable during the gate so Guide / Boosters
-                               (once capacity reveals it) / Compute (once 100 PP) / More utilities are never yanked away; the
-                               gate picks back up the instant the player navigates to `'game'`
-                               (Factory). Since `page` is independent of `intro.mainGameUnlocked`, no
-                               syncing effect is needed at all: the gate resolving just reveals
-                               whatever `page` already was (typically `'game'`)
+                               (once capacity reveals it) / Compute (once 100 PP) / More utilities are never yanked away.
+                               `intro.mainGameUnlocked` is now PERMANENT (see `latchMainGameUnlocked`
+                               in `engine.js`, "Economy model" below) — never reset by a real Prestige
+                               or an Era ascension — so in practice `!intro.mainGameUnlocked` can only
+                               ever be true on a save's very first cycle, before it has ever latched;
+                               every cycle after that starts with the gate condition already
+                               permanently false and this check is a pure no-op forever after. Since
+                               `page` is independent of `intro.mainGameUnlocked`, no syncing effect is
+                               needed at all: the gate resolving just reveals whatever `page` already
+                               was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -654,18 +660,25 @@ Strict three-layer separation:
    (Byte Factory is this page), so MainPage itself carries no page-to-page open-* links. See
    docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
-   taking `{ game, focusNonce }` as props. It's the only way any Prestige cycle ever earns its first
+   taking `{ game, focusNonce }` as props. It's how a save's very first Prestige cycle earns its first
    Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
    bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during
-   the gate; Guide and More stay). Once that cycle's `intro.mainGameUnlocked` flips true (the first
-   bits ever converted into Kilobytes this cycle), it stops being a gate and becomes a permanent
-   screen the player can voluntarily reopen at any time via AppNav's Foundry item — but it stays just
-   as interactive either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the
-   standalone Tap button is removed entirely — the Data Stream tile becomes the tap target instead (an
-   `as="button"` swap on the same styled `FillableStatCard`, calling the identical
-   `actions.tapIntroBit`), rather than two separate controls doing the same thing. What that tap
-   actually does depends on whether Storage pools are revealed yet — see "Fill-based Speed/Bandwidth
-   multiplier" under "Economy model" below. Compute lives on
+   the gate; Guide and More stay). `intro.mainGameUnlocked` flips permanently true the instant
+   Storage's own capacity threshold is crossed (`isStorageUnlocked` — see `latchMainGameUnlocked` in
+   `engine.js`, "Economy model" below) — the SAME "1 KiB" threshold that reveals pool 1's card and
+   switches the tap itself into fill-multiplier-bonus mode, so both happen simultaneously. Once
+   latched, it NEVER resets again — not on a real Prestige, not on an Era ascension — so this gate is
+   effectively a one-time-ever onboarding step: every cycle after the first starts with Factory
+   already reachable, no Byte Foundry replay. Once unlocked, ByteFoundryPage stops being a gate and
+   becomes a permanent screen the player can voluntarily reopen at any time via AppNav's Foundry item
+   — but it stays just as interactive either way, nothing here ever goes read-only. Once
+   `intro.mainGameUnlocked`, the standalone Tap button is removed entirely — the Data Stream tile
+   becomes the tap target instead (an `as="button"` swap on the same styled `FillableStatCard`,
+   calling the identical `actions.tapIntroBit`), rather than two separate controls doing the same
+   thing. What that tap actually does depends on whether Storage pools are revealed yet — see
+   "Fill-based Speed/Bandwidth multiplier" under "Economy model" below (in practice, by the time
+   `mainGameUnlocked` has ever flipped, Storage is already revealed too, so the tap is already in
+   fill-multiplier-bonus mode from that point on). Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
@@ -955,13 +968,17 @@ from Bits to whole Bytes once the balance reaches 8000 Bits (`formatMoneyBalance
 Prestige-threshold overlay) keeps reading in Bits, its actual priced/spent denomination.
 
 Bytes are no longer a purchasable tier — they're produced entirely by the **Byte Foundry**
-(`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
-every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
-onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
-that combines into a permanent, passively-producing Byte generator. Combine creates the generator
+(`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save must
+pass through once, before the main game (`tier01`/Kilobytes onward) is reachable — a ONE-TIME-EVER
+gate (see `latchMainGameUnlocked`/`intro.mainGameUnlocked` above): once Storage's own capacity
+threshold is reached, the gate is permanently gone, including across every future real Prestige and
+Era ascension. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance) that
+combines into a permanent, passively-producing Byte generator. Combine creates the generator
 without snapping Capacity; save load via `normalizePoolMemoryCapacity` preserves current Capacity
 and only clamps it when necessary, and Era ascension keeps the permanent generator (`byteCreated`)
-but resets Capacity to `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`).
+and the permanent `mainGameUnlocked` latch, but resets Capacity itself to `INTRO_STARTING_CAPACITY`
+with the rest of the Foundry (`buildEraIntroReset`) — Capacity has to be rebuilt from scratch each
+Era, but Factory access itself never goes away again once earned.
 Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
 restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
 Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
@@ -974,10 +991,12 @@ Compute Boost — so a lower-ranked action is disabled (both in the UI and in th
 reducer itself) whenever a higher one is currently available. An always-on auto-convert
 (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
 units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
-cap; the first successful conversion unlocks the main game. `ByteFoundryPage` no longer renders a
-manual transfer-block row for this at all (removed — see `docs/DESIGN_HISTORY.md`): once Storage
-Pool cards start appearing, Disk redemption (below) is the player-facing path to tier units, and
-before that, auto-convert alone carries the player through the mandatory gate with no click needed.
+cap — this funds tier01 purchases continuously, every cycle, forever, but neither function touches
+`mainGameUnlocked` any more (see `latchMainGameUnlocked` above for what does). `ByteFoundryPage` no
+longer renders a manual transfer-block row for this at all (removed — see
+`docs/DESIGN_HISTORY.md`): once Storage Pool cards start appearing, Disk redemption (below) is the
+player-facing path to tier units, and before that (on a save's very first, still-gated cycle),
+auto-convert alone carries the player through the mandatory gate with no click needed.
 `convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
 was removed.
 The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
@@ -1016,7 +1035,16 @@ clamped to the cap's remaining headroom (`Math.min(FILL_MULTIPLIER_TAP_BONUS_PER
 currentMultiplierPercent)`) rather than always adding a flat 5 points — a tap within less than one
 bonus's worth of the cap (e.g. at 198%) must not bank the unused remainder into the stored
 `dataStreamTapBonusPercent`/`poolTapBonusPercents` field, or that hidden excess would silently
-extend how long the effective (capped) total stays pinned at 200% once decay starts. Before Storage pools are
+extend how long the effective (capped) total stays pinned at 200% once decay starts.
+`tickFillMultiplierDecay` goes further still, every tick, independent of decay's own
+elapsedSeconds-scaled reduction: it also truncates whatever bonus remains down to the cap's
+CURRENT headroom (relative to the base value right now), discarding any excess INSTANTLY rather
+than leaving it to decay away over time — "effect beyond 200% is always lost instantly, 200% is
+the hard cap for total effect." This matters because the base value can rise independently of the
+bonus's own decay (e.g. a tap banked bonus while the buffer was nearly full — a low base, wide
+headroom — and the buffer then drains, raising the base back up); without this second truncation, a
+bonus that's already contributing nothing beyond what the cap allows would sit as dead weight,
+resurfacing as a "real" boost the moment the base later dropped again. Before Storage pools are
 revealed, tapping the Data Stream keeps its original flat "one second's worth of bits" direct-credit
 effect (`tapIntroBit`'s pre-reveal branch) — this multiplier has no bearing pre-reveal. `intro.bits`
 is no longer always an integer as a result (see its own field comment in `createInitialGameState`).
@@ -1412,7 +1440,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1671 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1683 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -223,10 +223,11 @@ There is no manual transfer-block UI any more (removed — see `docs/DESIGN_HIST
 no longer gate or price anything rendered here). The `tickIntroAutoInvest` auto-convenience — firing
 inside the shared tick loop the instant a single unit is affordable, live, unit by unit, not just
 once a whole batch accumulates, capped at completing one tier01 level per call — is now the sole
-path advancing `purchaseLevelProgress[tier01]` from this screen. The very first successful
-auto-convert sets `mainGameUnlocked: true`, and `App.jsx`'s own `showingFoundry` render check
-reveals whatever page the player was last on (typically `'game'`) the instant that flips — no button
-or handler needed for that transition.
+path advancing `purchaseLevelProgress[tier01]` from this screen. It no longer sets
+`mainGameUnlocked` itself — see `latchMainGameUnlocked` (`docs/ECONOMY_REFERENCE.md`), which flips
+it the instant Storage's own capacity threshold is crossed instead. `App.jsx`'s own `showingFoundry`
+render check reveals whatever page the player was last on (typically `'game'`) the instant that
+flips — no button or handler needed for that transition.
 
 Numbers are formatted via `formatMemoryBalance` (`ByteFoundryPage`-local helper, calling into
 `engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports): raw
@@ -256,16 +257,17 @@ was a direct alias of `formatBitsInNearestUnit`). A disk's *size* AND its own bu
 through `formatDiskSize` (SI, since the cost is itself a fixed multiple of that same SI size); any
 bit amount actually spent out of Memory's own binary-scaled balance renders through
 `formatBitsInNearestUnit` (binary) instead.
-This page's gate reappears every time a real Prestige resets Memory
-(`bits`/`productionAccumulator`) and the main-game-unlock gate (`mainGameUnlocked`) back to fresh —
-along with tier01's own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in
-docs/ECONOMY_REFERENCE.md) — it's
-not a one-time-ever gate, it sets the pace for every run — but the
+A real Prestige resets Memory (`bits`/`productionAccumulator`) back to fresh — along with tier01's
+own `purchaseLevels`/`purchaseLevelProgress` (see `prestigeGame` in docs/ECONOMY_REFERENCE.md) — but
+NOT the main-game-unlock gate (`mainGameUnlocked`) any more: that's now a PERMANENT, one-time-ever
+latch (`latchMainGameUnlocked`), never reset by a real Prestige or an Era ascension. So this page's
+gate only ever reappears once, on a save's very first cycle — every cycle after that starts with
+Factory already reachable, no gate replay at all. The
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
 productionMilestoneTier/productionMilestoneTierClaims) and Storage (`disks`/`disksBuiltTotal`/
 `diskCache`/`diskBuild` — but NOT `diskAutoRedeemedSizes`, which resets every real Prestige) are
-both permanent and carry over — a disk already FULL when Prestige fires stays full, giving the next
-cycle a head start — so the gate is a fast pit-stop after the first cycle, not a full replay.
+both permanent and carry over regardless — a disk already FULL when Prestige fires stays full,
+giving the next cycle a head start.
 Auto-redeem (`tickDiskAutoRedeem`) is no longer gated by any persisted per-cycle toggle at all — it
 checks whether the matched tier's own autobuyer is currently active (`autobuyers[tier.id]` non-null
 AND `autobuyersEnabled[tier.id]` not `false`), so there's no `storageAutoRedeemEnabled`-style field

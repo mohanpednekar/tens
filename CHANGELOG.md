@@ -59,10 +59,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Stream/pool's own multiplier, decaying back down at 1%/sec; before Storage pools are revealed, a
   Data Stream tap still credits its original flat "one second's worth of bits." The combined total
   (fill-based value plus any live tap bonus) is capped at 200%, at which point tapping becomes a
-  no-op. Each Speed/Bandwidth figure is paired with a compact speedometer gauge pinned to the
-  top-right corner of its own card, sweeping 0% to 200% with a percent readout below the dial and
-  showing the same split as a two-tone arc — the base fill-based portion in the usual accent color,
-  any live tap bonus extending it in a distinct orange/gold tone.
+  no-op — and any excess is discarded instantly on every tick (not just at tap time), so a stored
+  bonus can never resurface as extra effect later if the underlying fill level changes. Each
+  Speed/Bandwidth figure is paired with a compact speedometer gauge inside its own tappable tile,
+  sweeping 0% to 200% with a percent readout below the dial and showing the same split as a two-tone
+  arc — the base fill-based portion in the usual accent color, any live tap bonus extending it in a
+  distinct orange/gold tone.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
@@ -168,6 +170,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   correctly waits for the deposit instead of losing the disk to liquidation.
 
 ### Changed
+- **The Byte Foundry gate is now one-time-ever, not per-Prestige-cycle** — reaching the main game
+  no longer resets on a real Prestige or an Era ascension. The standalone Tap button disappears and
+  Factory becomes reachable the instant Storage's own capacity threshold is crossed (the same "1
+  KiB" moment that already reveals Storage pool cards and switches tapping into fill-multiplier-
+  bonus mode), and once that's happened, it's permanent: every future cycle starts with Factory
+  already reachable, with no Byte Foundry replay. (Previously, every real Prestige — via the
+  auto-convert mechanic that funds tier01 purchases — reset the gate and sent the player back
+  through the standalone Tap button each cycle.)
 - **Tier per-level costs now grow more slowly from level 6 onward** — `getCostEpochExponent`'s
   per-epoch increment changed from a Fibonacci progression (`1, 1, 2, 3, 5, 8, 13, …`) to a linear
   one (`1, 1, 2, 3, 4, 5, 6, …`), giving exponents `1, 2, 3, 5, 8, 12, 17, 23, 30, …` instead of

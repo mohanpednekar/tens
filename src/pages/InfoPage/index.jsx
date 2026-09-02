@@ -167,8 +167,9 @@ const InfoPage = () => {
       <Section aria-label="byte foundry section">
         <h2>Byte Foundry</h2>
         <p>
-          Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from the bottom nav’s Foundry item. Data Stream Buffer / pool Memory
+          Every fresh save starts here, once, before {firstTierName} exist — unlocking the main
+          game is permanent, so a Prestige never sends you back here again. Reopen any time from the
+          bottom nav’s Foundry item. Data Stream Buffer / pool Memory
           Capacity reads in binary units (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes,
           Data Lake, caches) stays SI (KB, MB, …, 1 KB = 1000 Bytes) throughout.
         </p>
@@ -613,8 +614,9 @@ const InfoPage = () => {
             unlocked.
           </li>
           <li>
-            Sends you back through the Byte Foundry gate each cycle, but permanent Foundry /
-            Storage / Compute progress carries over.
+            The Byte Foundry gate is one-time-ever — once unlocked on your very first cycle, a
+            Prestige never sends you back through it again. Permanent Foundry / Storage / Compute
+            progress always carries over regardless.
           </li>
           <li>
             The first Prestige of a save uses a full-screen overlay; later ones use the top bar /

@@ -112,10 +112,12 @@ are pure renderers. `App.jsx`
 switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Boosters → Compute →
 Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`)
-— whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is continuous Foundry sections (Data Stream + Disks), not gate-exempt on its own. Factory
-stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
-main game. Once unlocked, Foundry is just another AppNav destination.
+— whenever `intro.mainGameUnlocked` is still false (see "Byte Foundry" below). Storage is continuous
+Foundry sections (Data Stream + Disks), not gate-exempt on its own. Factory stays hidden during the
+gate; Guide and More stay reachable so utilities never require unlocking the main game. Once
+unlocked, Foundry is just another AppNav destination. `intro.mainGameUnlocked` is now PERMANENT
+(`latchMainGameUnlocked` in `engine.js`) — never reset by a real Prestige or Era ascension — so this
+gate is effectively one-time-ever, on a save's very first cycle only.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
@@ -130,9 +132,9 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 
 ### Byte Foundry
 
-`ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
-cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
-player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
+`ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save must pass through once
+(a one-time-ever gate — see `latchMainGameUnlocked` above) before `MainPage` (`tier01`/Kilobytes
+onward) is reachable. The player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
 B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
 permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
 cost ladder now ×4/tier) and **Capacity ×2**.
@@ -146,10 +148,12 @@ the Data Stream (once Storage pools reveal at 1 KiB) or a pool's own Memory buff
 one Data Stream/pool's own bonus, decaying at 1%/sec (`tickFillMultiplierDecay`); before reveal, a
 Data Stream tap keeps its original flat one-second direct-credit effect instead. The CUMULATIVE
 total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TAP_CAP_PERCENT`) —
-both tap actions no-op once already at that cap. `ByteFoundryPage` shows a compact two-tone
-`MultiplierGauge` — a half-circle 0–200% speedometer with a percent readout — pinned to the
-top-right corner of the Data Stream card and each pool card (`pointer-events: none` so it never
-blocks the tap button/expand-toggle underneath); the fill-based arc/needle position reads in the
+both tap actions no-op once already at that cap, AND `tickFillMultiplierDecay` truncates any stored
+excess down to the cap's current headroom every tick (not just at tap time), so effect beyond 200%
+is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
+`MultiplierGauge` — a half-circle 0–200% speedometer with a percent readout — inside the same
+tappable tile (`FillableStatCard`) for both the Data Stream and every pool, identically
+(`pointer-events: none` so it never blocks the tap/expand-toggle underneath); the fill-based arc/needle position reads in the
 accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution — the closest
 existing token to orange).
 
