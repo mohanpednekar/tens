@@ -28,6 +28,11 @@ import {
   DISK_LADDER_SIZE_MULTIPLIER,
   getTierBaseTickSpeedSeconds,
   GOOGOL,
+  FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_MIN_PERCENT,
+  FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+  FILL_MULTIPLIER_TAP_CAP_PERCENT,
+  FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_CAPACITY_CAP_BITS,
   INTRO_CAPACITY_DOUBLING_STEP,
@@ -301,6 +306,21 @@ describe('constants', () => {
 
   it('INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (Speed\'s own cost ladder steps ×4 per tier)', () => {
     expect(INTRO_BANDWIDTH_COST_MULTIPLIER).toBe(4)
+  })
+
+  it('FILL_MULTIPLIER_* span exactly 100 percentage points, centered on 100% at 50% full', () => {
+    expect(FILL_MULTIPLIER_MAX_PERCENT).toBe(150)
+    expect(FILL_MULTIPLIER_MIN_PERCENT).toBe(50)
+    expect(FILL_MULTIPLIER_MAX_PERCENT - FILL_MULTIPLIER_MIN_PERCENT).toBe(100)
+  })
+
+  it('FILL_MULTIPLIER_TAP_BONUS_PERCENT is 5 and FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND is 1', () => {
+    expect(FILL_MULTIPLIER_TAP_BONUS_PERCENT).toBe(5)
+    expect(FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND).toBe(1)
+  })
+
+  it('FILL_MULTIPLIER_TAP_CAP_PERCENT is 200 (the cumulative fill + tap-bonus ceiling)', () => {
+    expect(FILL_MULTIPLIER_TAP_CAP_PERCENT).toBe(200)
   })
 
   it('getStoragePoolMemoryBounds delimits pool Memory Capacity start/end on the shared SI-aligned ladder', () => {

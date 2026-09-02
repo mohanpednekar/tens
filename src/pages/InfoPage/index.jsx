@@ -30,6 +30,11 @@ import {
   DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
+  FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_MIN_PERCENT,
+  FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+  FILL_MULTIPLIER_TAP_CAP_PERCENT,
+  FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -172,14 +177,29 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Tap</strong> fills the Data Stream with bits (one second of production per tap
-            at the current rate). After the main game unlocks, the Data Stream tile is the tap
-            target — the standalone Tap button goes away.
+            at the current rate) — until Storage pools reveal (see below), after which tapping the
+            Data Stream instead boosts its own Speed multiplier (next bullet). After the main game
+            unlocks, the Data Stream tile is the tap target — the standalone Tap button goes away.
           </li>
           <li>
             Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
             produces passively forever after. Capacity starts at{' '}
             {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} and grows through a
             full-Buffer Capacity ×2 ladder; its ceiling follows the highest unlocked storage pool.
+          </li>
+          <li>
+            <strong>Speed/Bandwidth multiplier</strong> — the displayed Data Stream Speed and each
+            pool’s own Bandwidth never change; they’re always what applies at 100% of a separate
+            multiplier shown alongside them. That multiplier starts at{' '}
+            {FILL_MULTIPLIER_MAX_PERCENT}% when its own Buffer (Data Stream, or a pool’s own Memory)
+            is empty, reaches exactly 100% at 50% full, and bottoms out at{' '}
+            {FILL_MULTIPLIER_MIN_PERCENT}% once completely full. Tapping the Data Stream (once
+            Storage pools are revealed at 1 KiB) or a pool’s own Memory tile adds{' '}
+            +{FILL_MULTIPLIER_TAP_BONUS_PERCENT}% to that one Data Stream/pool’s own multiplier,
+            decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The combined
+            total (base multiplier plus any live tap bonus) is capped at{' '}
+            {FILL_MULTIPLIER_TAP_CAP_PERCENT}% — the bar next to each figure shows this, with the
+            tap bonus portion extending past the base fill in a distinct color.
           </li>
           <li>
             <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost

@@ -197,6 +197,36 @@ export const INTRO_BITS_PER_KILOBYTE_CONVERSION = 8000
 // conversion's starting balance cost at INTRO_BITS_PER_KILOBYTE_CONVERSION.
 export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSION
 
+// --- Byte Foundry fill-based Speed/Bandwidth multiplier --- see getDataStreamEffectMultiplier/
+// getPoolEffectMultiplier/tickFillMultiplierDecay in engine.js. The Data Stream's displayed Speed
+// (getIntroProductionRate) and each Storage pool's displayed Bandwidth (getStoragePoolBandwidth)
+// never change — both are always exactly what applies at 100% of this multiplier ("primary fill
+// only": the multiplier scales just the actual bits that land in intro.bits each tick
+// (tickIntroProduction) and the actual bits that land in a pool's own local buffer each tick
+// (tickPoolBufferFill) — every other consumer of these two rate functions, e.g. disk build time,
+// cache fill/flush, Data Lake transfer pacing, idle-disk liquidation, and Compute merge/boost
+// pacing, keeps reading the raw, un-multiplied rate exactly as before this mechanic existed). The
+// multiplier itself is fill-dependent: starts at FILL_MULTIPLIER_MAX_PERCENT when the Data Stream
+// Buffer / a pool's own local buffer (getPoolBufferBits/getPoolBufferCapacity) is empty, and drops
+// 1 percentage point per 1% of that buffer filled, reaching exactly 100% at 50% full and
+// FILL_MULTIPLIER_MIN_PERCENT once completely full (getFillMultiplierPercent). A manual tap on the
+// Data Stream (once Storage pools are revealed at 1 KiB — see getVisibleStoragePoolCount/
+// tapIntroBit) or on a specific pool's own Memory tile (tapPoolBuffer) adds
+// FILL_MULTIPLIER_TAP_BONUS_PERCENT on top of that fill-based value for that one Data Stream/pool
+// only, decaying back down at FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second
+// (tickFillMultiplierDecay) until only the fill-based value remains — never below it. Before
+// Storage pools are revealed, tapping the Data Stream keeps its original flat "one second's worth
+// of bits" effect instead (tapIntroBit) — this multiplier has no bearing pre-reveal.
+export const FILL_MULTIPLIER_MAX_PERCENT = 150
+export const FILL_MULTIPLIER_MIN_PERCENT = 50
+export const FILL_MULTIPLIER_TAP_BONUS_PERCENT = 5
+export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
+// Hard ceiling on the CUMULATIVE effect (fill-based value + live tap bonus combined), not on the
+// tap bonus alone — see getDataStreamMultiplierPercent/getPoolMultiplierPercent in engine.js, which
+// clamp their combined total to this. A tap that would push the total at/above this cap is a no-op
+// (same "nothing left to gain" reasoning as tapping an already-full Buffer).
+export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 200
+
 // --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
 // redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
 // diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine

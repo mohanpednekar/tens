@@ -660,7 +660,9 @@ Strict three-layer separation:
    as interactive either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the
    standalone Tap button is removed entirely — the Data Stream tile becomes the tap target instead (an
    `as="button"` swap on the same styled `FillableStatCard`, calling the identical
-   `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
+   `actions.tapIntroBit`), rather than two separate controls doing the same thing. What that tap
+   actually does depends on whether Storage pools are revealed yet — see "Fill-based Speed/Bandwidth
+   multiplier" under "Economy model" below. Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
@@ -691,12 +693,15 @@ Strict three-layer separation:
    `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
    tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
    a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
-   own Capacity — see above), unlabelled.
+   own Capacity — see above), unlabelled. Always a real `<button>` (`actions.tapPoolBuffer(poolIndex)`,
+   `$tappable`) — tapping it boosts that one pool's own fill-based multiplier bonus (see "Fill-based
+   Speed/Bandwidth multiplier" below); it's rendered as a sibling of `PoolSummaryButton`, not nested
+   inside it, since a `<button>` can't nest inside another `<button>`.
    Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
-   name — with the pool's own Bandwidth rendered beside it on the same `PoolHeaderRow` line (a
-   `StatusText`, unlabelled) rather than inside the `FillableStatCard` block below, so a pool's
-   throughput reads at a glance without expanding to the buffer detail — centered as a pair, since
-   the symbol alone already uniquely identifies the pool (`aria-label="pool
+   name — with the pool's own Bandwidth AND its live fill-based multiplier percent rendered beside it
+   on the same `PoolHeaderRow` line (a `StatusText`, unlabelled) rather than inside the
+   `FillableStatCard` block below, so a pool's throughput reads at a glance without expanding to the
+   buffer detail — centered as a pair, since the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
    VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
@@ -980,6 +985,41 @@ permanent across every real Prestige; only Data Stream balance itself, the main-
 and tier01's own purchase-block progress reset each cycle. Nothing here ever fully freezes — every
 action stays
 live indefinitely, every cycle.
+
+**Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`;
+`getFillMultiplierPercent`/`getDataStreamEffectMultiplier`/`getPoolEffectMultiplier`/
+`tickFillMultiplierDecay`/`tapPoolBuffer` in `engine.js`) — the Data Stream's displayed Speed
+(`getIntroProductionRate`) and each Storage pool's displayed Bandwidth (`getStoragePoolBandwidth`)
+never change; both are always exactly what applies at 100% of a separate fill-dependent multiplier
+that scales only the REAL per-tick amount actually delivered ("primary fill only": into `intro.bits`
+via `tickIntroProduction`, or into a pool's own local buffer via `tickPoolBufferFill` — every other
+consumer of these two rate functions, e.g. disk build time, cache fill/flush, Data Lake transfer
+pacing, idle-disk liquidation, and Compute merge/boost pacing, keeps reading the raw rate exactly as
+before). The multiplier starts at `FILL_MULTIPLIER_MAX_PERCENT` (150%) when the relevant buffer
+(the Data Stream Buffer itself, or a pool's own `getPoolBufferBits`/`getPoolBufferCapacity`) is
+empty, drops 1 percentage point per 1% filled, lands at exactly 100% at 50% full, and bottoms out at
+`FILL_MULTIPLIER_MIN_PERCENT` (50%) once completely full. Tapping the Data Stream tile (once Storage
+pools are revealed at 1 KiB — `getVisibleStoragePoolCount(state) >= 1`) or a specific pool's own
+Memory buffer tile (`tapPoolBuffer`) adds `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5) on top of that
+one Data Stream/pool's own fill-based value, decaying back down at
+`FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1) per second (`tickFillMultiplierDecay`, run once
+per tick ahead of production) — never crediting bits directly in this mode. The CUMULATIVE total
+(fill-based value + live tap bonus) is hard-capped at `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) —
+`getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` clamp their combined result there, and
+`tapIntroBit`'s post-reveal branch / `tapPoolBuffer` both additionally no-op once that cap is
+already reached (on top of their existing "buffer already full" no-op), so a bonus can't accumulate
+indefinitely past what the cap can ever apply. Before Storage pools are
+revealed, tapping the Data Stream keeps its original flat "one second's worth of bits" direct-credit
+effect (`tapIntroBit`'s pre-reveal branch) — this multiplier has no bearing pre-reveal. `intro.bits`
+is no longer always an integer as a result (see its own field comment in `createInitialGameState`).
+`ByteFoundryPage` shows the live multiplier percent, plus a two-tone `MultiplierBar` (own component
+in `ByteFoundryPage/index.jsx`, scaled to `FILL_MULTIPLIER_TAP_CAP_PERCENT` as its full width so a
+tap bonus has room to visibly extend past the fill-based portion), next to both the Data Stream's
+Speed figure and each pool's own Bandwidth figure — the fill-based portion fills in
+`theme.color.accent`, any live tap bonus on top of it extends the bar in `theme.color.warn` (the
+existing gold/caution token, the closest semantic stand-in for orange) so the two are visually
+distinguishable. A pool's own Memory buffer tile is a real tap target (a sibling of
+`PoolSummaryButton`, not nested inside it — two `<button>`s can't nest).
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
 `isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/
@@ -1335,7 +1375,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1624 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1657 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
