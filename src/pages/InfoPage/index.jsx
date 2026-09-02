@@ -318,10 +318,11 @@ const InfoPage = () => {
             (redeeming always comes first).
           </li>
           <li>
-            A lake's own deposit capacity is purchasable: it starts at 1 unit and grows each
-            purchase (spending the lake's own current capacity, converted into Data Stream Bits —
-            the same current-value doubling shape used by Capacity ×2, including the same SI-clean
-            deviation partway through), permanently hard-capped at{' '}
+            A lake's own deposit capacity is purchasable: it starts at 1 unit and climbs a plain
+            ×10-per-level ladder (1, 10, 100, 1,000) — the same decade-power-of-10 shape a Storage
+            pool's own Capacity uses. Advancing a level requires the lake to be completely full and
+            drains every deposit back to zero — it's paid out of the lake's own banked Disks, not
+            Data Stream Bits — permanently hard-capped at{' '}
             {DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]} units once fully
             grown — shown on the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures
             Disks use, not these raw unit counts.
@@ -330,7 +331,7 @@ const InfoPage = () => {
             Each denomination can also never hold more disks of a size than {DISK_ARRAY_LADDER_CAP}{' '}
             — the most that size's array can ever physically produce — so a lake's largest
             denomination can bank up to {DISK_ARRAY_LADDER_CAP * 111} once every sub-size array is
-            complete; this is well above the purchasable capacity above, so it's the doubling cap
+            complete; this is well above the purchasable capacity above, so it's the capacity ladder
             that actually limits deposits in practice, not this incidental ceiling.
           </li>
           <li>
@@ -454,8 +455,8 @@ const InfoPage = () => {
             Base costs follow the same 10³ ladder as Factory tiers (
             {COMPUTE_FLOPS_FIRST_TIER_COST_PP.toLocaleString()} –{' '}
             {COMPUTE_FLOPS_LAST_TIER_COST_PP.toExponential(0).replace('+', '')} PP). Per-unit price
-            then rises on <strong>every</strong> purchase via the triangular power-of-ten epoch (same
-            curve as the Factory, but not gated behind 8-purchase level blocks).
+            then rises on <strong>every</strong> purchase via the linear-increment power-of-ten
+            epoch (same curve as the Factory, but not gated behind 8-purchase level blocks).
           </li>
           <li>
             Each owned unit adds{' '}

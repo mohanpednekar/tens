@@ -110,8 +110,9 @@ Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the sh
 section.
 
 Storage is continuous on this same page: **Provision Disk** — the common disk-build operation —
-hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 80,000 bits — "9.765 KiB" in Memory's own binary
-scale — a later, more deliberate reveal than `revealed`'s own 8000-bit ("1,000 B") gate above).
+hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
+scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
+pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
 Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
 poolIndex`, right after that pool's summary/title row), not alongside Speed in the Data Stream
 section — an earlier layout had it there, standalone, but that separated the button from the pool
@@ -183,26 +184,39 @@ container — Memory / read cache / write cache fill it afterward (see DiskArray
 sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
 split — every shown size's full interactive DiskArrayRow already lives on this page.
 
-Below the disk-array rows, `components/DataLakePanel` renders with `bare` set (`<DataLakePanel
-actions={actions} state={state} bare />` — `actions` is needed for the per-lake capacity-doubling
-button, see below) — instead of its own default `StatCard` wrapper, `bare` mode renders a
-`BareDivider` (`hr`, same style as `PoolCard`'s own `Divider`) followed directly by the lake grid,
-so it reads as the last sub-section of the same `PoolCard` rather than a second card stacked below
-it. Returns `null` entirely (skipping even the divider) once nothing is visible yet — see
-`getVisibleLakeTierIndexes` in `components/DataLakePanel/index.jsx` (a lake tier shows once it has
-a nonzero deposit, at least one Booster already purchased, or its own capacity already doubled past
-the starting level). The lake list is a CSS Grid (`LakeGrid`,
-`grid-template-columns: minmax(0,1fr) auto auto auto auto`) with an explicit
-Lake/Deposited/Capacity/Bought/Next header row, so figures align across every lake row rather than
-each wrapping independently as a concatenated string; each lake's cells are wrapped in a
-`display: contents` `LakeRow` so they become direct grid children (the same relationship a `<tr>`
-has to a `<table>`). Each row's visible name is the terser `"{label} → {boosterLabel}"` (e.g. "KB →
-Cores"), with the fuller `"{label} Data Lake → {boosterLabel}"` phrase moved into a `title`
-attribute instead of crowding the compact grid cell; the Capacity column stacks that lake's current
-capacity figure over a compact "⚡ ×2" `DoubleCapacityButton` (hidden once the lake's own
-1,024-unit hard cap is reached — `isDataLakeCapacityMaxed`), and the remaining two columns show
-Boosters bought and the next purchase's cost (see
-docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic).
+Below its own disk-array rows, each pool card renders `components/DataLakePanel` with both `bare`
+and `tierIndex={poolIndex}` set (`<DataLakePanel actions={actions} state={state} bare
+tierIndex={poolIndex} />` — `actions` is needed for the capacity-upgrade button, see below) — that
+pool's own single Lake, not a page-wide list of every lake (an earlier layout rendered one shared
+`DataLakePanel` with no `tierIndex` at the bottom of the whole page instead; each Lake now lives
+inside its own pool's card, directly below that pool's disks). Instead of its own default `StatCard`
+wrapper, `bare` mode renders a `BareDivider` (`hr`, same style as `PoolCard`'s own divider) followed
+directly by the lake's own block, so it reads as the last sub-section of that same `PoolCard` rather
+than a second card stacked below it — a `tierIndex`-scoped lake always renders regardless of
+activity (it's a permanent part of that pool now), unlike the omitted-`tierIndex` list mode (still
+supported, retained for reuse/tests — no current caller uses it), which only shows a lake once it
+has a nonzero deposit, at least one Booster already purchased, or its own capacity already grown
+past the starting level (`getVisibleLakeTierIndexes`).
+
+A lake's own block deliberately mirrors `PoolCard`'s own title-row-plus-`FillableStatCard` shape
+rather than a labelled table row — "less labels, more actual numbers," matching the rest of the
+page: a header row pairs the lake's title, "`<symbol>` Lake" (e.g. "KB Lake" — the size unit is
+always part of the visible name, per the fuller `"{label} Data Lake — funds {boosterLabel}"` phrase
+tucked into a `title` attribute instead of crowding the compact header), with a `StatusText` showing
+how many of the funded Booster it's produced so far (e.g. "3× Cores" — this also communicates the
+lake's fixed Booster destination, without a separate arrow/label for it). Below that, a
+`FillableStatCard` (the SAME fill-gradient tile shape the Data Stream card and each pool's own
+Memory buffer already use) shows `{deposited} / {capacity}` as the one big number, filling toward
+capacity visually the same way. An actions row underneath pairs the compact "⚡ ×10" `UpgradeButton`
+(aria-label "increase the … Data Lake's capacity ×10" — the capacity ladder itself is a plain
+decade-power-of-10 step per level, not a literal doubling; the underlying action name
+(`actions.doubleDataLakeCapacity`) still says "double" since only the ladder's VALUES changed — see
+docs/ECONOMY_REFERENCE.md's "Data Lakes" section) — hidden entirely once the lake's own 1,000-unit
+hard cap is reached (`isDataLakeCapacityMaxed`) — with a `🎯 <cost>` `StatusText` showing the next
+Booster's own purchase cost (informational only; Boosters are started from `ComputePage`, not here).
+While a live transfer is in flight, one more `StatusText` line shows the transfer count/capacity and
+time remaining. See docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic,
+and `docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
 
 There is no manual transfer-block UI any more (removed — see `docs/DESIGN_HISTORY.md`;
 `isIntroConversionUnlocked`/`getIntroKilobyteConversionCost` still exist as pure, tested exports but

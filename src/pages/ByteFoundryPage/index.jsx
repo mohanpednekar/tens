@@ -296,13 +296,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const storageRevealed = isStorageUnlocked(state)
-  const unlockedPoolCount = getVisibleStoragePoolCount(state)
+  const visiblePoolCount = getVisibleStoragePoolCount(state)
   // Null follows the largest unlocked pool by default; 0 is an explicit "all collapsed" choice.
   const [expandedPoolIndex, setExpandedPoolIndex] = useState(null)
   useEffect(() => {
     setExpandedPoolIndex(null)
-  }, [unlockedPoolCount])
-  const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? unlockedPoolCount
+  }, [visiblePoolCount])
+  const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? visiblePoolCount
   const productionRate = getIntroProductionRate(intro)
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
@@ -520,9 +520,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       {/* Fallback for when the disk ladder has already advanced past the last VISIBLE pool card
           (its own capacity-unlock threshold not yet reached) — keeps the button reachable rather
           than disappearing until that pool's card catches up. */}
-      {storageRevealed && diskPoolIndex > unlockedPoolCount && provisionDiskButton}
+      {storageRevealed && diskPoolIndex > visiblePoolCount && provisionDiskButton}
 
-      {storageRevealed && Array.from({ length: unlockedPoolCount }, (_, offset) => {
+      {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
         const poolBandwidth = getStoragePoolBandwidth(state, poolIndex)
         const poolBufferBits = getPoolBufferBits(state, poolIndex)
