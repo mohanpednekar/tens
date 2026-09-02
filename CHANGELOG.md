@@ -50,6 +50,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   its existing disk-build condition before it renders. In practice this rarely changes pool 1's own
   reveal timing (Storage's own reveal threshold is already stricter), but it adds a real gate for
   pools 2 and up. See `docs/DESIGN_HISTORY.md`.
+- **Fill-based Speed/Bandwidth multiplier** — the Data Stream's own Speed and each Storage pool's
+  own Bandwidth now scale with how full their respective buffer currently is: 150% at empty, exactly
+  100% at 50% full, down to 50% completely full. The displayed Speed/Bandwidth numbers are unchanged
+  — they're always what applies at 100% of this multiplier, shown alongside the live percent — only
+  the real Data Stream/pool-buffer fill rate scales with it. Tapping the Data Stream tile (once
+  Storage pools are revealed at 1 KiB) or a pool's own Memory buffer tile adds +5% to that one Data
+  Stream/pool's own multiplier, decaying back down at 1%/sec; before Storage pools are revealed, a
+  Data Stream tap still credits its original flat "one second's worth of bits." The combined total
+  (fill-based value plus any live tap bonus) is capped at 200%, at which point tapping becomes a
+  no-op. Each Speed/Bandwidth figure is paired with a two-tone bar showing the split — the base
+  fill-based portion in the usual accent color, any live tap bonus extending it in a distinct
+  orange/gold tone.
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both

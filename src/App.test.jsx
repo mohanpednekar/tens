@@ -18,6 +18,9 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
+  FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
@@ -2682,9 +2685,11 @@ test('the Combine button shows fill progress toward INTRO_BYTE_COMBINE_COST', ()
 test('the intro auto-transitions into the main game once the bit balance crosses the auto-invest threshold', () => {
   vi.useFakeTimers()
 
-  // One tick (0.1s) at the tick loop's own fastest resolution (tickSpeedSeconds ==
-  // INTRO_MIN_TICK_SPEED_SECONDS) delivers exactly one batch of 1 bit — enough to cross from one
-  // below the threshold to the threshold itself.
+  // Starts one bit below the threshold. A single tick (0.1s) at the tick loop's own fastest
+  // resolution (tickSpeedSeconds == INTRO_MIN_TICK_SPEED_SECONDS) used to deliver exactly one
+  // batch of 1 bit here, but the fill-based Speed multiplier (see FILL_MULTIPLIER_* in
+  // game/layers) tapers production down toward FILL_MULTIPLIER_MIN_PERCENT (50%) this close to a
+  // full Buffer, so a few ticks are needed now to close that last bit.
   seedIntroState({
     bits: FRESH_CYCLE_BLOCK_BITS - 1,
     capacity: FRESH_CYCLE_BLOCK_BITS,
@@ -2696,7 +2701,7 @@ test('the intro auto-transitions into the main game once the bit balance crosses
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
-  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS * 5) })
 
   // Transitioned to MainPage — the Byte Foundry heading is gone, replaced by the game itself, with
   // the auto-invest-granted Kilobytes already owned.
@@ -2783,8 +2788,64 @@ test('Pool header row pairs the pool\'s own Bandwidth with its title on one line
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const heading = within(pool1).getByRole('heading', { level: 3 })
-  const bandwidthText = within(pool1).getByText(/\/sec$/)
+  const bandwidthText = within(pool1).getByText(/\/sec/)
   expect(bandwidthText.parentElement).toBe(heading.parentElement)
+})
+
+test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200%)', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  const dataStreamBar = screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i })
+  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  // Both the Data Stream Buffer and pool 1's own Memory buffer start empty — FILL_MULTIPLIER_MAX_PERCENT.
+  expect(dataStreamBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+
+  const poolBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(poolBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+})
+
+test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplier, leaving the Data Stream\'s untouched', async () => {
+  const user = userEvent.setup()
+  seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  await user.click(screen.getByRole('button', { name: /tap pool 1 memory/i }))
+
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT + FILL_MULTIPLIER_TAP_BONUS_PERCENT))
+  expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+})
+
+test('the Data Stream tap target disables once its own multiplier is already at the 200% cap', () => {
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      dataStreamTapBonusPercent: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT,
+    },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
+  expect(tapTarget).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+})
+
+test('a pool\'s own Memory tap target disables once that pool\'s own multiplier is already at the 200% cap', () => {
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT },
+  })
+  render(<App />)
+
+  const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
+  expect(poolTapTarget).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
 })
 
 test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
@@ -3932,7 +3993,11 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
-  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  // A few ticks, not just one: the Data Stream Buffer starts one bit shy of full, and the
+  // fill-based Speed multiplier (see FILL_MULTIPLIER_* in game/layers) tapers production down
+  // toward FILL_MULTIPLIER_MIN_PERCENT (50%) as it approaches capacity, so closing that last bit
+  // now takes a couple of ticks rather than exactly one.
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS * 5) })
 
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()

@@ -446,6 +446,8 @@ describe('schema merge on load', () => {
         computeFundedBandwidthClaims: 0, computeBandwidthSacrificeIndex: 0,
         foundryResetCaps: null,
         dataLakes: createInitialGameState().intro.dataLakes,
+        dataStreamTapBonusPercent: 0,
+        poolTapBonusPercents: {},
       },
     }
     saveGameState(state)

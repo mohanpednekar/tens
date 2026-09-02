@@ -137,6 +137,19 @@ B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines 
 permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
 cost ladder now ×4/tier) and **Capacity ×2**.
 
+**Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in layers.js): the displayed Speed/
+Bandwidth figures never change — both are always what applies at 100% of a separate multiplier that
+scales only the real per-tick amount actually delivered into `intro.bits`/a pool's own buffer (every
+other consumer of those rate functions — disk build/cache/Data Lake/merge pacing — stays on the raw
+rate). Starts at 150% empty, exactly 100% at 50% full, bottoms out at 50% completely full. Tapping
+the Data Stream (once Storage pools reveal at 1 KiB) or a pool's own Memory buffer adds +5% to that
+one Data Stream/pool's own bonus, decaying at 1%/sec (`tickFillMultiplierDecay`); before reveal, a
+Data Stream tap keeps its original flat one-second direct-credit effect instead. The CUMULATIVE
+total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TAP_CAP_PERCENT`) —
+both tap actions no-op once already at that cap. `ByteFoundryPage` shows a two-tone `MultiplierBar`
+next to each Speed/Bandwidth figure — the fill-based portion in the accent color, any live tap bonus
+extending it in `theme.color.warn` (gold/caution — the closest existing token to orange).
+
 **Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
 values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
 Stream tile's own balance/capacity figure. Capacity requires a full Buffer, drains it, and doubles
