@@ -961,8 +961,9 @@ formula/gate a past iteration may already have tried and rejected.
   gauge on each fillable tile. Once far enough along: Disks (`StoragePage`), Compute Cores/Boost
   (`ComputePage`, nav **Boosters**), and PP Compute Flops (`ComputeFlopsPage`, nav **Compute**,
   unlocks at 100 PP). An always-on auto-convert turns Data Stream bits into `tier01` units at their
-  current cost every tick, with no manual UI control — the conversion that first crosses Storage's
-  reveal threshold is what latches the gate open for good.
+  current cost every tick, with no manual UI control — the gate itself latches open the instant
+  Storage's own Capacity threshold is crossed (`latchMainGameUnlocked`, checked every tick and also
+  synchronously on a Capacity ×2 claim), independent of whether a conversion has happened.
 - **Forced priority order** — every recurring "upgrade" action is ranked so a lower-ranked one is
   disabled (both UI and engine) whenever a higher-ranked one is currently available: Disk Fill, then
   Speed/Invest, then Provision Disk, then Compute Boost — all of those must be unavailable before any
