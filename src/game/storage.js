@@ -1,5 +1,5 @@
 import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
-import { COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
+import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 // Drop __proto__/constructor at parse time so localStorage/Dev JSON cannot pollute merges.
@@ -401,18 +401,97 @@ export const discardIncompatibleActiveSaveIfNeeded = () => {
 
 const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {}) })
 
+// A save written before the pool-overflow Data Lake rework (still live on GitHub Pages) shaped a
+// lake tier as `{ deposits: { 1, 10, 100 }, purchased, transfers: [...], capacityLevel }` — none of
+// those field names exist on the current shape, so a saved tier carrying `deposits` or `transfers`
+// is legacy and needs translating rather than a plain overlay (which would silently keep every
+// field at its fresh-state default, discarding real banked disks/Boosters/capacity progress).
+const isLegacyDataLakeTier = tier =>
+  tier != null && typeof tier === 'object' && !('depositedUnits' in tier) &&
+  ('deposits' in tier || 'transfers' in tier)
+
+// Legacy `transfers` entries (`{ remainingSeconds }`) each represent a Booster already fully PAID
+// FOR under the old model — its funding Disks were consumed the instant the transfer was queued
+// (see startBoosterTransfer's own history), only the compute-ladder entity itself was still
+// pending. Dropping them on migration would silently take back value the player already spent on.
+const getLegacyPendingTransferCount = tier =>
+  isLegacyDataLakeTier(tier) && Array.isArray(tier.transfers) ? tier.transfers.length : 0
+
+// deposits[subSize] counted whole disks of that sub-size banked in the lake — the same "abstract
+// unit" total depositedUnits now tracks directly, just expressed as a disk count per denomination
+// instead of one running total. `sum(deposits[subSize] * subSize)` recovers that same total.
+// fillBits (progress on the disk currently filling) has no legacy analogue — old deposits were
+// discrete, already-complete disks, never a partial one — so it starts at 0. boostersUnlocked is a
+// new permanent latch; a legacy lake that already banked units or bought a Booster had already
+// crossed the equivalent milestone under the old (unlocked-by-default) mechanic, so it carries
+// forward unlocked rather than re-locking a lake the player was already using. autoBuyEnabled is a
+// new opt-in toggle with no legacy equivalent, so it starts off. `purchased` additionally absorbs
+// any pending transfers (see getLegacyPendingTransferCount) — each one already completed its own
+// purchase under the old model's own accounting, so the NEXT Booster's escalating cost
+// (getBoosterPurchaseCost = purchased + 1) picks up where the old save actually was, not cheaper.
+// Granting the compute-ladder entity itself for those pending transfers happens one level up, in
+// mergeDataLakes/mergeState below, since it touches intro.compute* fields outside dataLakes.
+const migrateLegacyDataLakeTier = legacy => {
+  const deposits = legacy.deposits ?? {}
+  const depositedUnits = DATA_LAKE_SUB_SIZES.reduce(
+    (sum, subSize) => sum + (Number(deposits[subSize]) || 0) * subSize,
+    0,
+  )
+  const purchased = Math.max(0, Number(legacy.purchased) || 0) + getLegacyPendingTransferCount(legacy)
+  return {
+    depositedUnits,
+    fillBits: 0,
+    purchased,
+    boostersUnlocked: depositedUnits > 0 || purchased > 0,
+    autoBuyEnabled: false,
+    capacityLevel: Math.max(0, Number(legacy.capacityLevel) || 0),
+  }
+}
+
+// Every field on a CURRENT-shape lake tier is a scalar (depositedUnits/fillBits/purchased/
+// boostersUnlocked/autoBuyEnabled/capacityLevel) — no nested container needing its own deep
+// merge, so a plain shallow overlay per tier is sufficient once any legacy tier has already been
+// translated above. Returns `{ dataLakes, pendingComputeGrants }` — the latter a
+// tierIndex -> count map of legacy in-flight transfers still owed their compute-ladder entity,
+// which mergeState folds into the matching intro.compute* field (see applyPendingComputeGrants).
 const mergeDataLakes = (fresh, saved) => {
   const merged = createEmptyDataLakes()
+  const pendingComputeGrants = {}
   for (const tier of Object.keys(merged)) {
-    const f = merged[tier]
-    const s = saved?.[tier]
-    merged[tier] = {
-      ...f,
-      ...(s ?? {}),
-      deposits: { ...f.deposits, ...(s?.deposits ?? {}) },
+    const savedTier = saved?.[tier]
+    if (isLegacyDataLakeTier(savedTier)) {
+      merged[tier] = { ...merged[tier], ...migrateLegacyDataLakeTier(savedTier) }
+      const pendingTransfers = getLegacyPendingTransferCount(savedTier)
+      if (pendingTransfers > 0) pendingComputeGrants[tier] = pendingTransfers
+    } else {
+      merged[tier] = { ...merged[tier], ...(savedTier ?? {}) }
     }
   }
-  return merged
+  return { dataLakes: merged, pendingComputeGrants }
+}
+
+// Grants each legacy pending-transfer's own compute-ladder entity (see getLegacyPendingTransferCount
+// above) directly onto `intro` — the same field buyBooster itself would have incremented had the
+// transfer actually been bought fresh. Tier 1 (Cores) additionally mirrors
+// latchComputeMergePageIfNeeded's own lifetime-counter/merge-page-unlock bookkeeping, so a migrated
+// save's merge-page unlock state stays consistent with a save that earned the same Cores normally.
+const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
+  const tierIndexes = Object.keys(pendingComputeGrants)
+  if (tierIndexes.length === 0) return intro
+  const next = { ...intro }
+  for (const tierIndexStr of tierIndexes) {
+    const tierIndex = Number(tierIndexStr)
+    const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+    if (!field) continue
+    const count = pendingComputeGrants[tierIndexStr]
+    next[field] = (next[field] ?? 0) + count
+    if (tierIndex === 1) {
+      next.computeCoresEverEarned = (next.computeCoresEverEarned ?? 0) + count
+      next.computeMergePageUnlocked =
+        (next.computeMergePageUnlocked ?? false) || next.computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
+    }
+  }
+  return next
 }
 
 // Merge a saved state with fresh defaults so newly added fields are present on load.
@@ -420,6 +499,7 @@ const mergeDataLakes = (fresh, saved) => {
 const mergeState = saved => {
   const fresh = createInitialGameState()
   const { lastTierTickspeedXpUnlocked: _removed, ...savedClean } = saved
+  const { dataLakes, pendingComputeGrants } = mergeDataLakes(fresh.intro.dataLakes, saved.intro?.dataLakes)
 
   return normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
@@ -458,11 +538,11 @@ const mergeState = saved => {
       history: Array.isArray(saved.prestigeMuseum?.history) ? saved.prestigeMuseum.history : fresh.prestigeMuseum.history,
       pinnedIds: Array.isArray(saved.prestigeMuseum?.pinnedIds) ? saved.prestigeMuseum.pinnedIds : fresh.prestigeMuseum.pinnedIds,
     },
-    intro: {
+    intro: applyPendingComputeGrants({
       ...fresh.intro,
       ...(saved.intro ?? {}),
-      dataLakes: mergeDataLakes(fresh.intro.dataLakes, saved.intro?.dataLakes),
-    },
+      dataLakes,
+    }, pendingComputeGrants),
     computeFlops: {
       pageUnlocked: Boolean(saved.computeFlops?.pageUnlocked)
         || Math.max(0, Number(saved.prestige?.points) || 0) >= COMPUTE_FLOPS_REVEAL_PP,

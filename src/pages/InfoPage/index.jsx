@@ -26,8 +26,9 @@ import {
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
   CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
-  DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER,
-  DATA_LAKE_TRANSFER_CAPACITY_MAX,
+  DATA_LAKE_OVERFLOW_MAX_PERCENT,
+  DATA_LAKE_OVERFLOW_MIN_PERCENT,
+  DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
@@ -331,52 +332,50 @@ const InfoPage = () => {
         <h3>Data Lakes</h3>
         <ul>
           <li>
-            Ten permanent lakes (one per storage denomination, KB … QB). A lake never itself holds a
-            big spendable balance — past a small prepaid deposit buffer (below), it's a live pipe
-            onto your built Disks, not a stockpile.
+            Ten permanent lakes (one per storage denomination, KB … QB), each fed directly by that
+            pool's own Memory buffer — whatever a pool can't put toward its fill-based multiplier
+            bonus (see Storage above) overflows straight into that pool's own lake, at a rate that
+            starts at {DATA_LAKE_OVERFLOW_MAX_PERCENT}% and tapers down as the lake's CURRENT disk
+            (the one actively filling — see below) fills up, resetting back toward{' '}
+            {DATA_LAKE_OVERFLOW_MAX_PERCENT}% every time that disk completes — never actually
+            dropping all the way to {DATA_LAKE_OVERFLOW_MIN_PERCENT}%, so a disk always keeps
+            filling rather than crawling forever. Disks are no longer deposited from Storage —
+            Data Lakes have their own separate disk ladder now.
           </li>
           <li>
-            A size's disks deposit into its lake automatically — no manual action — once that
-            size's array is completely built (all {DISK_ARRAY_LADDER_CAP} disks ever built, not
-            just one currently full) and the disk isn't currently redeemable for the main game
-            (redeeming always comes first).
+            A lake fills its own disks smallest-size-first (×1, then ×10, then ×100 of that lake's
+            denomination), showing each completed disk as a filled square — the same disk-array
+            visual Storage pools use — with the currently-filling disk's own progress bar being
+            exactly what drives the overflow rate above.
+          </li>
+          <li>
+            A lake holds at most {DATA_LAKE_SUB_SIZE_DISK_CAPS[0]} of its ×1 disks and{' '}
+            {DATA_LAKE_SUB_SIZE_DISK_CAPS[1]} each of its ×10 and ×100 disks —{' '}
+            {DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((sum, count) => sum + count, 0)} disks in total,
+            matching the lake's own capacity ladder (below) at its max level.
           </li>
           <li>
             A lake's own deposit capacity is purchasable: it starts at 1 unit and climbs a plain
             ×10-per-level ladder (1, 10, 100, 1,000) — the same decade-power-of-10 shape a Storage
-            pool's own Capacity uses. Advancing a level requires the lake to be completely full and
-            drains every deposit back to zero — it's paid out of the lake's own banked Disks, not
-            Data Stream Bits — permanently hard-capped at{' '}
-            {DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]} units once fully
-            grown — shown on the Data Lake panel itself in the same Byte-scale (KB/MB/GB) figures
-            Disks use, not these raw unit counts.
+            pool's own Capacity uses, permanently hard-capped at{' '}
+            {DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]} units. It only
+            becomes available to buy once the next Booster's cost would exceed the lake's current
+            capacity — not once the lake is simply full — and advancing a level drains every banked
+            disk back to zero to pay for it.
           </li>
           <li>
-            Each denomination can also never hold more disks of a size than {DISK_ARRAY_LADDER_CAP}{' '}
-            — the most that size's array can ever physically produce — so a lake's largest
-            denomination can bank up to {DISK_ARRAY_LADDER_CAP * 111} once every sub-size array is
-            complete; this is well above the purchasable capacity above, so it's the capacity ladder
-            that actually limits deposits in practice, not this incidental ceiling.
-          </li>
-          <li>
-            Starting the nth Booster ever started at a lake (whether already granted or still
-            transferring) costs n units. Deposits pay first, instantly; any cost still remaining is
-            transferred live from your held Disks over time, at {DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER}×
-            the Byte Foundry's current production rate, only granting the Booster once that transfer
-            finishes.
-          </li>
-          <li>
-            Each lake can run up to {DATA_LAKE_TRANSFER_CAPACITY_MAX} of these live transfers at
-            once — one slot unlocks per completed sub-size array, the same staged progression the
-            deposit buffer uses.
+            Boosters unlock permanently for a lake the first time it fills even one disk. From then
+            on, the nth Booster ever bought from that lake costs n banked units, spent instantly (no
+            live transfer or waiting period) — buy manually, or flip that lake's own Auto toggle to
+            buy automatically the instant it's affordable.
           </li>
         </ul>
 
         <h3>Cores</h3>
         <ul>
           <li>
-            Started from the matching Data Lake — the Booster button on the Cores row — there is no
-            other way to obtain a Core.
+            Bought from the matching Data Lake's own Buy/Auto controls (on the Byte Foundry
+            screen) — there is no other way to obtain a Core.
           </li>
           <li>
             Every {COMPUTE_CORES_PER_NODE} Cores convert toward 1 Node (via the Core → Node merge

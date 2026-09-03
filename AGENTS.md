@@ -73,9 +73,10 @@ src/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
     Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
-    DataLakePanel/          ← one Data Lake's own self-contained block (title + a big fillable
-                            deposited/capacity number, not a labelled table row), embedded per pool
-                            on ByteFoundryPage (below that pool's own disks); see "Byte Foundry" below
+    DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
+                            per sub-size showing live fill + a Buy/auto-buy/Upgrade-Capacity
+                            button), embedded per pool on ByteFoundryPage (below that pool's own
+                            disks); see "Byte Foundry" below
   pages/
     ByteFoundryPage/index.jsx ← pre-game tap-to-earn bootstrap; Data Stream + Disks continuous sections; see
                                "Byte Foundry" below
@@ -151,9 +152,12 @@ total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TA
 both tap actions no-op once already at that cap, AND `tickFillMultiplierDecay` truncates any stored
 excess down to the cap's current headroom every tick (not just at tap time), so effect beyond 200%
 is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
-`MultiplierGauge` — a half-circle 0–200% speedometer with a percent readout — inside the same
-tappable tile (`FillableStatCard`) for both the Data Stream and every pool, identically
-(`pointer-events: none` so it never blocks the tap/expand-toggle underneath); the fill-based arc
+`MultiplierGauge` in the middle column of a shared header row (title top-left, gauge top-middle,
+Speed/Bandwidth top-right — above the balance tile, not overlaid on it) for both the Data Stream
+and every pool: a 0–200% speedometer with a percent readout, top half only for the Data Stream, but
+a FULL circle for a pool — its bottom half showing progress on the ONE disk currently being filled
+in that pool's own Data Lake, not the lake's overall total (50%→0% as that disk fills, back to 50%
+once it completes, in `theme.color.info`; see "Data Lakes" below). The fill-based top arc
 reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
 the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
 pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
@@ -212,30 +216,29 @@ to one tier+level (KB sizes → Kilobytes, MB sizes → Megabytes, etc., 1st/2nd
 level 1/2/3); redeeming only fires while the tier is currently at exactly that level, and completes
 the whole level in one shot rather than granting 1 unit) and Compute Cores/Nodes/Compute Boost
 (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund Boosters, escalating cost (nth = n
-units, counting in-flight starts too): a fully-built disk array auto-deposits into its lake (no
-manual action — deferring to a still-redeemable disk first) as a prepaid buffer that spends
-first/instantly, any remaining cost live-transfers off built Disks over time (10x the Byte Foundry's
-bits/sec rate), up to 3 concurrent transfers per lake — a Data Lake never itself banks a spendable
-reserve beyond its deposits. A lake's own deposit capacity is a purchasable ladder: starts at 1
-unit, climbs a plain decade-power-of-10 step per purchase (1, 10, 100, 1,000) — the same coarse
-shape pool Capacity itself uses, replacing an earlier finer SI-clean sequence (plain doubling except
-one 64→125 step over 11 levels) that now only pool Bandwidth still uses (see above); a lake's
-capacity is never binary-displayed, so it never shared the conflict that keeps `intro.capacity`
-itself — the Data Stream tile's own value — on plain binary doubling. Advancing a level drains the
-lake's own current deposits back to zero (not Bits) — the same "requires a full Buffer, drains it"
-shape Capacity ×2 uses, just paid in the lake's own banked Disks instead — so each level's own cost
-is always exactly the level below it (1 unit to reach 10, 10 to reach 100, 100 to reach 1,000),
-hard-capped at 1,000 units (`DATA_LAKE_CAPACITY_MAX_LEVEL` = level 3) — the
-intentional limit a player actually experiences. A save carrying a `capacityLevel` from the old,
-longer ladder is clamped back to `DATA_LAKE_CAPACITY_MAX_LEVEL` on load
-(`normalizePoolMemoryCapacity`), same as a saved pool buffer above the new, lower decade-power
-Capacity ceiling — both are load-time defenses against a formula that changed underneath an
-existing save, not everyday gameplay. Each sub-slot's own deposit count is
-separately backstopped at `DISK_ARRAY_LADDER_CAP` (10, since only 10 disks of a given size can ever
-exist) purely so the counter can't exceed what's physically possible — not a second design cap, just
-incidental headroom (1,110 if ever fully filled) that sits well above the 1,000 ladder which is what
-actually gates deposits. Deposited/capacity/next-cost/doubling-cost all display in Byte-scale
-(KB/MB/GB), matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
+units) — fully decoupled from Storage Disks now: each lake is fed directly and continuously by its
+own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full),
+at a rate based on the ONE disk currently being filled, not the lake's overall total
+(`DATA_LAKE_OVERFLOW_MAX_PERCENT` 50% at that disk empty down to 0% as it's about to complete, then
+back to 50% once it completes and the next opens — the SAME `MultiplierGauge`'s own bottom half,
+see above), completing the lake's ×1/×10/×100 disks
+smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
+the maxed level's 1,000-unit capacity). A lake's first-ever completed disk permanently unlocks
+Boosters for it (`boostersUnlocked`); buying (`buyBooster`, manual or auto-buy via
+`autoBuyEnabled`/`tickDataLakeAutoBuy`) spends the cost off the lake's own banked units instantly —
+no live transfer, no waiting, and — since it doesn't touch Bits/Disks at all — not part of the
+forced priority order. A lake's own capacity is a purchasable ladder: starts at 1 unit, climbs a
+plain decade-power-of-10 step per purchase (1, 10, 100, 1,000, hard-capped at level 3) — available
+once the NEXT Booster's cost would EXCEED current capacity (not "the lake is full" — a lake can be
+short of full and still need this), draining whatever it currently holds. Buying and upgrading are
+mutually exclusive by construction, so the UI repurposes one button between the two modes. A save
+carrying a `capacityLevel` from an older, longer ladder — or written under the earlier
+deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
+load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.
+Idle disk liquidation (`tickIdleDiskLiquidation`) is now size-agnostic (not just a pool's largest
+size) since Storage Disks no longer feed lakes at all: any fully-built, no-longer-redeemable size
+liquidates straight into Bits. Deposited/capacity/next-cost display in Byte-scale (KB/MB/GB),
+matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 An always-on auto-convert turns Data Stream bits into free `tier01` units at tier01's own current
 per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row

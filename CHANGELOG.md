@@ -29,21 +29,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   game state (so it always matches whatever `engine.js` currently defines — no hand-maintained
   field list to keep in sync), and a raw state-JSON editor that merges a partial object (only the
   fields you're changing) onto the current dev save.
-- **Data Lakes + Booster transfers** — ten storage-tier lakes (KB … QB). A lake never itself banks a
-  spendable reserve — past a small prepaid deposit buffer (below), it's a throughput pipe onto the
-  live Disk inventory. Depositing Disks (`10×1 + 10×10 + 10×100` of that denomination) into the
-  buffer requires that size's disk array to be COMPLETELY built (all 10 disks ever built) — a
-  backstop that keeps the deposit counter from exceeding how many disks of that size can ever exist,
-  not a design cap in itself. A lake's own actual, intentional deposit capacity (see Changed below)
-  is a smaller, separate, purchasable doubling ladder. Starting a
-  Booster on the Boosters screen costs escalating lake units (the nth Booster ever started, counting
-  ones still in flight, costs n) — spent out of the deposit buffer FIRST (instant), then any
-  remaining cost is sourced live from built Disks and transferred into the lake over time, at 10×
-  the Byte Foundry's current production rate, only granting the Booster once that transfer
-  completes. Each lake can run up to 3 of these live transfers at once, one concurrency slot
-  unlocked per completed sub-size Disk array (the same staged gate the deposit buffer uses). Foundry
-  disk rows expose deposit-to-lake actions; a Data Lake summary shows deposited stock, next cost,
-  and any in-flight transfers.
+- **Data Lakes + Boosters** — ten storage-tier lakes (KB … QB), one per Storage pool. Each lake is
+  fed directly and continuously by its own matching pool's OVERFLOW (production beyond that pool's
+  Memory buffer once completely full) — fully decoupled from Storage Disks. The overflow feed rate
+  is itself fill-based on progress of the one disk currently being filled in that lake, not the
+  lake's overall total (50% at that disk empty, tapering down as it approaches completion — floored
+  at 5% rather than truly reaching 0%, so a disk always keeps filling — back to 50% once it
+  completes), shown as the bottom half of that pool's own speedometer gauge (see "Fill-based Speed/Bandwidth
+  multiplier" below). Overflow fills the lake's own ×1/×10/×100 disks smallest denomination first
+  (capped 10/9/9 respectively so the three sizes sum exactly to the maxed level's 1,000-unit
+  capacity), rendered on Foundry as one row of disk squares per size with the currently-filling one
+  showing live progress. A lake's first-ever completed disk permanently unlocks Boosters for it.
+  Buying a Booster (manual, or auto-buy via a per-lake toggle) costs escalating lake units (the nth
+  Booster ever bought costs n) and spends only that lake's own banked units, instantly — no transfer,
+  no waiting. A lake's own deposit capacity is a separate, purchasable decade-power ladder (1 → 10 →
+  100 → 1,000 units); advancing it is available once the next Booster's own cost would exceed the
+  lake's current capacity (not "the lake is full"), and drains whatever the lake currently holds.
+  Buying a Booster and upgrading capacity are mutually exclusive by construction, so Foundry's
+  per-lake panel repurposes one button between the two. Once a size's Storage Disk array is fully
+  built and a full disk on it is no longer redeemable, it liquidates straight into Bits instead of
+  sitting idle (previously only a pool's largest size did this, tied to the old deposit mechanic).
 - **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
   (`getVisibleStoragePoolCount`) needs the Data Stream's raw Capacity (`intro.capacity`) to have
   reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on — on top of
@@ -61,10 +66,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (fill-based value plus any live tap bonus) is capped at 200%, at which point tapping becomes a
   no-op — and any excess is discarded instantly on every tick (not just at tap time), so a stored
   bonus can never resurface as extra effect later if the underlying fill level changes. Each
-  Speed/Bandwidth figure is paired with a compact speedometer gauge inside its own tappable tile,
+  Speed/Bandwidth figure is paired with a compact speedometer gauge — title top-left, gauge
+  top-middle, the Speed/Bandwidth figure top-right, with the balance tile as a second line below —
   sweeping 0% to 200% with a percent readout below the dial and showing the same split as a two-tone
   arc — the base fill-based portion in the usual accent color, any live tap bonus extending it in a
-  distinct orange/gold tone.
+  distinct orange/gold tone. For a pool specifically, the same dial continues into a bottom half
+  showing that pool's own Data Lake overflow rate/fill (see "Data Lakes" above).
 
 ### Removed
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
@@ -80,12 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
-- **Idle disk liquidation could destroy a disk from a still-mid-build array** —
-  `isIdleDiskLiquidationAvailable` now requires the array itself to be fully built
-  (`isDiskArrayFullyBuilt`) in addition to the lake genuinely having no room, instead of inferring
-  "array not finished" and "lake is full" from the same `!canDepositDiskToDataLake` check, which
-  can't tell those two apart. A disk mid-array (e.g. 3 of 10 built) is no longer eligible for
-  liquidation just because Provision Disk happens to be momentarily unaffordable.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
@@ -99,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Missing hover tooltips on tier autobuyer pause toggles** (#515) — they now carry `title`
   tooltips matching their `aria-label`s and the global automation toggles.
 - **Prestige wiped Data Lakes** (#500) — a real Prestige now carries `intro.dataLakes`
-  (deposits, purchased Boosters, in-flight transfers, and capacity level) unchanged, matching
+  (banked units, purchased Boosters, and capacity level) unchanged, matching
   Disks and the documented "permanent across Prestige" rule. Era ascension still resets Data Lakes
   with the rest of the Foundry.
 - **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
@@ -161,13 +162,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   negative or non-integer index also returns `undefined`, the same failure mode from the other
   direction. `normalizePoolMemoryCapacity` now floors, truncates, and caps `capacityLevel` in one
   step; a negative pool buffer gets the same defensive floor for consistency.
-- **Idle disk liquidation could destroy a disk its own Data Lake still had 1,000 units of room
-  for** — `isIdleDiskLiquidationAvailable` gated on `isDataLakeCapacityMaxed`, which isn't the same
-  as "this lake can't accept another deposit": advancing a Data Lake to its hard-cap level always
-  drains its deposits to zero, so a lake can sit maxed with its full capacity completely empty for
-  exactly one tick right after that upgrade. It now checks `canDepositDiskToDataLake` directly — the
-  real "can this specific disk still be banked" condition — so a freshly-maxed-but-empty lake
-  correctly waits for the deposit instead of losing the disk to liquidation.
 
 ### Changed
 - **The Byte Foundry gate is now one-time-ever, not per-Prestige-cycle** — reaching the main game
@@ -319,15 +313,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Data Lake figures now display in the same Byte-scale currency as Disks** — deposited amount,
   capacity, and the next Booster's cost on the Data Lake panel now render as KB/MB/GB/… (matching
   Disk sizing) instead of a bare unit count (previously shown as raw numbers like 9/99/999).
-- **Storage Pool: read cache trimmed to one array, Data Lake deposits now automatic** — only the
-  pool's smallest disk size (the one that actually touches Memory) keeps a read cache; every larger
-  size fills exclusively via the write-cache ripple from the size below, which already existed and
-  never used the read cache anyway — running both was pure redundancy. Depositing a fully-built
-  array's disks into its Data Lake no longer needs a manual click: `tickDiskAutoDeposit` deposits
-  the smallest eligible size automatically every tick, deferring to a disk that's still redeemable
-  for the main game first (disks always take priority). `DiskArrayRow`'s manual "→ Lake" button and
-  the `depositDiskToDataLake` action are removed from the UI (the underlying engine function is
-  unchanged, now called automatically). A save carrying a stale read cache for a size that's no
+- **Storage Pool: read cache trimmed to one array** — only the pool's smallest disk size (the one
+  that actually touches Memory) keeps a read cache; every larger size fills exclusively via the
+  write-cache ripple from the size below, which already existed and never used the read cache
+  anyway — running both was pure redundancy. A save carrying a stale read cache for a size that's no
   longer eligible self-heals on its next tick, refunding the cached bits back into Memory.
 - **Byte Foundry pool renders as one card** — Memory, its Combine/Sacrifice/Bandwidth actions, and
   Storage (Build Disk + every disk-array row + the Data Lake panel) now render inside a single

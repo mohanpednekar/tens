@@ -15,6 +15,11 @@ import {
   COMPUTE_ENTITY_CAP,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
+  DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT,
+  DATA_LAKE_OVERFLOW_MAX_PERCENT,
+  DATA_LAKE_OVERFLOW_MIN_PERCENT,
+  DATA_LAKE_SUB_SIZE_DISK_CAPS,
+  DATA_LAKE_SUB_SIZES,
   DATA_LAKE_TIER_COUNT,
   DATA_LAKE_TIER_LABELS,
   COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
@@ -419,5 +424,23 @@ describe('constants', () => {
     expect(DATA_LAKE_CAPACITY_BY_LEVEL).toEqual([1, 10, 100, 1000])
     expect(DATA_LAKE_CAPACITY_BY_LEVEL).toHaveLength(DATA_LAKE_CAPACITY_MAX_LEVEL + 1)
     expect(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]).toBe(1000)
+  })
+
+  it('DATA_LAKE_SUB_SIZE_DISK_CAPS (10/9/9) sum exactly to the maxed level\'s own 1,000-unit capacity, one entry per DATA_LAKE_SUB_SIZES', () => {
+    expect(DATA_LAKE_SUB_SIZE_DISK_CAPS).toHaveLength(DATA_LAKE_SUB_SIZES.length)
+    const total = DATA_LAKE_SUB_SIZES.reduce((sum, subSize, index) => sum + subSize * DATA_LAKE_SUB_SIZE_DISK_CAPS[index], 0)
+    expect(total).toBe(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL])
+    expect(DATA_LAKE_SUB_SIZE_DISK_CAPS).toEqual([10, 9, 9])
+  })
+
+  it('DATA_LAKE_OVERFLOW_MAX_PERCENT/MIN_PERCENT bound the lake-overflow rate at 50%..0%', () => {
+    expect(DATA_LAKE_OVERFLOW_MAX_PERCENT).toBe(50)
+    expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
+    expect(DATA_LAKE_OVERFLOW_MAX_PERCENT).toBeGreaterThan(DATA_LAKE_OVERFLOW_MIN_PERCENT)
+  })
+
+  it('DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT sits strictly between the taper\'s MIN and MAX, so the real rate never actually reaches literal 0% (a pure proportional taper toward 0 never reaches its own target — see getDataLakeOverflowRatePercent)', () => {
+    expect(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT).toBeGreaterThan(DATA_LAKE_OVERFLOW_MIN_PERCENT)
+    expect(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT).toBeLessThan(DATA_LAKE_OVERFLOW_MAX_PERCENT)
   })
 })

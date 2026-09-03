@@ -457,6 +457,46 @@ describe('schema merge on load', () => {
     expect(loaded.intro).toEqual(state.intro)
   })
 
+  it('migrates a pre-rework Data Lake tier (deposits/transfers-shaped) into the current depositedUnits/fillBits/boostersUnlocked shape instead of silently discarding it, and grants each in-flight transfer\'s own compute-ladder entity rather than dropping it', () => {
+    localStorage.setItem('tens_game_state', JSON.stringify({
+      ...createInitialGameState(),
+      intro: {
+        ...createInitialGameState().intro,
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          // A legacy KB lake: 2 banked ×1 disks, 3 banked ×10 disks, 2 in-flight transfers (each
+          // already paid for by consumed Disks under the old model — see
+          // getLegacyPendingTransferCount in storage.js), already bought 4 Boosters, capacity
+          // doubled twice.
+          1: { deposits: { 1: 2, 10: 3, 100: 0 }, purchased: 4, transfers: [{ remainingSeconds: 12 }, { remainingSeconds: 40 }], capacityLevel: 2 },
+          // A legacy lake that was created but never actually used — no banked disks, no Boosters.
+          2: { deposits: { 1: 0, 10: 0, 100: 0 }, purchased: 0, transfers: [], capacityLevel: 0 },
+        },
+      },
+    }))
+    const loaded = loadGameState()
+    expect(loaded.intro.dataLakes['1']).toEqual({
+      depositedUnits: 2 * 1 + 3 * 10, // 32 — deposits translated to the same abstract-unit total
+      fillBits: 0,
+      purchased: 4 + 2, // the 2 in-flight transfers count toward the next Booster's own cost too
+      boostersUnlocked: true,
+      autoBuyEnabled: false,
+      capacityLevel: 2,
+    })
+    expect(loaded.intro.dataLakes['2']).toEqual({
+      depositedUnits: 0,
+      fillBits: 0,
+      purchased: 0,
+      boostersUnlocked: false,
+      autoBuyEnabled: false,
+      capacityLevel: 0,
+    })
+    // Both pending transfers were tier 1 (Cores) — granted directly, same as a real buyBooster(1)
+    // call would have, including the matching lifetime-earned/merge-page-unlock bookkeeping.
+    expect(loaded.intro.computeCores).toBe(2)
+    expect(loaded.intro.computeCoresEverEarned).toBe(2)
+  })
+
   it('preserves fully built KB arrays so pool 2 unlocks from an old save', () => {
     const state = {
       ...createInitialGameState(),
@@ -845,8 +885,8 @@ describe('Dev Mode', () => {
         ...createInitialGameState().intro,
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
-          1: { deposits: { 1: 50, 10: 3, 100: 0 }, purchased: 5, transfers: [], capacityLevel: 0 },
-          2: { deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 },
+          1: { depositedUnits: 53, fillBits: 0, purchased: 5, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 2 },
+          2: { depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 },
         },
       },
     }
@@ -857,10 +897,10 @@ describe('Dev Mode', () => {
     expect(result.ok).toBe(true)
     // The edited field applied...
     expect(result.state.intro.dataLakes['1'].purchased).toBe(6)
-    // ...and every sibling at every depth survives untouched: tier 1's own deposits (a sibling of
-    // the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
-    expect(result.state.intro.dataLakes['1'].deposits).toEqual({ 1: 50, 10: 3, 100: 0 })
-    expect(result.state.intro.dataLakes['2']).toEqual({ deposits: { 1: 0, 10: 9, 100: 1 }, purchased: 12, transfers: [], capacityLevel: 0 })
+    // ...and every sibling at every depth survives untouched: tier 1's own depositedUnits (a
+    // sibling of the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
+    expect(result.state.intro.dataLakes['1'].depositedUnits).toBe(53)
+    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

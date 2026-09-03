@@ -56,8 +56,10 @@ distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria
 from **manual redeem** (`isDiskManualRedeemAvailable` — good/green pulsing fill, aria
 `"redeem … for <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable`; instructional
 copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit control of any
-kind here — a fully-built, non-redeemable array's disks feed its pool's Data Lake automatically
-(`tickDiskAutoDeposit` in `engine.js`), not through this component. While `intro.diskBuild?.size`
+kind here — Storage Disks no longer feed a Data Lake at all (that mechanic now feeds lakes directly
+from pool overflow, see CLAUDE.md's "Data Lakes"); a fully-built, non-redeemable array's disk
+instead liquidates straight into Bits (`tickIdleDiskLiquidation` in `engine.js`), not through this
+component. While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
 replaces the cache strip (disk circles stay, disabled; `<size>` via `formatDiskSize` e.g. `1 KB`,
 `<N>` is the 1-indexed disk under construction). Neither size label uses `text-transform: uppercase`
@@ -77,9 +79,12 @@ specific size's own array being mid-build.
 common Provision Disk control. It renders one derived `PoolCard` per VISIBLE storage pool
 (`getVisibleStoragePoolCount` — disk-build progress AND the Data Stream's own raw Capacity having
 crossed that pool's `getPoolCapacityUnlockThresholdBits`, in ascending order, `aria-label="pool N"`),
-titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name, centered), with a full-width
-buffer/Bandwidth block (reusing `FillableStatCard`/`BalanceText`/`StatusText`, the same components
-the Data Stream card's own tile uses) below the title. Pool 1's own threshold — 1 KiB — is
+titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name) in a shared
+`SectionHeaderRow` — a 3-column grid: title top-left, the fill-based `MultiplierGauge` top-middle
+(its bottom half showing that pool's own Data Lake overflow rate/fill — see CLAUDE.md's
+"Fill-based Speed/Bandwidth multiplier"), Bandwidth top-right — with a full-width Memory buffer
+tile (`FillableStatCard`/`BalanceText`, the same component the Data Stream card's own tile uses,
+now showing just the balance as the section's second line) below that header row. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded
@@ -89,20 +94,26 @@ block (`bare`, `tierIndex={poolIndex}`) — each pool's Lake lives inside that p
 directly below its disks, not in a separate panel after all the pool cards.
 
 `DataLakePanel` (`bare tierIndex={poolIndex}`) renders one lake as a single self-contained block —
-not a labelled table row — mirroring `PoolCard`'s own title-row-plus-`FillableStatCard` shape rather
-than a dense grid: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" — the
-size unit is always part of the visible name) with a compact `StatusText` showing how many of the
-funded Booster it's produced so far (e.g. "3× Cores"); a `FillableStatCard` showing
-`{deposited} / {capacity}` as the one big number, filling toward capacity the same visual way every
-other Byte Foundry balance does; then an actions row with the "⚡ ×10" capacity-upgrade button
-(hidden once maxed) beside a `🎯 <next Booster cost>` `StatusText` (the next Booster's own cost from
-this lake, informational only — Boosters are started from `ComputePage`, not here); and, only while
-a live transfer is in flight, one more `StatusText` line with the transfer count/capacity and time
-remaining. Every figure is a real, minimally-labelled number — no "Deposited"/"Capacity"/"Bought"/
-"Next" column headers — matching the rest of the page's "big number, few words" convention. Omitting
-`tierIndex` falls back to every visible-with-activity lake (`getVisibleLakeTierIndexes`), each
-rendered as its own block stacked in a `LakesList`, optionally wrapped in one shared `StatCard`
-(`bare = false`) — retained for reuse/tests; no current caller uses this mode.
+not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
+the size unit is always part of the visible name) with a compact `StatusText` showing how many of the
+funded Booster it's produced so far (e.g. "3× Cores"); then one row of disk squares (`LakeSquare`)
+per sub-size present at the lake's current capacity level (×1/×10/×100, smallest first, each capped
+per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row per size" shape
+`DiskArrayRow` uses for Storage but non-interactive (no cache/redeem — a lake disk just fills and
+completes) — the one currently-open slot shows a live left-to-right fill toward its own full size;
+then an actions row with ONE repurposed button: while the next Booster's cost already exceeds the
+lake's current capacity, an "⚡ Upgrade" button (disabled until the forced-priority chain allows it);
+otherwise, once the lake's first disk has ever completed (`boostersUnlocked`), a `🎯 <next Booster
+cost>` Buy button (disabled until affordable) plus an Auto/Manual toggle for `autoBuyEnabled` — the
+two button modes are mutually exclusive by construction (see CLAUDE.md's "Data Lakes"), so only one
+ever shows. Before `boostersUnlocked`, that slot is just inert `🎯 <next cost>` status text. Every
+figure is a real, minimally-labelled number — no "Deposited"/"Capacity"/"Bought"/"Next" column
+headers — matching the rest of the page's "big number, few words" convention. `ComputePage` no
+longer has any Booster-buying control of its own — Foundry's `DataLakePanel` is the only place to
+buy or auto-buy one. Omitting `tierIndex` falls back to every visible-with-activity lake
+(`getVisibleLakeTierIndexes`), each rendered as its own block stacked in a `LakesList`, optionally
+wrapped in one shared `StatCard` (`bare = false`) — retained for reuse/tests; no current caller uses
+this mode.
 
 ## `ConfirmDialog/index.jsx`
 
