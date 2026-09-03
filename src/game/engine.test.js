@@ -1338,7 +1338,7 @@ describe('pool buffers', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('tickPoolBufferFill stops at the pool\'s own buffer room, leaving the remainder in intro.bits', () => {
+  it('tickPoolBufferFill stops the BUFFER at its own room, but the leftover reserved production for that same tick still overflows into the pool\'s own (fresh, 1-unit-capacity) Data Lake rather than just sitting unused in intro.bits — capped at exactly what that lake can hold, with the rest correctly left in intro.bits rather than destroyed', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
@@ -1351,7 +1351,14 @@ describe('pool buffers', () => {
     const bufferCapacity = getPoolBufferCapacity(state, 1)
     expect(bufferCapacity).toBe(80_000)
     expect(after.intro.poolBuffers[1]).toBe(bufferCapacity)
-    expect(after.intro.bits).toBe(1_000_000 - bufferCapacity)
+    // A fresh (capacityLevel 0) lake 1 can only ever hold 1 unit — exactly its own ×1 disk size
+    // (kb1 bits) — so with this much leftover production it maxes out completely this same tick.
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
+    // Everything beyond what the buffer AND the (now-maxed) lake could absorb stays as ordinary
+    // Bits — not destroyed, even though the raw overflow this tick vastly exceeded the lake's own
+    // tiny capacity (see fillDataLakeDisks's unconsumedBits / docs/DESIGN_HISTORY.md).
+    expect(after.intro.bits).toBe(1_000_000 - bufferCapacity - DISK_LADDER_BASE_SIZE_BITS)
   })
 
   it('tickPoolBufferFill allocates "leftover speed" across unlocked pools ascending — an earlier pool\'s own Bandwidth cap always claims first', () => {
@@ -9342,6 +9349,25 @@ describe('Data Lakes', () => {
       productionMultiplier: 999_999,
       poolBuffers: { 1: 8_000_000 },
       ...overrides,
+    })
+
+    it('routes leftover reserved production to the lake in the SAME tick the buffer transitions from not-full to full, rather than only starting once a LATER tick recognizes it as already full (regression — a large elapsedSeconds tick, e.g. offline-progress catch-up, that both tops off a nearly-full buffer AND has production left over used to just silently keep that leftover as ordinary Bits, neither topping up the buffer nor reaching the lake, until the next tick)', () => {
+      const almostFullState = fullBufferState({ poolBuffers: { 1: 8_000_000 - 4_000 } }) // 4,000 bits of room left
+      const after = tickPoolBufferFill(2)(almostFullState) // 2s elapsed — enough to fill the remaining room AND leave some over
+      expect(after.intro.poolBuffers[1]).toBe(8_000_000) // buffer topped out exactly, never overshoots its own capacity
+      // Some of THIS SAME tick's reserved production already reached the lake — before the fix,
+      // both of these would read as 0/false here, only becoming nonzero on the FOLLOWING tick.
+      expect(getDataLakeFillBits(after, 1) > 0 || getDataLakeDepositedUnits(1)(after) > 0).toBe(true)
+    })
+
+    it('preserves currency even when a single tick\'s overflow vastly exceeds what the lake can hold — the unconsumed portion stays in intro.bits rather than being destroyed (regression — fillDataLakeDisks used to silently discard any overshoot once the lake maxed out mid-call, while its caller had already unconditionally subtracted the FULL overflowBits from intro.bits, spending currency that was placed nowhere)', () => {
+      const state = fullBufferState({ bits: 1_000_000 })
+      const after = tickPoolBufferFill(1000)(state) // huge overflow relative to a fresh lake's 1-unit capacity
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(1) // maxed out completely (level 0 = 1 unit)
+      expect(getDataLakeFillBits(after, 1)).toBe(0)
+      // Only the 1 unit (kb1 bits) the lake could actually hold ever left intro.bits — everything
+      // beyond that survives, rather than vanishing.
+      expect(after.intro.bits).toBe(1_000_000 - kb1)
     })
 
     it('feeds the matching Data Lake once the pool\'s own buffer has no more room, at DATA_LAKE_OVERFLOW_MAX_PERCENT of the pool\'s reserved rate while the lake is empty', () => {

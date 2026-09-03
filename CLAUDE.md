@@ -1254,7 +1254,13 @@ anything to do with Storage Disk builds.
 *Overflow fill* — once a pool's own local Memory buffer is completely full, its reserved share of
 that tick's production rate has nowhere left to go; rather than wasting it, a percentage of it
 feeds that pool's own matching lake instead (`tickPoolBufferFill`'s own overflow branch,
-`poolIndex === tierIndex`). That percentage is itself fill-based on progress of the ONE disk
+`poolIndex === tierIndex`). This applies within the SAME tick the buffer transitions from not-full
+to full, not only once a LATER tick recognizes it as already full: if a single (possibly large,
+e.g. offline-progress catch-up) `elapsedSeconds` interval both tops off a buffer with room left AND
+has reserved production beyond that, the portion of the interval left over after the buffer fills
+still gets the overflow treatment this same call — tracked as a plain `elapsedSeconds` fraction
+(`overflowSeconds`), converted back out of the buffer-fill's own multiplier-scaled amount so it
+lines up with the overflow formula's own (deliberately unmultiplied, see below) basis. That percentage is itself fill-based on progress of the ONE disk
 CURRENTLY being filled in that lake — NOT the lake's overall total
 (`getDataLakeCurrentDiskFillFraction`, mirroring the FILL_MULTIPLIER_* mechanic's own shape):
 `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when that current disk is empty, linearly tapering down
@@ -1270,7 +1276,12 @@ Speed/Bandwidth multiplier" above), not compounded. The resulting overflow bits 
 `fillDataLakeDisks`, which completes the lake's own ×1/×10/×100 disks SMALLEST-first (see "Disk
 breakdown" below), tracking raw-bit progress toward the current open slot in `lake.fillBits` — the
 same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above and the
-pool gauge's own bottom-half progress arc (see "Fill-based Speed/Bandwidth multiplier" above). The
+pool gauge's own bottom-half progress arc (see "Fill-based Speed/Bandwidth multiplier" above).
+`fillDataLakeDisks` also returns `unconsumedBits` — whatever portion of the overflow it couldn't
+place anywhere (only nonzero when the lake becomes fully maxed partway through the same call, e.g.
+a huge single-tick overflow against a small/fresh lake) — and its caller subtracts only
+`overflowBits - unconsumedBits` from `intro.bits`, never the full `overflowBits` unconditionally,
+so an unconsumed excess stays as ordinary spendable Bits rather than being destroyed outright. The
 very FIRST disk any lake ever completes (always ×1) permanently latches `boostersUnlocked` true — a
 lake's Buy button (below) only ever shows once that's happened, even though `depositedUnits` itself
 can later drop back down as Boosters get bought.
@@ -1471,7 +1482,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1688 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1690 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -2491,28 +2491,57 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
 
     const current = poolBuffers[poolIndex] ?? 0
     const room = Math.max(0, getPoolBufferCapacity(state, poolIndex) - current)
+    const multiplier = getPoolEffectMultiplier(state, poolIndex)
 
+    // How much of this tick's own elapsedSeconds interval is left over for lake overflow, once
+    // the buffer-fill above has taken whatever it needed — 0 unless the buffer is (or just
+    // became) completely full. If the buffer already had no room at the start of the tick, the
+    // ENTIRE interval is available for overflow (the pre-existing behavior); if it just became
+    // full PARTWAY through this same tick (a single large elapsedSeconds catch-up tick — offline
+    // progress, or simply the tick a Capacity purchase's newly-emptied buffer refills all the way
+    // — can easily do this), only the portion of the interval AFTER that point is. Without this,
+    // that leftover reserved production neither topped up the buffer (no room) nor fed the lake
+    // (the overflow branch below never even ran this tick) — it just silently stayed as ordinary
+    // Bits instead, one full tick's worth of intended lake progress quietly missing. See
+    // docs/DESIGN_HISTORY.md.
+    let overflowSeconds = elapsedSeconds
     if (room > 0) {
-      const transfer = Math.min(fillRate * elapsedSeconds * getPoolEffectMultiplier(state, poolIndex), room, bits)
-      if (transfer <= 0) continue
-      bits -= transfer
-      poolBuffers[poolIndex] = current + transfer
-      changed = true
-      continue
+      const rawTransfer = fillRate * elapsedSeconds * multiplier
+      const transfer = Math.min(rawTransfer, room, bits)
+      if (transfer > 0) {
+        bits -= transfer
+        poolBuffers[poolIndex] = current + transfer
+        changed = true
+      }
+      // The buffer didn't actually reach full capacity this tick (either `rawTransfer` itself
+      // fell short of `room`, or `bits` ran out first) — nothing left to overflow either way.
+      if (transfer < room || bits <= 0) continue
+      // Convert how much of the (multiplier-scaled) buffer-fill this tick's own reserved rate
+      // already spent back into a plain elapsedSeconds fraction, so the overflow formula below —
+      // deliberately UNmultiplied, see this function's own doc comment above — applies to the
+      // genuinely-leftover portion of the interval exactly as it would to any other
+      // already-full-buffer tick.
+      const usedSeconds = multiplier > 0 ? transfer / (fillRate * multiplier) : elapsedSeconds
+      overflowSeconds = Math.max(0, elapsedSeconds - usedSeconds)
     }
+    if (overflowSeconds <= 0) continue
 
-    // The buffer's already completely full — this pool's own reserved share of the rate has
-    // nowhere left to go. Rather than wasting it, a fill-based percentage of it feeds this pool's
-    // own matching Data Lake instead (poolIndex === tierIndex, one lake per pool — see
-    // getDataLakeOverflowRatePercent/fillDataLakeDisks in the "Data Lakes" section below).
+    // The buffer is completely full — this pool's own reserved share of the rate (for whatever
+    // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
+    // fill-based percentage of it feeds this pool's own matching Data Lake instead (poolIndex ===
+    // tierIndex, one lake per pool — see getDataLakeOverflowRatePercent/fillDataLakeDisks in the
+    // "Data Lakes" section below).
     const overflowRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
     if (overflowRatePercent <= 0) continue
-    const overflowBits = Math.min(fillRate * elapsedSeconds * (overflowRatePercent / 100), bits)
+    const overflowBits = Math.min(fillRate * overflowSeconds * (overflowRatePercent / 100), bits)
     if (overflowBits <= 0) continue
     const filledLake = fillDataLakeDisks(state, dataLakes, poolIndex, overflowBits)
     if (!filledLake) continue
-    dataLakes[poolIndex] = filledLake
-    bits -= overflowBits
+    const { unconsumedBits, ...lakeUpdate } = filledLake
+    dataLakes[poolIndex] = lakeUpdate
+    // Only what fillDataLakeDisks actually placed somewhere leaves intro.bits — any portion it
+    // couldn't use (the lake maxed out mid-call) stays as ordinary Bits instead of being destroyed.
+    bits -= overflowBits - unconsumedBits
     changed = true
   }
 
@@ -4330,6 +4359,15 @@ export const getDataLakeUnitBits = tierIndex =>
 // fully maxed at its current capacity level — the overflow is simply lost, same as any other
 // "nowhere to put it" overflow. A bounded loop: at most DATA_LAKE_SUB_SIZES.length slot
 // transitions can ever happen in one call, so this always terminates.
+// Returns `{ ...updated lake fields, unconsumedBits }` — `unconsumedBits` is whatever portion of
+// `overflowBits` this call couldn't actually place anywhere (only ever nonzero when the lake
+// becomes fully maxed at its current level partway through this same call, e.g. a single
+// oversized `overflowBits` — a big offline-progress catch-up tick, or a tiny/fresh lake with very
+// little room left — completing every remaining slot with plenty to spare). The caller MUST
+// subtract only `overflowBits - unconsumedBits` from `intro.bits`, never the full `overflowBits`
+// unconditionally — otherwise the unconsumed portion is spent from `bits` but placed nowhere,
+// destroying real currency outright (a genuine bug this return field exists to prevent; see
+// docs/DESIGN_HISTORY.md).
 const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   const lake = dataLakes[tierIndex] ?? getDataLakeTier(state, tierIndex)
   const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
@@ -4349,9 +4387,12 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
     boostersUnlocked = true
     openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
   }
-  if (openSubSize === null) fillBits = 0 // fully maxed at this level — discard any overshoot
+  // Fully maxed at this level — whatever's left in fillBits has nowhere to go; hand it back as
+  // unconsumedBits instead of silently discarding it (see this function's own doc comment above).
+  const unconsumedBits = openSubSize === null ? fillBits : 0
+  if (openSubSize === null) fillBits = 0
 
-  return { ...lake, depositedUnits, fillBits, boostersUnlocked }
+  return { ...lake, depositedUnits, fillBits, boostersUnlocked, unconsumedBits }
 }
 
 // Display-only: the real amount (in bits) upgrading will actually drain right now — whatever this

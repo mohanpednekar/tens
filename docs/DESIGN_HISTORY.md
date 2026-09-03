@@ -5167,3 +5167,69 @@ asserting `sum(count × size) === total` (zero leftover) throughout; the other d
 through the real `buyBooster` path (five escalating-cost purchases draining a maxed level-2 lake
 from 100 to 85) rather than only the decomposition helper in isolation, matching how the bug would
 actually be reached in play. `yarn test`: 1688/1688 green (+2). `yarn build` succeeds.
+
+### A fifth and sixth Devin finding on the same PR: a one-tick lake-overflow lag, and a currency-destroying overshoot in fillDataLakeDisks it exposed
+
+Devin's own follow-up review round (the one that produced the `decomposeDataLakeUnits` finding
+above) also flagged two more issues in `tickPoolBufferFill`/`fillDataLakeDisks`. The first was a
+real, if narrow, pacing gap; fixing it exposed a second, more serious PRE-EXISTING bug that no
+previous test had ever exercised.
+
+**Finding 5: a pool's buffer completing mid-tick dropped that tick's own leftover reserved
+production instead of routing it to the lake.** `tickPoolBufferFill`'s buffer-fill branch computed
+`transfer = min(fillRate * elapsedSeconds * multiplier, room, bits)` and, whenever `room` was the
+binding constraint (the buffer had SOME space but not enough for the full `elapsedSeconds`
+interval), simply `continue`d after topping the buffer out to `room` — the unused remainder of that
+tick's own reserved production (`rawTransfer - room`) was neither refunded anywhere nor forwarded
+to the overflow branch (which only ever ran when `room` was ALREADY 0 at the START of the tick). It
+just silently stayed as ordinary `intro.bits` instead of feeding the lake, for exactly the one tick
+where the transition happened — self-correcting on the very next tick, since the buffer would then
+already read as full. Live play (`TICK_RATE_MS`-cadence ticks) makes this negligible, but
+`applyOfflineProgress` explicitly supports large real-world absences, and while it replays offline
+time as many 1-second `tickGame` calls rather than one giant tick (so the "missing" amount per
+transition is capped at roughly one second's worth of production, not hours'), any tick where a
+buffer happens to complete mid-interval still loses that slice of intended lake progress to
+ordinary Bits instead. **Fix:** track `overflowSeconds` — how much of `elapsedSeconds` is left over
+once the buffer-fill (if any) has taken what it needed. If the buffer was already full at the
+tick's start, this is the full interval (unchanged prior behavior); if it just became full
+mid-tick, it's derived by converting the multiplier-scaled amount the buffer-fill actually consumed
+back into a plain elapsedSeconds fraction (`usedSeconds = transfer / (fillRate * multiplier)`, then
+`overflowSeconds = elapsedSeconds - usedSeconds`) — deliberately reconstructing an UNmultiplied time
+value, since the overflow formula itself is (by design, see the "two separate dials" comment on
+this same function) never multiplier-scaled, unlike the buffer-fill amount it was derived from. If
+the buffer never actually reached capacity this tick (bits ran out first, or the interval simply
+wasn't long enough), `overflowSeconds` stays 0 and behavior is unchanged.
+
+**Finding 6 (found via testing Finding 5's own fix, not from Devin directly): `fillDataLakeDisks`
+could destroy real currency once a lake maxed out mid-call.** Making Finding 5's fix actually reach
+the overflow branch for a large existing test (`elapsedSeconds = 1e6` against a fresh, 1-unit-
+capacity lake) immediately failed an assertion in a way that traced back to a bug that predates this
+whole finding: `fillDataLakeDisks` accumulates `overflowBits` into `fillBits`, completes whatever
+whole disks fit, and — once the lake is fully maxed at its current level — discards any leftover
+`fillBits` outright (`fillBits = 0`, "nowhere left to go"). But its caller, `tickPoolBufferFill`,
+unconditionally subtracted the FULL `overflowBits` from `intro.bits`, regardless of how much
+`fillDataLakeDisks` actually placed anywhere. Whenever a single call's `overflowBits` was large
+enough to complete a lake's remaining capacity AND leave real overshoot (small/fresh lake + a big
+elapsedSeconds tick, exactly what Finding 5's fix started producing for the first time in that
+existing test), that overshoot was spent from `intro.bits` and then silently discarded by
+`fillDataLakeDisks` — bits genuinely destroyed, not just misallocated. This bug existed since the
+very first version of the pool-overflow Data Lake mechanic; no earlier test had ever combined "large
+enough overflow to matter" with "small enough remaining lake capacity to overshoot it" in the SAME
+call, so it stayed dormant until Finding 5's fix started reaching the overflow branch from a new
+code path. **Fix:** `fillDataLakeDisks` now also returns `unconsumedBits` (whatever `fillBits`
+remained right before being discarded, when it maxes out mid-call), and the caller subtracts only
+`overflowBits - unconsumedBits` from `intro.bits` — the unconsumed portion survives as ordinary
+Bits instead of vanishing.
+
+**Verification.** The existing `tickPoolBufferFill stops at the pool's own buffer room…` test
+(originally written to assert the now-recognized-as-buggy "leftover just sits in intro.bits, never
+reaching the lake" behavior) was updated to assert the corrected behavior instead — the lake
+(a fresh, 1-unit-capacity one in that fixture) receives exactly what it can hold, and the true
+remainder (buffer capacity + that one unit's worth) is what's actually missing from `intro.bits`,
+not the full naive `1,000,000 - bufferCapacity`. Two new regression tests: one seeds a buffer with a
+small amount of room left and confirms the SAME tick that tops it off already shows real lake
+progress (Finding 5, an invariant-only check rather than hand-derived exact figures, robust to the
+pool fill-multiplier's own exact value); the other seeds a fresh lake against a deliberately huge
+`overflowBits` and confirms `intro.bits` drops by exactly the one unit the lake could hold — no
+more, no less (Finding 6, pinning that overshoot is preserved, not destroyed). `yarn test`:
+1690/1690 green (+2). `yarn build` succeeds.
