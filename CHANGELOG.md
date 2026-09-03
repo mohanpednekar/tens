@@ -87,12 +87,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
-- **A freshly-unlocked Storage pool's Memory buffer could stall well short of its first disk's own
-  cost** — that size's read cache started pre-filling from the buffer the instant the pool unlocked,
-  even though the pool's own starting Capacity was one decade step below what that size's disk build
-  actually costs, so the buffer's inflow was silently diverted into an unusable cache instead of
-  growing the visible balance. The cache now also waits for that size's disk build to be affordable
-  (or for a disk of that size to already exist) before it starts filling. See `docs/DESIGN_HISTORY.md`.
+- **A freshly-unlocked Storage pool's Memory buffer could stall indefinitely** — that pool's smallest
+  size's read cache started pre-filling from the buffer the instant the pool unlocked, even before a
+  disk of that size existed, so the buffer's inflow was silently diverted into a cache with nothing
+  to flush into instead of growing the visible balance. The cache now only ever fills for a size once
+  a disk of that size has actually been built. See `docs/DESIGN_HISTORY.md`.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
@@ -170,6 +169,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **A pool's multiplier gauge and Data Lake reading are now one continuous speedometer, not two
+  stacked dials** — the earlier design rendered a separate bottom-half arc for the Data Lake's own
+  overflow rate. Now the same dial switches from the fill-based Speed/Bandwidth multiplier to that
+  pool's own Data Lake overflow rate the instant the pool's Memory buffer is completely full, on the
+  identical 0–200% scale, transitioning cleanly at the shared 50% value both readings meet at. The
+  Data Lake's own accumulated fill level (as opposed to that rate) now has its own separate bar below
+  the Memory buffer tile, always visible.
 - **The Byte Foundry gate is now one-time-ever, not per-Prestige-cycle** — reaching the main game
   no longer resets on a real Prestige or an Era ascension. The standalone Tap button disappears and
   Factory becomes reachable the instant Storage's own capacity threshold is crossed (the same "1

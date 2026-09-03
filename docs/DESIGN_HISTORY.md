@@ -5468,19 +5468,73 @@ throwaway scratch simulation (bits were fully conserved end to end, just relocat
 via a second scratch script logging `diskCache`/`poolBuffers` across ticks from a fresh save that the
 buffer's own inflow was being drained into the cache every tick it grew, and that
 `getDiskCost(FIRST_DISK_SIZE)` (80,000) exceeds `getPoolBufferCapacity` at capacityLevel 0 (8,000) by
-exactly 10×. **Fix.** `tickDiskAutoFill`'s `readCacheEligibleSizes` computation now requires, for any
-size with no disk EVER built at it, that the pool's CURRENT capacity already cover that size's own
-disk cost (`getPoolBufferCapacity(state, poolIndex) >= getDiskCost(unitBits)`) before the cache
-starts filling — `everBuilt || affordable`, an OR, not a replacement of the original condition.
-Once a disk of that size has ever existed, the affordability check no longer applies at all: the
-pre-fill stays exactly as eager as the original design intended in every case where it could
-actually be used (a save with a disk already built but a since-lowered/edited capacity, e.g. via Dev
-Mode, still pre-fills). An affordability-only gate (no `everBuilt` half) was tried first and broke 11
-existing `tickDiskAutoFill`/auto-redeem tests, all of which seeded `disksBuiltTotal[FIRST_DISK_SIZE]:
-1` but used ad-hoc capacity values below the true affordability threshold under the decade-power
-transform — the OR-based gate fixed all 11 with zero test changes, since `everBuilt` alone already
-satisfied them. **Verification.** Two new regression tests: one asserts a same-reference no-op when
-a pool sits at its own starting capacity with zero disks built (nothing eligible to fill, matching
-the reported bug exactly); the other asserts the cache DOES start filling, with zero disks built,
-the instant the pool's capacity crosses the affordability threshold. `yarn test`: 1696/1696 green
-(+2). `yarn build` succeeds.
+exactly 10×. **Fix (final).** A first attempt kept the original eager pre-fill-on-unlock behavior
+alive via an affordability OR-clause (`everBuilt || getPoolBufferCapacity(state, poolIndex) >=
+getDiskCost(unitBits)`), matching the original design's own "have the cache ready before the disk
+finishes" intent for whichever pool level actually reaches affordability. On review, that intent was
+rejected outright: the cache should never drain the buffer without an existing reason to — a disk of
+that size must already exist to receive it. The fix landed as a single, unconditional requirement in
+`tickDiskAutoFill`'s `readCacheEligibleSizes`: a size is only cache-eligible once
+`disksBuiltTotal[unitBits] > 0` — no capacity/affordability branch at all, and no eager pre-fill on
+pool unlock. This supersedes the original "pool cards gated on a capacity threshold too; read cache
+pre-fills on pool unlock" design entirely, not just patches around its interaction with the later
+decade-of-10 ladder: the cache now always starts empty and only ever fills once the player has built
+something for it to feed. **Verification.** Two regression tests: one confirms a same-reference
+no-op when a pool's capacity is easily affordable but no disk of that size has ever been built
+(matching the reported bug — no eager pre-fill regardless of capacity); the other confirms the cache
+DOES start filling the moment a disk exists, even at the pool's own starting (unaffordable-looking)
+capacity, so genuine use of the cache is unaffected. `yarn test`: 1696/1696 green. `yarn build`
+succeeds.
+
+### Pool gauge's separate bottom-half Data Lake arc replaced with one dial that switches meaning once the buffer is full
+
+Player feedback on the pool `MultiplierGauge`'s two-semicircle design (top half: fill-based Speed/
+Bandwidth multiplier; bottom half: that pool's own Data Lake overflow rate, added when Data Lakes
+were reworked to feed directly off pool overflow — see "Pool cards gated on a capacity threshold too;
+read cache pre-fills on pool unlock" above for the mechanic, and the "Fill-based Speed/Bandwidth
+multiplier" section this dial visualizes): "by downwards, I meant the same existing speedometer shall
+continue instead of a separate speedometer... the Data lake shall have its own bar which takes in the
+overflow from the pool bar. The existing arc will represent the data lake multiplier once pool memory
+is full. There is clean transition at 50%." Two distinct asks: (1) the two readings should share ONE
+dial, not two visually separate gauges glued together, and (2) the Data Lake's own accumulated LEVEL
+(as opposed to the rate the arc shows) needed its own separate visual, fed by the buffer's overflow.
+
+**Why 50% is the natural switch point.** `FILL_MULTIPLIER_MIN_PERCENT` (the fill-based multiplier's
+own floor, reached exactly once the relevant buffer is 100% full) and `DATA_LAKE_OVERFLOW_MAX_PERCENT`
+(the lake reading's own ceiling, at its highest right as that same buffer transitions to full and
+overflow begins) are BOTH 50 — not a coincidence being newly exploited here, but a property already
+latent in the two constants (`layers.js`) since the Data Lake overflow mechanic was designed to pick
+up exactly where the fill-based multiplier bottoms out. Plotting both readings on the SAME
+0..`FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) angle scale — rather than the overflow rate's own native
+0-50% range mapped onto a separately-scaled bottom semicircle, as the previous design did — means the
+needle is already sitting at the exact angle the lake reading picks up from the instant the switch
+happens: no jump, no discontinuity, "the same speedometer continues."
+
+**Fix.** `MultiplierGauge` drops the `lake` prop and its dedicated `GAUGE_BOTTOM_MIN_ANGLE`/
+`GAUGE_BOTTOM_MAX_ANGLE`/`fractionToBottomAngle` bottom-half machinery entirely, replaced with a
+`mode` prop (`'multiplier'` default, or `'lake'`). In `mode="lake"` the component draws a single
+`theme.color.info` arc from 0 to `totalPercent` on the ORDINARY top-half angle mapping
+(`percentToGaugeAngle`, unchanged) — no `basePercent`/bonus-arc split, since there's no "tap bonus"
+concept for a lake reading. `ByteFoundryPage`'s pool-card loop picks the mode per pool from
+`poolBufferFull` (already computed for the buffer tile's own disabled state): `mode="multiplier"`
+feeding `poolBaseMultiplierPercent`/`poolMultiplierPercent` while the buffer has room, `mode="lake"`
+feeding `0`/`getDataLakeOverflowRatePercent(state, poolIndex)` once it's full. The `aria-label` swaps
+correspondingly ("pool N fill-based bandwidth multiplier" vs. "pool N data lake overflow rate") but
+the `role="progressbar"`/`aria-valuemin`/`aria-valuemax` contract stays IDENTICAL in both modes
+(always `0`/`FILL_MULTIPLIER_TAP_CAP_PERCENT`), since both quantities now share that one scale — no
+second hidden progressbar is needed the way the old bottom-half reading required. Separately, a new
+Data Lake LEVEL bar — a second `FillableStatCard` (the same reusable fill-gradient tile the Memory
+buffer itself uses) rendered directly below the buffer tile, always visible rather than gated behind
+the pool card's `isExpanded` disclosure — shows `getDataLakeCurrentDiskFillFraction` as a 0-100% fill,
+colored via `$progressColor={theme.color.info}` to visually match the gauge's own lake-mode arc. This
+is a genuinely different quantity from the gauge's lake-mode reading (a RATE, tapering as the current
+disk fills) even though both derive from the same underlying disk-fill state — the bar shows how full
+the currently-open disk actually is, the gauge shows how fast bits are currently arriving into it.
+**Verification.** A new `App.test.jsx` test seeds pool 1's buffer at its own full derived capacity and
+confirms: the old "fill-based bandwidth multiplier" labeled progressbar is gone, a "data lake overflow
+rate" progressbar exists in its place with the same `aria-valuemax` and a value of exactly
+`DATA_LAKE_OVERFLOW_MAX_PERCENT` (matching `FILL_MULTIPLIER_MIN_PERCENT`, confirming the clean
+transition), and the new "data lake current disk fill" bar reads 0% for an untouched lake. The three
+pre-existing gauge tests (asserting the multiplier reading on an EMPTY buffer, where the pool stays in
+`mode="multiplier"`) needed no changes — they exercise a state this redesign leaves untouched.
+`yarn test`: 1697/1697 green (+1). `yarn build` succeeds.

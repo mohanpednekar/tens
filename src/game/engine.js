@@ -3667,35 +3667,19 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     changed = true
   }
 
-  // Read cache eligibility is keyed off which POOLS are unlocked, not which sizes have ever had a
-  // disk built — each unlocked pool's own smallest (×1) size starts filling from Memory the instant
-  // that pool unlocks, so the cache is already there waiting the moment the player's first disk of
-  // that size finishes provisioning, rather than starting empty and refilling from scratch after —
-  // BUT only once that size's own disk build is either already built at least once
-  // (`disksBuiltTotal[unitBits] > 0`) or currently affordable at the pool's CURRENT capacity
-  // (`getPoolBufferCapacity(state, poolIndex) >= getDiskCost(unitBits)`). A pool's own smallest
-  // size is never buildable at that pool's own STARTING capacity level — the decade-power-of-10
-  // Capacity ladder deliberately funds a size's disk cost one decade step AHEAD of that size's own
-  // face value (see "Data Stream Buffer / pool Memory Capacity" in CLAUDE.md: crossing into "10 KB"
-  // Capacity is what funds a 1 KB disk's own 80,000-bit cost, not "1 KB" Capacity itself) — so
-  // without this gate, a freshly-unlocked pool's read cache (this smallest size's own full 8 blocks,
-  // coincidentally equal to that pool's STARTING buffer capacity) would start greedily draining
-  // essentially all of that pool's buffer inflow toward a disk that cannot be built yet, for
-  // however long it takes the pool to grow past its own first capacity level — starving the
-  // player-visible buffer balance AND any Data Lake overflow (which also needs the buffer to reach
-  // FULL) for potentially many minutes at low production, with nothing to show for it since the
-  // cache can't be flushed into a disk that doesn't exist. The `disksBuiltTotal[unitBits] > 0`
-  // half of the OR keeps this gate safe for a save where a disk of that size genuinely already
-  // exists but the pool's own CURRENT derived capacity happens to read lower than its cost (e.g.
-  // Dev Mode state edits) — the pre-fill stays exactly as eager as before in every case where it
-  // could ever actually be used. See docs/DESIGN_HISTORY.md.
+  // Read cache eligibility requires a disk of that size to have actually been built at least once
+  // (`disksBuiltTotal[unitBits] > 0`) — a pool's smallest size never pre-fills its cache just
+  // because the pool unlocked. An earlier version pre-filled eagerly the instant a pool unlocked
+  // (regardless of whether that size's disk was ever built, later patched with an affordability
+  // sub-check), which drained the pool's own Memory buffer toward a cache with nothing to flush
+  // into — the buffer visibly stalled before the player had built anything to use the cache for.
+  // Requiring a built disk means the cache only ever drains the buffer once there's a real reason
+  // to: something waiting to receive it. See `docs/DESIGN_HISTORY.md`.
   const unlockedPoolCount = getUnlockedStoragePoolCount(state)
   const readCacheEligibleSizes = []
   for (let poolIndex = 1; poolIndex <= unlockedPoolCount; poolIndex += 1) {
     const unitBits = getDataLakeUnitBits(poolIndex)
-    const everBuilt = (builtTotal[unitBits] ?? 0) > 0
-    if (!everBuilt && getPoolBufferCapacity(state, poolIndex) < getDiskCost(unitBits)) continue
-    readCacheEligibleSizes.push(unitBits)
+    if ((builtTotal[unitBits] ?? 0) > 0) readCacheEligibleSizes.push(unitBits)
   }
   const sizes = readCacheEligibleSizes
     .filter(size => size !== buildingSize) // that array's IO is disallowed while it rebuilds
