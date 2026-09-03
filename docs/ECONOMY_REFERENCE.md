@@ -722,7 +722,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    already decompose (see below), each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` (`[10, 9, 9]` — see
    layers.js for why not a flat `[10, 10, 10]`: `10×1 + 9×10 + 9×100 = 1,000` exactly, the maxed
    level's own capacity, with no leftover/overlap the way a flat 10-per-size cap's incidental
-   1,110-unit sum would have). Every ×1 slot fills before any ×10 slot, every ×10 before any ×100 —
+   1,110-unit sum would have). `decomposeDataLakeUnits` is a mixed-radix decomposition, not a purely
+   greedy one — smallest-first for every total the lake's own natural growth reaches, but once a
+   smaller denomination's own cap is genuinely binding it picks the largest count in that
+   denomination's residue class (mod the ×10 ratio to the next size) that still leaves an exact
+   multiple behind, guaranteeing zero leftover for ANY total up to the level's own capacity —
+   `buyBooster` spends an arbitrary (non-whole-disk) cost, so `depositedUnits` isn't limited to
+   naturally-reached values; a naive purely-greedy version stranded real, spendable units with no
+   square to show for them once a spend landed off that natural lattice (see
+   `docs/DESIGN_HISTORY.md`). Every ×1 slot fills before any ×10 slot, every ×10 before any ×100 —
    `getDataLakeCurrentFillSubSize` is simply the smallest sub-size not yet at its own current-level
    slot cap, or `null` once every slot at that level is full. `fillDataLakeDisks` accumulates
    `overflowBits` into `lake.fillBits` (raw bits, progress toward completing the CURRENT open

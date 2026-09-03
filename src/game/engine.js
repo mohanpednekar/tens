@@ -4094,17 +4094,47 @@ export const getDataLakeCapacity = (state, tierIndex) =>
 // Smallest-denomination-first decomposition of a lake's own whole-unit total into ×1/×10/×100
 // disk counts, each capped per DATA_LAKE_SUB_SIZE_DISK_CAPS (10/9/9 — see layers.js for why not a
 // flat 10/10/10) — every ×1 slot fills before any ×10 slot, every ×10 before any ×100, matching
-// the actual fill order (see fillDataLakeDisks below). Exact with 0 leftover whenever `total`
-// exactly equals a capacity level's own value (1/10/100/1,000, by construction of those disk
-// caps); `remainderUnits` is only ever nonzero for a `total` still below the current level's
-// capacity, where it represents genuine in-progress units not yet enough to complete the next
-// (smallest still-open) disk.
+// the actual fill order (see fillDataLakeDisks below).
+//
+// A naive "always take min(cap, floor(remainder/subSize))" greedy is WRONG for values that don't
+// land on the natural "always fill smallest first" growth lattice (0,1,…,10,20,…,100,200,…,1000):
+// once a smaller denomination hits its OWN cap, the naive greedy can leave a leftover no larger
+// denomination can ever absorb, even though the total itself is fully representable by a
+// different split — e.g. 85 (at capacityLevel 1, caps {1:10, 10:9}) naively decomposes to
+// {1:10, 10:7} with 5 units unrepresented by any square, when {1:5, 10:8} represents the exact
+// same 85 with zero leftover. `buyBooster` spends an ARBITRARY cost (not a whole-disk multiple),
+// so any total in [0, capacity] is reachable this way, not just lattice points — confirmed by
+// direct simulation before this fix (see docs/DESIGN_HISTORY.md).
+//
+// Since each DATA_LAKE_SUB_SIZES step is exactly ×10 the previous one, this is really a mixed-
+// radix (base-10-per-digit, capped-per-digit) decomposition: whatever's left after a denomination
+// must still be an exact multiple of the NEXT denomination's own size, which pins that
+// denomination's own count to a single residue class modulo that ratio ONCE its own cap is
+// actually the binding constraint (`wholeUnits > cap` — otherwise `wholeUnits` itself already
+// satisfies every constraint, same as the original naive formula, so no adjustment is needed or
+// correct: e.g. `total = 0` must decompose to `{1: 0, …}`, not `{1: cap, …}`, even though `cap`
+// happens to be congruent to 0 in that residue class too). Picking the LARGEST count within the
+// cap that still lands in the correct residue class (`cap - ((cap - forced) % ratio)`) is what
+// both preserves "smallest fills first" for the common natural-growth case (where a lattice total
+// never triggers this branch at all) AND guarantees zero leftover for every total up to the
+// level's own capacity. The LAST denomination (no size above it to satisfy) has no such
+// constraint — plain cap-limited floor division. `remainderUnits` is only ever nonzero for a
+// `total` genuinely ABOVE what this level's own caps can represent (should not occur for
+// depositedUnits, which never exceeds getDataLakeCapacity).
 const decomposeDataLakeUnits = total => {
   const disks = {}
   let remainder = Math.max(0, total)
   DATA_LAKE_SUB_SIZES.forEach((subSize, index) => {
     const cap = DATA_LAKE_SUB_SIZE_DISK_CAPS[index]
-    disks[subSize] = Math.min(cap, Math.floor(remainder / subSize))
+    const nextSubSize = DATA_LAKE_SUB_SIZES[index + 1]
+    const wholeUnits = Math.floor(remainder / subSize)
+    if (nextSubSize && wholeUnits > cap) {
+      const ratio = nextSubSize / subSize
+      const forced = wholeUnits % ratio
+      disks[subSize] = cap - ((cap - forced) % ratio)
+    } else {
+      disks[subSize] = Math.min(cap, wholeUnits)
+    }
     remainder -= disks[subSize] * subSize
   })
   return { disks, remainderUnits: remainder }

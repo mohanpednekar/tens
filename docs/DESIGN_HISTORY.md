@@ -5099,3 +5099,71 @@ Cores and the bumped lifetime-earned/`purchased` counts.
 
 `yarn test`: 1686/1686 green (+3 net: two new regression tests, one existing test's expectation
 corrected to match the intentional floor). `yarn build` succeeds.
+
+### A fourth Devin finding on the same PR: the disk-square decomposition could strand real, spendable units with no square to show for them
+
+After the three fixes above (`2c59c97`) came back APPROVE from a fresh adversarial review, a Devin
+follow-up comment self-corrected one of its own earlier "info, no bug" notes into a genuine finding
+on `decomposeDataLakeUnits` — the helper that turns a lake's own scalar `depositedUnits` total into
+×1/×10/×100 disk-square counts for display. Independently confirmed by direct simulation before
+trusting the claim.
+
+**The bug.** `decomposeDataLakeUnits` (unchanged since the pool-overflow rework) processed
+denominations smallest-first, greedily assigning `min(cap, floor(remainder / subSize))` at each
+step. This is correct for any total reached via the lake's own NATURAL growth path (overflow always
+completes the smallest still-open disk first, so `depositedUnits` only ever takes "lattice" values —
+0,1,…,10,20,…,100,200,…,1000). But `buyBooster` spends an ARBITRARY cost (the nth Booster at a lake
+costs n units, not a whole-disk multiple), so `depositedUnits` can land on any integer in
+`[0, capacity]`, not just lattice points. For an off-lattice total, the naive greedy can leave a
+leftover no larger denomination can ever absorb: `total = 85` at `capacityLevel 1` (caps
+`{1: 10, 10: 9}`) naively decomposed to `{1: 10, 10: 7}` with 5 units completely unrepresented by
+any disk square — real, correctly-tracked, fully spendable currency (Booster purchases read the raw
+`depositedUnits` scalar directly, unaffected) that the disk-square UI simply never showed. Worse,
+continued natural overflow-filling from that drifted state could let `depositedUnits` climb PAST
+the lake's own declared capacity before the decomposition ever recognized the lake as full (traced
+by hand and confirmed by simulation: `depositedUnits` reached 105 against a declared capacity of
+100), which would have shown as `aria-valuenow` exceeding its own declared `aria-valuemax` on the
+lake's progress bar — an accessibility contract violation on top of the display bug.
+
+**Why a target-oriented "largest-first" swap doesn't work.** The obvious-looking fix — decompose
+largest-denomination-first instead, like ordinary place-value expansion — was tried by hand first
+and rejected: it exactly reproduces the correct total but with the WRONG disk-square breakdown for
+the common (never-spent) case. E.g. a natural `depositedUnits = 50` (10 ones filled and capped,
+4 tens completed, matching the real fill history) decomposes largest-first to `{1: 0, 10: 5}` —
+mathematically valid as a sum, but flatly contradicts what actually happened (no ones were ever
+skipped) and, more importantly, changes which sub-size `getDataLakeOpenSubSize` reports as
+currently-filling, corrupting the "ones must complete before tens, tens before hundreds" progression
+the whole capacity-level/pool-unlock design depends on. It would also make a `capacityLevel 2`
+lake's `slotCounts` decomposition of its own capacity value (100) come out as `{100: 1}` — implying
+a ×100 slot is available a full level early. Largest-first is simply the wrong algorithm, not a
+smaller-scoped version of the right one.
+
+**The actual fix: a mixed-radix decomposition that stays smallest-first except where a cap is
+genuinely binding.** Since each `DATA_LAKE_SUB_SIZES` step is exactly ×10 the previous one, whatever
+remains after assigning a denomination MUST be an exact multiple of the next denomination's own
+size for a larger denomination to ever finish the job — pinning that denomination's own count to a
+single residue class modulo that ratio once its cap is actually the binding constraint (i.e. once
+`wholeUnits > cap` — when `wholeUnits ≤ cap` no capping is happening at all, and the original naive
+formula is already exactly correct, so this branch must NOT fire there — an off-by-one in this
+guard was caught immediately by the very next test run: `decomposeDataLakeUnits(0)` came back
+`{1: 10, …}` instead of `{1: 0, …}`, since 10 is congruent to 0 mod 10 too, and the fix had to add
+the `wholeUnits > cap` gate to stop the modular-adjustment branch from ever firing when nothing
+needed adjusting). Within that binding-cap case, the LARGEST count within the cap that still lands
+in the correct residue class (`cap - ((cap - forced) % ratio)`, where `forced = wholeUnits % ratio`)
+is picked — provably: (a) reduces to the exact original naive formula for every lattice value (no
+behavior change for natural growth — verified against all six pre-existing
+`getDataLakeDiskCounts`/`getDataLakeDiskSlotCounts` test cases by hand before writing the fix), and
+(b) guarantees zero leftover for every total up to the level's own capacity, including the specific
+85 and 905 (a 3-denomination case needing tens to yield entirely so hundreds can reach its own
+natural value) cases hand-verified during development. The LAST (largest) denomination has no
+"next" size to satisfy, so it keeps the original plain cap-limited floor division unconditionally.
+
+**Verification.** Hand-derived the exact math for every existing test fixture (0, 5, 10, 70, 400,
+1000 at various capacity levels, plus the four `getDataLakeDiskSlotCounts` boundary values) before
+touching the code, confirming zero behavior change for the natural-growth path. Two new regression
+tests: one exercises `decomposeDataLakeUnits` (via `getDataLakeDiskCounts`) directly against the 85
+and 905 off-lattice cases plus a swept sample of every value from 0 to each level's own capacity,
+asserting `sum(count × size) === total` (zero leftover) throughout; the other drives the SAME bug
+through the real `buyBooster` path (five escalating-cost purchases draining a maxed level-2 lake
+from 100 to 85) rather than only the decomposition helper in isolation, matching how the bug would
+actually be reached in play. `yarn test`: 1688/1688 green (+2). `yarn build` succeeds.

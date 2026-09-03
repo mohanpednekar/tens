@@ -1279,7 +1279,16 @@ can later drop back down as Boosters get bought.
 into `DATA_LAKE_SUB_SIZES` (`[1, 10, 100]`) disk counts smallest-first, each capped per
 `DATA_LAKE_SUB_SIZE_DISK_CAPS` (`[10, 9, 9]` — chosen so `10×1 + 9×10 + 9×100 = 1,000` exactly, the
 maxed level's own capacity, with no leftover the way a flat `[10, 10, 10]` cap's incidental
-1,110-unit sum would have). `getDataLakeDiskSlotCounts`/`getDataLakeDiskCounts`/
+1,110-unit sum would have). `decomposeDataLakeUnits` is a mixed-radix (not purely greedy)
+decomposition — it stays smallest-first for any total the lake's own natural overflow-fill growth
+can reach, but once a smaller denomination's cap is actually binding it picks whichever count in
+that denomination's own residue class (mod the ×10 ratio to the next size) is largest while still
+leaving an exact multiple for the next size to finish — guaranteeing zero leftover for EVERY total
+up to the level's own capacity, not just naturally-reached ones (`buyBooster` spends an arbitrary,
+non-whole-disk cost, so `depositedUnits` can land on any such off-lattice value — see
+`docs/DESIGN_HISTORY.md` for the incident a naive purely-greedy version caused: real, spendable
+units invisible in every disk square, and `depositedUnits` able to drift past the lake's own
+declared capacity). `getDataLakeDiskSlotCounts`/`getDataLakeDiskCounts`/
 `getDataLakeCurrentFillSubSize` derive the visible/completed/currently-filling slots purely as a
 function of `depositedUnits` and the lake's own `capacityLevel` — no separate ledger.
 `DataLakePanel` renders one row of disk squares per sub-size present at the current level (the
@@ -1462,7 +1471,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1686 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1688 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

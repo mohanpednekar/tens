@@ -9280,6 +9280,42 @@ describe('Data Lakes', () => {
       expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 1000), 1)).toEqual({ 1: 10, 10: 9, 100: 9 })
     })
 
+    it('never strands units off the natural growth lattice with zero leftover (regression — a naive smallest-first-maxed-out greedy could leave real, spendable units unrepresented by any disk square once an arbitrary Booster spend, not a whole-disk multiple, landed depositedUnits off-lattice — confirmed by simulation: total=85 at capacityLevel 1 naively decomposed to {1:10,10:7} with 5 units unaccounted for, when {1:5,10:8} represents the same 85 exactly)', () => {
+      // capacityLevel 1: caps {1: 10, 10: 9} (100 hasn't opened yet).
+      const level1 = withLakeLevel(createInitialGameState(), 1, 1)
+      expect(getDataLakeDiskCounts(withLakeDeposited(level1, 1, 85), 1)).toEqual({ 1: 5, 10: 8, 100: 0 })
+      // capacityLevel 3 (max, all three denominations active): total=905 needs 0 tens (not 9) so
+      // hundreds can reach its own natural value of 9 — a value the smallest-first-only greedy
+      // cannot reach at all, since 895 (what's left after maxing ones at 10) isn't a multiple of 10.
+      const level3 = withLakeLevel(createInitialGameState(), 1, 3)
+      expect(getDataLakeDiskCounts(withLakeDeposited(level3, 1, 905), 1)).toEqual({ 1: 5, 10: 0, 100: 9 })
+      // Every value in a representative sample from 0 up to each level's own capacity must
+      // decompose with zero leftover units and the sum of (count × size) exactly matching the
+      // input — the real invariant this whole mechanic depends on.
+      for (const [level, capacity] of [[0, 1], [1, 10], [2, 100], [3, 1000]]) {
+        const state = withLakeLevel(createInitialGameState(), 1, level)
+        for (let total = 0; total <= capacity; total += Math.max(1, Math.floor(capacity / 37))) {
+          const counts = getDataLakeDiskCounts(withLakeDeposited(state, 1, total), 1)
+          const represented = counts[1] * 1 + counts[10] * 10 + counts[100] * 100
+          expect(represented).toBe(total)
+        }
+      }
+    })
+
+    it('buying Boosters at escalating (non-whole-disk) costs never leaves units unrepresented — regression via the real buyBooster path, not just the decomposition helper directly', () => {
+      let state = withLakeLevel(createInitialGameState(), 1, 2) // capacity 100
+      state = withLakeDeposited(state, 1, 100) // start maxed
+      state = { ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes, 1: { ...state.intro.dataLakes[1], boostersUnlocked: true } } } }
+      // Costs 1+2+3+4+5 = 15, leaving depositedUnits = 85 — the exact scenario Devin's review flagged.
+      for (let i = 0; i < 5; i += 1) {
+        state = buyBooster(1)(state)
+      }
+      expect(getDataLakeDepositedUnits(1)(state)).toBe(85)
+      const counts = getDataLakeDiskCounts(state, 1)
+      const represented = counts[1] * 1 + counts[10] * 10 + counts[100] * 100
+      expect(represented).toBe(85)
+    })
+
     it('getDataLakeCurrentFillSubSize is the smallest not-yet-maxed sub-size, or null once fully maxed at the current level', () => {
       const state = withLakeLevel(createInitialGameState(), 1, 3)
       expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 0), 1)).toBe(1)

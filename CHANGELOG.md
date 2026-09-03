@@ -33,8 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fed directly and continuously by its own matching pool's OVERFLOW (production beyond that pool's
   Memory buffer once completely full) — fully decoupled from Storage Disks. The overflow feed rate
   is itself fill-based on progress of the one disk currently being filled in that lake, not the
-  lake's overall total (50% at that disk empty, down to 0% as it's about to complete, back to 50%
-  once it completes), shown as the bottom half of that pool's own speedometer gauge (see "Fill-based Speed/Bandwidth
+  lake's overall total (50% at that disk empty, tapering down as it approaches completion — floored
+  at 5% rather than truly reaching 0%, so a disk always keeps filling — back to 50% once it
+  completes), shown as the bottom half of that pool's own speedometer gauge (see "Fill-based Speed/Bandwidth
   multiplier" below). Overflow fills the lake's own ×1/×10/×100 disks smallest denomination first
   (capped 10/9/9 respectively so the three sizes sum exactly to the maxed level's 1,000-unit
   capacity), rendered on Foundry as one row of disk squares per size with the currently-filling one
