@@ -81,10 +81,12 @@ common Provision Disk control. It renders one derived `PoolCard` per VISIBLE sto
 crossed that pool's `getPoolCapacityUnlockThresholdBits`, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name) in a shared
 `SectionHeaderRow` — a 3-column grid: title top-left, the fill-based `MultiplierGauge` top-middle
-(its bottom half showing that pool's own Data Lake overflow rate/fill — see CLAUDE.md's
-"Fill-based Speed/Bandwidth multiplier"), Bandwidth top-right — with a full-width Memory buffer
-tile (`FillableStatCard`/`BalanceText`, the same component the Data Stream card's own tile uses,
-now showing just the balance as the section's second line) below that header row. Pool 1's own threshold — 1 KiB — is
+(switching to that pool's own Data Lake overflow-rate reading once the Memory buffer is completely
+full — see CLAUDE.md's "Fill-based Speed/Bandwidth multiplier"), Bandwidth top-right — with a
+full-width Memory buffer tile (`FillableStatCard`/`BalanceText`, the same component the Data Stream
+card's own tile uses, now showing just the balance as the section's second line) below that header
+row, and a second `FillableStatCard` below THAT showing the Data Lake's own accumulated fill level.
+Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded

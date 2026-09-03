@@ -1062,42 +1062,59 @@ revealed, tapping the Data Stream keeps its original flat "one second's worth of
 effect (`tapIntroBit`'s pre-reveal branch) — this multiplier has no bearing pre-reveal. `intro.bits`
 is no longer always an integer as a result (see its own field comment in `createInitialGameState`).
 `ByteFoundryPage` shows the live multiplier via a compact two-tone `MultiplierGauge` (own component
-in `ByteFoundryPage/index.jsx`) — a needle-gauge whose TOP half sweeps 0% at the left through 100%
-straight up to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) at the right, with its own rounded percent
-readout printed beneath the dial. Rendered inline in the middle column of the shared
-`SectionHeaderRow` (title top-left, gauge top-middle, the section's own Speed/Bandwidth figure
-top-right — for both the Data Stream card and every pool's own summary), ABOVE the `FillableStatCard`
-tap tile rather than layered on top of it (an earlier corner-badge-overlay layout, and before that a
-full-width linear bar plus a separate "NN% Speed"/"· NN%" text line, both superseded — see
-`docs/DESIGN_HISTORY.md`); the tile itself now renders only the section's own second line (bits/
-capacity, or a pool's own Memory buffer balance). The fill-based portion of the top arc reads in
+in `ByteFoundryPage/index.jsx`) — a needle-gauge that sweeps 0% at the left through 100% straight up
+to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) at the right, with its own rounded percent readout
+printed beneath the dial. Rendered inline in the middle column of the shared `SectionHeaderRow`
+(title top-left, gauge top-middle, the section's own Speed/Bandwidth figure top-right — for both the
+Data Stream card and every pool's own summary), ABOVE the `FillableStatCard` tap tile rather than
+layered on top of it (an earlier corner-badge-overlay layout, and before that a full-width linear bar
+plus a separate "NN% Speed"/"· NN%" text line, both superseded — see `docs/DESIGN_HISTORY.md`); the
+tile itself now renders only the section's own second line (bits/capacity, or a pool's own Memory
+buffer balance). In its default `mode="multiplier"`, the fill-based portion of the arc reads in
 `theme.color.accent`; any live tap bonus on top of it extends the arc in `theme.color.warn` (the
 existing gold/caution token, the closest semantic stand-in for orange) so the two are visually
 distinguishable. The needle itself is a separate, neutral `theme.color.text` pointer swept to the
 current TOTAL (fill + tap bonus) reading, not tied to the accent/warn split.
 
-For a POOL specifically, the SAME dial continues downward into a BOTTOM half arc — the `lake` prop
-on `MultiplierGauge` — showing progress on the ONE disk CURRENTLY being filled in that pool's own
-Data Lake (see "Data Lakes" below), NOT the lake's overall total: `DATA_LAKE_OVERFLOW_MAX_PERCENT`
-(50%) when that current disk is empty, tapering down as it approaches completion — the percent
-LABEL text floors at `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5%) rather than reading a true
-`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%), so the underlying fill mechanism always keeps making real
-progress instead of asymptotically stalling short of completion (see "Data Lakes" below) — with the
-arc's own LENGTH tracking that same current-disk fill FRACTION, unaffected by the floor (a
-sliver near empty, a full bottom semicircle once it's about to complete — then snapping back to a
-sliver the instant it completes and the next disk opens, the same "grows as it fills" reading the
-top arc uses, just per-disk rather than lake-wide), rendered in `theme.color.info` to stay visually distinct from the top
-arc's accent/warn tones, plus its own small percent label inside the bottom half and a hidden
-second `role="progressbar"` for a11y. The Data Stream card has no lake of its own, so it always
-renders the plain top-half-only dial (`lake` omitted). `PoolCard`'s summary button (title/gauge/
-Bandwidth) stays a separate control from the Memory-buffer tap tile below it (a sibling of
-`PoolSummaryButton`, not nested inside it — two `<button>`s can't nest). Every tap target's own
-`disabled` mirrors BOTH of the underlying action's no-op conditions, not just the full-Buffer one —
-a `<button>` that stayed enabled once the multiplier hit its 200% cap would silently no-op on click
-with no feedback. The top-half gauge keeps the exact same `role="progressbar"`/`aria-label`/
-`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract the original bar used, so it remains
-screen-reader-accessible and existing tests asserting on that contract are unaffected by the visual
-swap.
+For a POOL specifically, ONE dial does double duty rather than two separate gauges stacked together
+(an earlier design rendered a second, independently-scaled bottom-half arc for the Data Lake reading —
+see `docs/DESIGN_HISTORY.md` for why that was replaced): once that pool's own Memory buffer is
+completely full (`poolBufferFull`), the SAME `MultiplierGauge` switches to `mode="lake"` and the
+identical arc/needle mechanism instead represents that pool's own Data Lake overflow RATE (NOT a
+level — see the separate bar below for that), on the exact SAME 0..`FILL_MULTIPLIER_TAP_CAP_PERCENT`
+angle scale the multiplier reading already uses, in a single `theme.color.info` arc from 0
+(`getDataLakeOverflowRatePercent` — `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) at an empty
+currently-filling disk, tapering down as it approaches completion, floored at
+`DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5%) so the underlying fill mechanism always keeps
+making real progress instead of asymptotically stalling short of completion — see "Data Lakes"
+below — then back up toward the ceiling the instant it completes and the next disk opens). The
+transition between the two readings is deliberately clean, not a jump: `FILL_MULTIPLIER_MIN_PERCENT`
+(the fill-based multiplier's own floor, reached exactly when the buffer becomes full) and
+`DATA_LAKE_OVERFLOW_MAX_PERCENT` (the lake reading's own ceiling, at its highest right as the buffer
+transitions to full) are both 50 by design, so the needle is already sitting where the lake reading
+picks up — this alone only holds for the BASE fill-based value, though: a live tap bonus
+(`poolTapBonusPercents[poolIndex]`) can still be sitting on top of it right at the transition instant
+(tapping is blocked once the buffer is full, but a bonus tapped moments earlier may not have fully
+decayed yet), which would otherwise make the pre-switch total read above 50 and the post-switch lake
+reading (capped at 50) visibly drop. `tickFillMultiplierDecay` closes this gap: once a pool's buffer
+is completely full, that pool's own tap bonus is forced to exactly 0 immediately (not merely
+decayed/headroom-truncated at the ordinary rate), so `getPoolMultiplierPercent` reads exactly 50 by
+the time the gauge switches modes. The Data Stream card has no lake of its own, so it always renders
+in `mode="multiplier"`.
+A pool's own Data Lake accumulation itself — what's actually filling from that overflow, as a LEVEL
+rather than a rate — gets its OWN separate bar: a second `FillableStatCard` directly below the Memory
+buffer tile (always visible, not gated behind the card's `isExpanded` disclosure), showing the SAME
+current-disk fill fraction (`getDataLakeCurrentDiskFillFraction`) the gauge's lake-mode reading is
+derived from, colored via `$progressColor={theme.color.info}` to visually match the gauge's own
+lake-mode arc — "the Data Lake has its own bar which takes in the overflow from the pool bar."
+`PoolCard`'s summary button (title/gauge/Bandwidth) stays a separate control from the Memory-buffer
+tap tile below it (a sibling of `PoolSummaryButton`, not nested inside it — two `<button>`s can't
+nest). Every tap target's own `disabled` mirrors BOTH of the underlying action's no-op conditions,
+not just the full-Buffer one — a `<button>` that stayed enabled once the multiplier hit its 200% cap
+would silently no-op on click with no feedback. The gauge keeps the exact same
+`role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract regardless
+of mode — always 0..`FILL_MULTIPLIER_TAP_CAP_PERCENT`, since both readings share that one scale — so
+it remains screen-reader-accessible and existing tests asserting on that contract are unaffected.
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
 `isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/
@@ -1214,12 +1231,13 @@ itself is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10)
 production rate (a CACHE filling FROM Memory), so even a large banked balance sitting behind a
 block/tier claim drains into the cache at a real, continuous, bounded rate once unblocked — not
 instantly — rather than the fixed rate/tier check alone gating it. `tickDiskAutoFill`'s cache
-eligibility (which sizes it tries to fill) is keyed off `getUnlockedStoragePoolCount` — every
-currently-unlocked pool's own smallest size — NOT off `disksBuiltTotal` having an entry for that
-size: a pool's read cache starts filling from Memory the instant that pool unlocks, so it's already
-waiting full (or filling) by the time the player's first disk of that size finishes provisioning,
-rather than starting from empty only once a disk has ever been built — see
-`docs/DESIGN_HISTORY.md`. Read cache flushes into an empty
+eligibility (which sizes it tries to fill) requires `disksBuiltTotal[unitBits] > 0` for that pool's
+smallest size — a disk of that size must already exist before its cache starts filling at all. An
+earlier design pre-filled eagerly the instant a pool unlocked, regardless of whether a disk of that
+size had ever been built, so the cache would already be waiting full by the time the player's first
+disk finished provisioning — but that drained the pool's own buffer toward a cache with nothing yet
+to flush into, silently stalling the player-visible buffer balance (and any Data Lake overflow riding
+on it) for no reason; see `docs/DESIGN_HISTORY.md`. Read cache flushes into an empty
 disk over the time to fill one cache block at `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2) times
 the current Byte Foundry production rate (a DISK filling FROM a cache) when all 8 blocks are full
 and no tier claim blocks that size (pauses while a tier matches). Every size above the pool's
@@ -1305,12 +1323,15 @@ unfloored version got permanently stuck at 7999.999999992724/8000 bits after 442
 `docs/DESIGN_HISTORY.md`) — then straight back up to 50% the
 instant it completes and the next disk opens — a repeating per-disk taper, not one slow lake-wide
 ramp (`getDataLakeOverflowRatePercent`) — deliberately independent of the pool's own fill-based
-Speed/Bandwidth multiplier; these are two separate dials on the same gauge (see "Fill-based
-Speed/Bandwidth multiplier" above), not compounded. The resulting overflow bits feed
+Speed/Bandwidth multiplier as a FORMULA (neither reads the other's value), even though the two
+readings share the SAME gauge component, which switches which one it displays once the buffer is
+full rather than compounding them (see "Fill-based Speed/Bandwidth multiplier" above). The resulting
+overflow bits feed
 `fillDataLakeDisks`, which completes the lake's own ×1/×10/×100 disks SMALLEST-first (see "Disk
 breakdown" below), tracking raw-bit progress toward the current open slot in `lake.fillBits` — the
-same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above and the
-pool gauge's own bottom-half progress arc (see "Fill-based Speed/Bandwidth multiplier" above).
+same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above, the
+gauge's `mode="lake"` reading once the buffer is full, and the pool's own separate Data Lake fill bar
+(see "Fill-based Speed/Bandwidth multiplier" above).
 `fillDataLakeDisks` also returns `unconsumedBits` per segment — whatever portion of that segment's
 bits it couldn't place anywhere (only nonzero when the lake becomes fully maxed partway through the
 segment) — which `applyDataLakeOverflow` folds back into its own returned `remainingBits` and also
@@ -1532,7 +1553,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1694 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1699 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

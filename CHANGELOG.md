@@ -87,6 +87,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **A freshly-unlocked Storage pool's Memory buffer could stall indefinitely** — that pool's smallest
+  size's read cache started pre-filling from the buffer the instant the pool unlocked, even before a
+  disk of that size existed, so the buffer's inflow was silently diverted into a cache with nothing
+  to flush into instead of growing the visible balance. The cache now only ever fills for a size once
+  a disk of that size has actually been built. See `docs/DESIGN_HISTORY.md`.
+- **A save whose cache had already staged bits under the above (now-reverted) behavior would have had
+  those bits stranded forever** once the fix above landed — the existing stale-cache self-heal now
+  also catches this case, refunding them into the pool's own buffer on the next tick.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since
@@ -164,6 +172,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **A pool's multiplier gauge and Data Lake reading are now one continuous speedometer, not two
+  stacked dials** — the earlier design rendered a separate bottom-half arc for the Data Lake's own
+  overflow rate. Now the same dial switches from the fill-based Speed/Bandwidth multiplier to that
+  pool's own Data Lake overflow rate the instant the pool's Memory buffer is completely full, on the
+  identical 0–200% scale, transitioning cleanly at the shared 50% value both readings meet at — a
+  pool's own live tap bonus is now forced to 0 the instant its buffer is full so a leftover bonus
+  can't make the transition visibly jump. The Data Lake's own accumulated fill level (as opposed to
+  that rate) now has its own separate bar below the Memory buffer tile, always visible.
 - **The Byte Foundry gate is now one-time-ever, not per-Prestige-cycle** — reaching the main game
   no longer resets on a real Prestige or an Era ascension. The standalone Tap button disappears and
   Factory becomes reachable the instant Storage's own capacity threshold is crossed (the same "1
@@ -179,11 +195,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   every tier's level 6 and beyond (and PP Compute/Flops tiers, which reuse the same formula) now
   cost noticeably less as levels climb, since the sequence grows quadratically rather than
   exponentially. See `docs/DESIGN_HISTORY.md`.
-- **A pool's read cache now starts filling the moment that pool unlocks, not once a disk has been
-  built** — `tickDiskAutoFill`'s cache eligibility used to key off `disksBuiltTotal` having an entry
-  for a size; now it's keyed off which pools are currently unlocked (`getUnlockedStoragePoolCount`),
-  so each pool's smallest size starts filling from Memory as soon as the pool unlocks and is already
-  waiting (full, or filling) by the time the player's first disk of that size finishes provisioning.
+- **A pool's read cache now only ever fills once a disk of that size has actually been built** — a
+  since-reverted change (never cut into a dated release — see `### Fixed` above) briefly keyed cache
+  eligibility off which pools were unlocked instead of `disksBuiltTotal`, so a freshly-unlocked pool's
+  cache would start filling from Memory before any disk existed to receive it, silently draining the
+  buffer toward a cache with nowhere to flush. It had already reached the live GitHub Pages
+  deployment (which auto-publishes on every push to `main`, independent of any release tag), so real
+  saves could carry cache staged under it — see the migration note under `### Fixed`.
 - **Pool cards: Bandwidth moved onto the title line, compacting each card** — each pool's own
   Bandwidth figure ("+N/sec") now renders beside its "`<symbol>` Pool" title instead of inside the
   Memory buffer block below, saving a row per pool card.

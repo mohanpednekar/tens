@@ -863,14 +863,22 @@ describe('fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js)
       expect(getDataStreamMultiplierPercent(after.intro)).toBe(FILL_MULTIPLIER_TAP_CAP_PERCENT)
     })
 
-    it('truncates a pool\'s own bonus down to ITS cap headroom independently of the Data Stream\'s', () => {
+    it("forces a pool's own tap bonus to exactly 0 once its buffer is completely full — NOT merely headroom-truncated like the Data Stream's own bonus above — so ByteFoundryPage's gauge transitions cleanly into its Data Lake overflow-rate reading with no visible jump (Devin finding on PR #562: a residual bonus riding on top of the retired fill-based reading could sit well above the lake reading's own 50% ceiling)", () => {
       const baseState = withIntro(createInitialGameState(), { poolTapBonusPercents: { 1: 170 } })
       const fullBufferBits = getPoolBufferCapacity(baseState, 1)
       const state = withIntro(baseState, { poolBuffers: { 1: fullBufferBits } })
       const after = tickFillMultiplierDecay(0)(state)
-      // Pool 1's buffer is full => FILL_MULTIPLIER_MIN_PERCENT (50) base, same headroom math as
-      // the Data Stream case above.
-      expect(after.intro.poolTapBonusPercents[1]).toBe(150)
+      expect(after.intro.poolTapBonusPercents[1]).toBe(0)
+      // The pool's own total multiplier reading is now exactly FILL_MULTIPLIER_MIN_PERCENT (50) —
+      // the SAME value the gauge's lake-mode reading maxes out at (DATA_LAKE_OVERFLOW_MAX_PERCENT),
+      // so switching from one reading to the other never visibly jumps.
+      expect(getPoolMultiplierPercent(after, 1)).toBe(FILL_MULTIPLIER_MIN_PERCENT)
+    })
+
+    it('does NOT force a pool\'s tap bonus to 0 while its buffer still has room — only a genuinely full buffer retires the fill-based reading', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), 4, 1), { poolTapBonusPercents: { 1: 5 } })
+      const after = tickFillMultiplierDecay(0)(state)
+      expect(after.intro.poolTapBonusPercents[1]).toBe(5)
     })
 
     it('never truncates a bonus that already fits within the current headroom', () => {
@@ -2892,6 +2900,28 @@ describe('tickDiskAutoFill', () => {
     expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
+  it("does NOT pre-fill a pool's own smallest size's read cache before a disk of that size has ever been built, even once the pool's own capacity could easily afford one (regression: the read cache used to start draining a freshly-unlocked pool's buffer the instant the pool unlocked, with no disk yet built to ever flush it into — silently starving the player-visible buffer balance, and any Data Lake overflow riding on it, for no reason)", () => {
+    const affordableCapacity = getDiskCost(FIRST_DISK_SIZE) * 2 // comfortably affordable, but nothing built yet
+    const state = withIntro(withPoolBuffer(createInitialGameState(), 0), {
+      capacity: affordableCapacity,
+      bits: FIRST_DISK_SIZE * 10, // plenty of Data Stream bits available to draw from
+    })
+    expect(state.intro.disksBuiltTotal?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    const after = tickDiskAutoFill(1e12)(state)
+    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(after).toBe(state) // same-reference no-op — nothing eligible to fill at all
+  })
+
+  it("starts filling the read cache once a disk of that size has actually been built, even at the pool's own starting capacity", () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits * 3), {
+      capacity: INTRO_DISK_UNLOCK_CAPACITY, // pool 1's own starting capacity — well below this size's own disk cost
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+    })
+    const after = tickDiskAutoFill(1e12)(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 3)
+    expect(after.intro.poolBuffers[1]).toBe(0)
+  })
+
   it('is a same-reference no-op when Memory has no bits at all to add to the cache', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 0,
@@ -3055,6 +3085,20 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.poolBuffers[1]).toBe(level2Size)
     // No disk was ever credited from this stale, now-abandoned flush.
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
+  })
+
+  it("self-heals a legacy save carrying diskCache staged by the earlier (since-reverted) eager pre-fill-on-unlock design for a size no disk has ever been built at — refunds it to the pool's own buffer rather than stranding it forever (Devin finding on PR #562)", () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), 0), {
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      // FIRST_DISK_SIZE (pool 1's own smallest size) IS isDiskReadCacheEligible, but no disk of
+      // it has ever been built — the exact state a save written under the old eager-pre-fill
+      // design could be stuck in once this fix lands, since readCacheEligibleSizes now excludes
+      // this size outright.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    const after = tickDiskAutoFill(0)(state)
+    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(after.intro.poolBuffers[1]).toBe(FIRST_DISK_SIZE)
   })
 
   it('does not pour read cache into an empty disk while that size\'s own fixed tier is at its required level, even with surplus Memory', () => {

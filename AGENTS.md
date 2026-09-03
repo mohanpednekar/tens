@@ -154,11 +154,15 @@ excess down to the cap's current headroom every tick (not just at tap time), so 
 is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
 `MultiplierGauge` in the middle column of a shared header row (title top-left, gauge top-middle,
 Speed/Bandwidth top-right — above the balance tile, not overlaid on it) for both the Data Stream
-and every pool: a 0–200% speedometer with a percent readout, top half only for the Data Stream, but
-a FULL circle for a pool — its bottom half showing progress on the ONE disk currently being filled
-in that pool's own Data Lake, not the lake's overall total (50%→0% as that disk fills, back to 50%
-once it completes, in `theme.color.info`; see "Data Lakes" below). The fill-based top arc
-reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
+and every pool: a 0–200% speedometer with a percent readout. For a pool, the SAME dial does double
+duty rather than a second stacked gauge: once that pool's own Memory buffer is completely full, it
+switches from the fill-based multiplier reading to that pool's own Data Lake overflow RATE instead
+(progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as that disk
+fills, back to 50% once it completes, drawn in `theme.color.info` on the SAME 0–200% scale so the
+needle doesn't jump at the transition — both readings hit 50 at that exact boundary by design; see
+"Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) gets its own
+separate fill bar below the Memory buffer tile instead. In its default multiplier mode the fill-based
+arc reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
 the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
 pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
 
@@ -220,8 +224,8 @@ units) — fully decoupled from Storage Disks now: each lake is fed directly and
 own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full),
 at a rate based on the ONE disk currently being filled, not the lake's overall total
 (`DATA_LAKE_OVERFLOW_MAX_PERCENT` 50% at that disk empty down to 0% as it's about to complete, then
-back to 50% once it completes and the next opens — the SAME `MultiplierGauge`'s own bottom half,
-see above), completing the lake's ×1/×10/×100 disks
+back to 50% once it completes and the next opens — the SAME `MultiplierGauge` switching into its
+lake-rate mode once the pool's buffer is full, see above), completing the lake's ×1/×10/×100 disks
 smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
 the maxed level's 1,000-unit capacity). A lake's first-ever completed disk permanently unlocks
 Boosters for it (`boostersUnlocked`); buying (`buyBooster`, manual or auto-buy via
@@ -249,9 +253,10 @@ Storage's own capacity threshold instead. Storage pool cards also require
 on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
 own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
 so the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already
-showing a clean "1 KB" Capacity — and each
-unlocked pool's own read cache now starts filling from Memory the moment that pool unlocks, not only
-once a disk of that size has ever been built. The generator, Disks, Data Lakes, and Compute
+showing a clean "1 KB" Capacity. A pool's own smallest size's read cache only ever starts filling
+from Memory once a disk of that size has actually been built — never merely on the pool itself
+unlocking (an earlier eager pre-fill-on-unlock design drained the buffer toward a cache with nothing
+to flush into; see docs/DESIGN_HISTORY.md). The generator, Disks, Data Lakes, and Compute
 Cores/Nodes are permanent across every real Prestige; so is `intro.mainGameUnlocked` itself, a
 one-time-ever latch (`latchMainGameUnlocked`) — once Storage-unlock capacity is ever reached, no
 real Prestige or Era ascension resets it again, so Factory stays permanently reachable from then on.
