@@ -9642,6 +9642,31 @@ describe('Data Lakes', () => {
       expect(after.intro.dataLakes[1].purchased).toBe(1)
       expect(after.intro.computeCores).toBe(1)
     })
+
+    it("caps the escalating Booster cost at the lake's own capacity once permanently maxed, so Boosters stay buyable forever instead of going permanently unaffordable (regression — Devin finding: the nth Booster costs n units with no upper bound, but capacity itself permanently caps at DATA_LAKE_CAPACITY_MAX_LEVEL's 1,000 units; once purchased reached 1,000 the next cost (1,001) could never be deposited and isDataLakeCapacityDoublingAvailable was also false (already maxed), so the lake could never buy another Booster again)", () => {
+      const maxed = withLake(createInitialGameState(), 1, {
+        depositedUnits: 1000,
+        boostersUnlocked: true,
+        capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL,
+        purchased: 1000,
+      })
+      // Without the fix this would be 1001 — unaffordable forever, since depositedUnits can never
+      // exceed the lake's own (now permanently fixed) 1,000-unit capacity.
+      expect(getBoosterPurchaseCost(1)(maxed)).toBe(1000)
+      expect(isBoosterPurchaseAvailable(maxed, 1)).toBe(true)
+      expect(isDataLakeCapacityDoublingAvailable(maxed, 1)).toBe(false)
+
+      const after = buyBooster(1)(maxed)
+      expect(after.intro.dataLakes[1].purchased).toBe(1001)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(0)
+      // The lake can refill to its own capacity and buy again indefinitely — cost stays pinned at
+      // capacity rather than climbing past what could ever be deposited.
+      expect(getBoosterPurchaseCost(1)(after)).toBe(1000)
+
+      // Below the maxed capacity level, escalation is unaffected — this only kicks in once maxed.
+      const notMaxed = withLake(createInitialGameState(), 1, { depositedUnits: 100, boostersUnlocked: true, capacityLevel: 2, purchased: 99 })
+      expect(getBoosterPurchaseCost(1)(notMaxed)).toBe(100)
+    })
   })
 
   describe('idle disk liquidation — now size-agnostic (Storage Disks no longer deposit into Data Lakes at all)', () => {

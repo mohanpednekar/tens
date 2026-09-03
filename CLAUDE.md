@@ -1358,7 +1358,12 @@ shows only status now) — funded ONLY from that lake's own banked units, so unl
 Provision Disk/Compute Boost this isn't part of the forced priority order at all; always available
 the instant it's affordable (`isBoosterPurchaseAvailable` — `boostersUnlocked` AND `depositedUnits
 >= getBoosterPurchaseCost`). The nth Booster ever bought at a tier costs *n* units
-(`getBoosterPurchaseCost` — simply `purchased + 1`). Buying spends the cost off `depositedUnits`
+(`getBoosterPurchaseCost` — simply `purchased + 1`, EXCEPT once the lake's own capacity ladder is
+permanently maxed (`isDataLakeCapacityMaxed`, `DATA_LAKE_CAPACITY_MAX_LEVEL`), where the cost is
+instead capped at the lake's own (now-fixed) capacity — otherwise the unbounded `purchased + 1`
+escalation would eventually demand more units than a maxed lake could ever hold, permanently
+bricking that lake's Boosters once `purchased` reached capacity; see `docs/DESIGN_HISTORY.md`).
+Buying spends the cost off `depositedUnits`
 instantly, resets `fillBits`, and grants 1 of the matching compute-ladder entity
 (`COMPUTE_BOOST_TIER_FIELDS`) right away — no transfer, no waiting. `toggleDataLakeAutoBuy(tierIndex)`
 flips a per-lake `autoBuyEnabled` flag; `tickDataLakeAutoBuy` (run every tick right after
@@ -1497,7 +1502,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1690 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1691 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

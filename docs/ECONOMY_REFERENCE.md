@@ -804,7 +804,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    (`isBoosterPurchaseAvailable` — `isDataLakeBoosterUnlocked` AND `depositedUnits >=
    getBoosterPurchaseCost`). The nth Booster ever bought at a tier costs n units
    (`getBoosterPurchaseCost` — simply `purchased + 1`, with no transfer queue to
-   count alongside it). Buying spends the cost off `depositedUnits`, resets `fillBits` to 0 (the
+   count alongside it — EXCEPT once the lake's own capacity ladder is permanently maxed
+   (`isDataLakeCapacityMaxed`), where the cost is capped at the lake's own fixed capacity instead of
+   continuing to climb past what a maxed lake could ever hold; see `docs/DESIGN_HISTORY.md`). Buying spends the cost off `depositedUnits`, resets `fillBits` to 0 (the
    disk that was mid-fill before the spend may no longer be the lake's own open slot afterward, so
    any in-progress fill is discarded rather than carried forward inconsistently), increments
    `purchased`, and grants 1 of the matching compute-ladder entity instantly — no transfer, no

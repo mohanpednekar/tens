@@ -4240,11 +4240,20 @@ export const isDataLakeBoosterUnlocked = (state, tierIndex) =>
 export const isDataLakeAutoBuyEnabled = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.autoBuyEnabled ?? false
 
-// The nth Booster ever bought at a tier costs n units.
+// The nth Booster ever bought at a tier costs n units — but once the lake's own capacity ladder
+// is permanently maxed (DATA_LAKE_CAPACITY_MAX_LEVEL, see isDataLakeCapacityMaxed above), that
+// escalation is capped at the lake's own (now-fixed) capacity rather than left to keep climbing
+// forever: past capacity level 3 there's no further capacity upgrade left to fund a cost that
+// keeps growing past what the lake could ever hold, which would otherwise leave every future
+// Booster permanently unaffordable (deposits can never exceed capacity) — a lake that should have
+// an indefinite Booster path instead going permanently dead once purchased reaches capacity+1. See
+// docs/DESIGN_HISTORY.md.
 export const getBoosterPurchaseCost = tierIndex => state => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake) return 0
-  return (lake.purchased ?? 0) + 1
+  const rawCost = (lake.purchased ?? 0) + 1
+  if (!isDataLakeCapacityMaxed(state, tierIndex)) return rawCost
+  return Math.min(rawCost, getDataLakeCapacity(state, tierIndex))
 }
 
 export const isBoosterPurchaseAvailable = (state, tierIndex) =>

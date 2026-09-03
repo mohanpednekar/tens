@@ -5307,3 +5307,34 @@ floor rate to that same remaining time). The test's assertion was updated to the
 segment-derived value. No other test in the `Data Lakes` describe block changed behavior. `yarn
 test`: 1690/1690 green (one existing assertion corrected to the newly-correct value, no net new test
 count change). `yarn build` succeeds.
+
+### A ninth finding: a lake's escalating Booster cost could outgrow its own permanently-capped capacity, bricking it forever
+
+The same review round also flagged that `getBoosterPurchaseCost`'s escalation (`purchased + 1`, no
+upper bound) and the lake's own capacity ladder (`DATA_LAKE_CAPACITY_BY_LEVEL`, permanently
+hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` — 1,000 units) were never reconciled. Once a lake
+reached `purchased = 1000` (the 1,000th Booster ever bought at that tier), the 1,001st would cost
+1,001 units — but `depositedUnits` can never exceed the lake's own capacity, and that capacity was
+already maxed and could never grow further. `isBoosterPurchaseAvailable` (needs `depositedUnits >=
+cost`) and `isDataLakeCapacityDoublingAvailable` (short-circuits false once `isDataLakeCapacityMaxed`)
+were therefore BOTH permanently false from that point on — the lake could never buy another Booster
+again, contradicting the mechanic's own intent (Boosters are meant to be an indefinite, ever-repeatable
+purchase; only the CAPACITY ladder is meant to have a hard ceiling, not the Booster supply itself).
+This is a genuinely late-game-only bug (1,000 Boosters at one tier is a lot of play), but a real
+permanent dead-end once reached, not a display nit. **Fix:** `getBoosterPurchaseCost` now checks
+`isDataLakeCapacityMaxed` first; below max level, behavior is completely unchanged (`purchased + 1`,
+uncapped, exactly as before — this only ever activates AT the max level). Once maxed, the returned
+cost is `Math.min(purchased + 1, getDataLakeCapacity(state, tierIndex))` — pinned at the lake's own
+(now permanently fixed) capacity rather than left to keep climbing past it, so a fully-refilled maxed
+lake can always afford its next Booster, forever, at a flat cost equal to its own capacity. This
+preserves the pre-existing "buying and capacity-upgrading are mutually exclusive by construction"
+invariant (`isDataLakeCapacityDoublingAvailable` needs `cost > capacity`, which can now never be true
+once maxed, exactly matching `isDataLakeCapacityMaxed` already forcing that function false — no
+double-guard needed, just consistent). **Verification.** New regression test: seeds a lake at the
+max capacity level with `purchased: 1000` (so the pre-fix cost would have been 1,001, permanently
+unaffordable) and a full 1,000-unit deposit; asserts the cost now reads 1,000 (not 1,001), that
+`isBoosterPurchaseAvailable` is true and `isDataLakeCapacityDoublingAvailable` stays false, that
+`buyBooster` succeeds and drains the deposit to 0, and that the NEXT cost (after `purchased` is now
+1,001) still reads 1,000, not 1,002 — confirming the cap holds indefinitely, not just for one
+purchase. A second assertion confirms a NOT-yet-maxed lake's cost is completely unaffected (still the
+plain `purchased + 1`). `yarn test`: 1691/1691 green (+1). `yarn build` succeeds.
