@@ -196,10 +196,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   cost noticeably less as levels climb, since the sequence grows quadratically rather than
   exponentially. See `docs/DESIGN_HISTORY.md`.
 - **A pool's read cache now only ever fills once a disk of that size has actually been built** — a
-  since-reverted change (superseded before ever shipping — see `### Fixed` above) briefly keyed cache
+  since-reverted change (never cut into a dated release — see `### Fixed` above) briefly keyed cache
   eligibility off which pools were unlocked instead of `disksBuiltTotal`, so a freshly-unlocked pool's
   cache would start filling from Memory before any disk existed to receive it, silently draining the
-  buffer toward a cache with nowhere to flush.
+  buffer toward a cache with nowhere to flush. It had already reached the live GitHub Pages
+  deployment (which auto-publishes on every push to `main`, independent of any release tag), so real
+  saves could carry cache staged under it — see the migration note under `### Fixed`.
 - **Pool cards: Bandwidth moved onto the title line, compacting each card** — each pool's own
   Bandwidth figure ("+N/sec") now renders beside its "`<symbol>` Pool" title instead of inside the
   Memory buffer block below, saving a row per pool card.
