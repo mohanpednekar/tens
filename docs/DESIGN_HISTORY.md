@@ -11,8 +11,8 @@ section faster than the trims could merge. PR #566 verified every constant/funct
 was still present (and non-contradictory) in `docs/ECONOMY_REFERENCE.md`, and that
 incident-specific rationale (e.g. the unfloored Data Lake overflow taper getting permanently stuck,
 see this file's own entry below) was already covered here, before condensing each subsection to an
-orientation paragraph with a pointer to the reference doc. Net: `CLAUDE.md` 1729 → 1317 lines
-(-412, ~24%), with a new standing rule added to `CLAUDE.md`'s own "Documentation" section (keep
+orientation paragraph with a pointer to the reference doc. Net: `CLAUDE.md` 1729 → 1333 lines
+(-396, ~23%), with a new standing rule added to `CLAUDE.md`'s own "Documentation" section (keep
 future additions terse and reference-doc-first) since a one-time trim alone doesn't fix the
 recurring cause — see issue #537, which tracks the remaining "Architecture" section slice (blocked
 on `docs/MAINPAGE_REFERENCE.md` staleness, tracked separately as #567).

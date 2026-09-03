@@ -1065,7 +1065,7 @@ wrong (see `docs/DESIGN_HISTORY.md`). Each Storage pool derives its OWN Capacity
 own bound; each decade step is deliberately sized to exactly fund that step's own disk-build cost.
 Bandwidth instead follows a finer SI-clean switchover sequence (`getSiCleanEquivalentBits` — 125
 instead of 128 past 64 B/s, repeating every decade). The Data Lake capacity ladder uses the same
-decade-power shape independently. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half the top pool's
+decade-power shape independently. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half of pool 1's
 end bound. Full formulas, the `getCoreEarnTimeSeconds` raw-`intro.capacity` pacing caveat, and every
 constant name are in `docs/ECONOMY_REFERENCE.md`.
 
