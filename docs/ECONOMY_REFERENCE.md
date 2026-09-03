@@ -538,7 +538,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    reserve — split into `DISK_CACHE_BLOCK_COUNT` (8) equal blocks, each holding
    `size / DISK_CACHE_BLOCK_COUNT` bits (e.g. a 1 MB array → 8 × 1 Mb), totaling one disk's own
    capacity. Steady state is full; gaps appear only right after a manual block release, a completed
-   read-cache→disk flush, or when the size is newly unlocked/built. When all 8 blocks are full and no
+   read-cache→disk flush, or when a disk of that size is newly built (a size only becomes cache-
+   eligible once a disk of it has actually been built — `disksBuiltTotal[size] > 0` — never merely on
+   the pool itself unlocking; see `docs/DESIGN_HISTORY.md`). When all 8 blocks are full and no
    tier claim blocks ladder use at that size (`isDiskRedeemable` is false), `tickDiskAutoFill`
    starts a timed flush into one empty disk — a DISK filling FROM a cache — duration
    `getDiskReadCacheFlushSeconds` = one block ÷ (`getIntroProductionRate` ×
