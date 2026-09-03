@@ -48,6 +48,10 @@ ios/DerivedData/
 .env.local
 .env.*.local
 
+# Claude Code agent worktree isolation (ephemeral, session-local — created/removed by the Agent
+# tool's `isolation: "worktree"` option, not project content)
+.claude/worktrees/
+
 # IDE — JetBrains
 .idea/
 
