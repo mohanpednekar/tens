@@ -1,5 +1,82 @@
 # Design history & rationale
 
+### Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02
+
+Follow-up requests on the corner-speedometer-gauge PR (#555, itself following #552's fill-based
+Speed/Bandwidth multiplier) asked for three changes to that same mechanic:
+
+**1. The Byte Foundry gate is no longer replayed every real Prestige.** Previously,
+`intro.mainGameUnlocked` reset to `false` on every real Prestige and Era ascension
+(`prestigeGame`/`buildEraIntroReset`), so each cycle briefly re-showed the Byte Foundry as a
+mandatory gate again until the always-on auto-convert (`tickIntroAutoInvest`) or a manual transfer
+crossed `tier01`'s own starting per-unit cost — a "fast pit-stop," not a full replay, but still a
+real per-cycle detour. The maintainer explicitly asked to make this permanent: "Tap button in
+Foundry should be removed on reaching 1KiB and simultaneously main game shall be revealed. Once
+revealed, the main game should always be reachable and never gated behind anything." Clarified via
+two confirmed decisions: (a) unify the reveal trigger with the SAME "1 KiB" Storage-capacity
+threshold that already reveals Storage pools and switches the Data Stream tap into
+fill-multiplier-bonus mode (`isStorageUnlocked`), rather than the earlier, smaller, slightly-earlier
+threshold auto-convert happened to fire at — so the two now trigger simultaneously; (b) make the
+latch PERMANENT — never reset by a real Prestige or an Era ascension again once it has ever fired.
+
+New exported `latchMainGameUnlocked` (`engine.js`) is now the sole place `intro.mainGameUnlocked`
+is ever set `true`: a same-reference no-op both below the threshold and once already latched.
+`convertIntroBitsToKilobytes`/`tickIntroAutoInvest` had their own `mainGameUnlocked: true` side
+effects removed entirely — they still fund `tier01` purchases every cycle, forever, but no longer
+touch the flag. `latchMainGameUnlocked` is called unconditionally as the very first step of
+`tickGame` (ahead of `tickFillMultiplierDecay`) for the ordinary case, and ALSO synchronously
+inside `upgradePoolCapacity`'s own return value, so a manual Capacity ×2 purchase (or a queued
+upgrade firing) reveals Factory within the same state transition rather than waiting up to one tick
+— the same "instant reveal, don't wait for the next tick" precedent `computeMergePageUnlocked`
+already set for a different one-time-ever reveal. `prestigeGame` and `buildEraIntroReset` both
+changed from unconditionally resetting `mainGameUnlocked` (via the `...initial.intro` spread with
+no override) to `state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked` — carrying it
+forward once set, same shape the Byte generator/Disks/Compute entities already used for their own
+permanence. The ONE place this flag still resets to `false` is a full Reset
+(`createInitialGameState()` called fresh) — a genuinely new save, not a new cycle.
+
+This is a deliberate, hard-to-reverse change to the core Prestige loop, confirmed directly with the
+maintainer before implementing (not inferred) — a later session re-introducing a per-cycle reset
+here would be reverting an explicit, considered decision, not fixing a bug. The underlying economy
+is UNCHANGED: resources/owned tiers/purchase-block progress still reset every cycle exactly as
+before, and a player still needs Foundry-earned currency to actually afford anything — only
+Factory's *reachability* became permanent, not the numbers behind it. `App.jsx`'s
+`showingFoundry`/`GATE_EXEMPT_PAGES` routing logic needed no code change at all, since it already
+derived off `intro.mainGameUnlocked` rather than assuming it resets — the gate resolving just
+reveals whatever `page` already was.
+
+**2. Fill-multiplier effect beyond the 200% cap is now lost instantly, not banked.** The existing
+tap-bonus mechanic (#552) already clamped each individual tap to the cap's remaining headroom, but
+a bonus already at/near the cap could still sit banked in `dataStreamTapBonusPercent`/
+`poolTapBonusPercents` as dead weight if the BASE (fill-based) value later dropped — e.g. a tap
+landed while the buffer was nearly full (a low base, wide headroom), then the buffer drained,
+raising the base back toward the cap and leaving no real room for the bonus that was already there.
+The maintainer's direct instruction: "Effect beyond 200% should always be lost instantly. 200% is
+the hard cap for total effect." `tickFillMultiplierDecay` now also truncates whatever bonus remains
+down to the cap's CURRENT headroom every tick, independent of its own elapsed-time-scaled decay —
+discarding excess immediately rather than letting it decay away or resurface as a "real" boost once
+the base later dropped. Same-reference no-op preserved when stored bonuses are already within
+headroom, so this doesn't disturb the engine's "same reference = no purchase/tick happened"
+convention autobuyer/tick loops depend on.
+
+**3. The gauge moved from a corner overlay to living inside the tile itself.** The initial
+gauge-swap PR positioned `MultiplierGauge` as a `position: absolute` sibling layered over the outer
+`DataStreamCard`/`PoolCard`. Per "Use identical component layout for data stream and pool memory.
+The speedometer should be inside that component," the gauge now renders as a child of the shared
+`FillableStatCard` tile itself (`position: relative` moved from the outer card onto
+`FillableStatCard`) — identically for the Data Stream and every pool's own Memory buffer tile, since
+both already reuse that one component. A pool's gauge is specifically a child of its Memory tile
+(the tap `<button>`), not of `PoolCard` or a sibling of `PoolSummaryButton` — an early doc pass
+mis-described it as "a sibling of both, a direct child of PoolCard," caught and fixed by a review
+pass partway through.
+
+**yarn test**: 1683/1683 green (new coverage: a dedicated `latchMainGameUnlocked` describe block;
+three new `tickFillMultiplierDecay` tests for the instant-truncation behavior; `prestigeGame`/
+`eraGame`/`convertIntroBitsToKilobytes`/`tickIntroAutoInvest` tests rewritten for the new permanent
+semantics; `App.test.jsx` and `storage.test.js` tests updated to match). `yarn build` succeeds.
+`e2e/prestige.e2e.js`/`e2e/meta-prestige.e2e.js` updated to assert the gate stays permanently
+unlocked across Prestige/Era ascension rather than resetting.
+
 ### Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31
 
 #431 (closing #399) had renamed this screen from "Factory"/"Byte Factory" to "Ladder" specifically
@@ -2354,6 +2431,13 @@ the job, the manual row really is the redundant piece being described.
 
 ### Era ascension and Eons — meta-prestige above Unbounded (#407 / #405)
 
+> **2026-09-02 update:** the "reuses the Byte Foundry gate as a familiar rhythm" framing below, and
+> the "Skip the Foundry gate after Era — rejected" call, both describe the ORIGINAL design and no
+> longer hold — see the "Byte Foundry gate made permanent, one-time-ever" entry at the top of this
+> file. `intro.mainGameUnlocked` is now a permanent one-time-ever latch; Era ascension (like
+> ordinary Prestige) no longer sends the player back through the Byte Foundry gate, though it still
+> resets Foundry Capacity and everything else this entry describes as wiped.
+
 After **Unbounded Prestige** (#405) removed the production freeze at 100 lifetime prestiges, the
 endgame needed a deeper reset layer that still felt voluntary rather than another hard wall.
 **Era ascension** is that layer: when unspent Prestige Points reach **1 Googol PP**
@@ -2387,9 +2471,9 @@ generator’s *existence* (`intro.byteCreated`) is the permanent “you’ve com
 it would force re-tapping through the very first combine on every Era, which reads as a tutorial
 replay rather than a meta reset. Everything *built on top* of that generator — capacity/production
 tracks, Disk arrays, compute entities, Flops owned counts, `foundryResetCaps` convenience state — is
-cycle-scoped progress that Era is meant to clear. Ordinary Prestige already reset Memory and the
-main-game gate each cycle while keeping those Foundry assets; Era extends that wipe to the assets
-Prestige had made permanent.
+cycle-scoped progress that Era is meant to clear. Ordinary Prestige already reset Memory each cycle
+while keeping those Foundry assets (see 2026-09-02 update above re: the main-game gate); Era extends
+that wipe to the assets Prestige had made permanent.
 
 **What persists vs. resets (shipped in #410 / UI in #411).** Automation unlock flags and pause
 states, tier/tickspeed autobuyer milestone objects, `prestige.unboundedUnlocked`, museum,
@@ -2400,9 +2484,10 @@ Foundry upgrade state reset. Era *N* free-unlocks the *N*th Compute tier’s aut
 `applyFlopsAutobuyerMilestones` — a permanent unlock track that survives the wipe.
 
 **Rejected alternatives.**
-- **Skip the Foundry gate after Era** — rejected; the gate is the pacing rhythm every Prestige cycle
-  already uses, and bypassing it would make Era ascension feel like a cheat code rather than a deeper
-  cycle.
+- **Skip the Foundry gate after Era** — rejected at the time (the gate was still the pacing rhythm
+  every Prestige cycle used); later reversed for BOTH Prestige and Era ascension by the 2026-09-02
+  permanent-gate change noted above, on explicit maintainer instruction, not a revival of this
+  rejection.
 - **Keep unspent PP balance across Era** — rejected; Googol PP is the eligibility key; carrying the
   bank forward would collapse Era into a label with no economic reset.
 - **Reset `prestige.count` without latching Unbounded** — rejected; `prestige.unboundedUnlocked` is

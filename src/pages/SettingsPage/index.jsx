@@ -598,8 +598,8 @@ const SettingsPage = ({ game, onReset, onResetByteFoundry, themePreference = 'sy
         title="Ascend an Era?"
       >
         <p>
-          Awards {eonsAwarded} {eonWord(eonsAwarded)} and sends you back through the Byte Foundry
-          gate for a deep reset.
+          Awards {eonsAwarded} {eonWord(eonsAwarded)} and resets the Byte Foundry for a deep reset —
+          Factory itself stays permanently reachable, no gate to tap back through.
         </p>
         <p>
           <strong>Resets:</strong> Foundry generator upgrades, Memory, Disks, Compute entities,

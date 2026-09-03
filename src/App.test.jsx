@@ -18,6 +18,9 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
+  FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
@@ -933,10 +936,11 @@ test('the first time money reaches a googol, a mandatory full-screen prompt offe
   await user.click(prestigeButton)
 
   expect(screen.queryByRole('dialog', { name: /prestige required/i })).not.toBeInTheDocument()
-  // A real Prestige now resets the Byte Foundry intro too (see engine.js's prestigeGame), so the
-  // app navigates back there instead of straight to MainPage — see the dedicated Byte-Foundry/
+  // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
+  // resets the Byte Foundry's Data Stream balance but never re-gates it, so the app stays on
+  // Factory rather than navigating back to the Byte Foundry — see the dedicated Byte-Foundry/
   // Prestige interaction tests further down for the full reset assertions.
-  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
 })
 
 test('from the 2nd prestige onward, reaching a googol shows a top banner instead of the full-screen prompt', () => {
@@ -2544,9 +2548,11 @@ test('shows the offline-progress notice on the Byte Foundry screen too, not just
   // during offline catch-up (tickGame runs them unconditionally, every tick, regardless of
   // mainGameUnlocked) — the gap was that the notice itself only ever rendered inside MainPage, so a
   // player who lands on (or is still gated to) ByteFoundryPage after being away saw no
-  // acknowledgment of it. mainGameUnlocked stays false here (bits stay far below capacity), so <App
-  // /> gates onto ByteFoundryPage — the notice should show there too.
-  seedIntroState({ bits: 0, capacity: 10000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1 })
+  // acknowledgment of it. Capacity stays below INTRO_DISK_UNLOCK_CAPACITY (8,192 bits) so
+  // mainGameUnlocked (now latched purely off that threshold — see latchMainGameUnlocked in
+  // engine.js) stays false even after the offline catch-up below, and <App /> gates onto
+  // ByteFoundryPage — the notice should show there too.
+  seedIntroState({ bits: 0, capacity: 4000, byteCreated: true, tickSpeedSeconds: 1, productionMultiplier: 1 })
   localStorage.setItem('tens_last_save_timestamp', String(Date.now() - 1_000_000))
 
   render(<App />)
@@ -2682,9 +2688,11 @@ test('the Combine button shows fill progress toward INTRO_BYTE_COMBINE_COST', ()
 test('the intro auto-transitions into the main game once the bit balance crosses the auto-invest threshold', () => {
   vi.useFakeTimers()
 
-  // One tick (0.1s) at the tick loop's own fastest resolution (tickSpeedSeconds ==
-  // INTRO_MIN_TICK_SPEED_SECONDS) delivers exactly one batch of 1 bit — enough to cross from one
-  // below the threshold to the threshold itself.
+  // Starts one bit below the threshold. A single tick (0.1s) at the tick loop's own fastest
+  // resolution (tickSpeedSeconds == INTRO_MIN_TICK_SPEED_SECONDS) used to deliver exactly one
+  // batch of 1 bit here, but the fill-based Speed multiplier (see FILL_MULTIPLIER_* in
+  // game/layers) tapers production down toward FILL_MULTIPLIER_MIN_PERCENT (50%) this close to a
+  // full Buffer, so a few ticks are needed now to close that last bit.
   seedIntroState({
     bits: FRESH_CYCLE_BLOCK_BITS - 1,
     capacity: FRESH_CYCLE_BLOCK_BITS,
@@ -2696,7 +2704,7 @@ test('the intro auto-transitions into the main game once the bit balance crosses
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
-  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS * 5) })
 
   // Transitioned to MainPage — the Byte Foundry heading is gone, replaced by the game itself, with
   // the auto-invest-granted Kilobytes already owned.
@@ -2783,8 +2791,70 @@ test('Pool header row pairs the pool\'s own Bandwidth with its title on one line
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const heading = within(pool1).getByRole('heading', { level: 3 })
-  const bandwidthText = within(pool1).getByText(/\/sec$/)
+  const bandwidthText = within(pool1).getByText(/\/sec/)
   expect(bandwidthText.parentElement).toBe(heading.parentElement)
+})
+
+test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200%)', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  const dataStreamBar = screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i })
+  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  // Both the Data Stream Buffer and pool 1's own Memory buffer start empty — FILL_MULTIPLIER_MAX_PERCENT.
+  expect(dataStreamBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+
+  const poolBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(poolBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+})
+
+test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplier, leaving the Data Stream\'s untouched', async () => {
+  const user = userEvent.setup()
+  // mainGameUnlocked: true set explicitly — capacity is already >= INTRO_DISK_UNLOCK_CAPACITY,
+  // which would latch it true on the first real tick anyway (see latchMainGameUnlocked in
+  // engine.js), and this test's own `await user.click` leaves enough real time for that tick to
+  // fire; seeding it upfront (and navigating to Foundry explicitly, same as the sibling
+  // disabled-at-cap tests below) avoids racing that latch mid-test.
+  seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  await user.click(screen.getByRole('button', { name: /tap pool 1 memory/i }))
+
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT + FILL_MULTIPLIER_TAP_BONUS_PERCENT))
+  expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
+})
+
+test('the Data Stream tap target disables once its own multiplier is already at the 200% cap', () => {
+  seedMainGameState({
+    intro: {
+      mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+      dataStreamTapBonusPercent: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT,
+    },
+  })
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  const tapTarget = screen.getByRole('button', { name: /tap to generate a bit/i })
+  expect(tapTarget).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+})
+
+test('a pool\'s own Memory tap target disables once that pool\'s own multiplier is already at the 200% cap', () => {
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolTapBonusPercents: { 1: FILL_MULTIPLIER_TAP_CAP_PERCENT - FILL_MULTIPLIER_MAX_PERCENT },
+  })
+  render(<App />)
+
+  const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
+  expect(poolTapTarget).toBeDisabled()
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i }))
+    .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
 })
 
 test('Data Stream tile no longer shows a separate "bits this cycle" transfer-block tracker line', () => {
@@ -3879,14 +3949,16 @@ describe('Compute auto-merge automation', () => {
 
 })
 
-// --- The Byte Foundry resets and reappears after every real Prestige ---
-// A real Prestige now sends the player back through the intro every cycle (see engine.js's
-// prestigeGame and App.jsx's bidirectional page-sync effect) — it's no longer a one-time-ever gate.
-// But the Byte generator itself (capacity/byteCreated/tickSpeedSeconds/productionMultiplier) is
-// PERMANENT — only Memory (bits/productionAccumulator) and the completion gate reset. Speed
-// Up/Overclock remain unaffected (covered at the engine.test.js level, not here).
+// --- The Byte Foundry gate is a permanent, one-time-ever unlock ---
+// intro.mainGameUnlocked latches permanently true the first time Storage's own capacity threshold
+// is crossed (see engine.js's latchMainGameUnlocked) — a real Prestige no longer sends the player
+// back through the intro; App.jsx's own routing derives off mainGameUnlocked, which simply stays
+// true from then on. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
+// productionMultiplier) is likewise PERMANENT — only the Data Stream balance (bits/
+// productionAccumulator) resets each cycle. Speed Up/Overclock remain unaffected (covered at the
+// engine.test.js level, not here).
 
-test('a real Prestige from MainPage navigates back to the Byte Foundry, resetting Data Stream but keeping the generator permanent', async () => {
+test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {
   const user = userEvent.setup()
 
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
@@ -3901,12 +3973,14 @@ test('a real Prestige from MainPage navigates back to the Byte Foundry, resettin
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
 
-  expect(screen.queryByRole('heading', { level: 1, name: /^byte factory$/i })).not.toBeInTheDocument()
-  expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
+  // never re-gates it, so Factory stays on screen with no navigation to the Byte Foundry.
+  expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  // Data Stream balance + the gate reset to fresh; the generator's Capacity stays permanent.
-  expect(saved.intro.mainGameUnlocked).toBe(false)
+  // Data Stream balance resets to fresh; the gate itself stays permanently unlocked.
+  expect(saved.intro.mainGameUnlocked).toBe(true)
   expect(saved.intro.bits).toBe(0)
   // The generator and its upgrades are permanent — carried over from before the Prestige.
   expect(saved.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
@@ -3932,7 +4006,11 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
-  act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
+  // A few ticks, not just one: the Data Stream Buffer starts one bit shy of full, and the
+  // fill-based Speed multiplier (see FILL_MULTIPLIER_* in game/layers) tapers production down
+  // toward FILL_MULTIPLIER_MIN_PERCENT (50%) as it approaches capacity, so closing that last bit
+  // now takes a couple of ticks rather than exactly one.
+  act(() => { vi.advanceTimersByTime(TICK_RATE_MS * 5) })
 
   expect(screen.queryByRole('heading', { level: 1, name: /byte foundry/i })).not.toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
@@ -3942,7 +4020,7 @@ test('completing the Byte Foundry again after a Prestige navigates forward into 
   vi.useRealTimers()
 })
 
-test('a Prestige firing while on the Guide page defers navigation to the Byte Foundry until the player backs out', () => {
+test('a Prestige firing while on the Guide page does not disrupt the page — mainGameUnlocked stays permanently true', () => {
   vi.useFakeTimers()
 
   // autoPrestigeAttemptBudget seeded at 1 (the fire threshold) so the very next tick's elapsed
@@ -3959,16 +4037,17 @@ test('a Prestige firing while on the Guide page defers navigation to the Byte Fo
   fireEvent.click(screen.getByRole('button', { name: /open guide/i }))
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 
-  // Auto-Prestige fires in the background and resets intro.mainGameUnlocked to false, but the
-  // Guide page stays exactly where it was — App.jsx's sync effect is a no-op while page === 'info'.
+  // Auto-Prestige fires in the background — the Guide page stays exactly where it was regardless
+  // (App.jsx's routing has no sync effect at all), and mainGameUnlocked (now permanent — see
+  // latchMainGameUnlocked in engine.js) is untouched by the Prestige, so there's no gate to defer.
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
 
   const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-  expect(saved.intro.mainGameUnlocked).toBe(false)
+  expect(saved.intro.mainGameUnlocked).toBe(true)
 
-  // Leaving Guide via AppNav's Foundry item lands on the Byte Foundry gate — Factory is hidden
-  // while mainGameUnlocked is false, so Foundry is the way out.
+  // Leaving Guide via AppNav's Foundry item reaches the Byte Foundry as a voluntary screen, not a
+  // gate — Factory stays reachable directly too (see the dedicated always-interactive test below).
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
 
@@ -4024,7 +4103,7 @@ test('the mandatory Byte Foundry gate (before mainGameUnlocked) blocks Factory b
   expect(screen.queryByRole('button', { name: /back to game/i })).not.toBeInTheDocument()
 })
 
-test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into the mandatory gate in place, hiding Factory but keeping Guide/More', () => {
+test('a Prestige firing while voluntarily viewing the Byte Foundry leaves Factory reachable — no gate re-triggers', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
@@ -4047,14 +4126,17 @@ test('a Prestige firing while voluntarily viewing the Byte Foundry turns it into
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Still on the same screen — no navigation jump — but now it's the mandatory gate: Factory is
-  // gone, while Guide/More stay so utilities never depend on re-unlocking the main game.
+  // Still on the same screen — no navigation jump — and mainGameUnlocked (now permanent — see
+  // latchMainGameUnlocked in engine.js) is untouched: Factory stays reachable, nothing hidden.
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /open byte factory/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /open byte factory/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open guide/i })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /open more menu/i })).toBeInTheDocument()
   expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
+
+  const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+  expect(saved.intro.mainGameUnlocked).toBe(true)
 
   unmount()
   vi.useRealTimers()

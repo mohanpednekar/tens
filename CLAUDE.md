@@ -12,8 +12,9 @@ workflow, or mechanic a past iteration may already have tried and rejected for a
 of ten. No routing library, no backend — state lives in React and is persisted to `localStorage`. The
 app switches between top-level screens via a plain `useState` toggle in `App.jsx` plus a shared bottom
 `AppNav` (Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture" below):
-`ByteFoundryPage` (tap-to-earn bootstrap; mandatory gate until the first Kilobyte transfer each cycle,
-then voluntarily revisitable), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
+`ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first
+cycle, until Storage's own capacity threshold is reached — never again after that, permanently
+revisitable from then on), `MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide),
 `ComputePage`/`ComputeFlopsPage` (Boosters once Foundry Compute unlocks; PP Flops Compute at 100 PP),
 `StoragePage` is not an AppNav destination — disk arrays live under Foundry as continuous Memory +
 Storage sections on the same screen (no second-level tabs).
@@ -537,11 +538,16 @@ src/
                                any time via AppNav's Foundry item (`page = 'foundry'`) to review the
                                current cycle's stats — it no longer disappears once passed.
                                Gate-exempt pages stay reachable during the gate so Guide / Boosters
-                               (once capacity reveals it) / Compute (once 100 PP) / More utilities are never yanked away; the
-                               gate picks back up the instant the player navigates to `'game'`
-                               (Factory). Since `page` is independent of `intro.mainGameUnlocked`, no
-                               syncing effect is needed at all: the gate resolving just reveals
-                               whatever `page` already was (typically `'game'`)
+                               (once capacity reveals it) / Compute (once 100 PP) / More utilities are never yanked away.
+                               `intro.mainGameUnlocked` is now PERMANENT (see `latchMainGameUnlocked`
+                               in `engine.js`, "Economy model" below) — never reset by a real Prestige
+                               or an Era ascension — so in practice `!intro.mainGameUnlocked` can only
+                               ever be true on a save's very first cycle, before it has ever latched;
+                               every cycle after that starts with the gate condition already
+                               permanently false and this check is a pure no-op forever after. Since
+                               `page` is independent of `intro.mainGameUnlocked`, no syncing effect is
+                               needed at all: the gate resolving just reveals whatever `page` already
+                               was (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless
                                passed a callback function — currently called with no argument, so it
@@ -639,16 +645,25 @@ Strict three-layer separation:
    (Byte Factory is this page), so MainPage itself carries no page-to-page open-* links. See
    docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
-   taking `{ game, focusNonce }` as props. It's the only way any Prestige cycle ever earns its first
+   taking `{ game, focusNonce }` as props. It's how a save's very first Prestige cycle earns its first
    Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
    bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during
-   the gate; Guide and More stay). Once that cycle's `intro.mainGameUnlocked` flips true (the first
-   bits ever converted into Kilobytes this cycle), it stops being a gate and becomes a permanent
-   screen the player can voluntarily reopen at any time via AppNav's Foundry item — but it stays just
-   as interactive either way, nothing here ever goes read-only. Once `intro.mainGameUnlocked`, the
-   standalone Tap button is removed entirely — the Data Stream tile becomes the tap target instead (an
-   `as="button"` swap on the same styled `FillableStatCard`, calling the identical
-   `actions.tapIntroBit`), rather than two separate controls doing the same thing. Compute lives on
+   the gate; Guide and More stay). `intro.mainGameUnlocked` flips permanently true the instant
+   Storage's own capacity threshold is crossed (`isStorageUnlocked` — see `latchMainGameUnlocked` in
+   `engine.js`, "Economy model" below) — the SAME "1 KiB" threshold that reveals pool 1's card and
+   switches the tap itself into fill-multiplier-bonus mode, so both happen simultaneously. Once
+   latched, it NEVER resets again — not on a real Prestige, not on an Era ascension — so this gate is
+   effectively a one-time-ever onboarding step: every cycle after the first starts with Factory
+   already reachable, no Byte Foundry replay. Once unlocked, ByteFoundryPage stops being a gate and
+   becomes a permanent screen the player can voluntarily reopen at any time via AppNav's Foundry item
+   — but it stays just as interactive either way, nothing here ever goes read-only. Once
+   `intro.mainGameUnlocked`, the standalone Tap button is removed entirely — the Data Stream tile
+   becomes the tap target instead (an `as="button"` swap on the same styled `FillableStatCard`,
+   calling the identical `actions.tapIntroBit`), rather than two separate controls doing the same
+   thing. What that tap actually does depends on whether Storage pools are revealed yet — see
+   "Fill-based Speed/Bandwidth multiplier" under "Economy model" below (in practice, by the time
+   `mainGameUnlocked` has ever flipped, Storage is already revealed too, so the tap is already in
+   fill-multiplier-bonus mode from that point on). Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
@@ -671,12 +686,16 @@ Strict three-layer separation:
    `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
    tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
    a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
-   own Capacity — see above), unlabelled.
+   own Capacity — see above), unlabelled. Always a real `<button>` (`actions.tapPoolBuffer(poolIndex)`,
+   `$tappable`) — tapping it boosts that one pool's own fill-based multiplier bonus (see "Fill-based
+   Speed/Bandwidth multiplier" below); it's rendered as a sibling of `PoolSummaryButton`, not nested
+   inside it, since a `<button>` can't nest inside another `<button>`.
    Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
    name — with the pool's own Bandwidth rendered beside it on the same `PoolHeaderRow` line (a
-   `StatusText`, unlabelled) rather than inside the `FillableStatCard` block below, so a pool's
-   throughput reads at a glance without expanding to the buffer detail — centered as a pair, since
-   the symbol alone already uniquely identifies the pool (`aria-label="pool
+   `StatusText`, unlabelled), so a pool's throughput reads at a glance without expanding to the
+   buffer detail; the live fill-based multiplier percent is no longer text on this line — it's the
+   `MultiplierGauge` inside the `FillableStatCard` block below instead (see "Fill-based
+   Speed/Bandwidth multiplier" below) — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
    VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
@@ -927,13 +946,17 @@ from Bits to whole Bytes once the balance reaches 8000 Bits (`formatMoneyBalance
 Prestige-threshold overlay) keeps reading in Bits, its actual priced/spent denomination.
 
 Bytes are no longer a purchasable tier — they're produced entirely by the **Byte Foundry**
-(`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save — and
-every real Prestige cycle after that — must pass through before the main game (`tier01`/Kilobytes
-onward) is reachable. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance)
-that combines into a permanent, passively-producing Byte generator. Combine creates the generator
+(`ByteFoundryPage`, see "Architecture" above), a separate tap-to-earn screen every fresh save must
+pass through once, before the main game (`tier01`/Kilobytes onward) is reachable — a ONE-TIME-EVER
+gate (see `latchMainGameUnlocked`/`intro.mainGameUnlocked` above): once Storage's own capacity
+threshold is reached, the gate is permanently gone, including across every future real Prestige and
+Era ascension. Tapping accumulates bits into the **Data Stream** (a Buffer-capped balance) that
+combines into a permanent, passively-producing Byte generator. Combine creates the generator
 without snapping Capacity; save load via `normalizePoolMemoryCapacity` preserves current Capacity
 and only clamps it when necessary, and Era ascension keeps the permanent generator (`byteCreated`)
-but resets Capacity to `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`).
+and the permanent `mainGameUnlocked` latch, but resets Capacity itself to `INTRO_STARTING_CAPACITY`
+with the rest of the Foundry (`buildEraIntroReset`) — Capacity has to be rebuilt from scratch each
+Era, but Factory access itself never goes away again once earned.
 Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
 restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
 Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
@@ -946,20 +969,86 @@ Compute Boost — so a lower-ranked action is disabled (both in the UI and in th
 reducer itself) whenever a higher one is currently available. An always-on auto-convert
 (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
 units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
-cap; the first successful conversion unlocks the main game. `ByteFoundryPage` no longer renders a
-manual transfer-block row for this at all (removed — see `docs/DESIGN_HISTORY.md`): once Storage
-Pool cards start appearing, Disk redemption (below) is the player-facing path to tier units, and
-before that, auto-convert alone carries the player through the mandatory gate with no click needed.
+cap — this funds tier01 purchases continuously, every cycle, forever, but neither function touches
+`mainGameUnlocked` any more (see `latchMainGameUnlocked` above for what does). `ByteFoundryPage` no
+longer renders a manual transfer-block row for this at all (removed — see
+`docs/DESIGN_HISTORY.md`): once Storage Pool cards start appearing, Disk redemption (below) is the
+player-facing path to tier units, and before that (on a save's very first, still-gated cycle),
+auto-convert alone carries the player through the mandatory gate with no click needed.
 `convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
 was removed.
 The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
 `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
-permanent across every real Prestige; only Data Stream balance itself, the main-game-unlock gate,
-and tier01's own purchase-block progress reset each cycle. Nothing here ever fully freezes — every
-action stays
+permanent across every real Prestige — as is the main-game-unlock gate itself once ever latched (see
+`latchMainGameUnlocked` above); only Data Stream balance itself and tier01's own purchase-block
+progress reset each cycle. Nothing here ever fully freezes — every action stays
 live indefinitely, every cycle.
+
+**Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`;
+`getFillMultiplierPercent`/`getDataStreamEffectMultiplier`/`getPoolEffectMultiplier`/
+`tickFillMultiplierDecay`/`tapPoolBuffer` in `engine.js`) — the Data Stream's displayed Speed
+(`getIntroProductionRate`) and each Storage pool's displayed Bandwidth (`getStoragePoolBandwidth`)
+never change; both are always exactly what applies at 100% of a separate fill-dependent multiplier
+that scales only the REAL per-tick amount actually delivered ("primary fill only": into `intro.bits`
+via `tickIntroProduction`, or into a pool's own local buffer via `tickPoolBufferFill` — every other
+consumer of these two rate functions, e.g. disk build time, cache fill/flush, Data Lake transfer
+pacing, idle-disk liquidation, and Compute merge/boost pacing, keeps reading the raw rate exactly as
+before). The multiplier starts at `FILL_MULTIPLIER_MAX_PERCENT` (150%) when the relevant buffer
+(the Data Stream Buffer itself, or a pool's own `getPoolBufferBits`/`getPoolBufferCapacity`) is
+empty, drops 1 percentage point per 1% filled, lands at exactly 100% at 50% full, and bottoms out at
+`FILL_MULTIPLIER_MIN_PERCENT` (50%) once completely full. Tapping the Data Stream tile (once Storage
+pools are revealed at 1 KiB — `getVisibleStoragePoolCount(state) >= 1`) or a specific pool's own
+Memory buffer tile (`tapPoolBuffer`) adds `FILL_MULTIPLIER_TAP_BONUS_PERCENT` (5) on top of that
+one Data Stream/pool's own fill-based value, decaying back down at
+`FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1) per second (`tickFillMultiplierDecay`, run once
+per tick ahead of production) — never crediting bits directly in this mode. The CUMULATIVE total
+(fill-based value + live tap bonus) is hard-capped at `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) —
+`getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` clamp their combined result there, and
+`tapIntroBit`'s post-reveal branch / `tapPoolBuffer` both additionally no-op once that cap is
+already reached (on top of their existing "buffer already full" no-op), so a bonus can't accumulate
+indefinitely past what the cap can ever apply. Below the cap, each tap's own increment is further
+clamped to the cap's remaining headroom (`Math.min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, cap -
+currentMultiplierPercent)`) rather than always adding a flat 5 points — a tap within less than one
+bonus's worth of the cap (e.g. at 198%) must not bank the unused remainder into the stored
+`dataStreamTapBonusPercent`/`poolTapBonusPercents` field, or that hidden excess would silently
+extend how long the effective (capped) total stays pinned at 200% once decay starts.
+`tickFillMultiplierDecay` goes further still, every tick, independent of decay's own
+elapsedSeconds-scaled reduction: it also truncates whatever bonus remains down to the cap's
+CURRENT headroom (relative to the base value right now), discarding any excess INSTANTLY rather
+than leaving it to decay away over time — "effect beyond 200% is always lost instantly, 200% is
+the hard cap for total effect." This matters because the base value can rise independently of the
+bonus's own decay (e.g. a tap banked bonus while the buffer was nearly full — a low base, wide
+headroom — and the buffer then drains, raising the base back up); without this second truncation, a
+bonus that's already contributing nothing beyond what the cap allows would sit as dead weight,
+resurfacing as a "real" boost the moment the base later dropped again. Before Storage pools are
+revealed, tapping the Data Stream keeps its original flat "one second's worth of bits" direct-credit
+effect (`tapIntroBit`'s pre-reveal branch) — this multiplier has no bearing pre-reveal. `intro.bits`
+is no longer always an integer as a result (see its own field comment in `createInitialGameState`).
+`ByteFoundryPage` shows the live multiplier via a compact two-tone `MultiplierGauge` (own component
+in `ByteFoundryPage/index.jsx`) — a half-circle speedometer needle-gauge, 0% at the left through
+100% straight up to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) at the right, with its own rounded
+percent readout printed beneath the dial — pinned to the top-right corner of the shared
+`FillableStatCard` tile itself (`position: relative` on `FillableStatCard`, the gauge itself
+`position: absolute` + `pointer-events: none` so it never intercepts a click meant for the tap
+button/expand-toggle it's layered on top of), rendered INSIDE that same tile for both the Data
+Stream and every pool's own Memory buffer in identical layout, replacing the earlier full-width
+linear bar plus a separate "NN% Speed"/"· NN%" text line. The fill-based portion of the arc reads
+in `theme.color.accent`; any live tap bonus on top of it extends the arc in `theme.color.warn` (the
+existing gold/caution token, the closest semantic stand-in for orange) so the two are visually
+distinguishable, same semantics the old bar used. The needle itself is a separate, neutral
+`theme.color.text` pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to the
+accent/warn split. A pool's own Memory buffer
+tile is a real tap target (a sibling of `PoolSummaryButton`, not nested inside it — two `<button>`s
+can't nest); its gauge is a child of that same Memory tile (`FillableStatCard`), not of
+`PoolSummaryButton` or `PoolCard` directly — same nesting the Data Stream's own gauge uses. Every
+tap target's own `disabled` mirrors BOTH of the underlying action's no-op conditions,
+not just the full-Buffer one — a `<button>` that stayed enabled once the multiplier hit its 200%
+cap would silently no-op on click with no feedback. The gauge keeps the exact same
+`role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract the old
+bar used, so it remains screen-reader-accessible and existing tests asserting on that contract are
+unaffected by the visual swap.
 
 **Data Stream Buffer / pool Memory Capacity** (`getMemoryUnit`/`formatBitsInNearestUnit`/
 `isMemoryCapacityAtCap`/`normalizePoolMemoryCapacity`/`getStoragePoolMemoryBounds`/
@@ -1333,7 +1422,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1634 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1683 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
@@ -1384,7 +1473,7 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   without being silently relocked), `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
   prestiging from the first-time `FullScreenOverlay`, and confirming resources reset and Prestige Points
   are awarded), and `e2e/meta-prestige.e2e.js` (seed at 1 Googol PP → Settings Era ascension → assert
-  `era.count`, Eons award, and Foundry gate reset).
+  `era.count`, Eons award, and the permanent `intro.mainGameUnlocked` latch carrying forward).
 - **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on
   the runner, adding a job/step) is real follow-up work, but it means editing `ci.yml`, which is off-limits
   to `autonomous-maintenance.yml` (see docs/AUTOMATION.md) — a human needs to do that wiring

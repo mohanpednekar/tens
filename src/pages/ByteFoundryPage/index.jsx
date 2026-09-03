@@ -3,8 +3,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -157,7 +157,10 @@ const DataStreamCard = styled(StatCard)`
 
 // Structured header + stats block, replacing the earlier single concatenated text line — matches
 // the tier row's own name/stat layout convention elsewhere in the app (see MainPage's TierName/
-// OwnedText/ProductionText) rather than staying a plain sentence.
+// OwnedText/ProductionText) rather than staying a plain sentence. Wraps just PoolHeaderRow (title +
+// Bandwidth/multiplier) — the pool's own Memory buffer block used to render inside this same
+// button too, but it's now a separate tappable control of its own (see FillableStatCard below /
+// tapPoolBuffer in game/engine), and a <button> can't nest inside another <button>.
 const PoolSummaryButton = styled.button`
   width: 100%;
   display: flex;
@@ -209,12 +212,19 @@ const PoolTitleSymbol = styled.span`
 // this it would sit flush against the left edge instead of centered under the balance text above
 // it. Deliberately a plain div, not `styled(StatCard)` — it renders inside DataStreamCard, which
 // supplies the outer border/shadow/background.
-// Once intro.mainGameUnlocked, this renders as a real <button> (via the `as` prop below) instead
-// of a plain <section> — Memory itself becomes the tap target, replacing the standalone TapArea
-// button below (which only renders pre-unlock). `$tappable` adds the same hover/active/disabled
-// affordance TapArea itself already has, scoped to this prop so the pre-unlock (non-interactive)
-// rendering keeps its plain, unclickable look.
+// Once intro.mainGameUnlocked, the Data Stream's own tile renders as a real <button> (via the `as`
+// prop below) instead of a plain <section> — Memory itself becomes the tap target, replacing the
+// standalone TapArea button below (which only renders pre-unlock). `$tappable` adds the same
+// hover/active/disabled affordance TapArea itself already has, scoped to this prop so the
+// pre-unlock (non-interactive) rendering keeps its plain, unclickable look. Each pool's own local
+// Memory buffer block reuses this SAME component with the SAME internal layout (title/rate lines
+// then the tile itself), always rendered as a real <button> (tapPoolBuffer in game/engine) —
+// tapping either boosts that specific Data Stream/pool's own fill-based multiplier bonus (see
+// FILL_MULTIPLIER_* in game/layers), it never credits bits directly. `position: relative` so the
+// corner-anchored MultiplierGauge (see below) — now rendered INSIDE this same tile for both Data
+// Stream and every pool, identically — positions against this tile's own box.
 const FillableStatCard = styled.div`
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -284,6 +294,129 @@ const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
+// Fill-based Speed/Bandwidth multiplier gauge (see FILL_MULTIPLIER_* in game/layers and
+// getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact speedometer
+// pinned to its own tile's top-right corner (see FillableStatCard's own `position: relative`
+// above), replacing the earlier full-width linear bar + separate "NN% Speed"/"· NN%" text. A half-
+// circle dial sweeping left (0%) through straight-up (100%) to right (FILL_MULTIPLIER_TAP_CAP_PERCENT,
+// 200%) — the same needle-gauge convention as a car speedometer, just halved to fit a corner badge.
+// The base (fill-based) arc reads in the ordinary accent color; when a live tap bonus pushes the
+// total past the base value, a second arc segment extends in `theme.color.warn` (the app's
+// existing gold/caution token, the closest semantic stand-in for "orange") so the two contributions
+// stay visually distinguishable, same as the bar did. The needle itself is a separate, neutral
+// `theme.color.text` pointer swept to the current TOTAL (fill + tap bonus) reading — not tied to
+// the accent/warn split, so it never mismatches whichever arc zone it happens to point into.
+// `pointer-events: none` on the wrapper keeps it purely decorative — it must never intercept a
+// click meant for the tap button/expand-toggle it's layered on top of. Keeps the exact same
+// role="progressbar"/aria-label/aria-valuenow/min/max contract the old bar used, so existing tests
+// asserting on that contract are unaffected by the visual swap.
+const GAUGE_SIZE = 52
+const GAUGE_STROKE_WIDTH = 5
+const GAUGE_CENTER = GAUGE_SIZE / 2
+const GAUGE_RADIUS = GAUGE_CENTER - GAUGE_STROKE_WIDTH
+const GAUGE_NEEDLE_RADIUS = GAUGE_RADIUS - 3
+const GAUGE_LABEL_GAP = 11
+const GAUGE_HEIGHT = GAUGE_CENTER + GAUGE_LABEL_GAP
+// -90deg = left (0%), 0deg = straight up (100%), +90deg = right (FILL_MULTIPLIER_TAP_CAP_PERCENT).
+const GAUGE_MIN_ANGLE = -90
+const GAUGE_MAX_ANGLE = 90
+
+const clampGaugeValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.max(0, value))
+
+const percentToGaugeAngle = percent =>
+  GAUGE_MIN_ANGLE + (clampGaugeValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * (GAUGE_MAX_ANGLE - GAUGE_MIN_ANGLE)
+
+const gaugePoint = (radius, angleDeg) => {
+  const angleRad = (angleDeg * Math.PI) / 180
+  return { x: GAUGE_CENTER + radius * Math.sin(angleRad), y: GAUGE_CENTER - radius * Math.cos(angleRad) }
+}
+
+// A single SVG arc segment (never more than a 180deg sweep here, so largeArcFlag is always 0).
+const gaugeArcPath = (radius, startAngle, endAngle) => {
+  if (endAngle <= startAngle) return ''
+  const start = gaugePoint(radius, startAngle)
+  const end = gaugePoint(radius, endAngle)
+  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`
+}
+
+const GaugeWrap = styled.div`
+  position: absolute;
+  top: ${props => props.theme.space.xs};
+  right: ${props => props.theme.space.xs};
+  pointer-events: none;
+  z-index: 1;
+`
+
+const GaugeTrack = styled.path`
+  fill: none;
+  stroke: ${props => props.theme.color.surfaceSunken};
+  stroke-width: ${GAUGE_STROKE_WIDTH};
+  stroke-linecap: round;
+`
+
+const GaugeBaseArc = styled.path`
+  fill: none;
+  stroke: ${props => props.theme.color.accent};
+  stroke-width: ${GAUGE_STROKE_WIDTH};
+  stroke-linecap: round;
+`
+
+const GaugeBonusArc = styled.path`
+  fill: none;
+  stroke: ${props => props.theme.color.warn};
+  stroke-width: ${GAUGE_STROKE_WIDTH};
+  stroke-linecap: round;
+`
+
+const GaugeNeedle = styled.line`
+  stroke: ${props => props.theme.color.text};
+  stroke-width: 2;
+  stroke-linecap: round;
+`
+
+const GaugeHub = styled.circle`
+  fill: ${props => props.theme.color.text};
+`
+
+const GaugeLabel = styled.text`
+  font-family: ${props => props.theme.font.body};
+  font-size: 8px;
+  font-weight: 700;
+  fill: ${props => props.theme.color.textMuted};
+  text-anchor: middle;
+`
+
+const MultiplierGauge = ({ basePercent, totalPercent, ariaLabel }) => {
+  const clampedBase = clampGaugeValue(basePercent)
+  const clampedTotal = clampGaugeValue(totalPercent)
+  const baseAngle = percentToGaugeAngle(clampedBase)
+  const totalAngle = percentToGaugeAngle(clampedTotal)
+  const needleTip = gaugePoint(GAUGE_NEEDLE_RADIUS, totalAngle)
+  const hasBonus = clampedTotal > clampedBase
+
+  return (
+    <GaugeWrap>
+      <svg
+        role="progressbar"
+        aria-label={ariaLabel}
+        aria-valuenow={Math.round(clampedTotal)}
+        aria-valuemin={0}
+        aria-valuemax={FILL_MULTIPLIER_TAP_CAP_PERCENT}
+        width={GAUGE_SIZE}
+        height={GAUGE_HEIGHT}
+        viewBox={`0 0 ${GAUGE_SIZE} ${GAUGE_HEIGHT}`}
+      >
+        <GaugeTrack d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, GAUGE_MAX_ANGLE)} />
+        {clampedBase > 0 && <GaugeBaseArc d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, baseAngle)} />}
+        {hasBonus && <GaugeBonusArc d={gaugeArcPath(GAUGE_RADIUS, baseAngle, totalAngle)} />}
+        <GaugeNeedle x1={GAUGE_CENTER} y1={GAUGE_CENTER} x2={needleTip.x} y2={needleTip.y} />
+        <GaugeHub cx={GAUGE_CENTER} cy={GAUGE_CENTER} r={2} />
+        <GaugeLabel x={GAUGE_CENTER} y={GAUGE_HEIGHT - 2}>{Math.round(clampedTotal)}%</GaugeLabel>
+      </svg>
+    </GaugeWrap>
+  )
+}
+
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
 // still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
 // here is read-only. Data Stream + per-pool Memory/Storage are continuous sections on this one
@@ -304,6 +437,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   }, [visiblePoolCount])
   const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? visiblePoolCount
   const productionRate = getIntroProductionRate(intro)
+  // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): productionRate above stays
+  // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
+  // instead (see getDataStreamEffectMultiplier in game/engine).
+  const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
+  const dataStreamBaseMultiplierPercent = getDataStreamBaseMultiplierPercent(intro)
+  // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
+  // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
+  // from a direct bit credit into a multiplier-bonus tap.
+  const dataStreamMultiplierCapped = visiblePoolCount >= 1 && dataStreamMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
@@ -401,11 +543,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
           onClick={intro.mainGameUnlocked ? actions.tapIntroBit : undefined}
-          disabled={intro.mainGameUnlocked ? isFull : undefined}
+          disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
           aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
+          title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap` : undefined}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
+          {intro.byteCreated && (
+            <MultiplierGauge
+              basePercent={dataStreamBaseMultiplierPercent}
+              totalPercent={dataStreamMultiplierPercent}
+              ariaLabel="data stream fill-based speed multiplier"
+            />
+          )}
           <SectionLabel>Data Stream</SectionLabel>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <VisuallyHidden
@@ -416,20 +566,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             aria-valuemax={intro.capacity}
           />
           {intro.byteCreated && (
-            productionRate < BITS_PER_BYTE ? (
-              <>
-                <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
-                <RateBlocksRow role="progressbar" aria-label="data stream production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
-                  {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
-                    <RateBlock key={index} $filled={index < productionRate} />
-                  ))}
-                </RateBlocksRow>
-              </>
-            ) : (
-              <StatusText>
-                +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
-              </StatusText>
-            )
+            <>
+              {productionRate < BITS_PER_BYTE ? (
+                <>
+                  <StatusText>+{formatAmount(productionRate)} bit{productionRate === 1 ? '' : 's'}/sec</StatusText>
+                  <RateBlocksRow role="progressbar" aria-label="data stream production rate" aria-valuenow={productionRate} aria-valuemin={0} aria-valuemax={BITS_PER_BYTE}>
+                    {Array.from({ length: BITS_PER_BYTE }, (_, index) => (
+                      <RateBlock key={index} $filled={index < productionRate} />
+                    ))}
+                  </RateBlocksRow>
+                </>
+              ) : (
+                <StatusText>
+                  +{formatAmount(productionRate / BITS_PER_BYTE)} Byte{productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec
+                </StatusText>
+              )}
+            </>
           )}
         </FillableStatCard>
 
@@ -528,6 +680,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolBufferBits = getPoolBufferBits(state, poolIndex)
         const poolBufferCapacity = getPoolBufferCapacity(state, poolIndex)
         const poolBufferPercent = poolBufferCapacity > 0 ? clampPercent((poolBufferBits / poolBufferCapacity) * 100) : 0
+        const poolBufferFull = poolBufferBits >= poolBufferCapacity
+        // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): poolBandwidth above
+        // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
+        // this percent instead (see getPoolEffectMultiplier in game/engine).
+        const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
+        const poolBaseMultiplierPercent = getPoolBaseMultiplierPercent(state, poolIndex)
+        // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
+        // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
+        const poolMultiplierCapped = poolMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -553,17 +714,42 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 </PoolTitle>
                 <StatusText>{formatDiskSize(poolBandwidth)}/sec</StatusText>
               </PoolHeaderRow>
-              <FillableStatCard role="group" aria-label={`pool ${poolIndex} memory`} $progress={poolBufferPercent}>
-                <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
-                <VisuallyHidden
-                  role="progressbar"
-                  aria-label={`pool ${poolIndex} memory buffer`}
-                  aria-valuenow={Math.round(poolBufferPercent)}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-              </FillableStatCard>
             </PoolSummaryButton>
+            {/* A separate control from PoolSummaryButton above (not nested inside it — two
+                buttons can't nest) so tapping Memory to boost this pool's own multiplier bonus
+                (see tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and game/layers) doesn't also
+                toggle the card's expanded state. Same FillableStatCard component/layout Data
+                Stream's own tap tile uses, gauge included — see FillableStatCard above. */}
+            <FillableStatCard
+              as="button"
+              type="button"
+              onClick={() => actions.tapPoolBuffer(poolIndex)}
+              disabled={poolBufferFull || poolMultiplierCapped}
+              aria-label={`tap pool ${poolIndex} memory`}
+              title={
+                poolBufferFull
+                  ? undefined
+                  : poolMultiplierCapped
+                    ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap`
+                    : undefined
+              }
+              $progress={poolBufferPercent}
+              $tappable
+            >
+              <MultiplierGauge
+                basePercent={poolBaseMultiplierPercent}
+                totalPercent={poolMultiplierPercent}
+                ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
+              />
+              <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
+              <VisuallyHidden
+                role="progressbar"
+                aria-label={`pool ${poolIndex} memory buffer`}
+                aria-valuenow={Math.round(poolBufferPercent)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            </FillableStatCard>
             {isActiveDiskPool && provisionDiskButton}
             {isExpanded && (
               <>
@@ -580,7 +766,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       {!intro.mainGameUnlocked && (
         <TapArea
           aria-label="tap to generate a bit"
-          disabled={isFull}
+          disabled={isFull || dataStreamMultiplierCapped}
+          title={!isFull && dataStreamMultiplierCapped ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap` : undefined}
           onClick={actions.tapIntroBit}
           type="button"
         >
