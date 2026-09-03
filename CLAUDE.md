@@ -676,9 +676,9 @@ Strict three-layer separation:
    becomes the tap target instead (an `as="button"` swap on the same styled `FillableStatCard`,
    calling the identical `actions.tapIntroBit`), rather than two separate controls doing the same
    thing. What that tap actually does depends on whether Storage pools are revealed yet — see
-   "Fill-based Speed/Bandwidth multiplier" under "Economy model" below (in practice, by the time
-   `mainGameUnlocked` has ever flipped, Storage is already revealed too, so the tap is already in
-   fill-multiplier-bonus mode from that point on). Compute lives on
+   `docs/ECONOMY_REFERENCE.md`'s "Fill-based Speed/Bandwidth multiplier" section (in practice, by the
+   time `mainGameUnlocked` has ever flipped, Storage is already revealed too, so the tap is already
+   in fill-multiplier-bonus mode from that point on). Compute lives on
    its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
    detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
@@ -710,15 +710,17 @@ Strict three-layer separation:
    tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
    a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
    own Capacity — see above), unlabelled. Always a real `<button>` (`actions.tapPoolBuffer(poolIndex)`,
-   `$tappable`) — tapping it boosts that one pool's own fill-based multiplier bonus (see "Fill-based
-   Speed/Bandwidth multiplier" below); it's rendered as a sibling of `PoolSummaryButton`, not nested
-   inside it, since a `<button>` can't nest inside another `<button>`.
+   `$tappable`) — tapping it boosts that one pool's own fill-based multiplier bonus (see
+   `docs/ECONOMY_REFERENCE.md`'s "Fill-based Speed/Bandwidth multiplier" section); it's rendered as a
+   sibling of `PoolSummaryButton`, not nested inside it, since a `<button>` can't nest inside another
+   `<button>`.
    Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
    name — with the pool's own Bandwidth rendered beside it on the same `PoolHeaderRow` line (a
    `StatusText`, unlabelled), so a pool's throughput reads at a glance without expanding to the
    buffer detail; the live fill-based multiplier percent is no longer text on this line — it's the
-   `MultiplierGauge` inside the `FillableStatCard` block below instead (see "Fill-based
-   Speed/Bandwidth multiplier" below) — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
+   `MultiplierGauge` inside the `FillableStatCard` block below instead (see
+   `docs/ECONOMY_REFERENCE.md`'s "Fill-based Speed/Bandwidth multiplier" section) — centered, since
+   the symbol alone already uniquely identifies the pool (`aria-label="pool
    `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
    the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
    VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
