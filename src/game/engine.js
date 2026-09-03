@@ -2529,19 +2529,16 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
     // fill-based percentage of it feeds this pool's own matching Data Lake instead (poolIndex ===
-    // tierIndex, one lake per pool — see getDataLakeOverflowRatePercent/fillDataLakeDisks in the
-    // "Data Lakes" section below).
-    const overflowRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
-    if (overflowRatePercent <= 0) continue
-    const overflowBits = Math.min(fillRate * overflowSeconds * (overflowRatePercent / 100), bits)
-    if (overflowBits <= 0) continue
-    const filledLake = fillDataLakeDisks(state, dataLakes, poolIndex, overflowBits)
-    if (!filledLake) continue
-    const { unconsumedBits, ...lakeUpdate } = filledLake
-    dataLakes[poolIndex] = lakeUpdate
-    // Only what fillDataLakeDisks actually placed somewhere leaves intro.bits — any portion it
-    // couldn't use (the lake maxed out mid-call) stays as ordinary Bits instead of being destroyed.
-    bits -= overflowBits - unconsumedBits
+    // tierIndex, one lake per pool — see getDataLakeOverflowRatePercent/fillDataLakeDisks/
+    // applyDataLakeOverflow in the "Data Lakes" section below). applyDataLakeOverflow re-evaluates
+    // the rate per disk rather than once for the whole interval, so a large overflow spanning
+    // multiple disk completions this same tick isn't stuck using whichever rate applied to the
+    // FIRST of them.
+    const { lake: lakeAfterOverflow, remainingBits, changed: overflowChanged } =
+      applyDataLakeOverflow(state, poolIndex, fillRate, overflowSeconds, bits)
+    if (!overflowChanged) continue
+    dataLakes[poolIndex] = lakeAfterOverflow
+    bits = remainingBits
     changed = true
   }
 
@@ -4398,6 +4395,64 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   if (openSubSize === null) fillBits = 0
 
   return { ...lake, depositedUnits, fillBits, boostersUnlocked, unconsumedBits }
+}
+
+// The most disks any single lake could ever hold (DATA_LAKE_SUB_SIZE_DISK_CAPS' own sum, 28) —
+// applyDataLakeOverflow below can never need more segments than that to run out of room, so this
+// bounds its loop and guarantees it always terminates.
+const DATA_LAKE_OVERFLOW_SEGMENT_LIMIT = DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((sum, cap) => sum + cap, 0)
+
+// Applies at most `availableSeconds`/`availableBits` worth of overflow to lake `tierIndex`,
+// re-evaluating the fill-based overflow RATE every time a disk completes, rather than computing
+// one rate up front (from whichever disk happened to be open at the START) and reusing it for
+// every disk a single tick's own overflow might go on to complete. A rate appropriate for the
+// FIRST disk otherwise silently gets applied to every later one too — either over- or under-
+// crediting the lake relative to a properly re-integrated continuous model — once a tick's
+// reserved production is large enough to span multiple disk completions (reachable at high
+// production rates, not merely theoretical; see docs/DESIGN_HISTORY.md). Each segment fills
+// (up to) one disk's own remaining gap at whatever rate applies right now, converts that into a
+// real time cost, and stops early if the interval or the available Bits run out first — bounded
+// by DATA_LAKE_OVERFLOW_SEGMENT_LIMIT so this always terminates. Returns
+// `{ lake, remainingBits, changed }` — the caller's own `bits` should be SET to `remainingBits`
+// (already accounts for fillDataLakeDisks' own unconsumedBits at every segment), not decremented
+// separately.
+const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, availableBits) => {
+  let lake = getDataLakeTier(state, tierIndex)
+  let remainingSeconds = availableSeconds
+  let remainingBits = availableBits
+  let changed = false
+
+  for (
+    let segment = 0;
+    segment < DATA_LAKE_OVERFLOW_SEGMENT_LIMIT && remainingSeconds > 0 && remainingBits > 0;
+    segment += 1
+  ) {
+    const viewState = { ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes, [tierIndex]: lake } } }
+    const ratePercent = getDataLakeOverflowRatePercent(viewState, tierIndex)
+    if (ratePercent <= 0) break // maxed — nothing left to fill
+    const openSubSize = getDataLakeCurrentFillSubSize(viewState, tierIndex)
+    if (openSubSize === null) break
+    const slotSizeBits = getDataLakeUnitBits(tierIndex) * openSubSize
+    const neededBits = Math.max(0, slotSizeBits - (lake.fillBits ?? 0))
+    const rate = ratePercent / 100
+    // Real time this rate needs to deliver the rest of the current disk — this segment stops
+    // either once that disk completes, or once the interval/available Bits run out, whichever
+    // comes first (ratePercent > 0 here, so fillRate * rate is always positive — no division risk).
+    const neededSeconds = neededBits / (fillRate * rate)
+    const segmentSeconds = Math.min(remainingSeconds, neededSeconds)
+    const segmentBits = Math.min(fillRate * segmentSeconds * rate, remainingBits)
+    if (segmentBits <= 0) break
+    const filled = fillDataLakeDisks(viewState, { [tierIndex]: lake }, tierIndex, segmentBits)
+    if (!filled) break
+    const { unconsumedBits, ...lakeUpdate } = filled
+    lake = lakeUpdate
+    remainingBits -= segmentBits - unconsumedBits
+    remainingSeconds -= segmentSeconds
+    changed = true
+    if (unconsumedBits > 0) break // maxed out mid-segment — nothing more this call can do
+  }
+
+  return { lake, remainingBits, changed }
 }
 
 // Display-only: the real amount (in bits) upgrading will actually drain right now — whatever this

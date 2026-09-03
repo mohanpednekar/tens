@@ -240,7 +240,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      to 64 B/s, then diverges (125 instead of 128, repeating every decade — e.g. a raw
      256 B/s rate reads as a clean 250 B/s). `sqrt(that pool's own Capacity in Bytes)` is only a
      GUIDELINE for the bandwidth's lower/upper bounds, not the formula itself — a small early pool's
-     Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Booster transfer
+     Bandwidth (and every rate derived from it: disk/cache fill and build speeds, Data Lake overflow
      pacing) could otherwise run far ahead of what its own tiny Memory window could plausibly move
      through — so `getStoragePoolBandwidth` computes `min(rawRate, sqrt(Capacity))` in raw terms
      FIRST, then applies the SI-clean transform once to that bounded value; the sqrt bound still acts
@@ -267,7 +267,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    100% of a separate fill-dependent multiplier. That multiplier scales ONLY the real per-tick
    amount actually delivered — "primary fill only": into `intro.bits` via `tickIntroProduction`, or
    into a pool's own local buffer via `tickPoolBufferFill` (point 8 below). Every other consumer of
-   these two rate functions — disk build time, cache fill/flush, Data Lake transfer pacing,
+   these two rate functions — disk build time, cache fill/flush, Data Lake overflow pacing,
    idle-disk liquidation, and Compute merge/boost pacing — keeps reading the raw, un-multiplied
    rate exactly as before this mechanic existed.
    - `getFillMultiplierPercent(fillFraction)` = `FILL_MULTIPLIER_MAX_PERCENT` (150) minus
@@ -684,7 +684,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `docs/DESIGN_HISTORY.md`) by the current mechanic: each Data Lake is now fed directly and
    continuously by its own matching Storage pool's OVERFLOW (production beyond that pool's Memory
    buffer once the buffer is completely full), entirely decoupled from Storage Disks, and
-   `buyBooster(tierIndex)` spends a lake's own banked units instantly — no live transfer, no
+   `buyBooster(tierIndex)` spends a lake's own banked units instantly — no transfer, no
    waiting.
 
    **Overflow fill** (`tickPoolBufferFill`'s own overflow branch, `fillDataLakeDisks`/
@@ -803,7 +803,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    part of the forced priority order at all; it's always available the instant it's affordable
    (`isBoosterPurchaseAvailable` — `isDataLakeBoosterUnlocked` AND `depositedUnits >=
    getBoosterPurchaseCost`). The nth Booster ever bought at a tier costs n units
-   (`getBoosterPurchaseCost` — simply `purchased + 1` now that there's no live transfer queue to
+   (`getBoosterPurchaseCost` — simply `purchased + 1`, with no transfer queue to
    count alongside it). Buying spends the cost off `depositedUnits`, resets `fillBits` to 0 (the
    disk that was mid-fill before the spend may no longer be the lake's own open slot afterward, so
    any in-progress fill is discarded rather than carried forward inconsistently), increments
@@ -842,7 +842,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `INTRO_CAPACITY_CAP_BITS`; historically one Sacrifice doubling short of that hard cap —
    `isComputeCoreConversionUnlocked`). Capacity grows through full-Buffer Capacity ×2 doublings,
    so Boosters unlock when the corresponding capacity threshold is reached. Every
-   successful tier-1 Booster (instant or completed transfer) also increments
+   successful tier-1 Booster also increments
    `intro.computeCoresEverEarned`, a lifetime
    counter tracked alongside `computeCores` but never decremented by spending
    (`activateComputeBoost`) or merging (`mergeComputeCoresIntoNode`/`startComputeCoresMerge` and the
@@ -2342,7 +2342,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // time by activateComputeBoost below
     computeCoresEverEarned: 0,                            // PERMANENT, UNCAPPED lifetime counter — incremented
                                                           // alongside computeCores by every successful tier-1
-                                                          // Booster (instant or completed transfer), but never
+                                                          // Booster (always instant), but never
                                                           // decremented by spending/merging.
                                                           // computeMergePageUnlocked below gates on this, not the
                                                           // live computeCores balance

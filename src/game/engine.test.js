@@ -9455,10 +9455,13 @@ describe('Data Lakes', () => {
       // (never reach) the remaining gap.
       const after = tickPoolBufferFill(1)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
-      // The floored 400-bit overflow overshoots the 0.08-bit gap by 399.92 bits, which carries
-      // forward as the NEXT disk's own opening progress (capacityLevel 1 still has 9 more ×1 slots
-      // open) rather than being discarded.
-      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(400 - tinyRemainingGap)
+      // The remaining ~0.9998s of this tick (after the ~0.0002s needed to close the 0.08-bit gap)
+      // goes toward the NEXT disk (capacityLevel 1 still has 9 more ×1 slots open) at THAT disk's
+      // own fresh MAX_PERCENT rate (50%, since it just opened empty) — not the stale floored 5%
+      // rate the first disk was completing at. 8,000 bits/sec x ~0.9998s x 50% ≈ 3999.2 bits —
+      // correctly re-evaluating the rate per disk rather than reusing one rate across a tick that
+      // spans more than one disk completion (see docs/DESIGN_HISTORY.md).
+      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(3999.2, 1)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
     })
   })

@@ -1261,7 +1261,19 @@ e.g. offline-progress catch-up) `elapsedSeconds` interval both tops off a buffer
 has reserved production beyond that, the portion of the interval left over after the buffer fills
 still gets the overflow treatment this same call — tracked as a plain `elapsedSeconds` fraction
 (`overflowSeconds`), converted back out of the buffer-fill's own multiplier-scaled amount so it
-lines up with the overflow formula's own (deliberately unmultiplied, see below) basis. That percentage is itself fill-based on progress of the ONE disk
+lines up with the overflow formula's own (deliberately unmultiplied, see below) basis. `overflowSeconds`
+is handed to `applyDataLakeOverflow` (not applied as one flat-rate computation over the whole
+interval), which walks it in bounded segments — at most `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT` (the sum
+of `DATA_LAKE_SUB_SIZE_DISK_CAPS`, i.e. every disk slot a lake could ever hold at its current level) —
+because a single large `overflowSeconds` (again, offline-progress catch-up is the case that actually
+reaches this) can span MORE than one disk completion, and each disk has its OWN fill-based overflow
+rate (below): reusing the first disk's rate for the rest of the interval is wrong once that disk
+completes and a fresh one opens at a different rate. Each segment re-evaluates
+`getDataLakeOverflowRatePercent` against the lake's state as of that segment's start, computes how
+much of the remaining `overflowSeconds`/bits is needed to either close out the currently-open disk or
+exhaust the interval (whichever comes first), applies `fillDataLakeDisks` for just that slice, then
+loops — so a tick spanning several disk completions correctly charges each one at its own rate rather
+than smearing one stale rate across all of them (see `docs/DESIGN_HISTORY.md`). That percentage is itself fill-based on progress of the ONE disk
 CURRENTLY being filled in that lake — NOT the lake's overall total
 (`getDataLakeCurrentDiskFillFraction`, mirroring the FILL_MULTIPLIER_* mechanic's own shape):
 `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when that current disk is empty, linearly tapering down
@@ -1278,11 +1290,13 @@ Speed/Bandwidth multiplier" above), not compounded. The resulting overflow bits 
 breakdown" below), tracking raw-bit progress toward the current open slot in `lake.fillBits` — the
 same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above and the
 pool gauge's own bottom-half progress arc (see "Fill-based Speed/Bandwidth multiplier" above).
-`fillDataLakeDisks` also returns `unconsumedBits` — whatever portion of the overflow it couldn't
-place anywhere (only nonzero when the lake becomes fully maxed partway through the same call, e.g.
-a huge single-tick overflow against a small/fresh lake) — and its caller subtracts only
-`overflowBits - unconsumedBits` from `intro.bits`, never the full `overflowBits` unconditionally,
-so an unconsumed excess stays as ordinary spendable Bits rather than being destroyed outright. The
+`fillDataLakeDisks` also returns `unconsumedBits` per segment — whatever portion of that segment's
+bits it couldn't place anywhere (only nonzero when the lake becomes fully maxed partway through the
+segment) — which `applyDataLakeOverflow` folds back into its own returned `remainingBits` and also
+uses to stop iterating early (a maxed lake has nothing left to fill). `tickPoolBufferFill` credits
+that `remainingBits` back to `intro.bits` rather than assuming every offered bit was consumed, so an
+unconsumed excess (e.g. a huge single-tick overflow against a small/fresh lake) stays as ordinary
+spendable Bits rather than being destroyed outright. The
 very FIRST disk any lake ever completes (always ×1) permanently latches `boostersUnlocked` true — a
 lake's Buy button (below) only ever shows once that's happened, even though `depositedUnits` itself
 can later drop back down as Boosters get bought.

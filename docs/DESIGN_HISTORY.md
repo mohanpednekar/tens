@@ -5261,3 +5261,49 @@ Prestige sentence (the actual current fields are `depositedUnits`/`fillBits`/`pu
 `boostersUnlocked`/`autoBuyEnabled`/`capacityLevel`) — both corrected in the same commit. `yarn
 test`: 1690/1690 green (one existing assertion corrected, no net new test count change). `yarn
 build` succeeds.
+
+### An eighth finding: a tick spanning more than one lake-disk completion reused the first disk's stale overflow rate for the rest
+
+The same Devin review pass (against `7022e1b`) also flagged that `tickPoolBufferFill`'s overflow
+branch computed a single `overflowBits = fillRate * overflowSeconds * (ratePercent / 100)` for the
+WHOLE `overflowSeconds` interval, using `getDataLakeOverflowRatePercent` evaluated once, at the
+START of that interval. `getDataLakeOverflowRatePercent` tapers per-disk (50% while a disk is empty,
+down toward the completion floor as it nears full, then straight back up to 50% the instant it
+completes and the next disk opens — see Finding 1/7 above) — so a rate captured before the interval
+began is only valid until whichever comes first: the interval ends, or the currently-open disk
+completes. A single `overflowSeconds` large enough to complete MORE than one disk (the same
+`applyOfflineProgress`-catch-up scenario Finding 5 above was about — offline time is replayed as many
+1-second `tickGame` calls, not one giant tick, but even a single second can still span multiple lake
+disk completions once production is fast enough) kept applying the FIRST disk's rate to every disk it
+went on to complete in that same call, even though each of those later disks actually opened empty
+(entitled to the fresh 50% MAX rate, not whatever stale, possibly-near-floor rate the first disk was
+finishing at). This under- or over-credits lake progress for that tick depending on whether the stale
+rate happened to be above or below what the later disk(s) should have gotten — silent pacing drift,
+not a currency bug (no bits are created or destroyed; `fillDataLakeDisks`'s own accounting stays
+sound). **Fix:** replaced the single flat-rate computation with `applyDataLakeOverflow`, which walks
+`overflowSeconds` in bounded segments — capped at `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT`
+(`DATA_LAKE_SUB_SIZE_DISK_CAPS` summed, i.e. the most disk slots a lake could ever hold at its current
+level, so the loop is provably bounded rather than open-ended) — re-evaluating
+`getDataLakeOverflowRatePercent` at the START of each segment against a synthetic view of the lake's
+state as of that point (`{ ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes,
+[tierIndex]: lake } } }`, since the real `state` passed in is still the tick's ORIGINAL, pre-mutation
+snapshot). Each segment computes how many seconds/bits are needed to close out the currently-open
+disk, takes the smaller of that and what's left of the interval, applies `fillDataLakeDisks` for just
+that slice, and loops — so a disk that completes partway through `overflowSeconds` correctly hands
+the remaining time to the NEXT disk at ITS OWN fresh rate, rather than smearing one rate across a
+multi-disk span. Terminates early once a segment produces no rate (`ratePercent <= 0`), no open slot
+(`getDataLakeCurrentFillSubSize` returns `null`, i.e. now maxed), no bits (`segmentBits <= 0`), or
+the lake maxes out mid-segment (`unconsumedBits > 0`, mirroring Finding 6's own overshoot-preservation
+contract — folded into the helper's own `remainingBits` return rather than re-litigated at the call
+site). **Verification.** Hand-derived the expected result for the regression test that already
+exercised a near-complete-disk scenario (Finding 1's own "floors the overflow rate…" test, whose
+`elapsedSeconds` was large enough that, once close, its now-100%-elapsed tick also opens and starts
+filling a SECOND disk): segment 1 closes the ~0.08-bit gap on the first (near-full, low-rate) disk
+in a tiny fraction of a second; segment 2 then correctly applies the fresh `DATA_LAKE_OVERFLOW_MAX_PERCENT`
+(50%) rate — since the newly-opened second disk starts empty — to the remaining ~0.9998s of the tick,
+yielding `fillBits ≈ 8,000 bits/sec × 0.9998s × 0.5 ≈ 3999.2` on the second disk, versus the
+old (buggy) flat-rate calculation's `≈399.92` (which wrongly kept applying the first disk's ~5%
+floor rate to that same remaining time). The test's assertion was updated to the correct,
+segment-derived value. No other test in the `Data Lakes` describe block changed behavior. `yarn
+test`: 1690/1690 green (one existing assertion corrected to the newly-correct value, no net new test
+count change). `yarn build` succeeds.
