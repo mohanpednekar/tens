@@ -21,6 +21,7 @@ import {
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
+  isDataLakePoolReady,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -91,6 +92,7 @@ const LakeSquare = styled.div`
   position: relative;
   flex: 1 1 1.2rem;
   min-width: 0;
+  max-width: 2.5rem;
   aspect-ratio: 1;
   display: inline-flex;
   align-items: center;
@@ -120,6 +122,42 @@ const LakeSquareLabel = styled.span`
   font-size: 0.6rem;
   font-weight: 600;
   color: ${props => props.theme.color.textMuted};
+  font-variant-numeric: tabular-nums;
+`
+
+// A dedicated fillable tile — same visual language as the per-square LakeSquareFill overlay above,
+// just surfaced as its own explicit element inside the Data Lake section rather than only as a
+// sliver on one small square. Purely additive: shows the exact SAME data
+// (getDataLakeCurrentDiskFillFraction/getDataLakeFillBits) the square overlay already reads, no
+// change to how filling actually works. Represents progress toward the smallest currently-unfilled
+// disk in the lake — the instant it reaches full, that disk completes (see fillDataLakeDisks).
+const LakePoolTile = styled.div`
+  position: relative;
+  width: 100%;
+  min-height: 1.8rem;
+  border-radius: ${props => props.theme.radius.md};
+  overflow: hidden;
+  background: ${props => props.theme.color.surfaceSunken};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`
+
+const LakePoolFill = styled.div`
+  position: absolute;
+  inset: 0;
+  background: ${props => props.theme.color.accent};
+  opacity: 0.35;
+  transform-origin: left center;
+  transform: scaleX(${props => props.$fill});
+`
+
+const LakePoolLabel = styled.span`
+  position: relative;
+  font-family: ${props => props.theme.font.display};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 600;
+  color: ${props => props.theme.color.text};
   font-variant-numeric: tabular-nums;
 `
 
@@ -206,14 +244,21 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const currentFillSubSize = getDataLakeCurrentFillSubSize(state, tierIndex)
         const fillBits = getDataLakeFillBits(state, tierIndex)
 
-        // Mutually exclusive by construction (see isDataLakeCapacityDoublingAvailable in
-        // engine.js): a lake can never simultaneously afford its next Booster AND need a capacity
-        // upgrade, so the same button slot repurposes between the two modes rather than showing
-        // both.
+        // No longer mutually exclusive by construction (see isDataLakeCapacityDoublingAvailable in
+        // engine.js, tied to real Storage array completion now, not the lake's own escalating
+        // Booster cost) — a lake CAN simultaneously afford its next Booster and have its next array
+        // already complete. The same button slot still repurposes between the two, preferring
+        // Upgrade when both are true (see the ternary below).
         const upgradeAvailable = isDataLakeCapacityDoublingAvailable(state, tierIndex)
         const canUpgrade = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
         const unlocked = isDataLakeBoosterUnlocked(state, tierIndex)
+        // Distinct from `unlocked` above for old-save compatibility: a legacy `boostersUnlocked`
+        // latch can make `unlocked` true while this pool has never built a real disk, in which case
+        // Boosters correctly stay purchasable but the lake's own pool-fill tile (below) must NOT
+        // claim to be actively filling, since tickPoolBufferFill's overflow branch is gated on this
+        // alone.
+        const poolReady = isDataLakePoolReady(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         const autoBuyEnabled = isDataLakeAutoBuyEnabled(state, tierIndex)
 
@@ -227,10 +272,53 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               <StatusText>{formatAmount(purchased)}× {boosterLabel}</StatusText>
             </LakeHeaderRow>
 
+            {currentFillSubSize !== null && (() => {
+              // Always visible, even before this lake is unlocked (isDataLakePoolReady) — showing a
+              // static "0 / size" the whole time it's waiting, rather than the tile only appearing
+              // out of nowhere once real progress starts. Silently absent feedback before that point
+              // read as "no idea what it did in between" once the tile DID eventually show up already
+              // mid-fill.
+              //
+              // Deliberately keyed off `poolReady` (isDataLakePoolReady), NOT `unlocked`
+              // (isDataLakeBoosterUnlocked) — the two diverge for an old save whose legacy
+              // `boostersUnlocked` flag is already true but whose matching Storage pool has never
+              // built a real disk: `unlocked` reads true there (Boosters correctly stay purchasable,
+              // for save compatibility), but tickPoolBufferFill's overflow branch is gated on
+              // `isDataLakePoolReady` alone, so this tile would NEVER actually fill — showing real
+              // (frozen) fillBits/size progress under `unlocked` would misrepresent a permanently
+              // stalled tile as actively filling (found by Devin Review on this same PR).
+              const openSlotSizeBits = unitBits * currentFillSubSize
+              const openSlotFraction = poolReady && openSlotSizeBits > 0 ? clampFraction(fillBits / openSlotSizeBits) : 0
+              const openSlotSizeLabel = formatDiskSize(openSlotSizeBits)
+              return (
+                <LakePoolTile
+                  role="progressbar"
+                  aria-label={`${label} lake pool — fills the next ${openSlotSizeLabel} disk`}
+                  aria-valuenow={Math.round(openSlotFraction * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  title={
+                    poolReady
+                      ? `${label} Lake pool — fills toward the next ${openSlotSizeLabel} disk; completing it deposits instantly`
+                      : `${label} Lake pool — waiting on a ${formatDiskSize(unitBits)} disk to be built in Storage before this can start filling`
+                  }
+                >
+                  <LakePoolFill $fill={openSlotFraction} />
+                  <LakePoolLabel>{poolReady ? `${formatDiskSize(fillBits)} / ${openSlotSizeLabel}` : `Locked · 0 / ${openSlotSizeLabel}`}</LakePoolLabel>
+                </LakePoolTile>
+              )
+            })()}
+
             {DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
               const full = diskCounts[subSize] ?? 0
               const totalSlots = slotCounts[subSize]
-              const isFillingThisSize = currentFillSubSize === subSize
+              // Gated on poolReady for the same reason LakePoolTile above is (see its own
+              // comment): a legacy save's residual fillBits banked before this pool's
+              // isDataLakePoolReady gate existed would otherwise render this square as actively
+              // "filling" — a live-looking overlay and aria-label on a slot the engine can no
+              // longer advance (found by the adversarial reviewer as a follow-up to Devin's
+              // original LakePoolTile finding on the same PR).
+              const isFillingThisSize = poolReady && currentFillSubSize === subSize
               const slotSizeBits = unitBits * subSize
               const fillFraction = isFillingThisSize && slotSizeBits > 0 ? clampFraction(fillBits / slotSizeBits) : 0
               const sizeLabel = formatDiskSize(slotSizeBits)
@@ -268,12 +356,21 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
             />
 
             <LakeActionsRow>
-              {upgradeAvailable ? (
+              {/* upgradeAvailable alone isn't enough to claim this slot: no longer mutually
+                  exclusive with Buy by construction (see isDataLakeCapacityDoublingAvailable's own
+                  comment) — Upgrade can sit available-but-not-its-turn (canUpgrade false, blocked
+                  by the forced priority chain) at the same time Buy is genuinely actionable right
+                  now (Buy isn't part of that chain at all). Showing a dead disabled Upgrade button
+                  in that window while hiding an immediately-clickable Buy left a player with no
+                  action to take even though one existed (found by the adversarial reviewer).
+                  Upgrade only claims the slot when it's actually clickable OR Buy isn't an option
+                  either — otherwise Buy takes it. */}
+              {upgradeAvailable && (canUpgrade || !canBuy) ? (
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
                   disabled={!canUpgrade}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity to ${formatDiskSize(nextCapacity * unitBits)} — the next Booster's own cost (${nextCostSize}) already exceeds what this lake's current ${capacitySize} capacity could ever fund`}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSize(nextCapacity * unitBits)} — unlocked by completing that array in Storage`}
                   type="button"
                   variant={canUpgrade ? 'prestige' : 'neutral'}
                 >
@@ -291,7 +388,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
                 </ActionButton>
               ) : (
-                <StatusText title={`First fill a ${formatDiskSize(unitBits)} disk to unlock Boosters here`}>
+                <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
                   {`🎯 ${nextCostSize}`}
                 </StatusText>
               )}

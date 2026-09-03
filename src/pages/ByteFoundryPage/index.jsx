@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeCurrentDiskFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeCurrentDiskFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { useTheme } from 'styled-components'
@@ -105,6 +105,30 @@ const MilestonesRow = styled.div`
   }
 `
 
+// Groups the Provision Disk button with its small "queue next build" toggle so the toggle sits
+// beside it rather than stacking full-width like every other ActionsRow child — the toggle is a
+// secondary aid, not a peer action.
+const ProvisionDiskRow = styled.div`
+  align-items: stretch;
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+
+  > button:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
+// Small secondary control, visually subordinate to the Provision Disk button it sits beside — same
+// "plain icon toggle rather than a costed action button" shape MainPage's own autobuyer
+// PauseToggleButton uses (see #171).
+const QueueToggleButton = styled(Button)`
+  font-size: 0.75em;
+  min-width: 0;
+  padding: 0.3em 0.6em;
+`
+
 // Speed ×2's two-line content: the symbol/label/multiplier on top, its cost — what it actually
 // spends — on its own line below, in smaller/muted text, rather than crammed
 // inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
@@ -132,7 +156,7 @@ const MilestoneCostLine = styled.span`
 // derived Bandwidth/Capacity card with its three disk-array rows below it.
 const PoolCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.md};
+  gap: ${props => props.theme.space.sm};
 `
 
 const DataStreamCard = styled(StatCard)`
@@ -158,7 +182,10 @@ const PoolSummaryButton = styled.button`
   font: inherit;
   text-align: left;
   cursor: pointer;
-  padding: ${props => props.theme.space.sm};
+  // Less on the bottom than the other three sides — PoolCard's own gap already separates this
+  // button from the Memory buffer tile right below it, so full padding on all four sides doubled
+  // up into a visibly larger gap than the rest of the card's own rhythm.
+  padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm} 0.15rem;
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
@@ -512,6 +539,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       ? 100
       : clampPercent((diskPoolBufferBits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
+  // "Queue next build" (see queueDiskBuild/tickQueuedDiskBuild in engine.js) — arms an auto-fire
+  // for the NEXT Provision Disk the moment its own pool buffer can afford it and nothing outranks
+  // it, so the player doesn't have to click at that exact instant. Nothing to arm once a build is
+  // already in flight (it has its own countdown) or the ladder has nothing left to ever build.
+  const diskBuildQueued = Boolean(intro.diskBuildQueued)
+  // Canceling an already-armed queue should never be blocked — only ARMING it needs the build-in-
+  // progress/ladder-exhausted guard (matching queueDiskBuild's own no-op conditions in engine.js).
+  const diskBuildQueueDisabled = !diskBuildQueued && (!!diskBuildInProgress || diskLadderExhausted)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
 
@@ -528,40 +563,61 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
   // disk-build-driven, independent of capacity — has already moved past it).
   const provisionDiskButton = (
-    <Button
-      aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-      disabled={!canStartDiskBuild || !!diskBuildInProgress}
-      onClick={actions.provisionDisk}
-      title={
-        diskBuildInProgress
-          ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-          : diskLadderExhausted
-            ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-            : diskBuildBlockedByPriority
-              ? 'Take Speed (or redeem a full Disk) first'
-              : diskRedeemTierName
-                ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
-      }
-      type="button"
-      variant={canStartDiskBuild ? 'info' : 'neutral'}
-      $progress={diskBuildProgress}
-    >
-      <ButtonContent>
-        {diskBuildInProgress
-          ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-          : diskLadderExhausted
-            ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
-            : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-      </ButtonContent>
-      <VisuallyHidden
-        role="progressbar"
-        aria-label="byte foundry disk build progress"
-        aria-valuenow={Math.round(diskBuildProgress)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      />
-    </Button>
+    <ProvisionDiskRow>
+      <Button
+        aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
+        disabled={!canStartDiskBuild || !!diskBuildInProgress}
+        onClick={actions.provisionDisk}
+        title={
+          diskBuildInProgress
+            ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
+            : diskLadderExhausted
+              ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+              : diskBuildBlockedByPriority
+                ? 'Take Speed (or redeem a full Disk) first'
+                : diskRedeemTierName
+                  ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                  : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+        }
+        type="button"
+        variant={canStartDiskBuild ? 'info' : 'neutral'}
+        $progress={diskBuildProgress}
+      >
+        <ButtonContent>
+          {diskBuildInProgress
+            ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+            : diskLadderExhausted
+              ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
+              : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+        </ButtonContent>
+        <VisuallyHidden
+          role="progressbar"
+          aria-label="byte foundry disk build progress"
+          aria-valuenow={Math.round(diskBuildProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        />
+      </Button>
+      <QueueToggleButton
+        aria-pressed={diskBuildQueued}
+        aria-label={diskBuildQueued ? 'cancel queued disk build' : 'queue next disk build'}
+        disabled={diskBuildQueueDisabled}
+        onClick={() => (diskBuildQueued ? actions.clearDiskBuildQueue() : actions.queueDiskBuild())}
+        title={
+          diskLadderExhausted
+            ? 'Nothing left to queue — every active pool is already fully built'
+            : diskBuildInProgress
+              ? 'Already building — nothing to queue until it finishes'
+              : diskBuildQueued
+                ? `Queued — will auto-provision the next ${formatDiskSize(diskSize)} disk the moment it's affordable. Click to cancel.`
+                : `Auto-provision the next ${formatDiskSize(diskSize)} disk the moment its buffer can afford it, without clicking Provision Disk yourself`
+        }
+        type="button"
+        variant={diskBuildQueued ? 'prestige' : 'ghost'}
+      >
+        {diskBuildQueued ? '✕' : '📌'}
+      </QueueToggleButton>
+    </ProvisionDiskRow>
   )
 
   return (
@@ -711,8 +767,23 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // tierIndex, one lake per pool), not the lake's overall total — feeds both the gauge's
         // `mode="lake"` reading above (once poolBufferFull) and the standalone lake bar below.
         const lakeFillFraction = getDataLakeCurrentDiskFillFraction(state, poolIndex)
-        const lakeFillPercent = clampPercent(lakeFillFraction * 100)
         const lakeRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
+        // Same isDataLakePoolReady this pool's own DataLakePanel/LakePoolTile already keys its
+        // "Locked" placeholder on (see components/DataLakePanel) — required here too, not just
+        // poolBufferFull: tickPoolBufferFill's overflow branch (engine.js) won't credit this lake
+        // at all until a real Storage disk has been built for it, so a pool whose buffer fills
+        // before that (the common, non-legacy case — pool 1 in particular, visible from the very
+        // start) would otherwise switch the gauge to "lake" mode and show a constant nonzero
+        // "incoming rate" that can never actually turn into real progress — the exact
+        // stalled-tile-shown-as-active misrepresentation Devin Review flagged for LakePoolTile,
+        // just on this page's own gauge/bar instead.
+        const poolReady = isDataLakePoolReady(state, poolIndex)
+        const showLakeMode = poolBufferFull && poolReady
+        // Same reasoning as above — a legacy save's own residual fillBits (banked before this
+        // pool's isDataLakePoolReady gate existed) would otherwise read as live progress on a
+        // lake the engine can no longer advance; the standalone lake bar below reads 0 until ready,
+        // matching LakePoolTile's own "Locked" convention rather than showing stale banked state.
+        const lakeFillPercent = poolReady ? clampPercent(lakeFillFraction * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -737,14 +808,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <span>Pool</span>
                 </SectionTitle>
                 <MultiplierGauge
-                  basePercent={poolBufferFull ? 0 : poolBaseMultiplierPercent}
-                  totalPercent={poolBufferFull ? lakeRatePercent : poolMultiplierPercent}
+                  basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
+                  totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
                   ariaLabel={
-                    poolBufferFull
+                    showLakeMode
                       ? `pool ${poolIndex} data lake overflow rate`
                       : `pool ${poolIndex} fill-based bandwidth multiplier`
                   }
-                  mode={poolBufferFull ? 'lake' : 'multiplier'}
+                  mode={showLakeMode ? 'lake' : 'multiplier'}
                 />
                 <SectionRateText>{formatDiskSize(poolBandwidth)}/sec</SectionRateText>
               </SectionHeaderRow>

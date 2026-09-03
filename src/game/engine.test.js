@@ -57,6 +57,9 @@ import {
   tickIntroProduction,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
+  queueDiskBuild,
+  clearDiskBuildQueue,
+  tickQueuedDiskBuild,
   isBitFundedBandwidthAvailable,
   isComputeFundedBandwidthAvailable,
   rollbackComputeFundedBandwidth,
@@ -258,6 +261,7 @@ import {
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
   isDataLakeBoosterUnlocked,
+  isDataLakePoolReady,
   isDataLakeAutoBuyEnabled,
   isBoosterPurchaseAvailable,
   buyBooster,
@@ -1354,6 +1358,8 @@ describe('pool buffers', () => {
       // Bytes (80,000 bits), deliberately below the seeded bits balance.
       capacity: 8 * 2 ** 16,
       productionMultiplier: 999_999,
+      // The lake only accepts overflow once its own pool has built a real disk (isDataLakePoolReady).
+      disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 1 },
     })
     const after = tickPoolBufferFill(1e6)(state) // ample elapsed time — room, not rate, binds
     const bufferCapacity = getPoolBufferCapacity(state, 1)
@@ -1419,6 +1425,102 @@ describe('pool buffers', () => {
     expect(isProvisionDiskAvailable(state)).toBe(true)
     const after = provisionDisk(state)
     expect(after.intro.diskBuild).not.toBeNull()
+  })
+})
+
+describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
+  it('queueDiskBuild arms diskBuildQueued', () => {
+    const state = createInitialGameState()
+    const queued = queueDiskBuild(state)
+    expect(queued).not.toBe(state)
+    expect(queued.intro.diskBuildQueued).toBe(true)
+  })
+
+  it('queueDiskBuild is a same-reference no-op while a build is already in progress', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 5, totalSeconds: 10 },
+    })
+    expect(queueDiskBuild(state)).toBe(state)
+  })
+
+  it('queueDiskBuild is a same-reference no-op once already queued', () => {
+    const state = withIntro(createInitialGameState(), { diskBuildQueued: true })
+    expect(queueDiskBuild(state)).toBe(state)
+  })
+
+  it('queueDiskBuild is a same-reference no-op once the disk ladder is exhausted for active pools', () => {
+    const disksBuiltTotal = {}
+    for (let step = 1; step <= DATA_LAKE_TIER_COUNT * 3; step += 1) {
+      disksBuiltTotal[getDiskLadderSizeBits(step)] = DISK_ARRAY_LADDER_CAP
+    }
+    const state = withIntro(createInitialGameState(), { disksBuiltTotal })
+    expect(isDiskLadderExhaustedForActivePools(state)).toBe(true)
+    expect(queueDiskBuild(state)).toBe(state)
+  })
+
+  it('clearDiskBuildQueue disarms it, and is a same-reference no-op once already clear', () => {
+    const queued = withIntro(createInitialGameState(), { diskBuildQueued: true })
+    const cleared = clearDiskBuildQueue(queued)
+    expect(cleared.intro.diskBuildQueued).toBe(false)
+    expect(clearDiskBuildQueue(cleared)).toBe(cleared)
+  })
+
+  it('tickQueuedDiskBuild is a same-reference no-op while nothing is queued', () => {
+    const state = createInitialGameState()
+    expect(tickQueuedDiskBuild(state)).toBe(state)
+  })
+
+  it('tickQueuedDiskBuild waits (same-reference no-op) while the pool buffer still can\'t afford the build', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: 0 },
+    })
+    expect(tickQueuedDiskBuild(state)).toBe(state)
+  })
+
+  it('tickQueuedDiskBuild fires the build and clears the queue once the pool buffer can afford it', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: getDiskCost(FIRST_DISK_SIZE) },
+    })
+    const after = tickQueuedDiskBuild(state)
+    expect(after.intro.diskBuildQueued).toBe(false)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: expect.any(Number), totalSeconds: expect.any(Number) })
+  })
+
+  it('a manual provisionDisk click also clears a stale queue, not just a queued fire', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: getDiskCost(FIRST_DISK_SIZE) },
+    })
+    const after = provisionDisk(state)
+    expect(after.intro.diskBuildQueued).toBe(false)
+    expect(after.intro.diskBuild).not.toBeNull()
+  })
+
+  it('a queued build takes its turn inside tickGame once the forced priority chain clears', () => {
+    let state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      bits: 0,
+      capacity: 4_000_000,
+      productionMultiplier: 999_999,
+      productionMilestoneTierClaims: 2,
+    })
+    // Ample elapsed time both funds the pool buffer (via tickPoolBufferFill) and lets the queued
+    // build fire the same call, end to end, exactly as a real player leaving the queue armed would
+    // experience it.
+    state = tickGame(1000)(state)
+    expect(state.intro.diskBuildQueued).toBe(false)
+    expect(state.intro.diskBuild).not.toBeNull()
+  })
+
+  it('diskBuildQueued is permanent — carried over unchanged by a real Prestige', () => {
+    const state = withMoney(withIntro(createInitialGameState(), { diskBuildQueued: true }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro.diskBuildQueued).toBe(true)
   })
 })
 
@@ -3752,7 +3854,40 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state)).toBe(state)
   })
 
-  it('reclaims the only stack: refunds 1 token of the funding tier and clears the boost fully back to inactive', () => {
+  it('canReclaimComputeBoost is false once pooled remaining time is at or below one stack\'s own duration, even with multiple stacks held — reclaiming a stack must never zero out the running effect (Devin Review finding)', () => {
+    // A 2-stack boost with LESS pooled time left than one stack's own base duration: stacks alone
+    // isn't the right gate, since computeBoostRemainingSeconds is a single pooled timer, not two
+    // independent per-stack timers — reclaiming here would subtract a full stack's duration and
+    // floor the pool straight to 0, ending the effect exactly as if the last stack were reclaimed.
+    const stackDuration = getComputeBoostTierDurationSeconds('standard', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0,
+      computeBoostType: 'standard',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: stackDuration - 1, // just under one stack's own duration
+    })
+    expect(canReclaimComputeBoost(state)).toBe(false)
+    expect(reclaimComputeBoost(state)).toBe(state)
+  })
+
+  it('canReclaimComputeBoost is true once pooled remaining time exceeds one stack\'s own duration', () => {
+    const stackDuration = getComputeBoostTierDurationSeconds('standard', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0,
+      computeBoostType: 'standard',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: stackDuration + 1, // just over one stack's own duration
+    })
+    expect(canReclaimComputeBoost(state)).toBe(true)
+    const after = reclaimComputeBoost(state)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(1)
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostType).toBe('standard')
+  })
+
+  it('canReclaimComputeBoost is false with exactly 1 stack — a boost\'s own actively-funding stack can never be reclaimed once its effect has started, only quantity above it', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 2,
       computeBoostType: 'standard',
@@ -3760,27 +3895,46 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
       computeBoostStacks: 1,
       computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('standard', 1),
     })
+    expect(canReclaimComputeBoost(state)).toBe(false)
+    expect(reclaimComputeBoost(state)).toBe(state)
+  })
+
+  it('falls back to tier 1 (Core) when computeBoostTierIndex is missing — a legacy save from before that field existed with an active multi-stack boost (Devin Review finding)', () => {
+    // computeBoostTierIndex deliberately omitted (stays at createInitialGameState's own null
+    // default) — matches getComputeBoostMultiplier's own `?? 1` fallback for the same legacy save
+    // shape. Without the fallback, getComputeBoostTierDurationSeconds(boostType, null) is invalid
+    // and returns 0, which would wrongly let this gate pass (any positive remaining time clears
+    // "- 0 > 0") and reclaimComputeBoost would then resolve a bogus field via
+    // getComputeBoostTierField(null) instead of refunding a real Core, while leaving
+    // computeBoostRemainingSeconds untouched.
+    const tier1Duration = getComputeBoostTierDurationSeconds('standard', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2,
+      computeBoostType: 'standard',
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: tier1Duration + 1,
+    })
+    expect(state.intro.computeBoostTierIndex).toBeFalsy()
     expect(canReclaimComputeBoost(state)).toBe(true)
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeCores).toBe(3)
-    expect(after.intro.computeBoostType).toBe(null)
-    expect(after.intro.computeBoostTierIndex).toBe(null)
-    expect(after.intro.computeBoostStacks).toBe(0)
-    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(1)
   })
 
-  it('reclaims from a higher tier\'s own field, at that tier\'s own base duration', () => {
+  it('reclaims from a higher tier\'s own field, at that tier\'s own base duration, stopping at 1 stack (boost stays active)', () => {
     const state = withIntro(createInitialGameState(), {
       computeClusters: 2, // tier 3
       computeBoostType: 'burst',
       computeBoostTierIndex: 3,
-      computeBoostStacks: 1,
-      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('burst', 3),
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('burst', 3) * 2,
     })
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeClusters).toBe(3)
     expect(after.intro.computeCores).toBe(0) // untouched — the funding tier was Clusters, not Cores
-    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostType).toBe('burst') // still active — the last stack was never reclaimed
+    expect(after.intro.computeBoostStacks).toBe(1)
   })
 
   it('reclaims one of several stacks: refunds 1 token, subtracts one duration\'s worth, decrements stacks, boost stays active', () => {
@@ -3799,14 +3953,15 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(after.intro.computeBoostRemainingSeconds).toBe(getComputeBoostTierDurationSeconds('standard', 1) * 2)
   })
 
-  it('is the exact inverse of activateComputeBoost — activate then reclaim returns to the pre-activation balance/duration', () => {
+  it('is the exact inverse of stackComputeBoost — stack then reclaim returns to the pre-stack balance/duration, with the boost still active', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 5 })
-    const activated = activateComputeBoost('burst', 1)(state)
-    const reclaimed = reclaimComputeBoost(activated)
-    expect(reclaimed.intro.computeCores).toBe(5)
-    expect(reclaimed.intro.computeBoostType).toBe(null)
-    expect(reclaimed.intro.computeBoostTierIndex).toBe(null)
-    expect(reclaimed.intro.computeBoostRemainingSeconds).toBe(0)
+    const activated = activateComputeBoost('burst', 1)(state) // 1 stack, computeCores -> 4
+    const stacked = stackComputeBoost(activated) // 2 stacks, computeCores -> 3
+    const reclaimed = reclaimComputeBoost(stacked)
+    expect(reclaimed.intro.computeCores).toBe(activated.intro.computeCores)
+    expect(reclaimed.intro.computeBoostStacks).toBe(1)
+    expect(reclaimed.intro.computeBoostType).toBe('burst')
+    expect(reclaimed.intro.computeBoostRemainingSeconds).toBe(activated.intro.computeBoostRemainingSeconds)
   })
 
   it('refund never exceeds COMPUTE_ENTITY_CAP even if more tokens were earned while the boost was running', () => {
@@ -3814,24 +3969,39 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
       computeCores: COMPUTE_ENTITY_CAP,
       computeBoostType: 'sustain',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 1,
-      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1),
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1) * 2,
     })
     const after = reclaimComputeBoost(state)
     expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
   })
 
-  it('remaining duration never goes negative when reclaiming after some of it has already ticked away', () => {
+  it('is blocked once ticking has eaten into pooled time far enough, even with 3 stacks held — stack count alone is never sufficient', () => {
+    const stackDuration = getComputeBoostTierDurationSeconds('burst', 1)
     const state = withIntro(createInitialGameState(), {
       computeCores: 0,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 1,
-      computeBoostRemainingSeconds: 1, // less than burst's own base 60s duration
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: stackDuration, // exactly one stack's own duration left, not more
+    })
+    expect(canReclaimComputeBoost(state)).toBe(false)
+    expect(reclaimComputeBoost(state)).toBe(state)
+  })
+
+  it('remains reclaimable with 3 stacks while pooled time still comfortably exceeds one stack\'s own duration', () => {
+    const stackDuration = getComputeBoostTierDurationSeconds('burst', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: stackDuration * 3,
     })
     const after = reclaimComputeBoost(state)
-    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
-    expect(after.intro.computeBoostType).toBe(null)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(stackDuration * 2)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeBoostType).toBe('burst') // still active
   })
 })
 
@@ -4488,6 +4658,22 @@ describe('canStackComputeBoost / stackComputeBoost', () => {
     expect(after.intro.computeBoostStacks).toBe(2)
     expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
     expect(getComputeBoostMultiplier(after.intro)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('falls back to tier 1 (Core) when computeBoostTierIndex is missing — a legacy save from before that field existed with an active boost (same root cause as the reclaim finding above)', () => {
+    // computeBoostTierIndex deliberately omitted (stays at createInitialGameState's own null
+    // default). Without the `?? 1` fallback, canStackComputeBoost's own getComputeBoostTierField
+    // call would see an invalid tierIndex and return false, silently disabling Stack for such a
+    // save even with tokens held.
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2, computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 3,
+    })
+    expect(state.intro.computeBoostTierIndex).toBeFalsy()
+    expect(canStackComputeBoost(state)).toBe(true)
+    const after = stackComputeBoost(state)
+    expect(after.intro.computeCores).toBe(1)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
   it('stackComputeBoost always extends the ACTIVE tier, regardless of any other tier a player might hold', () => {
@@ -9386,12 +9572,16 @@ describe('Data Lakes', () => {
     // same derivation. `poolBuffers: { 1: 8_000_000 }` seeds that buffer already completely full,
     // so every bit of pool 1's own reserved rate this tick is overflow, none of it topping up the
     // (already-full) buffer itself.
+    // A lake only feeds from overflow once its own pool has built at least one real disk
+    // (isDataLakePoolReady) — seeded here via disksBuiltTotal so every test below exercises the
+    // overflow MATH itself rather than that separate unlock gate (covered by its own describe block).
     const fullBufferState = overrides => withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
       capacity: 32_000_000,
       productionMultiplier: 999_999,
       poolBuffers: { 1: 8_000_000 },
+      disksBuiltTotal: { [kb1]: 1 },
       ...overrides,
     })
 
@@ -9541,7 +9731,61 @@ describe('Data Lakes', () => {
     })
   })
 
-  describe('capacity upgrade (available once the next Booster\'s cost exceeds current capacity — not "the lake is full")', () => {
+  describe('isDataLakePoolReady / isDataLakeBoosterUnlocked (gated on a real Storage disk built for the matching pool)', () => {
+    it('isDataLakePoolReady is false before any disk is built for that pool', () => {
+      const state = withIntro(createInitialGameState(), {})
+      expect(isDataLakePoolReady(state, 1)).toBe(false)
+    })
+
+    it('isDataLakePoolReady is true the instant one disk has been built, regardless of the lake\'s own progress', () => {
+      const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [kb1]: 1 } })
+      expect(isDataLakePoolReady(state, 1)).toBe(true)
+    })
+
+    it('isDataLakeBoosterUnlocked follows isDataLakePoolReady even with a totally untouched lake', () => {
+      const state = withIntro(createInitialGameState(), { disksBuiltTotal: { [kb1]: 1 } })
+      expect(getDataLakeDepositedUnits(1)(state)).toBe(0)
+      expect(isDataLakeBoosterUnlocked(state, 1)).toBe(true)
+    })
+
+    it('isDataLakeBoosterUnlocked stays true via the legacy boostersUnlocked latch even if disksBuiltTotal were somehow absent (old-save compatibility)', () => {
+      const state = withIntro(createInitialGameState(), {
+        dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { ...getDataLakeTier(createInitialGameState(), 1), boostersUnlocked: true } },
+      })
+      expect(isDataLakePoolReady(state, 1)).toBe(false)
+      expect(isDataLakeBoosterUnlocked(state, 1)).toBe(true)
+    })
+
+    it('tickPoolBufferFill leaves bits/lake untouched by overflow while the pool has never built a disk, even with a full buffer and ample elapsed time', () => {
+      const state = withIntro(createInitialGameState(), {
+        byteCreated: true,
+        bits: 1_000_000,
+        capacity: 32_000_000,
+        productionMultiplier: 999_999,
+        poolBuffers: { 1: 8_000_000 }, // already completely full
+      })
+      const after = tickPoolBufferFill(1000)(state)
+      expect(after.intro.bits).toBe(1_000_000) // nothing spent — no valid destination for the overflow yet
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(0)
+      expect(getDataLakeFillBits(after, 1)).toBe(0)
+    })
+
+    it('tickPoolBufferFill starts feeding the lake normally the very first tick a disk has been built', () => {
+      const state = withIntro(createInitialGameState(), {
+        byteCreated: true,
+        bits: 1_000_000,
+        capacity: 32_000_000,
+        productionMultiplier: 999_999,
+        poolBuffers: { 1: 8_000_000 },
+        disksBuiltTotal: { [kb1]: 1 },
+      })
+      const after = tickPoolBufferFill(1)(state)
+      expect(after.intro.bits).toBeLessThan(1_000_000)
+      expect(getDataLakeFillBits(after, 1)).toBeGreaterThan(0)
+    })
+  })
+
+  describe('capacity upgrade (available once the corresponding Storage array is fully built)', () => {
     const withLake = (state, tierIndex, overrides) => ({
       ...state,
       intro: {
@@ -9550,28 +9794,46 @@ describe('Data Lakes', () => {
       },
     })
 
-    it('is NOT available for a fresh, empty, never-purchased lake — next cost (1) does not exceed capacity (1)', () => {
+    it('is NOT available for a fresh lake whose pool has never built the ×1 array', () => {
       const state = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
       expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false)
     })
 
-    it('becomes available the instant next cost exceeds capacity, even with the lake completely EMPTY', () => {
-      // capacityLevel 0 => capacity 1; purchased 1 => next cost 2 > 1.
-      const state = withLake(withIntro(createInitialGameState(), { ...noOtherUpgradesLeft }), 1, { purchased: 1, depositedUnits: 0 })
+    it('is NOT available while the ×1 array is only PARTIALLY built (9 of 10)', () => {
+      const state = withIntro(createInitialGameState(), {
+        disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP - 1 },
+        ...noOtherUpgradesLeft,
+      })
+      expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false)
+    })
+
+    it('becomes available the instant the ×1 array is fully built, even with the lake completely EMPTY', () => {
+      const state = withIntro(createInitialGameState(), {
+        disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+        ...noOtherUpgradesLeft,
+      })
       expect(getDataLakeDepositedUnits(1)(state)).toBe(0)
       expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(true)
       expect(isDataLakeCapacityDoublingTurnAvailable(state, 1)).toBe(true)
     })
 
     it('is blocked by a higher-priority forced-order action (Disk Fill) even while available', () => {
-      const state = withLake(withIntro(createInitialGameState(), { disks: { [kb1]: 1 }, ...noOtherUpgradesLeft }), 1, { purchased: 1 })
+      const state = withIntro(createInitialGameState(), {
+        disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+        disks: { [kb1]: 1 },
+        ...noOtherUpgradesLeft,
+      })
       expect(isDiskFillAvailable(state)).toBe(true)
       expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(true)
       expect(isDataLakeCapacityDoublingTurnAvailable(state, 1)).toBe(false)
     })
 
     it('doubleDataLakeCapacity drains whatever the lake CURRENTLY holds (not necessarily full) and advances the level', () => {
-      const state = withLake(withIntro(createInitialGameState(), { bits: 42, ...noOtherUpgradesLeft }), 1, { purchased: 1, depositedUnits: 0, fillBits: 4321 })
+      const state = withLake(
+        withIntro(createInitialGameState(), { bits: 42, disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP }, ...noOtherUpgradesLeft }),
+        1,
+        { depositedUnits: 0, fillBits: 4321 },
+      )
       const after = doubleDataLakeCapacity(1)(state)
       expect(after.intro.bits).toBe(42) // untouched — never spent Data Stream Bits
       expect(getDataLakeDepositedUnits(1)(after)).toBe(0)
@@ -9585,29 +9847,37 @@ describe('Data Lakes', () => {
     it('is a no-op while not available or blocked by priority', () => {
       const notAvailable = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
       expect(doubleDataLakeCapacity(1)(notAvailable)).toBe(notAvailable)
-      const blocked = withLake(withIntro(createInitialGameState(), { disks: { [kb1]: 1 }, ...noOtherUpgradesLeft }), 1, { purchased: 1 })
+      const blocked = withIntro(createInitialGameState(), {
+        disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
+        disks: { [kb1]: 1 },
+        ...noOtherUpgradesLeft,
+      })
       expect(doubleDataLakeCapacity(1)(blocked)).toBe(blocked)
     })
 
-    it('hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — never advances past it even once next cost exceeds 1,000', () => {
-      let state = withLake(withIntro(createInitialGameState(), { ...noOtherUpgradesLeft }), 1, {
-        capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL,
-        purchased: 1000,
-      })
+    it('hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — never advances past it even once every array is complete', () => {
+      let state = withLake(
+        withIntro(createInitialGameState(), { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP }, ...noOtherUpgradesLeft }),
+        1,
+        { capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL },
+      )
       expect(isDataLakeCapacityMaxed(state, 1)).toBe(true)
-      expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false) // maxed short-circuits regardless of cost
+      expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false) // maxed short-circuits regardless of array completion
       expect(doubleDataLakeCapacity(1)(state)).toBe(state)
     })
 
-    it('follows the same decade-power-of-10 ladder as pool Capacity: 1 -> 10 -> 100 -> 1,000', () => {
+    it('follows the same decade-power-of-10 ladder as pool Capacity: 1 -> 10 -> 100 -> 1,000, unlocked by the smallest/middle/largest array in turn', () => {
       const expectedByLevel = [1, 10, 100, 1000]
+      const requiredArraySizeByLevel = [kb1, kb10, kb100]
       expect(expectedByLevel.length - 1).toBe(DATA_LAKE_CAPACITY_MAX_LEVEL)
       let state = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
       expect(getDataLakeCapacity(state, 1)).toBe(expectedByLevel[0])
       for (let level = 1; level <= DATA_LAKE_CAPACITY_MAX_LEVEL; level += 1) {
-        // Force availability regardless of the current level's own magnitude: purchased just past
-        // the current capacity so next cost > capacity.
-        state = withLake(state, 1, { purchased: getDataLakeCapacity(state, 1) })
+        expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(false) // that level's own array not built yet
+        state = withIntro(state, {
+          disksBuiltTotal: { ...state.intro.disksBuiltTotal, [requiredArraySizeByLevel[level - 1]]: DISK_ARRAY_LADDER_CAP },
+        })
+        expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(true)
         state = doubleDataLakeCapacity(1)(state)
         expect(getDataLakeCapacity(state, 1)).toBe(expectedByLevel[level])
       }

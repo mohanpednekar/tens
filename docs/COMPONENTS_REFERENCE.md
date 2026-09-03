@@ -98,17 +98,37 @@ directly below its disks, not in a separate panel after all the pool cards.
 `DataLakePanel` (`bare tierIndex={poolIndex}`) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a compact `StatusText` showing how many of the
-funded Booster it's produced so far (e.g. "3× Cores"); then one row of disk squares (`LakeSquare`)
-per sub-size present at the lake's current capacity level (×1/×10/×100, smallest first, each capped
-per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row per size" shape
-`DiskArrayRow` uses for Storage but non-interactive (no cache/redeem — a lake disk just fills and
-completes) — the one currently-open slot shows a live left-to-right fill toward its own full size;
-then an actions row with ONE repurposed button: while the next Booster's cost already exceeds the
-lake's current capacity, an "⚡ Upgrade" button (disabled until the forced-priority chain allows it);
-otherwise, once the lake's first disk has ever completed (`boostersUnlocked`), a `🎯 <next Booster
-cost>` Buy button (disabled until affordable) plus an Auto/Manual toggle for `autoBuyEnabled` — the
-two button modes are mutually exclusive by construction (see CLAUDE.md's "Data Lakes"), so only one
-ever shows. Before `boostersUnlocked`, that slot is just inert `🎯 <next cost>` status text. Every
+funded Booster it's produced so far (e.g. "3× Cores"); then a dedicated `LakePoolTile` (own
+`FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
+`fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
+`<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
+reading a static "Locked · 0 / `<size>`" before `isDataLakePoolReady` rather than being absent, so
+the section never jumps from showing nothing to already mid-fill with no visible history in between
+(see `docs/DESIGN_HISTORY.md`). Deliberately keyed off `isDataLakePoolReady`, NOT
+`isDataLakeBoosterUnlocked` — the latter's old-save-compatibility fallback can read true (correctly
+keeping Boosters purchasable) for a pool that has never built a real disk, where this tile would
+otherwise show live-looking fill data the engine can never actually advance; then one row of disk squares
+(`LakeSquare`, capped at `max-width: 2.5rem` so a lone square at a fresh capacity level doesn't
+stretch to fill the whole row) per sub-size present at the lake's current capacity level (×1/×10/×100,
+smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row
+per size" shape `DiskArrayRow` uses for Storage but non-interactive (no cache/redeem — a lake disk
+just fills and completes) — the one currently-open slot shows a live left-to-right fill toward its
+own full size, but only once `isDataLakePoolReady` (same gate as `LakePoolTile` above, and for the
+same reason — otherwise a legacy save's residual `fillBits` would render this square as actively
+filling); before that it renders as an ordinary empty slot; then an actions row with ONE repurposed button: once the Storage array corresponding
+to the lake's CURRENT capacity level is fully built (`isDataLakeCapacityDoublingAvailable` — the
+pool's smallest ×1 array for level 0→1, middle ×10 for 1→2, largest ×100 for 2→3 — not the lake's
+own Booster cost any more), an "⚡ Upgrade" button (disabled until the forced-priority chain allows
+it, HIDDEN rather than merely disabled before that array is complete); otherwise, once the lake is
+unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one real disk,
+not the lake's own fill progress), a `🎯 <next Booster cost>` Buy button (disabled until affordable)
+plus an Auto/Manual toggle for `autoBuyEnabled` — the two button modes are **no longer guaranteed
+mutually exclusive** (that held only under the old cost-based Upgrade condition — see
+`docs/DESIGN_HISTORY.md`), so `DataLakePanel` shows only one, preferring Upgrade whenever it's
+actually clickable or Buy isn't an option either — but if Upgrade is merely available-but-not-its-turn
+while Buy IS currently affordable, Buy takes the slot instead, since Buy isn't part of the forced
+priority chain at all and must never sit hidden behind a dead disabled Upgrade button (see
+`docs/DESIGN_HISTORY.md`). Before unlock, that slot is just inert `🎯 <next cost>` status text. Every
 figure is a real, minimally-labelled number — no "Deposited"/"Capacity"/"Bought"/"Next" column
 headers — matching the rest of the page's "big number, few words" convention. `ComputePage` no
 longer has any Booster-buying control of its own — Foundry's `DataLakePanel` is the only place to

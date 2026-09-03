@@ -450,8 +450,10 @@ const InfoPage = () => {
             While active: <strong>Stack</strong> spends another token of the active boost’s own
             funding tier to extend duration (up to {COMPUTE_BOOST_MAX_STACKS} stacks; multiplier
             doesn’t compound). <strong>Reclaim</strong> undoes the most recent unused stack,
-            refunding 1 token. <strong>Forfeit</strong> cancels everything with no refund
-            (confirmation required).
+            refunding 1 token — only while more than 1 stack is held, since the one stack actively
+            funding a started effect can never be reclaimed away. <strong>Forfeit</strong> cancels
+            everything with no refund (confirmation required) — the only way to end a boost early
+            once it's down to its last stack.
           </li>
           <li>
             <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a

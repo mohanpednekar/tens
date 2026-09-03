@@ -227,15 +227,22 @@ at a rate based on the ONE disk currently being filled, not the lake's overall t
 back to 50% once it completes and the next opens — the SAME `MultiplierGauge` switching into its
 lake-rate mode once the pool's buffer is full, see above), completing the lake's ×1/×10/×100 disks
 smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
-the maxed level's 1,000-unit capacity). A lake's first-ever completed disk permanently unlocks
-Boosters for it (`boostersUnlocked`); buying (`buyBooster`, manual or auto-buy via
-`autoBuyEnabled`/`tickDataLakeAutoBuy`) spends the cost off the lake's own banked units instantly —
-no live transfer, no waiting, and — since it doesn't touch Bits/Disks at all — not part of the
-forced priority order. A lake's own capacity is a purchasable ladder: starts at 1 unit, climbs a
-plain decade-power-of-10 step per purchase (1, 10, 100, 1,000, hard-capped at level 3) — available
-once the NEXT Booster's cost would EXCEED current capacity (not "the lake is full" — a lake can be
-short of full and still need this), draining whatever it currently holds. Buying and upgrading are
-mutually exclusive by construction, so the UI repurposes one button between the two modes. A save
+the maxed level's 1,000-unit capacity). A lake is gated on `isDataLakePoolReady` — its own matching
+Storage pool having built at least one real disk, not the lake's own fill progress (overflow itself
+won't feed a lake until then); Boosters become buyable the instant that's true
+(`isDataLakeBoosterUnlocked`, following the same condition — an older per-lake `boostersUnlocked`
+flag, latched on the lake's own first completed disk, is still read as a fallback for old-save
+compatibility only). `DataLakePanel`'s own pool-fill tile stays visible even before unlock, reading
+a static "Locked · 0 / size" rather than being entirely absent. Buying (`buyBooster`, manual or
+auto-buy via `autoBuyEnabled`/`tickDataLakeAutoBuy`) spends the cost off the lake's own banked units
+instantly — no live transfer, no waiting, and — since it doesn't touch Bits/Disks at all — not part
+of the forced priority order. A lake's own capacity is a purchasable ladder: starts at 1 unit,
+climbs a plain decade-power-of-10 step per purchase (1, 10, 100, 1,000, hard-capped at level 3) —
+available once the CORRESPONDING Storage array for the current level is fully built (level 0→1
+needs the pool's smallest ×1 array, 1→2 the middle ×10, 2→3 the largest ×100 — no longer tied to the
+lake's own escalating Booster cost or to "the lake is full," both superseded), draining whatever it
+currently holds. Buying and upgrading are no longer guaranteed mutually exclusive, so the UI
+repurposes one button between the two, preferring Upgrade when both apply. A save
 carrying a `capacityLevel` from an older, longer ladder — or written under the earlier
 deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
 load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.

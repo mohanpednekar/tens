@@ -425,6 +425,7 @@ describe('schema merge on load', () => {
         capacityUpgradeQueued: false,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
         diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
+        diskBuildQueued: false,
         poolBuffers: {},
         diskReadCacheFlush: {},
         diskWriteCache: {},

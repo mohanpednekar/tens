@@ -20,6 +20,7 @@ import {
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
@@ -2813,9 +2814,12 @@ test('the pool gauge switches from the fill-based multiplier to the Data Lake ov
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
+  // disksBuiltTotal seeded so isDataLakePoolReady(state, 1) is true — the gauge only switches to
+  // lake mode once this pool's own lake can actually be fed (see the "buffer full but no disk
+  // built yet" test below for the not-ready case this transition is gated against).
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity },
+    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 },
   })
   render(<App />)
 
@@ -2832,6 +2836,32 @@ test('the pool gauge switches from the fill-based multiplier to the Data Lake ov
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
 
   // The Data Lake's own separate fill bar (fed by the buffer's own overflow) starts empty.
+  const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
+  expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
+})
+
+test('the pool gauge stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
+  // Same full-buffer seed as the transition test above, but with no disksBuiltTotal entry —
+  // isDataLakePoolReady(state, 1) is false, so tickPoolBufferFill's overflow branch (engine.js)
+  // will never actually credit this pool's lake. Switching the gauge to "lake" mode here would
+  // show a constant nonzero "incoming rate" that can never turn into real progress — the same
+  // stalled-tile-shown-as-active bug LakePoolTile was fixed for on this same PR, just on this
+  // page's own gauge/bar (found by the adversarial reviewer as a follow-up).
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+
+  // The Data Lake's own fill bar reads 0 rather than any residual/live-looking value.
   const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
   expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
 })
@@ -2941,6 +2971,33 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: /foundry view/i })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  })
+
+  test('the queue-next-build toggle beside Provision Disk arms/disarms diskBuildQueued on click', async () => {
+    const user = userEvent.setup()
+    // mainGameUnlocked seeded true (and Foundry opened explicitly) rather than relying on the
+    // mandatory-gate render, matching the "tapping a pool's own Memory buffer" test above — this
+    // test's own `await user.click` calls leave enough real time for a live tick to fire, which
+    // would otherwise latch mainGameUnlocked mid-test and navigate away from Foundry. poolBuffers
+    // is deliberately left unseeded (defaults to 0, well under the 1 KB disk's own cost) so
+    // tickQueuedDiskBuild can never actually auto-fire the build mid-test regardless of how many
+    // real ticks elapse — this test only exercises the toggle's own arm/disarm click behavior, not
+    // Provision Disk's affordability.
+    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+    const queueButton = screen.getByRole('button', { name: /queue next disk build/i })
+    expect(queueButton).toHaveAttribute('aria-pressed', 'false')
+    expect(queueButton).not.toBeDisabled()
+
+    await user.click(queueButton)
+    const armedButton = screen.getByRole('button', { name: /cancel queued disk build/i })
+    expect(armedButton).toHaveAttribute('aria-pressed', 'true')
+    expect(armedButton).toBe(queueButton)
+
+    await user.click(armedButton)
+    expect(screen.getByRole('button', { name: /queue next disk build/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('Provision Disk is disabled below its cost, starting at 1 KB', () => {
@@ -3429,24 +3486,47 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByText(/Cores/)).toBeInTheDocument()
   })
 
+  test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      // No disksBuiltTotal entry for pool 1 at all — isDataLakePoolReady is false, but the legacy
+      // per-lake flag still makes isDataLakeBoosterUnlocked true (old-save compatibility).
+      dataLakes: { 1: { depositedUnits: 5, fillBits: 4321, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 1 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    const lakeBlock = within(pool1).getByLabelText('KB lake')
+    // The pool-fill tile must show its Locked state, not fabricate progress from fillBits (which
+    // the engine can never actually advance while isDataLakePoolReady is false) — see
+    // src/components/DataLakePanel/index.jsx's poolReady/unlocked distinction.
+    expect(within(lakeBlock).getByText(/^Locked · 0 \/ 1 KB$/)).toBeInTheDocument()
+    // Boosters themselves stay purchasable off the legacy latch — the Buy/Auto controls still show.
+    expect(within(lakeBlock).getByRole('button', { name: /buy 1 cores from the kb data lake/i })).toBeInTheDocument()
+  })
+
   test('Data Lake capacity can be increased ×10 by clicking its ⚡ Upgrade button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another
     // forced-priority input out from under the click before it's processed.
     vi.useFakeTimers()
 
-    // The next Booster (purchased: 1 => cost 2) already exceeds the KB lake's own level-0 capacity
-    // (1 unit) — the new "upgrade available" condition — regardless of how full the lake currently
-    // is; draining whatever it holds (here, nothing) funds the advance, not Bits. bits (8000) is
-    // included only to prove it never touches it. Provision Disk's own cost (80,000) stays out of
-    // reach either way, so it never outranks this action; Invest's current-tier claims are already
-    // used up (productionMilestoneTierClaims: 2) — the same higher-priority-action neutralization
-    // the Sacrifice tests above use, since Data Lake capacity sits at the same forced-priority rank.
+    // The pool's own ×1 array (KB) is fully built — the "upgrade available" condition — regardless
+    // of how full the lake currently is; draining whatever it holds (here, nothing) funds the
+    // advance, not Bits. bits (8000) is included only to prove it never touches it. Provision
+    // Disk's own cost (80,000) stays out of reach either way, so it never outranks this action;
+    // Invest's current-tier claims are already used up (productionMilestoneTierClaims: 2) — the
+    // same higher-priority-action neutralization the Sacrifice tests above use, since Data Lake
+    // capacity sits at the same forced-priority rank.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       productionMilestoneTierClaims: 2,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 1, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
     })
     const { unmount } = render(<App />)
@@ -3464,6 +3544,29 @@ describe('Byte Foundry Storage', () => {
 
     unmount()
     vi.useRealTimers()
+  })
+
+  test('Buy stays reachable when Upgrade is available but not its turn — Upgrade no longer hides an immediately-clickable Buy (adversarial-review finding)', () => {
+    // Upgrade is available (the KB pool's ×1 array is fully built) but blocked from actually
+    // firing by the forced priority order — Bandwidth (Speed ×2) is left available here (unlike
+    // the "capacity can be increased" test above, which neutralizes it via
+    // productionMilestoneTierClaims) specifically to put Upgrade in this available-but-not-its-turn
+    // state. Buy is genuinely affordable (1 unit banked, first Booster costs 1) and isn't part of
+    // the forced priority order at all, so it must still be clickable rather than hidden behind a
+    // dead disabled Upgrade button.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
+    expect(buyButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
   })
 
   test('Data Lake capacity-increase button disappears once the lake hits its hard cap', () => {
@@ -3726,7 +3829,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  test('reclaiming the last remaining stack clears the boost entirely and removes the status line', () => {
+  test('the Reclaim button is disabled once only 1 stack remains — an active boost\'s own effect can never be reclaimed away entirely, only clicking it stays a no-op', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
@@ -3734,11 +3837,14 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
+    const reclaimButton = screen.getByRole('button', { name: /reclaim one stack/i })
+    expect(reclaimButton).toBeDisabled()
+    fireEvent.click(reclaimButton)
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe(null)
-    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+    expect(saved.intro.computeBoostType).toBe('burst') // still active — the last stack was never reclaimed
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(screen.getByLabelText(/^active compute boost$/i)).toBeInTheDocument()
   })
 })
 

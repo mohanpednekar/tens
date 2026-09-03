@@ -1,5 +1,253 @@
 # Design history & rationale
 
+### Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03
+
+Follow-up player feedback on the just-shipped Provision Disk queue toggle (previous entry) surfaced
+a real UI bug and asked for several Data Lake mechanic changes, plus an unrelated Compute Boost
+change, all landed together on the same PR/branch.
+
+**1. Giant-circle CSS bug.** At a lake's fresh capacity level (0 — "1 unit"), only ONE `LakeSquare`
+renders in its `LakeSizeRow` (`display: flex; flex-wrap: nowrap`). `LakeSquare`'s own `flex: 1 1
+1.2rem` (`flex-grow: 1`) meant a lone square stretched to fill the ENTIRE row width — combined with
+`border-radius: 50%`/`aspect-ratio: 1`, a single circle several times its intended size. Fixed with
+a simple `max-width: 2.5rem` cap — preserves the existing "grow to fill nicely" behavior for a
+fuller row (9-10 items) while bounding a near-empty row's item size sanely.
+
+**2. Data Lake unlock (`isDataLakePoolReady`) now requires a real Storage disk.** Previously, a
+lake's OWN progress was entirely self-contained: `tickPoolBufferFill`'s overflow branch fed it the
+moment a pool's Memory buffer was completely full, regardless of whether the player had ever built
+a single physical disk for that pool, and Boosters unlocked (`boostersUnlocked`, latched
+permanently) the moment the LAKE's own first disk completed — a lake could unlock Boosters before
+any real Storage progress existed at all. New `isDataLakePoolReady(state, tierIndex)` —
+`disksBuiltTotal[that pool's own ×1 size] > 0` — now gates BOTH: `tickPoolBufferFill`'s overflow
+branch won't feed a lake until a disk exists for that pool (the reserved production simply stays as
+ordinary Bits that tick, same "nowhere to put it, don't destroy it" posture the lake-maxed case
+already had), and `isDataLakeBoosterUnlocked` now follows the SAME condition instead of the lake's
+own `boostersUnlocked` latch. The old stored `boostersUnlocked` field is kept and still read as a
+fallback OR (`isDataLakeBoosterUnlocked = storedFlag || isDataLakePoolReady(...)`) purely for
+old-save compatibility — `disksBuiltTotal` is itself permanent and monotonic, so the new condition
+needed no separate latch/state field of its own, and `fillDataLakeDisks`' own redundant `boostersUnlocked
+= true` write on the lake's first completed disk was left in place harmlessly (under the new
+overflow gate it can now only ever fire after `isDataLakePoolReady` is already true anyway).
+
+**3. Data Lake capacity upgrades now tied to Storage array completion, not the lake's own cost
+curve.** `isDataLakeCapacityDoublingAvailable` previously fired once a lake's own escalating next
+Booster cost (`purchased + 1`) exceeded its current capacity — a condition entirely internal to the
+lake's own economy, disconnected from real Storage progress (superseding an even earlier "the lake
+is full" condition). New rule: level 0→1 (to reach capacity 10) requires the pool's smallest (×1)
+disk array fully built (all `DISK_ARRAY_LADDER_CAP` = 10); level 1→2 (100) the middle (×10) array;
+level 2→3 (1,000, maxed) the largest (×100) array — one array per capacity step, matching
+`DATA_LAKE_SUB_SIZES`' own 3-entry shape exactly. New private helper
+`getDataLakeCapacityUnlockArraySize(tierIndex, level)` resolves the required disk-ladder size via
+the existing `getDataLakeSubSizeStep`/`getDiskLadderSizeBits` primitives — no new state, no new
+constants. This BREAKS the old "mutually exclusive with buying a Booster by construction" guarantee
+(cost ≤ capacity buy-side vs. cost > capacity upgrade-side, structurally impossible to overlap under
+the old rule) — under the new rule a lake CAN simultaneously afford its next Booster and have its
+next array already complete. `DataLakePanel`'s single-button-slot repurposing (Upgrade vs. Buy)
+still works unchanged (the same `upgradeAvailable ? Upgrade : unlocked ? Buy : locked-text` ternary),
+now simply preferring Upgrade whenever both apply — advancing capacity unblocks every future Booster
+too, so it's the more valuable of the two once available. This also means "do not show the Upgrade
+button unless eligible" (an explicit ask) falls out for free from the same ternary — no separate
+hide/disable logic was needed, only the underlying predicate changed.
+
+**4. New `LakePoolTile` — always visible, not gated behind unlock.** A player reported watching a
+lake's Data Lake section eventually "start filling up after some time" with "no idea what it did in
+between" — traced to the FIRST version of this new tile (a small `FillableStatCard`-style element
+surfacing the same `fillBits`/`getDataLakeCurrentDiskFillFraction` progress the per-square fill
+overlay already tracked, added specifically so this progress reads as its own explicit element
+rather than only a sliver on one small square) being gated on `unlocked` (the pool-readiness
+condition from #2) — before that, the section showed NOTHING at all, so the tile's first appearance
+was already mid-progress with no visible history. Fixed by decoupling the tile's OWN visibility from
+unlock state entirely: it now renders whenever an open slot exists at all
+(`currentFillSubSize !== null`, true almost always until a level is fully maxed), reading a static
+"Locked · 0 / `<size>`" before `isDataLakePoolReady`, and the real "`<fillBits>` / `<size>`" fill
+reading once unlocked — continuous feedback throughout, not a sudden appearance.
+
+**5. Compute Boost reclaim can no longer cancel a started effect outright.** `canReclaimComputeBoost`
+previously required only "any boost currently active," letting a player reclaim a boost's OWN LAST
+stack — the one actively producing its effect — clearing it back to fully inactive, functionally
+canceling a running boost via Reclaim (a separate `forfeitComputeBoost` action already exists for
+"cancel with no refund"; this let Reclaim do the same thing WITH a refund, which wasn't the intended
+distinction between the two actions). New gate: `computeBoostStacks > 1` — reclaiming now always
+leaves at least 1 stack behind, so an active boost's own effect can never be pulled back below
+"running," only quantity held IN ADDITION to that floor. `reclaimComputeBoost` itself simplified
+accordingly: the `nextStacks <= 0` branch (which used to clear the boost fully) became dead code
+under the new gate (a call is now only ever reachable with `stacks > 1`, so `nextStacks =
+stacks - 1` is always `>= 1`) and was removed. The exact-inverse relationship this action documents
+shifted too — reclaim is now the inverse of `stackComputeBoost` specifically, not of
+`activateComputeBoost` (a freshly-activated 1-stack boost can no longer be reclaimed at all).
+
+**6. PoolCard vertical spacing tightened** (a player screenshot flagged "too much wasted space"
+below a pool's own title/gauge/rate header row) — `PoolCard`'s own `gap` reduced from
+`theme.space.md` (0.6rem) to `theme.space.sm` (0.4rem), and `PoolSummaryButton`'s own padding made
+asymmetric (`theme.space.sm` on top/left/right, `0.15rem` on the bottom specifically) rather than
+uniform on all four sides — the button's own bottom padding was compounding with the card's `gap`
+right where the header row meets the Memory buffer tile below it, visibly wider than the rest of the
+card's own spacing rhythm.
+
+**7. Two follow-up bugs in #4 and #5 above, both caught by Devin Review on the same PR before merge.**
+
+- **Reclaim's `stacks > 1` gate (#5) wasn't actually sufficient.** `computeBoostRemainingSeconds` is
+  a single POOLED timer shared across every stack the boost holds, not N independent per-stack
+  timers — `stackComputeBoost` just adds one flat duration chunk onto it each time. That means a
+  multi-stack boost late in its own countdown can hold LESS pooled time remaining than even one
+  stack's own base duration, so `stacks > 1` alone could still let a reclaim subtract a full stack's
+  duration and floor the pool straight to 0 via `reclaimComputeBoost`'s own `Math.max(0, …)` clamp —
+  ending the boost's real running effect exactly as if its last stack had been reclaimed, the precise
+  outcome #5 set out to prevent. Fixed by adding a second condition to `canReclaimComputeBoost`:
+  `computeBoostRemainingSeconds - stackDuration > 0`. The `Math.max(0, …)` inside
+  `reclaimComputeBoost` itself is now purely defensive — the new gate guarantees it never actually
+  clamps in practice.
+- **`LakePoolTile` (#4) read the wrong predicate for its pre-fill "Locked" placeholder.** It decided
+  whether to show real fill progress using `isDataLakeBoosterUnlocked` (`unlocked` in
+  `DataLakePanel`), but that predicate's own old-save-compatibility OR fallback
+  (`storedFlag || isDataLakePoolReady(...)`, from #2 above) means it can read true on an old save
+  whose legacy `boostersUnlocked` flag is already set even though the matching Storage pool has never
+  built a real disk — correct for the Buy button (Boosters should stay purchasable there), but wrong
+  for this tile: `tickPoolBufferFill`'s overflow branch — the only thing that ever actually advances
+  `fillBits` — is gated on `isDataLakePoolReady` ALONE, with no such fallback, so the tile would
+  display real (permanently frozen) fill data as if it were actively progressing. Fixed by
+  introducing a separate `poolReady = isDataLakePoolReady(state, tierIndex)` value and keying the
+  tile's fill fraction/title/label on that instead of `unlocked`, leaving `unlocked` itself unchanged
+  for the Buy/Auto-buy button logic.
+
+**8. The `LakePoolTile` fix in #7 above was itself incomplete — the SAME misrepresentation survived
+on two other, more prominent surfaces reading the identical underlying fill data**, caught by the
+adversarial `code-reviewer` subagent on a re-review of the same PR. `ByteFoundryPage`'s own pool
+gauge and standalone "Data Lake" bar, plus `DataLakePanel`'s per-square `LakeSquare` fill overlay,
+all read `getDataLakeCurrentDiskFillFraction`/`getDataLakeOverflowRatePercent`/`currentFillSubSize`
+directly with no `isDataLakePoolReady` check anywhere — only `tickPoolBufferFill`'s WRITE side (the
+overflow branch that actually credits a lake) had been gated by #2/#7 above; nothing gated these
+READ side consumers. Concretely: the gauge switched to `mode="lake"` purely on `poolBufferFull`
+(`ByteFoundryPage`), so ANY pool whose local Memory buffer fills before its first disk is
+built — pool 1 in particular, visible and fillable from the very start of Storage, with no
+dependency the other way — would show a constant `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) "incoming
+rate" that can never actually turn into progress, since the overflow branch that would credit it
+never fires while `isDataLakePoolReady` is false. This wasn't a hypothetical: a **pre-existing,
+unmodified-by-that-PR test** (`App.test.jsx`'s pool-gauge-transition test) seeded exactly that state
+(a full buffer, no `disksBuiltTotal`) and asserted the 50% reading as *correct* behavior — the
+repo's own test suite had locked in the bug. `DataLakePanel`'s `LakeSquare` overlay had the matching
+gap on old-save `fillBits` specifically (the same legacy scenario #7 fixed for `LakePoolTile`).
+Fixed by threading the same `isDataLakePoolReady` check through all three: the gauge now only
+switches to lake mode (`showLakeMode = poolBufferFull && poolReady`) once the lake can actually
+receive it, staying in ordinary multiplier mode otherwise (which reads a real, accurate
+`FILL_MULTIPLIER_MIN_PERCENT` at a full-but-not-ready buffer, not a fabricated value); the
+standalone Data Lake bar reads a flat 0% before `isDataLakePoolReady` rather than any residual
+`fillBits` a legacy save might already hold; `LakeSquare`'s `isFillingThisSize` is now
+`poolReady && currentFillSubSize === subSize`. The pre-existing test was updated to seed a built
+disk (keeping its original "clean transition" assertion meaningful) and a new sibling test asserts
+the not-ready case explicitly. This is the second time in the same PR the same fix pattern needed
+applying to more than one consumer of shared derived data — a reminder that gating a WRITE path
+(the engine tick) doesn't automatically gate every READ path (every UI surface) deriving from the
+same underlying fields; each consumer needs its own explicit check.
+
+**9. `canReclaimComputeBoost`/`reclaimComputeBoost`/`canStackComputeBoost`/`stackComputeBoost` were
+missing the `?? 1` legacy-tierIndex fallback `getComputeBoostMultiplier` already used**, caught by
+Devin Review on a later round of the same PR. `intro.computeBoostTierIndex` didn't always exist —
+`getComputeBoostMultiplier`'s own comment already documented that a save from before that field
+existed can have an active boost with it missing (reading as `null` after `mergeState` fills it from
+`createInitialGameState`'s own default). `getComputeBoostTierDurationSeconds`/`getComputeBoostTierField`
+both treat an invalid (non-integer) `tierIndex` as 0/`null` respectively — so, for such a save, the
+new pooled-time gate in #7 above computed `stackDuration = 0`, which made `canReclaimComputeBoost`
+ALWAYS pass (any positive remaining time clears `- 0 > 0`), and `reclaimComputeBoost` would then
+resolve a bogus `"null"`-keyed field via `getComputeBoostTierField(null)` instead of refunding a
+real token, while `computeBoostRemainingSeconds` stayed untouched (subtracting a duration of 0) —
+real state corruption, not just a display bug. `canStackComputeBoost`'s own version of the same gap
+was milder: `getComputeBoostTierField(null)` returning `null` made it always return `false`, simply
+disabling Stack outright for such a save rather than corrupting anything. Fixed by applying the
+same `?? 1` fallback at every read site (`canReclaimComputeBoost`, `reclaimComputeBoost`,
+`canStackComputeBoost`, `stackComputeBoost`) — `activateComputeBoost`/`tickComputeBoost` don't need
+it: the former's `tierIndex` is always a fresh, valid, caller-provided value (never read from stored
+state), and the latter never calls either tier-keyed helper at all.
+
+**10. A disabled-but-available Data Lake Upgrade button could hide an immediately-clickable Buy
+button**, caught by the adversarial `code-reviewer` subagent on yet another re-review round of the
+same PR. This is a direct consequence of #3 above (Data Lake capacity upgrades tied to real Storage
+array completion): that change explicitly "BREAKS the old 'mutually exclusive with buying a Booster
+by construction' guarantee," creating a real window where `isDataLakeCapacityDoublingAvailable`
+(`upgradeAvailable`) is true but `isDataLakeCapacityDoublingTurnAvailable` (`canUpgrade`) is false —
+Upgrade blocked by the forced priority chain — while `isBoosterPurchaseAvailable` (`canBuy`) is
+simultaneously true. `DataLakePanel`'s action-slot ternary claimed the slot for Upgrade purely on
+`upgradeAvailable`, so in that window it rendered a dead, disabled Upgrade button while an
+affordable, immediately-clickable Buy sat entirely hidden — `buyBooster` is explicitly NOT part of
+the forced priority chain and documented as "always available the instant it's affordable," so a
+player had no action to take even though one genuinely existed. Fixed by changing the slot's own
+claim condition to `upgradeAvailable && (canUpgrade || !canBuy)` — Upgrade only claims the slot when
+it's actually clickable, or when Buy isn't an option either (nothing else to do, so showing the
+pending Upgrade goal is still the more informative choice); otherwise Buy takes the slot, matching
+its own documented "isn't part of the forced priority order at all" status.
+
+### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
+
+A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)
+still looked "starved" for 10 KB disks specifically: "cache blocks get filled and emptied without
+actually doing anything." Investigation with real engine calls (a throwaway Vitest scratch file,
+deleted before concluding, per this repo's usual empirical-verification method) ruled out a bug in
+`tickDiskWriteCache` itself — an isolated test with 10 pre-filled source disks and a pre-built
+target container completed the merge correctly. The actual cause: `getDiskSize` only advances the
+disk ladder from 1 KB to 10 KB once `disksBuiltTotal[1KB]` reaches `DISK_ARRAY_LADDER_CAP` (10) —
+and `disksBuiltTotal` only ever increments via `provisionDisk`, which had **zero automation
+anywhere in `tickGame`**: `tickProvisionDisk` only counts down a build already in progress; nothing
+ever auto-STARTS one. Every other Foundry step already runs itself once its own gate clears — cache
+fill (`tickDiskAutoFill`), the write-cache ripple (`tickDiskWriteCache`), disk redeem
+(`tickDiskAutoRedeem`, opt-in via the matching tier's autobuyer) — and Capacity ×2 even has its own
+"arm it before the buffer is full" queue (`queueIntroCapacityUpgrade`/`capacityUpgradeQueued`) for
+exactly this kind of missed-instant problem. Provision Disk had none of that, so a player who wasn't
+proactively re-clicking it 10 separate times per size (once per disk, before the ladder even offers
+the next size) would watch the cache faithfully refill/redeem the same 1–2 disks forever without
+ever seeing new sizes appear — matching both of the player's own observations exactly.
+
+Two clarifying rounds with the player (via `AskUserQuestion`) confirmed the diagnosis before any
+fix was written: (1) they had never seen a single 10 KB container provisioned, and (2) Compute/
+Boosters activity was minimal in their save (ruling out the *other* plausible blocker — Capacity ×2
+also requires Compute unavailable, and a save with perpetual Compute activity could stall Capacity
+growth by an entirely separate path). A third question asked directly how to close the gap: fully
+automatic firing (matching cache-fill/redeem's own unconditional automation), a queue/arm toggle
+matching Capacity's own precedent, or leaving it manual and only improving in-game guidance. The
+player chose the queue approach — the smaller, more conservative change of the three, since full
+automation would remove manual clicking from the core loop entirely (a real pacing decision, not a
+clear-cut bug fix) while "leave it manual" doesn't actually solve the reported problem.
+
+**Implementation notes.** `intro.diskBuildQueued` (new state field) is armed via `queueDiskBuild`
+and disarmed via `clearDiskBuildQueue`, mirroring `queueIntroCapacityUpgrade`'s exact shape
+(same-reference no-op while already armed, while a build is already in flight, or while nothing is
+left to ever build — `isDiskLadderExhaustedForActivePools`). `tickQueuedDiskBuild` fires
+`provisionDisk` itself once affordable (deferring to `provisionDisk`'s own
+`isProvisionDiskTurnAvailable` guard rather than duplicating it), and is wired into `tickGame`'s
+`tickStorage` right after redeem/cache-release and before idle-disk liquidation — the same rank an
+ordinary manual Provision Disk click already holds in the forced priority order. `provisionDisk`
+itself unconditionally clears `diskBuildQueued` the moment ANY build starts, whether that start came
+from the queue firing or an ordinary manual click, so a stale queue can never double-fire against
+the next build.
+
+**Two deliberate departures from the Capacity queue's own precedent**, both because this one is
+actually meant to be used, not just retained for legacy save compatibility (`capacityUpgradeQueued`'s
+own comment: "retained for save compatibility with the historical Sacrifice flow" — it is
+unconditionally cleared on every save load by `normalizePoolMemoryCapacity` and, more importantly,
+**was never wired to any UI control at all** — `queueIntroCapacityUpgrade`/`clearIntroCapacityUpgradeQueue`
+exist only in `engine.js` and its tests, with no button anywhere calling them, so in live gameplay
+today it can only ever be set via Dev Mode or a legacy save and is otherwise dead from the player's
+perspective):
+1. **`diskBuildQueued` is NOT cleared on save load.** The entire point is a persistent "keep
+   building for me" intent; clearing it on every reload would force re-arming every session,
+   defeating the purpose for a page players may not revisit often. `mergeState`'s ordinary
+   fill-missing-fields-from-`createInitialGameState()` behavior already gives old saves a correct
+   default of `false`, so no dedicated load-time handling was needed at all.
+2. **`diskBuildQueued` IS wired to an actual UI control** — a small pin-icon `QueueToggleButton`
+   (styled after MainPage's own `PauseToggleButton` — a plain icon toggle subordinate to the
+   primary action beside it, see #171) inside a new `ProvisionDiskRow` wrapper, right next to the
+   Provision Disk button on `ByteFoundryPage`. Verified end-to-end in a real browser (Playwright
+   against `yarn dev`, scratch script deleted afterward): seeding an unaffordable pool buffer, arming
+   the toggle, confirming Provision Disk stays disabled and the toggle shows its armed/cancel state,
+   then — with zero further clicks — watching the pool buffer's live production fill it and the
+   build actually start on its own once affordable.
+
+`diskBuildQueued` is PERMANENT across a real Prestige (carried forward in `prestigeGame`, same as
+`diskBuild`/`disks`/`poolBuffers`) since Storage itself never resets with an ordinary Prestige, but
+resets to `false` on Era ascension and a full Reset like the rest of the Foundry, since neither
+carries `diskBuildQueued` forward in their own intro-rebuild (`buildEraIntroReset`/
+`createInitialGameState()`).
+
 ### Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02
 
 Follow-up requests on the corner-speedometer-gauge PR (#555, itself following #552's fill-based
