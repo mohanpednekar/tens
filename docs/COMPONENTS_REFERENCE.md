@@ -113,7 +113,9 @@ stretch to fill the whole row) per sub-size present at the lake's current capaci
 smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row
 per size" shape `DiskArrayRow` uses for Storage but non-interactive (no cache/redeem — a lake disk
 just fills and completes) — the one currently-open slot shows a live left-to-right fill toward its
-own full size; then an actions row with ONE repurposed button: once the Storage array corresponding
+own full size, but only once `isDataLakePoolReady` (same gate as `LakePoolTile` above, and for the
+same reason — otherwise a legacy save's residual `fillBits` would render this square as actively
+filling); before that it renders as an ordinary empty slot; then an actions row with ONE repurposed button: once the Storage array corresponding
 to the lake's CURRENT capacity level is fully built (`isDataLakeCapacityDoublingAvailable` — the
 pool's smallest ×1 array for level 0→1, middle ×10 for 1→2, largest ×100 for 2→3 — not the lake's
 own Booster cost any more), an "⚡ Upgrade" button (disabled until the forced-priority chain allows

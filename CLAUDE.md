@@ -1090,8 +1090,12 @@ current TOTAL (fill + tap bonus) reading, not tied to the accent/warn split.
 For a POOL specifically, ONE dial does double duty rather than two separate gauges stacked together
 (an earlier design rendered a second, independently-scaled bottom-half arc for the Data Lake reading —
 see `docs/DESIGN_HISTORY.md` for why that was replaced): once that pool's own Memory buffer is
-completely full (`poolBufferFull`), the SAME `MultiplierGauge` switches to `mode="lake"` and the
-identical arc/needle mechanism instead represents that pool's own Data Lake overflow RATE (NOT a
+completely full (`poolBufferFull`) AND that pool's own lake is actually ready to receive it
+(`isDataLakePoolReady` — see "Data Lakes" below; required in addition to `poolBufferFull`, not just
+the buffer alone, or the gauge would switch to lake mode and show a nonzero "incoming rate" for a
+pool whose lake the engine can never actually credit — an adversarial-review finding on the same PR
+that introduced this gate, see `docs/DESIGN_HISTORY.md`), the SAME `MultiplierGauge` switches to
+`mode="lake"` and the identical arc/needle mechanism instead represents that pool's own Data Lake overflow RATE (NOT a
 level — see the separate bar below for that), on the exact SAME 0..`FILL_MULTIPLIER_TAP_CAP_PERCENT`
 angle scale the multiplier reading already uses, in a single `theme.color.info` arc from 0
 (`getDataLakeOverflowRatePercent` — `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) at an empty
@@ -1116,7 +1120,10 @@ A pool's own Data Lake accumulation itself — what's actually filling from that
 rather than a rate — gets its OWN separate bar: a second `FillableStatCard` directly below the Memory
 buffer tile (always visible, not gated behind the card's `isExpanded` disclosure), showing the SAME
 current-disk fill fraction (`getDataLakeCurrentDiskFillFraction`) the gauge's lake-mode reading is
-derived from, colored via `$progressColor={theme.color.info}` to visually match the gauge's own
+derived from — but only once `isDataLakePoolReady`; reading a flat 0% before that (rather than any
+residual `fillBits` a legacy save's own lake might already hold from before this gate existed) so it
+never shows live-looking progress on a pool the engine can no longer actually advance — colored via
+`$progressColor={theme.color.info}` to visually match the gauge's own
 lake-mode arc — "the Data Lake has its own bar which takes in the overflow from the pool bar."
 `PoolCard`'s summary button (title/gauge/Bandwidth) stays a separate control from the Memory-buffer
 tap tile below it (a sibling of `PoolSummaryButton`, not nested inside it — two `<button>`s can't
@@ -1604,7 +1611,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1721 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1723 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

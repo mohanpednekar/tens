@@ -121,6 +121,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   built a real disk, the tile read that legacy flag and displayed live fill data even though nothing
   in the engine could ever advance it, permanently frozen mid-progress. It now reads the same
   disk-built condition the engine's own fill logic uses, correctly showing "Locked" there instead.
+- **The Byte Foundry pool gauge and Data Lake bar could show the same kind of unreachable progress**
+  — any pool whose Memory buffer filled up before its first disk was built (a common case, not just
+  an old-save one) would switch the gauge to a Data Lake "incoming rate" reading and show a
+  constant nonzero value that could never actually advance, plus a per-square lake overlay with the
+  same issue on old saves. Both now stay in their ordinary state until the matching disk exists.
 - **A pool card's own header row sat noticeably farther from its Memory buffer tile than the rest of
   the card's spacing** — the header button's own bottom padding was compounding with the card's own
   gap; padding made asymmetric and the card's gap tightened.

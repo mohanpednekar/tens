@@ -742,9 +742,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's value — even
    though the two readings share the SAME `MultiplierGauge` (see `ByteFoundryPage`): the gauge
    switches from the fill-based multiplier reading to this lake overflow rate (`mode="lake"`,
-   rendered in `theme.color.info`) the instant that pool's own Memory buffer is completely full,
-   rather than compounding the two into one. The lake's own accumulated fill LEVEL (as opposed to
-   this overflow RATE) has its own separate always-visible bar below the Memory buffer tile.
+   rendered in `theme.color.info`) once that pool's own Memory buffer is completely full AND
+   `isDataLakePoolReady` — both, not the buffer alone, since `tickPoolBufferFill`'s overflow branch
+   won't credit a lake that isn't ready either, and switching modes purely on buffer fullness would
+   show a nonzero "incoming rate" for a pool whose lake can never actually receive it (an
+   adversarial-review finding on the PR that introduced `isDataLakePoolReady` — see
+   `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one. The lake's own accumulated
+   fill LEVEL (as opposed to this overflow RATE) has its own separate always-visible bar below the
+   Memory buffer tile, likewise reading 0 until `isDataLakePoolReady` rather than any residual
+   fill a legacy save's lake might already hold.
 
    **Disk breakdown / fill order** (`decomposeDataLakeUnits`, `getDataLakeDiskCounts`/
    `getDataLakeDiskSlotCounts`/`getDataLakeCurrentFillSubSize`) — a lake's own banked total

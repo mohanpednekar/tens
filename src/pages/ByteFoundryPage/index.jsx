@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeCurrentDiskFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeCurrentDiskFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { useTheme } from 'styled-components'
@@ -767,8 +767,23 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // tierIndex, one lake per pool), not the lake's overall total — feeds both the gauge's
         // `mode="lake"` reading above (once poolBufferFull) and the standalone lake bar below.
         const lakeFillFraction = getDataLakeCurrentDiskFillFraction(state, poolIndex)
-        const lakeFillPercent = clampPercent(lakeFillFraction * 100)
         const lakeRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
+        // Same isDataLakePoolReady this pool's own DataLakePanel/LakePoolTile already keys its
+        // "Locked" placeholder on (see components/DataLakePanel) — required here too, not just
+        // poolBufferFull: tickPoolBufferFill's overflow branch (engine.js) won't credit this lake
+        // at all until a real Storage disk has been built for it, so a pool whose buffer fills
+        // before that (the common, non-legacy case — pool 1 in particular, visible from the very
+        // start) would otherwise switch the gauge to "lake" mode and show a constant nonzero
+        // "incoming rate" that can never actually turn into real progress — the exact
+        // stalled-tile-shown-as-active misrepresentation Devin Review flagged for LakePoolTile,
+        // just on this page's own gauge/bar instead.
+        const poolReady = isDataLakePoolReady(state, poolIndex)
+        const showLakeMode = poolBufferFull && poolReady
+        // Same reasoning as above — a legacy save's own residual fillBits (banked before this
+        // pool's isDataLakePoolReady gate existed) would otherwise read as live progress on a
+        // lake the engine can no longer advance; the standalone lake bar below reads 0 until ready,
+        // matching LakePoolTile's own "Locked" convention rather than showing stale banked state.
+        const lakeFillPercent = poolReady ? clampPercent(lakeFillFraction * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -793,14 +808,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <span>Pool</span>
                 </SectionTitle>
                 <MultiplierGauge
-                  basePercent={poolBufferFull ? 0 : poolBaseMultiplierPercent}
-                  totalPercent={poolBufferFull ? lakeRatePercent : poolMultiplierPercent}
+                  basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
+                  totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
                   ariaLabel={
-                    poolBufferFull
+                    showLakeMode
                       ? `pool ${poolIndex} data lake overflow rate`
                       : `pool ${poolIndex} fill-based bandwidth multiplier`
                   }
-                  mode={poolBufferFull ? 'lake' : 'multiplier'}
+                  mode={showLakeMode ? 'lake' : 'multiplier'}
                 />
                 <SectionRateText>{formatDiskSize(poolBandwidth)}/sec</SectionRateText>
               </SectionHeaderRow>

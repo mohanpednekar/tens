@@ -20,6 +20,7 @@ import {
   DISK_BUILD_COST_MULTIPLIER,
   ERA_ELIGIBILITY_PP,
   FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
@@ -2813,9 +2814,12 @@ test('the pool gauge switches from the fill-based multiplier to the Data Lake ov
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
+  // disksBuiltTotal seeded so isDataLakePoolReady(state, 1) is true — the gauge only switches to
+  // lake mode once this pool's own lake can actually be fed (see the "buffer full but no disk
+  // built yet" test below for the not-ready case this transition is gated against).
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity },
+    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 },
   })
   render(<App />)
 
@@ -2832,6 +2836,32 @@ test('the pool gauge switches from the fill-based multiplier to the Data Lake ov
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
 
   // The Data Lake's own separate fill bar (fed by the buffer's own overflow) starts empty.
+  const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
+  expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
+})
+
+test('the pool gauge stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
+  // Same full-buffer seed as the transition test above, but with no disksBuiltTotal entry —
+  // isDataLakePoolReady(state, 1) is false, so tickPoolBufferFill's overflow branch (engine.js)
+  // will never actually credit this pool's lake. Switching the gauge to "lake" mode here would
+  // show a constant nonzero "incoming rate" that can never turn into real progress — the same
+  // stalled-tile-shown-as-active bug LakePoolTile was fixed for on this same PR, just on this
+  // page's own gauge/bar (found by the adversarial reviewer as a follow-up).
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+
+  // The Data Lake's own fill bar reads 0 rather than any residual/live-looking value.
   const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
   expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
 })
@@ -2941,6 +2971,33 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: /foundry view/i })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  })
+
+  test('the queue-next-build toggle beside Provision Disk arms/disarms diskBuildQueued on click', async () => {
+    const user = userEvent.setup()
+    // mainGameUnlocked seeded true (and Foundry opened explicitly) rather than relying on the
+    // mandatory-gate render, matching the "tapping a pool's own Memory buffer" test above — this
+    // test's own `await user.click` calls leave enough real time for a live tick to fire, which
+    // would otherwise latch mainGameUnlocked mid-test and navigate away from Foundry. poolBuffers
+    // is deliberately left unseeded (defaults to 0, well under the 1 KB disk's own cost) so
+    // tickQueuedDiskBuild can never actually auto-fire the build mid-test regardless of how many
+    // real ticks elapse — this test only exercises the toggle's own arm/disarm click behavior, not
+    // Provision Disk's affordability.
+    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+    const queueButton = screen.getByRole('button', { name: /queue next disk build/i })
+    expect(queueButton).toHaveAttribute('aria-pressed', 'false')
+    expect(queueButton).not.toBeDisabled()
+
+    await user.click(queueButton)
+    const armedButton = screen.getByRole('button', { name: /cancel queued disk build/i })
+    expect(armedButton).toHaveAttribute('aria-pressed', 'true')
+    expect(armedButton).toBe(queueButton)
+
+    await user.click(armedButton)
+    expect(screen.getByRole('button', { name: /queue next disk build/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('Provision Disk is disabled below its cost, starting at 1 KB', () => {

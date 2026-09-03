@@ -312,7 +312,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
             {DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
               const full = diskCounts[subSize] ?? 0
               const totalSlots = slotCounts[subSize]
-              const isFillingThisSize = currentFillSubSize === subSize
+              // Gated on poolReady for the same reason LakePoolTile above is (see its own
+              // comment): a legacy save's residual fillBits banked before this pool's
+              // isDataLakePoolReady gate existed would otherwise render this square as actively
+              // "filling" — a live-looking overlay and aria-label on a slot the engine can no
+              // longer advance (found by the adversarial reviewer as a follow-up to Devin's
+              // original LakePoolTile finding on the same PR).
+              const isFillingThisSize = poolReady && currentFillSubSize === subSize
               const slotSizeBits = unitBits * subSize
               const fillFraction = isFillingThisSize && slotSizeBits > 0 ? clampFraction(fillBits / slotSizeBits) : 0
               const sizeLabel = formatDiskSize(slotSizeBits)

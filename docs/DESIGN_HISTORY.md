@@ -111,6 +111,36 @@ card's own spacing rhythm.
   tile's fill fraction/title/label on that instead of `unlocked`, leaving `unlocked` itself unchanged
   for the Buy/Auto-buy button logic.
 
+**8. The `LakePoolTile` fix in #7 above was itself incomplete — the SAME misrepresentation survived
+on two other, more prominent surfaces reading the identical underlying fill data**, caught by the
+adversarial `code-reviewer` subagent on a re-review of the same PR. `ByteFoundryPage`'s own pool
+gauge and standalone "Data Lake" bar, plus `DataLakePanel`'s per-square `LakeSquare` fill overlay,
+all read `getDataLakeCurrentDiskFillFraction`/`getDataLakeOverflowRatePercent`/`currentFillSubSize`
+directly with no `isDataLakePoolReady` check anywhere — only `tickPoolBufferFill`'s WRITE side (the
+overflow branch that actually credits a lake) had been gated by #2/#7 above; nothing gated these
+READ side consumers. Concretely: the gauge switched to `mode="lake"` purely on `poolBufferFull`
+(`ByteFoundryPage`), so ANY pool whose local Memory buffer fills before its first disk is
+built — pool 1 in particular, visible and fillable from the very start of Storage, with no
+dependency the other way — would show a constant `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) "incoming
+rate" that can never actually turn into progress, since the overflow branch that would credit it
+never fires while `isDataLakePoolReady` is false. This wasn't a hypothetical: a **pre-existing,
+unmodified-by-that-PR test** (`App.test.jsx`'s pool-gauge-transition test) seeded exactly that state
+(a full buffer, no `disksBuiltTotal`) and asserted the 50% reading as *correct* behavior — the
+repo's own test suite had locked in the bug. `DataLakePanel`'s `LakeSquare` overlay had the matching
+gap on old-save `fillBits` specifically (the same legacy scenario #7 fixed for `LakePoolTile`).
+Fixed by threading the same `isDataLakePoolReady` check through all three: the gauge now only
+switches to lake mode (`showLakeMode = poolBufferFull && poolReady`) once the lake can actually
+receive it, staying in ordinary multiplier mode otherwise (which reads a real, accurate
+`FILL_MULTIPLIER_MIN_PERCENT` at a full-but-not-ready buffer, not a fabricated value); the
+standalone Data Lake bar reads a flat 0% before `isDataLakePoolReady` rather than any residual
+`fillBits` a legacy save might already hold; `LakeSquare`'s `isFillingThisSize` is now
+`poolReady && currentFillSubSize === subSize`. The pre-existing test was updated to seed a built
+disk (keeping its original "clean transition" assertion meaningful) and a new sibling test asserts
+the not-ready case explicitly. This is the second time in the same PR the same fix pattern needed
+applying to more than one consumer of shared derived data — a reminder that gating a WRITE path
+(the engine tick) doesn't automatically gate every READ path (every UI surface) deriving from the
+same underlying fields; each consumer needs its own explicit check.
+
 ### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
 
 A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)
