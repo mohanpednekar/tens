@@ -698,10 +698,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    ONE disk CURRENTLY being filled in that lake — NOT the lake's overall total
    (`getDataLakeCurrentDiskFillFraction` — `fillBits / (unitBits × the current open sub-size)`),
    mirroring the FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape:
-   `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50) when that current disk is completely empty, linearly down
-   to `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0 — no more feed at all) as it approaches completion, then
-   straight back up to 50 the instant it completes and the next disk opens — a repeating per-disk
-   taper, not one slow lake-wide ramp — `getDataLakeOverflowRatePercent`. The resulting
+   `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50) when that current disk is completely empty, linearly
+   tapering down toward `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0) as it approaches completion — but
+   floored in practice at `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5): a rate literally
+   converging to 0 is a pure proportional decay toward the remaining gap, which mathematically never
+   reaches it (and gets permanently stuck in floating point once the remaining increment rounds to
+   nothing — see `docs/DESIGN_HISTORY.md`), so `getDataLakeOverflowRatePercent` never actually
+   returns below the floor while a disk is still genuinely open — then straight back up to 50 the
+   instant it completes and the next disk opens — a repeating per-disk
+   taper, not one slow lake-wide ramp. The resulting
    `overflowBits` (`fillRate * elapsedSeconds * (ratePercent / 100)`, bounded by whatever
    `intro.bits` actually holds) is consumed from `intro.bits` exactly like an ordinary buffer
    transfer, then handed to `fillDataLakeDisks`. Deliberately independent of the pool's own fill-based Speed/Bandwidth

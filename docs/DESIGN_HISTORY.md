@@ -5029,3 +5029,73 @@ inferring the first from the second's `false` result. A new regression test seed
 tests use, confirms `canDepositDiskToDataLake` is `false` for the array-not-finished reason, and
 pins that `isIdleDiskLiquidationAvailable` stays `false` regardless (rather than reading that
 `false` as "lake is full"). `yarn test`: 1634/1634 green (+1). `yarn build` succeeds.
+
+### Three more findings from a Devin bot review pass on the pool-overflow Data Lake rework PR: an overflow rate that asymptotically never completes, a lifetime-counter bug, and dropped legacy transfers
+
+A `Devin Review` pass on the PR that replaced the Storage-Disk-deposit Data Lake mechanic with the
+current pool-overflow feed (see the "Data Lakes" entries further up — the rework's own PR, not yet
+merged when this pass ran) found three genuine issues, the first of which was severe enough to make
+the whole feature non-functional under ordinary play.
+
+**Finding 1 (severe): `getDataLakeOverflowRatePercent`'s own 50%→0% taper is a pure exponential
+decay toward the remaining gap, which mathematically never reaches it.** The rate feeding a lake's
+currently-open disk was computed live from that SAME disk's own current fill fraction — `50 -
+fraction * 50`, hitting exactly 0% only once the disk is already complete. Every tick's own
+overflow-bits increment was proportional to that live rate, applied to the SAME fraction it was
+just derived from — a self-referential feedback loop with no forcing term. Solving the continuous
+ODE this recurrence approximates (`d(gap)/dt = -k * gap`) confirms this isn't a discretization
+artifact: even in exact real-number arithmetic, the gap shrinks toward zero forever without ever
+crossing it. In floating point it's worse — the recurrence gets PERMANENTLY stuck once the
+increment rounds to nothing relative to the accumulated `fillBits`. Simulated directly against the
+real `tickPoolBufferFill` (a fresh KB lake, starting Byte Foundry production rate, 1-second ticks):
+`fillBits` climbed to `7999.999999992724` out of an 8,000-bit slot and then never moved again, for
+over 440,000 consecutive ticks — Boosters, and the entire Data Lake feature, would never actually
+unlock through ordinary play. **Fix:** `getDataLakeOverflowRatePercent` now floors its returned
+value at a new `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5) constant in `layers.js` — the
+taper still reads as "approaching zero" at ordinary (whole-percent) display precision, but the real
+per-tick increment never shrinks below a small, constant, nonzero floor, so a disk always finishes
+in a bounded number of ticks instead of asymptoting. A regression test seeds `fillBits` a tiny
+0.08-bit gap short of a slot's own full size, confirms the rate reads exactly at the floor (not the
+near-zero unfloored value), and confirms a single ordinary tick actually completes the disk. The
+pre-existing "fully maxed lake" test's own expectation (`getDataLakeOverflowRatePercent` returning
+the raw `MIN_PERCENT`) was updated to expect the floor instead — harmless either way in practice,
+since `fillDataLakeDisks` itself already no-ops once a lake has no open slot regardless of what rate
+this function returns for that case.
+
+**Finding 2 (real, narrower): `computeCoresEverEarned` was computed as `max(previous, live
+balance)`, not a true running total.** `latchComputeMergePageIfNeeded` (the internal helper
+`buyBooster` calls on every tier-1 purchase) set this lifetime-earned counter to whichever was
+larger — its own previous value, or the Cores balance right after this purchase. Since Cores get
+spent (Compute Boost activations, 8:1 merging into Nodes), that live balance routinely drops back
+down between purchases — meaning `max()` re-derives "lifetime earned" from a number that isn't
+monotonic, silently forgetting everything earned before the most recent spend. Concretely: earn 3,
+spend all 3, then earn 5 more — `max(3, 5) = 5`, not the true lifetime total of 8 — which could leave
+the Compute merge chain's own unlock (`computeMergePageUnlocked`, gated at `COMPUTE_CORES_PER_NODE`
+lifetime Cores) permanently one Core short of true for a player who happened to spend Cores early.
+**Fix:** increments `computeCoresEverEarned` by exactly 1 per successful tier-1 Booster instead —
+`(intro.computeCoresEverEarned ?? 0) + 1` — a genuine running total, immune to how the live balance
+moves in between. A regression test earns 3, spends them (directly, simulating a merge/Boost), earns
+5 more, and confirms the counter reads 8, not 5.
+
+**Finding 3 (real, narrower): migrating a legacy (pre-rework) Data Lake tier silently dropped any
+in-flight `transfers`.** The migration added for the rework itself (two entries up) correctly
+translated `deposits`/`purchased`/`capacityLevel` into the new shape, but simply discarded the old
+`transfers` array (`{ remainingSeconds }` entries — a live Booster funding pipe under the since-
+removed mechanic) with no equivalent under the new instant-buy model. Each entry represented a
+Booster that had ALREADY been fully paid for — its source Disks were consumed the instant the
+transfer was queued, not when it completed — so a player with an in-flight transfer at the moment
+this PR shipped would have silently lost that compute-ladder entity outright, with nothing to show
+for the Disks they'd already spent. **Fix:** `mergeDataLakes` now also returns a
+`pendingComputeGrants` map (tierIndex → in-flight transfer count) alongside the migrated
+`dataLakes`, which a new `applyPendingComputeGrants` helper folds into `mergeState`'s `intro` —
+granting the matching compute-ladder entity (`COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]`) per pending
+transfer, exactly as a real `buyBooster` call would have, including (for tier 1) the same
+`computeCoresEverEarned`/`computeMergePageUnlocked` bookkeeping `latchComputeMergePageIfNeeded`
+applies. The migrated tier's own `purchased` count also absorbs the pending-transfer count, so the
+NEXT Booster's escalating cost (`purchased + 1`) picks up where the old save actually was rather
+than reading as cheaper than it should. The existing migration regression test
+(`storage.test.js`) was extended to seed 2 in-flight tier-1 transfers and assert both the granted
+Cores and the bumped lifetime-earned/`purchased` counts.
+
+`yarn test`: 1686/1686 green (+3 net: two new regression tests, one existing test's expectation
+corrected to match the intentional floor). `yarn build` succeeds.

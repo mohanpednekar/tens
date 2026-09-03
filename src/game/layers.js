@@ -506,15 +506,25 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // percentage itself is fill-based on progress of the ONE disk currently being filled in that lake
 // (getDataLakeCurrentDiskFillFraction — NOT the lake's overall total; mirroring the
 // FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape): DATA_LAKE_OVERFLOW_MAX_PERCENT
-// when that current disk is empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT (0) as it
-// approaches completion — then straight back up to MAX the instant it completes and the next disk
-// opens, a repeating per-disk taper rather than one slow lake-wide ramp. Deliberately independent
-// of the pool's own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) — these are two
-// separate dials on the same gauge (see ByteFoundryPage's pool MultiplierGauge, extended into a
-// full circle for pools: the top half stays the existing pool fill multiplier, the bottom half is
-// this lake overflow rate/current-disk progress), not compounded into one.
+// when that current disk is empty, linearly tapering down toward DATA_LAKE_OVERFLOW_MIN_PERCENT
+// (0) as it approaches completion — then straight back up to MAX the instant it completes and the
+// next disk opens, a repeating per-disk taper rather than one slow lake-wide ramp. Deliberately
+// independent of the pool's own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) —
+// these are two separate dials on the same gauge (see ByteFoundryPage's pool MultiplierGauge,
+// extended into a full circle for pools: the top half stays the existing pool fill multiplier, the
+// bottom half is this lake overflow rate/current-disk progress), not compounded into one.
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
+// A rate PROPORTIONAL to the still-open disk's own remaining gap (the taper above) is a pure
+// exponential decay toward that gap — mathematically it shrinks the remainder forever without ever
+// reaching it, and in floating point gets permanently stuck a hair short of completion once the
+// remaining increment rounds to nothing (confirmed by simulation: fillBits froze at 7999.99999999…
+// out of a 8000-bit slot after ~440k ticks and never moved again). getDataLakeOverflowRatePercent
+// floors its returned percent here so the real rate always keeps making forward progress once a
+// disk is genuinely still open — the taper still reads as visually "approaching zero" at ordinary
+// (whole-percent) display precision, but the underlying fill mechanism actually terminates in a
+// bounded number of ticks instead of asymptoting. See docs/DESIGN_HISTORY.md.
+export const DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT = 5
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry

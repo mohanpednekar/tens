@@ -282,7 +282,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -9364,13 +9364,40 @@ describe('Data Lakes', () => {
       expect(getDataLakeOverflowRatePercent(partial, 1)).toBeCloseTo(expectedRate)
       expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty disk
 
-      // Once maxed at the current level (no open slot left), reads as a fully "done" disk -> min rate.
+      // Once maxed at the current level (no open slot left), reads as a fully "done" disk -> the
+      // taper's own floored rate (DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, not the raw
+      // MIN_PERCENT — see getDataLakeOverflowRatePercent's own comment). The returned value is
+      // moot either way here: tickPoolBufferFill's caller only reaches fillDataLakeDisks while
+      // there's an open slot to fill, and fillDataLakeDisks itself no-ops (returns null) once
+      // maxed — see the same-reference no-op test right below this one.
       const maxed = withIntro(createInitialGameState(), {
         dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 } },
       })
       expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
       expect(getDataLakeCurrentDiskFillFraction(maxed, 1)).toBe(1)
-      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_MIN_PERCENT)
+      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT)
+    })
+
+    it('floors the overflow rate so a nearly-complete disk keeps making real forward progress instead of asymptotically stalling short of completion (regression — a pure proportional taper toward 0% at full never actually reaches full, and gets permanently stuck in floating point once the remaining gap rounds to nothing; confirmed by simulation before this fix: fillBits froze at 7999.999999992724/8000 after 442,746 ticks and never moved again)', () => {
+      const tinyRemainingGap = 0.08 // leaves the taper's own UNFLOORED rate at a negligible ~0.0005%
+      const state = fullBufferState({
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          1: { capacityLevel: 1, depositedUnits: 0, fillBits: unitBits1 - tinyRemainingGap, boostersUnlocked: false, autoBuyEnabled: false, purchased: 0 },
+        },
+      })
+      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT)
+      // A single ordinary tick at the floored rate (8,000 bits/sec x 1s x 5%) delivers 400 bits —
+      // vastly more than the 0.08-bit gap — so the disk actually completes, unlike the unfloored
+      // formula, which would deliver only ~0.04 bits this same tick and asymptotically approach
+      // (never reach) the remaining gap.
+      const after = tickPoolBufferFill(1)(state)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+      // The floored 400-bit overflow overshoots the 0.08-bit gap by 399.92 bits, which carries
+      // forward as the NEXT disk's own opening progress (capacityLevel 1 still has 9 more ×1 slots
+      // open) rather than being discarded.
+      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(400 - tinyRemainingGap)
+      expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
     })
   })
 
@@ -9492,6 +9519,24 @@ describe('Data Lakes', () => {
       }
       expect(state.intro.computeMergePageUnlocked).toBe(true)
       expect(state.intro.computeCoresEverEarned).toBe(COMPUTE_CORES_PER_NODE)
+    })
+
+    it('computeCoresEverEarned is a monotonic LIFETIME counter, unaffected by spending Cores between purchases (regression — an earlier version derived it as max(previous, live balance), which re-read the CURRENT balance instead of truly accumulating, so spending Cores between purchases silently lost credit for everything earned before the most recent spend)', () => {
+      let state = withLake(createInitialGameState(), 1, { depositedUnits: 1000, boostersUnlocked: true, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL })
+      state = buyBooster(1)(state)
+      state = buyBooster(1)(state)
+      state = buyBooster(1)(state)
+      expect(state.intro.computeCores).toBe(3)
+      expect(state.intro.computeCoresEverEarned).toBe(3)
+      // Spend all 3 earned Cores (e.g. a merge or Boost activation) between purchases.
+      state = { ...state, intro: { ...state.intro, computeCores: 0 } }
+      for (let i = 0; i < 5; i += 1) {
+        state = buyBooster(1)(state)
+      }
+      expect(state.intro.computeCores).toBe(5)
+      // 3 (before the spend) + 5 (after) = 8 lifetime-earned — NOT max(3, 5) = 5, which the old
+      // live-balance-derived formula would have wrongly produced.
+      expect(state.intro.computeCoresEverEarned).toBe(8)
     })
 
     it('buyBooster can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped', () => {

@@ -335,10 +335,12 @@ const InfoPage = () => {
             Ten permanent lakes (one per storage denomination, KB … QB), each fed directly by that
             pool's own Memory buffer — whatever a pool can't put toward its fill-based multiplier
             bonus (see Storage above) overflows straight into that pool's own lake, at a rate that
-            starts at {DATA_LAKE_OVERFLOW_MAX_PERCENT}% and drops toward {DATA_LAKE_OVERFLOW_MIN_PERCENT}%
-            as the lake's CURRENT disk (the one actively filling — see below) fills up, resetting back
-            toward {DATA_LAKE_OVERFLOW_MAX_PERCENT}% every time that disk completes. Disks are no
-            longer deposited from Storage — Data Lakes have their own separate disk ladder now.
+            starts at {DATA_LAKE_OVERFLOW_MAX_PERCENT}% and tapers down as the lake's CURRENT disk
+            (the one actively filling — see below) fills up, resetting back toward{' '}
+            {DATA_LAKE_OVERFLOW_MAX_PERCENT}% every time that disk completes — never actually
+            dropping all the way to {DATA_LAKE_OVERFLOW_MIN_PERCENT}%, so a disk always keeps
+            filling rather than crawling forever. Disks are no longer deposited from Storage —
+            Data Lakes have their own separate disk ladder now.
           </li>
           <li>
             A lake fills its own disks smallest-size-first (×1, then ×10, then ×100 of that lake's

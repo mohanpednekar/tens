@@ -15,6 +15,7 @@ import {
   COMPUTE_ENTITY_CAP,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
+  DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT,
   DATA_LAKE_OVERFLOW_MAX_PERCENT,
   DATA_LAKE_OVERFLOW_MIN_PERCENT,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
@@ -436,5 +437,10 @@ describe('constants', () => {
     expect(DATA_LAKE_OVERFLOW_MAX_PERCENT).toBe(50)
     expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
     expect(DATA_LAKE_OVERFLOW_MAX_PERCENT).toBeGreaterThan(DATA_LAKE_OVERFLOW_MIN_PERCENT)
+  })
+
+  it('DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT sits strictly between the taper\'s MIN and MAX, so the real rate never actually reaches literal 0% (a pure proportional taper toward 0 never reaches its own target — see getDataLakeOverflowRatePercent)', () => {
+    expect(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT).toBeGreaterThan(DATA_LAKE_OVERFLOW_MIN_PERCENT)
+    expect(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT).toBeLessThan(DATA_LAKE_OVERFLOW_MAX_PERCENT)
   })
 })

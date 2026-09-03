@@ -1065,8 +1065,11 @@ current TOTAL (fill + tap bonus) reading, not tied to the accent/warn split.
 For a POOL specifically, the SAME dial continues downward into a BOTTOM half arc — the `lake` prop
 on `MultiplierGauge` — showing progress on the ONE disk CURRENTLY being filled in that pool's own
 Data Lake (see "Data Lakes" below), NOT the lake's overall total: `DATA_LAKE_OVERFLOW_MAX_PERCENT`
-(50%) when that current disk is empty, down to `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) as it
-approaches completion, with the arc's own LENGTH tracking that same current-disk fill FRACTION (a
+(50%) when that current disk is empty, tapering down as it approaches completion — the percent
+LABEL text floors at `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5%) rather than reading a true
+`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%), so the underlying fill mechanism always keeps making real
+progress instead of asymptotically stalling short of completion (see "Data Lakes" below) — with the
+arc's own LENGTH tracking that same current-disk fill FRACTION, unaffected by the floor (a
 sliver near empty, a full bottom semicircle once it's about to complete — then snapping back to a
 sliver the instant it completes and the next disk opens, the same "grows as it fills" reading the
 top arc uses, just per-disk rather than lake-wide), rendered in `theme.color.info` to stay visually distinct from the top
@@ -1254,8 +1257,12 @@ feeds that pool's own matching lake instead (`tickPoolBufferFill`'s own overflow
 `poolIndex === tierIndex`). That percentage is itself fill-based on progress of the ONE disk
 CURRENTLY being filled in that lake — NOT the lake's overall total
 (`getDataLakeCurrentDiskFillFraction`, mirroring the FILL_MULTIPLIER_* mechanic's own shape):
-`DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when that current disk is empty, linearly down to
-`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) as it approaches completion, then straight back up to 50% the
+`DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when that current disk is empty, linearly tapering down
+toward `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0%) as it approaches completion — floored in practice at
+`DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5%), since a rate literally converging to 0% is a
+pure exponential decay that mathematically never reaches its own target (confirmed by simulation: an
+unfloored version got permanently stuck at 7999.999999992724/8000 bits after 442,746 ticks — see
+`docs/DESIGN_HISTORY.md`) — then straight back up to 50% the
 instant it completes and the next disk opens — a repeating per-disk taper, not one slow lake-wide
 ramp (`getDataLakeOverflowRatePercent`) — deliberately independent of the pool's own fill-based
 Speed/Bandwidth multiplier; these are two separate dials on the same gauge (see "Fill-based
@@ -1455,7 +1462,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1683 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1686 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
