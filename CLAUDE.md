@@ -131,6 +131,19 @@ status quo (a pass with no new actionable comments and CI green, or only pre-exi
 failures left). Don't stop after a single round just because the latest round of comments was
 addressed — the loop isn't done until nothing new shows up.
 
+**Explicitly mark each review thread resolved once you've handled it** — reply with what you did
+(fixed, or why no action is needed for a purely informational finding), then call
+`resolve_review_thread` (or the equivalent UI action) on that same thread. This applies to every
+thread, not just ones that needed a code fix: a bot's purely informational/confirmatory comment
+still needs an acknowledging reply and an explicit resolve, not just silence. This repo's branch
+protection requires every conversation on a PR resolved before it can merge — an unresolved thread,
+even one that never needed any code change, blocks the merge FOREVER (indefinitely, not just until
+some other condition clears) regardless of how green CI is or how many approvals exist. A single
+stray unresolved thread left over from an earlier review round is enough to silently stall a PR that
+otherwise looks completely done — so treat "reply and resolve" as a mandatory pair for every thread
+you touch, and periodically sweep the PR's full thread list (not just the ones a fresh notification
+just surfaced) for anything still sitting unresolved before considering a PR finished.
+
 Keep PRs green through genuine fixes only — never `--no-verify`, never disable or delete a failing
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
 needs updating, fix the workflow/check definition instead of routing around it.
