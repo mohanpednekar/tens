@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SPEED_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DATA_LAKE_TRANSFER_BANDWIDTH_MULTIPLIER, DATA_LAKE_TRANSFER_CAPACITY_MAX, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SPEED_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -340,13 +340,15 @@ export const createInitialGameState = () => ({
   // Foundry"), same id/name decoupling convention TIER_DEFINITIONS' own `id` vs `name` uses.
   //
   // Three distinct groups, per prestigeGame (see there): Data Stream balance (bits/
-  // productionAccumulator/mainGameUnlocked) reset to fresh every real Prestige — a new cycle
-  // always starts this screen's balance from 0 and re-shows it before MainPage. The Byte generator
-  // itself and every upgrade to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
-  // productionMilestoneTier/productionMilestoneTierClaims) are PERMANENT, carried over unchanged
-  // exactly like an unlocked autobuyer — so each cycle's gate reopens with whatever production
-  // strength was already built, not from scratch. speedUpGame/overclockGame carry the whole object
-  // through untouched either way (see there) — they're intra-cycle soft resets, not new cycles.
+  // productionAccumulator) resets to fresh every real Prestige — a new cycle always starts this
+  // screen's balance from 0. mainGameUnlocked itself, despite living in this same object, is a
+  // PERMANENT one-time-ever latch (see latchMainGameUnlocked below) — once ever set true by
+  // reaching Storage-unlock capacity, no real Prestige or Era ascension ever resets it again, so
+  // Factory stays permanently reachable from then on. The Byte generator itself and every upgrade
+  // to it (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/productionMilestoneTier/
+  // productionMilestoneTierClaims) are likewise PERMANENT, carried over unchanged exactly like an
+  // unlocked autobuyer. speedUpGame/overclockGame carry the whole object through untouched either
+  // way (see there) — they're intra-cycle soft resets, not new cycles.
   //
   // Naming (#506): the fillable intake is the Data Stream (bits vs Buffer = capacity). Storage
   // pools are derived views with Capacity start/end (getStoragePoolMemoryBounds) and Bandwidth
@@ -354,7 +356,10 @@ export const createInitialGameState = () => ({
   // Tap/Combine/Speed/Convert keep working indefinitely, every cycle, for as long as the Data
   // Stream Buffer covers the cost.
   intro: {
-    bits: 0,                   // Data Stream balance — always an integer. Resets on Prestige.
+    bits: 0,                   // Data Stream balance — was always an integer before the fill-based
+                                // Speed multiplier (see getDataStreamEffectMultiplier) made
+                                // tickIntroProduction's own per-tick delivery continuous; can be
+                                // fractional now. Resets on Prestige.
     productionAccumulator: 0,  // fractional sub-bit accumulator, same pattern as tierProductionAccumulators. Resets on Prestige.
     // PERMANENT — Data Stream Buffer / pool Memory Capacity. Starts at INTRO_STARTING_CAPACITY
     // and advances by the pool's own Capacity ×2 ladder up to its end bound.
@@ -381,10 +386,14 @@ export const createInitialGameState = () => ({
     // Invest, Provision Disk) after a Foundry wipe. null when inactive. Survives Prestige like other
     // permanent intro fields; cleared only by a full save Reset.
     foundryResetCaps: null,
-    // Resets to false every real Prestige. True the instant any bits are ever converted into
-    // Kilobytes this cycle (manual or auto — see convertIntroBitsToKilobytes/tickIntroAutoInvest);
-    // drives App.jsx's page-routing gate away from this screen and into MainPage. Not a "frozen"
-    // flag at all — converting keeps working indefinitely afterward too, with no cap.
+    // PERMANENT — a one-time-ever latch, never reset by a real Prestige or an Era ascension (see
+    // prestigeGame/buildEraIntroReset). True the instant Storage's own capacity threshold is
+    // crossed (isStorageUnlocked — the same "1 KiB" threshold that reveals pool 1's card and
+    // switches the Data Stream tap into fill-multiplier-bonus mode — see latchMainGameUnlocked);
+    // drives App.jsx's page-routing gate away from this screen and into MainPage. Once true, the
+    // standalone Tap button/mandatory gate never comes back — the main game stays reachable for
+    // every future cycle. Not a "frozen" flag at all otherwise — the Foundry's own conversion/
+    // production keeps working indefinitely afterward too, with no cap.
     mainGameUnlocked: false,
     // Queue flag for a pending Capacity doubling. Cleared on load/normalize; retained for save
     // compatibility with the historical Sacrifice flow.
@@ -563,6 +572,17 @@ export const createInitialGameState = () => ({
     // Counts down every tick (see tickComputeBoost), frozen or not, clearing computeBoostType back
     // to null once it reaches 0.
     computeBoostRemainingSeconds: 0,
+    // NOT permanent — resets to 0 on every real Prestige/Era ascension/Reset Byte Foundry (falls
+    // out of the intro object entirely, same posture as computeBoostType), but carried through
+    // untouched by Speed Up/Overclock like the rest of intro. The Data Stream's own decaying tap
+    // bonus (see FILL_MULTIPLIER_TAP_BONUS_PERCENT/tickFillMultiplierDecay/getDataStreamMultiplierPercent
+    // in engine.js) — added to by tapIntroBit once Storage pools are revealed at 1 KiB, decays back
+    // toward 0 at FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per second.
+    dataStreamTapBonusPercent: 0,
+    // NOT permanent, same reset posture as dataStreamTapBonusPercent above — { [poolIndex]: decaying
+    // tap bonus percent } for each pool's own local Memory buffer (see tapPoolBuffer/
+    // getPoolMultiplierPercent in engine.js). Missing/zero entries are equivalent to "no bonus."
+    poolTapBonusPercents: {},
   },
 })
 
@@ -1139,7 +1159,10 @@ const buildEraIntroReset = (state, initial) => {
     byteCreated,
     bits: 0,
     productionAccumulator: 0,
-    mainGameUnlocked: false,
+    // PERMANENT, like computeMergePageUnlocked below — once the main game has ever been revealed,
+    // Era ascension (a much bigger reset than an ordinary Prestige) still never re-gates it. See
+    // latchMainGameUnlocked.
+    mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
     foundryResetCaps: {},
     autoMergeCoresIntoNode: state.intro?.autoMergeCoresIntoNode ?? initial.intro.autoMergeCoresIntoNode,
     autoMergeNodesIntoCluster: state.intro?.autoMergeNodesIntoCluster ?? initial.intro.autoMergeNodesIntoCluster,
@@ -1526,7 +1549,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // more unit (their own first-line guards); none of these ever fully freeze, matching the "return
   // the same reference so React can bail out" convention every other no-op path in this function
   // already follows.
-  const stateAfterProvision = tickProvisionDisk(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(state))
+  // Latches mainGameUnlocked permanently true the instant Storage's own capacity threshold is
+  // crossed (see latchMainGameUnlocked) — unconditional and first, so it takes effect within one
+  // tick of capacity changing however that happened (a manual Capacity ×2 claim between ticks, a
+  // queued upgrade firing later this same tick, a save load, or a Dev Mode edit).
+  const stateAfterMainGameLatch = latchMainGameUnlocked(state)
+  // Decays any live Data Stream/pool tap bonus (see tickFillMultiplierDecay) ahead of production
+  // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
+  // multiplier rather than lagging a tick behind.
+  const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
+  const stateAfterProvision = tickProvisionDisk(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay))
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
   // Disk auto-fill can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterProvision)
@@ -2030,14 +2062,70 @@ const grantTierUnits = (tierId, quantity) => state => {
 export const getIntroProductionRate = intro =>
   (INTRO_BYTE_BASE_RATE * intro.productionMultiplier) / intro.tickSpeedSeconds
 
-// Manual tap — credits "one second's worth" at the Byte generator's current rate (see
-// getIntroProductionRate), capped at capacity. Before the Byte exists (or at the starting rate),
-// this is the same flat 1 bit it's always been; once "Invest for Double Production" has grown the
-// rate, a tap scales right along with passive production instead of staying stuck at 1. Never
-// freezes (no completed-style flag — see createInitialGameState) — the only no-op condition is
-// already being full.
+// --- Fill-based Speed/Bandwidth multiplier (see FILL_MULTIPLIER_* in layers.js) --- Displayed
+// rates (getIntroProductionRate above, getStoragePoolBandwidth below) never change; this
+// multiplier scales only the REAL per-tick amount tickIntroProduction/tickPoolBufferFill actually
+// deliver, "primary fill only" (see layers.js for the full scope note).
+//
+// Percent value (100 = "no change") from a 0..1 fill fraction: FILL_MULTIPLIER_MAX_PERCENT when
+// empty, exactly 100 at 50% full, FILL_MULTIPLIER_MIN_PERCENT once completely full. Shared by the
+// Data Stream itself and every pool's own local buffer below — same linear "150% down to 50%"
+// curve either way. fillFraction is clamped defensively — both real callers already clamp their
+// own fraction to at most 1 before calling this, so this only guards a corrupted/hand-edited save.
+export const getFillMultiplierPercent = fillFraction => {
+  const clampedFraction = Math.min(1, Math.max(0, fillFraction))
+  return FILL_MULTIPLIER_MAX_PERCENT - clampedFraction * (FILL_MULTIPLIER_MAX_PERCENT - FILL_MULTIPLIER_MIN_PERCENT)
+}
+
+// The Data Stream Buffer's own fill fraction (0..1) — intro.bits over intro.capacity.
+export const getDataStreamFillFraction = intro =>
+  intro.capacity > 0 ? Math.min(1, intro.bits / intro.capacity) : 0
+
+// The Data Stream's fill-based multiplier percent, before any tap bonus.
+export const getDataStreamBaseMultiplierPercent = intro =>
+  getFillMultiplierPercent(getDataStreamFillFraction(intro))
+
+// The Data Stream's currently active multiplier percent — fill-based value plus any live decaying
+// tap bonus (see tapIntroBit/tickFillMultiplierDecay). What ByteFoundryPage displays alongside the
+// Speed figure, and what getDataStreamEffectMultiplier below turns into the real production scale.
+// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — the
+// cap applies to this CUMULATIVE total, not to dataStreamTapBonusPercent alone (see layers.js).
+export const getDataStreamMultiplierPercent = intro =>
+  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getDataStreamBaseMultiplierPercent(intro) + (intro.dataStreamTapBonusPercent ?? 0))
+
+export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPercent(intro) / 100
+
+// Manual tap. Before Storage pools are revealed at 1 KiB (getVisibleStoragePoolCount below), this
+// credits "one second's worth" at the Byte generator's current rate (see getIntroProductionRate),
+// capped at capacity — the original flat 1-bit tap at the starting rate. Once Storage pools ARE
+// revealed, this direct-credit effect is REPLACED (see FILL_MULTIPLIER_* in layers.js): a tap
+// instead adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to the Data Stream's own decaying multiplier
+// bonus (dataStreamTapBonusPercent) — tickFillMultiplierDecay drains it back down over time, and
+// tickIntroProduction is what actually spends the resulting multiplier against real per-tick
+// delivery; no bits are credited directly by the tap itself in this mode. Never freezes (no
+// completed-style flag — see createInitialGameState) — the only no-op condition, either mode, is
+// already being full (a full Buffer has no room left for either a direct credit or a faster fill
+// rate to matter) or, in the post-reveal mode, the combined multiplier already sitting at
+// FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — another tap would have nothing left to add.
 export const tapIntroBit = state => {
   if (state.intro.bits >= state.intro.capacity) return state
+  if (getVisibleStoragePoolCount(state) >= 1) {
+    const currentMultiplierPercent = getDataStreamMultiplierPercent(state.intro)
+    if (currentMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT) return state
+    // Clamped to the cap's remaining headroom, not a flat +FILL_MULTIPLIER_TAP_BONUS_PERCENT — a
+    // tap within less than one bonus's worth of the cap (e.g. at 198%) must not bank the unused
+    // remainder (2 of the 5 points) into dataStreamTapBonusPercent, or that hidden excess would
+    // silently extend how long the effective (capped) total stays pinned at the cap once it starts
+    // decaying, undermining the cap's own "instantaneous ceiling" intent.
+    const bonusIncrement = Math.min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - currentMultiplierPercent)
+    return {
+      ...state,
+      intro: {
+        ...state.intro,
+        dataStreamTapBonusPercent: (state.intro.dataStreamTapBonusPercent ?? 0) + bonusIncrement,
+      },
+    }
+  }
   // Math.max(1, …) is a defensive floor (rate is always >= 1 by construction — productionMultiplier
   // only ever grows and tickSpeedSeconds only ever shrinks from their starting 1/1 — but guards
   // against a corrupted/hand-edited save where that invariant doesn't hold) — the same posture as
@@ -2260,6 +2348,103 @@ export const getPoolBufferCapacity = (state, poolIndex) => getStoragePoolCapacit
 export const getPoolBufferBits = (state, poolIndex) =>
   state.intro?.poolBuffers?.[poolIndex] ?? 0
 
+// --- Fill-based Bandwidth multiplier, pool half (see the Data Stream half above
+// getDataStreamEffectMultiplier and FILL_MULTIPLIER_* in layers.js) ---
+// The pool's own local buffer's fill fraction (0..1).
+export const getPoolBufferFillFraction = (state, poolIndex) => {
+  const capacity = getPoolBufferCapacity(state, poolIndex)
+  return capacity > 0 ? Math.min(1, getPoolBufferBits(state, poolIndex) / capacity) : 0
+}
+
+// The pool's fill-based multiplier percent, before any tap bonus.
+export const getPoolBaseMultiplierPercent = (state, poolIndex) =>
+  getFillMultiplierPercent(getPoolBufferFillFraction(state, poolIndex))
+
+export const getPoolTapBonusPercent = (state, poolIndex) =>
+  state.intro?.poolTapBonusPercents?.[poolIndex] ?? 0
+
+// The pool's currently active multiplier percent — fill-based value plus any live decaying tap
+// bonus (see tapPoolBuffer/tickFillMultiplierDecay below). What ByteFoundryPage displays alongside
+// that pool's Bandwidth figure, and what getPoolEffectMultiplier below turns into the real
+// buffer-fill scale (see tickPoolBufferFill).
+// Combined fill-based + live tap bonus, hard-capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200) — same
+// "cumulative total, not the bonus alone" cap the Data Stream's own getDataStreamMultiplierPercent uses.
+export const getPoolMultiplierPercent = (state, poolIndex) =>
+  Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, getPoolBaseMultiplierPercent(state, poolIndex) + getPoolTapBonusPercent(state, poolIndex))
+
+export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPercent(state, poolIndex) / 100
+
+// Manual tap on one pool's own local Memory buffer — adds FILL_MULTIPLIER_TAP_BONUS_PERCENT to
+// that pool's own decaying multiplier bonus (poolTapBonusPercents[poolIndex]), scoped to this one
+// pool only — never touches the Data Stream's own bonus or any other pool's (see FILL_MULTIPLIER_*
+// in layers.js). No-op for a locked/invalid pool, one whose buffer is already full (same "extra
+// rate has nowhere to go" reasoning tapIntroBit's own full-Buffer guard uses), or one whose combined
+// multiplier is already at FILL_MULTIPLIER_TAP_CAP_PERCENT (200).
+export const tapPoolBuffer = poolIndex => state => {
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getUnlockedStoragePoolCount(state)) return state
+  if (getPoolBufferBits(state, poolIndex) >= getPoolBufferCapacity(state, poolIndex)) return state
+  const currentMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
+  if (currentMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT) return state
+  // Clamped to the cap's remaining headroom — see tapIntroBit's own identical guard above for why
+  // a flat +FILL_MULTIPLIER_TAP_BONUS_PERCENT would bank hidden excess past the cap.
+  const bonusIncrement = Math.min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - currentMultiplierPercent)
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      poolTapBonusPercents: {
+        ...(state.intro.poolTapBonusPercents ?? {}),
+        [poolIndex]: getPoolTapBonusPercent(state, poolIndex) + bonusIncrement,
+      },
+    },
+  }
+}
+
+// Decays the Data Stream's own tap bonus and every pool's own tap bonus by
+// FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND per elapsed second, floored at 0 (never below the
+// fill-based value alone) — see FILL_MULTIPLIER_* in layers.js. Runs once per tick, ahead of
+// tickIntroProduction/tickPoolBufferFill (see tickGame), so both read this tick's already-decayed
+// bonus.
+//
+// ALSO — independent of decay's own elapsedSeconds-scaled reduction — truncates whatever remains
+// down to the cap's CURRENT headroom (FILL_MULTIPLIER_TAP_CAP_PERCENT minus the base fill-based
+// value right now), discarding any excess INSTANTLY rather than leaving it to decay away over
+// time. The base value can rise independently of the bonus's own decay (e.g. a tap banked bonus
+// while the buffer was nearly full — a low base, wide headroom — and the buffer then drains,
+// raising the base back up) — without this, a stored bonus that's already contributing nothing
+// beyond what the cap allows would sit there as dead weight, only shrinking at the flat decay
+// rate, and would resurface as a "real" boost the moment the base later dropped again. This is the
+// companion half of tapIntroBit's/tapPoolBuffer's own at-tap-time headroom clamp (which stops a
+// single tap from ever ADDING more than fits) — this half stops the STORED value from ever holding
+// onto more than fits, tick over tick, regardless of how it got there.
+export const tickFillMultiplierDecay = elapsedSeconds => state => {
+  const decay = FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND * elapsedSeconds
+
+  const dataStreamHeadroom = Math.max(0, FILL_MULTIPLIER_TAP_CAP_PERCENT - getDataStreamBaseMultiplierPercent(state.intro))
+  const priorDataStreamBonus = state.intro.dataStreamTapBonusPercent ?? 0
+  const decayedDataStreamBonus = decay > 0 ? Math.max(0, priorDataStreamBonus - decay) : priorDataStreamBonus
+  const dataStreamTapBonusPercent = Math.min(decayedDataStreamBonus, dataStreamHeadroom)
+
+  const priorPoolBonuses = state.intro.poolTapBonusPercents ?? {}
+  let poolsChanged = false
+  const poolTapBonusPercents = {}
+  Object.keys(priorPoolBonuses).forEach(poolIndexKey => {
+    const priorBonus = priorPoolBonuses[poolIndexKey]
+    const decayedBonus = decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
+    const poolHeadroom = Math.max(0, FILL_MULTIPLIER_TAP_CAP_PERCENT - getPoolBaseMultiplierPercent(state, Number(poolIndexKey)))
+    const finalBonus = Math.min(decayedBonus, poolHeadroom)
+    if (finalBonus !== priorBonus) poolsChanged = true
+    poolTapBonusPercents[poolIndexKey] = finalBonus
+  })
+
+  if (dataStreamTapBonusPercent === priorDataStreamBonus && !poolsChanged) return state
+
+  return {
+    ...state,
+    intro: { ...state.intro, dataStreamTapBonusPercent, poolTapBonusPercents },
+  }
+}
+
 // Tops up every unlocked pool's own local buffer from the shared Data Stream, ascending (pool 1
 // first): each pool reserves fill-rate up to its own Bandwidth cap (getStoragePoolBandwidth) off
 // the top of the Data Stream's raw production rate, and whatever remains — the "leftover speed"
@@ -2275,7 +2460,11 @@ export const getPoolBufferBits = (state, poolIndex) =>
 // only ever fill from genuine leftover throughput, so Storage's own background funding can never
 // compete with (and delay) unlocking the main game or a Capacity doubling in flight. A buffer
 // topped up this tick isn't visible to that same tick's own cache fill (tickDiskAutoFill, which
-// runs earlier in the pipeline) until the next tick — imperceptible at TICK_RATE_MS.
+// runs earlier in the pipeline) until the next tick — imperceptible at TICK_RATE_MS. The
+// reservation bookkeeping above (poolRate/fillRate/remainingRate) stays on each pool's RAW
+// Bandwidth throughout — only the actual bits transferred into a pool's buffer at the end of its
+// own iteration are scaled by that pool's own fill-based multiplier (getPoolEffectMultiplier),
+// "primary fill only" per FILL_MULTIPLIER_* in layers.js.
 export const tickPoolBufferFill = elapsedSeconds => state => {
   // Storage itself (and so any pool) isn't a thing yet below this threshold — pool 1 is otherwise
   // always structurally "unlocked" (see isStoragePoolUnlocked), which would silently start
@@ -2299,7 +2488,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     const room = Math.max(0, getPoolBufferCapacity(state, poolIndex) - current)
     if (room <= 0) continue
 
-    const transfer = Math.min(fillRate * elapsedSeconds, room, bits)
+    const transfer = Math.min(fillRate * elapsedSeconds * getPoolEffectMultiplier(state, poolIndex), room, bits)
     if (transfer <= 0) continue
 
     bits -= transfer
@@ -2571,7 +2760,9 @@ export const upgradePoolCapacity = state => {
   const afterWipe = isComputeCoreConversionUnlocked(state)
     ? rollbackComputeFundedBandwidth(eraseAllComputeTokens(state))
     : state
-  return {
+  // latchMainGameUnlocked here (not just tickGame's own unconditional call) makes the reveal
+  // synchronous with the capacity change that triggers it — no need to wait for the next tick.
+  return latchMainGameUnlocked({
     ...afterWipe,
     intro: {
       ...afterWipe.intro,
@@ -2579,7 +2770,7 @@ export const upgradePoolCapacity = state => {
       capacity: afterWipe.intro.capacity * INTRO_CAPACITY_DOUBLING_STEP,
       capacityUpgradeQueued: false,
     },
-  }
+  })
 }
 
 export const pickIntroCapacityMilestone = state => upgradePoolCapacity(state)
@@ -2885,10 +3076,8 @@ export const getIntroKilobyteConversionCost = state =>
 // pool, not resources.base. No-op below cost — otherwise always available, every cycle, with no
 // separate budget or cap of its own (tier01's own purchaseLevelProgress/getPurchaseBlockSize is
 // what the transfer-block row on screen actually tracks, and that already rolls over into the
-// next level's blocks on its own once one completes — see ByteFoundryPage). The first successful
-// call ever this cycle also flips mainGameUnlocked, opening the App.jsx routing gate into
-// MainPage — set unconditionally (harmless once already true), so this is the earliest of the two
-// transfer paths (this or the auto-invest below) to actually fire that does the unlocking.
+// next level's blocks on its own once one completes — see ByteFoundryPage). Does NOT itself touch
+// mainGameUnlocked any more — see latchMainGameUnlocked below for what does.
 export const convertIntroBitsToKilobytes = state => {
   const cost = getIntroKilobyteConversionCost(state)
   if (state.intro.bits < cost) return state
@@ -2898,9 +3087,25 @@ export const convertIntroBitsToKilobytes = state => {
     intro: {
       ...state.intro,
       bits: state.intro.bits - cost,
-      mainGameUnlocked: true,
     },
   })
+}
+
+// The main game (Factory/MainPage) reveals the instant Storage pools do — the SAME
+// isStorageUnlocked capacity threshold (INTRO_DISK_UNLOCK_CAPACITY, "1 KiB") that already reveals
+// pool 1's card and switches the Data Stream tap into fill-multiplier-bonus mode — rather than the
+// much smaller, slightly-earlier threshold the auto-convert mechanic above happens to fire at
+// (tier01's own starting per-unit cost). Once latched (mainGameUnlocked: true), it's PERMANENT:
+// never reset by a real Prestige (see prestigeGame) or an Era ascension (see buildEraIntroReset) —
+// the standalone Tap button is a one-time-ever onboarding step, not something replayed every
+// cycle. Called unconditionally every tick (see tickGame) — a no-op once already latched or before
+// the threshold — so it takes effect within one tick (TICK_RATE_MS) of capacity crossing it,
+// however that happened (a manual Capacity ×2 claim, a queued upgrade firing, a save load, or a
+// Dev Mode edit), without needing a call at every individual capacity-changing site.
+export const latchMainGameUnlocked = state => {
+  if (state.intro?.mainGameUnlocked) return state
+  if (!isStorageUnlocked(state)) return state
+  return { ...state, intro: { ...state.intro, mainGameUnlocked: true } }
 }
 
 // Tick-time passive production for the Byte generator — no-op immediately before byteCreated (a
@@ -2925,7 +3130,11 @@ export const tickIntroProduction = elapsedSeconds => state => {
       : { ...state, intro: { ...state.intro, productionAccumulator: accumulated } }
   }
 
-  const bitsToAdd = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed * getComputeBoostMultiplier(state.intro)
+  // getDataStreamEffectMultiplier applies the fill-based multiplier (see FILL_MULTIPLIER_* in
+  // layers.js) to this real per-tick delivery only — getIntroProductionRate's own displayed rate
+  // never includes it. Evaluated against the Buffer's fill level BEFORE this batch is added, same
+  // "read state, then derive the delta" order every other multiplier factor here already follows.
+  const bitsToAdd = INTRO_BYTE_BASE_RATE * state.intro.productionMultiplier * ticksElapsed * getComputeBoostMultiplier(state.intro) * getDataStreamEffectMultiplier(state.intro)
 
   return {
     ...state,
@@ -2938,9 +3147,8 @@ export const tickIntroProduction = elapsedSeconds => state => {
 }
 
 // Auto-convert convenience — fires every tick, converting one unit at a time (at
-// getIntroKilobyteConversionCost(state), tier01's own current per-unit cost — not a fixed rate) via
-// convertIntroBitsToKilobytes itself (so it flips mainGameUnlocked on first success and behaves
-// identically to a manual click), for as long as bits still affords another unit. Used to wait for
+// getIntroKilobyteConversionCost(state), tier01's own current per-unit cost — not a fixed rate),
+// for as long as bits still affords another unit. Used to wait for
 // a whole getPurchaseBlockSize(state)-sized batch before firing even once — which meant the
 // transfer-block row's active block visually sat pinned at 100% (bits clamped past the per-unit
 // cost) for the entire time bits climbed toward that full batch, looking frozen, with
@@ -2968,7 +3176,6 @@ export const tickIntroAutoInvest = state => {
       intro: {
         ...state.intro,
         bits: state.intro.bits - totalCost,
-        mainGameUnlocked: true,
       },
     })
   }
@@ -5339,19 +5546,23 @@ export const prestigeGame = state => {
       history: nextHistory,
       pinnedIds: nextPinnedIds,
     },
-    // "Memory" (bits/productionAccumulator/mainGameUnlocked) resets to
-    // fresh on every real Prestige, in the same atomic reset as resources/owned above — a new
-    // cycle always starts this screen's balance from 0 and re-shows it before MainPage. The Byte
-    // generator itself and every upgrade to it — capacity/byteCreated/tickSpeedSeconds/
-    // productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims — are PERMANENT
-    // and carried over from state, exactly like an unlocked autobuyer, so each cycle's gate
-    // reopens with whatever production strength was already built rather than from scratch.
+    // "Memory" (bits/productionAccumulator) resets to fresh on every real Prestige, in the same
+    // atomic reset as resources/owned above — a new cycle always starts this screen's balance from
+    // 0. mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked) — once the main game has
+    // ever been revealed, a real Prestige never re-gates it: Factory stays reachable from the
+    // instant this prestige resolves, with no mandatory Byte Foundry replay. The Byte generator
+    // itself and every upgrade to it — capacity/byteCreated/tickSpeedSeconds/
+    // productionMultiplier/productionMilestoneTier/productionMilestoneTierClaims — are likewise
+    // PERMANENT and carried over from state, exactly like an unlocked autobuyer, so a cycle that
+    // still needs the gate (the very first one, before mainGameUnlocked has ever latched) reopens
+    // with whatever production strength was already built rather than from scratch.
     // speedUpGame/overclockGame (below) are intra-cycle soft resets, not new cycles, and still
     // carry the whole intro object through untouched either way.
     intro: {
       ...initial.intro,
       // Falls back to initial.intro's own fresh values (rather than throwing) for a state that
       // predates the intro field entirely — same defensive posture as autobuyers/smartAutobuyer/etc. below.
+      mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
       capacity: state.intro?.capacity ?? initial.intro.capacity,
       byteCreated: state.intro?.byteCreated ?? initial.intro.byteCreated,
       tickSpeedSeconds: state.intro?.tickSpeedSeconds ?? initial.intro.tickSpeedSeconds,
@@ -5563,9 +5774,10 @@ export const speedUpGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike prestigeGame (which resets Memory/the gate every cycle but keeps the generator itself
-    // permanent — see there), this is an intra-cycle soft reset and carries the whole intro object
-    // through completely untouched, Memory included.
+    // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
+    // generator itself and the mainGameUnlocked latch permanent — see there), this is an
+    // intra-cycle soft reset and carries the whole intro object through completely untouched,
+    // Memory included.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as prestigeGame gives these two "enabled" flags — see there.
@@ -5638,9 +5850,10 @@ export const overclockGame = state => {
   const initial = createInitialGameState()
   return {
     ...initial,
-    // Unlike prestigeGame (which resets Memory/the gate every cycle but keeps the generator itself
-    // permanent — see there), this is an intra-cycle soft reset and carries the whole intro object
-    // through completely untouched, same as speedUpGame.
+    // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
+    // generator itself and the mainGameUnlocked latch permanent — see there), this is an
+    // intra-cycle soft reset and carries the whole intro object through completely untouched,
+    // same as speedUpGame.
     intro: state.intro ?? initial.intro,
     autobuyers: state.autobuyers ?? initial.autobuyers,
     // Same permanence as speedUpGame/prestigeGame give these two "enabled" flags — see there.

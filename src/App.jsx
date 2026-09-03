@@ -37,6 +37,10 @@ function App() {
 
   // Local page toggle — not a router. Defaults to 'game'; the gate override below forces Foundry
   // whenever mainGameUnlocked is false and the player isn't on a gate-exempt utility page.
+  // mainGameUnlocked is now a PERMANENT, one-time-ever latch (see latchMainGameUnlocked in
+  // engine.js) — never reset by a real Prestige or an Era ascension — so this override can only
+  // ever fire before the very first time the main game is revealed on this save; every subsequent
+  // cycle goes straight to Factory with no replay of the gate.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
   // Bumped when AppNav selects Byte Factory so MainPage resets to the Factory tab (not Upgrades).

@@ -30,6 +30,11 @@ import {
   DATA_LAKE_TRANSFER_CAPACITY_MAX,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
+  FILL_MULTIPLIER_MAX_PERCENT,
+  FILL_MULTIPLIER_MIN_PERCENT,
+  FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+  FILL_MULTIPLIER_TAP_CAP_PERCENT,
+  FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
   INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -162,8 +167,9 @@ const InfoPage = () => {
       <Section aria-label="byte foundry section">
         <h2>Byte Foundry</h2>
         <p>
-          Every fresh save — and every Prestige — starts here before {firstTierName} exist.
-          Reopen any time from the bottom nav’s Foundry item. Data Stream Buffer / pool Memory
+          Every fresh save starts here, once, before {firstTierName} exist — unlocking the main
+          game is permanent, so a Prestige never sends you back here again. Reopen any time from the
+          bottom nav’s Foundry item. Data Stream Buffer / pool Memory
           Capacity reads in binary units (KiB, MiB, …, 1 KiB = 1024 Bytes) — Storage (Disk sizes,
           Data Lake, caches) stays SI (KB, MB, …, 1 KB = 1000 Bytes) throughout.
         </p>
@@ -172,14 +178,30 @@ const InfoPage = () => {
         <ul>
           <li>
             <strong>Tap</strong> fills the Data Stream with bits (one second of production per tap
-            at the current rate). After the main game unlocks, the Data Stream tile is the tap
-            target — the standalone Tap button goes away.
+            at the current rate) — until Storage pools reveal (see below), after which tapping the
+            Data Stream instead boosts its own Speed multiplier (next bullet). After the main game
+            unlocks, the Data Stream tile is the tap target — the standalone Tap button goes away.
           </li>
           <li>
             Combine the first {INTRO_BYTE_COMBINE_COST} bits into a permanent Byte generator that
             produces passively forever after. Capacity starts at{' '}
             {formatBitsInNearestUnit(getStoragePoolMemoryBounds(1).startBits)} and grows through a
             full-Buffer Capacity ×2 ladder; its ceiling follows the highest unlocked storage pool.
+          </li>
+          <li>
+            <strong>Speed/Bandwidth multiplier</strong> — the displayed Data Stream Speed and each
+            pool’s own Bandwidth never change; they’re always what applies at 100% of a separate
+            multiplier shown alongside them. That multiplier starts at{' '}
+            {FILL_MULTIPLIER_MAX_PERCENT}% when its own Buffer (Data Stream, or a pool’s own Memory)
+            is empty, reaches exactly 100% at 50% full, and bottoms out at{' '}
+            {FILL_MULTIPLIER_MIN_PERCENT}% once completely full. Tapping the Data Stream (once
+            Storage pools are revealed at 1 KiB) or a pool’s own Memory tile adds{' '}
+            +{FILL_MULTIPLIER_TAP_BONUS_PERCENT}% to that one Data Stream/pool’s own multiplier,
+            decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The combined
+            total (base multiplier plus any live tap bonus) is capped at{' '}
+            {FILL_MULTIPLIER_TAP_CAP_PERCENT}% — the speedometer gauge in each card’s top-right
+            corner shows this, with the tap bonus portion extending past the base needle position in
+            a distinct color.
           </li>
           <li>
             <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost
@@ -191,20 +213,22 @@ const InfoPage = () => {
           </li>
           <li>
             <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at
-            {firstTierName}’ current per-unit cost. The first transfer unlocks the main game;
-            there’s no per-cycle cap after that. Auto-convert keeps running even when the manual
-            row is hidden.
+            {firstTierName}’ current per-unit cost, with no per-cycle cap, every cycle. Auto-convert
+            keeps running even when the manual row is hidden — it doesn’t itself gate the main game;
+            crossing Storage’s own capacity threshold does that (next section), a one-time-ever
+            unlock on your very first cycle.
           </li>
         </ul>
 
         <h3>What resets vs. what stays</h3>
         <ul>
           <li>
-            <strong>Resets each Prestige:</strong> Data Stream balance and the main-game unlock gate.
+            <strong>Resets each Prestige:</strong> Data Stream balance.
           </li>
           <li>
             <strong>Permanent:</strong> the Byte generator, Buffer/production upgrades, Disks,
-            and every Compute entity.
+            every Compute entity, and the main-game unlock gate itself — once it has ever
+            triggered, no Prestige re-gates you behind the Byte Foundry again.
           </li>
           <li>Later cycles are a fast pit-stop, not a full replay.</li>
         </ul>
@@ -592,8 +616,9 @@ const InfoPage = () => {
             unlocked.
           </li>
           <li>
-            Sends you back through the Byte Foundry gate each cycle, but permanent Foundry /
-            Storage / Compute progress carries over.
+            The Byte Foundry gate is one-time-ever — once unlocked on your very first cycle, a
+            Prestige never sends you back through it again. Permanent Foundry / Storage / Compute
+            progress always carries over regardless.
           </li>
           <li>
             The first Prestige of a save uses a full-screen overlay; later ones use the top bar /
@@ -619,15 +644,15 @@ const InfoPage = () => {
             and eligibility.
           </li>
           <li>
-            <strong>Resets:</strong> Foundry generator upgrades, Memory and the main-game gate,
-            Disks, Compute entities, ordinary Factory cycle (resources, owned tiers, Double PP
-            level), unspent PP and prestige count, and Compute owned units.
+            <strong>Resets:</strong> Foundry generator upgrades, Memory (Capacity), Disks, Compute
+            entities, ordinary Factory cycle (resources, owned tiers, Double PP level), unspent PP
+            and prestige count, and Compute owned units.
           </li>
           <li>
             <strong>Keeps:</strong> automation unlocks and pause flags, Unbounded Prestige latch,
-            museum, Compute page reveal, Flops autobuyer unlock flags, Eons (+ award), and
-            hyperscalers. Era <em>N</em> free-unlocks the <em>N</em>th Compute tier&apos;s
-            autobuyer.
+            the main-game unlock gate (once it has ever triggered), museum, Compute page reveal,
+            Flops autobuyer unlock flags, Eons (+ award), and hyperscalers. Era <em>N</em>
+            free-unlocks the <em>N</em>th Compute tier&apos;s autobuyer.
           </li>
         </ul>
       </Section>

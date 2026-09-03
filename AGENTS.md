@@ -112,10 +112,12 @@ are pure renderers. `App.jsx`
 switches pages via a local `page` `useState` and a shared bottom `AppNav` (Foundry → Boosters → Compute →
 Factory → Guide → More), with `ByteFoundryPage` additionally forced onto screen — overriding whatever
 `page` says, except on gate-exempt utility pages (`'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`)
-— whenever the current Prestige cycle's `intro.mainGameUnlocked` is still false (see "Byte Foundry"
-below). Storage is continuous Foundry sections (Data Stream + Disks), not gate-exempt on its own. Factory
-stays hidden during the gate; Guide and More stay reachable so utilities never require unlocking the
-main game. Once unlocked, Foundry is just another AppNav destination.
+— whenever `intro.mainGameUnlocked` is still false (see "Byte Foundry" below). Storage is continuous
+Foundry sections (Data Stream + Disks), not gate-exempt on its own. Factory stays hidden during the
+gate; Guide and More stay reachable so utilities never require unlocking the main game. Once
+unlocked, Foundry is just another AppNav destination. `intro.mainGameUnlocked` is now PERMANENT
+(`latchMainGameUnlocked` in `engine.js`) — never reset by a real Prestige or Era ascension — so this
+gate is effectively one-time-ever, on a save's very first cycle only.
 
 There are 10 tiers, ids `tier01`–`tier10` (display names `Kilobytes`–`Quettabytes`, a byte-scale
 theme). Every tier is bought with the base currency (`MONEY_ID = 'base'`, display "Bits") and
@@ -131,12 +133,31 @@ or tickspeed mechanics here** — they're intricate and have changed shape multi
 
 ### Byte Foundry
 
-`ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save — and every real Prestige
-cycle after that — must pass through before `MainPage` (`tier01`/Kilobytes onward) is reachable. The
-player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
+`ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save must pass through once
+(a one-time-ever gate — see `latchMainGameUnlocked` above) before `MainPage` (`tier01`/Kilobytes
+onward) is reachable. The player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
 B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
 permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
 cost ladder now ×4/tier) and **Capacity ×2**.
+
+**Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in layers.js): the displayed Speed/
+Bandwidth figures never change — both are always what applies at 100% of a separate multiplier that
+scales only the real per-tick amount actually delivered into `intro.bits`/a pool's own buffer (every
+other consumer of those rate functions — disk build/cache/Data Lake/merge pacing — stays on the raw
+rate). Starts at 150% empty, exactly 100% at 50% full, bottoms out at 50% completely full. Tapping
+the Data Stream (once Storage pools reveal at 1 KiB) or a pool's own Memory buffer adds +5% to that
+one Data Stream/pool's own bonus, decaying at 1%/sec (`tickFillMultiplierDecay`); before reveal, a
+Data Stream tap keeps its original flat one-second direct-credit effect instead. The CUMULATIVE
+total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TAP_CAP_PERCENT`) —
+both tap actions no-op once already at that cap, AND `tickFillMultiplierDecay` truncates any stored
+excess down to the cap's current headroom every tick (not just at tap time), so effect beyond 200%
+is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
+`MultiplierGauge` — a half-circle 0–200% speedometer with a percent readout — inside the same
+tappable tile (`FillableStatCard`) for both the Data Stream and every pool, identically
+(`pointer-events: none` so it never blocks the tap/expand-toggle underneath); the fill-based arc
+reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
+the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
+pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
 
 **Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
 values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
@@ -219,7 +240,9 @@ actually gates deposits. Deposited/capacity/next-cost/doubling-cost all display 
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 An always-on auto-convert turns Data Stream bits into free `tier01` units at tier01's own current
 per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
-was removed); the first successful conversion unlocks the main game. Storage pool cards also require
+was removed) — it funds `tier01` purchases continuously, every cycle, but doesn't itself touch
+`intro.mainGameUnlocked` any more; that's `latchMainGameUnlocked`'s job (see above), keyed off
+Storage's own capacity threshold instead. Storage pool cards also require
 `intro.capacity` to reach 1024^N Bytes (1 KiB/1 MiB/1 GiB/…, `getPoolCapacityUnlockThresholdBits`)
 on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
 own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
@@ -227,8 +250,10 @@ so the whole Storage section and pool 1's card reveal at the same instant, with 
 showing a clean "1 KB" Capacity — and each
 unlocked pool's own read cache now starts filling from Memory the moment that pool unlocks, not only
 once a disk of that size has ever been built. The generator, Disks, Data Lakes, and Compute
-Cores/Nodes are permanent across every real Prestige; only Data Stream balance and the
-main-game-unlock gate reset each cycle.
+Cores/Nodes are permanent across every real Prestige; so is `intro.mainGameUnlocked` itself, a
+one-time-ever latch (`latchMainGameUnlocked`) — once Storage-unlock capacity is ever reached, no
+real Prestige or Era ascension resets it again, so Factory stays permanently reachable from then on.
+Only the Data Stream balance itself resets each cycle.
 After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
 upgrades on the Upgrades tab.
