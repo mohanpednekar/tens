@@ -1,5 +1,21 @@
 # Design history & rationale
 
+### Repo layout rationale relocated from CLAUDE.md (CLAUDE.md/doc cost trim) — 2026-09-03
+
+Two file-tree entries in `CLAUDE.md`'s "Repo layout" carried embedded design-rationale prose (why a
+component was made a shared standalone file) rather than a bare current-behavior fact — moved here
+per `CLAUDE.md`'s own header rule that rationale belongs in this file, not inline in the file tree.
+
+**`components/DiskArrayRow`** — extracted so both `ByteFoundryPage` (the single currently-active/
+buildable size only) and `StoragePage` (every size ever reached) render identical, fully interactive
+disk detail — read cache blocks, disk squares, releasing, redeeming — rather than `StoragePage`
+alone owning that detail and `ByteFoundryPage` settling for a text summary.
+
+**`public/`'s old create-react-app-era files** — `index.html`/`manifest.json`/`logo192.png`/
+`logo512.png` were unused dead weight (this is a Vite app — Vite's own root `index.html` is what's
+actually served) and were removed rather than left in place to confuse the newer PWA manifest
+(`docs/PWA_REFERENCE.md`) sitting alongside them.
+
 ### Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03
 
 Follow-up player feedback on the just-shipped Provision Disk queue toggle (previous entry) surfaced
