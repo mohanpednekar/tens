@@ -87,6 +87,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **A freshly-unlocked Storage pool's Memory buffer could stall well short of its first disk's own
+  cost** — that size's read cache started pre-filling from the buffer the instant the pool unlocked,
+  even though the pool's own starting Capacity was one decade step below what that size's disk build
+  actually costs, so the buffer's inflow was silently diverted into an unusable cache instead of
+  growing the visible balance. The cache now also waits for that size's disk build to be affordable
+  (or for a disk of that size to already exist) before it starts filling. See `docs/DESIGN_HISTORY.md`.
 - **Whole-Byte tier costs shown as an arbitrary-looking bit count in scientific notation** (e.g.
   "8e6 b" for Megabytes' full-block cost) — `formatCurrency` now renders an exponential-range
   amount whose mantissa is exactly `BITS_PER_BYTE` (8) converted to Bytes instead ("1e6 B"), since

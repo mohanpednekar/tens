@@ -2892,6 +2892,29 @@ describe('tickDiskAutoFill', () => {
     expect(tickDiskAutoFill(1e12)(state)).toBe(state)
   })
 
+  it("does NOT pre-fill a pool's own smallest size's read cache before that size's disk is even affordable — no disk ever built and the pool's own capacity is still its own starting level (regression: the read cache used to start draining a freshly-unlocked pool's buffer the instant the pool unlocked, even though that pool's own smallest disk costs 10x more than the pool could ever hold at its own starting capacity level — silently starving the player-visible buffer balance, and any Data Lake overflow riding on it, for as long as it took the cache to fill on its own)", () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), 0), {
+      // Pool 1's own starting capacity — no Capacity ×2 purchases yet, no disk ever built.
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      bits: FIRST_DISK_SIZE * 10, // plenty of Data Stream bits available to draw from
+    })
+    expect(isProvisionDiskAvailable(state)).toBe(false) // this size's own disk isn't affordable yet
+    const after = tickDiskAutoFill(1e12)(state)
+    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(after).toBe(state) // same-reference no-op — nothing eligible to fill at all
+  })
+
+  it("starts pre-filling the read cache the instant the pool's own capacity grows enough to afford that size's disk, even with zero disks built yet", () => {
+    const affordableCapacity = getDiskCost(FIRST_DISK_SIZE) * 2 // comfortably past the affordability threshold
+    const state = withIntro(withPoolBuffer(createInitialGameState(), blockBits * 3), {
+      capacity: affordableCapacity,
+    })
+    expect(getPoolBufferCapacity(state, 1)).toBeGreaterThanOrEqual(getDiskCost(FIRST_DISK_SIZE))
+    const after = tickDiskAutoFill(1e12)(state)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(blockBits * 3)
+    expect(after.intro.poolBuffers[1]).toBe(0)
+  })
+
   it('is a same-reference no-op when Memory has no bits at all to add to the cache', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 0,

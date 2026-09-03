@@ -5436,3 +5436,51 @@ within the exponential regime the whole 2 seconds (well short of a disk completi
 exactly the WITHIN-one-disk precision this fix targets, distinct from the eighth finding's own
 cross-disk-boundary regression test. `yarn test`: 1694/1694 green (+3 total across the tenth and
 eleventh findings — 1691 → 1694). `yarn build` succeeds.
+
+### The read-cache pre-fill design was never reconciled with the later decade-of-10 Capacity ladder, starving a freshly-unlocked pool's buffer
+
+A player-reported bug: a fresh pool 1 (the KB pool) could not accumulate even 1 KB of Memory buffer
+— its balance appeared to be "consumed too fast," with no visible destination for the missing bits.
+This traced to two earlier, independently-reasonable design decisions that were never checked
+against each other once the second one landed. The first ("Pool cards gated on a capacity threshold
+too; read cache pre-fills on pool unlock" above) made a pool's smallest size's read cache
+(`diskCache`, `DISK_CACHE_BLOCK_COUNT` (8) blocks totaling one disk's worth of bits — 8,000 bits for
+a 1 KB pool) start filling from that pool's own buffer the instant the pool unlocked, regardless of
+whether a disk of that size had ever been built, specifically so the cache would already be full (or
+filling) by the time the player's first disk finished provisioning. The second, much later ("Provision
+Disk moved back inside its pool card; pool Capacity switched from SI-clean to a plain decade-of-10
+ladder" above) deliberately made a pool's own decade-power Capacity climb one decade step AHEAD of
+that size's own face value — a 1 KB disk's `getDiskCost` (`DISK_BUILD_COST_MULTIPLIER` (10) × size =
+80,000 bits) is only affordable once the pool's Capacity has reached "10 KB," not "1 KB." Neither
+change touched the other's own logic, but together they meant a pool's smallest size's read cache
+(8,000 bits — coincidentally exactly the pool's own STARTING buffer capacity at capacityLevel 0) was
+eligible to fill the moment the pool unlocked, while that same size's disk build was providably
+unaffordable for an entire Capacity level (until the pool grew ten-fold, to 80,000 bits). Every bit
+`tickPoolBufferFill` funneled into the buffer, `tickDiskAutoFill`'s cache-fill pass immediately
+diverted right back out into `diskCache` — not destroyed, but invisible to the player (no UI surface
+shows cache contents until a disk of that size exists to receive them) and unusable (the cache can
+only flush into a disk that can't yet be built), so the pool's own visible buffer balance, and any
+Data Lake overflow riding on that buffer ever reaching full, could stall indefinitely at low
+production. **Diagnosis.** Traced the tick pipeline order in `tickGame`
+(`tickIntroAutoInvest` → `tickPoolBufferFill` → `tickDataLakeAutoBuy`, with `tickDiskAutoFill` run
+earlier in the same tick), ruled out tier01's own auto-convert priority as the mechanism via a
+throwaway scratch simulation (bits were fully conserved end to end, just relocated), then confirmed
+via a second scratch script logging `diskCache`/`poolBuffers` across ticks from a fresh save that the
+buffer's own inflow was being drained into the cache every tick it grew, and that
+`getDiskCost(FIRST_DISK_SIZE)` (80,000) exceeds `getPoolBufferCapacity` at capacityLevel 0 (8,000) by
+exactly 10×. **Fix.** `tickDiskAutoFill`'s `readCacheEligibleSizes` computation now requires, for any
+size with no disk EVER built at it, that the pool's CURRENT capacity already cover that size's own
+disk cost (`getPoolBufferCapacity(state, poolIndex) >= getDiskCost(unitBits)`) before the cache
+starts filling — `everBuilt || affordable`, an OR, not a replacement of the original condition.
+Once a disk of that size has ever existed, the affordability check no longer applies at all: the
+pre-fill stays exactly as eager as the original design intended in every case where it could
+actually be used (a save with a disk already built but a since-lowered/edited capacity, e.g. via Dev
+Mode, still pre-fills). An affordability-only gate (no `everBuilt` half) was tried first and broke 11
+existing `tickDiskAutoFill`/auto-redeem tests, all of which seeded `disksBuiltTotal[FIRST_DISK_SIZE]:
+1` but used ad-hoc capacity values below the true affordability threshold under the decade-power
+transform — the OR-based gate fixed all 11 with zero test changes, since `everBuilt` alone already
+satisfied them. **Verification.** Two new regression tests: one asserts a same-reference no-op when
+a pool sits at its own starting capacity with zero disks built (nothing eligible to fill, matching
+the reported bug exactly); the other asserts the cache DOES start filling, with zero disks built,
+the instant the pool's capacity crosses the affordability threshold. `yarn test`: 1696/1696 green
+(+2). `yarn build` succeeds.

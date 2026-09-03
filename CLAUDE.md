@@ -1216,7 +1216,17 @@ block/tier claim drains into the cache at a real, continuous, bounded rate once 
 instantly — rather than the fixed rate/tier check alone gating it. `tickDiskAutoFill`'s cache
 eligibility (which sizes it tries to fill) is keyed off `getUnlockedStoragePoolCount` — every
 currently-unlocked pool's own smallest size — NOT off `disksBuiltTotal` having an entry for that
-size: a pool's read cache starts filling from Memory the instant that pool unlocks, so it's already
+size, EXCEPT that a size with no disk ever built also needs its own disk build to be currently
+AFFORDABLE at the pool's present capacity (`getPoolBufferCapacity(state, poolIndex) >=
+getDiskCost(unitBits)`) before its cache starts filling at all — a pool's own smallest size is
+never affordable at that pool's own STARTING capacity level (the decade-power Capacity ladder
+funds a size's disk cost one decade step ahead of that size's own face value), so without this
+gate a freshly-unlocked pool's read cache (coincidentally the same size as that pool's own starting
+buffer capacity) would drain essentially all of the pool's buffer inflow toward a disk that cannot
+be built yet, for as long as it took the cache to fill on its own — starving the player-visible
+buffer balance and any Data Lake overflow riding on it. Once a disk of that size has EVER been
+built, the affordability check no longer applies (`disksBuiltTotal[unitBits] > 0` alone is
+sufficient) — the cache starts filling from Memory the instant that pool unlocks, so it's already
 waiting full (or filling) by the time the player's first disk of that size finishes provisioning,
 rather than starting from empty only once a disk has ever been built — see
 `docs/DESIGN_HISTORY.md`. Read cache flushes into an empty
