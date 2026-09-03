@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
 
 ### Added
+- **A dedicated Data Lake pool-fill tile** — a small fillable element inside each Data Lake block
+  showing progress toward the currently-open disk slot ("`<fillBits>` / `<size>`"), always visible
+  (even before the lake unlocks, where it reads "Locked · 0 / `<size>`") rather than only a sliver
+  on one small disk square.
 - **"Queue next disk build" on Provision Disk** — a small pin-icon toggle next to the Provision Disk
   button arms the next build to fire itself the instant its own pool buffer can afford it and
   nothing outranks it in the forced priority order, instead of requiring a click at that exact
@@ -94,6 +98,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **A lone Data Lake disk square rendered as a giant, room-spanning circle** at a fresh capacity
+  level (only one slot to show) — `LakeSquare`'s own flex-grow stretched it to fill the whole row
+  width with nothing else to share space with; capped with a `max-width`.
+- **A pool's Data Lake section showed nothing at all until it unlocked**, so the first thing a player
+  saw was already mid-progress with no history — the new pool-fill tile now always renders, showing
+  a static "Locked" state before that point instead of being absent.
+- **Compute Boost's Reclaim could cancel a running effect entirely** — reclaiming down to the very
+  last stack cleared the boost fully back to inactive (refunded), which wasn't meaningfully different
+  from Forfeit (cancel, no refund). Reclaim now always leaves at least 1 stack behind — an active
+  boost's own effect can no longer be pulled back below "running," only reclaimed for quantity beyond
+  that; letting it run out is the only way to end one early.
+- **A pool card's own header row sat noticeably farther from its Memory buffer tile than the rest of
+  the card's spacing** — the header button's own bottom padding was compounding with the card's own
+  gap; padding made asymmetric and the card's gap tightened.
 - **A freshly-unlocked Storage pool's Memory buffer could stall indefinitely** — that pool's smallest
   size's read cache started pre-filling from the buffer the instant the pool unlocked, even before a
   disk of that size existed, so the buffer's inflow was silently diverted into a cache with nothing
@@ -179,6 +197,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **A Data Lake now unlocks with its own matching Storage pool's real progress, not its own internal
+  fill state.** Boosters become buyable the instant a pool has built its first real disk
+  (`isDataLakePoolReady`), not once the lake's own first disk completes — and overflow no longer
+  feeds a lake at all until then, so a pool can't bank lake progress before any real Storage disk
+  exists. Capacity upgrades (1 → 10 → 100 → 1,000) now require the CORRESPONDING Storage array to be
+  fully built (the smallest/middle/largest array for level 0→1/1→2/2→3 respectively) rather than the
+  lake's own escalating Booster cost exceeding its capacity — the Upgrade button is hidden (not just
+  disabled) until that array is actually complete. This is no longer guaranteed mutually exclusive
+  with an affordable Booster purchase, unlike under the old cost-based condition; `DataLakePanel`
+  still repurposes one button slot, preferring Upgrade when both apply. See `docs/DESIGN_HISTORY.md`.
 - **A pool's multiplier gauge and Data Lake reading are now one continuous speedometer, not two
   stacked dials** — the earlier design rendered a separate bottom-half arc for the Data Lake's own
   overflow rate. Now the same dial switches from the fill-based Speed/Bandwidth multiplier to that

@@ -156,7 +156,7 @@ const MilestoneCostLine = styled.span`
 // derived Bandwidth/Capacity card with its three disk-array rows below it.
 const PoolCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.md};
+  gap: ${props => props.theme.space.sm};
 `
 
 const DataStreamCard = styled(StatCard)`
@@ -182,7 +182,10 @@ const PoolSummaryButton = styled.button`
   font: inherit;
   text-align: left;
   cursor: pointer;
-  padding: ${props => props.theme.space.sm};
+  // Less on the bottom than the other three sides — PoolCard's own gap already separates this
+  // button from the Memory buffer tile right below it, so full padding on all four sides doubled
+  // up into a visibly larger gap than the rest of the card's own rhythm.
+  padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm} 0.15rem;
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
@@ -541,7 +544,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // it, so the player doesn't have to click at that exact instant. Nothing to arm once a build is
   // already in flight (it has its own countdown) or the ladder has nothing left to ever build.
   const diskBuildQueued = Boolean(intro.diskBuildQueued)
-  const diskBuildQueueDisabled = !!diskBuildInProgress || diskLadderExhausted
+  // Canceling an already-armed queue should never be blocked — only ARMING it needs the build-in-
+  // progress/ladder-exhausted guard (matching queueDiskBuild's own no-op conditions in engine.js).
+  const diskBuildQueueDisabled = !diskBuildQueued && (!!diskBuildInProgress || diskLadderExhausted)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
 
@@ -608,7 +613,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 : `Auto-provision the next ${formatDiskSize(diskSize)} disk the moment its buffer can afford it, without clicking Provision Disk yourself`
         }
         type="button"
-        variant={diskBuildQueued ? 'warn' : 'ghost'}
+        variant={diskBuildQueued ? 'prestige' : 'ghost'}
       >
         {diskBuildQueued ? '✕' : '📌'}
       </QueueToggleButton>

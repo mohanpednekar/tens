@@ -186,6 +186,16 @@ container — Memory / read cache / write cache fill it afterward (see DiskArray
 sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
 split — every shown size's full interactive DiskArrayRow already lives on this page.
 
+A small pin-icon `QueueToggleButton` sits beside the Provision Disk button (`ProvisionDiskRow` wraps
+the pair) arming/disarming `intro.diskBuildQueued` (`actions.queueDiskBuild`/`clearDiskBuildQueue`):
+since Provision Disk has no automation of its own (nothing in `tickGame` ever auto-starts a build —
+only `tickProvisionDisk` counts an already-started one down), a player would otherwise have to click
+it at the exact instant it's affordable, potentially 10 separate times per size before the ladder
+even advances. `aria-pressed={diskBuildQueued}`, showing `📌` (`variant="ghost"`) unarmed → `✕`
+(`variant="prestige"`, the gold/caution token) once armed; `disabled` only while ARMING would no-op
+(`diskBuildInProgress` or `diskLadderExhausted`) — canceling an already-armed queue is never blocked.
+See docs/ECONOMY_REFERENCE.md's "Disks" section for the full queue mechanic.
+
 Below its own disk-array rows, each pool card renders `components/DataLakePanel` with both `bare`
 and `tierIndex={poolIndex}` set (`<DataLakePanel actions={actions} state={state} bare
 tierIndex={poolIndex} />` — `actions` is needed for the capacity-upgrade button, see below) — that
@@ -211,20 +221,27 @@ language `DiskArrayRow` uses for Storage's own Disks — showing every completed
 live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeCurrentFillSubSize`/
 `getDataLakeFillBits`) on whichever ONE slot is actively filling right now; a hidden
 `role="progressbar"` (`aria-label="… lake deposits"`) still exposes the lake's overall
-deposited-units/capacity fraction for a11y. An actions row underneath repurposes ONE button slot
-between two mutually-exclusive modes (`isDataLakeCapacityDoublingAvailable` — never both at once,
-see engine.js): "⚡ Upgrade" (`actions.doubleDataLakeCapacity`) once the next Booster's own cost
-would exceed the lake's current capacity — the capacity ladder itself is a plain decade-power-of-10
-step per level, not a literal doubling; the action name still says "double" since only the ladder's
-VALUES changed, see docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden once the lake's own
-1,000-unit hard cap is reached (`isDataLakeCapacityMaxed`); otherwise a `🎯 <cost>` "Buy" button
-(`actions.buyBooster`) once that lake's Boosters have ever unlocked (`isDataLakeBoosterUnlocked` —
-permanently latched the first time the lake fills even one disk), or the same `🎯 <cost>` text alone,
-non-interactive, before that first disk ever completes. Boosters buy instantly out of the lake's own
-banked units — there is no live transfer or waiting period any more — with a second "🔁 Auto"/
-"🔁 Manual" toggle (`actions.toggleDataLakeAutoBuy`) next to it once unlocked, buying automatically
-the instant the next Booster is affordable. See docs/ECONOMY_REFERENCE.md's "Data Lakes" section for
-the underlying mechanic, and `docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
+deposited-units/capacity fraction for a11y. A dedicated `LakePoolTile` sits right below the header
+row, ALWAYS visible whenever an open slot exists — regardless of unlock state — reading "`<fillBits>`
+/ `<open slot size>`" once unlocked or a static "Locked · 0 / `<size>`" before that, so the section
+never goes from entirely absent to already-mid-fill with no feedback in between (see
+`docs/DESIGN_HISTORY.md`). An actions row underneath repurposes ONE button slot between two modes
+(`isDataLakeCapacityDoublingAvailable`, preferring Upgrade when both happen to apply — no longer
+guaranteed mutually exclusive, see engine.js): "⚡ Upgrade" (`actions.doubleDataLakeCapacity`) once
+the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
+needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
+capacity ladder itself is a plain decade-power-of-10 step per level, not a literal doubling; the
+action name still says "double" since only the ladder's VALUES changed, see
+docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden (not merely disabled) unless that array is
+actually complete, and hidden once the lake's own 1,000-unit hard cap is reached
+(`isDataLakeCapacityMaxed`); otherwise a `🎯 <cost>` "Buy" button (`actions.buyBooster`) once that
+lake is unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one
+real disk, not the lake's own fill progress), or the same `🎯 <cost>` text alone, non-interactive,
+before that. Boosters buy instantly out of the lake's own banked units — there is no live transfer
+or waiting period any more — with a second "🔁 Auto"/"🔁 Manual" toggle (`actions.toggleDataLakeAutoBuy`)
+next to it once unlocked, buying automatically the instant the next Booster is affordable. See
+docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic, and
+`docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
 
 There is no manual transfer-block UI any more (removed — see `docs/DESIGN_HISTORY.md`;
 `isIntroConversionUnlocked`/`getIntroKilobyteConversionCost` still exist as pure, tested exports but

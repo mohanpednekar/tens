@@ -2551,6 +2551,13 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     }
     if (overflowSeconds <= 0) continue
 
+    // The lake itself isn't unlocked yet — this pool has never built a real Storage disk (see
+    // isDataLakePoolReady) — so there's nowhere for the overflow to go. Leaving `bits` untouched
+    // here (rather than crediting/discarding anything) means this pool's reserved share simply
+    // isn't spent this tick, staying ordinary Bits for whatever else (Provision Disk, a later
+    // pool's own buffer, tier01 auto-invest) can use it once this pool's turn is skipped.
+    if (!isDataLakePoolReady(state, poolIndex)) continue
+
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
     // fill-based percentage of it feeds this pool's own matching Data Lake instead (poolIndex ===
@@ -4294,11 +4301,22 @@ export const getDataLakeOverflowRatePercent = (state, tierIndex) => {
   return Math.max(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, taperedPercent)
 }
 
-// Whether this lake has ever completed its own first (smallest, ×1) disk — see
-// createEmptyDataLakeTier's own boostersUnlocked comment: a permanent latch, unlike
-// getDataLakeDepositedUnits, which can drop back down once a Booster is bought.
+// Whether this lake's own matching Storage pool has built at least one real disk (the pool's own
+// smallest, ×1 size) — the gate for the lake itself being "unlocked" at all: both feeding overflow
+// into it (see tickPoolBufferFill) and Boosters becoming purchasable (below) wait on this, rather
+// than either running purely off the lake's own fill progress. disksBuiltTotal is permanent and
+// only ever grows, so this predicate is naturally monotonic — no separate latch/state field needed.
+export const isDataLakePoolReady = (state, tierIndex) =>
+  (state.intro?.disksBuiltTotal?.[getDataLakeUnitBits(tierIndex)] ?? 0) > 0
+
+// Boosters become purchasable once this lake is unlocked (isDataLakePoolReady — a real disk built
+// for the matching Storage pool), OR once the legacy per-lake `boostersUnlocked` latch is already
+// true (an older save, or fillDataLakeDisks' own redundant latch on that lake's first completed
+// disk — harmless to keep: under the new pool-readiness gate above, overflow can never even reach
+// the lake before a disk exists, so that latch can only ever fire after this predicate is already
+// true anyway). getDataLakeDepositedUnits, in contrast, can drop back down once a Booster is bought.
 export const isDataLakeBoosterUnlocked = (state, tierIndex) =>
-  getDataLakeTier(state, tierIndex)?.boostersUnlocked ?? false
+  (getDataLakeTier(state, tierIndex)?.boostersUnlocked ?? false) || isDataLakePoolReady(state, tierIndex)
 
 export const isDataLakeAutoBuyEnabled = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.autoBuyEnabled ?? false
@@ -4632,29 +4650,44 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
 export const getDataLakeCapacityDoublingCost = (state, tierIndex) =>
   getDataLakeDepositedUnits(tierIndex)(state) * getDataLakeUnitBits(tierIndex)
 
-// Available once the NEXT Booster's own cost would exceed what this lake could EVER hold at its
-// current capacity — at that point no amount of filling can ever afford another Booster, so
-// growing capacity is the only way forward. Deliberately not "the lake is full" (an earlier
-// version's own condition — see docs/DESIGN_HISTORY.md): a lake can sit well short of full and
-// still need a capacity upgrade the moment its next Booster's cost has climbed past what its
-// current capacity could ever fund. Advancing still drains whatever the lake currently holds, the
-// same "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid
-// in the lake's own banked units instead of Data Stream Buffer bits (the function/predicate names
-// below still say "doubling" even though the ladder itself climbs by a decade-power-of-10 step per
-// level, not a literal ×2 — renaming every call site was judged not worth the extra diff for a
-// value-only change).
+// Available once the CORRESPONDING Storage disk array for this lake's current capacity level is
+// completely built (see getDataLakeCapacityUnlockArraySize below) — tying capacity growth directly
+// to real Storage progress rather than to the lake's own escalating Booster cost (an earlier
+// condition — "the next Booster's own cost would exceed this lake's current capacity" — superseded
+// because it let a lake demand an upgrade purely from its own internal economy, disconnected from
+// whether the player had actually built anything in Storage yet; before that, an even earlier
+// version used "the lake is full" — see docs/DESIGN_HISTORY.md for both). Advancing still drains
+// whatever the lake currently holds, the same "requires a full Buffer, drains it" shape Memory's
+// own Capacity ×2 ladder uses, just paid in the lake's own banked units instead of Data Stream
+// Buffer bits (the function/predicate names below still say "doubling" even though the ladder
+// itself climbs by a decade-power-of-10 step per level, not a literal ×2 — renaming every call site
+// was judged not worth the extra diff for a value-only change).
+// The Storage disk size, within this lake's own tier group, whose COMPLETED array (all
+// DISK_ARRAY_LADDER_CAP built) unlocks capacity level `level + 1` — level 0's array is the pool's
+// smallest (×1) disk size, level 1's is ×10, level 2's is ×100 (DATA_LAKE_SUB_SIZES, in order). The
+// 3 arrays per tier group map one-for-one onto the 3 capacity steps above the starting level
+// (DATA_LAKE_CAPACITY_MAX_LEVEL), so `level` is always a valid DATA_LAKE_SUB_SIZES index here —
+// isDataLakeCapacityDoublingAvailable's own maxed check below guards level < 3 before ever calling
+// this.
+const getDataLakeCapacityUnlockArraySize = (tierIndex, level) =>
+  getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, DATA_LAKE_SUB_SIZES[level]))
+
 export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
   if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return false
   if (isDataLakeCapacityMaxed(state, tierIndex)) return false
-  return getBoosterPurchaseCost(tierIndex)(state) > getDataLakeCapacity(state, tierIndex)
+  const level = getDataLakeCapacityLevel(state, tierIndex)
+  const arraySize = getDataLakeCapacityUnlockArraySize(tierIndex, level)
+  return (state.intro?.disksBuiltTotal?.[arraySize] ?? 0) >= DISK_ARRAY_LADDER_CAP
 }
 
 // Gated by the same forced priority order every other Byte Foundry milestone action follows —
 // available only once nothing ranked above it (Disk Fill, Speed, Provision Disk, Compute) currently
-// is. Lake doubling sits alone at that bottom rank. Mutually exclusive with Booster-buying by
-// construction (see isBoosterPurchaseAvailable/isDataLakeCapacityDoublingAvailable above): a lake
-// can never simultaneously afford its next Booster AND need a capacity upgrade — the UI reuses one
-// button for both (see DataLakePanel).
+// is. Lake doubling sits alone at that bottom rank. NOT mutually exclusive with Booster-buying any
+// more, now that isDataLakeCapacityDoublingAvailable tracks real Storage array completion instead
+// of the lake's own escalating Booster cost — a lake can, in principle, simultaneously be able to
+// afford its next Booster AND have its next array already complete. DataLakePanel still reuses one
+// button slot for both, preferring Upgrade when both are true (advancing capacity unblocks every
+// future Booster too, so it's the more valuable of the two once available) — see DataLakePanel.
 export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
   isDataLakeCapacityDoublingAvailable(state, tierIndex) &&
   !isDiskFillAvailable(state) &&
@@ -5352,21 +5385,26 @@ export const tickAutoComputeBoost = state => {
   return activateComputeBoost(preference, waitingTierIndex)(state)
 }
 
-// Whether reclaimComputeBoost below would do anything right now — any boost currently active at
-// all. Only the UNUSED quantity is ever reclaimable — a stack whose time has already fully ticked
-// away no longer exists (tickComputeBoost clears type/tierIndex/stacks/remaining back to inactive
-// the instant remaining hits 0), so "any boost active" and "something reclaimable" are the same
-// check.
-export const canReclaimComputeBoost = state => (state.intro.computeBoostType ?? null) !== null
+// Whether reclaimComputeBoost below would do anything right now. Only reclaimable while MORE than
+// 1 stack is currently held (`computeBoostStacks > 1`) — once a boost's effect has actually
+// started, the one stack actively funding it can never be pulled back out via reclaim; only
+// quantity ABOVE that floor is reclaimable. An active boost always holds at least 1 stack while
+// running (tickComputeBoost clears type/tierIndex/stacks/remaining back to inactive the instant
+// remaining hits 0, rather than leaving a live boost at 0 stacks). A boost's effect can no longer
+// be canceled outright via reclaim once it's started — letting it run out is the only way to end
+// it early (see docs/DESIGN_HISTORY.md for the earlier, un-gated behavior this replaced).
+export const canReclaimComputeBoost = state =>
+  (state.intro.computeBoostType ?? null) !== null && (state.intro.computeBoostStacks ?? 0) > 1
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
 // the active boost's own funding tier (capped at COMPUTE_ENTITY_CAP, in case more were earned
 // while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
 // back out of computeBoostRemainingSeconds (floored at 0), decrementing computeBoostStacks by 1.
-// Clears the boost fully back to inactive (type/tierIndex null, stacks/remaining 0) once the last
-// stack is reclaimed, rather than leaving a 0-stack "active" boost around. A same-reference no-op
-// while no boost is active (canReclaimComputeBoost's own gate).
+// canReclaimComputeBoost's own >1 gate means nextStacks here is always >= 1 — the boost stays
+// active, never clearing to inactive via reclaim (compare stackComputeBoost/activateComputeBoost,
+// which are the only ways a boost starts or grows). A same-reference no-op while nothing above the
+// 1-stack floor is currently held.
 export const reclaimComputeBoost = state => {
   if (!canReclaimComputeBoost(state)) return state
 
@@ -5375,20 +5413,6 @@ export const reclaimComputeBoost = state => {
   const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
   const refunded = Math.min(COMPUTE_ENTITY_CAP, (state.intro[field] ?? 0) + 1)
-
-  if (nextStacks <= 0) {
-    return {
-      ...state,
-      intro: {
-        ...state.intro,
-        [field]: refunded,
-        computeBoostType: null,
-        computeBoostTierIndex: null,
-        computeBoostStacks: 0,
-        computeBoostRemainingSeconds: 0,
-      },
-    }
-  }
 
   return {
     ...state,

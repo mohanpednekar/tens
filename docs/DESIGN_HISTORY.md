@@ -1,5 +1,90 @@
 # Design history & rationale
 
+### Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03
+
+Follow-up player feedback on the just-shipped Provision Disk queue toggle (previous entry) surfaced
+a real UI bug and asked for several Data Lake mechanic changes, plus an unrelated Compute Boost
+change, all landed together on the same PR/branch.
+
+**1. Giant-circle CSS bug.** At a lake's fresh capacity level (0 — "1 unit"), only ONE `LakeSquare`
+renders in its `LakeSizeRow` (`display: flex; flex-wrap: nowrap`). `LakeSquare`'s own `flex: 1 1
+1.2rem` (`flex-grow: 1`) meant a lone square stretched to fill the ENTIRE row width — combined with
+`border-radius: 50%`/`aspect-ratio: 1`, a single circle several times its intended size. Fixed with
+a simple `max-width: 2.5rem` cap — preserves the existing "grow to fill nicely" behavior for a
+fuller row (9-10 items) while bounding a near-empty row's item size sanely.
+
+**2. Data Lake unlock (`isDataLakePoolReady`) now requires a real Storage disk.** Previously, a
+lake's OWN progress was entirely self-contained: `tickPoolBufferFill`'s overflow branch fed it the
+moment a pool's Memory buffer was completely full, regardless of whether the player had ever built
+a single physical disk for that pool, and Boosters unlocked (`boostersUnlocked`, latched
+permanently) the moment the LAKE's own first disk completed — a lake could unlock Boosters before
+any real Storage progress existed at all. New `isDataLakePoolReady(state, tierIndex)` —
+`disksBuiltTotal[that pool's own ×1 size] > 0` — now gates BOTH: `tickPoolBufferFill`'s overflow
+branch won't feed a lake until a disk exists for that pool (the reserved production simply stays as
+ordinary Bits that tick, same "nowhere to put it, don't destroy it" posture the lake-maxed case
+already had), and `isDataLakeBoosterUnlocked` now follows the SAME condition instead of the lake's
+own `boostersUnlocked` latch. The old stored `boostersUnlocked` field is kept and still read as a
+fallback OR (`isDataLakeBoosterUnlocked = storedFlag || isDataLakePoolReady(...)`) purely for
+old-save compatibility — `disksBuiltTotal` is itself permanent and monotonic, so the new condition
+needed no separate latch/state field of its own, and `fillDataLakeDisks`' own redundant `boostersUnlocked
+= true` write on the lake's first completed disk was left in place harmlessly (under the new
+overflow gate it can now only ever fire after `isDataLakePoolReady` is already true anyway).
+
+**3. Data Lake capacity upgrades now tied to Storage array completion, not the lake's own cost
+curve.** `isDataLakeCapacityDoublingAvailable` previously fired once a lake's own escalating next
+Booster cost (`purchased + 1`) exceeded its current capacity — a condition entirely internal to the
+lake's own economy, disconnected from real Storage progress (superseding an even earlier "the lake
+is full" condition). New rule: level 0→1 (to reach capacity 10) requires the pool's smallest (×1)
+disk array fully built (all `DISK_ARRAY_LADDER_CAP` = 10); level 1→2 (100) the middle (×10) array;
+level 2→3 (1,000, maxed) the largest (×100) array — one array per capacity step, matching
+`DATA_LAKE_SUB_SIZES`' own 3-entry shape exactly. New private helper
+`getDataLakeCapacityUnlockArraySize(tierIndex, level)` resolves the required disk-ladder size via
+the existing `getDataLakeSubSizeStep`/`getDiskLadderSizeBits` primitives — no new state, no new
+constants. This BREAKS the old "mutually exclusive with buying a Booster by construction" guarantee
+(cost ≤ capacity buy-side vs. cost > capacity upgrade-side, structurally impossible to overlap under
+the old rule) — under the new rule a lake CAN simultaneously afford its next Booster and have its
+next array already complete. `DataLakePanel`'s single-button-slot repurposing (Upgrade vs. Buy)
+still works unchanged (the same `upgradeAvailable ? Upgrade : unlocked ? Buy : locked-text` ternary),
+now simply preferring Upgrade whenever both apply — advancing capacity unblocks every future Booster
+too, so it's the more valuable of the two once available. This also means "do not show the Upgrade
+button unless eligible" (an explicit ask) falls out for free from the same ternary — no separate
+hide/disable logic was needed, only the underlying predicate changed.
+
+**4. New `LakePoolTile` — always visible, not gated behind unlock.** A player reported watching a
+lake's Data Lake section eventually "start filling up after some time" with "no idea what it did in
+between" — traced to the FIRST version of this new tile (a small `FillableStatCard`-style element
+surfacing the same `fillBits`/`getDataLakeCurrentDiskFillFraction` progress the per-square fill
+overlay already tracked, added specifically so this progress reads as its own explicit element
+rather than only a sliver on one small square) being gated on `unlocked` (the pool-readiness
+condition from #2) — before that, the section showed NOTHING at all, so the tile's first appearance
+was already mid-progress with no visible history. Fixed by decoupling the tile's OWN visibility from
+unlock state entirely: it now renders whenever an open slot exists at all
+(`currentFillSubSize !== null`, true almost always until a level is fully maxed), reading a static
+"Locked · 0 / `<size>`" before `isDataLakePoolReady`, and the real "`<fillBits>` / `<size>`" fill
+reading once unlocked — continuous feedback throughout, not a sudden appearance.
+
+**5. Compute Boost reclaim can no longer cancel a started effect outright.** `canReclaimComputeBoost`
+previously required only "any boost currently active," letting a player reclaim a boost's OWN LAST
+stack — the one actively producing its effect — clearing it back to fully inactive, functionally
+canceling a running boost via Reclaim (a separate `forfeitComputeBoost` action already exists for
+"cancel with no refund"; this let Reclaim do the same thing WITH a refund, which wasn't the intended
+distinction between the two actions). New gate: `computeBoostStacks > 1` — reclaiming now always
+leaves at least 1 stack behind, so an active boost's own effect can never be pulled back below
+"running," only quantity held IN ADDITION to that floor. `reclaimComputeBoost` itself simplified
+accordingly: the `nextStacks <= 0` branch (which used to clear the boost fully) became dead code
+under the new gate (a call is now only ever reachable with `stacks > 1`, so `nextStacks =
+stacks - 1` is always `>= 1`) and was removed. The exact-inverse relationship this action documents
+shifted too — reclaim is now the inverse of `stackComputeBoost` specifically, not of
+`activateComputeBoost` (a freshly-activated 1-stack boost can no longer be reclaimed at all).
+
+**6. PoolCard vertical spacing tightened** (a player screenshot flagged "too much wasted space"
+below a pool's own title/gauge/rate header row) — `PoolCard`'s own `gap` reduced from
+`theme.space.md` (0.6rem) to `theme.space.sm` (0.4rem), and `PoolSummaryButton`'s own padding made
+asymmetric (`theme.space.sm` on top/left/right, `0.15rem` on the bottom specifically) rather than
+uniform on all four sides — the button's own bottom padding was compounding with the card's `gap`
+right where the header row meets the Memory buffer tile below it, visibly wider than the rest of the
+card's own spacing rhythm.
+
 ### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
 
 A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)

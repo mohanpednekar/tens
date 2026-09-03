@@ -3435,18 +3435,19 @@ describe('Byte Foundry Storage', () => {
     // forced-priority input out from under the click before it's processed.
     vi.useFakeTimers()
 
-    // The next Booster (purchased: 1 => cost 2) already exceeds the KB lake's own level-0 capacity
-    // (1 unit) — the new "upgrade available" condition — regardless of how full the lake currently
-    // is; draining whatever it holds (here, nothing) funds the advance, not Bits. bits (8000) is
-    // included only to prove it never touches it. Provision Disk's own cost (80,000) stays out of
-    // reach either way, so it never outranks this action; Invest's current-tier claims are already
-    // used up (productionMilestoneTierClaims: 2) — the same higher-priority-action neutralization
-    // the Sacrifice tests above use, since Data Lake capacity sits at the same forced-priority rank.
+    // The pool's own ×1 array (KB) is fully built — the "upgrade available" condition — regardless
+    // of how full the lake currently is; draining whatever it holds (here, nothing) funds the
+    // advance, not Bits. bits (8000) is included only to prove it never touches it. Provision
+    // Disk's own cost (80,000) stays out of reach either way, so it never outranks this action;
+    // Invest's current-tier claims are already used up (productionMilestoneTierClaims: 2) — the
+    // same higher-priority-action neutralization the Sacrifice tests above use, since Data Lake
+    // capacity sits at the same forced-priority rank.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       productionMilestoneTierClaims: 2,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 1, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
     })
     const { unmount } = render(<App />)
@@ -3726,7 +3727,7 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  test('reclaiming the last remaining stack clears the boost entirely and removes the status line', () => {
+  test('the Reclaim button is disabled once only 1 stack remains — an active boost\'s own effect can never be reclaimed away entirely, only clicking it stays a no-op', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
       computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
@@ -3734,11 +3735,14 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    fireEvent.click(screen.getByRole('button', { name: /reclaim one stack/i }))
+    const reclaimButton = screen.getByRole('button', { name: /reclaim one stack/i })
+    expect(reclaimButton).toBeDisabled()
+    fireEvent.click(reclaimButton)
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe(null)
-    expect(screen.queryByLabelText(/^active compute boost$/i)).not.toBeInTheDocument()
+    expect(saved.intro.computeBoostType).toBe('burst') // still active — the last stack was never reclaimed
+    expect(saved.intro.computeBoostStacks).toBe(1)
+    expect(screen.getByLabelText(/^active compute boost$/i)).toBeInTheDocument()
   })
 })
 

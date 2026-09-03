@@ -771,14 +771,29 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `DATA_LAKE_SUB_SIZES.length` transitions per call). `DataLakePanel` renders one row of disk
    squares per sub-size present at the current level (the same "one unbroken row per size" shape
    `DiskArrayRow` uses for Storage, just without cache/redeem interactivity), the one currently-open
-   slot showing a live left-to-right fill.
+   slot showing a live left-to-right fill. A dedicated `LakePoolTile` (own `FillableStatCard`-style
+   element, purely additive UI — same `fillBits`/`getDataLakeCurrentFillSubSize` data the per-square
+   overlay already reads, no new engine mechanic) sits right below the header row, ALWAYS visible
+   whenever an open slot exists (`currentFillSubSize !== null`) regardless of unlock state, showing
+   "`<fillBits>` / `<open slot size>`" once unlocked or a static "Locked · 0 / `<size>`" before that.
 
-   The very FIRST disk any lake ever completes (always its own ×1 slot, since fill order is
-   smallest-first) permanently latches `boostersUnlocked` true (`createEmptyDataLakeTier`'s own
-   comment) — unlike `depositedUnits`, which can drop back down once a Booster is bought, this never
-   re-clears. `DataLakePanel`'s Buy button (see "Buying Boosters" below) only ever shows for a lake
-   with `boostersUnlocked` true; before that, the same slot shows the plain next-cost figure as
-   inert status text.
+   A lake is gated on its own matching Storage pool having built at least one real disk
+   (`isDataLakePoolReady` — `disksBuiltTotal[that pool's own ×1 size] > 0`), not on the lake's own
+   fill progress — `tickPoolBufferFill`'s overflow branch itself won't feed a lake until this is
+   true, so a pool with a completely full Memory buffer but zero built disks banks nothing into its
+   lake (the reserved production stays as ordinary Bits that tick instead). `isDataLakeBoosterUnlocked`
+   follows the SAME condition: Boosters become buyable the instant a disk exists for that pool, not
+   once the lake ITSELF has ever completed a disk (an earlier design — the very first disk the lake
+   completed, always its own ×1 slot since fill order is smallest-first, permanently latched a
+   stored `boostersUnlocked` flag; that stored flag is still read as a fallback OR — for old-save
+   compatibility, since `disksBuiltTotal` is itself permanent and monotonic, no separate latch/state
+   field was needed for the new condition — but no longer what SETS it going forward). Unlike
+   `depositedUnits`, which can drop back down once a Booster is bought, neither condition ever
+   re-clears. `DataLakePanel`'s Buy button (see "Buying Boosters" below) only ever shows for an
+   unlocked lake; before that, the same slot shows the plain next-cost figure as inert status text.
+   Its own `LakePoolTile` (above) stays visible even before unlock, though — the section showing
+   nothing at all before the first real Storage disk read as "no idea what it did in between" once
+   the tile then appeared already mid-fill; see `docs/DESIGN_HISTORY.md`.
 
    **Capacity ladder** (`getDataLakeCapacity(state, tierIndex)`, `getDataLakeCapacityLevel`,
    `doubleDataLakeCapacity(tierIndex)` — the function/predicate names still say "doubling" even
@@ -794,26 +809,28 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    no float-precision handling — but IS vulnerable to an out-of-bounds `undefined` read if a saved
    `capacityLevel` predates this narrower array (see the migration note below).
 
-   **Advancing is available once the NEXT Booster's own cost would exceed what the lake could EVER
-   hold at its current capacity** (`isDataLakeCapacityDoublingAvailable` —
-   `getBoosterPurchaseCost(tierIndex)(state) > getDataLakeCapacity(state, tierIndex)`) —
-   deliberately NOT "the lake is full" (an earlier version's own condition, before the overflow-fill
-   mechanic replaced deposits — see `docs/DESIGN_HISTORY.md`): a lake can sit well short of full and
-   still need a capacity upgrade the moment its next Booster's cost has climbed past what its
-   current capacity could ever fund, since further filling alone can never close that gap. Executing
-   still **drains whatever the lake CURRENTLY holds** (`depositedUnits`/`fillBits` both reset to 0,
-   not necessarily from a full balance) — the same "requires a full Buffer, drains it" shape
-   Memory's own Capacity ×2 ladder uses, just paid in the lake's own banked units instead of Buffer
-   bits. `getDataLakeCapacityDoublingCost` (display-only — the REAL amount that will actually drain
-   right now, `depositedUnits × getDataLakeUnitBits(tierIndex)`, not the level's own full capacity,
-   since the lake need not be full when this fires) feeds the button's own tooltip; no code path
-   spends it out of `intro.bits`. Gated by the same forced priority chain as every other Byte
-   Foundry milestone action (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk
-   Fill, Speed, Provision Disk, and Compute are all currently unavailable; sits at the former
-   Sacrifice rank). **Mutually exclusive with Booster-buying by construction** — a lake can never
-   simultaneously afford its next Booster AND need a capacity upgrade (buying is available only
-   while cost ≤ capacity; upgrading only once cost > capacity) — so `DataLakePanel` repurposes ONE
-   button slot between the two modes rather than showing both.
+   **Advancing is available once the CORRESPONDING Storage array for the current level is fully
+   built** (`isDataLakeCapacityDoublingAvailable` — level 0's own array is the pool's smallest ×1
+   disk size, level 1's is ×10, level 2's is ×100; `disksBuiltTotal[that size] >=
+   DISK_ARRAY_LADDER_CAP` for the required array) — tying capacity growth to real Storage progress
+   instead of the lake's own internal cost escalation. Two earlier conditions are superseded: "the
+   next Booster's own cost would exceed what the lake could EVER hold at its current capacity" (let
+   a lake demand an upgrade purely from its own cost curve, independent of whether the player had
+   built anything in Storage yet), and before that "the lake is full," from before the overflow-fill
+   mechanic replaced deposits — see `docs/DESIGN_HISTORY.md` for both. Executing still **drains
+   whatever the lake CURRENTLY holds** (`depositedUnits`/`fillBits` both reset to 0, not necessarily
+   from a full balance) — the same "requires a full Buffer, drains it" shape Memory's own Capacity
+   ×2 ladder uses, just paid in the lake's own banked units instead of Buffer bits.
+   `getDataLakeCapacityDoublingCost` (display-only — the REAL amount that will actually drain right
+   now, `depositedUnits × getDataLakeUnitBits(tierIndex)`, not the level's own full capacity, since
+   the lake need not be full when this fires) feeds the button's own tooltip; no code path spends it
+   out of `intro.bits`. Gated by the same forced priority chain as every other Byte Foundry
+   milestone action (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
+   Speed, Provision Disk, and Compute are all currently unavailable; sits at the former Sacrifice
+   rank). **No longer mutually exclusive with Booster-buying by construction** — that guarantee held
+   only under the old cost-based condition; a lake CAN now simultaneously afford its next Booster
+   and have its next array already complete — `DataLakePanel` still repurposes ONE button slot
+   between the two, preferring Upgrade when both are true at once.
 
    **Migration.** A save written under an older, longer capacity ladder can carry a `capacityLevel`
    above the current array's own bounds — left unclamped, `getDataLakeCapacity` would index past
@@ -1057,14 +1074,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` — the
    multiplier itself never compounds from stacking. `tickComputeBoost(elapsedSeconds)` counts the
    remaining duration down every tick, frozen or not, clearing the boost back to inactive (`type:
-   null, tierIndex: null, stacks: 0, remaining: 0`) once it reaches 0. Only the UNUSED quantity is
-   ever reclaimable, one at a time: `reclaimComputeBoost` (gated by `canReclaimComputeBoost`, true
-   whenever any boost is active) is the exact inverse of one `activateComputeBoost`/`stackComputeBoost`
-   call — refunds 1 token of the active boost's own funding tier (capped at `COMPUTE_ENTITY_CAP`, in
-   case more were earned meanwhile) and subtracts that tier's own base preset `durationSeconds` back out of
-   `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1 — clearing
-   the boost fully back to inactive once the last stack is reclaimed, rather than leaving a 0-stack
-   "active" boost around.
+   null, tierIndex: null, stacks: 0, remaining: 0`) once it reaches 0. Only the quantity ABOVE 1
+   stack is ever reclaimable, one at a time: `reclaimComputeBoost` (gated by `canReclaimComputeBoost`
+   — a boost active AND `computeBoostStacks > 1`) is the exact inverse of one `stackComputeBoost`
+   call (no longer of `activateComputeBoost` itself, since a freshly-activated 1-stack boost can no
+   longer be reclaimed at all) — refunds 1 token of the active boost's own funding tier (capped at
+   `COMPUTE_ENTITY_CAP`, in case more were earned meanwhile) and subtracts that tier's own base
+   preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing
+   `computeBoostStacks` by 1. The `> 1` gate means `computeBoostStacks` after a reclaim is always
+   `>= 1` — the boost stays active; it can no longer be reclaimed all the way back to inactive (an
+   earlier version allowed reclaiming the very last stack too, clearing the boost outright the same
+   as `activateComputeBoost`'s own inverse — canceling a running effect entirely via Reclaim was the
+   behavior this replaced; letting it run out is now the only way to end one early — see
+   `docs/DESIGN_HISTORY.md`).
 
    On `ComputePage`, render order top to bottom: the active-boost status itself (effect, countdown,
    stack count — no longer a Reclaim control, moved below, see next) renders at the very TOP of the
@@ -2365,6 +2387,11 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Only one size is ever buildable at a time.
                                                           // While set, every IO operation against that
                                                           // size's array is disallowed ("the array rebuild")
+    diskBuildQueued: false,                               // PERMANENT. true once "queue next build" is
+                                                          // armed (queueDiskBuild) — the next Provision
+                                                          // Disk fires itself (tickQueuedDiskBuild) once
+                                                          // affordable and nothing outranks it; clears the
+                                                          // moment ANY build starts, queued or manual.
     diskWriteCache: {},                                   // NOT permanent — resets every real Prestige.
                                                           // In-flight upward merges; empty at rest.
                                                           // See tickDiskWriteCache.
@@ -2564,6 +2591,9 @@ purchases were manual or automatic.
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose own fixed corresponding tier is currently at that size's required level, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `provisionDisk` | `state → state` | Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, spends the next disk's cost from that size's own POOL buffer (`intro.poolBuffers`, not the shared Data Stream Buffer directly), and sets the intentionally historical `intro.diskBuild` persisted key. Duration uses `getProvisionDiskBaseSeconds` at that pool's own Bandwidth |
 | `tickProvisionDisk` | `elapsedSeconds → state → state` | Counts down the persisted `intro.diskBuild` timer and, on completion, increments that size's cumulative built count and clears the timer; unconditional in `tickGame` |
+| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` so the next Provision Disk fires itself once affordable, mirroring `queueIntroCapacityUpgrade`'s shape but actually reachable from the UI. Same-reference no-op while already queued, mid-build, or the ladder is exhausted for active pools |
+| `clearDiskBuildQueue` | `state → state` | Clears `intro.diskBuildQueued`. Same-reference no-op when already false |
+| `tickQueuedDiskBuild` | `state → state` | If `diskBuildQueued` is set, calls `provisionDisk` (deferring to its own `isProvisionDiskTurnAvailable` guard rather than duplicating it) — fires and clears the queue once affordable, otherwise a same-reference no-op leaving it armed. Called from `tickGame`'s `tickStorage`, ranked the same as an ordinary manual click |
 | `getPoolBufferCapacity` | `(state, poolIndex) → number` | Byte Foundry Storage: a pool's own local buffer ceiling — equals `getStoragePoolCapacity(state, poolIndex)` exactly (see the "Pool buffers" entry below for why the fraction is 1, not smaller) |
 | `getPoolBufferBits` | `(state, poolIndex) → number` | Byte Foundry Storage: how much of that ceiling is currently banked — `state.intro.poolBuffers[poolIndex] ?? 0` |
 | `tickPoolBufferFill` | `elapsedSeconds → state → state` | Byte Foundry Storage: tops up every unlocked pool's own local buffer from `intro.bits`, ascending (pool 1 first) — each pool reserves fill-rate up to its own RAW Bandwidth cap off the top of the Data Stream's RAW rate (this reservation/leftover bookkeeping is unaffected by the fill-based multiplier — point 4a above), leftover goes to the next pool; the actual bit transfer for each pool is that reserved fill-rate × `elapsedSeconds` × `getPoolEffectMultiplier(state, poolIndex)`, further bounded by the pool's own remaining buffer room and `intro.bits` itself. No-op below `INTRO_DISK_UNLOCK_CAPACITY` (Storage isn't revealed yet). Called from `tickGame` AFTER `tickIntroAutoInvest`/Queued Capacity each tick, so pool funding never competes with the main-game-unlock gate or a Capacity doubling in flight |
@@ -2591,8 +2621,8 @@ purchases were manual or automatic.
 | `activateComputeBoost` | `(boostType, tierIndex) → state → state` | Byte Foundry Compute Boost (issue #326): requires `isComputeBoostTurnAvailable(state, boostType, tierIndex)` (see its own row above); otherwise spends exactly 1 token of `tierIndex`'s own field and starts a fresh boost: `computeBoostType: boostType`, `computeBoostTierIndex: tierIndex`, `computeBoostStacks: 1`, `computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex)` |
 | `stackComputeBoost` | `state → state` | Byte Foundry Compute Boost (issue #326): requires `isStackComputeBoostTurnAvailable(state)`; otherwise spends 1 more token of the ACTIVE boost's own funding tier, increments `computeBoostStacks`, and adds that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` (extending, not resetting, the remaining time) — the multiplier itself never compounds. The replacement for same-type restacking through the preset buttons, which `activateComputeBoost` no longer permits |
 | `tickComputeBoost` | `elapsedSeconds → state → state` | Byte Foundry Compute Boost: same-reference no-op while no boost is active; otherwise decrements `computeBoostRemainingSeconds` by `elapsedSeconds`, clearing back to inactive (`type: null`, `tierIndex: null`, `stacks: 0`, `remaining: 0`) once it reaches 0. Runs every tick, frozen or not — called from `tickGame` alongside the other Byte Foundry intro ticks |
-| `canReclaimComputeBoost` | `state → bool` | Whether `reclaimComputeBoost` below would do anything: any boost currently active (`computeBoostType !== null`) |
-| `reclaimComputeBoost` | `state → state` | Byte Foundry Compute Boost (issues #316/#326/#363): no-op below `canReclaimComputeBoost`'s own gate; otherwise the exact inverse of one `activateComputeBoost`/`stackComputeBoost` call — refunds 1 token into the ACTIVE boost's own funding tier field (capped at `COMPUTE_ENTITY_CAP`, in case more were earned while the boost was running) and subtracts that tier's own base preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1; clears the boost fully back to inactive (`type: null`, `tierIndex: null`, `stacks: 0`, `remaining: 0`) once the last stack is reclaimed rather than leaving a 0-stack "active" boost around |
+| `canReclaimComputeBoost` | `state → bool` | Whether `reclaimComputeBoost` below would do anything: a boost currently active AND `computeBoostStacks > 1` — the one stack actively funding a started effect can never be reclaimed away, only quantity above it |
+| `reclaimComputeBoost` | `state → state` | Byte Foundry Compute Boost (issues #316/#326/#363): no-op below `canReclaimComputeBoost`'s own `> 1` gate; otherwise the exact inverse of one `stackComputeBoost` call — refunds 1 token into the ACTIVE boost's own funding tier field (capped at `COMPUTE_ENTITY_CAP`, in case more were earned while the boost was running) and subtracts that tier's own base preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1. `computeBoostStacks` after a reclaim is always `>= 1` — the boost stays active; it can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the last stack too, canceling a running effect outright — see `docs/DESIGN_HISTORY.md`) |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
 | `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.prestige.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `prestigeGame` (right after incrementing `count`) |

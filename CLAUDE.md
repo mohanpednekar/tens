@@ -802,7 +802,11 @@ Strict three-layer separation:
    spending another token of ITS OWN funding tier (never whatever tier a player might have since
    selected), and `reclaimComputeBoost` (`canReclaimComputeBoost`'s own gate) reclaims the most
    recently added, still-unused stack of an active boost, one at a time, refunding 1 token into
-   that same funding tier. THEN, below the whole Boost effects section, each of the nine
+   that same funding tier — only reclaimable while MORE than 1 stack is currently held
+   (`computeBoostStacks > 1`); once a boost's effect has actually started it always holds at least 1
+   stack while running, and that one actively-funding stack can never be reclaimed away — only
+   letting the boost run out ends it early, not reclaim (an earlier version allowed reclaiming the
+   very last stack too, canceling the boost outright — see `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
    the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
    #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
@@ -1353,10 +1357,22 @@ segment) — which `applyDataLakeOverflow` folds back into its own returned `rem
 uses to stop iterating early (a maxed lake has nothing left to fill). `tickPoolBufferFill` credits
 that `remainingBits` back to `intro.bits` rather than assuming every offered bit was consumed, so an
 unconsumed excess (e.g. a huge single-tick overflow against a small/fresh lake) stays as ordinary
-spendable Bits rather than being destroyed outright. The
-very FIRST disk any lake ever completes (always ×1) permanently latches `boostersUnlocked` true — a
-lake's Buy button (below) only ever shows once that's happened, even though `depositedUnits` itself
-can later drop back down as Boosters get bought.
+spendable Bits rather than being destroyed outright.
+
+*Unlock* (`isDataLakePoolReady`) — a lake is gated on its own matching Storage pool having built at
+least one real disk (`disksBuiltTotal[that pool's own ×1 size] > 0`), not on the lake's own fill
+progress: `tickPoolBufferFill`'s overflow branch (above) only feeds a lake once this is true, so a
+pool sitting with a completely full Memory buffer but zero built disks banks nothing into its lake
+at all (the reserved production simply stays as ordinary Bits that tick instead of being spent
+nowhere). `isDataLakeBoosterUnlocked` follows the SAME condition — Boosters become buyable the
+instant a disk exists for that pool, not once the lake itself has ever completed a disk (an earlier
+design: the very first disk the LAKE completed, always ×1, permanently latched a stored
+`boostersUnlocked` flag — still read as a fallback OR for legacy-save compatibility, but no longer
+what sets it going forward; `disksBuiltTotal` is itself permanent and monotonic, so no separate
+latch/state field was needed for the new condition). `DataLakePanel`'s own pool-fill tile (below)
+stays visible even before this is true, reading a static "Locked · 0 / size" rather than being
+absent — the section showing nothing at all before the first real Storage progress read as "no idea
+what it did in between" once the tile then appeared already mid-fill; see `docs/DESIGN_HISTORY.md`.
 
 *Disk breakdown* — a lake's own banked total (`depositedUnits`, a whole-unit integer) decomposes
 into `DATA_LAKE_SUB_SIZES` (`[1, 10, 100]`) disk counts smallest-first, each capped per
@@ -1376,7 +1392,13 @@ declared capacity). `getDataLakeDiskSlotCounts`/`getDataLakeDiskCounts`/
 function of `depositedUnits` and the lake's own `capacityLevel` — no separate ledger.
 `DataLakePanel` renders one row of disk squares per sub-size present at the current level (the
 same "one unbroken row per size" shape `DiskArrayRow` uses for Storage, no cache/redeem
-interactivity), the currently-open slot showing a live fill.
+interactivity), the currently-open slot showing a live fill. A dedicated `LakePoolTile` (own
+`FillableStatCard`-style element inside `DataLakePanel`, purely additive — same
+`getDataLakeFillBits`/`getDataLakeCurrentFillSubSize` data the per-square fill overlay already
+reads, no new engine mechanic) sits right below the header row, always visible whenever an open
+slot exists (`currentFillSubSize !== null` — regardless of `isDataLakePoolReady`), showing
+"`<fillBits>` / `<open slot size>`" — or, before the lake is unlocked, a static "Locked · 0 /
+`<size>`" instead of reading 0 as if genuinely idle.
 
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
 purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB
@@ -1385,17 +1407,20 @@ lake, in that lake's own Byte-scale currency) and climbing by 1 level per
 DECADE-POWER-OF-10 ladder (1, 10, 100, 1,000), the same coarse shape pool Capacity itself uses
 (`getDecadePowerEquivalentBits`) — permanently hard-capped at `DATA_LAKE_CAPACITY_MAX_LEVEL` (level
 3 — 1,000 units, "1000 KB" for the KB lake) via `isDataLakeCapacityMaxed`. Advancing a level is
-available once the NEXT Booster's own cost would EXCEED the lake's current capacity
-(`isDataLakeCapacityDoublingAvailable` —
-`getBoosterPurchaseCost(tierIndex)(state) > getDataLakeCapacity(state, tierIndex)`) —
-deliberately NOT "the lake is full" (an earlier condition, from before the overflow-fill mechanic
-replaced deposits — see `docs/DESIGN_HISTORY.md`): a lake can sit well short of full and still need
-an upgrade the moment its next Booster's cost has climbed past what its current capacity could ever
-fund. Executing still drains whatever the lake CURRENTLY holds (`depositedUnits`/`fillBits` both
-reset to 0) — the same "requires a full Buffer, drains it" shape Memory's own Capacity ×2 ladder
-uses, just paid in the lake's own banked units. **Mutually exclusive with buying a Booster by
-construction** (buying needs cost ≤ capacity; upgrading needs cost > capacity), so `DataLakePanel`
-repurposes ONE button slot between the two modes. The `doubleDataLakeCapacity`/
+available once the CORRESPONDING Storage array for that level is fully built
+(`isDataLakeCapacityDoublingAvailable`) — level 0→1 (to reach "10") once the pool's smallest (×1)
+array is complete (all `DISK_ARRAY_LADDER_CAP` built), level 1→2 ("100") once the middle (×10) array
+is complete, level 2→3 ("1,000", maxed) once the largest (×100) array is complete — tying capacity
+growth directly to real Storage progress. Two earlier conditions are superseded: "the next Booster's
+own cost would exceed the lake's current capacity" (let a lake demand an upgrade purely from its own
+internal cost escalation, disconnected from whether the player had built anything in Storage yet),
+and before that "the lake is full" — see `docs/DESIGN_HISTORY.md` for both. Executing still drains
+whatever the lake CURRENTLY holds (`depositedUnits`/`fillBits` both reset to 0) — the same "requires
+a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the lake's own
+banked units. **No longer mutually exclusive with buying a Booster by construction** (that
+guarantee held only under the old cost-based condition) — `DataLakePanel` still repurposes ONE
+button slot between the two, preferring Upgrade when both happen to be true at once. The
+`doubleDataLakeCapacity`/
 `isDataLakeCapacityDoubling*` function/predicate names still say "doubling" even though the ladder
 itself climbs a decade-power step per level, not a literal ×2. `normalizePoolMemoryCapacity` (save
 load) clamps a saved `capacityLevel` back down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if it's above it,
@@ -1568,7 +1593,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1709 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1717 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
