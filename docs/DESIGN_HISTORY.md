@@ -5233,3 +5233,31 @@ pool fill-multiplier's own exact value); the other seeds a fresh lake against a 
 `overflowBits` and confirms `intro.bits` drops by exactly the one unit the lake could hold — no
 more, no less (Finding 6, pinning that overshoot is preserved, not destroyed). `yarn test`:
 1690/1690 green (+2). `yarn build` succeeds.
+
+### A seventh finding: the pool gauge could display a nonzero incoming-overflow rate on an already-full lake
+
+The next Devin review pass (against `9b9680e`/`7022e1b`) confirmed all six findings above as fixed,
+plus one more real (if purely cosmetic) issue: `getDataLakeOverflowRatePercent` still returned
+`DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5%) for a lake with no open slot left at its current
+capacity level — the completion floor added for Finding 1 above (a rate literally reaching 0%
+never actually reaches full) applied unconditionally, without checking whether there was anything
+left to fill at all. This function's own doc comment claimed the case was unreachable in practice
+("tickPoolBufferFill's caller only ever calls this while there's an open slot to fill") — WRONG:
+`ByteFoundryPage`'s pool gauge reads this same function directly, for every pool, to render its own
+"N% incoming" display label, entirely independent of whether `tickPoolBufferFill` happens to reach
+the overflow branch that tick. A maxed lake would therefore show a live "5%" reading even though it
+can accept nothing — misleading, though harmless mechanically (`fillDataLakeDisks` already no-ops
+on a maxed lake regardless of what rate is passed in, so no currency or progress was ever actually
+at stake). **Fix:** `getDataLakeOverflowRatePercent` now checks
+`getDataLakeCurrentFillSubSize(state, tierIndex) === null` FIRST and returns the raw
+`DATA_LAKE_OVERFLOW_MIN_PERCENT` (0) in that case, bypassing the completion floor entirely — the
+floor only ever matters while there's a genuinely open slot to make progress on. The pre-existing
+"once maxed at the current level" test (which had asserted the floor value, on the mistaken
+"unreachable" premise) was corrected to assert `MIN_PERCENT` instead. The same review pass also
+surfaced two leftover stale passages in `CLAUDE.md` from before the pool-overflow rework — a
+"Booster transfer pacing" phrase (no more literal transfers exist) and a `deposits`/`purchased
+Boosters`/`in-flight transfers`/`capacityLevel` field list in the Data-Lakes-permanent-across-
+Prestige sentence (the actual current fields are `depositedUnits`/`fillBits`/`purchased`/
+`boostersUnlocked`/`autoBuyEnabled`/`capacityLevel`) — both corrected in the same commit. `yarn
+test`: 1690/1690 green (one existing assertion corrected, no net new test count change). `yarn
+build` succeeds.

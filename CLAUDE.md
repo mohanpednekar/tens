@@ -726,7 +726,8 @@ Strict three-layer separation:
    both conditions required). This capacity gate is deliberately kept separate from
    `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` themselves, which stay disk-build-only and
    keep driving the disk ladder's own progression (`getMaxActiveDiskLadderStep`), read-cache
-   eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing — folding the capacity
+   eligibility, Data Lake idle-disk liquidation, and which pools' own overflow `tickPoolBufferFill`
+   processes each tick — folding the capacity
    rule into that shared primitive directly was tried first and reverted for exactly this reason (a
    much wider blast radius than intended) — see `docs/DESIGN_HISTORY.md`. Only the largest unlocked pool is expanded initially, while
    earlier pools remain visible as compact disclosure summaries that reveal their three disk-array
@@ -998,8 +999,8 @@ player-facing path to tier units, and before that (on a save's very first, still
 auto-convert alone carries the player through the mandatory gate with no click needed.
 `convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
 was removed.
-The generator, Disks, Data Lakes (deposits / purchased Boosters / in-flight transfers /
-`capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
+The generator, Disks, Data Lakes (`depositedUnits`/`fillBits` / purchased Boosters / `autoBuyEnabled`
+/ `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
 permanent across every real Prestige — as is the main-game-unlock gate itself once ever latched (see

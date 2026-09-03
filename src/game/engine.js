@@ -4219,11 +4219,16 @@ export const getDataLakeCurrentDiskFillFraction = (state, tierIndex) => {
 // (see getDataLakeCurrentDiskFillFraction above), not a slow lake-wide taper. Floored at
 // DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT (see its own comment in layers.js) so the taper
 // always keeps making real forward progress instead of asymptotically stalling short of
-// completion — a still-genuinely-open disk (fraction < 1) never actually reads/uses a rate of
-// exactly 0. A disk with no open slot at all (fraction === 1, nothing left to fill) still floors
-// to the same value, but tickPoolBufferFill's caller only ever calls this while there IS an open
-// slot to fill, so that case is never actually reached in practice.
+// completion — a still-genuinely-open disk never actually reads/uses a rate of exactly 0. A lake
+// with NO open slot at all (fully maxed at its current capacity level) is the one case that must
+// NOT floor: nothing this rate could ever apply to would actually go anywhere (fillDataLakeDisks
+// itself no-ops on a maxed lake regardless of rate), and ByteFoundryPage's own gauge reads this
+// function directly for every pool's display label — showing a nonzero "5% incoming" rate on an
+// already-full lake would be actively misleading, not just an unreachable edge case (this WAS
+// reachable in practice, unlike this comment's own earlier claim that it wasn't — see
+// docs/DESIGN_HISTORY.md).
 export const getDataLakeOverflowRatePercent = (state, tierIndex) => {
+  if (getDataLakeCurrentFillSubSize(state, tierIndex) === null) return DATA_LAKE_OVERFLOW_MIN_PERCENT
   const fraction = getDataLakeCurrentDiskFillFraction(state, tierIndex)
   const taperedPercent = DATA_LAKE_OVERFLOW_MAX_PERCENT - fraction * (DATA_LAKE_OVERFLOW_MAX_PERCENT - DATA_LAKE_OVERFLOW_MIN_PERCENT)
   return Math.max(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, taperedPercent)

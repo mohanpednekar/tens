@@ -9426,18 +9426,18 @@ describe('Data Lakes', () => {
       expect(getDataLakeOverflowRatePercent(partial, 1)).toBeCloseTo(expectedRate)
       expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty disk
 
-      // Once maxed at the current level (no open slot left), reads as a fully "done" disk -> the
-      // taper's own floored rate (DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, not the raw
-      // MIN_PERCENT — see getDataLakeOverflowRatePercent's own comment). The returned value is
-      // moot either way here: tickPoolBufferFill's caller only reaches fillDataLakeDisks while
-      // there's an open slot to fill, and fillDataLakeDisks itself no-ops (returns null) once
-      // maxed — see the same-reference no-op test right below this one.
+      // Once maxed at the current level (no open slot left), the rate reads MIN_PERCENT (0) — NOT
+      // the completion floor — since nothing this rate could ever apply to has anywhere left to go
+      // (fillDataLakeDisks itself no-ops once maxed regardless of rate), and the pool gauge reads
+      // this function directly for its own display label — a nonzero "N% incoming" reading on an
+      // already-full lake would be actively misleading, not merely an unreachable edge case (see
+      // getDataLakeOverflowRatePercent's own comment / docs/DESIGN_HISTORY.md).
       const maxed = withIntro(createInitialGameState(), {
         dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 } },
       })
       expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
       expect(getDataLakeCurrentDiskFillFraction(maxed, 1)).toBe(1)
-      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT)
+      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_MIN_PERCENT)
     })
 
     it('floors the overflow rate so a nearly-complete disk keeps making real forward progress instead of asymptotically stalling short of completion (regression — a pure proportional taper toward 0% at full never actually reaches full, and gets permanently stuck in floating point once the remaining gap rounds to nothing; confirmed by simulation before this fix: fillBits froze at 7999.999999992724/8000 after 442,746 ticks and never moved again)', () => {
