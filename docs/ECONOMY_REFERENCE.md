@@ -705,11 +705,38 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    reaches it (and gets permanently stuck in floating point once the remaining increment rounds to
    nothing — see `docs/DESIGN_HISTORY.md`), so `getDataLakeOverflowRatePercent` never actually
    returns below the floor while a disk is still genuinely open — then straight back up to 50 the
-   instant it completes and the next disk opens — a repeating per-disk
-   taper, not one slow lake-wide ramp. The resulting
-   `overflowBits` (`fillRate * elapsedSeconds * (ratePercent / 100)`, bounded by whatever
-   `intro.bits` actually holds) is consumed from `intro.bits` exactly like an ordinary buffer
-   transfer, then handed to `fillDataLakeDisks`. Deliberately independent of the pool's own fill-based Speed/Bandwidth
+   instant it completes and the next disk opens — a repeating per-disk taper, not one slow
+   lake-wide ramp. This taper is exactly LINEAR in fill fraction, which makes a single disk's own
+   fill an ordinary first-order linear ODE (`dx/dt = fillRate * rateFraction(x/L)`, x = fillBits,
+   L = the open disk's own slot size) with a closed-form solution: exponential decay toward an
+   equilibrium (which coincides with L itself, since `DATA_LAKE_OVERFLOW_MIN_PERCENT` is 0 — the
+   taper alone asymptotically approaches, but never reaches, 100% fill, exactly why the completion
+   floor above exists) while still above that floor, then plain constant-rate linear fill once the
+   taper drops to it. `solveDataLakeDiskFillAfterSeconds`/`solveDataLakeDiskSecondsForBits` (two
+   solvers — seconds→fill and fill→seconds, the latter used only when the available-Bits budget
+   binds before the time budget does) implement this exactly, via `getDataLakeOverflowTaperShape`'s
+   shared threshold/equilibrium/decay-rate constants so the two solvers can never disagree about
+   where one regime ends and the other begins. `tickPoolBufferFill`'s overflow branch (once a pool's
+   own local Memory buffer is completely full, `room <= 0`) hands its own reserved time/Bits budget
+   (the same `fillRate`/`elapsedSeconds` reservation `tickPoolBufferFill` already computes for
+   buffer-filling) to `applyDataLakeOverflow`, which walks that budget in bounded segments — at most
+   `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT` (`DATA_LAKE_SUB_SIZE_DISK_CAPS` summed, the most disk slots a
+   lake could ever hold, so the loop is provably bounded) — re-fetching which disk is currently open
+   and solving ITS OWN exact fill every time a disk completes, rather than sampling one rate up
+   front and reusing it for every disk a single tick's own overflow might go on to complete. This
+   makes a single disk's own fill mathematically exact and TICK-SIZE-INDEPENDENT: splitting the
+   same total `elapsedSeconds` into any number of smaller calls produces IDENTICAL results, not
+   just approximately close ones — an earlier version sampled one rate per disk-completion segment
+   and held it flat for that whole segment's own duration, which was correct only at a disk's
+   completion BOUNDARY, not within its own partial fill, whose true rate keeps decreasing
+   continuously as fillBits rises (verified to diverge from the tick-size-independent value by a
+   large, not rounding-error-scale, margin at realistic production rates — see
+   `docs/DESIGN_HISTORY.md`). `fillDataLakeDisks` also returns `unconsumedBits` per segment
+   (nonzero only when the lake becomes fully maxed partway through it), which `applyDataLakeOverflow`
+   folds into its own `remainingBits` return; `tickPoolBufferFill` credits that back to `intro.bits`
+   rather than assuming every offered bit was consumed, so an unconsumed excess (e.g. a huge
+   single-tick overflow against a small/fresh lake) survives as ordinary spendable Bits instead of
+   being destroyed. Deliberately independent of the pool's own fill-based Speed/Bandwidth
    multiplier (`getPoolEffectMultiplier`) — these are two separate dials on the same
    `MultiplierGauge` (see `ByteFoundryPage`, extended into a full circle for pools: the top half
    stays the existing pool fill multiplier, the bottom half is this lake overflow rate, rendered in
@@ -837,6 +864,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    is also what protects a currently-redeemable disk from ever being liquidated: `isDiskFillAvailable`
    (top of the chain) is already true whenever ANY size anywhere has a redeemable full disk, so
    liquidation is fully blocked until that's no longer the case. The lowest rank in the whole chain.
+   A stranded size is further excluded (`isDiskSizeReservedForWriteCache`) whenever the write-cache
+   path up to its own next ladder size (`getNextDiskLadderSize`) still has a real, current use for
+   its full disks — an empty, ever-built target slot waiting to be topped up (the exact same
+   `disksBuiltTotal > disks` condition `canStartDiskWriteCacheMerge` itself checks before starting a
+   NEW collect — this also covers an in-progress collect/flush, since a target slot mid-merge stays
+   counted as not-full the whole time) — AND that target size isn't ALSO already permanently
+   stranded itself (`isDiskSizeStrandedByAdvancedTier`): once the target's own tier has moved past
+   ITS required level too, filling it with more disks could never redeem either, so there's nothing
+   left to protect and the chain cascades upward exactly as before. Without this, a stranded
+   source's full disks could be skimmed down to nothing before they ever reach
+   `DISK_ARRAY_LADDER_CAP` simultaneously full — the count a NEW write-cache merge needs to ever
+   START — permanently starving a still-needed, still-redeemable higher size of its own write-cache
+   refill (see `docs/DESIGN_HISTORY.md`).
 
    `ComputePage` (page
    id `'boosters'`) reveals once Buffer reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,000,000

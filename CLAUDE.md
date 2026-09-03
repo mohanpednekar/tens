@@ -1268,12 +1268,20 @@ of `DATA_LAKE_SUB_SIZE_DISK_CAPS`, i.e. every disk slot a lake could ever hold a
 because a single large `overflowSeconds` (again, offline-progress catch-up is the case that actually
 reaches this) can span MORE than one disk completion, and each disk has its OWN fill-based overflow
 rate (below): reusing the first disk's rate for the rest of the interval is wrong once that disk
-completes and a fresh one opens at a different rate. Each segment re-evaluates
-`getDataLakeOverflowRatePercent` against the lake's state as of that segment's start, computes how
-much of the remaining `overflowSeconds`/bits is needed to either close out the currently-open disk or
-exhaust the interval (whichever comes first), applies `fillDataLakeDisks` for just that slice, then
-loops — so a tick spanning several disk completions correctly charges each one at its own rate rather
-than smearing one stale rate across all of them (see `docs/DESIGN_HISTORY.md`). That percentage is itself fill-based on progress of the ONE disk
+completes and a fresh one opens at a different rate. Each segment computes how much of the
+remaining `overflowSeconds`/bits the CURRENTLY-open disk needs to either complete or exhaust the
+interval (whichever comes first), applies `fillDataLakeDisks` for just that slice, then loops — so
+a tick spanning several disk completions correctly charges each one on its own terms rather than
+smearing one disk's own numbers across all of them (see `docs/DESIGN_HISTORY.md`). WITHIN one
+disk's own segment, the taper below is exactly linear in fill fraction, making a single disk's fill
+an ordinary linear ODE (`dx/dt = fillRate * rateFraction(x/L)`) with a closed-form solution —
+`solveDataLakeDiskFillAfterSeconds`/`solveDataLakeDiskSecondsForBits` (seconds→fill and its
+inverse, sharing `getDataLakeOverflowTaperShape`'s threshold/equilibrium/decay-rate constants) —
+rather than one rate sampled at the segment's own start and held flat for its whole duration: the
+closed form makes a single disk's own fill mathematically exact and TICK-SIZE-INDEPENDENT, so
+splitting the same total `elapsedSeconds` into any number of smaller calls produces IDENTICAL
+results (verified directly — see `docs/DESIGN_HISTORY.md` for the magnitude of the earlier
+flat-rate approximation's own error, which was large, not rounding-scale). That percentage is itself fill-based on progress of the ONE disk
 CURRENTLY being filled in that lake — NOT the lake's overall total
 (`getDataLakeCurrentDiskFillFraction`, mirroring the FILL_MULTIPLIER_* mechanic's own shape):
 `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50%) when that current disk is empty, linearly tapering down
@@ -1384,7 +1392,16 @@ EVERY tier's own Lake Capacity doubling ranked directly above it
 the Foundry would otherwise be completely idle — Disk Fill, Speed, Provision Disk, Compute, and
 every lake's own Capacity doubling all unavailable — `isDiskFillAvailable` being part of that chain
 is also what protects a currently-redeemable disk elsewhere from ever being liquidated. The lowest
-rank in the whole forced priority chain.
+rank in the whole forced priority chain. A stranded size's full disks are additionally excluded
+(`isDiskSizeReservedForWriteCache`) whenever the write-cache path up to its own next ladder size
+still has a real, current use for them — an empty, ever-built target slot waiting to be topped up,
+the same condition `canStartDiskWriteCacheMerge` itself checks — AND that target size isn't ALSO
+already permanently stranded itself (filling an already-stranded target with more disks could never
+redeem either, so the chain still cascades upward as before once it is); without this, liquidation
+could repeatedly skim a stranded source's full disks down to nothing before they ever reach
+`DISK_ARRAY_LADDER_CAP` simultaneously full — the count a NEW write-cache merge needs to ever
+start — permanently starving a still-needed, still-redeemable higher size of its own refill; see
+`docs/DESIGN_HISTORY.md`.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
 loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -1502,7 +1519,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1691 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1694 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

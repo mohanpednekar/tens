@@ -9370,20 +9370,34 @@ describe('Data Lakes', () => {
       expect(after.intro.bits).toBe(1_000_000 - kb1)
     })
 
-    it('feeds the matching Data Lake once the pool\'s own buffer has no more room, at DATA_LAKE_OVERFLOW_MAX_PERCENT of the pool\'s reserved rate while the lake is empty', () => {
+    it('feeds the matching Data Lake once the pool\'s own buffer has no more room, STARTING at DATA_LAKE_OVERFLOW_MAX_PERCENT of the pool\'s reserved rate while the lake is empty and tapering continuously from there', () => {
       const state = fullBufferState()
+      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // the instantaneous rate at 0 fill
       const after = tickPoolBufferFill(1)(state) // 1s elapsed, 8,000 bits/sec reserved for pool 1
       expect(after.intro.poolBuffers[1]).toBe(8_000_000) // untouched — buffer was already full
-      const expectedOverflow = 8000 * (DATA_LAKE_OVERFLOW_MAX_PERCENT / 100)
-      expect(getDataLakeFillBits(after, 1)).toBe(expectedOverflow)
-      expect(after.intro.bits).toBe(1_000_000 - expectedOverflow)
+      // The rate isn't flat across the whole second — it's the exact closed-form solution to
+      // dx/dt = fillRate * rateFraction(x/L), which continuously DECREASES as fillBits rises, so
+      // the total delivered is LESS than a naive flat-MAX_PERCENT estimate (8000*50%=4000) would
+      // suggest: x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L = 8000*0.5/8000 =
+      // 0.5/sec, so fillBits(1) = 8000*(1-exp(-0.5)) ≈ 3147.75 (see docs/DESIGN_HISTORY.md).
+      const expectedOverflow = 8000 * (1 - Math.exp(-0.5))
+      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(expectedOverflow, 6)
+      expect(after.intro.bits).toBeCloseTo(1_000_000 - expectedOverflow, 6)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(0) // not a whole unit yet
     })
 
     it('completes the lake\'s first (×1) disk once enough overflow accumulates, latching boostersUnlocked permanently', () => {
       const state = fullBufferState()
-      // Exactly enough overflow this tick to complete 1 unit: 8,000 bits/sec x elapsed x 50% = 8,000 bits (unitBits1) at elapsed=2s.
-      const after = tickPoolBufferFill(2)(state)
+      // The exact closed-form time to fill one disk from empty: ~4.605s in the exponential-taper
+      // regime to reach 90% fill (where the completion floor takes over — see the "floors the
+      // overflow rate" regression above), then 2s more at the floored rate (the remaining 800 bits
+      // / (8000 x 5%)) to finish the last 10% — not a flat "unitBits1 / (fillRate x MAX_PERCENT)"
+      // estimate, since the rate isn't constant across the fill. Overshoot slightly (elapsed well
+      // past that ~6.6s total) so float precision in the boundary comparison can't leave a tiny
+      // residual — a level-0 lake's capacity is exactly 1 unit, so completing this ONE disk maxes
+      // the whole lake regardless of how much leftover time this tick still has, and
+      // fillDataLakeDisks resets fillBits to exactly 0 once maxed either way.
+      const after = tickPoolBufferFill(8)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
       expect(getDataLakeFillBits(after, 1)).toBe(0)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
@@ -9456,13 +9470,30 @@ describe('Data Lakes', () => {
       const after = tickPoolBufferFill(1)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
       // The remaining ~0.9998s of this tick (after the ~0.0002s needed to close the 0.08-bit gap)
-      // goes toward the NEXT disk (capacityLevel 1 still has 9 more ×1 slots open) at THAT disk's
-      // own fresh MAX_PERCENT rate (50%, since it just opened empty) — not the stale floored 5%
-      // rate the first disk was completing at. 8,000 bits/sec x ~0.9998s x 50% ≈ 3999.2 bits —
-      // correctly re-evaluating the rate per disk rather than reusing one rate across a tick that
-      // spans more than one disk completion (see docs/DESIGN_HISTORY.md).
-      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(3999.2, 1)
+      // goes toward the NEXT disk (capacityLevel 1 still has 9 more ×1 slots open), starting at
+      // its own fresh MAX_PERCENT rate (50%, since it just opened empty) and continuously
+      // DECREASING as that disk's own fill rises — the exact closed-form solution to
+      // dx/dt = fillRate * rateFraction(x/L), not a single rate sampled once and held flat for the
+      // whole ~0.9998s (which would overestimate the fill, since the true rate keeps dropping the
+      // whole time). x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L = 8000*0.5/8000
+      // = 0.5/sec, so fillBits(t) = 8000*(1 - exp(-0.5*t)); at t≈0.9998s that's ≈3147.27 bits —
+      // still well short of the 90%-fill threshold where the completion floor would take over, so
+      // the whole remaining interval stays in this exponential regime (see docs/DESIGN_HISTORY.md).
+      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(3147.27, 1)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
+    })
+
+    it('is associative — splitting the same total elapsedSeconds into many small ticks produces the SAME lake fill as one big tick (regression — Devin finding: holding one rate flat across a whole partial-disk segment made tickPoolBufferFill non-associative, so live small-tick play and offline 1-second-increment replay could reach different results for the same total elapsed time)', () => {
+      const wholeState = fullBufferState()
+      const wholeAfter = tickPoolBufferFill(2)(wholeState)
+
+      let splitState = fullBufferState()
+      for (let i = 0; i < 20; i += 1) {
+        splitState = tickPoolBufferFill(0.1)(splitState)
+      }
+
+      expect(getDataLakeFillBits(wholeAfter, 1)).toBeCloseTo(getDataLakeFillBits(splitState, 1), 6)
+      expect(getDataLakeDepositedUnits(1)(wholeAfter)).toBe(getDataLakeDepositedUnits(1)(splitState))
     })
   })
 
@@ -9727,6 +9758,44 @@ describe('Data Lakes', () => {
       expect(after).not.toBe(state)
       expect(after.intro.disks[kb10]).toBe(1) // smallest eligible size liquidated first
       expect(after.intro.disks[kb100]).toBe(1) // untouched this call
+      expect(after.intro.bits).toBe(state.intro.bits + kb10)
+    })
+
+    it('a stranded source size does NOT liquidate while its next ladder size still needs it via write-cache (regression — Devin finding: liquidation could skim a stranded source down before it ever reaches DISK_ARRAY_LADDER_CAP simultaneously full, permanently starving the target size\'s own write-cache refill)', () => {
+      // kb10 requires tier01 level 2; tier01 is at level 3, so kb10 is stranded (own redeem window
+      // passed) — but kb100 (kb10's own next ladder size, requiring level 3) is NOT stranded: it's
+      // sitting EXACTLY at its required level right now, genuinely redeemable the moment a fresh
+      // disk arrives. kb100 was fully built once (disksBuiltTotal at cap) but every one of its
+      // disks has since been redeemed away (disks[kb100] = 0) — it desperately needs write-cache
+      // refill from kb10, which only has 3 of the 10 simultaneously-full disks a new merge needs.
+      const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
+        ...noOtherUpgradesLeft,
+        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+        disks: { [kb10]: 3, [kb100]: 0 },
+      })
+      // kb10 is genuinely stranded (own redeem window passed) and kb100 is not (isDiskRedeemable
+      // would be true for kb100 if it held a full disk — it doesn't, hence isDiskFillAvailable
+      // being false here rather than blocking liquidation for that separate reason).
+      expect(isDiskRedeemable(state, kb10)).toBe(false)
+      expect(isDiskRedeemable(state, kb100)).toBe(true)
+      expect(isDiskFillAvailable(state)).toBe(false)
+      expect(isIdleDiskLiquidationAvailable(state)).toBe(false)
+      expect(tickIdleDiskLiquidation(state)).toBe(state)
+    })
+
+    it('protection lifts once the target size becomes stranded too — the chain still cascades upward as before', () => {
+      // Same setup as above, but tier01 has now moved to level 4 — kb100 is stranded too, so
+      // filling it with more disks via write-cache could never redeem either. kb10 is no longer
+      // protected and becomes the smallest eligible liquidation candidate again.
+      const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
+        ...noOtherUpgradesLeft,
+        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+        disks: { [kb10]: 3, [kb100]: 0 },
+      })
+      expect(isIdleDiskLiquidationAvailable(state)).toBe(true)
+      const after = tickIdleDiskLiquidation(state)
+      expect(after).not.toBe(state)
+      expect(after.intro.disks[kb10]).toBe(2)
       expect(after.intro.bits).toBe(state.intro.bits + kb10)
     })
 

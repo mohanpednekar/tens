@@ -5338,3 +5338,101 @@ unaffordable) and a full 1,000-unit deposit; asserts the cost now reads 1,000 (n
 1,001) still reads 1,000, not 1,002 — confirming the cap holds indefinitely, not just for one
 purchase. A second assertion confirms a NOT-yet-maxed lake's cost is completely unaffected (still the
 plain `purchased + 1`). `yarn test`: 1691/1691 green (+1). `yarn build` succeeds.
+
+### A tenth finding: idle disk liquidation could starve a still-needed write-cache merge of its own source disks
+
+A later Devin pass (against `b0ed228`) flagged that size-agnostic idle-disk liquidation (see the
+ninth finding's own section above, and the earlier "size-agnostic" rework predating this PR) never
+accounted for write-cache (`tickDiskWriteCache`) as an alternative destination for a stranded
+size's full disks. `getIdleDiskLiquidationSizes`'s own reasoning — "a stranded size's disks have
+nowhere left to go, since Data Lakes no longer accept Disk deposits at all" — forgot that write-cache
+IS exactly such a destination: a source size whose own tier has moved past its redeem level can
+still feed the NEXT ladder size up via write-cache, which itself may still need — or be actively
+mid-collect on — full disks from that exact source. Two concrete failure modes: (1) liquidation
+could repeatedly skim a stranded source's full disks down to nothing BEFORE they ever simultaneously
+reach `DISK_ARRAY_LADDER_CAP` (10), the count `canStartDiskWriteCacheMerge` needs to ever start a
+NEW merge — permanently preventing one from starting; (2) if a merge already has an ACTIVE, in-flight
+collect running against that source, liquidation could steal disks it was mid-way through
+collecting. Both cases permanently starve a higher, still-currently-redeemable size of the refill it
+needs (its tier could be sitting EXACTLY at its own required level right now, with 0 currently-full
+disks, desperately needing a write-cache-delivered disk to ever redeem again) — a real,
+gameplay-blocking loss, not a display nit. **Fix:** a new `isDiskSizeReservedForWriteCache(state,
+size)` predicate excludes a stranded size from `getIdleDiskLiquidationSizes` whenever its own next
+ladder size (`getNextDiskLadderSize`) still has a real, current use for its disks — an empty,
+ever-built target slot waiting to be topped up (`disksBuiltTotal[targetSize] > disks[targetSize]`,
+the EXACT same condition `canStartDiskWriteCacheMerge` itself checks, which also transparently
+covers an active in-flight collect/flush, since a target slot mid-merge stays counted as not-full
+the whole time it's in progress) — AND that target size isn't ALSO already permanently stranded
+itself (`isDiskSizeStrandedByAdvancedTier(state, targetSize)`): once the target's own tier has
+already moved past ITS required level too, filling it with even more disks could never redeem
+either, so there's genuinely nothing left to protect and the liquidation chain cascades upward
+exactly as it did before this fix. This second condition is what keeps the existing
+"liquidates the smallest eligible size" test passing unchanged — in that fixture BOTH the source
+and its own next size are already stranded, so the new protection correctly doesn't apply there;
+protection only ever activates for a target that's genuinely still redeemable (at, or not yet at,
+its own required level). **Verification.** Two new regression tests: one seeds a source (kb10,
+stranded) whose next size (kb100) is fully built but NOT stranded (sitting exactly at its own
+required level, currently holding 0 full disks — genuinely needing a write-cache refill) and
+confirms liquidation is unavailable/a no-op despite kb10 otherwise qualifying; a companion test
+advances the tier one more level (making kb100 stranded too) and confirms the protection lifts,
+with kb10 liquidating exactly as the pre-existing cascade test already expected. `yarn test`:
+1693/1693 green (+2, from the 1691 baseline before this finding). `yarn build` succeeds.
+
+### An eleventh finding: the Data Lake overflow taper was sampled once per disk-completion segment, not truly continuous — making a single tick's own result depend on how it was split
+
+The same Devin pass also flagged that `applyDataLakeOverflow`'s per-disk segment loop (added for
+the eighth finding above, to stop reusing one disk's rate across a tick that spans MULTIPLE disk
+completions) still had a narrower version of the exact same bug WITHIN a single disk's own partial
+fill: each segment sampled `getDataLakeOverflowRatePercent` ONCE, at the segment's own start, and
+applied that one rate flatly for the segment's entire duration — correct only when the segment
+happens to land exactly on a disk-completion boundary, not for the (far more common) case where a
+segment consumes only PART of a disk's remaining gap without completing it. The true rate keeps
+decreasing continuously as `fillBits` rises within that same disk (the whole point of the taper),
+so holding it flat at the segment-start value over-credits the lake relative to a properly
+integrated result. Concretely: `tickPoolBufferFill(2)` (one 2-second tick) and
+`tickPoolBufferFill(1)` called twice in a row (two 1-second ticks) could disagree on the resulting
+`fillBits`/`depositedUnits` for the exact same total elapsed time — a non-associative tick function,
+meaning live small-tick play and offline-progress's own 1-second-increment replay (see
+`applyOfflineProgress` in `CLAUDE.md`'s Architecture section) were not guaranteed to reach the same
+state for the same real elapsed time. **Fix:** rather than further subdividing into smaller and
+smaller discrete slices (which only shrinks, never eliminates, the same class of error, and adds an
+arbitrary new granularity constant to tune), the taper's own shape makes an EXACT fix possible: since
+`getDataLakeOverflowRatePercent` is exactly linear in fill fraction, a single disk's own fill obeys
+`dx/dt = fillRate * rateFraction(x/L)` — an ordinary first-order linear ODE with a closed-form
+solution. Below the completion floor's own threshold fraction (90% fill, where the un-floored taper
+would cross `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT`), the solution is exponential decay toward
+an equilibrium that coincides with `L` itself (since `DATA_LAKE_OVERFLOW_MIN_PERCENT` is 0 — the
+same "asymptotically approaches but never reaches 100%" property Finding 1 already required a floor
+for); at or above that threshold, the rate is pinned at the floor, so fill is plain constant-rate
+linear. Two new solver functions — `solveDataLakeDiskFillAfterSeconds` (seconds→fill) and
+`solveDataLakeDiskSecondsForBits` (fill→seconds, needed only when `applyDataLakeOverflow`'s own
+available-Bits budget binds before its time budget does) — implement both regimes exactly, sharing
+`getDataLakeOverflowTaperShape`'s threshold/equilibrium/decay-rate constants so the two can never
+disagree about where one regime ends and the other begins. `applyDataLakeOverflow`'s own per-disk
+segment loop is unchanged in shape (still re-evaluates which disk is open every time one completes,
+still bounded by `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT`) — only what happens INSIDE one disk's own
+segment changed, from "sample once, apply flat" to "solve exactly." This makes a single disk's own
+fill mathematically exact and genuinely tick-size-independent, not just closer. **Verification.**
+Derived the closed-form solution's parameters by hand (equilibrium `x* = MAX*L/(MAX-MIN) = L` when
+`MIN=0`; decay rate `fillRate*(MAX-MIN)/L`) and validated it two ways before touching `engine.js`: a
+scratch script comparing the closed form against a fine-grained (0.0001s-step) numerical integration
+of the same ODE (agreement to within the numerical integrator's own step-size error, ~0.005 bits out
+of thousands) and an associativity check (splitting one 20-second fill into 2,000 steps of 0.01s
+each reproduced the one-shot 20-second result to 6 decimal places). Two pre-existing tests whose
+expected values had been hand-derived under the OLD (flat-rate-per-segment) approximation needed
+correcting to the new, exact values: the "feeds the matching Data Lake ... at DATA_LAKE_OVERFLOW_MAX_PERCENT"
+test's 1-second fill from empty changed from a flat `8000*50%=4,000` bits estimate to the true
+`8000*(1-exp(-0.5))≈3,147.75` bits (a large, not rounding-scale, difference — confirming this was a
+real error, not a cosmetic one); the "completes the lake's first disk" test's assumed flat
+completion time (2s) was replaced with the disk's own true closed-form completion time (~6.6s: ~4.6s
+in the exponential regime to reach the 90%-fill threshold, then 2s more at the floored constant
+rate), using a safely-overshot elapsed value so floating-point precision at the exact boundary can't
+leave a residual (harmless regardless, since a level-0 lake's capacity is exactly 1 unit — completing
+that one disk maxes the whole lake no matter how much leftover time remains in the tick). A new
+regression test directly pins the associativity property itself: one `tickPoolBufferFill(2)` call
+versus twenty `tickPoolBufferFill(0.1)` calls in a row, from the same fresh state, now produce
+`fillBits` matching to 6 decimal places (previously they diverged meaningfully) — this fixture stays
+within the exponential regime the whole 2 seconds (well short of a disk completing), so it isolates
+exactly the WITHIN-one-disk precision this fix targets, distinct from the eighth finding's own
+cross-disk-boundary regression test. `yarn test`: 1694/1694 green (+3 total across the tenth and
+eleventh findings — 1691 → 1694). `yarn build` succeeds.

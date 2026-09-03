@@ -4411,20 +4411,119 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
 // bounds its loop and guarantees it always terminates.
 const DATA_LAKE_OVERFLOW_SEGMENT_LIMIT = DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((sum, cap) => sum + cap, 0)
 
-// Applies at most `availableSeconds`/`availableBits` worth of overflow to lake `tierIndex`,
-// re-evaluating the fill-based overflow RATE every time a disk completes, rather than computing
-// one rate up front (from whichever disk happened to be open at the START) and reusing it for
-// every disk a single tick's own overflow might go on to complete. A rate appropriate for the
-// FIRST disk otherwise silently gets applied to every later one too — either over- or under-
-// crediting the lake relative to a properly re-integrated continuous model — once a tick's
-// reserved production is large enough to span multiple disk completions (reachable at high
-// production rates, not merely theoretical; see docs/DESIGN_HISTORY.md). Each segment fills
-// (up to) one disk's own remaining gap at whatever rate applies right now, converts that into a
-// real time cost, and stops early if the interval or the available Bits run out first — bounded
-// by DATA_LAKE_OVERFLOW_SEGMENT_LIMIT so this always terminates. Returns
-// `{ lake, remainingBits, changed }` — the caller's own `bits` should be SET to `remainingBits`
-// (already accounts for fillDataLakeDisks' own unconsumedBits at every segment), not decremented
-// separately.
+// getDataLakeOverflowRatePercent's taper is exactly LINEAR in fill fraction (MAX at empty, down to
+// MIN at full, floored at FLOOR), which makes a single disk's own fill an ordinary first-order
+// linear ODE: dx/dt = fillRate * rateFraction(x/L), x = fillBits, L = the disk's own slot size.
+// That has a closed-form solution — exponential decay toward an equilibrium (which coincides with
+// L itself here, since DATA_LAKE_OVERFLOW_MIN_PERCENT is 0 — the taper alone asymptotically
+// approaches, but never reaches, 100% fill, which is exactly why a completion floor exists at
+// all — see the "floors the overflow rate" regression above) while still above the completion
+// floor, then plain constant-rate linear fill once the taper drops to the floor. The two solver
+// functions below (seconds→fill and fill→seconds) implement this exactly, in two regimes each —
+// so a single disk's own fill is mathematically exact and tick-size-independent: splitting the
+// same total elapsedSeconds into any number of smaller calls produces IDENTICAL results, not just
+// approximately close ones. Before this, applyDataLakeOverflow sampled ONE rate at the START of
+// each per-disk segment and applied it flatly for that whole segment's own duration — correct only
+// at a disk-completion BOUNDARY (re-evaluating per disk, per the comment above), but still wrong
+// WITHIN a single disk's own partial fill, whose true rate keeps decreasing continuously as fillBits
+// rises — verified to diverge from the true, tick-size-independent value by a large margin at
+// realistic production rates, not a rounding-error-scale difference; see docs/DESIGN_HISTORY.md.
+const DATA_LAKE_OVERFLOW_MAX_FRACTION = DATA_LAKE_OVERFLOW_MAX_PERCENT / 100
+const DATA_LAKE_OVERFLOW_MIN_FRACTION = DATA_LAKE_OVERFLOW_MIN_PERCENT / 100
+const DATA_LAKE_OVERFLOW_FLOOR_FRACTION = DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT / 100
+
+// Fill-fraction (of L) at which the taper crosses the completion floor, and the two derived ODE
+// constants for the exponential-decay regime below that threshold — shared by both solvers so
+// they can never disagree with each other about where one regime ends and the other begins.
+const getDataLakeOverflowTaperShape = slotSizeBits => {
+  const spread = DATA_LAKE_OVERFLOW_MAX_FRACTION - DATA_LAKE_OVERFLOW_MIN_FRACTION
+  if (spread <= 0) return null // degenerate config — taper never actually decreases, see callers
+  const thresholdFraction = Math.min(1, Math.max(0, (DATA_LAKE_OVERFLOW_MAX_FRACTION - DATA_LAKE_OVERFLOW_FLOOR_FRACTION) / spread))
+  return {
+    thresholdX: thresholdFraction * slotSizeBits,
+    equilibriumX: (DATA_LAKE_OVERFLOW_MAX_FRACTION / spread) * slotSizeBits, // "x*" the taper alone asymptotes toward
+    decayRate: spread / slotSizeBits, // per unit of fillRate — actual decay constant is fillRate * this
+  }
+}
+
+// Advances one disk's own fillBits (x0, out of slotSizeBits) by up to `seconds` of production at
+// `fillRate`. Returns the resulting fillBits (never overshoots past slotSizeBits — a segment stays
+// scoped to exactly one disk, same as before) and how much of `seconds` was actually consumed
+// (less than `seconds` only when the disk completes before the budget runs out).
+const solveDataLakeDiskFillAfterSeconds = (x0, slotSizeBits, fillRate, seconds) => {
+  if (seconds <= 0 || fillRate <= 0 || slotSizeBits <= 0 || x0 >= slotSizeBits) {
+    return { fillBits: Math.min(Math.max(0, x0), slotSizeBits), secondsUsed: 0 }
+  }
+  const shape = getDataLakeOverflowTaperShape(slotSizeBits)
+  const floorRate = fillRate * DATA_LAKE_OVERFLOW_FLOOR_FRACTION
+  if (!shape) {
+    // No taper at all (degenerate constants) — plain constant-rate fill the whole way.
+    const rate = fillRate * Math.max(DATA_LAKE_OVERFLOW_FLOOR_FRACTION, DATA_LAKE_OVERFLOW_MAX_FRACTION)
+    const timeToComplete = (slotSizeBits - x0) / rate
+    if (seconds >= timeToComplete) return { fillBits: slotSizeBits, secondsUsed: timeToComplete }
+    return { fillBits: x0 + rate * seconds, secondsUsed: seconds }
+  }
+
+  const { thresholdX, equilibriumX, decayRate: decayRatePerFillRate } = shape
+  const decayRate = fillRate * decayRatePerFillRate
+  let x = x0
+  let remaining = seconds
+
+  if (x < thresholdX) {
+    // x(t) = equilibriumX + (x0 - equilibriumX) * exp(-decayRate * t) — solve for how long it
+    // takes to reach the threshold, then either stop here (still within this regime) or continue
+    // into the floor regime below with whatever time is left.
+    const secondsToThreshold = -Math.log((thresholdX - equilibriumX) / (x - equilibriumX)) / decayRate
+    if (remaining < secondsToThreshold) {
+      return { fillBits: equilibriumX + (x - equilibriumX) * Math.exp(-decayRate * remaining), secondsUsed: seconds }
+    }
+    remaining -= secondsToThreshold
+    x = thresholdX
+  }
+
+  const timeToComplete = (slotSizeBits - x) / floorRate
+  if (remaining >= timeToComplete) return { fillBits: slotSizeBits, secondsUsed: seconds - remaining + timeToComplete }
+  return { fillBits: x + floorRate * remaining, secondsUsed: seconds }
+}
+
+// Inverse of the above: the real time it takes to advance one disk's own fillBits (x0) by exactly
+// `bits` at `fillRate` (`bits` is always <= slotSizeBits - x0 by construction at its one call
+// site below, so this never needs to reason about "running out of disk"). Used only when
+// applyDataLakeOverflow's own available-Bits budget — not time — is what limits a segment.
+const solveDataLakeDiskSecondsForBits = (x0, slotSizeBits, fillRate, bits) => {
+  const targetX = Math.min(slotSizeBits, x0 + Math.max(0, bits))
+  if (targetX <= x0 || fillRate <= 0) return 0
+  const shape = getDataLakeOverflowTaperShape(slotSizeBits)
+  const floorRate = fillRate * DATA_LAKE_OVERFLOW_FLOOR_FRACTION
+  if (!shape) {
+    const rate = fillRate * Math.max(DATA_LAKE_OVERFLOW_FLOOR_FRACTION, DATA_LAKE_OVERFLOW_MAX_FRACTION)
+    return (targetX - x0) / rate
+  }
+
+  const { thresholdX, equilibriumX, decayRate: decayRatePerFillRate } = shape
+  const decayRate = fillRate * decayRatePerFillRate
+  if (targetX <= thresholdX) {
+    return -Math.log((targetX - equilibriumX) / (x0 - equilibriumX)) / decayRate
+  }
+  let secondsSoFar = 0
+  let x = x0
+  if (x < thresholdX) {
+    secondsSoFar = -Math.log((thresholdX - equilibriumX) / (x - equilibriumX)) / decayRate
+    x = thresholdX
+  }
+  return secondsSoFar + (targetX - x) / floorRate
+}
+
+// Applies at most `availableSeconds`/`availableBits` worth of overflow to lake `tierIndex`, one
+// disk's own gap at a time (re-evaluating which disk is open, and its own exact closed-form fill
+// — see solveDataLakeDiskFillAfterSeconds/solveDataLakeDiskSecondsForBits above — every time a
+// disk completes, rather than computing one rate up front and reusing it for every disk a single
+// tick's own overflow might go on to complete; see docs/DESIGN_HISTORY.md). Each segment fills (up
+// to) one disk's own remaining gap, respecting BOTH the remaining time and the remaining Bits
+// budgets (whichever binds first), and stops early once either is exhausted — bounded by
+// DATA_LAKE_OVERFLOW_SEGMENT_LIMIT so this always terminates. Returns `{ lake, remainingBits,
+// changed }` — the caller's own `bits` should be SET to `remainingBits` (already accounts for
+// fillDataLakeDisks' own unconsumedBits at every segment), not decremented separately.
 const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, availableBits) => {
   let lake = getDataLakeTier(state, tierIndex)
   let remainingSeconds = availableSeconds
@@ -4437,19 +4536,19 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
     segment += 1
   ) {
     const viewState = { ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes, [tierIndex]: lake } } }
-    const ratePercent = getDataLakeOverflowRatePercent(viewState, tierIndex)
-    if (ratePercent <= 0) break // maxed — nothing left to fill
     const openSubSize = getDataLakeCurrentFillSubSize(viewState, tierIndex)
-    if (openSubSize === null) break
+    if (openSubSize === null) break // maxed — nothing left to fill
     const slotSizeBits = getDataLakeUnitBits(tierIndex) * openSubSize
-    const neededBits = Math.max(0, slotSizeBits - (lake.fillBits ?? 0))
-    const rate = ratePercent / 100
-    // Real time this rate needs to deliver the rest of the current disk — this segment stops
-    // either once that disk completes, or once the interval/available Bits run out, whichever
-    // comes first (ratePercent > 0 here, so fillRate * rate is always positive — no division risk).
-    const neededSeconds = neededBits / (fillRate * rate)
-    const segmentSeconds = Math.min(remainingSeconds, neededSeconds)
-    const segmentBits = Math.min(fillRate * segmentSeconds * rate, remainingBits)
+    const x0 = lake.fillBits ?? 0
+
+    const afterTime = solveDataLakeDiskFillAfterSeconds(x0, slotSizeBits, fillRate, remainingSeconds)
+    let segmentBits = Math.min(afterTime.fillBits - x0, remainingBits)
+    let segmentSeconds = afterTime.secondsUsed
+    if (segmentBits < afterTime.fillBits - x0) {
+      // The Bits budget binds before the time budget does — the time this smaller amount actually
+      // takes is shorter than afterTime.secondsUsed (which assumed the larger, unaffordable one).
+      segmentSeconds = solveDataLakeDiskSecondsForBits(x0, slotSizeBits, fillRate, segmentBits)
+    }
     if (segmentBits <= 0) break
     const filled = fillDataLakeDisks(viewState, { [tierIndex]: lake }, tierIndex, segmentBits)
     if (!filled) break
@@ -4537,11 +4636,35 @@ export const doubleDataLakeCapacity = tierIndex => state => {
 const isDiskArrayFullyBuilt = (state, sizeBits) =>
   (state.intro?.disksBuiltTotal?.[sizeBits] ?? 0) >= DISK_ARRAY_LADDER_CAP
 
+// A stranded size's full disks are NOT genuinely idle if the write-cache path up to its own next
+// ladder size (getNextDiskLadderSize) still has a real, current use for them: an empty, ever-built
+// target slot waiting to be topped up (the same "disksBuiltTotal > disks" condition
+// canStartDiskWriteCacheMerge itself checks before starting a NEW collect — this also covers a
+// merge already actively collecting, since a target slot mid-collect/mid-flush stays counted as
+// not-full the whole time). Only when the TARGET size is itself not ALSO permanently stranded
+// (isDiskSizeStrandedByAdvancedTier) does this protection apply — once the target's own tier has
+// moved past ITS required level too, filling it with more disks could never redeem either, so
+// there's genuinely nothing left to protect and the chain's liquidation cascades upward as before.
+// Without this, size-agnostic liquidation (added above) could repeatedly skim a stranded source's
+// full disks down to nothing before they ever reach DISK_ARRAY_LADDER_CAP simultaneously full — the
+// count canStartDiskWriteCacheMerge needs to ever START a merge — permanently starving a
+// still-needed, still-redeemable higher size of its own write-cache refill; see
+// docs/DESIGN_HISTORY.md.
+const isDiskSizeReservedForWriteCache = (state, size) => {
+  const targetSize = getNextDiskLadderSize(size)
+  if (isDiskSizeStrandedByAdvancedTier(state, targetSize)) return false
+  const builtAtTarget = state.intro?.disksBuiltTotal?.[targetSize] ?? 0
+  if (builtAtTarget <= 0) return false
+  const fullAtTarget = state.intro?.disks?.[targetSize] ?? 0
+  return builtAtTarget > fullAtTarget
+}
+
 // Ascending (smallest first) — every size that's ever been built out, still holds at least 1 full
-// disk, isn't itself mid-rebuild right now, AND whose corresponding tier has already moved past
+// disk, isn't itself mid-rebuild right now, whose corresponding tier has already moved past
 // the level this size requires (isDiskSizeStrandedByAdvancedTier) — a size built ahead of its own
 // tier's progress ("too early") is excluded: it still has real future redemption use once the
-// tier catches up, and must never be liquidated out from under it.
+// tier catches up, and must never be liquidated out from under it — AND isn't still reserved as
+// write-cache fodder for its own next ladder size (isDiskSizeReservedForWriteCache above).
 const getIdleDiskLiquidationSizes = state => {
   const buildingSize = state.intro?.diskBuild?.size
   return Object.keys(state.intro.disksBuiltTotal ?? {})
@@ -4550,6 +4673,7 @@ const getIdleDiskLiquidationSizes = state => {
     .filter(size => (state.intro.disks?.[size] ?? 0) >= 1)
     .filter(size => isDiskArrayFullyBuilt(state, size))
     .filter(size => isDiskSizeStrandedByAdvancedTier(state, size))
+    .filter(size => !isDiskSizeReservedForWriteCache(state, size))
     .sort((a, b) => a - b)
 }
 
