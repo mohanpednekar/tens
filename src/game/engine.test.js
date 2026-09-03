@@ -3899,6 +3899,29 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state)).toBe(state)
   })
 
+  it('falls back to tier 1 (Core) when computeBoostTierIndex is missing — a legacy save from before that field existed with an active multi-stack boost (Devin Review finding)', () => {
+    // computeBoostTierIndex deliberately omitted (stays at createInitialGameState's own null
+    // default) — matches getComputeBoostMultiplier's own `?? 1` fallback for the same legacy save
+    // shape. Without the fallback, getComputeBoostTierDurationSeconds(boostType, null) is invalid
+    // and returns 0, which would wrongly let this gate pass (any positive remaining time clears
+    // "- 0 > 0") and reclaimComputeBoost would then resolve a bogus field via
+    // getComputeBoostTierField(null) instead of refunding a real Core, while leaving
+    // computeBoostRemainingSeconds untouched.
+    const tier1Duration = getComputeBoostTierDurationSeconds('standard', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2,
+      computeBoostType: 'standard',
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: tier1Duration + 1,
+    })
+    expect(state.intro.computeBoostTierIndex).toBeFalsy()
+    expect(canReclaimComputeBoost(state)).toBe(true)
+    const after = reclaimComputeBoost(state)
+    expect(after.intro.computeCores).toBe(3)
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(1)
+  })
+
   it('reclaims from a higher tier\'s own field, at that tier\'s own base duration, stopping at 1 stack (boost stays active)', () => {
     const state = withIntro(createInitialGameState(), {
       computeClusters: 2, // tier 3
@@ -4635,6 +4658,22 @@ describe('canStackComputeBoost / stackComputeBoost', () => {
     expect(after.intro.computeBoostStacks).toBe(2)
     expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
     expect(getComputeBoostMultiplier(after.intro)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier)
+  })
+
+  it('falls back to tier 1 (Core) when computeBoostTierIndex is missing — a legacy save from before that field existed with an active boost (same root cause as the reclaim finding above)', () => {
+    // computeBoostTierIndex deliberately omitted (stays at createInitialGameState's own null
+    // default). Without the `?? 1` fallback, canStackComputeBoost's own getComputeBoostTierField
+    // call would see an invalid tierIndex and return false, silently disabling Stack for such a
+    // save even with tokens held.
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 2, computeBoostType: 'burst', computeBoostStacks: 1, computeBoostRemainingSeconds: 3,
+    })
+    expect(state.intro.computeBoostTierIndex).toBeFalsy()
+    expect(canStackComputeBoost(state)).toBe(true)
+    const after = stackComputeBoost(state)
+    expect(after.intro.computeCores).toBe(1)
+    expect(after.intro.computeBoostStacks).toBe(2)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(3 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
   it('stackComputeBoost always extends the ACTIVE tier, regardless of any other tier a player might hold', () => {

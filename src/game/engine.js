@@ -5217,7 +5217,11 @@ export const canStackComputeBoost = state => {
   const boostType = state.intro.computeBoostType ?? null
   if (boostType === null) return false
   if ((state.intro.computeBoostStacks ?? 0) >= COMPUTE_BOOST_MAX_STACKS) return false
-  const field = getComputeBoostTierField(state.intro.computeBoostTierIndex)
+  // Same `?? 1` fallback as getComputeBoostMultiplier/canReclaimComputeBoost — a save from before
+  // computeBoostTierIndex existed can have this field missing on an active boost; without the
+  // fallback, getComputeBoostTierField(null) is invalid and this would always return false,
+  // silently disabling Stack for such a save even with tokens held.
+  const field = getComputeBoostTierField(state.intro.computeBoostTierIndex ?? 1)
   if (!field) return false
   return (state.intro[field] ?? 0) >= 1
 }
@@ -5295,7 +5299,11 @@ export const stackComputeBoost = state => {
   if (!isStackComputeBoostTurnAvailable(state)) return state
 
   const boostType = state.intro.computeBoostType
-  const tierIndex = state.intro.computeBoostTierIndex
+  // Same `?? 1` fallback as getComputeBoostMultiplier/canReclaimComputeBoost/reclaimComputeBoost —
+  // a save from before computeBoostTierIndex existed can have this field missing on an active
+  // boost; without the fallback getComputeBoostTierField/getComputeBoostTierDurationSeconds would
+  // both treat it as invalid (same pre-existing bug Devin Review surfaced via the reclaim path).
+  const tierIndex = state.intro.computeBoostTierIndex ?? 1
   const field = getComputeBoostTierField(tierIndex)
 
   return {
@@ -5401,7 +5409,15 @@ export const tickAutoComputeBoost = state => {
 export const canReclaimComputeBoost = state => {
   if ((state.intro.computeBoostType ?? null) === null) return false
   if ((state.intro.computeBoostStacks ?? 0) <= 1) return false
-  const stackDuration = getComputeBoostTierDurationSeconds(state.intro.computeBoostType, state.intro.computeBoostTierIndex)
+  // `?? 1` matches getComputeBoostMultiplier's own fallback — a save from before
+  // computeBoostTierIndex existed can have an active boost with that field missing entirely.
+  // Without this fallback, getComputeBoostTierDurationSeconds sees an invalid tierIndex and
+  // returns 0, so this gate would always pass (any positive remaining time clears "> 0") and
+  // reclaimComputeBoost below would then resolve a bogus field via getComputeBoostTierField(undefined)
+  // instead of refunding a real token, while leaving computeBoostRemainingSeconds untouched
+  // (found by Devin Review on this same PR).
+  const tierIndex = state.intro.computeBoostTierIndex ?? 1
+  const stackDuration = getComputeBoostTierDurationSeconds(state.intro.computeBoostType, tierIndex)
   return (state.intro.computeBoostRemainingSeconds ?? 0) - stackDuration > 0
 }
 
@@ -5420,7 +5436,8 @@ export const reclaimComputeBoost = state => {
   if (!canReclaimComputeBoost(state)) return state
 
   const boostType = state.intro.computeBoostType
-  const tierIndex = state.intro.computeBoostTierIndex
+  // Same `?? 1` fallback canReclaimComputeBoost's own gate above uses — see its comment.
+  const tierIndex = state.intro.computeBoostTierIndex ?? 1
   const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
   const refunded = Math.min(COMPUTE_ENTITY_CAP, (state.intro[field] ?? 0) + 1)
