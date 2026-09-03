@@ -11037,7 +11037,7 @@
       "node_kind": "heading",
       "norm_label": "`confirmdialog/index.jsx`",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L120"
+      "source_location": "L132"
     },
     {
       "id": "docs_components_reference_diskarrayrow_index_jsx",
@@ -11061,7 +11061,7 @@
       "node_kind": "heading",
       "norm_label": "`incompatiblesavenotice/index.jsx`",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L163"
+      "source_location": "L175"
     },
     {
       "id": "docs_components_reference_money_index_js",
@@ -11073,7 +11073,7 @@
       "node_kind": "heading",
       "norm_label": "`money/index.js`",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L129"
+      "source_location": "L141"
     },
     {
       "id": "docs_components_reference_offlineprogressnotice_index_jsx",
@@ -11085,7 +11085,7 @@
       "node_kind": "heading",
       "norm_label": "`offlineprogressnotice/index.jsx`",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L133"
+      "source_location": "L145"
     },
     {
       "id": "docs_components_reference_shared_components_reference",
@@ -11109,7 +11109,7 @@
       "node_kind": "heading",
       "norm_label": "`statcard/index.js`",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L174"
+      "source_location": "L186"
     },
     {
       "id": "claude_skills_graphify_references_add_watch",
@@ -50084,7 +50084,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L120",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -50095,7 +50095,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L129",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -50106,7 +50106,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L133",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -50117,7 +50117,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L163",
+      "source_location": "L175",
       "weight": 1.0
     },
     {
@@ -50128,7 +50128,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L174",
+      "source_location": "L186",
       "weight": 1.0
     },
     {
@@ -64812,5 +64812,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b39695e5e284cfa3885b8826b4a0f00fd2025f52"
+  "built_at_commit": "fd427444e4007d00ac799fe2f7bb05501fccf61d"
 }
