@@ -141,6 +141,25 @@ applying to more than one consumer of shared derived data — a reminder that ga
 (the engine tick) doesn't automatically gate every READ path (every UI surface) deriving from the
 same underlying fields; each consumer needs its own explicit check.
 
+**9. `canReclaimComputeBoost`/`reclaimComputeBoost`/`canStackComputeBoost`/`stackComputeBoost` were
+missing the `?? 1` legacy-tierIndex fallback `getComputeBoostMultiplier` already used**, caught by
+Devin Review on a later round of the same PR. `intro.computeBoostTierIndex` didn't always exist —
+`getComputeBoostMultiplier`'s own comment already documented that a save from before that field
+existed can have an active boost with it missing (reading as `null` after `mergeState` fills it from
+`createInitialGameState`'s own default). `getComputeBoostTierDurationSeconds`/`getComputeBoostTierField`
+both treat an invalid (non-integer) `tierIndex` as 0/`null` respectively — so, for such a save, the
+new pooled-time gate in #7 above computed `stackDuration = 0`, which made `canReclaimComputeBoost`
+ALWAYS pass (any positive remaining time clears `- 0 > 0`), and `reclaimComputeBoost` would then
+resolve a bogus `"null"`-keyed field via `getComputeBoostTierField(null)` instead of refunding a
+real token, while `computeBoostRemainingSeconds` stayed untouched (subtracting a duration of 0) —
+real state corruption, not just a display bug. `canStackComputeBoost`'s own version of the same gap
+was milder: `getComputeBoostTierField(null)` returning `null` made it always return `false`, simply
+disabling Stack outright for such a save rather than corrupting anything. Fixed by applying the
+same `?? 1` fallback at every read site (`canReclaimComputeBoost`, `reclaimComputeBoost`,
+`canStackComputeBoost`, `stackComputeBoost`) — `activateComputeBoost`/`tickComputeBoost` don't need
+it: the former's `tierIndex` is always a fresh, valid, caller-provided value (never read from stored
+state), and the latter never calls either tier-keyed helper at all.
+
 ### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
 
 A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)

@@ -126,6 +126,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   an old-save one) would switch the gauge to a Data Lake "incoming rate" reading and show a
   constant nonzero value that could never actually advance, plus a per-square lake overlay with the
   same issue on old saves. Both now stay in their ordinary state until the matching disk exists.
+- **Stack/Reclaim on a Compute Boost could corrupt state on a save old enough to predate the
+  boost's own funding-tier field** — Reclaim would refund into a bogus field instead of a real Core
+  (or other tier's unit) and fail to reduce the boost's own remaining time, while Stack would
+  simply refuse to do anything at all. Both now fall back to tier 1 (Core) for such a save, matching
+  how the boost's own production multiplier already handled this.
 - **A pool card's own header row sat noticeably farther from its Memory buffer tile than the rest of
   the card's spacing** — the header button's own bottom padding was compounding with the card's own
   gap; padding made asymmetric and the card's gap tightened.
