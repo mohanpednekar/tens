@@ -2430,10 +2430,21 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
   let poolsChanged = false
   const poolTapBonusPercents = {}
   Object.keys(priorPoolBonuses).forEach(poolIndexKey => {
+    const poolIndex = Number(poolIndexKey)
     const priorBonus = priorPoolBonuses[poolIndexKey]
-    const decayedBonus = decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
-    const poolHeadroom = Math.max(0, FILL_MULTIPLIER_TAP_CAP_PERCENT - getPoolBaseMultiplierPercent(state, Number(poolIndexKey)))
-    const finalBonus = Math.min(decayedBonus, poolHeadroom)
+    // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired —
+    // ByteFoundryPage's gauge switches to that pool's Data Lake overflow-rate reading instead (see
+    // MultiplierGauge's mode="lake"), which shares the SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
+    // scale specifically so the transition is seamless (both readings meet at exactly 50 —
+    // FILL_MULTIPLIER_MIN_PERCENT == DATA_LAKE_OVERFLOW_MAX_PERCENT). A leftover tap bonus riding on
+    // top of the now-retired base reading would break that seam — the pre-switch total could sit
+    // well above 50 (tapping is only blocked once full, not before), so the switch to the lake's
+    // own <=50 ceiling would visibly drop instead of continuing smoothly. Force it to 0 immediately
+    // once full, rather than merely letting it decay at the ordinary 1%/sec rate.
+    const isBufferFull = getPoolBufferFillFraction(state, poolIndex) >= 1
+    const decayedBonus = !isBufferFull && decay > 0 ? Math.max(0, priorBonus - decay) : priorBonus
+    const poolHeadroom = Math.max(0, FILL_MULTIPLIER_TAP_CAP_PERCENT - getPoolBaseMultiplierPercent(state, poolIndex))
+    const finalBonus = isBufferFull ? 0 : Math.min(decayedBonus, poolHeadroom)
     if (finalBonus !== priorBonus) poolsChanged = true
     poolTapBonusPercents[poolIndexKey] = finalBonus
   })
@@ -3645,14 +3656,19 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
   let changed = false
 
-  // Self-heal a save carrying leftover diskCache/diskReadCacheFlush for a size that no longer
-  // keeps a read cache (see isDiskReadCacheEligible above) — refund whatever's cached back into
-  // ITS OWN pool's buffer (that's what funded it — see Pass 1 below) rather than stranding it
-  // where nothing will ever fill or flush it again. A same-reference no-op (aside from the loop
-  // itself) once nothing is stranded.
+  // Self-heal a save carrying leftover diskCache/diskReadCacheFlush for a size that's no longer
+  // cache-eligible — either because it never was the pool's own smallest denomination (see
+  // isDiskReadCacheEligible above), OR because a disk of that size hasn't actually been built yet
+  // (the built-only gate below, in readCacheEligibleSizes — an earlier, since-reverted design used
+  // to pre-fill this eagerly on pool unlock, so a save written under that design can carry real,
+  // spendable bits staged in diskCache for a size with disksBuiltTotal still at 0). Either way,
+  // refund whatever's cached back into ITS OWN pool's buffer (that's what funded it — see Pass 1
+  // below) rather than stranding it where nothing will ever fill or flush it again. A same-reference
+  // no-op (aside from the loop itself) once nothing is stranded.
   for (const sizeStr in diskCache) {
     const size = Number(sizeStr)
-    if (isDiskReadCacheEligible(size)) continue
+    const stillEligible = isDiskReadCacheEligible(size) && (builtTotal[size] ?? 0) > 0
+    if (stillEligible) continue
     const poolIndex = getPoolIndexForDiskSize(size)
     if (poolIndex) poolBuffers[poolIndex] = getPoolBufferBitsLocal(poolIndex) + diskCache[size]
     const { [size]: _removedCache, ...restCache } = diskCache

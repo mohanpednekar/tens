@@ -739,10 +739,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    rather than assuming every offered bit was consumed, so an unconsumed excess (e.g. a huge
    single-tick overflow against a small/fresh lake) survives as ordinary spendable Bits instead of
    being destroyed. Deliberately independent of the pool's own fill-based Speed/Bandwidth
-   multiplier (`getPoolEffectMultiplier`) — these are two separate dials on the same
-   `MultiplierGauge` (see `ByteFoundryPage`, extended into a full circle for pools: the top half
-   stays the existing pool fill multiplier, the bottom half is this lake overflow rate, rendered in
-   `theme.color.info`), not compounded into one.
+   multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's value — even
+   though the two readings share the SAME `MultiplierGauge` (see `ByteFoundryPage`): the gauge
+   switches from the fill-based multiplier reading to this lake overflow rate (`mode="lake"`,
+   rendered in `theme.color.info`) the instant that pool's own Memory buffer is completely full,
+   rather than compounding the two into one. The lake's own accumulated fill LEVEL (as opposed to
+   this overflow RATE) has its own separate always-visible bar below the Memory buffer tile.
 
    **Disk breakdown / fill order** (`decomposeDataLakeUnits`, `getDataLakeDiskCounts`/
    `getDataLakeDiskSlotCounts`/`getDataLakeCurrentFillSubSize`) — a lake's own banked total

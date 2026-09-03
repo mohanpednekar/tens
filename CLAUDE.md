@@ -1092,7 +1092,15 @@ transition between the two readings is deliberately clean, not a jump: `FILL_MUL
 (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) and
 `DATA_LAKE_OVERFLOW_MAX_PERCENT` (the lake reading's own ceiling, at its highest right as the buffer
 transitions to full) are both 50 by design, so the needle is already sitting where the lake reading
-picks up. The Data Stream card has no lake of its own, so it always renders in `mode="multiplier"`.
+picks up — this alone only holds for the BASE fill-based value, though: a live tap bonus
+(`poolTapBonusPercents[poolIndex]`) can still be sitting on top of it right at the transition instant
+(tapping is blocked once the buffer is full, but a bonus tapped moments earlier may not have fully
+decayed yet), which would otherwise make the pre-switch total read above 50 and the post-switch lake
+reading (capped at 50) visibly drop. `tickFillMultiplierDecay` closes this gap: once a pool's buffer
+is completely full, that pool's own tap bonus is forced to exactly 0 immediately (not merely
+decayed/headroom-truncated at the ordinary rate), so `getPoolMultiplierPercent` reads exactly 50 by
+the time the gauge switches modes. The Data Stream card has no lake of its own, so it always renders
+in `mode="multiplier"`.
 A pool's own Data Lake accumulation itself — what's actually filling from that overflow, as a LEVEL
 rather than a rate — gets its OWN separate bar: a second `FillableStatCard` directly below the Memory
 buffer tile (always visible, not gated behind the card's `isExpanded` disclosure), showing the SAME
@@ -1315,12 +1323,15 @@ unfloored version got permanently stuck at 7999.999999992724/8000 bits after 442
 `docs/DESIGN_HISTORY.md`) — then straight back up to 50% the
 instant it completes and the next disk opens — a repeating per-disk taper, not one slow lake-wide
 ramp (`getDataLakeOverflowRatePercent`) — deliberately independent of the pool's own fill-based
-Speed/Bandwidth multiplier; these are two separate dials on the same gauge (see "Fill-based
-Speed/Bandwidth multiplier" above), not compounded. The resulting overflow bits feed
+Speed/Bandwidth multiplier as a FORMULA (neither reads the other's value), even though the two
+readings share the SAME gauge component, which switches which one it displays once the buffer is
+full rather than compounding them (see "Fill-based Speed/Bandwidth multiplier" above). The resulting
+overflow bits feed
 `fillDataLakeDisks`, which completes the lake's own ×1/×10/×100 disks SMALLEST-first (see "Disk
 breakdown" below), tracking raw-bit progress toward the current open slot in `lake.fillBits` — the
-same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above and the
-pool gauge's own bottom-half progress arc (see "Fill-based Speed/Bandwidth multiplier" above).
+same field `getDataLakeCurrentDiskFillFraction` reads to drive both the overflow rate above, the
+gauge's `mode="lake"` reading once the buffer is full, and the pool's own separate Data Lake fill bar
+(see "Fill-based Speed/Bandwidth multiplier" above).
 `fillDataLakeDisks` also returns `unconsumedBits` per segment — whatever portion of that segment's
 bits it couldn't place anywhere (only nonzero when the lake becomes fully maxed partway through the
 segment) — which `applyDataLakeOverflow` folds back into its own returned `remainingBits` and also
@@ -1542,7 +1553,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1697 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1699 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -5538,3 +5538,59 @@ transition), and the new "data lake current disk fill" bar reads 0% for an untou
 pre-existing gauge tests (asserting the multiplier reading on an EMPTY buffer, where the pool stays in
 `mode="multiplier"`) needed no changes — they exercise a state this redesign leaves untouched.
 `yarn test`: 1697/1697 green (+1). `yarn build` succeeds.
+
+### The built-only read-cache gate stranded bits a legacy save's cache had already staged under the reverted eager-pre-fill design
+
+Devin review on PR #562 caught a real migration gap in the "built-only" cache-eligibility fix above:
+`tickDiskAutoFill` already had a self-heal loop that refunds any `diskCache`/`diskReadCacheFlush`
+entry for a size that's no longer cache-eligible back into that size's own pool buffer — but its
+condition only checked `isDiskReadCacheEligible(size)` (whether the size is even the pool's OWN
+smallest denomination at all), not the newer, stricter `disksBuiltTotal[size] > 0` requirement the
+built-only fix introduced. The eager-pre-fill-on-unlock design this PR reverts had already shipped to
+the live GitHub Pages deployment (this repo auto-deploys `dist/` on every push to `main`, independent
+of any version tag — see "Automation workflows"/`deploy.yml`) before being caught and reverted within
+this same PR, so a real player's save, not just a hypothetical one, could already be sitting on
+`diskCache[unitBits]` bits for a size with zero disks built — bits that would become permanently
+unreachable the instant this fix landed: excluded from `readCacheEligibleSizes` (so never flushed into
+a disk), and not caught by the self-heal loop either (since `isDiskReadCacheEligible` alone still
+said "yes" for that size). **Fix.** The self-heal loop's condition became `isDiskReadCacheEligible(size)
+&& (builtTotal[size] ?? 0) > 0` — refund whenever EITHER half fails, not just the size-shape one — so
+a legacy save's stranded cache is refunded into its own pool buffer on the very next tick after
+upgrading, using the exact same refund mechanism (and lack of any pool-capacity clamp — this is a
+currency-preservation guarantee, not a display concern) the original self-heal case already relied on.
+`diskReadCacheFlush` needed no equivalent change: a flush can only ever start once an empty disk of
+that size already exists, so `disksBuiltTotal[size] > 0` is already guaranteed for any in-flight
+flush — no legacy save could have a stale flush entry for an unbuilt size. **Verification.** A new
+regression test seeds `diskCache[FIRST_DISK_SIZE]` with no matching `disksBuiltTotal` entry
+(reproducing exactly the state a save from before this PR's fix could be in) and confirms the cache is
+refunded into `poolBuffers[1]` on the next tick rather than sitting stranded. `yarn test`: 1698/1698
+green (+1). `yarn build` succeeds.
+
+### A live tap bonus could survive into the pool gauge's mode switch, breaking the "clean transition at 50%" claim
+
+A third Devin finding on PR #562, against the gauge redesign above: the "clean transition at 50%"
+claim assumed the fill-based multiplier reads exactly `FILL_MULTIPLIER_MIN_PERCENT` (50) the instant
+a pool's buffer becomes full, since that's the BASE value's own floor — but `getPoolMultiplierPercent`
+(what the gauge's needle actually follows pre-switch) is base PLUS any live, still-decaying tap bonus
+(`poolTapBonusPercents[poolIndex]`), which is not forced to 0 just because the buffer is full —
+`tapPoolBuffer` blocks NEW taps once full, but a bonus banked moments earlier decays only at the
+ordinary `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND` (1) rate. A player who tapped repeatedly while
+the buffer was nearly full (wide headroom for the bonus to grow into) could still be sitting on a
+sizeable bonus the instant it crosses to full — the gauge would then switch to `mode="lake"`, whose
+reading is hard-capped at `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50), so the needle would visibly DROP
+rather than continue smoothly. **Fix.** `tickFillMultiplierDecay` now forces a pool's own tap bonus to
+exactly 0, instantly, once `getPoolBufferFillFraction(state, poolIndex) >= 1` — not merely
+decayed/headroom-truncated at the ordinary rate the way an over-cap bonus already was (see the
+Data Stream's own equivalent truncation, which this pool-side logic sits right beside). This is
+semantically consistent too, not just a visual patch: once a pool's buffer is full, the fill-based
+reading it was boosting is itself retired (the gauge no longer shows it), so a bonus riding on top of
+a retired reading has nothing left to represent. The one acknowledged gap: `tickFillMultiplierDecay`
+runs BEFORE `tickPoolBufferFill` in the tick pipeline (see `tickGame`), so a bonus present at the
+EXACT tick a buffer transitions from not-full to full is zeroed on the FOLLOWING tick, not that same
+one — a sub-100ms residual at the live ~10Hz tick rate, and typically much smaller still since
+`tapPoolBuffer` already refuses new taps well before that point. **Verification.** The existing test
+asserting a pool's over-cap bonus gets headroom-truncated to 150 (not zeroed) at a full buffer was
+WRONG under the new rule and updated to expect exactly 0, plus a check that
+`getPoolMultiplierPercent` reads precisely `FILL_MULTIPLIER_MIN_PERCENT` afterward; a second new test
+confirms a pool with room left in its buffer is unaffected (bonus untouched). `yarn test`: 1699/1699
+green (+1, net — one existing test's assertions changed, one new test added). `yarn build` succeeds.
