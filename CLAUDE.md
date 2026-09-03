@@ -349,10 +349,11 @@ behavior should never ship together. If a change is significant enough to need a
 
 **Keep additions here terse; put the detail in the matching `docs/*_REFERENCE.md` file.** `CLAUDE.md`
 is loaded into every session's context (interactive and every autonomous-workflow run), so its size
-is a direct, recurring cost, and duplicated facts drift when only one copy gets updated. This file has
-needed repeated dedicated trims (see `docs/DESIGN_HISTORY.md`'s CLAUDE.md-cost-trim entries) because
-individual feature PRs kept adding formula-level/UI-rendering-level prose here instead of to the
-reference doc that already exists for that area (`docs/ECONOMY_REFERENCE.md` for economy/engine
+is a direct, recurring cost, and duplicated facts drift when only one copy gets updated. This file
+needed a dedicated trim in 2026-09 (see `docs/DESIGN_HISTORY.md`'s "CLAUDE.md Economy model
+duplication trim" entry, and issue #537) because individual feature PRs kept adding formula-level/
+UI-rendering-level prose here instead of to the reference doc that already exists for that area
+(`docs/ECONOMY_REFERENCE.md` for economy/engine
 mechanics, `docs/MAINPAGE_REFERENCE.md` for MainPage/ByteFoundryPage/ComputePage field layout,
 `docs/COMPONENTS_REFERENCE.md` for component prop contracts, `docs/THEMING_REFERENCE.md`/
 `docs/PWA_REFERENCE.md`/`docs/AUTOMATION.md` for their own areas). When documenting a change here,
