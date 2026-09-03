@@ -775,7 +775,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    element, purely additive UI — same `fillBits`/`getDataLakeCurrentFillSubSize` data the per-square
    overlay already reads, no new engine mechanic) sits right below the header row, ALWAYS visible
    whenever an open slot exists (`currentFillSubSize !== null`) regardless of unlock state, showing
-   "`<fillBits>` / `<open slot size>`" once unlocked or a static "Locked · 0 / `<size>`" before that.
+   "`<fillBits>` / `<open slot size>`" once `isDataLakePoolReady` (below) or a static
+   "Locked · 0 / `<size>`" before that. Deliberately keyed off `isDataLakePoolReady` here, NOT
+   `isDataLakeBoosterUnlocked` — the two diverge for an old save whose legacy `boostersUnlocked` flag
+   is already true but whose matching Storage pool has never built a real disk: Boosters correctly
+   stay purchasable there (per `isDataLakeBoosterUnlocked`'s own OR fallback below), but the tile
+   would never actually progress (`tickPoolBufferFill`'s overflow branch is gated on
+   `isDataLakePoolReady` alone), so showing real fill data there would misrepresent a permanently
+   stalled tile as actively filling — a bug Devin Review caught on the PR that introduced this tile;
+   see `docs/DESIGN_HISTORY.md`.
 
    A lake is gated on its own matching Storage pool having built at least one real disk
    (`isDataLakePoolReady` — `disksBuiltTotal[that pool's own ×1 size] > 0`), not on the lake's own
@@ -1076,17 +1084,27 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    remaining duration down every tick, frozen or not, clearing the boost back to inactive (`type:
    null, tierIndex: null, stacks: 0, remaining: 0`) once it reaches 0. Only the quantity ABOVE 1
    stack is ever reclaimable, one at a time: `reclaimComputeBoost` (gated by `canReclaimComputeBoost`
-   — a boost active AND `computeBoostStacks > 1`) is the exact inverse of one `stackComputeBoost`
+   — a boost active AND `computeBoostStacks > 1` AND enough pooled time remains that reclaiming one
+   stack's own duration wouldn't zero it out) is the exact inverse of one `stackComputeBoost`
    call (no longer of `activateComputeBoost` itself, since a freshly-activated 1-stack boost can no
    longer be reclaimed at all) — refunds 1 token of the active boost's own funding tier (capped at
    `COMPUTE_ENTITY_CAP`, in case more were earned meanwhile) and subtracts that tier's own base
-   preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing
-   `computeBoostStacks` by 1. The `> 1` gate means `computeBoostStacks` after a reclaim is always
-   `>= 1` — the boost stays active; it can no longer be reclaimed all the way back to inactive (an
-   earlier version allowed reclaiming the very last stack too, clearing the boost outright the same
-   as `activateComputeBoost`'s own inverse — canceling a running effect entirely via Reclaim was the
-   behavior this replaced; letting it run out is now the only way to end one early — see
-   `docs/DESIGN_HISTORY.md`).
+   preset `durationSeconds` back out of `computeBoostRemainingSeconds`, decrementing
+   `computeBoostStacks` by 1. `computeBoostRemainingSeconds` is a single POOLED timer shared across
+   every stack, not N independent per-stack timers — `stackComputeBoost` just adds a flat duration
+   chunk onto it — so a multi-stack boost late in its own countdown can hold LESS pooled time than
+   even one stack's own base duration; `computeBoostStacks > 1` alone is not sufficient to gate a
+   reclaim, since it would let one floor the pool straight to 0 (via the now-purely-defensive
+   `Math.max(0, …)` inside `reclaimComputeBoost`'s own body), ending the running effect exactly as if
+   the last stack itself had been reclaimed. `canReclaimComputeBoost` therefore also requires
+   `computeBoostRemainingSeconds - stackDuration > 0` before allowing a reclaim (a real bug caught by
+   Devin Review on the PR that introduced this gate — see `docs/DESIGN_HISTORY.md`). Together, the
+   `> 1` stacks gate and the pooled-time floor mean `computeBoostStacks` after a reclaim is always
+   `>= 1` and `computeBoostRemainingSeconds` after one is always `> 0` — the boost stays active; it
+   can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the
+   very last stack too, clearing the boost outright the same as `activateComputeBoost`'s own inverse
+   — canceling a running effect entirely via Reclaim was the behavior this replaced; letting it run
+   out is now the only way to end one early — see `docs/DESIGN_HISTORY.md`).
 
    On `ComputePage`, render order top to bottom: the active-boost status itself (effect, countdown,
    stack count — no longer a Reclaim control, moved below, see next) renders at the very TOP of the
@@ -2621,7 +2639,7 @@ purchases were manual or automatic.
 | `activateComputeBoost` | `(boostType, tierIndex) → state → state` | Byte Foundry Compute Boost (issue #326): requires `isComputeBoostTurnAvailable(state, boostType, tierIndex)` (see its own row above); otherwise spends exactly 1 token of `tierIndex`'s own field and starts a fresh boost: `computeBoostType: boostType`, `computeBoostTierIndex: tierIndex`, `computeBoostStacks: 1`, `computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds(boostType, tierIndex)` |
 | `stackComputeBoost` | `state → state` | Byte Foundry Compute Boost (issue #326): requires `isStackComputeBoostTurnAvailable(state)`; otherwise spends 1 more token of the ACTIVE boost's own funding tier, increments `computeBoostStacks`, and adds that same tier's own `getComputeBoostTierDurationSeconds` onto `computeBoostRemainingSeconds` (extending, not resetting, the remaining time) — the multiplier itself never compounds. The replacement for same-type restacking through the preset buttons, which `activateComputeBoost` no longer permits |
 | `tickComputeBoost` | `elapsedSeconds → state → state` | Byte Foundry Compute Boost: same-reference no-op while no boost is active; otherwise decrements `computeBoostRemainingSeconds` by `elapsedSeconds`, clearing back to inactive (`type: null`, `tierIndex: null`, `stacks: 0`, `remaining: 0`) once it reaches 0. Runs every tick, frozen or not — called from `tickGame` alongside the other Byte Foundry intro ticks |
-| `canReclaimComputeBoost` | `state → bool` | Whether `reclaimComputeBoost` below would do anything: a boost currently active AND `computeBoostStacks > 1` — the one stack actively funding a started effect can never be reclaimed away, only quantity above it |
+| `canReclaimComputeBoost` | `state → bool` | Whether `reclaimComputeBoost` below would do anything: a boost currently active AND `computeBoostStacks > 1` AND `computeBoostRemainingSeconds - stackDuration > 0` (pooled remaining time must exceed one stack's own duration) — the one stack actively funding a started effect can never be reclaimed away, only quantity above it, and reclaiming can never floor the pooled timer to 0 even with multiple stacks nominally held (`computeBoostRemainingSeconds` is one shared pooled timer, not N independent per-stack timers) |
 | `reclaimComputeBoost` | `state → state` | Byte Foundry Compute Boost (issues #316/#326/#363): no-op below `canReclaimComputeBoost`'s own `> 1` gate; otherwise the exact inverse of one `stackComputeBoost` call — refunds 1 token into the ACTIVE boost's own funding tier field (capped at `COMPUTE_ENTITY_CAP`, in case more were earned while the boost was running) and subtracts that tier's own base preset `durationSeconds` back out of `computeBoostRemainingSeconds` (floored at 0), decrementing `computeBoostStacks` by 1. `computeBoostStacks` after a reclaim is always `>= 1` — the boost stays active; it can no longer be reclaimed all the way back to inactive (an earlier version allowed reclaiming the last stack too, canceling a running effect outright — see `docs/DESIGN_HISTORY.md`) |
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |

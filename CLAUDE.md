@@ -803,7 +803,12 @@ Strict three-layer separation:
    selected), and `reclaimComputeBoost` (`canReclaimComputeBoost`'s own gate) reclaims the most
    recently added, still-unused stack of an active boost, one at a time, refunding 1 token into
    that same funding tier — only reclaimable while MORE than 1 stack is currently held
-   (`computeBoostStacks > 1`); once a boost's effect has actually started it always holds at least 1
+   (`computeBoostStacks > 1`) AND enough pooled time remains that reclaiming one stack's own
+   duration wouldn't zero it out (`computeBoostRemainingSeconds` is a single pooled timer, not N
+   independent per-stack timers, so a multi-stack boost late in its countdown can hold less time
+   than even one stack's own base duration — `stacks > 1` alone isn't sufficient, since it would
+   let a reclaim floor the pool straight to 0, ending the effect exactly as if the last stack itself
+   had been reclaimed); once a boost's effect has actually started it always holds at least 1
    stack while running, and that one actively-funding stack can never be reclaimed away — only
    letting the boost run out ends it early, not reclaim (an earlier version allowed reclaiming the
    very last stack too, canceling the boost outright — see `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
@@ -1396,9 +1401,15 @@ interactivity), the currently-open slot showing a live fill. A dedicated `LakePo
 `FillableStatCard`-style element inside `DataLakePanel`, purely additive — same
 `getDataLakeFillBits`/`getDataLakeCurrentFillSubSize` data the per-square fill overlay already
 reads, no new engine mechanic) sits right below the header row, always visible whenever an open
-slot exists (`currentFillSubSize !== null` — regardless of `isDataLakePoolReady`), showing
-"`<fillBits>` / `<open slot size>`" — or, before the lake is unlocked, a static "Locked · 0 /
-`<size>`" instead of reading 0 as if genuinely idle.
+slot exists (`currentFillSubSize !== null`), showing "`<fillBits>` / `<open slot size>`" once
+`isDataLakePoolReady` — or, before that, a static "Locked · 0 / `<size>`" instead of reading 0 as if
+genuinely idle. Deliberately keyed off `isDataLakePoolReady` here, NOT `isDataLakeBoosterUnlocked` —
+the two diverge for an old save whose legacy `boostersUnlocked` flag is already true but whose
+matching Storage pool has never built a real disk: Boosters correctly stay purchasable there (per
+`isDataLakeBoosterUnlocked`'s own OR), but the tile would never actually progress
+(`tickPoolBufferFill`'s overflow branch is gated on `isDataLakePoolReady` alone), so showing real
+fill data there would misrepresent a permanently stalled tile as actively filling — a bug Devin
+Review caught on this same PR before merge.
 
 *Capacity* — a lake's own deposit capacity (`getDataLakeCapacity(state, tierIndex)`) is a
 purchasable ladder: starting at 1 unit (`getDataLakeCapacityLevel` level 0 — "1 KB" for the KB

@@ -21,6 +21,7 @@ import {
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
+  isDataLakePoolReady,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -252,6 +253,12 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const canUpgrade = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
         const unlocked = isDataLakeBoosterUnlocked(state, tierIndex)
+        // Distinct from `unlocked` above for old-save compatibility: a legacy `boostersUnlocked`
+        // latch can make `unlocked` true while this pool has never built a real disk, in which case
+        // Boosters correctly stay purchasable but the lake's own pool-fill tile (below) must NOT
+        // claim to be actively filling, since tickPoolBufferFill's overflow branch is gated on this
+        // alone.
+        const poolReady = isDataLakePoolReady(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         const autoBuyEnabled = isDataLakeAutoBuyEnabled(state, tierIndex)
 
@@ -271,8 +278,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               // out of nowhere once real progress starts. Silently absent feedback before that point
               // read as "no idea what it did in between" once the tile DID eventually show up already
               // mid-fill.
+              //
+              // Deliberately keyed off `poolReady` (isDataLakePoolReady), NOT `unlocked`
+              // (isDataLakeBoosterUnlocked) — the two diverge for an old save whose legacy
+              // `boostersUnlocked` flag is already true but whose matching Storage pool has never
+              // built a real disk: `unlocked` reads true there (Boosters correctly stay purchasable,
+              // for save compatibility), but tickPoolBufferFill's overflow branch is gated on
+              // `isDataLakePoolReady` alone, so this tile would NEVER actually fill — showing real
+              // (frozen) fillBits/size progress under `unlocked` would misrepresent a permanently
+              // stalled tile as actively filling (found by Devin Review on this same PR).
               const openSlotSizeBits = unitBits * currentFillSubSize
-              const openSlotFraction = unlocked && openSlotSizeBits > 0 ? clampFraction(fillBits / openSlotSizeBits) : 0
+              const openSlotFraction = poolReady && openSlotSizeBits > 0 ? clampFraction(fillBits / openSlotSizeBits) : 0
               const openSlotSizeLabel = formatDiskSize(openSlotSizeBits)
               return (
                 <LakePoolTile
@@ -282,13 +298,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   aria-valuemin={0}
                   aria-valuemax={100}
                   title={
-                    unlocked
+                    poolReady
                       ? `${label} Lake pool — fills toward the next ${openSlotSizeLabel} disk; completing it deposits instantly`
                       : `${label} Lake pool — waiting on a ${formatDiskSize(unitBits)} disk to be built in Storage before this can start filling`
                   }
                 >
                   <LakePoolFill $fill={openSlotFraction} />
-                  <LakePoolLabel>{unlocked ? `${formatDiskSize(fillBits)} / ${openSlotSizeLabel}` : `Locked · 0 / ${openSlotSizeLabel}`}</LakePoolLabel>
+                  <LakePoolLabel>{poolReady ? `${formatDiskSize(fillBits)} / ${openSlotSizeLabel}` : `Locked · 0 / ${openSlotSizeLabel}`}</LakePoolLabel>
                 </LakePoolTile>
               )
             })()}

@@ -85,6 +85,32 @@ uniform on all four sides — the button's own bottom padding was compounding wi
 right where the header row meets the Memory buffer tile below it, visibly wider than the rest of the
 card's own spacing rhythm.
 
+**7. Two follow-up bugs in #4 and #5 above, both caught by Devin Review on the same PR before merge.**
+
+- **Reclaim's `stacks > 1` gate (#5) wasn't actually sufficient.** `computeBoostRemainingSeconds` is
+  a single POOLED timer shared across every stack the boost holds, not N independent per-stack
+  timers — `stackComputeBoost` just adds one flat duration chunk onto it each time. That means a
+  multi-stack boost late in its own countdown can hold LESS pooled time remaining than even one
+  stack's own base duration, so `stacks > 1` alone could still let a reclaim subtract a full stack's
+  duration and floor the pool straight to 0 via `reclaimComputeBoost`'s own `Math.max(0, …)` clamp —
+  ending the boost's real running effect exactly as if its last stack had been reclaimed, the precise
+  outcome #5 set out to prevent. Fixed by adding a second condition to `canReclaimComputeBoost`:
+  `computeBoostRemainingSeconds - stackDuration > 0`. The `Math.max(0, …)` inside
+  `reclaimComputeBoost` itself is now purely defensive — the new gate guarantees it never actually
+  clamps in practice.
+- **`LakePoolTile` (#4) read the wrong predicate for its pre-fill "Locked" placeholder.** It decided
+  whether to show real fill progress using `isDataLakeBoosterUnlocked` (`unlocked` in
+  `DataLakePanel`), but that predicate's own old-save-compatibility OR fallback
+  (`storedFlag || isDataLakePoolReady(...)`, from #2 above) means it can read true on an old save
+  whose legacy `boostersUnlocked` flag is already set even though the matching Storage pool has never
+  built a real disk — correct for the Buy button (Boosters should stay purchasable there), but wrong
+  for this tile: `tickPoolBufferFill`'s overflow branch — the only thing that ever actually advances
+  `fillBits` — is gated on `isDataLakePoolReady` ALONE, with no such fallback, so the tile would
+  display real (permanently frozen) fill data as if it were actively progressing. Fixed by
+  introducing a separate `poolReady = isDataLakePoolReady(state, tierIndex)` value and keying the
+  tile's fill fraction/title/label on that instead of `unlocked`, leaving `unlocked` itself unchanged
+  for the Buy/Auto-buy button logic.
+
 ### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
 
 A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)

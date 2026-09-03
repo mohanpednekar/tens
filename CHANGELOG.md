@@ -109,6 +109,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   from Forfeit (cancel, no refund). Reclaim now always leaves at least 1 stack behind — an active
   boost's own effect can no longer be pulled back below "running," only reclaimed for quantity beyond
   that; letting it run out is the only way to end one early.
+- **Reclaim could still zero out a running Compute Boost even with multiple stacks held** —
+  `computeBoostRemainingSeconds` is one pooled timer shared across every stack, not independent
+  per-stack timers, so a multi-stack boost late in its own countdown could hold less time remaining
+  than a single stack's own duration; reclaiming one still subtracted a full stack's duration,
+  flooring the timer to 0 and ending the effect the same as reclaiming the actual last stack would
+  have. Reclaim is now also blocked whenever it would leave less than the reclaimed stack's own
+  duration behind.
+- **A Data Lake's pool-fill tile could show real progress it could never actually reach** — on an old
+  save whose legacy per-lake unlock flag was already set but whose matching Storage pool had never
+  built a real disk, the tile read that legacy flag and displayed live fill data even though nothing
+  in the engine could ever advance it, permanently frozen mid-progress. It now reads the same
+  disk-built condition the engine's own fill logic uses, correctly showing "Locked" there instead.
 - **A pool card's own header row sat noticeably farther from its Memory buffer tile than the rest of
   the card's spacing** — the header button's own bottom padding was compounding with the card's own
   gap; padding made asymmetric and the card's gap tightened.

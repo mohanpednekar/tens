@@ -102,9 +102,12 @@ funded Booster it's produced so far (e.g. "3× Cores"); then a dedicated `LakePo
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
-regardless of unlock state, reading a static "Locked · 0 / `<size>`" before the lake unlocks rather
-than being absent, so the section never jumps from showing nothing to already mid-fill with no
-visible history in between (see `docs/DESIGN_HISTORY.md`); then one row of disk squares
+reading a static "Locked · 0 / `<size>`" before `isDataLakePoolReady` rather than being absent, so
+the section never jumps from showing nothing to already mid-fill with no visible history in between
+(see `docs/DESIGN_HISTORY.md`). Deliberately keyed off `isDataLakePoolReady`, NOT
+`isDataLakeBoosterUnlocked` — the latter's old-save-compatibility fallback can read true (correctly
+keeping Boosters purchasable) for a pool that has never built a real disk, where this tile would
+otherwise show live-looking fill data the engine can never actually advance; then one row of disk squares
 (`LakeSquare`, capped at `max-width: 2.5rem` so a lone square at a fresh capacity level doesn't
 stretch to fill the whole row) per sub-size present at the lake's current capacity level (×1/×10/×100,
 smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row

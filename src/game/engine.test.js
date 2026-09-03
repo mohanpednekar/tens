@@ -3854,6 +3854,39 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimComputeBoost(state)).toBe(state)
   })
 
+  it('canReclaimComputeBoost is false once pooled remaining time is at or below one stack\'s own duration, even with multiple stacks held — reclaiming a stack must never zero out the running effect (Devin Review finding)', () => {
+    // A 2-stack boost with LESS pooled time left than one stack's own base duration: stacks alone
+    // isn't the right gate, since computeBoostRemainingSeconds is a single pooled timer, not two
+    // independent per-stack timers — reclaiming here would subtract a full stack's duration and
+    // floor the pool straight to 0, ending the effect exactly as if the last stack were reclaimed.
+    const stackDuration = getComputeBoostTierDurationSeconds('standard', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0,
+      computeBoostType: 'standard',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: stackDuration - 1, // just under one stack's own duration
+    })
+    expect(canReclaimComputeBoost(state)).toBe(false)
+    expect(reclaimComputeBoost(state)).toBe(state)
+  })
+
+  it('canReclaimComputeBoost is true once pooled remaining time exceeds one stack\'s own duration', () => {
+    const stackDuration = getComputeBoostTierDurationSeconds('standard', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0,
+      computeBoostType: 'standard',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: stackDuration + 1, // just over one stack's own duration
+    })
+    expect(canReclaimComputeBoost(state)).toBe(true)
+    const after = reclaimComputeBoost(state)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(1)
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostType).toBe('standard')
+  })
+
   it('canReclaimComputeBoost is false with exactly 1 stack — a boost\'s own actively-funding stack can never be reclaimed once its effect has started, only quantity above it', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 2,
@@ -3920,17 +3953,31 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
   })
 
-  it('remaining duration never goes negative when reclaiming after some of it has already ticked away', () => {
+  it('is blocked once ticking has eaten into pooled time far enough, even with 3 stacks held — stack count alone is never sufficient', () => {
+    const stackDuration = getComputeBoostTierDurationSeconds('burst', 1)
     const state = withIntro(createInitialGameState(), {
       computeCores: 0,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 2,
-      computeBoostRemainingSeconds: 1, // less than one stack's own base 60s duration
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: stackDuration, // exactly one stack's own duration left, not more
+    })
+    expect(canReclaimComputeBoost(state)).toBe(false)
+    expect(reclaimComputeBoost(state)).toBe(state)
+  })
+
+  it('remains reclaimable with 3 stacks while pooled time still comfortably exceeds one stack\'s own duration', () => {
+    const stackDuration = getComputeBoostTierDurationSeconds('burst', 1)
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 0,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 3,
+      computeBoostRemainingSeconds: stackDuration * 3,
     })
     const after = reclaimComputeBoost(state)
-    expect(after.intro.computeBoostRemainingSeconds).toBe(0)
-    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(stackDuration * 2)
+    expect(after.intro.computeBoostStacks).toBe(2)
     expect(after.intro.computeBoostType).toBe('burst') // still active
   })
 })

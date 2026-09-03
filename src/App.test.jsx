@@ -3429,6 +3429,28 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByText(/Cores/)).toBeInTheDocument()
   })
 
+  test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      // No disksBuiltTotal entry for pool 1 at all — isDataLakePoolReady is false, but the legacy
+      // per-lake flag still makes isDataLakeBoosterUnlocked true (old-save compatibility).
+      dataLakes: { 1: { depositedUnits: 5, fillBits: 4321, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 1 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    const lakeBlock = within(pool1).getByLabelText('KB lake')
+    // The pool-fill tile must show its Locked state, not fabricate progress from fillBits (which
+    // the engine can never actually advance while isDataLakePoolReady is false) — see
+    // src/components/DataLakePanel/index.jsx's poolReady/unlocked distinction.
+    expect(within(lakeBlock).getByText(/^Locked · 0 \/ 1 KB$/)).toBeInTheDocument()
+    // Boosters themselves stay purchasable off the legacy latch — the Buy/Auto controls still show.
+    expect(within(lakeBlock).getByRole('button', { name: /buy 1 cores from the kb data lake/i })).toBeInTheDocument()
+  })
+
   test('Data Lake capacity can be increased ×10 by clicking its ⚡ Upgrade button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another

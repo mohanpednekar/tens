@@ -5386,25 +5386,36 @@ export const tickAutoComputeBoost = state => {
 }
 
 // Whether reclaimComputeBoost below would do anything right now. Only reclaimable while MORE than
-// 1 stack is currently held (`computeBoostStacks > 1`) — once a boost's effect has actually
-// started, the one stack actively funding it can never be pulled back out via reclaim; only
-// quantity ABOVE that floor is reclaimable. An active boost always holds at least 1 stack while
-// running (tickComputeBoost clears type/tierIndex/stacks/remaining back to inactive the instant
-// remaining hits 0, rather than leaving a live boost at 0 stacks). A boost's effect can no longer
-// be canceled outright via reclaim once it's started — letting it run out is the only way to end
-// it early (see docs/DESIGN_HISTORY.md for the earlier, un-gated behavior this replaced).
-export const canReclaimComputeBoost = state =>
-  (state.intro.computeBoostType ?? null) !== null && (state.intro.computeBoostStacks ?? 0) > 1
+// 1 stack is currently held (`computeBoostStacks > 1`) AND enough pooled time remains that
+// reclaiming one stack's own duration wouldn't zero it out. Both checks are needed:
+// `computeBoostRemainingSeconds` is a single POOLED timer, not N independent per-stack timers
+// (`stackComputeBoost` just adds a flat duration chunk onto it), so a multi-stack boost can still
+// have LESS time left than even one stack's own base duration once it's ticked down far enough —
+// `stacks > 1` alone would wrongly permit a reclaim there, subtracting a full stack's duration and
+// flooring the pool straight to 0, ending the effect exactly as if the last stack itself had been
+// reclaimed (found by Devin Review on this same PR). An active boost always holds at least 1 stack
+// while running (tickComputeBoost clears type/tierIndex/stacks/remaining back to inactive the
+// instant remaining hits 0, rather than leaving a live boost at 0 stacks). A boost's effect can no
+// longer be canceled outright via reclaim once it's started — letting it run out is the only way
+// to end it early (see docs/DESIGN_HISTORY.md for the earlier, un-gated behavior this replaced).
+export const canReclaimComputeBoost = state => {
+  if ((state.intro.computeBoostType ?? null) === null) return false
+  if ((state.intro.computeBoostStacks ?? 0) <= 1) return false
+  const stackDuration = getComputeBoostTierDurationSeconds(state.intro.computeBoostType, state.intro.computeBoostTierIndex)
+  return (state.intro.computeBoostRemainingSeconds ?? 0) - stackDuration > 0
+}
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
 // the active boost's own funding tier (capped at COMPUTE_ENTITY_CAP, in case more were earned
 // while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
-// back out of computeBoostRemainingSeconds (floored at 0), decrementing computeBoostStacks by 1.
-// canReclaimComputeBoost's own >1 gate means nextStacks here is always >= 1 — the boost stays
-// active, never clearing to inactive via reclaim (compare stackComputeBoost/activateComputeBoost,
-// which are the only ways a boost starts or grows). A same-reference no-op while nothing above the
-// 1-stack floor is currently held.
+// back out of computeBoostRemainingSeconds, decrementing computeBoostStacks by 1.
+// canReclaimComputeBoost's own gate (>1 stack AND enough pooled time that this subtraction can't
+// zero it out) means nextStacks is always >= 1 and the resulting remaining time is always > 0 here
+// — the boost stays genuinely active/running, never clearing to inactive or silently expiring via
+// reclaim (compare stackComputeBoost/activateComputeBoost, which are the only ways a boost starts
+// or grows). The `Math.max(0, …)` below is defensive only, given that guarantee. A same-reference
+// no-op while canReclaimComputeBoost's own gate isn't met.
 export const reclaimComputeBoost = state => {
   if (!canReclaimComputeBoost(state)) return state
 
