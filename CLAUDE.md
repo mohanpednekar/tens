@@ -769,7 +769,9 @@ Strict three-layer separation:
    and independent of capacity); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
+   slots in one unbroken row. A small pin-icon `QueueToggleButton` sits beside Provision Disk
+   (`ProvisionDiskRow` wraps the pair) arming/disarming `intro.diskBuildQueued` — see "Economy
+   model" below's Disks section for the full mechanic. Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
    action — here or on either dedicated screen — stays gated by the forced priority order (see
    "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
@@ -1195,8 +1197,10 @@ shared the Data Stream-display conflict pool Capacity itself once had (see above
 the first slice of a larger per-storage-pool generator design — see `docs/DESIGN_HISTORY.md` and
 epic #456 / tracking #506.
 
-**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild` in `createInitialGameState`,
-`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickProvisionDisk`/`tickDiskAutoFill`/`tickDiskWriteCache`/
+**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/`diskBuildQueued`
+in `createInitialGameState`,
+`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickProvisionDisk`/`queueDiskBuild`/`clearDiskBuildQueue`/
+`tickQueuedDiskBuild`/`tickDiskAutoFill`/`tickDiskWriteCache`/
 `isDiskCacheBlockReleasable`/`releaseDiskCacheBlock`/`isDiskRedeemable`/`redeemDisk`/
 `tickDiskAutoRedeem`/`getDiskRedeemTierName` in `engine.js`) are a real storage medium, not
 tier01-only: a size's ladder (every Byte power of ten — `DISK_LADDER_BASE_SIZE_BITS` ×
@@ -1216,7 +1220,18 @@ starts) — at the default starting rate (1
 bit/sec) a fresh 1 KB (8000-bit) array's first disk takes 8000 seconds, its 6th disk 48,000 seconds,
 and a 10 KB array's first disk 80,000 seconds; all three shrink in lockstep as Invest/Compute Boost
 grow the rate. An earlier version used a flat, rate-independent "1 second per real KB of size"
-instead — see `docs/DESIGN_HISTORY.md`. During provisioning, every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
+instead — see `docs/DESIGN_HISTORY.md`. `provisionDisk` is otherwise a purely manual action — nothing
+in `tickGame` ever auto-STARTS a build (`tickProvisionDisk` only counts an already-started one down)
+— so a player can arm **"queue next build"** instead (`queueDiskBuild`/`clearDiskBuildQueue`, a small
+pin-icon toggle next to Provision Disk on `ByteFoundryPage`; one-shot, mirroring
+`queueIntroCapacityUpgrade`'s own "arm it once, it fires itself" shape below, but — unlike that
+one — actually reachable from the UI): `intro.diskBuildQueued` fires `provisionDisk` itself
+(`tickQueuedDiskBuild`, called from `tickGame`'s `tickStorage` once redeem/cache-release have had
+their own turn, ranking above idle liquidation like an ordinary click) the instant its pool buffer
+can afford it and nothing else outranks it, clearing itself the moment ANY build starts (queued or a
+plain manual click) — re-arm per build. PERMANENT, same as `diskBuild`/`disks` above (survives a
+real Prestige; NOT cleared on save load, unlike the legacy Capacity queue flag below — see
+`docs/DESIGN_HISTORY.md`). During provisioning, every disk already in that size's array is completely offline (no auto-fill, no auto-redeem, no
 manual cache-block release, no manual redeem) until `tickProvisionDisk` finishes the countdown. Each
 array's smallest size — the one whose `getDataLakeSubSize` sub-slot is ×1, the rung that actually
 touches Memory directly — has its own always-full **read cache** (`diskCache[size]`,
@@ -1553,7 +1568,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1699 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1709 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

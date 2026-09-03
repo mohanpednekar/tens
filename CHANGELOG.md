@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
 
 ### Added
+- **"Queue next disk build" on Provision Disk** — a small pin-icon toggle next to the Provision Disk
+  button arms the next build to fire itself the instant its own pool buffer can afford it and
+  nothing outranks it in the forced priority order, instead of requiring a click at that exact
+  affordability instant. Especially useful since a disk size never advances the ladder (e.g. 1 KB →
+  10 KB) until 10 separate builds have completed at the current size — 10 affordability instants to
+  catch by hand otherwise. One-shot (re-arm per build); armed state and the underlying queue survive
+  reload and a real Prestige, same permanence as the rest of Storage.
 - **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
   `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
   (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for

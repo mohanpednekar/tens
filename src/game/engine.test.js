@@ -57,6 +57,9 @@ import {
   tickIntroProduction,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
+  queueDiskBuild,
+  clearDiskBuildQueue,
+  tickQueuedDiskBuild,
   isBitFundedBandwidthAvailable,
   isComputeFundedBandwidthAvailable,
   rollbackComputeFundedBandwidth,
@@ -1419,6 +1422,92 @@ describe('pool buffers', () => {
     expect(isProvisionDiskAvailable(state)).toBe(true)
     const after = provisionDisk(state)
     expect(after.intro.diskBuild).not.toBeNull()
+  })
+})
+
+describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
+  it('queueDiskBuild arms diskBuildQueued', () => {
+    const state = createInitialGameState()
+    const queued = queueDiskBuild(state)
+    expect(queued).not.toBe(state)
+    expect(queued.intro.diskBuildQueued).toBe(true)
+  })
+
+  it('queueDiskBuild is a same-reference no-op while a build is already in progress', () => {
+    const state = withIntro(createInitialGameState(), {
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 5, totalSeconds: 10 },
+    })
+    expect(queueDiskBuild(state)).toBe(state)
+  })
+
+  it('queueDiskBuild is a same-reference no-op once already queued', () => {
+    const state = withIntro(createInitialGameState(), { diskBuildQueued: true })
+    expect(queueDiskBuild(state)).toBe(state)
+  })
+
+  it('clearDiskBuildQueue disarms it, and is a same-reference no-op once already clear', () => {
+    const queued = withIntro(createInitialGameState(), { diskBuildQueued: true })
+    const cleared = clearDiskBuildQueue(queued)
+    expect(cleared.intro.diskBuildQueued).toBe(false)
+    expect(clearDiskBuildQueue(cleared)).toBe(cleared)
+  })
+
+  it('tickQueuedDiskBuild is a same-reference no-op while nothing is queued', () => {
+    const state = createInitialGameState()
+    expect(tickQueuedDiskBuild(state)).toBe(state)
+  })
+
+  it('tickQueuedDiskBuild waits (same-reference no-op) while the pool buffer still can\'t afford the build', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: 0 },
+    })
+    expect(tickQueuedDiskBuild(state)).toBe(state)
+  })
+
+  it('tickQueuedDiskBuild fires the build and clears the queue once the pool buffer can afford it', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: getDiskCost(FIRST_DISK_SIZE) },
+    })
+    const after = tickQueuedDiskBuild(state)
+    expect(after.intro.diskBuildQueued).toBe(false)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: expect.any(Number), totalSeconds: expect.any(Number) })
+  })
+
+  it('a manual provisionDisk click also clears a stale queue, not just a queued fire', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: getDiskCost(FIRST_DISK_SIZE) },
+    })
+    const after = provisionDisk(state)
+    expect(after.intro.diskBuildQueued).toBe(false)
+    expect(after.intro.diskBuild).not.toBeNull()
+  })
+
+  it('a queued build takes its turn inside tickGame once the forced priority chain clears', () => {
+    let state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      bits: 0,
+      capacity: 4_000_000,
+      productionMultiplier: 999_999,
+      productionMilestoneTierClaims: 2,
+    })
+    // Ample elapsed time both funds the pool buffer (via tickPoolBufferFill) and lets the queued
+    // build fire the same call, end to end, exactly as a real player leaving the queue armed would
+    // experience it.
+    state = tickGame(1000)(state)
+    expect(state.intro.diskBuildQueued).toBe(false)
+    expect(state.intro.diskBuild).not.toBeNull()
+  })
+
+  it('diskBuildQueued is permanent — carried over unchanged by a real Prestige', () => {
+    const state = withMoney(withIntro(createInitialGameState(), { diskBuildQueued: true }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro.diskBuildQueued).toBe(true)
   })
 })
 

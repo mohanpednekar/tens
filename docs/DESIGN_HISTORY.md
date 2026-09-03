@@ -1,5 +1,76 @@
 # Design history & rationale
 
+### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
+
+A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)
+still looked "starved" for 10 KB disks specifically: "cache blocks get filled and emptied without
+actually doing anything." Investigation with real engine calls (a throwaway Vitest scratch file,
+deleted before concluding, per this repo's usual empirical-verification method) ruled out a bug in
+`tickDiskWriteCache` itself — an isolated test with 10 pre-filled source disks and a pre-built
+target container completed the merge correctly. The actual cause: `getDiskSize` only advances the
+disk ladder from 1 KB to 10 KB once `disksBuiltTotal[1KB]` reaches `DISK_ARRAY_LADDER_CAP` (10) —
+and `disksBuiltTotal` only ever increments via `provisionDisk`, which had **zero automation
+anywhere in `tickGame`**: `tickProvisionDisk` only counts down a build already in progress; nothing
+ever auto-STARTS one. Every other Foundry step already runs itself once its own gate clears — cache
+fill (`tickDiskAutoFill`), the write-cache ripple (`tickDiskWriteCache`), disk redeem
+(`tickDiskAutoRedeem`, opt-in via the matching tier's autobuyer) — and Capacity ×2 even has its own
+"arm it before the buffer is full" queue (`queueIntroCapacityUpgrade`/`capacityUpgradeQueued`) for
+exactly this kind of missed-instant problem. Provision Disk had none of that, so a player who wasn't
+proactively re-clicking it 10 separate times per size (once per disk, before the ladder even offers
+the next size) would watch the cache faithfully refill/redeem the same 1–2 disks forever without
+ever seeing new sizes appear — matching both of the player's own observations exactly.
+
+Two clarifying rounds with the player (via `AskUserQuestion`) confirmed the diagnosis before any
+fix was written: (1) they had never seen a single 10 KB container provisioned, and (2) Compute/
+Boosters activity was minimal in their save (ruling out the *other* plausible blocker — Capacity ×2
+also requires Compute unavailable, and a save with perpetual Compute activity could stall Capacity
+growth by an entirely separate path). A third question asked directly how to close the gap: fully
+automatic firing (matching cache-fill/redeem's own unconditional automation), a queue/arm toggle
+matching Capacity's own precedent, or leaving it manual and only improving in-game guidance. The
+player chose the queue approach — the smaller, more conservative change of the three, since full
+automation would remove manual clicking from the core loop entirely (a real pacing decision, not a
+clear-cut bug fix) while "leave it manual" doesn't actually solve the reported problem.
+
+**Implementation notes.** `intro.diskBuildQueued` (new state field) is armed via `queueDiskBuild`
+and disarmed via `clearDiskBuildQueue`, mirroring `queueIntroCapacityUpgrade`'s exact shape
+(same-reference no-op while already armed, while a build is already in flight, or while nothing is
+left to ever build — `isDiskLadderExhaustedForActivePools`). `tickQueuedDiskBuild` fires
+`provisionDisk` itself once affordable (deferring to `provisionDisk`'s own
+`isProvisionDiskTurnAvailable` guard rather than duplicating it), and is wired into `tickGame`'s
+`tickStorage` right after redeem/cache-release and before idle-disk liquidation — the same rank an
+ordinary manual Provision Disk click already holds in the forced priority order. `provisionDisk`
+itself unconditionally clears `diskBuildQueued` the moment ANY build starts, whether that start came
+from the queue firing or an ordinary manual click, so a stale queue can never double-fire against
+the next build.
+
+**Two deliberate departures from the Capacity queue's own precedent**, both because this one is
+actually meant to be used, not just retained for legacy save compatibility (`capacityUpgradeQueued`'s
+own comment: "retained for save compatibility with the historical Sacrifice flow" — it is
+unconditionally cleared on every save load by `normalizePoolMemoryCapacity` and, more importantly,
+**was never wired to any UI control at all** — `queueIntroCapacityUpgrade`/`clearIntroCapacityUpgradeQueue`
+exist only in `engine.js` and its tests, with no button anywhere calling them, so in live gameplay
+today it can only ever be set via Dev Mode or a legacy save and is otherwise dead from the player's
+perspective):
+1. **`diskBuildQueued` is NOT cleared on save load.** The entire point is a persistent "keep
+   building for me" intent; clearing it on every reload would force re-arming every session,
+   defeating the purpose for a page players may not revisit often. `mergeState`'s ordinary
+   fill-missing-fields-from-`createInitialGameState()` behavior already gives old saves a correct
+   default of `false`, so no dedicated load-time handling was needed at all.
+2. **`diskBuildQueued` IS wired to an actual UI control** — a small pin-icon `QueueToggleButton`
+   (styled after MainPage's own `PauseToggleButton` — a plain icon toggle subordinate to the
+   primary action beside it, see #171) inside a new `ProvisionDiskRow` wrapper, right next to the
+   Provision Disk button on `ByteFoundryPage`. Verified end-to-end in a real browser (Playwright
+   against `yarn dev`, scratch script deleted afterward): seeding an unaffordable pool buffer, arming
+   the toggle, confirming Provision Disk stays disabled and the toggle shows its armed/cancel state,
+   then — with zero further clicks — watching the pool buffer's live production fill it and the
+   build actually start on its own once affordable.
+
+`diskBuildQueued` is PERMANENT across a real Prestige (carried forward in `prestigeGame`, same as
+`diskBuild`/`disks`/`poolBuffers`) since Storage itself never resets with an ordinary Prestige, but
+resets to `false` on Era ascension and a full Reset like the rest of the Foundry, since neither
+carries `diskBuildQueued` forward in their own intro-rebuild (`buildEraIntroReset`/
+`createInitialGameState()`).
+
 ### Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02
 
 Follow-up requests on the corner-speedometer-gauge PR (#555, itself following #552's fill-based

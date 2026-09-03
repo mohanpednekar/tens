@@ -105,6 +105,30 @@ const MilestonesRow = styled.div`
   }
 `
 
+// Groups the Provision Disk button with its small "queue next build" toggle so the toggle sits
+// beside it rather than stacking full-width like every other ActionsRow child — the toggle is a
+// secondary aid, not a peer action.
+const ProvisionDiskRow = styled.div`
+  align-items: stretch;
+  display: flex;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+
+  > button:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+`
+
+// Small secondary control, visually subordinate to the Provision Disk button it sits beside — same
+// "plain icon toggle rather than a costed action button" shape MainPage's own autobuyer
+// PauseToggleButton uses (see #171).
+const QueueToggleButton = styled(Button)`
+  font-size: 0.75em;
+  min-width: 0;
+  padding: 0.3em 0.6em;
+`
+
 // Speed ×2's two-line content: the symbol/label/multiplier on top, its cost — what it actually
 // spends — on its own line below, in smaller/muted text, rather than crammed
 // inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
@@ -512,6 +536,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       ? 100
       : clampPercent((diskPoolBufferBits / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
+  // "Queue next build" (see queueDiskBuild/tickQueuedDiskBuild in engine.js) — arms an auto-fire
+  // for the NEXT Provision Disk the moment its own pool buffer can afford it and nothing outranks
+  // it, so the player doesn't have to click at that exact instant. Nothing to arm once a build is
+  // already in flight (it has its own countdown) or the ladder has nothing left to ever build.
+  const diskBuildQueued = Boolean(intro.diskBuildQueued)
+  const diskBuildQueueDisabled = !!diskBuildInProgress || diskLadderExhausted
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
 
@@ -528,40 +558,61 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
   // disk-build-driven, independent of capacity — has already moved past it).
   const provisionDiskButton = (
-    <Button
-      aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-      disabled={!canStartDiskBuild || !!diskBuildInProgress}
-      onClick={actions.provisionDisk}
-      title={
-        diskBuildInProgress
-          ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-          : diskLadderExhausted
-            ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-            : diskBuildBlockedByPriority
-              ? 'Take Speed (or redeem a full Disk) first'
-              : diskRedeemTierName
-                ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
-      }
-      type="button"
-      variant={canStartDiskBuild ? 'info' : 'neutral'}
-      $progress={diskBuildProgress}
-    >
-      <ButtonContent>
-        {diskBuildInProgress
-          ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-          : diskLadderExhausted
-            ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
-            : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-      </ButtonContent>
-      <VisuallyHidden
-        role="progressbar"
-        aria-label="byte foundry disk build progress"
-        aria-valuenow={Math.round(diskBuildProgress)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      />
-    </Button>
+    <ProvisionDiskRow>
+      <Button
+        aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
+        disabled={!canStartDiskBuild || !!diskBuildInProgress}
+        onClick={actions.provisionDisk}
+        title={
+          diskBuildInProgress
+            ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
+            : diskLadderExhausted
+              ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+              : diskBuildBlockedByPriority
+                ? 'Take Speed (or redeem a full Disk) first'
+                : diskRedeemTierName
+                  ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                  : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+        }
+        type="button"
+        variant={canStartDiskBuild ? 'info' : 'neutral'}
+        $progress={diskBuildProgress}
+      >
+        <ButtonContent>
+          {diskBuildInProgress
+            ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+            : diskLadderExhausted
+              ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
+              : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+        </ButtonContent>
+        <VisuallyHidden
+          role="progressbar"
+          aria-label="byte foundry disk build progress"
+          aria-valuenow={Math.round(diskBuildProgress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        />
+      </Button>
+      <QueueToggleButton
+        aria-pressed={diskBuildQueued}
+        aria-label={diskBuildQueued ? 'cancel queued disk build' : 'queue next disk build'}
+        disabled={diskBuildQueueDisabled}
+        onClick={() => (diskBuildQueued ? actions.clearDiskBuildQueue() : actions.queueDiskBuild())}
+        title={
+          diskLadderExhausted
+            ? 'Nothing left to queue — every active pool is already fully built'
+            : diskBuildInProgress
+              ? 'Already building — nothing to queue until it finishes'
+              : diskBuildQueued
+                ? `Queued — will auto-provision the next ${formatDiskSize(diskSize)} disk the moment it's affordable. Click to cancel.`
+                : `Auto-provision the next ${formatDiskSize(diskSize)} disk the moment its buffer can afford it, without clicking Provision Disk yourself`
+        }
+        type="button"
+        variant={diskBuildQueued ? 'warn' : 'ghost'}
+      >
+        {diskBuildQueued ? '✕' : '📌'}
+      </QueueToggleButton>
+    </ProvisionDiskRow>
   )
 
   return (

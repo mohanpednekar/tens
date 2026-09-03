@@ -447,6 +447,13 @@ export const createInitialGameState = () => ({
     // manual cache release, manual redeem) against `size`'s own array is disallowed — "the array
     // rebuild" — until the build completes and disksBuiltTotal[size] increments.
     diskBuild: null,
+    // PERMANENT — true once the player has armed "queue next build" (see queueDiskBuild): the next
+    // Provision Disk fires itself (tickQueuedDiskBuild) the instant its own pool buffer can afford
+    // it and nothing outranks it in the forced priority order, rather than requiring a click at
+    // that exact instant. One-shot — clears the moment a build actually starts (provisionDisk),
+    // whether that start was fired by the queue or an ordinary manual click; re-arm for the next
+    // one. Same shape as disks/disksBuiltTotal/diskBuild above.
+    diskBuildQueued: false,
     // PERMANENT — { [poolIndex]: bits currently held } in each unlocked pool's own small local
     // buffer (see getPoolBufferCapacity/tickPoolBufferFill). Every bit-costing Storage action for
     // a pool (Provision Disk's build cost, cache fill-from-Memory) spends exclusively from this
@@ -1633,11 +1640,18 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const tickStorage = state => {
     const afterRedeem = tickDiskAutoRedeem(state)
     const afterCache = tickDiskAutoReleaseCache(afterRedeem)
-    // Lowest-priority Storage action — only reached once redeem/deposit/cache release all had
-    // nothing left to do (see tickIdleDiskLiquidation's own forced-priority gate).
-    const afterLiquidation = tickIdleDiskLiquidation(afterCache)
+    // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
+    // redeem/cache-release have had first claim on the forced-priority state — ranks above idle
+    // liquidation, same as an ordinary manual Provision Disk click would.
+    const afterQueuedBuild = tickQueuedDiskBuild(afterCache)
+    // Lowest-priority Storage action — only reached once redeem/deposit/cache release/queued build
+    // all had nothing left to do (see tickIdleDiskLiquidation's own forced-priority gate).
+    const afterLiquidation = tickIdleDiskLiquidation(afterQueuedBuild)
     // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
-    // countdown continues on the next ordinary tickGame pass.
+    // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
+    // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
+    // finishes), but re-running this is harmless and keeps the same "refresh after any Storage
+    // change" shape the redeem/liquidation branches already use.
     return afterLiquidation === state ? state : tickDiskAutoFill(0)(afterLiquidation)
   }
 
@@ -3397,8 +3411,36 @@ export const provisionDisk = state => {
       ...state.intro,
       poolBuffers: { ...state.intro.poolBuffers, [poolIndex]: getPoolBufferBits(state, poolIndex) - cost },
       diskBuild: { size, remainingSeconds: totalSeconds, totalSeconds },
+      // A build just started (whether from a manual click or a queued fire below) — the queue's
+      // job for this build is done; re-arm for the next one.
+      diskBuildQueued: false,
     },
   }
+}
+
+// Commit to the next Provision Disk build before its own pool buffer can afford it — the same
+// "arm it once, it fires itself" aid as Capacity's own (see docs/DESIGN_HISTORY.md for why that
+// one isn't reachable from the UI today; this one is, via ByteFoundryPage). Especially useful here
+// since a size's array never advances the disk ladder until DISK_ARRAY_LADDER_CAP (10) builds have
+// completed at that size — 10 separate affordability instants to catch by hand otherwise.
+export const queueDiskBuild = state => {
+  if (state.intro?.diskBuildQueued) return state
+  if (state.intro.diskBuild) return state
+  if (isDiskLadderExhaustedForActivePools(state)) return state
+  return { ...state, intro: { ...state.intro, diskBuildQueued: true } }
+}
+
+export const clearDiskBuildQueue = state => {
+  if (!(state.intro?.diskBuildQueued ?? false)) return state
+  return { ...state, intro: { ...state.intro, diskBuildQueued: false } }
+}
+
+// Fires a queued Provision Disk build once its own pool buffer can afford it and nothing else
+// outranks it in the forced priority order (isProvisionDiskTurnAvailable, checked by provisionDisk
+// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick.
+export const tickQueuedDiskBuild = state => {
+  if (!(state.intro?.diskBuildQueued ?? false)) return state
+  return provisionDisk(state)
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
@@ -5780,6 +5822,9 @@ export const prestigeGame = state => {
       disksBuiltTotal: state.intro?.disksBuiltTotal ?? initial.intro.disksBuiltTotal,
       diskCache: state.intro?.diskCache ?? initial.intro.diskCache,
       diskBuild: state.intro?.diskBuild ?? initial.intro.diskBuild,
+      // An armed "queue next build" (see queueDiskBuild) survives a real Prestige too — same
+      // permanence as the disk state it's arming.
+      diskBuildQueued: state.intro?.diskBuildQueued ?? initial.intro.diskBuildQueued,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       diskReadCacheFlush: initial.intro.diskReadCacheFlush,
       diskWriteCache: initial.intro.diskWriteCache,
