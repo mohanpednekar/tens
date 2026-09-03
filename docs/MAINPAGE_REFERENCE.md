@@ -222,12 +222,16 @@ live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeCurrentFillSubS
 `getDataLakeFillBits`) on whichever ONE slot is actively filling right now; a hidden
 `role="progressbar"` (`aria-label="… lake deposits"`) still exposes the lake's overall
 deposited-units/capacity fraction for a11y. A dedicated `LakePoolTile` sits right below the header
-row, ALWAYS visible whenever an open slot exists — regardless of unlock state — reading "`<fillBits>`
-/ `<open slot size>`" once unlocked or a static "Locked · 0 / `<size>`" before that, so the section
-never goes from entirely absent to already-mid-fill with no feedback in between (see
-`docs/DESIGN_HISTORY.md`). An actions row underneath repurposes ONE button slot between two modes
-(`isDataLakeCapacityDoublingAvailable`, preferring Upgrade when both happen to apply — no longer
-guaranteed mutually exclusive, see engine.js): "⚡ Upgrade" (`actions.doubleDataLakeCapacity`) once
+row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open slot size>`" once
+`isDataLakePoolReady` or a static "Locked · 0 / `<size>`" before that (deliberately keyed off
+`isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
+for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
+already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
+between two modes (`isDataLakeCapacityDoublingAvailable`, preferring Upgrade whenever it's actually
+clickable or Buy isn't an option either — a disabled-but-available Upgrade must never hide an
+immediately-affordable Buy, since Buy isn't part of the forced priority chain at all — no longer
+guaranteed mutually exclusive, see engine.js and `docs/DESIGN_HISTORY.md`): "⚡ Upgrade"
+(`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
 capacity ladder itself is a plain decade-power-of-10 step per level, not a literal doubling; the

@@ -131,6 +131,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (or other tier's unit) and fail to reduce the boost's own remaining time, while Stack would
   simply refuse to do anything at all. Both now fall back to tier 1 (Core) for such a save, matching
   how the boost's own production multiplier already handled this.
+- **A Data Lake's Upgrade button could hide an affordable Buy button behind a dead, disabled
+  control** — whenever the lake's own capacity upgrade was available but not yet its turn in the
+  forced priority order, an immediately-clickable Booster purchase (which isn't part of that order
+  at all) sat entirely hidden with no action available. Buy now takes the button slot instead
+  whenever it's actually affordable and Upgrade isn't currently clickable.
 - **A pool card's own header row sat noticeably farther from its Memory buffer tile than the rest of
   the card's spacing** — the header button's own bottom padding was compounding with the card's own
   gap; padding made asymmetric and the card's gap tightened.

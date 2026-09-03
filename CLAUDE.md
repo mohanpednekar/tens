@@ -1437,8 +1437,13 @@ whatever the lake CURRENTLY holds (`depositedUnits`/`fillBits` both reset to 0) 
 a full Buffer, drains it" shape Memory's own Capacity ×2 ladder uses, just paid in the lake's own
 banked units. **No longer mutually exclusive with buying a Booster by construction** (that
 guarantee held only under the old cost-based condition) — `DataLakePanel` still repurposes ONE
-button slot between the two, preferring Upgrade when both happen to be true at once. The
-`doubleDataLakeCapacity`/
+button slot between the two, preferring Upgrade whenever it's actually clickable
+(`isDataLakeCapacityDoublingTurnAvailable`) or Buy isn't an option either; if Upgrade is merely
+available-but-not-its-turn (blocked by the forced priority chain) while Buy IS currently
+affordable, Buy takes the slot instead — Buy isn't part of that priority chain at all, so a
+disabled Upgrade must never hide an immediately-clickable Buy (an adversarial-review finding on
+the PR that introduced this no-longer-mutually-exclusive behavior — see `docs/DESIGN_HISTORY.md`).
+The `doubleDataLakeCapacity`/
 `isDataLakeCapacityDoubling*` function/predicate names still say "doubling" even though the ladder
 itself climbs a decade-power step per level, not a literal ×2. `normalizePoolMemoryCapacity` (save
 load) clamps a saved `capacityLevel` back down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if it's above it,
@@ -1611,7 +1616,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1725 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1726 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -356,7 +356,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
             />
 
             <LakeActionsRow>
-              {upgradeAvailable ? (
+              {/* upgradeAvailable alone isn't enough to claim this slot: no longer mutually
+                  exclusive with Buy by construction (see isDataLakeCapacityDoublingAvailable's own
+                  comment) — Upgrade can sit available-but-not-its-turn (canUpgrade false, blocked
+                  by the forced priority chain) at the same time Buy is genuinely actionable right
+                  now (Buy isn't part of that chain at all). Showing a dead disabled Upgrade button
+                  in that window while hiding an immediately-clickable Buy left a player with no
+                  action to take even though one existed (found by the adversarial reviewer).
+                  Upgrade only claims the slot when it's actually clickable OR Buy isn't an option
+                  either — otherwise Buy takes it. */}
+              {upgradeAvailable && (canUpgrade || !canBuy) ? (
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
                   disabled={!canUpgrade}

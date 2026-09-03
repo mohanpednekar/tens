@@ -124,8 +124,11 @@ unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at
 not the lake's own fill progress), a `🎯 <next Booster cost>` Buy button (disabled until affordable)
 plus an Auto/Manual toggle for `autoBuyEnabled` — the two button modes are **no longer guaranteed
 mutually exclusive** (that held only under the old cost-based Upgrade condition — see
-`docs/DESIGN_HISTORY.md`), so `DataLakePanel` still shows only one, preferring Upgrade when both
-happen to apply at once. Before unlock, that slot is just inert `🎯 <next cost>` status text. Every
+`docs/DESIGN_HISTORY.md`), so `DataLakePanel` shows only one, preferring Upgrade whenever it's
+actually clickable or Buy isn't an option either — but if Upgrade is merely available-but-not-its-turn
+while Buy IS currently affordable, Buy takes the slot instead, since Buy isn't part of the forced
+priority chain at all and must never sit hidden behind a dead disabled Upgrade button (see
+`docs/DESIGN_HISTORY.md`). Before unlock, that slot is just inert `🎯 <next cost>` status text. Every
 figure is a real, minimally-labelled number — no "Deposited"/"Capacity"/"Bought"/"Next" column
 headers — matching the rest of the page's "big number, few words" convention. `ComputePage` no
 longer has any Booster-buying control of its own — Foundry's `DataLakePanel` is the only place to

@@ -160,6 +160,23 @@ same `?? 1` fallback at every read site (`canReclaimComputeBoost`, `reclaimCompu
 it: the former's `tierIndex` is always a fresh, valid, caller-provided value (never read from stored
 state), and the latter never calls either tier-keyed helper at all.
 
+**10. A disabled-but-available Data Lake Upgrade button could hide an immediately-clickable Buy
+button**, caught by the adversarial `code-reviewer` subagent on yet another re-review round of the
+same PR. This is a direct consequence of #3 above (Data Lake capacity upgrades tied to real Storage
+array completion): that change explicitly "BREAKS the old 'mutually exclusive with buying a Booster
+by construction' guarantee," creating a real window where `isDataLakeCapacityDoublingAvailable`
+(`upgradeAvailable`) is true but `isDataLakeCapacityDoublingTurnAvailable` (`canUpgrade`) is false —
+Upgrade blocked by the forced priority chain — while `isBoosterPurchaseAvailable` (`canBuy`) is
+simultaneously true. `DataLakePanel`'s action-slot ternary claimed the slot for Upgrade purely on
+`upgradeAvailable`, so in that window it rendered a dead, disabled Upgrade button while an
+affordable, immediately-clickable Buy sat entirely hidden — `buyBooster` is explicitly NOT part of
+the forced priority chain and documented as "always available the instant it's affordable," so a
+player had no action to take even though one genuinely existed. Fixed by changing the slot's own
+claim condition to `upgradeAvailable && (canUpgrade || !canBuy)` — Upgrade only claims the slot when
+it's actually clickable, or when Buy isn't an option either (nothing else to do, so showing the
+pending Upgrade goal is still the more informative choice); otherwise Buy takes the slot, matching
+its own documented "isn't part of the forced priority order at all" status.
+
 ### Provision Disk gets a "queue next build" toggle — closing a real automation gap — 2026-09-03
 
 A player reported the write-cache/read-cache path (fixed in the immediately preceding PR #562)

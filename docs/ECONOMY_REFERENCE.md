@@ -844,7 +844,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    rank). **No longer mutually exclusive with Booster-buying by construction** — that guarantee held
    only under the old cost-based condition; a lake CAN now simultaneously afford its next Booster
    and have its next array already complete — `DataLakePanel` still repurposes ONE button slot
-   between the two, preferring Upgrade when both are true at once.
+   between the two, preferring Upgrade whenever it's actually clickable
+   (`isDataLakeCapacityDoublingTurnAvailable`) or Buy isn't an option either; if Upgrade is merely
+   available-but-not-its-turn (blocked by the forced priority chain) while Buy IS currently
+   affordable, Buy takes the slot instead — Buy isn't part of that chain at all, so a disabled
+   Upgrade must never hide an immediately-clickable Buy (an adversarial-review finding — see
+   `docs/DESIGN_HISTORY.md`).
 
    **Migration.** A save written under an older, longer capacity ladder can carry a `capacityLevel`
    above the current array's own bounds — left unclamped, `getDataLakeCapacity` would index past

@@ -3546,6 +3546,29 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
+  test('Buy stays reachable when Upgrade is available but not its turn — Upgrade no longer hides an immediately-clickable Buy (adversarial-review finding)', () => {
+    // Upgrade is available (the KB pool's ×1 array is fully built) but blocked from actually
+    // firing by the forced priority order — Bandwidth (Speed ×2) is left available here (unlike
+    // the "capacity can be increased" test above, which neutralizes it via
+    // productionMilestoneTierClaims) specifically to put Upgrade in this available-but-not-its-turn
+    // state. Buy is genuinely affordable (1 unit banked, first Booster costs 1) and isn't part of
+    // the forced priority order at all, so it must still be clickable rather than hidden behind a
+    // dead disabled Upgrade button.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
+    expect(buyButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
+  })
+
   test('Data Lake capacity-increase button disappears once the lake hits its hard cap', () => {
     seedIntroState({
       bits: 0,
