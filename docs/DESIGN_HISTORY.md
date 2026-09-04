@@ -1,5 +1,40 @@
 # Design history & rationale
 
+### CLAUDE.md Economy model duplication trim — 2026-09-03
+
+`CLAUDE.md`'s "Economy model" section had grown to 572 lines of formula/UI-rendering detail
+already fully duplicated in `docs/ECONOMY_REFERENCE.md` (the Fill-based Speed/Bandwidth multiplier,
+Data Stream Buffer/pool Memory Capacity, Disks, and Data Lakes subsections) — well past the 282
+lines that motivated two earlier attempts at this same trim (#536, #542), both of which went stale
+(merge-conflicted / fell behind `main`) before landing, as later feature PRs kept re-expanding the
+section faster than the trims could merge. PR #566 verified every constant/function name being cut
+was still present (and non-contradictory) in `docs/ECONOMY_REFERENCE.md`, and that
+incident-specific rationale (e.g. the unfloored Data Lake overflow taper getting permanently stuck,
+see this file's own entry below) was already covered here, before condensing each subsection to an
+orientation paragraph with a pointer to the reference doc. Net: `CLAUDE.md` 1729 → 1333 lines
+(-396, ~23%), with a new standing rule added to `CLAUDE.md`'s own "Documentation" section (keep
+future additions terse and reference-doc-first) since a one-time trim alone doesn't fix the
+recurring cause — see issue #537, which tracks the remaining "Architecture" section slice (blocked
+on `docs/MAINPAGE_REFERENCE.md` staleness, tracked separately as #567).
+
+Two file-tree entries in `CLAUDE.md`'s "Repo layout" carried embedded design-rationale prose (why a
+component was made a shared standalone file) rather than a bare current-behavior fact — relocated
+here in the same PR, per `CLAUDE.md`'s own header rule that rationale belongs in this file, not
+inline in the file tree.
+
+**`components/DiskArrayRow`** — extracted so both `ByteFoundryPage` and `StoragePage` can render
+identical, fully interactive disk detail — read cache blocks, disk squares, releasing, redeeming —
+from one shared component instead of duplicating that logic per page. (Note: the original CLAUDE.md
+sentence being relocated here claimed `ByteFoundryPage` only ever showed "the single currently-
+active/buildable size," which was already stale before this relocation — both pages in fact render
+every size from the shared `getDiskSizesToShow(state)` helper, ascending; corrected here rather than
+propagated.)
+
+**`public/`'s old create-react-app-era files** — `index.html`/`manifest.json`/`logo192.png`/
+`logo512.png` were unused dead weight (this is a Vite app — Vite's own root `index.html` is what's
+actually served) and were removed rather than left in place to confuse the newer PWA manifest
+(`docs/PWA_REFERENCE.md`) sitting alongside them.
+
 ### Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03
 
 Follow-up player feedback on the just-shipped Provision Disk queue toggle (previous entry) surfaced
