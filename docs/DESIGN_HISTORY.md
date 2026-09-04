@@ -68,7 +68,21 @@ is no earlier schema where one existed without the other — and every mutating 
 (`activateComputeBoost`/`stackComputeBoost`/`reclaimComputeBoost`/`forfeitComputeBoost`/
 `tickComputeBoost`) keeps them in lockstep, always setting `computeBoostStacks >= 1` whenever
 `computeBoostType` is non-null. No `save-migration/` entry references either field. This scenario
-isn't reachable through any real save.
+isn't reachable through any real player save or any engine-driven code path.
+
+A later adversarial review of this same PR (re-reviewing after the `canForfeitComputeBoost` fix
+above) noted one narrow exception outside that guarantee: Dev Mode's raw-JSON editor
+(`DevModePage`, `applyDevGameStateJson` → `mergeStateForDevWrite`) deep-merges a caller-supplied
+partial object onto the live dev-save state, so a deliberately crafted partial edit (e.g. just
+`{ "intro": { "computeBoostType": "burst" } }` while `computeBoostStacks` still sits at its
+existing `0`) CAN desync the pair — `storage.js`'s `mergeState` only shallow-overlays `intro` by
+top-level key on load, it doesn't re-derive `computeBoostStacks` from `computeBoostType`. This is
+accepted as-is rather than fixed: Dev Mode is a dev-build-only debug sandbox (never shipped to
+players — see "Dev Mode" in `CLAUDE.md`) whose whole raw-JSON-editor feature is explicitly designed
+to let a developer write arbitrary partial state for testing; guarding against every
+internally-inconsistent state it could produce would defeat that purpose. The "unreachable through
+any real save" claim above still holds for every player-facing and engine-driven path — only this
+one deliberately-freeform dev tool is excluded.
 
 ### CLAUDE.md Economy model duplication trim — 2026-09-03
 
