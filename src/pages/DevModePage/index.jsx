@@ -101,6 +101,12 @@ const Summary = styled.summary`
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.2rem 0;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${props => props.theme.radius.sm};
+  }
 `
 
 const JsonTextarea = styled.textarea`

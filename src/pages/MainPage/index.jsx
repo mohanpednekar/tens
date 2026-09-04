@@ -109,6 +109,11 @@ const TierLine = styled(StatCard)`
     border-left-color: ${props => props.$accent};
   }
 
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
@@ -616,6 +621,12 @@ const Disclosure = styled.details`
     list-style: none;
     user-select: none;
     width: fit-content;
+    border-radius: ${props => props.theme.radius.sm};
+  }
+
+  summary:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
   }
 
   summary::-webkit-details-marker {
