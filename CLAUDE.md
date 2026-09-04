@@ -1093,11 +1093,13 @@ advancing only once the CORRESPONDING Storage array size is fully built. **Buyin
 (`buyBooster`) spends only banked lake units — outside the forced priority order entirely, always
 available the instant affordable — at a `purchased + 1` cost (capped once the lake is
 capacity-maxed) and grants 1 compute-ladder entity instantly; `toggleDataLakeAutoBuy` auto-buys.
-**Stranded disks are never liquidated.** A disk whose corresponding tier has already moved past the
+**Stranded disks are never touched.** A disk whose corresponding tier has already moved past the
 level it requires simply sits full and unredeemable for the rest of the cycle — nothing sweeps it
-into Bits; it waits for the next real Prestige to reset purchase levels and reopen its redemption
-window (an earlier "idle disk liquidation" mechanic that did convert such disks to Bits was removed
-per the maintainer's explicit instruction — see `docs/DESIGN_HISTORY.md`).
+into Bits (an earlier "idle disk liquidation" mechanic that did convert such disks to Bits was
+removed per the maintainer's explicit instruction), and `tickDiskWriteCache` refuses to fold it into
+another array either (never starts a new merge from a stranded source, and permanently pauses one
+already mid-collection the instant its source becomes stranded) — it waits for the next real
+Prestige to reset purchase levels and reopen its redemption window. See `docs/DESIGN_HISTORY.md`.
 Full overflow-segment math, the disk-breakdown mixed-radix proof, and every gating predicate are in
 `docs/ECONOMY_REFERENCE.md`.
 
@@ -1217,7 +1219,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1726 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1729 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

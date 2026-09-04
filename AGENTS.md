@@ -247,8 +247,10 @@ carrying a `capacityLevel` from an older, longer ladder — or written under the
 deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
 load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.
 A disk whose corresponding tier has already moved past the level it requires simply sits full and
-unredeemable for the rest of the cycle — nothing sweeps it away; a removed "idle disk liquidation"
-mechanic used to convert such stranded disks to Bits (see docs/DESIGN_HISTORY.md). Deposited/capacity/next-cost display in Byte-scale (KB/MB/GB),
+unredeemable for the rest of the cycle — nothing sweeps it away or folds it into another array
+(`tickDiskWriteCache` refuses to start or continue a merge from a stranded source too); a removed
+"idle disk liquidation" mechanic used to convert such stranded disks to Bits (see
+docs/DESIGN_HISTORY.md). Deposited/capacity/next-cost display in Byte-scale (KB/MB/GB),
 matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
 (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
 An always-on auto-convert turns Data Stream bits into free `tier01` units at tier01's own current

@@ -3501,14 +3501,19 @@ export const getDiskWriteCacheFlushFill = merge => {
 export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
   const merge = getDiskWriteCacheMerge(state, targetSize)
   if (!merge || merge.segmentsCollected >= DISK_ARRAY_LADDER_CAP) return false
-  return isDiskRedeemable(state, merge.sourceSize)
+  return isDiskRedeemable(state, merge.sourceSize) || isDiskStrandedByAdvancedTier(state, merge.sourceSize)
 }
 
+// A stranded source (its own corresponding tier has already moved past the level it requires — see
+// isDiskStrandedByAdvancedTier below) never starts a new write-cache merge: it just stays exactly
+// as built, "simply ignored," the same as every other stranded disk (see docs/DESIGN_HISTORY.md) —
+// not silently folded into another array that may be just as unredeemable.
 const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
   if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
   if ((state.intro.disks?.[sourceSize] ?? 0) < DISK_ARRAY_LADDER_CAP) return false
   if ((state.intro.disksBuiltTotal?.[targetSize] ?? 0) <= 0) return false
+  if (isDiskStrandedByAdvancedTier(state, sourceSize)) return false
   return (state.intro.disksBuiltTotal[targetSize] ?? 0) > (state.intro.disks?.[targetSize] ?? 0)
 }
 
@@ -3585,7 +3590,17 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     if (!merge) continue
 
     if (merge.segmentsCollected < DISK_ARRAY_LADDER_CAP) {
-      if (isDiskRedeemable({ ...state, intro: { ...intro, disks, diskWriteCache } }, merge.sourceSize)) {
+      const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
+      // Pause (never resume this cycle) the instant the source becomes stranded mid-collection —
+      // its own tier can only have raced past it since the merge started, never back down, so
+      // there is nothing left to wait for until the next real Prestige clears diskWriteCache and
+      // reopens the window. Whatever's already been collected stays banked in the cache exactly as
+      // is; this only stops taking MORE from a disk that's now off-limits (see
+      // canStartDiskWriteCacheMerge above for the "never even start" half of the same rule).
+      if (
+        isDiskRedeemable(mergeSnapshot, merge.sourceSize) ||
+        isDiskStrandedByAdvancedTier(mergeSnapshot, merge.sourceSize)
+      ) {
         continue
       }
 
@@ -3946,6 +3961,24 @@ const getMatchingTierForDiskSize = (state, capacityBits) => {
 
 export const isDiskRedeemable = (state, capacityBits) =>
   getMatchingTierForDiskSize(state, capacityBits) !== undefined
+
+// True only for the "already past it" half of getMatchingTierForDiskSize's two non-redeemable
+// cases — this size's own corresponding tier has moved on to a LATER level than this size
+// requires, so a disk of this size can never be redeemed again this cycle. False both when the
+// tier is exactly at the required level (isDiskRedeemable already covers that) and when the tier
+// hasn't reached the required level YET ("too early" — a disk built ahead of the tier's own
+// progress, which still has real future redemption use and must stay eligible for everything a
+// normal disk is). Used by tickDiskWriteCache below to keep a genuinely stranded disk completely
+// untouched ("simply ignore it" — see docs/DESIGN_HISTORY.md) rather than letting write-cache
+// silently consume it into another array that may be just as unredeemable.
+const isDiskStrandedByAdvancedTier = (state, capacityBits) => {
+  const tierIndex = getDataLakeTierIndex(capacityBits)
+  const requiredLevel = getDiskRequiredTierLevel(capacityBits)
+  if (!tierIndex || !requiredLevel) return false
+  const tier = TIER_DEFINITIONS[tierIndex - 1]
+  if (!tier) return false
+  return (state.purchaseLevels?.[tier.id] ?? 1) > requiredLevel
+}
 
 // Byte Foundry pages call this directly (rather than getMatchingTierForDiskSize, kept internal) to
 // name which tier a disk would actually redeem into right now, or null if none currently matches —
