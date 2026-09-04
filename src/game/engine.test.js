@@ -4605,7 +4605,7 @@ describe('activateComputeBoost', () => {
       computeCores: 3,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 2,
+      computeBoostStacks: 1,
       computeBoostRemainingSeconds: 40,
     })
     expect(canForfeitComputeBoost(state)).toBe(true)
@@ -4618,6 +4618,18 @@ describe('activateComputeBoost', () => {
 
   it('forfeitComputeBoost is a same-reference no-op while no boost is active', () => {
     const state = createInitialGameState()
+    expect(forfeitComputeBoost(state)).toBe(state)
+  })
+
+  it('forfeitComputeBoost is a same-reference no-op while more than 1 stack is held — a multi-stack boost must be Reclaimed down first (Devin Review finding)', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 3,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 40,
+    })
+    expect(canForfeitComputeBoost(state)).toBe(false)
     expect(forfeitComputeBoost(state)).toBe(state)
   })
 

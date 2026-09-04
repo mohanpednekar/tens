@@ -808,8 +808,10 @@ Strict three-layer separation:
    how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
    enhancement — see "Economy model" below), disabled
-   until a tier is armed. While a boost is active, activating any NEW boost is blocked entirely
-   (any type/tier) — a Stack + Reclaim-or-Forfeit row appears right below the presets instead:
+   until a tier is armed. While a boost is active, activating any NEW boost is blocked from its
+   own preset button without an explicit forfeit confirmation (any type/tier — see the
+   forfeit-and-replace exception a few sentences below) — a Stack + Reclaim-or-Forfeit row appears
+   right below the presets instead:
    `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
    spending another token of ITS OWN funding tier (never whatever tier a player might have since
    selected). Alongside Stack, exactly ONE of Reclaim or Forfeit renders — mutually exclusive by
@@ -828,12 +830,13 @@ Strict three-layer separation:
    clears the boost entirely with no token refund, gated behind a `window.confirm` (unlike Reclaim's
    instant click) since it's the more consequential, final action; letting that last stack run out
    naturally is the only OTHER way to end it early (an earlier version let Reclaim itself cancel the
-   very last stack too, conflating the two actions — see `docs/DESIGN_HISTORY.md`). This
-   last-remaining-stack restriction also gates the preset buttons' own forfeit-and-replace path
-   (clicking a DIFFERENT preset/tier while a boost is active — `canActivateComputeBoost`'s
-   `forfeitConfirmed` branch): switching to a different boost entirely is blocked while
-   `computeBoostStacks > 1`, the same as the standalone Forfeit button, so it can't reopen the
-   "discard several stacks' worth of tokens outright" gap through a different control (see
+   very last stack too, conflating the two actions — see `docs/DESIGN_HISTORY.md`).
+   `canForfeitComputeBoost` itself requires `computeBoostStacks <= 1` (not just a UI-only disabled
+   state, per this file's own "Security notes" convention), and the SAME last-remaining-stack
+   restriction also gates the preset buttons' own forfeit-and-replace path (clicking a DIFFERENT
+   preset/tier while a boost is active — `canActivateComputeBoost`'s `forfeitConfirmed` branch):
+   switching to a different boost entirely is blocked while `computeBoostStacks > 1` too — every
+   path that could discard several stacks' worth of tokens outright is closed the same way (see
    `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
    the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
@@ -1231,7 +1234,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1732 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1733 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

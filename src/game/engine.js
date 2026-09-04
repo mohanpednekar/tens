@@ -5255,8 +5255,14 @@ export const isComputeUpgradeTurnAvailable = state =>
 
 // Cancels the active Compute Boost with NO token refund and NO duration credit — pure forfeit.
 // Same-reference no-op while no boost is active. Distinct from reclaimComputeBoost (which refunds).
-// UI must confirm before calling when the player is abandoning remaining stacks on purpose.
-export const canForfeitComputeBoost = state => (state.intro.computeBoostType ?? null) !== null
+// UI must confirm before calling when the player is abandoning the last stack on purpose. Only
+// reachable at `computeBoostStacks <= 1` — the same restriction canActivateComputeBoost's own
+// forfeit-replace branch uses — so this API can't be used to discard several stacks' worth of
+// tokens outright any more than the standalone Forfeit button or a preset swap can; a multi-stack
+// boost must be Reclaimed down first (found by Devin Review on the same PR that added the
+// canActivateComputeBoost restriction — see docs/DESIGN_HISTORY.md).
+export const canForfeitComputeBoost = state =>
+  (state.intro.computeBoostType ?? null) !== null && (state.intro.computeBoostStacks ?? 0) <= 1
 
 export const forfeitComputeBoost = state => {
   if (!canForfeitComputeBoost(state)) return state

@@ -43,6 +43,33 @@ exercising `computeBoostStacks: 2` forfeit-replace scenarios (which had demonstr
 now-closed gap) were updated to `1`; new tests cover the blocked-at-multiple-stacks case at both
 the engine (`canActivateComputeBoost`/`activateComputeBoost`) and component (`App.test.jsx`) levels.
 
+**Second follow-up (same day): `canForfeitComputeBoost` itself still had no stack restriction at
+all.** A further Devin Review round on the same PR pointed out the first follow-up above only
+closed the preset-replace path — `canForfeitComputeBoost`/`forfeitComputeBoost` (the standalone
+Forfeit action's own engine-level gate) still unconditionally allowed forfeiting a boost at ANY
+stack count, contradicting the same repo convention just applied to
+`canActivateComputeBoost`: the engine itself should enforce an invariant, not rely on the UI only
+ever rendering the button under the right condition. In the shipped UI this specific gap wasn't
+directly reachable by a normal player any more (the standalone Forfeit button had already stopped
+rendering above 1 stack in the very first fix in this entry), but the underlying API itself still
+disagreed with its own documented contract, and any other caller (present or future) would have
+silently reopened the exact gap the whole day's work was closing. Fixed by adding the same
+`computeBoostStacks <= 1` requirement to `canForfeitComputeBoost` directly, matching
+`canActivateComputeBoost`'s own restriction — `forfeitComputeBoost` now becomes a same-reference
+no-op whenever called on a boost still holding more than 1 stack, so all three surfaces (standalone
+Forfeit button, preset forfeit-and-replace, and the raw action itself) now agree: forfeiting
+anything is only ever possible once Reclaim has brought the boost down to its last stack.
+
+The same review round also flagged, and this session investigated and declined, a claim that a
+legacy save could have an active boost with `computeBoostStacks` missing/zero, leaving neither
+Reclaim nor Forfeit rendered. `computeBoostType` and `computeBoostStacks` were introduced together
+in the same commit (`9a71df4`, "Add Compute Boost activation and a Sacrifice confirmation") — there
+is no earlier schema where one existed without the other — and every mutating code path
+(`activateComputeBoost`/`stackComputeBoost`/`reclaimComputeBoost`/`forfeitComputeBoost`/
+`tickComputeBoost`) keeps them in lockstep, always setting `computeBoostStacks >= 1` whenever
+`computeBoostType` is non-null. No `save-migration/` entry references either field. This scenario
+isn't reachable through any real save.
+
 ### CLAUDE.md Economy model duplication trim — 2026-09-03
 
 `CLAUDE.md`'s "Economy model" section had grown to 572 lines of formula/UI-rendering detail
