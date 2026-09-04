@@ -96,8 +96,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
   it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
+- **Idle disk liquidation** — the mechanic that converted a fully-built Storage Disk straight into
+  Bits once its corresponding tier's purchase level had moved past the level it required is gone. A
+  stranded disk now simply sits full and unredeemable for the rest of the cycle instead of being
+  destroyed; it becomes redeemable again after the next real Prestige resets purchase levels. See
+  `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **A stranded Storage Disk could still be silently folded into another (possibly also-unredeemable)
+  array by the write-cache upward-merge mechanism**, undermining the idle-disk-liquidation removal
+  above — `tickDiskWriteCache` never checked whether a merge's source size was stranded before
+  starting or continuing to collect from it, and a Prestige landing mid-merge could discard
+  already-consumed source disks with nothing to show for it. A stranded source can no longer start
+  or continue feeding a write-cache merge. See `docs/DESIGN_HISTORY.md`.
 - **A lone Data Lake disk square rendered as a giant, room-spanning circle** at a fresh capacity
   level (only one slot to show) — `LakeSquare`'s own flex-grow stretched it to fill the whole row
   width with nothing else to share space with; capped with a `max-width`.

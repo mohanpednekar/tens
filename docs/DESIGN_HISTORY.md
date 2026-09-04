@@ -5961,3 +5961,117 @@ WRONG under the new rule and updated to expect exactly 0, plus a check that
 `getPoolMultiplierPercent` reads precisely `FILL_MULTIPLIER_MIN_PERCENT` afterward; a second new test
 confirms a pool with room left in its buffer is unaffected (bonus untouched). `yarn test`: 1699/1699
 green (+1, net — one existing test's assertions changed, one new test added). `yarn build` succeeds.
+
+### Idle disk liquidation removed entirely — stranded disks now just sit idle instead of being converted to Bits
+
+A player reported that clicking a Data Lake's ⚡ Upgrade button seemed to trigger their built Storage
+Disks emptying out and never refilling, with the pool's Memory buffer draining afterward too. Tracing
+the actual mechanism (reproduced directly against the real engine functions, not just read from code)
+found this wasn't random: it was idle disk liquidation (`tickIdleDiskLiquidation`, introduced in the
+"Per-pool Bandwidth capped at sqrt(Capacity)..." entry above and refined across several Devin-review
+passes since — see the "idle disk liquidation" entries earlier in this file) firing in a delayed burst.
+
+**The chain.** A disk's redemption window is a one-time, exact-match thing per Prestige cycle: it
+only redeems while its corresponding tier (Kilobytes for pool 1, etc.) sits at EXACTLY the purchase
+level it requires (`isDiskRedeemable`). That tier's own level, though, advances from ordinary
+main-game buying — an autobuyer spending accumulated Money — which is completely independent of, and
+usually much faster than, Storage's own build pace. Over a long offline catch-up in particular, it's
+easy for a tier to blow right past the level a disk size needs, permanently stranding it for the rest
+of the cycle. Idle disk liquidation existed specifically to sweep such stranded, fully-built disks
+into Bits — but it's gated behind `!isAnyDataLakeCapacityDoublingAvailable(state)`, a GLOBAL check (any
+lake, not just the one being liquidated). So a stranded disk could sit looking intact for a while
+purely because some Data Lake's Upgrade was still unclaimed — and the instant that Upgrade got
+clicked, the guard lifted and every already-stranded, already-built disk got liquidated within
+moments, which read exactly like "clicking Upgrade emptied my disks."
+
+**Decision.** The maintainer's explicit instruction: *"No disks are ever supposed to be liquidated to
+bits. If the tier has surpassed the level, simply ignore it."* Destroying a disk the player actually
+built, just because an unrelated tier's own (much faster) autobuyer happened to outrun Storage's own
+pace, was judged surprising and unwanted — especially since a long offline stretch made it trivially
+easy to trigger without the player doing anything that looked like a mistake. Rather than trying to
+patch the guard's scoping (e.g. making it per-pool instead of global), the whole mechanic was removed:
+a disk whose tier has already moved past the level it requires now simply stays exactly as built —
+full, idle, unredeemable — until the next real Prestige resets purchase levels and reopens its
+window. Nothing sweeps it away; nothing is lost.
+
+**What was removed.** `tickIdleDiskLiquidation`, `isIdleDiskLiquidationAvailable`,
+`isIdleDiskLiquidationTurnAvailable`, `getIdleDiskLiquidationSizes`, `isDiskArrayFullyBuilt`,
+`isDiskSizeReservedForWriteCache`, `isAnyDataLakeCapacityDoublingAvailable`, and the now-unused
+`isDiskSizeStrandedByAdvancedTier` helper — all from `engine.js`. `tickStorage`'s own pipeline
+(`tickGame`) no longer calls into liquidation at all; it now ends at `tickQueuedDiskBuild`, with
+`tickDiskAutoFill` re-run only when a redeem or a queued build actually changed something. The whole
+"idle disk liquidation" describe block in `engine.test.js` (8 tests covering size-agnostic
+eligibility, mid-build protection, the "too early" vs. "already past" distinction, the
+write-cache-reservation protection, and the no-op cases) was replaced with a single regression test
+confirming a plain `tickGame` pass leaves an already-stranded, already-full disk completely
+untouched. `docs/ECONOMY_REFERENCE.md`'s "Idle disk liquidation" section, `isDiskRedeemable`'s
+function-table entry, `CLAUDE.md`'s Data Lakes paragraph, and `AGENTS.md`'s condensed mirror were all
+updated to describe the new "just sits idle" behavior instead. `yarn test`: 1726/1726 green (net −7:
+8 removed, 1 added). `yarn build` succeeds.
+
+### A Devin Review pass on the idle-disk-liquidation removal found write-cache still consuming stranded disks
+
+A Devin Review pass on the PR that removed idle disk liquidation (previous entry above) found the
+new "stranded disks are never touched" contract was only half-enforced: `tickDiskWriteCache` — the
+mechanism that merges 10 simultaneously-full disks of one size into a single disk of the next ladder
+size (`getNextDiskLadderSize`) — never checked whether the SOURCE size was stranded before starting
+or continuing a merge. `canStartDiskWriteCacheMerge`'s own gate only checked that the source held 10
+full disks and the target had room; it had no concept of redemption windows at all. And the ongoing
+collect loop only paused while `isDiskRedeemable` was true at the source size (prioritizing
+redemption over feeding the cache) — the instant that became false, collection proceeded, with no
+distinction between "too early" (still has a real future) and "already stranded" (permanently dead
+this cycle). So a fully-built, stranded source could still be silently folded into another array —
+one that, per the finding's exact scenario, might be JUST AS stranded itself — directly contradicting
+the "simply ignore it" instruction the previous entry recorded. Worse: `prestigeGame` explicitly
+resets `intro.diskWriteCache` to empty on every real Prestige (unlike `disks`/`disksBuiltTotal`,
+which are permanent), while the collect loop already permanently decrements `disks[sourceSize]` as
+each segment completes — so a Prestige landing mid-merge would silently discard whatever source disks
+had already been consumed, with nothing to show for them: not liquidated to Bits, not turned into a
+target disk, just gone. This bug predates the liquidation-removal PR — `canStartDiskWriteCacheMerge`
+never checked stranding even when idle liquidation still existed — but the removed liquidation's own
+`isDiskSizeReservedForWriteCache` guard had, in effect, been routing a doubly-stranded source into
+Bits via liquidation BEFORE write-cache's forced-priority-free tick loop usually got a chance to claim
+it in most in-game timing, since liquidation's own comment explicitly chose to let "the chain cascade
+upward" once both source and target were stranded. With liquidation gone, nothing intercepts that
+path any more, making the gap far more consequential (and, since `tickDiskWriteCache` runs
+unconditionally every tick with no forced-priority gate at all, unlike liquidation, this was
+plausibly the DOMINANT path a doubly-stranded source went through even before this PR — this PR's
+removal just removed the one thing that had ever prevented it from mattering as much).
+
+**Fix.** Reintroduced a private `isDiskStrandedByAdvancedTier(state, capacityBits)` predicate in
+`engine.js` (identical logic to the one removed in the liquidation-removal commit, but now serving a
+different caller) and wired it into two places: `canStartDiskWriteCacheMerge` now refuses to start a
+new merge from an already-stranded source; the ongoing collect loop inside `tickDiskWriteCache` now
+pauses — permanently, since a tier's purchase level only ever increases within a cycle, never drops
+back down — the instant its source becomes stranded mid-collection, on top of the pre-existing
+"pause while redeemable" check. `isDiskWriteCacheCollectPaused` (the UI-facing read `DiskArrayRow`
+uses to show a paused merge) was updated to report `true` for either reason, so the UI doesn't show a
+stuck merge as if it were still live. Segments already collected before a source became stranded stay
+banked as-is — nothing is refunded, since they were consumed while genuinely eligible; only FURTHER
+consumption from that point on is blocked. The deeper, separate bug this surfaced — `diskWriteCache`/
+`diskReadCacheFlush` resetting on Prestige while already-decremented source disks have no equivalent
+rollback, which can lose progress from ANY in-flight merge (redeemable-sourced or not) interrupted by
+Prestige, not just a stranded one — was judged out of scope for this fix: it predates this PR
+entirely, is orthogonal to disk stranding specifically (a `Speed`-boosted merge finishing in one tick
+is no less exposed), and fixing it properly (most likely making `diskWriteCache`/`diskReadCacheFlush`
+survive Prestige the same way `diskBuild` already does, rather than a narrower patch) is a genuine
+design decision better made deliberately than folded into an unrelated bug-report PR. Left as a
+follow-up rather than widened into here.
+
+**Verification.** Fixing this broke two pre-existing `tickDiskWriteCache` tests whose own scenarios
+turned out to rely on the exact gap being closed: one used `FIRST_DISK_SIZE` (the disk ladder's very
+first size, whose required tier level is 1) at purchase level 2 to represent "nothing blocking
+collection" — but level 2 is already one past level 1, i.e. stranded under the new rule, not merely
+"not currently redeemable." Since `FIRST_DISK_SIZE`'s required level is the tier's own minimum
+starting level, there is no purchase level at which it is simultaneously "not redeemable" and "not
+stranded" — level 1 is exactly redeemable, anything above is stranded. That test was rewritten to use
+the write-cache's second and third disk sizes as source/target instead, at the tier's default level 1
+("too early" for a size whose required level is 2 — the one state that's genuinely unblocked). The
+second test's whole premise — pause while redeemable, then advance the tier and expect collection to
+unblock and eventually flush — was the exact old (buggy) behavior; it now asserts collection stays
+paused permanently instead once the tier moves past the required level, rather than resuming. Three
+new regression tests were added: a stranded source never starts a new merge; a stranded source with
+an ALSO-stranded target still never merges (the finding's own exact scenario); and an in-progress
+merge whose source becomes stranded mid-collection freezes at whatever was already collected and
+never resumes. `yarn test`: 1729/1729 green (+3 net: 2 existing tests' scenarios/assertions
+rewritten, 3 new tests added). `yarn build` succeeds.

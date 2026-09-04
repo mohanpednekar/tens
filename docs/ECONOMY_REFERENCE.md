@@ -267,9 +267,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    100% of a separate fill-dependent multiplier. That multiplier scales ONLY the real per-tick
    amount actually delivered — "primary fill only": into `intro.bits` via `tickIntroProduction`, or
    into a pool's own local buffer via `tickPoolBufferFill` (point 8 below). Every other consumer of
-   these two rate functions — disk build time, cache fill/flush, Data Lake overflow pacing,
-   idle-disk liquidation, and Compute merge/boost pacing — keeps reading the raw, un-multiplied
-   rate exactly as before this mechanic existed.
+   these two rate functions — disk build time, cache fill/flush, Data Lake overflow pacing, and
+   Compute merge/boost pacing — keeps reading the raw, un-multiplied rate exactly as before this
+   mechanic existed.
    - `getFillMultiplierPercent(fillFraction)` = `FILL_MULTIPLIER_MAX_PERCENT` (150) minus
      `fillFraction * 100`, clamped to `[FILL_MULTIPLIER_MIN_PERCENT (50), FILL_MULTIPLIER_MAX_PERCENT]`
      — 150% empty, exactly 100% at 50% full, 50% once completely full. `fillFraction` is
@@ -572,13 +572,21 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Memory. `tickDiskAutoFill` refills the gap in whole-block transfers once Memory has enough again.
 
    **The write cache (upward ladder merge).** When 10 full disks exist at size N and size N+1
-   (`getNextDiskLadderSize`) has an empty container, `tickDiskWriteCache(elapsedSeconds)` starts
-   collecting into `intro.diskWriteCache[N+1]` — empty at rest. Collect runs 10 timed segments — a
+   (`getNextDiskLadderSize`) has an empty container — AND size N is not already stranded (see below)
+   — `tickDiskWriteCache(elapsedSeconds)` starts collecting into `intro.diskWriteCache[N+1]` — empty
+   at rest. Collect runs 10 timed segments — a
    CACHE filling FROM Disks — each segment's own duration = that source disk's own size ÷
    (`getIntroProductionRate` × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 2)
    (`getDiskWriteCacheSegmentSeconds`); each completed segment empties one
    full source disk at N into the write cache. Collect **pauses** while `isDiskRedeemable` is true
-   at the source size (tier match); **flush never pauses**. Once 10 segments are collected, flush
+   at the source size (tier match), and permanently (never resumes this cycle) the instant the
+   source instead becomes STRANDED (its own tier has moved past the level it requires — the same
+   internal `isDiskStrandedByAdvancedTier` check `canStartDiskWriteCacheMerge` uses to refuse a new
+   merge in the first place): a stranded disk is "simply ignored" everywhere, not silently folded
+   into another array that may be just as unredeemable (see "Stranded disks are never destroyed"
+   above and `docs/DESIGN_HISTORY.md`) — whatever segments were already collected before that point
+   stay banked as-is, just frozen; `isDiskWriteCacheCollectPaused` (the UI-facing read of this same
+   pause state) reflects both reasons identically. **Flush never pauses**. Once 10 segments are collected, flush
    runs — a DISK filling FROM a cache, same rate class the read-cache flush above uses — for the
    target's own size ÷ (`getIntroProductionRate` × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)
    (`getDiskWriteCacheFlushSeconds` — deliberately independent of `getProvisionDiskSeconds`'s own
@@ -615,9 +623,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    level in a single tick (a banked attempt budget catching up after a broke/paused stretch),
    jumping its price straight past a disk's exact size without it ever exactly matching mid-tick.
    The fixed mapping has no coincidence to jump past: a disk whose tier has already moved beyond its
-   required level simply stays full and unredeemable for the rest of the cycle (not lost — if that
-   size's own array is already completely built, `tickIdleDiskLiquidation` claims it straight into
-   Bits on the next tick instead, see "Idle disk liquidation" under "Data Lakes" below) rather than
+   required level simply stays full and unredeemable for the rest of the cycle — nothing destroys
+   it; it just sits idle until the next real Prestige resets purchase levels and reopens its
+   redemption window (an earlier version liquidated such stranded disks straight into Bits instead;
+   removed per the maintainer's explicit instruction — see `docs/DESIGN_HISTORY.md`) rather than
    waiting for a price to cycle back through an exact value. See `docs/DESIGN_HISTORY.md`.
 
    `redeemDisk(capacityBits)` then empties one matching full disk (`disks[capacityBits] -= 1` — NOT
@@ -885,38 +894,16 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    purchase, so this always terminates. `DataLakePanel` shows a manual Buy button (disabled until
    affordable) alongside an Auto/Manual toggle, both only once `boostersUnlocked`.
 
-   **Idle disk liquidation** (`isIdleDiskLiquidationAvailable`/`isIdleDiskLiquidationTurnAvailable`/
-   `tickIdleDiskLiquidation`) — now size-agnostic: since Storage Disks no longer deposit into Data
-   Lakes at ALL (fully decoupled, see above), ANY size's disk array — not just a pool's LAST
-   (largest, ×100) one — that's completely built (`disksBuiltTotal[sizeBits] >=
-   DISK_ARRAY_LADDER_CAP`) and currently holds a full, non-mid-rebuild disk is a liquidation
-   candidate (`getIdleDiskLiquidationSizes`, ascending). Once such a disk is no longer redeemable
-   (its own fixed corresponding tier has moved past the level it requires — see "Disks always take
-   priority" above), it has nowhere left to go and its slot would otherwise sit permanently full,
-   never recycling back to empty for cache to refill. Rather than let that happen,
-   `tickIdleDiskLiquidation` (called from `tickGame`'s `tickStorage`, right after
-   `tickDiskAutoReleaseCache`) liquidates the SMALLEST such eligible size straight into `intro.bits`
-   — the same Data Stream currency Provision Disk spends from — one call at a time, same cadence as
-   the other Storage auto-actions. This automatically funds whatever Provision Disk needs next.
-   Gated by the full forced priority chain, with EVERY tier's own Lake Capacity doubling ranked
-   directly above it — it only ever fires once the Foundry would otherwise be completely idle (Disk
-   Fill, Speed, Provision Disk, Compute, and every lake's Capacity doubling all unavailable) — this
-   is also what protects a currently-redeemable disk from ever being liquidated: `isDiskFillAvailable`
-   (top of the chain) is already true whenever ANY size anywhere has a redeemable full disk, so
-   liquidation is fully blocked until that's no longer the case. The lowest rank in the whole chain.
-   A stranded size is further excluded (`isDiskSizeReservedForWriteCache`) whenever the write-cache
-   path up to its own next ladder size (`getNextDiskLadderSize`) still has a real, current use for
-   its full disks — an empty, ever-built target slot waiting to be topped up (the exact same
-   `disksBuiltTotal > disks` condition `canStartDiskWriteCacheMerge` itself checks before starting a
-   NEW collect — this also covers an in-progress collect/flush, since a target slot mid-merge stays
-   counted as not-full the whole time) — AND that target size isn't ALSO already permanently
-   stranded itself (`isDiskSizeStrandedByAdvancedTier`): once the target's own tier has moved past
-   ITS required level too, filling it with more disks could never redeem either, so there's nothing
-   left to protect and the chain cascades upward exactly as before. Without this, a stranded
-   source's full disks could be skimmed down to nothing before they ever reach
-   `DISK_ARRAY_LADDER_CAP` simultaneously full — the count a NEW write-cache merge needs to ever
-   START — permanently starving a still-needed, still-redeemable higher size of its own write-cache
-   refill (see `docs/DESIGN_HISTORY.md`).
+   **Stranded disks are never destroyed.** A disk whose own fixed corresponding tier has moved past
+   the level it requires (see "Disks always take priority" above) simply stays full and
+   unredeemable for the rest of the cycle — its slot doesn't recycle back to empty, and nothing
+   sweeps it away. It sits exactly as built until the next real Prestige resets purchase levels and
+   reopens that size's redemption window. An earlier version ("idle disk liquidation") swept such
+   stranded, fully-built disks straight into `intro.bits` instead once the Foundry had nothing
+   higher-priority to do; this was removed per the maintainer's explicit instruction — destroying a
+   disk the player actually built, just because an unrelated tier's own (much faster) autobuyer
+   happened to outrun Storage's pace, was surprising and unwanted, especially since a long offline
+   catch-up made it easy to trigger. See `docs/DESIGN_HISTORY.md`.
 
    `ComputePage` (page
    id `'boosters'`) reveals once Buffer reaches `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (4,000,000
@@ -2633,10 +2620,10 @@ purchases were manual or automatic.
 | `tickDiskAutoFill` | `(elapsedSeconds = 0) → state → state` | Byte Foundry Disks: three ascending passes over every known size (skipping mid-build — `intro.diskBuild?.size`): (1) refill each size's **read cache** toward full in whole-block transfers only when that size's own POOL BUFFER holds ≥ one block (or dump a full-but-sub-block balance when the pool buffer's own capacity is &lt; one block) — skips sizes mid-flush, and this whole pass is bandwidth-capped at `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER` (10) × that pool's own Bandwidth × `elapsedSeconds` (one shared budget across every eligible size in that pool this call — a 0-elapsed call contributes no refill); (2) start a timed flush into one empty disk when `diskCache[size] >= size`, no write-cache merge, and `isDiskRedeemable` is false — duration `getDiskReadCacheFlushSeconds` (one block ÷ (that pool's Bandwidth × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)); (3) count down `intro.diskReadCacheFlush` (pause on tier match) and complete into one disk. Same-reference no-op when nothing changed. Called from `tickGame` before `tickDiskWriteCache` with real elapsed (advances flushes) and after it with `0` elapsed (refill/start only — avoids double-countdown), and again after a successful `tickDiskAutoRedeem` with 0 elapsed — unconditional, bypasses `isProductionFrozen` |
 | `getDiskReadCacheFlushSeconds` | `(state, size) → number` | Duration for a new read-cache → disk flush (a DISK filling FROM a cache): `(size / DISK_CACHE_BLOCK_COUNT) / (getStoragePoolBandwidth(state, getPoolIndexForDiskSize(size)) * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)` |
 | `getDiskReadCacheFlush` / `getDiskReadCacheFlushFill` / `isDiskReadCacheFlushPaused` | helpers | In-flight flush lookup, 0..1 progress fill, and whether tier match is currently pausing the countdown |
-| `tickDiskWriteCache` | `elapsedSeconds → state → state` | Byte Foundry Disks upward ladder: when 10 full disks exist at source size N and target N+1 has an empty container, collects 10 timed segments — a CACHE filling FROM Disks, each segment's duration = source size / (production rate × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 2) — into `intro.diskWriteCache[N+1]` (pausing collect while source size has an active tier claim), then flushes — a DISK filling FROM a cache, duration = target size / (production rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2), independent of `getDiskBuildSeconds`'s own 1x-bandwidth fresh-build duration — into one disk at N+1. Empty at rest. Called from `tickGame` between the two `tickDiskAutoFill` passes |
+| `tickDiskWriteCache` | `elapsedSeconds → state → state` | Byte Foundry Disks upward ladder: when 10 full disks exist at source size N, target N+1 has an empty container, and source N is not already stranded (`isDiskStrandedByAdvancedTier` — its own tier has already moved past the level it requires), collects 10 timed segments — a CACHE filling FROM Disks, each segment's duration = source size / (production rate × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 2) — into `intro.diskWriteCache[N+1]` (pausing collect while source size has an active tier claim, and permanently once source size instead becomes stranded mid-merge — "simply ignore it," see `docs/DESIGN_HISTORY.md`), then flushes — a DISK filling FROM a cache, duration = target size / (production rate × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2), independent of `getDiskBuildSeconds`'s own 1x-bandwidth fresh-build duration — into one disk at N+1. Empty at rest. Called from `tickGame` between the two `tickDiskAutoFill` passes |
 | `isDiskCacheBlockReleasable` | `(state, capacityBits) → bool` | Byte Foundry Disks: whether that size's cache currently holds at least one full, releasable block — `diskCache[capacityBits] >= capacityBits / DISK_CACHE_BLOCK_COUNT` — that size isn't currently mid-build, **and** `isDiskRedeemable(state, capacityBits)` (that size's own fixed corresponding tier currently sits at exactly the level that size maps to) |
 | `releaseDiskCacheBlock` | `capacityBits → state → state` | Byte Foundry Disks: no-op unless `isDiskCacheBlockReleasable`; otherwise moves exactly one block's worth of bits (`capacityBits / DISK_CACHE_BLOCK_COUNT`) out of `diskCache[capacityBits]` into `resources.base` (Bits) — **not** Memory — Cache's only player-facing use (manual funding of the matching tier's level blocks). `tickDiskAutoFill` refills the gap in whole-block transfers once Memory has enough again |
-| `isDiskRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Disks: true whenever `capacityBits`' own FIXED, PERMANENT corresponding tier (via the internal `getMatchingTierForDiskSize`/`getDiskRequiredTierLevel` helpers — the tier sharing that disk-ladder step's Data Lake grouping, `getDataLakeTierIndex`, and that step's 1st/2nd/3rd position within its 3-step group as the required level) is CURRENTLY sitting at exactly that required level (`purchaseLevels[tier.id] ?? 1 === requiredLevel`) — a genuine one-tick-only EXACT match, same as before, but now against a fixed (tier, level) pair rather than a live price comparison (superseded the earlier "whichever tier's current per-unit cost happens to coincidentally match its size" design — see `docs/DESIGN_HISTORY.md`). A tier already past its required level, or not yet there, makes the disk simply wait — once that size's own array is fully built, `tickIdleDiskLiquidation` sweeps a disk already past its level straight into Bits instead (see "Data Lakes" above) |
+| `isDiskRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Disks: true whenever `capacityBits`' own FIXED, PERMANENT corresponding tier (via the internal `getMatchingTierForDiskSize`/`getDiskRequiredTierLevel` helpers — the tier sharing that disk-ladder step's Data Lake grouping, `getDataLakeTierIndex`, and that step's 1st/2nd/3rd position within its 3-step group as the required level) is CURRENTLY sitting at exactly that required level (`purchaseLevels[tier.id] ?? 1 === requiredLevel`) — a genuine one-tick-only EXACT match, same as before, but now against a fixed (tier, level) pair rather than a live price comparison (superseded the earlier "whichever tier's current per-unit cost happens to coincidentally match its size" design — see `docs/DESIGN_HISTORY.md`). A tier already past its required level, or not yet there, makes the disk simply wait, full and untouched, until the tier's level matches again — which only happens after the next real Prestige resets purchase levels (see "Data Lakes" above) |
 | `getDiskRedeemTierName` | `(state, capacityBits) → string \| null` | Byte Foundry Disks: names which tier a disk of `capacityBits` is fixed to — the matched tier's display `name` (via the internal `getMatchingTierForDiskSize` helper, a direct positional `TIER_DEFINITIONS` lookup, not a cost search) only while that tier currently sits at the disk's own required level, or `null` otherwise. `ByteFoundryPage`/`StoragePage` call this directly (rather than reimplementing the match) to render e.g. "Redeems 1 10 KB disk for 1 free Megabyte" |
 | `redeemDisk` | `capacityBits → state → state` | Byte Foundry Disks: no-op if no disk of that size is currently full (`intro.disks[capacityBits] <= 0`), if that size's array is currently mid-build (`intro.diskBuild?.size === capacityBits` — IO disallowed), or if its own fixed corresponding tier isn't currently at the required level (`isDiskRedeemable`/`getMatchingTierForDiskSize`); otherwise decrements `intro.disks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.disksBuiltTotal[capacityBits]` is untouched, so the disk re-enters the fillable pool) and grants `getPurchaseBlockSize(state) - (purchaseLevelProgress[tier.id] ?? 0)` free units of that fixed tier via `grantTierUnits` — completing the tier's WHOLE current level in one shot, not a single unit (an earlier design granted exactly 1 — see `docs/DESIGN_HISTORY.md`) — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` too (a disk's contents came from Memory via `tickDiskAutoFill`, not a further bit-to-Kilobyte conversion at redeem time) |
 | `tickDiskAutoRedeem` | `state → state` | Byte Foundry Disks: no-op unless there's an eligible size. A size is eligible if a disk of it is currently FULL, `isDiskRedeemable` (its own fixed corresponding tier is currently at the required level), its array isn't currently mid-build, it isn't already in `intro.diskAutoRedeemedSizes` this cycle, AND that fixed tier's own unit-buying autobuyer is currently actually running — unlocked (`autobuyers[tier.id]` non-null) and not paused (`autobuyersEnabled[tier.id] ?? true`, via the internal `isTierAutobuyerActive` helper). No more "smallest denomination always auto-redeems regardless" carve-out, and no global enable/disable toggle at all — with no active autobuyer for the matching tier, a full/redeemable disk simply waits for a manual click (`redeemDisk`) instead. Redeems the smallest eligible size and marks it in `diskAutoRedeemedSizes`, capping auto-redeem at once per size per real Prestige cycle (reset fresh every real Prestige — see `prestigeGame`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `redeemDisk` itself), at the very end, after every other per-tick automation (including `tickDiskAutoFill`, which runs much earlier, right after `tickDiskBuild` — see the `tickGame` row above — and a possible automatic Speed Up), so it always reacts to every tier's truly final level for the tick — a disk filled earlier the same tick can still redeem the same tick |
