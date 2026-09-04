@@ -1125,9 +1125,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    top of the Compute page, not at the bottom"): an armed-tier status line names the currently armed
    tier and how many tokens it holds, then the 3 small icon preset buttons — disabled entirely until
    a tier is armed, and (per the "no boost of any kind currently active" gate above) disabled again
-   the instant any boost starts, regardless of type/tier. Only while a boost IS active, a Stack +
-   Reclaim row appears right below the presets ("Stack and reclaim buttons shall be shown on the next
-   row"). THEN, below the whole effects section, come the tier rows themselves — clicking one arms
+   the instant any boost starts, regardless of type/tier. Only while a boost IS active, a row appears
+   right below the presets with Stack plus exactly ONE of Reclaim or Forfeit ("Stack and reclaim
+   buttons shall be shown on the next row") — mutually exclusive by `computeBoostStacks`: Reclaim
+   (instant, no confirmation) while `> 1`, Forfeit (confirmation-gated, clears the boost entirely
+   with no refund) once down to the last remaining stack (`=== 1`) — see the Reclaim/Forfeit
+   paragraph above and `docs/DESIGN_HISTORY.md` for why these two were made mutually exclusive
+   rather than Reclaim staying visible-but-disabled at 1 stack. THEN, below the whole effects section, come the tier rows themselves — clicking one arms
    the presets above it. Ranked fourth in the forced priority order
    (below Disk Fill/Speed/Provision Disk — see "Forced priority order" below):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`

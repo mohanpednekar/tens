@@ -1,5 +1,30 @@
 # Design history & rationale
 
+### Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04
+
+Player feedback on the just-shipped Reclaim/Forfeit mechanics (previous entries) pointed out that
+the two controls should never both be relevant at once: **Reclaim and Forfeit are mutually
+exclusive, Forfeit needs confirmation, Reclaim is instant, and Forfeit should only show once the
+boost is down to its last remaining stack and still active.**
+
+Previously `ComputePage`'s `StackReclaimRow` rendered BOTH Reclaim and Forfeit unconditionally
+whenever any boost was active, each independently disabled by its own gate
+(`canReclaimComputeBoost`/`canForfeitComputeBoost`). This meant a multi-stack boost showed a live,
+clickable Forfeit button right next to Reclaim the whole time — a player could accidentally forfeit
+several stacks' worth of tokens outright (no refund) via a control that was always sitting there,
+rather than being nudged toward Reclaim's incremental, refundable path first. Reclaim itself was
+never hidden either — at exactly 1 stack it just sat visibly disabled, which read as confusing next
+to an enabled Forfeit doing conceptually the same "end the boost" job.
+
+Fixed by conditionally rendering exactly one of the two based on `intro.computeBoostStacks`, not
+disabling one while leaving both visible: Reclaim renders (still subject to its own
+`canReclaimComputeBoost` gate, including the pooled-time floor) only while `computeBoostStacks > 1`;
+Forfeit renders only once `computeBoostStacks === 1` — the last remaining, still-active stack, where
+letting it run out is the only other way to end it early. Stack itself is unaffected by this
+change — it renders regardless of stack count, since it's not part of the Reclaim/Forfeit
+exclusivity. Neither control's own underlying gate function changed; this was purely a rendering
+condition added around each `CompactButton` in `src/pages/ComputePage/index.jsx`.
+
 ### CLAUDE.md Economy model duplication trim — 2026-09-03
 
 `CLAUDE.md`'s "Economy model" section had grown to 572 lines of formula/UI-rendering detail

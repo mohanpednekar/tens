@@ -809,21 +809,26 @@ Strict three-layer separation:
    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
    enhancement — see "Economy model" below), disabled
    until a tier is armed. While a boost is active, activating any NEW boost is blocked entirely
-   (any type/tier) — a Stack + Reclaim row appears right below the presets instead:
+   (any type/tier) — a Stack + Reclaim-or-Forfeit row appears right below the presets instead:
    `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
    spending another token of ITS OWN funding tier (never whatever tier a player might have since
-   selected), and `reclaimComputeBoost` (`canReclaimComputeBoost`'s own gate) reclaims the most
-   recently added, still-unused stack of an active boost, one at a time, refunding 1 token into
-   that same funding tier — only reclaimable while MORE than 1 stack is currently held
-   (`computeBoostStacks > 1`) AND enough pooled time remains that reclaiming one stack's own
-   duration wouldn't zero it out (`computeBoostRemainingSeconds` is a single pooled timer, not N
-   independent per-stack timers, so a multi-stack boost late in its countdown can hold less time
-   than even one stack's own base duration — `stacks > 1` alone isn't sufficient, since it would
-   let a reclaim floor the pool straight to 0, ending the effect exactly as if the last stack itself
-   had been reclaimed); once a boost's effect has actually started it always holds at least 1
-   stack while running, and that one actively-funding stack can never be reclaimed away — only
-   letting the boost run out ends it early, not reclaim (an earlier version allowed reclaiming the
-   very last stack too, canceling the boost outright — see `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
+   selected). Alongside Stack, exactly ONE of Reclaim or Forfeit renders — mutually exclusive by
+   `computeBoostStacks`, not two always-visible controls with different disabled states (see
+   `docs/DESIGN_HISTORY.md`): while `computeBoostStacks > 1`, `reclaimComputeBoost`
+   (`canReclaimComputeBoost`'s own gate) reclaims the most recently added, still-unused stack of an
+   active boost, one at a time — instant, no confirmation — refunding 1 token into that same
+   funding tier and subtracting that stack's own duration, gated additionally on enough pooled time
+   remaining that the subtraction wouldn't zero it out (`computeBoostRemainingSeconds` is a single
+   pooled timer, not N independent per-stack timers, so a multi-stack boost late in its countdown
+   can hold less time than even one stack's own base duration — `stacks > 1` alone isn't
+   sufficient, since it would let a reclaim floor the pool straight to 0, ending the effect exactly
+   as if the last stack itself had been reclaimed). Once `computeBoostStacks === 1` (the last
+   remaining, still-active stack — an active boost always holds at least 1 while running), Reclaim
+   is replaced by Forfeit instead (`forfeitComputeBoost`, `canForfeitComputeBoost`'s own gate) —
+   clears the boost entirely with no token refund, gated behind a `window.confirm` (unlike Reclaim's
+   instant click) since it's the more consequential, final action; letting that last stack run out
+   naturally is the only OTHER way to end it early (an earlier version let Reclaim itself cancel the
+   very last stack too, conflating the two actions — see `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
    the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
    #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
@@ -1220,8 +1225,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1726 tests). The four core test files (`engine.test.js`, `layers.test.js`,
-- `yarn test` is green (1726 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1729 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

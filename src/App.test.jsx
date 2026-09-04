@@ -3714,9 +3714,10 @@ describe('Byte Foundry Compute Boost', () => {
 
   test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    // Forfeit only shows at the last remaining stack (stacks: 1) — see the mutual-exclusion test below.
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
     openBoosters()
@@ -3726,6 +3727,27 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoostType).toBe(null)
     expect(saved.intro.computeCores).toBe(3)
     confirmSpy.mockRestore()
+  })
+
+  test('Reclaim and Forfeit are mutually exclusive — Reclaim shows only above 1 stack, Forfeit only at the last remaining stack', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds * 2,
+    })
+    const { unmount } = render(<App />)
+    openBoosters()
+    expect(screen.getByRole('button', { name: /reclaim one stack/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /forfeit the active compute boost with no refund/i })).not.toBeInTheDocument()
+    unmount()
+
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
+    })
+    render(<App />)
+    openBoosters()
+    expect(screen.queryByRole('button', { name: /reclaim one stack/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /forfeit the active compute boost with no refund/i })).toBeInTheDocument()
   })
 
   test('the Stack button is disabled once the active boost is already at COMPUTE_BOOST_MAX_STACKS', () => {
@@ -3829,23 +3851,6 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
   })
 
-  test('the Reclaim button is disabled once only 1 stack remains — an active boost\'s own effect can never be reclaimed away entirely, only clicking it stays a no-op', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 0,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: COMPUTE_BOOST_PRESETS.burst.durationSeconds,
-    })
-    render(<App />)
-    openBoosters()
-
-    const reclaimButton = screen.getByRole('button', { name: /reclaim one stack/i })
-    expect(reclaimButton).toBeDisabled()
-    fireEvent.click(reclaimButton)
-
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.intro.computeBoostType).toBe('burst') // still active — the last stack was never reclaimed
-    expect(saved.intro.computeBoostStacks).toBe(1)
-    expect(screen.getByLabelText(/^active compute boost$/i)).toBeInTheDocument()
-  })
 })
 
 describe('ComputePage merge chain', () => {
