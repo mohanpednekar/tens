@@ -204,8 +204,8 @@ export const INTRO_CONVERSION_UNLOCK_CAPACITY = INTRO_BITS_PER_KILOBYTE_CONVERSI
 // only": the multiplier scales just the actual bits that land in intro.bits each tick
 // (tickIntroProduction) and the actual bits that land in a pool's own local buffer each tick
 // (tickPoolBufferFill) — every other consumer of these two rate functions, e.g. disk build time,
-// cache fill/flush, Data Lake transfer pacing, idle-disk liquidation, and Compute merge/boost
-// pacing, keeps reading the raw, un-multiplied rate exactly as before this mechanic existed). The
+// cache fill/flush, Data Lake transfer pacing, and Compute merge/boost pacing, keeps reading the
+// raw, un-multiplied rate exactly as before this mechanic existed). The
 // multiplier itself is fill-dependent: starts at FILL_MULTIPLIER_MAX_PERCENT when the Data Stream
 // Buffer / a pool's own local buffer (getPoolBufferBits/getPoolBufferCapacity) is empty, and drops
 // 1 percentage point per 1% of that buffer filled, reaching exactly 100% at 50% full and
