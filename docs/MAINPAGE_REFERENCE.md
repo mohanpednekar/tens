@@ -417,16 +417,26 @@ not at the bottom"):
       this button) together with the forced priority order (a no-op while Disk Fill/Bandwidth/Disk
       Build outranks Compute — see "Forced priority order" in docs/ECONOMY_REFERENCE.md), with a
       `title` naming which to take first in that case, or prompting tier selection if none is armed.
-   c. A `StackReclaimRow` (`role="group"`, `aria-label="stack or reclaim the active compute boost"`)
-      — rendered only while a boost is active (`boostActive`) — two `CompactButton`s: **Stack**
+   c. A `StackReclaimRow` (`role="group"`,
+      `aria-label="stack, reclaim, or forfeit the active compute boost"`) — rendered only while a
+      boost is active (`boostActive`) — always shows **Stack**
       (`aria-label="stack the active compute boost"`, visible label `"+ Stack"`,
       `disabled={!isStackComputeBoostTurnAvailable(state)}`) calling `actions.stackComputeBoost`,
       which always extends the ACTIVE boost's own funding tier (`intro.computeBoostTierIndex`),
-      never whatever tier is currently armed if the player has since clicked a different row; and
-      **Reclaim** (`aria-label="reclaim one stack of the active compute boost"`, visible label
-      `"↩ Reclaim"`, `disabled={!canReclaimComputeBoost(state)}`) calling
+      never whatever tier is currently armed if the player has since clicked a different row; PLUS
+      exactly one of **Reclaim** or **Forfeit**, mutually exclusive by `intro.computeBoostStacks`
+      (not two always-visible controls with different disabled states — conflating "Reclaim, but
+      disabled" with the last-stack case read as confusing, see `docs/DESIGN_HISTORY.md`): while
+      `computeBoostStacks > 1`, **Reclaim** (`aria-label="reclaim one stack of the active compute
+      boost"`, visible label `"↩ Reclaim"`, `disabled={!canReclaimComputeBoost(state)}` — the
+      pooled-time floor can still disable it within that range) calling
       `actions.reclaimComputeBoost`, undoing the most recently added, still-unused stack one at a
-      time (refunds 1 token of the active funding tier, subtracts that stack's own duration).
+      time (refunds 1 token of the active funding tier, subtracts that stack's own duration) —
+      instant, no confirmation; once `computeBoostStacks === 1` (the last remaining, still-active
+      stack), **Forfeit** (`aria-label="forfeit the active compute boost with no refund"`, visible
+      label `"✕ Forfeit"`, `disabled={!canForfeitComputeBoost(state)}`) calling
+      `actions.forfeitComputeBoost` after a `window.confirm`, clearing the boost entirely with no
+      token refund — the only way to end that last stack early (letting it run out is the other).
 3. THEN, below the whole effects section, the page branches on `intro.computeMergePageUnlocked` (a
    permanent, one-time reveal latch — see `docs/ECONOMY_REFERENCE.md`'s "Byte Foundry" step 9 —
    that flips the first time `intro.computeCoresEverEarned`, a lifetime counter never decremented by

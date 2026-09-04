@@ -1,5 +1,89 @@
 # Design history & rationale
 
+### Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04
+
+Player feedback on the just-shipped Reclaim/Forfeit mechanics (previous entries) pointed out that
+the two controls should never both be relevant at once: **Reclaim and Forfeit are mutually
+exclusive, Forfeit needs confirmation, Reclaim is instant, and Forfeit should only show once the
+boost is down to its last remaining stack and still active.**
+
+Previously `ComputePage`'s `StackReclaimRow` rendered BOTH Reclaim and Forfeit unconditionally
+whenever any boost was active, each independently disabled by its own gate
+(`canReclaimComputeBoost`/`canForfeitComputeBoost`). This meant a multi-stack boost showed a live,
+clickable Forfeit button right next to Reclaim the whole time — a player could accidentally forfeit
+several stacks' worth of tokens outright (no refund) via a control that was always sitting there,
+rather than being nudged toward Reclaim's incremental, refundable path first. Reclaim itself was
+never hidden either — at exactly 1 stack it just sat visibly disabled, which read as confusing next
+to an enabled Forfeit doing conceptually the same "end the boost" job.
+
+Fixed by conditionally rendering exactly one of the two based on `intro.computeBoostStacks`, not
+disabling one while leaving both visible: Reclaim renders (still subject to its own
+`canReclaimComputeBoost` gate, including the pooled-time floor) only while `computeBoostStacks > 1`;
+Forfeit renders only once `computeBoostStacks === 1` — the last remaining, still-active stack, where
+letting it run out is the only other way to end it early. Stack itself is unaffected by this
+change — it renders regardless of stack count, since it's not part of the Reclaim/Forfeit
+exclusivity. Neither control's own underlying gate function changed; this was purely a rendering
+condition added around each `CompactButton` in `src/pages/ComputePage/index.jsx`.
+
+**Follow-up (same day): the standalone Forfeit button wasn't the only way to discard multiple
+stacks.** Devin Review on the resulting PR pointed out a second path to the exact outcome the fix
+above was meant to prevent: `ComputePage`'s preset buttons already offer a "forfeit-and-replace"
+flow — clicking a DIFFERENT preset/tier while a boost is active confirm-guards then calls
+`activateComputeBoost(boostType, tierIndex, forfeitConfirmed=true)`, which cancels whatever's
+currently running (ALL its stacks, no refund) and starts the new one. This flow was untouched by
+the rendering-condition fix above (it's a different button, `canActivateComputeBoost`'s own gate,
+not `canForfeitComputeBoost`'s), so a player could still discard several stacks' worth of tokens
+outright — just through a different control than the one just restricted. Fixed at the engine
+level, not just the UI: `canActivateComputeBoost`'s forfeit-replace branch now also requires
+`computeBoostStacks <= 1`, the identical restriction the standalone Forfeit button uses, so
+switching to a genuinely different boost is only ever possible once Reclaim has whittled the active
+one down to its last stack (matching `activateComputeBoost` itself enforcing this — not just a
+UI-only disabled state, per this repo's existing "Security notes" convention). Existing tests
+exercising `computeBoostStacks: 2` forfeit-replace scenarios (which had demonstrated exactly the
+now-closed gap) were updated to `1`; new tests cover the blocked-at-multiple-stacks case at both
+the engine (`canActivateComputeBoost`/`activateComputeBoost`) and component (`App.test.jsx`) levels.
+
+**Second follow-up (same day): `canForfeitComputeBoost` itself still had no stack restriction at
+all.** A further Devin Review round on the same PR pointed out the first follow-up above only
+closed the preset-replace path — `canForfeitComputeBoost`/`forfeitComputeBoost` (the standalone
+Forfeit action's own engine-level gate) still unconditionally allowed forfeiting a boost at ANY
+stack count, contradicting the same repo convention just applied to
+`canActivateComputeBoost`: the engine itself should enforce an invariant, not rely on the UI only
+ever rendering the button under the right condition. In the shipped UI this specific gap wasn't
+directly reachable by a normal player any more (the standalone Forfeit button had already stopped
+rendering above 1 stack in the very first fix in this entry), but the underlying API itself still
+disagreed with its own documented contract, and any other caller (present or future) would have
+silently reopened the exact gap the whole day's work was closing. Fixed by adding the same
+`computeBoostStacks <= 1` requirement to `canForfeitComputeBoost` directly, matching
+`canActivateComputeBoost`'s own restriction — `forfeitComputeBoost` now becomes a same-reference
+no-op whenever called on a boost still holding more than 1 stack, so all three surfaces (standalone
+Forfeit button, preset forfeit-and-replace, and the raw action itself) now agree: forfeiting
+anything is only ever possible once Reclaim has brought the boost down to its last stack.
+
+The same review round also flagged, and this session investigated and declined, a claim that a
+legacy save could have an active boost with `computeBoostStacks` missing/zero, leaving neither
+Reclaim nor Forfeit rendered. `computeBoostType` and `computeBoostStacks` were introduced together
+in the same commit (`9a71df4`, "Add Compute Boost activation and a Sacrifice confirmation") — there
+is no earlier schema where one existed without the other — and every mutating code path
+(`activateComputeBoost`/`stackComputeBoost`/`reclaimComputeBoost`/`forfeitComputeBoost`/
+`tickComputeBoost`) keeps them in lockstep, always setting `computeBoostStacks >= 1` whenever
+`computeBoostType` is non-null. No `save-migration/` entry references either field. This scenario
+isn't reachable through any real player save or any engine-driven code path.
+
+A later adversarial review of this same PR (re-reviewing after the `canForfeitComputeBoost` fix
+above) noted one narrow exception outside that guarantee: Dev Mode's raw-JSON editor
+(`DevModePage`, `applyDevGameStateJson` → `mergeStateForDevWrite`) deep-merges a caller-supplied
+partial object onto the live dev-save state, so a deliberately crafted partial edit (e.g. just
+`{ "intro": { "computeBoostType": "burst" } }` while `computeBoostStacks` still sits at its
+existing `0`) CAN desync the pair — `storage.js`'s `mergeState` only shallow-overlays `intro` by
+top-level key on load, it doesn't re-derive `computeBoostStacks` from `computeBoostType`. This is
+accepted as-is rather than fixed: Dev Mode is a dev-build-only debug sandbox (never shipped to
+players — see "Dev Mode" in `CLAUDE.md`) whose whole raw-JSON-editor feature is explicitly designed
+to let a developer write arbitrary partial state for testing; guarding against every
+internally-inconsistent state it could produce would defeat that purpose. The "unreachable through
+any real save" claim above still holds for every player-facing and engine-driven path — only this
+one deliberately-freeform dev tool is excluded.
+
 ### CLAUDE.md Economy model duplication trim — 2026-09-03
 
 `CLAUDE.md`'s "Economy model" section had grown to 572 lines of formula/UI-rendering detail

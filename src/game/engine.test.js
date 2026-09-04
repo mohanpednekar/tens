@@ -4516,6 +4516,12 @@ describe('canActivateComputeBoost', () => {
     expect(canActivateComputeBoost(state, 'burst', 1, true)).toBe(false) // same type+tier still blocked
   })
 
+  it('forfeit-replace of a different boost is blocked while more than 1 stack is held, even with forfeitConfirmed — Reclaim down to the last stack first (Devin Review finding)', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: 5, computeNodes: 5, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2 })
+    expect(canActivateComputeBoost(state, 'standard', 1, true)).toBe(false)
+    expect(canActivateComputeBoost(state, 'burst', 2, true)).toBe(false)
+  })
+
   it('is false for an unrecognized preset name', () => {
     const state = withIntro(createInitialGameState(), { computeCores: 1 })
     expect(canActivateComputeBoost(state, 'does_not_exist', 1)).toBe(false)
@@ -4568,7 +4574,22 @@ describe('activateComputeBoost', () => {
     expect(activateComputeBoost('standard', 1)(state)).toBe(state)
   })
 
-  it('with forfeitConfirmed, replaces a different active boost with no refund of the forfeited stacks', () => {
+  it('with forfeitConfirmed, replaces a different active boost with no refund of the forfeited stack — only reachable at the last remaining stack', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 5,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 1,
+      computeBoostRemainingSeconds: 30,
+    })
+    const after = activateComputeBoost('standard', 1, true)(state)
+    expect(after.intro.computeBoostType).toBe('standard')
+    expect(after.intro.computeBoostStacks).toBe(1)
+    expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
+    expect(after.intro.computeCores).toBe(4) // spent 1 for the new boost; no refund of the forfeited burst stack
+  })
+
+  it('is a same-reference no-op when replacing a different boost with forfeitConfirmed while more than 1 stack is held (Devin Review finding)', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: 5,
       computeBoostType: 'burst',
@@ -4576,11 +4597,7 @@ describe('activateComputeBoost', () => {
       computeBoostStacks: 2,
       computeBoostRemainingSeconds: 90,
     })
-    const after = activateComputeBoost('standard', 1, true)(state)
-    expect(after.intro.computeBoostType).toBe('standard')
-    expect(after.intro.computeBoostStacks).toBe(1)
-    expect(after.intro.computeBoostRemainingSeconds).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds)
-    expect(after.intro.computeCores).toBe(4) // spent 1 for the new boost; no refund of the 2 burst stacks
+    expect(activateComputeBoost('standard', 1, true)(state)).toBe(state)
   })
 
   it('forfeitComputeBoost clears the active boost with no token refund', () => {
@@ -4588,7 +4605,7 @@ describe('activateComputeBoost', () => {
       computeCores: 3,
       computeBoostType: 'burst',
       computeBoostTierIndex: 1,
-      computeBoostStacks: 2,
+      computeBoostStacks: 1,
       computeBoostRemainingSeconds: 40,
     })
     expect(canForfeitComputeBoost(state)).toBe(true)
@@ -4601,6 +4618,18 @@ describe('activateComputeBoost', () => {
 
   it('forfeitComputeBoost is a same-reference no-op while no boost is active', () => {
     const state = createInitialGameState()
+    expect(forfeitComputeBoost(state)).toBe(state)
+  })
+
+  it('forfeitComputeBoost is a same-reference no-op while more than 1 stack is held — a multi-stack boost must be Reclaimed down first (Devin Review finding)', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: 3,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: 40,
+    })
+    expect(canForfeitComputeBoost(state)).toBe(false)
     expect(forfeitComputeBoost(state)).toBe(state)
   })
 

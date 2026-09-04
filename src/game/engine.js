@@ -5181,9 +5181,12 @@ export const getComputeBoostMultiplier = intro =>
 // Whether boostType can be activated right now FROM tierIndex: a valid preset, a valid tier with
 // at least 1 of that tier's own token held. Starting a brand-new boost while none is active needs
 // no extra flag. Replacing an already-running boost forfeits the current one with NO refund — that
-// path is only allowed when `forfeitConfirmed` is true (UI must get an explicit confirm first) and
+// path is only allowed when `forfeitConfirmed` is true (UI must get an explicit confirm first),
 // the new type/tier differs from the active one (same type+tier while active is Stack's job, not
-// a forfeit-restart). The actual gate activateComputeBoost itself enforces, not just a UI-only
+// a forfeit-restart), AND `computeBoostStacks <= 1` — the same last-remaining-stack restriction
+// the standalone Forfeit button uses, so a preset swap can't reopen the "discard several stacks'
+// worth of tokens outright" gap that restriction closed (a multi-stack boost must be Reclaimed
+// down first). The actual gate activateComputeBoost itself enforces, not just a UI-only
 // disabled state — see "Security notes" in CLAUDE.md.
 export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConfirmed = false) => {
   if (!COMPUTE_BOOST_PRESETS[boostType]) return false
@@ -5196,7 +5199,12 @@ export const canActivateComputeBoost = (state, boostType, tierIndex, forfeitConf
 
   // Same type + same funding tier while active → use stackComputeBoost, not forfeit-restart.
   if (activeType === boostType && (state.intro.computeBoostTierIndex ?? 1) === tierIndex) return false
-  // Different boost while one is running only with an explicit forfeit confirmation from the UI.
+  // Different boost while one is running only with an explicit forfeit confirmation from the UI,
+  // and only once down to the last remaining stack — matches the standalone Forfeit button's own
+  // restriction (mutually exclusive with Reclaim, see docs/DESIGN_HISTORY.md). Without this, a
+  // preset swap would reopen the same "discard several stacks' worth of tokens outright" gap that
+  // restriction was meant to close, just through a different control (found by Devin Review).
+  if ((state.intro.computeBoostStacks ?? 0) > 1) return false
   return forfeitConfirmed === true
 }
 
@@ -5247,8 +5255,14 @@ export const isComputeUpgradeTurnAvailable = state =>
 
 // Cancels the active Compute Boost with NO token refund and NO duration credit — pure forfeit.
 // Same-reference no-op while no boost is active. Distinct from reclaimComputeBoost (which refunds).
-// UI must confirm before calling when the player is abandoning remaining stacks on purpose.
-export const canForfeitComputeBoost = state => (state.intro.computeBoostType ?? null) !== null
+// UI must confirm before calling when the player is abandoning the last stack on purpose. Only
+// reachable at `computeBoostStacks <= 1` — the same restriction canActivateComputeBoost's own
+// forfeit-replace branch uses — so this API can't be used to discard several stacks' worth of
+// tokens outright any more than the standalone Forfeit button or a preset swap can; a multi-stack
+// boost must be Reclaimed down first (found by Devin Review on the same PR that added the
+// canActivateComputeBoost restriction — see docs/DESIGN_HISTORY.md).
+export const canForfeitComputeBoost = state =>
+  (state.intro.computeBoostType ?? null) !== null && (state.intro.computeBoostStacks ?? 0) <= 1
 
 export const forfeitComputeBoost = state => {
   if (!canForfeitComputeBoost(state)) return state

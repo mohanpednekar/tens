@@ -1125,9 +1125,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    top of the Compute page, not at the bottom"): an armed-tier status line names the currently armed
    tier and how many tokens it holds, then the 3 small icon preset buttons — disabled entirely until
    a tier is armed, and (per the "no boost of any kind currently active" gate above) disabled again
-   the instant any boost starts, regardless of type/tier. Only while a boost IS active, a Stack +
-   Reclaim row appears right below the presets ("Stack and reclaim buttons shall be shown on the next
-   row"). THEN, below the whole effects section, come the tier rows themselves — clicking one arms
+   the instant any boost starts, regardless of type/tier. Only while a boost IS active, a row appears
+   right below the presets with Stack plus exactly ONE of Reclaim or Forfeit ("Stack and reclaim
+   buttons shall be shown on the next row") — mutually exclusive by `computeBoostStacks`: Reclaim
+   (instant, no confirmation) while `> 1`, Forfeit (confirmation-gated, clears the boost entirely
+   with no refund) once down to the last remaining stack (`=== 1`) — see the Reclaim/Forfeit
+   paragraph above and `docs/DESIGN_HISTORY.md` for why these two were made mutually exclusive
+   rather than Reclaim staying visible-but-disabled at 1 stack. THEN, below the whole effects section, come the tier rows themselves — clicking one arms
    the presets above it. Ranked fourth in the forced priority order
    (below Disk Fill/Speed/Provision Disk — see "Forced priority order" below):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
@@ -2816,4 +2820,4 @@ purchases were manual or automatic.
 - `COMPUTE_AUTO_BOOST_UNLOCK_COST = 30` — one-time PP cost for Compute auto-Boost (`buyComputeAutoBoost` / `tickAutoComputeBoost`)
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Core through Megacomputer — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
 - `COMPUTE_BOOST_TIER_POWER_STEP = 4` — each compute-ladder tier past Core multiplies a Boost preset's base multiplier by this much (`4^(tierIndex - 1)`); duration is unaffected
-- `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; replacing an active boost with a different preset/tier requires an explicit forfeit confirmation — see `forfeitComputeBoost` / `activateComputeBoost(..., forfeitConfirmed)`) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`
+- `COMPUTE_BOOST_MAX_STACKS = 10` — Byte Foundry Compute Boost: how many times `stackComputeBoost` can extend the currently active boost's remaining duration by spending another token of that boost's own funding tier (the multiplier itself never compounds; replacing an active boost with a different preset/tier requires an explicit forfeit confirmation AND `computeBoostStacks <= 1` — the same last-remaining-stack restriction the standalone Forfeit button uses, so a preset swap can't discard several stacks' worth of tokens outright the way the standalone control is restricted from doing — see `forfeitComputeBoost` / `activateComputeBoost(..., forfeitConfirmed)` / `docs/DESIGN_HISTORY.md`) — see `stackComputeBoost`/`canStackComputeBoost`/`activateComputeBoost`

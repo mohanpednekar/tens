@@ -562,11 +562,13 @@ const ComputePage = ({ game }) => {
                   ? 'Select a tier below first'
                   : sameAsActive
                     ? 'This boost is already active — use Stack to extend it'
-                    : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Provision Disk)'
-                      : needsForfeit
-                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
-                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
+                    : needsForfeit && intro.computeBoostStacks > 1
+                      ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
+                      : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
+                        ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Provision Disk)'
+                        : needsForfeit
+                          ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
+                          : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
               }
               type="button"
               variant="prestige"
@@ -589,29 +591,41 @@ const ComputePage = ({ game }) => {
           >
             <ButtonContent>+ Stack</ButtonContent>
           </CompactButton>
-          <CompactButton
-            aria-label="reclaim one stack of the active compute boost"
-            disabled={!canReclaimComputeBoost(state)}
-            onClick={actions.reclaimComputeBoost}
-            title={`Reclaim the most recent unused stack: refunds 1 ${singularize(armedRow?.label ?? 'Core')} and its duration — one at a time`}
-            type="button"
-            variant="neutral"
-          >
-            <ButtonContent>↩ Reclaim</ButtonContent>
-          </CompactButton>
-          <CompactButton
-            aria-label="forfeit the active compute boost with no refund"
-            disabled={!canForfeitComputeBoost(state)}
-            onClick={() => {
-              if (!window.confirm('Forfeit the active boost with no refund?')) return
-              actions.forfeitComputeBoost()
-            }}
-            title="Forfeit: cancel the active boost immediately with no token refund — asks for confirmation"
-            type="button"
-            variant="danger"
-          >
-            <ButtonContent>✕ Forfeit</ButtonContent>
-          </CompactButton>
+          {/* Reclaim and Forfeit are mutually exclusive, not two always-visible controls with
+              different disabled states: Reclaim only makes sense while there's quantity ABOVE the
+              one actively-funding stack to give back (computeBoostStacks > 1 — canReclaimComputeBoost's
+              own pooled-time floor can still disable it within that range); once down to the last
+              remaining stack, giving it back would end the boost outright, which is Forfeit's job
+              (instant refund vs. no-refund-with-confirmation are different enough operations that
+              conflating them into "Reclaim, but disabled" at 1 stack was confusing — see
+              docs/DESIGN_HISTORY.md). */}
+          {intro.computeBoostStacks > 1 && (
+            <CompactButton
+              aria-label="reclaim one stack of the active compute boost"
+              disabled={!canReclaimComputeBoost(state)}
+              onClick={actions.reclaimComputeBoost}
+              title={`Reclaim the most recent unused stack: refunds 1 ${singularize(armedRow?.label ?? 'Core')} and its duration — one at a time`}
+              type="button"
+              variant="neutral"
+            >
+              <ButtonContent>↩ Reclaim</ButtonContent>
+            </CompactButton>
+          )}
+          {intro.computeBoostStacks === 1 && (
+            <CompactButton
+              aria-label="forfeit the active compute boost with no refund"
+              disabled={!canForfeitComputeBoost(state)}
+              onClick={() => {
+                if (!window.confirm('Forfeit the active boost with no refund?')) return
+                actions.forfeitComputeBoost()
+              }}
+              title="Forfeit: cancel the active boost immediately with no token refund — asks for confirmation"
+              type="button"
+              variant="danger"
+            >
+              <ButtonContent>✕ Forfeit</ButtonContent>
+            </CompactButton>
+          )}
         </StackReclaimRow>
       )}
 
