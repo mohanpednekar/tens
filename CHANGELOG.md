@@ -103,6 +103,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
+- **A stranded Storage Disk could still be silently folded into another (possibly also-unredeemable)
+  array by the write-cache upward-merge mechanism**, undermining the idle-disk-liquidation removal
+  above — `tickDiskWriteCache` never checked whether a merge's source size was stranded before
+  starting or continuing to collect from it, and a Prestige landing mid-merge could discard
+  already-consumed source disks with nothing to show for it. A stranded source can no longer start
+  or continue feeding a write-cache merge. See `docs/DESIGN_HISTORY.md`.
 - **A lone Data Lake disk square rendered as a giant, room-spanning circle** at a fresh capacity
   level (only one slot to show) — `LakeSquare`'s own flex-grow stretched it to fill the whole row
   width with nothing else to share space with; capped with a `max-width`.
