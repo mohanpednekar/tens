@@ -5961,3 +5961,50 @@ WRONG under the new rule and updated to expect exactly 0, plus a check that
 `getPoolMultiplierPercent` reads precisely `FILL_MULTIPLIER_MIN_PERCENT` afterward; a second new test
 confirms a pool with room left in its buffer is unaffected (bonus untouched). `yarn test`: 1699/1699
 green (+1, net — one existing test's assertions changed, one new test added). `yarn build` succeeds.
+
+### Idle disk liquidation removed entirely — stranded disks now just sit idle instead of being converted to Bits
+
+A player reported that clicking a Data Lake's ⚡ Upgrade button seemed to trigger their built Storage
+Disks emptying out and never refilling, with the pool's Memory buffer draining afterward too. Tracing
+the actual mechanism (reproduced directly against the real engine functions, not just read from code)
+found this wasn't random: it was idle disk liquidation (`tickIdleDiskLiquidation`, introduced in the
+"Per-pool Bandwidth capped at sqrt(Capacity)..." entry above and refined across several Devin-review
+passes since — see the "idle disk liquidation" entries earlier in this file) firing in a delayed burst.
+
+**The chain.** A disk's redemption window is a one-time, exact-match thing per Prestige cycle: it
+only redeems while its corresponding tier (Kilobytes for pool 1, etc.) sits at EXACTLY the purchase
+level it requires (`isDiskRedeemable`). That tier's own level, though, advances from ordinary
+main-game buying — an autobuyer spending accumulated Money — which is completely independent of, and
+usually much faster than, Storage's own build pace. Over a long offline catch-up in particular, it's
+easy for a tier to blow right past the level a disk size needs, permanently stranding it for the rest
+of the cycle. Idle disk liquidation existed specifically to sweep such stranded, fully-built disks
+into Bits — but it's gated behind `!isAnyDataLakeCapacityDoublingAvailable(state)`, a GLOBAL check (any
+lake, not just the one being liquidated). So a stranded disk could sit looking intact for a while
+purely because some Data Lake's Upgrade was still unclaimed — and the instant that Upgrade got
+clicked, the guard lifted and every already-stranded, already-built disk got liquidated within
+moments, which read exactly like "clicking Upgrade emptied my disks."
+
+**Decision.** The maintainer's explicit instruction: *"No disks are ever supposed to be liquidated to
+bits. If the tier has surpassed the level, simply ignore it."* Destroying a disk the player actually
+built, just because an unrelated tier's own (much faster) autobuyer happened to outrun Storage's own
+pace, was judged surprising and unwanted — especially since a long offline stretch made it trivially
+easy to trigger without the player doing anything that looked like a mistake. Rather than trying to
+patch the guard's scoping (e.g. making it per-pool instead of global), the whole mechanic was removed:
+a disk whose tier has already moved past the level it requires now simply stays exactly as built —
+full, idle, unredeemable — until the next real Prestige resets purchase levels and reopens its
+window. Nothing sweeps it away; nothing is lost.
+
+**What was removed.** `tickIdleDiskLiquidation`, `isIdleDiskLiquidationAvailable`,
+`isIdleDiskLiquidationTurnAvailable`, `getIdleDiskLiquidationSizes`, `isDiskArrayFullyBuilt`,
+`isDiskSizeReservedForWriteCache`, `isAnyDataLakeCapacityDoublingAvailable`, and the now-unused
+`isDiskSizeStrandedByAdvancedTier` helper — all from `engine.js`. `tickStorage`'s own pipeline
+(`tickGame`) no longer calls into liquidation at all; it now ends at `tickQueuedDiskBuild`, with
+`tickDiskAutoFill` re-run only when a redeem or a queued build actually changed something. The whole
+"idle disk liquidation" describe block in `engine.test.js` (8 tests covering size-agnostic
+eligibility, mid-build protection, the "too early" vs. "already past" distinction, the
+write-cache-reservation protection, and the no-op cases) was replaced with a single regression test
+confirming a plain `tickGame` pass leaves an already-stranded, already-full disk completely
+untouched. `docs/ECONOMY_REFERENCE.md`'s "Idle disk liquidation" section, `isDiskRedeemable`'s
+function-table entry, `CLAUDE.md`'s Data Lakes paragraph, and `AGENTS.md`'s condensed mirror were all
+updated to describe the new "just sits idle" behavior instead. `yarn test`: 1726/1726 green (net −7:
+8 removed, 1 added). `yarn build` succeeds.

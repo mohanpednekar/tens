@@ -272,9 +272,6 @@ import {
   getDataLakeUnitBits,
   getDataLakeDepositedUnits,
   getDataLakeTier,
-  isIdleDiskLiquidationAvailable,
-  isIdleDiskLiquidationTurnAvailable,
-  tickIdleDiskLiquidation,
   getPoolBufferCapacity,
   getPoolBufferBits,
   tickPoolBufferFill,
@@ -10043,109 +10040,19 @@ describe('Data Lakes', () => {
     })
   })
 
-  describe('idle disk liquidation — now size-agnostic (Storage Disks no longer deposit into Data Lakes at all)', () => {
-    it('isIdleDiskLiquidationAvailable/TurnAvailable are true for ANY fully-built size holding a full disk, not just a pool\'s last (×100) size', () => {
-      // kb10 (an intermediate, non-last size) fully built and holding 1 full disk, with tier01
-      // already past every level a kb1/kb10/kb100 disk could ever redeem into.
-      const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP },
-        disks: { [kb10]: 1 },
-      })
-      expect(isIdleDiskLiquidationAvailable(state)).toBe(true)
-      expect(isIdleDiskLiquidationTurnAvailable(state)).toBe(true)
+  it('a disk fully built AND full, whose tier has already moved past the level it requires, just sits idle instead of being liquidated (see docs/DESIGN_HISTORY.md)', () => {
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
+      ...noOtherUpgradesLeft,
+      disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      disks: { [kb10]: 2, [kb100]: 1 },
     })
-
-    it('an idle full disk from a STILL-MID-BUILD array does NOT liquidate', () => {
-      const state = withIntro(createInitialGameState(), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb100]: 3 },
-        disks: { [kb100]: 1 },
-      })
-      expect(isIdleDiskLiquidationAvailable(state)).toBe(false)
-      expect(tickIdleDiskLiquidation(state)).toBe(state)
-    })
-
-    it('a fully-built size built AHEAD of its own tier\'s progress ("too early") does NOT liquidate — only a size the tier has already moved PAST is stranded', () => {
-      // kb10 requires tier01 level 2, but tier01 is still at its default level 1 — kb10 hasn't
-      // been reached yet ("too early"), NOT already passed, so this disk still has real future
-      // redemption use once tier01 catches up and must never be destroyed. No other size holds a
-      // full disk, so isDiskFillAvailable is false too (nothing anywhere is redeemable right now).
-      const state = withIntro(createInitialGameState(), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP },
-        disks: { [kb10]: 1 },
-      })
-      expect(isDiskFillAvailable(state)).toBe(false)
-      expect(isIdleDiskLiquidationAvailable(state)).toBe(false)
-      expect(tickIdleDiskLiquidation(state)).toBe(state)
-    })
-
-    it('a redeemable full disk (Disk Fill) elsewhere outranks liquidation', () => {
-      const state = withIntro(createInitialGameState(), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb100]: DISK_ARRAY_LADDER_CAP },
-        disks: { [kb1]: 1, [kb100]: 1 }, // kb1 is currently redeemable (default tier01 level 1)
-      })
-      expect(isDiskFillAvailable(state)).toBe(true)
-      expect(isIdleDiskLiquidationTurnAvailable(state)).toBe(false)
-    })
-
-    it('tickIdleDiskLiquidation liquidates the SMALLEST eligible size straight into Bits, freeing its slot to refill', () => {
-      const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
-        disks: { [kb10]: 2, [kb100]: 1 },
-      })
-      const after = tickIdleDiskLiquidation(state)
-      expect(after).not.toBe(state)
-      expect(after.intro.disks[kb10]).toBe(1) // smallest eligible size liquidated first
-      expect(after.intro.disks[kb100]).toBe(1) // untouched this call
-      expect(after.intro.bits).toBe(state.intro.bits + kb10)
-    })
-
-    it('a stranded source size does NOT liquidate while its next ladder size still needs it via write-cache (regression — Devin finding: liquidation could skim a stranded source down before it ever reaches DISK_ARRAY_LADDER_CAP simultaneously full, permanently starving the target size\'s own write-cache refill)', () => {
-      // kb10 requires tier01 level 2; tier01 is at level 3, so kb10 is stranded (own redeem window
-      // passed) — but kb100 (kb10's own next ladder size, requiring level 3) is NOT stranded: it's
-      // sitting EXACTLY at its required level right now, genuinely redeemable the moment a fresh
-      // disk arrives. kb100 was fully built once (disksBuiltTotal at cap) but every one of its
-      // disks has since been redeemed away (disks[kb100] = 0) — it desperately needs write-cache
-      // refill from kb10, which only has 3 of the 10 simultaneously-full disks a new merge needs.
-      const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
-        disks: { [kb10]: 3, [kb100]: 0 },
-      })
-      // kb10 is genuinely stranded (own redeem window passed) and kb100 is not (isDiskRedeemable
-      // would be true for kb100 if it held a full disk — it doesn't, hence isDiskFillAvailable
-      // being false here rather than blocking liquidation for that separate reason).
-      expect(isDiskRedeemable(state, kb10)).toBe(false)
-      expect(isDiskRedeemable(state, kb100)).toBe(true)
-      expect(isDiskFillAvailable(state)).toBe(false)
-      expect(isIdleDiskLiquidationAvailable(state)).toBe(false)
-      expect(tickIdleDiskLiquidation(state)).toBe(state)
-    })
-
-    it('protection lifts once the target size becomes stranded too — the chain still cascades upward as before', () => {
-      // Same setup as above, but tier01 has now moved to level 4 — kb100 is stranded too, so
-      // filling it with more disks via write-cache could never redeem either. kb10 is no longer
-      // protected and becomes the smallest eligible liquidation candidate again.
-      const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
-        ...noOtherUpgradesLeft,
-        disksBuiltTotal: { [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
-        disks: { [kb10]: 3, [kb100]: 0 },
-      })
-      expect(isIdleDiskLiquidationAvailable(state)).toBe(true)
-      const after = tickIdleDiskLiquidation(state)
-      expect(after).not.toBe(state)
-      expect(after.intro.disks[kb10]).toBe(2)
-      expect(after.intro.bits).toBe(state.intro.bits + kb10)
-    })
-
-    it('tickIdleDiskLiquidation is a same-reference no-op once nothing is eligible', () => {
-      const state = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
-      expect(tickIdleDiskLiquidation(state)).toBe(state)
-    })
+    expect(isDiskRedeemable(state, kb10)).toBe(false)
+    expect(isDiskFillAvailable(state)).toBe(false)
+    // No liquidation mechanic exists any more — a plain tickGame pass leaves already-stranded,
+    // already-full disks completely untouched.
+    const after = tickGame(1, Number.MAX_SAFE_INTEGER)(state)
+    expect(after.intro.disks[kb10]).toBe(2)
+    expect(after.intro.disks[kb100]).toBe(1)
   })
 
   it('createInitialGameState seeds all DATA_LAKE_TIER_COUNT lakes fresh (0 deposited, locked Boosters)', () => {

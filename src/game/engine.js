@@ -1641,18 +1641,14 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const afterRedeem = tickDiskAutoRedeem(state)
     const afterCache = tickDiskAutoReleaseCache(afterRedeem)
     // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
-    // redeem/cache-release have had first claim on the forced-priority state — ranks above idle
-    // liquidation, same as an ordinary manual Provision Disk click would.
+    // redeem/cache-release have had first claim on the forced-priority state.
     const afterQueuedBuild = tickQueuedDiskBuild(afterCache)
-    // Lowest-priority Storage action — only reached once redeem/deposit/cache release/queued build
-    // all had nothing left to do (see tickIdleDiskLiquidation's own forced-priority gate).
-    const afterLiquidation = tickIdleDiskLiquidation(afterQueuedBuild)
     // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
     // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
     // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
     // finishes), but re-running this is harmless and keeps the same "refresh after any Storage
-    // change" shape the redeem/liquidation branches already use.
-    return afterLiquidation === state ? state : tickDiskAutoFill(0)(afterLiquidation)
+    // change" shape the redeem branch already uses.
+    return afterQueuedBuild === state ? state : tickDiskAutoFill(0)(afterQueuedBuild)
   }
 
   // Once at/above PRESTIGE_THRESHOLD, everything freezes — no passive production, no autobuyer
@@ -2201,8 +2197,8 @@ export const getUnlockedStoragePoolCount = state => {
 // disk-build requirement above. Deliberately kept separate from isStoragePoolUnlocked/
 // getUnlockedStoragePoolCount rather than folded into them: those two feed the disk ladder's own
 // progression (getMaxActiveDiskLadderStep — which size is currently buildable), read-cache
-// eligibility, Data Lake idle-disk liquidation, and Booster transfer pacing, none of which this
-// capacity rule was meant to touch — see docs/DESIGN_HISTORY.md for the wider blast radius an
+// eligibility, and Booster transfer pacing, none of which this capacity rule was meant to touch —
+// see docs/DESIGN_HISTORY.md for the wider blast radius an
 // earlier attempt at folding this into isStoragePoolUnlocked directly caused. Pool 1's own 1 KiB
 // (8,192-bit) threshold here is deliberately equal to isStorageUnlocked's own
 // INTRO_DISK_UNLOCK_CAPACITY, so pool 1's card and the whole Storage section reveal at the same
@@ -2630,7 +2626,7 @@ export const normalizePoolMemoryCapacity = state => {
   // the same class of bug from the other direction — a JS array index that isn't a non-negative
   // integer also reads back `undefined`. Either way, without this clamp `getDataLakeCapacity` would
   // return `undefined`, breaking every downstream comparison against it (deposit eligibility,
-  // doubling availability, idle-disk liquidation) rather than just displaying a lower cap.
+  // doubling availability) rather than just displaying a lower cap.
   if (nextIntro.dataLakes) {
     const dataLakes = { ...nextIntro.dataLakes }
     let lakesChanged = false
@@ -3935,10 +3931,10 @@ const getDiskRequiredTierLevel = capacityBits => {
 // Which tier, if any, a Disk of `capacityBits` can redeem into RIGHT NOW — its one fixed
 // corresponding tier (see getDiskRequiredTierLevel above), but only while that tier is CURRENTLY
 // sitting at EXACTLY its required level (not yet there, or already past it, both mean this size is
-// not redeemable this cycle — the past-it case is what tickIdleDiskLiquidation picks up instead,
-// once that size's own array is fully built, see its own doc comment). undefined when no
-// corresponding tier exists (a size beyond DATA_LAKE_MAX_DISK_LADDER_STEP) or the current level
-// doesn't match.
+// not redeemable this cycle — a disk whose tier has already moved past it just sits full and idle
+// until the next real Prestige resets purchase levels and reopens the window; see
+// docs/DESIGN_HISTORY.md). undefined when no corresponding tier exists (a size beyond
+// DATA_LAKE_MAX_DISK_LADDER_STEP) or the current level doesn't match.
 const getMatchingTierForDiskSize = (state, capacityBits) => {
   const tierIndex = getDataLakeTierIndex(capacityBits)
   const requiredLevel = getDiskRequiredTierLevel(capacityBits)
@@ -3950,22 +3946,6 @@ const getMatchingTierForDiskSize = (state, capacityBits) => {
 
 export const isDiskRedeemable = (state, capacityBits) =>
   getMatchingTierForDiskSize(state, capacityBits) !== undefined
-
-// True only for the "already past it" half of getMatchingTierForDiskSize's two non-redeemable
-// cases — this size's own corresponding tier has moved on to a LATER level than this size
-// requires, so this disk can never be redeemed again this cycle. False both when the tier is
-// exactly at the required level (isDiskRedeemable already covers that) and when the tier hasn't
-// reached the required level YET ("too early" — a disk built ahead of the tier's own progress,
-// which still has real future use and must never be liquidated). Used by
-// getIdleDiskLiquidationSizes below to liquidate only genuinely stranded output.
-const isDiskSizeStrandedByAdvancedTier = (state, capacityBits) => {
-  const tierIndex = getDataLakeTierIndex(capacityBits)
-  const requiredLevel = getDiskRequiredTierLevel(capacityBits)
-  if (!tierIndex || !requiredLevel) return false
-  const tier = TIER_DEFINITIONS[tierIndex - 1]
-  if (!tier) return false
-  return (state.purchaseLevels?.[tier.id] ?? 1) > requiredLevel
-}
 
 // Byte Foundry pages call this directly (rather than getMatchingTierForDiskSize, kept internal) to
 // name which tier a disk would actually redeem into right now, or null if none currently matches —
@@ -4715,101 +4695,16 @@ export const doubleDataLakeCapacity = tierIndex => state => {
   }
 }
 
-// Once ANY size's disk array is fully built, a full disk of that size whose corresponding tier has
-// already moved PAST the level that size requires (isDiskSizeStrandedByAdvancedTier — genuinely
-// stranded, never redeemable again this cycle; a size the tier hasn't reached YET is excluded, see
-// that helper's own comment) has nowhere left to go — Storage Disks and Data Lakes are fully
-// decoupled now (see the "Data Lakes" section above), so there's no lake to defer to any more, for
-// any size, not just a pool's own last one. Rather than let that output sit permanently idle (and
-// its slot never recycle back to empty for cache to refill), it liquidates straight into Bits —
-// the same Data Stream currency Provision Disk spends from — automatically funding whatever
-// Provision Disk still needs next. Gated by the same forced priority order every other Byte
-// Foundry action follows, with Lake Capacity doubling (any tier) ranked directly above it:
-// liquidation only ever kicks in once the Foundry would otherwise be completely idle, so it never
-// destroys a disk that's still currently redeemable — isDiskFillAvailable (top of the priority
-// chain) is already true whenever any size
-// anywhere has a redeemable full disk, which blocks this entirely until that's no longer the case.
-const isDiskArrayFullyBuilt = (state, sizeBits) =>
-  (state.intro?.disksBuiltTotal?.[sizeBits] ?? 0) >= DISK_ARRAY_LADDER_CAP
-
-// A stranded size's full disks are NOT genuinely idle if the write-cache path up to its own next
-// ladder size (getNextDiskLadderSize) still has a real, current use for them: an empty, ever-built
-// target slot waiting to be topped up (the same "disksBuiltTotal > disks" condition
-// canStartDiskWriteCacheMerge itself checks before starting a NEW collect — this also covers a
-// merge already actively collecting, since a target slot mid-collect/mid-flush stays counted as
-// not-full the whole time). Only when the TARGET size is itself not ALSO permanently stranded
-// (isDiskSizeStrandedByAdvancedTier) does this protection apply — once the target's own tier has
-// moved past ITS required level too, filling it with more disks could never redeem either, so
-// there's genuinely nothing left to protect and the chain's liquidation cascades upward as before.
-// Without this, size-agnostic liquidation (added above) could repeatedly skim a stranded source's
-// full disks down to nothing before they ever reach DISK_ARRAY_LADDER_CAP simultaneously full — the
-// count canStartDiskWriteCacheMerge needs to ever START a merge — permanently starving a
-// still-needed, still-redeemable higher size of its own write-cache refill; see
-// docs/DESIGN_HISTORY.md.
-const isDiskSizeReservedForWriteCache = (state, size) => {
-  const targetSize = getNextDiskLadderSize(size)
-  if (isDiskSizeStrandedByAdvancedTier(state, targetSize)) return false
-  const builtAtTarget = state.intro?.disksBuiltTotal?.[targetSize] ?? 0
-  if (builtAtTarget <= 0) return false
-  const fullAtTarget = state.intro?.disks?.[targetSize] ?? 0
-  return builtAtTarget > fullAtTarget
-}
-
-// Ascending (smallest first) — every size that's ever been built out, still holds at least 1 full
-// disk, isn't itself mid-rebuild right now, whose corresponding tier has already moved past
-// the level this size requires (isDiskSizeStrandedByAdvancedTier) — a size built ahead of its own
-// tier's progress ("too early") is excluded: it still has real future redemption use once the
-// tier catches up, and must never be liquidated out from under it — AND isn't still reserved as
-// write-cache fodder for its own next ladder size (isDiskSizeReservedForWriteCache above).
-const getIdleDiskLiquidationSizes = state => {
-  const buildingSize = state.intro?.diskBuild?.size
-  return Object.keys(state.intro.disksBuiltTotal ?? {})
-    .map(Number)
-    .filter(size => size !== buildingSize)
-    .filter(size => (state.intro.disks?.[size] ?? 0) >= 1)
-    .filter(size => isDiskArrayFullyBuilt(state, size))
-    .filter(size => isDiskSizeStrandedByAdvancedTier(state, size))
-    .filter(size => !isDiskSizeReservedForWriteCache(state, size))
-    .sort((a, b) => a - b)
-}
-
-export const isIdleDiskLiquidationAvailable = state => getIdleDiskLiquidationSizes(state).length > 0
-
-const isAnyDataLakeCapacityDoublingAvailable = state => {
-  for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
-    if (isDataLakeCapacityDoublingAvailable(state, tierIndex)) return true
-  }
-  return false
-}
-
-export const isIdleDiskLiquidationTurnAvailable = state =>
-  isIdleDiskLiquidationAvailable(state) &&
-  !isDiskFillAvailable(state) &&
-  !isBandwidthAvailable(state) &&
-  !isProvisionDiskAvailable(state) &&
-  !isComputeUpgradeAvailable(state) &&
-  !isAnyDataLakeCapacityDoublingAvailable(state)
-
-// Called from tickStorage, after auto-redeem/auto-release-cache have already had first claim on
-// every size — liquidation is the lowest-priority Storage tick action. Liquidates the single
-// smallest eligible size per call, same cadence as the other Storage auto-actions.
-export const tickIdleDiskLiquidation = state => {
-  if (!isIdleDiskLiquidationTurnAvailable(state)) return state
-  const size = getIdleDiskLiquidationSizes(state)[0]
-  if (size === undefined) return state
-  const disks = state.intro.disks ?? {}
-  const full = disks[size] ?? 0
-  const { [size]: _removed, ...remainingDisks } = disks
-  const nextDisks = full > 1 ? { ...disks, [size]: full - 1 } : remainingDisks
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      disks: nextDisks,
-      bits: state.intro.bits + size,
-    },
-  }
-}
+// A disk whose corresponding tier has already moved PAST the level it requires (see
+// getMatchingTierForDiskSize/isDiskRedeemable above) is simply left alone: it isn't redeemable
+// again this cycle, but it stays exactly as built — a full disk of a size no longer redeemable
+// just sits there inert until either its tier's level drops back to the required one (never
+// happens mid-cycle) or the next real Prestige resets purchase levels and reopens the window.
+// Earlier versions liquidated such "stranded" output straight into Bits instead (see
+// docs/DESIGN_HISTORY.md) — removed because destroying a disk the player actually built, just
+// because an unrelated tier's autobuyer happened to outrun Storage's own pace (very easy to
+// trigger from a long offline catch-up), was surprising and unwanted; see the maintainer's
+// explicit "no disks are ever supposed to be liquidated to Bits" instruction recorded there.
 
 // --- Byte Foundry Compute Cores/Nodes --- see intro.computeCores/computeNodes in
 // createInitialGameState and INTRO_COMPUTE_CORE_UNLOCK_CAPACITY/COMPUTE_CORES_PER_NODE in

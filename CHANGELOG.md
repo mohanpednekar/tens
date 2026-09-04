@@ -96,6 +96,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   auto-convert (`tickIntroAutoInvest`) already handled this automatically with no per-cycle cap, so
   it's now the sole path from Data Stream bits to `tier01` units and to unlocking the main game — no
   functional loss, only a UI simplification. See `docs/DESIGN_HISTORY.md`.
+- **Idle disk liquidation** — the mechanic that converted a fully-built Storage Disk straight into
+  Bits once its corresponding tier's purchase level had moved past the level it required is gone. A
+  stranded disk now simply sits full and unredeemable for the rest of the cycle instead of being
+  destroyed; it becomes redeemable again after the next real Prestige resets purchase levels. See
+  `docs/DESIGN_HISTORY.md`.
 
 ### Fixed
 - **A lone Data Lake disk square rendered as a giant, room-spanning circle** at a fresh capacity
