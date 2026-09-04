@@ -3699,7 +3699,7 @@ describe('Byte Foundry Compute Boost', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
-      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
     })
     render(<App />)
     openBoosters()
@@ -3710,6 +3710,24 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoostStacks).toBe(1)
     expect(saved.intro.computeCores).toBe(2)
     confirmSpy.mockRestore()
+  })
+
+  test('forfeit-replace of a different preset is blocked while more than 1 stack is held — must Reclaim down to the last stack first (Devin Review finding)', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeCores: 3,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 2, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openBoosters()
+
+    const replaceButton = screen.getByRole('button', { name: /forfeit active boost and activate standard/i })
+    expect(replaceButton).toBeDisabled()
+    fireEvent.click(replaceButton)
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostType).toBe('burst')
+    expect(saved.intro.computeBoostStacks).toBe(2)
+    expect(saved.intro.computeCores).toBe(3)
   })
 
   test('Forfeit button asks for confirmation and clears the active boost with no refund', () => {

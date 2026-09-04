@@ -562,11 +562,13 @@ const ComputePage = ({ game }) => {
                   ? 'Select a tier below first'
                   : sameAsActive
                     ? 'This boost is already active — use Stack to extend it'
-                    : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                      ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Provision Disk)'
-                      : needsForfeit
-                        ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
-                        : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
+                    : needsForfeit && intro.computeBoostStacks > 1
+                      ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
+                      : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
+                        ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Provision Disk)'
+                        : needsForfeit
+                          ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
+                          : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
               }
               type="button"
               variant="prestige"

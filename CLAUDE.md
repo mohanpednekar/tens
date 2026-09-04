@@ -828,7 +828,13 @@ Strict three-layer separation:
    clears the boost entirely with no token refund, gated behind a `window.confirm` (unlike Reclaim's
    instant click) since it's the more consequential, final action; letting that last stack run out
    naturally is the only OTHER way to end it early (an earlier version let Reclaim itself cancel the
-   very last stack too, conflating the two actions — see `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
+   very last stack too, conflating the two actions — see `docs/DESIGN_HISTORY.md`). This
+   last-remaining-stack restriction also gates the preset buttons' own forfeit-and-replace path
+   (clicking a DIFFERENT preset/tier while a boost is active — `canActivateComputeBoost`'s
+   `forfeitConfirmed` branch): switching to a different boost entirely is blocked while
+   `computeBoostStacks > 1`, the same as the standalone Forfeit button, so it can't reopen the
+   "discard several stacks' worth of tokens outright" gap through a different control (see
+   `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
    the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
    #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
@@ -1225,7 +1231,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1729 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1732 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

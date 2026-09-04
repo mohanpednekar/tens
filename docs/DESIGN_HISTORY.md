@@ -25,6 +25,24 @@ change — it renders regardless of stack count, since it's not part of the Recl
 exclusivity. Neither control's own underlying gate function changed; this was purely a rendering
 condition added around each `CompactButton` in `src/pages/ComputePage/index.jsx`.
 
+**Follow-up (same day): the standalone Forfeit button wasn't the only way to discard multiple
+stacks.** Devin Review on the resulting PR pointed out a second path to the exact outcome the fix
+above was meant to prevent: `ComputePage`'s preset buttons already offer a "forfeit-and-replace"
+flow — clicking a DIFFERENT preset/tier while a boost is active confirm-guards then calls
+`activateComputeBoost(boostType, tierIndex, forfeitConfirmed=true)`, which cancels whatever's
+currently running (ALL its stacks, no refund) and starts the new one. This flow was untouched by
+the rendering-condition fix above (it's a different button, `canActivateComputeBoost`'s own gate,
+not `canForfeitComputeBoost`'s), so a player could still discard several stacks' worth of tokens
+outright — just through a different control than the one just restricted. Fixed at the engine
+level, not just the UI: `canActivateComputeBoost`'s forfeit-replace branch now also requires
+`computeBoostStacks <= 1`, the identical restriction the standalone Forfeit button uses, so
+switching to a genuinely different boost is only ever possible once Reclaim has whittled the active
+one down to its last stack (matching `activateComputeBoost` itself enforcing this — not just a
+UI-only disabled state, per this repo's existing "Security notes" convention). Existing tests
+exercising `computeBoostStacks: 2` forfeit-replace scenarios (which had demonstrated exactly the
+now-closed gap) were updated to `1`; new tests cover the blocked-at-multiple-stacks case at both
+the engine (`canActivateComputeBoost`/`activateComputeBoost`) and component (`App.test.jsx`) levels.
+
 ### CLAUDE.md Economy model duplication trim — 2026-09-03
 
 `CLAUDE.md`'s "Economy model" section had grown to 572 lines of formula/UI-rendering detail

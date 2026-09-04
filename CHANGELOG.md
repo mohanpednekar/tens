@@ -229,7 +229,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   with no refund, confirmation required) shows only once down to the last remaining, still-active
   stack. Previously both sat visible together the whole time a boost was active, with Forfeit able
   to cancel several stacks' worth of tokens outright instead of nudging toward Reclaim's
-  incremental, refundable path first.
+  incremental, refundable path first. Switching to a different boost preset entirely (which also
+  forfeits whatever's currently running) is now restricted the same way — only possible once
+  Reclaimed down to the last stack, closing a second path to the same outcome.
 - **A Data Lake now unlocks with its own matching Storage pool's real progress, not its own internal
   fill state.** Boosters become buyable the instant a pool has built its first real disk
   (`isDataLakePoolReady`), not once the lake's own first disk completes — and overflow no longer
