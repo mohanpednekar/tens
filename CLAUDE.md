@@ -809,35 +809,16 @@ Strict three-layer separation:
    minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
    enhancement — see "Economy model" below), disabled
    until a tier is armed. While a boost is active, activating any NEW boost is blocked from its
-   own preset button without an explicit forfeit confirmation (any type/tier — see the
-   forfeit-and-replace exception a few sentences below) — a Stack + Reclaim-or-Forfeit row appears
-   right below the presets instead:
-   `stackComputeBoost` (`isStackComputeBoostTurnAvailable`'s own gate) extends the ACTIVE boost by
-   spending another token of ITS OWN funding tier (never whatever tier a player might have since
-   selected). Alongside Stack, exactly ONE of Reclaim or Forfeit renders — mutually exclusive by
-   `computeBoostStacks`, not two always-visible controls with different disabled states (see
-   `docs/DESIGN_HISTORY.md`): while `computeBoostStacks > 1`, `reclaimComputeBoost`
-   (`canReclaimComputeBoost`'s own gate) reclaims the most recently added, still-unused stack of an
-   active boost, one at a time — instant, no confirmation — refunding 1 token into that same
-   funding tier and subtracting that stack's own duration, gated additionally on enough pooled time
-   remaining that the subtraction wouldn't zero it out (`computeBoostRemainingSeconds` is a single
-   pooled timer, not N independent per-stack timers, so a multi-stack boost late in its countdown
-   can hold less time than even one stack's own base duration — `stacks > 1` alone isn't
-   sufficient, since it would let a reclaim floor the pool straight to 0, ending the effect exactly
-   as if the last stack itself had been reclaimed). Once `computeBoostStacks === 1` (the last
-   remaining, still-active stack — an active boost always holds at least 1 while running), Reclaim
-   is replaced by Forfeit instead (`forfeitComputeBoost`, `canForfeitComputeBoost`'s own gate) —
-   clears the boost entirely with no token refund, gated behind a `window.confirm` (unlike Reclaim's
-   instant click) since it's the more consequential, final action; letting that last stack run out
-   naturally is the only OTHER way to end it early (an earlier version let Reclaim itself cancel the
-   very last stack too, conflating the two actions — see `docs/DESIGN_HISTORY.md`).
-   `canForfeitComputeBoost` itself requires `computeBoostStacks <= 1` (not just a UI-only disabled
-   state, per this file's own "Security notes" convention), and the SAME last-remaining-stack
-   restriction also gates the preset buttons' own forfeit-and-replace path (clicking a DIFFERENT
-   preset/tier while a boost is active — `canActivateComputeBoost`'s `forfeitConfirmed` branch):
-   switching to a different boost entirely is blocked while `computeBoostStacks > 1` too — every
-   path that could discard several stacks' worth of tokens outright is closed the same way (see
-   `docs/DESIGN_HISTORY.md`). THEN, below the whole Boost effects section, each of the nine
+   own preset button without an explicit forfeit confirmation (any type/tier) — a Stack +
+   Reclaim-or-Forfeit row appears below the presets instead: Stack extends the active boost's own
+   funding tier; alongside it, exactly ONE of Reclaim (instant, no confirmation, while
+   `computeBoostStacks > 1`) or Forfeit (`window.confirm`-gated, no refund, once down to the last
+   remaining stack) ever renders — mutually exclusive by design, not two always-visible controls
+   with different disabled states. `canReclaimComputeBoost`/`canForfeitComputeBoost` enforce this
+   at the engine level too (not just UI rendering), and the same last-remaining-stack restriction
+   also gates the preset buttons' own forfeit-and-replace path (switching to a different boost
+   entirely while one is active). Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`;
+   rationale: `docs/DESIGN_HISTORY.md`. THEN, below the whole Boost effects section, each of the nine
    merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
    the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
    #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
