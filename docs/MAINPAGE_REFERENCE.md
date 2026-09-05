@@ -95,10 +95,9 @@ fund it instead (`isComputeFundedBandwidthAvailable`), `{COMPUTE_ENTITY_CAP} {co
 bits for double production"` (or, compute-funded, `"sacrifice {COMPUTE_ENTITY_CAP}
 {computeBandwidthLabel} for double production"`) carries the full description — cost
 `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
-— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `bits >=` the
-(bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)` **and** no currently-redeemable Disk Fill
-outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md); this cost is entirely
+— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `intro.productionMilestoneTierClaims <
+getIntroProductionMilestoneMaxClaims(tier)`, no currently-redeemable Disk Fill
+outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md), and it is either compute-funded (when the bit cost exceeds Capacity) or `bits >=` the (bits-denominated) cost; this cost is entirely
 independent of `capacity`, so the button is frequently enabled well before Buffer is full — see
 docs/ECONOMY_REFERENCE.md's "Byte
 Foundry") — paired with a hidden `role="progressbar"`
@@ -107,7 +106,7 @@ Foundry") — paired with a hidden `role="progressbar"`
 (top line `🧠 Capacity ×2`; cost line `formatBitsInNearestUnit(capacity)`; `aria-label="double Memory
 Capacity"`; `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
 isMemoryCapacityUpgradeAvailable(state)`) requires a full Buffer, drains it, and doubles Capacity up
-to the active highest-unlocked-pool end bound (`INTRO_CAPACITY_CAP_BITS` for pool 1) — it carries no
+to `INTRO_CAPACITY_CAP_BITS` (the active highest-unlocked-pool's end bound, though the raw Capacity multiplier tracks past this limit silently) — it carries no
 `role="progressbar"` of its own, since its own gating (a full Buffer) is already visible on the Data
 Stream tile above.
 
