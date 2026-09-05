@@ -623,7 +623,10 @@ export const clearDevGameState = () => {
   return { ok: true }
 }
 
-const isPlainObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+const isPlainObject = value =>
+  Boolean(value) &&
+  Object.prototype.toString.call(value) === '[object Object]' &&
+  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
 
 // Recursive deep merge of `parsed` onto `base`, at any depth: an object-valued field (resources,
 // prestige, intro, intro.dataLakes, intro.dataLakes['1'], ...) is merged key-by-key rather than
