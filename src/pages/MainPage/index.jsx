@@ -109,11 +109,6 @@ const TierLine = styled(StatCard)`
     border-left-color: ${props => props.$accent};
   }
 
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
