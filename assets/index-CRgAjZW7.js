@@ -1031,6 +1031,12 @@ Error generating stack: `+e.message+`
   font-size: 0.85rem;
   font-weight: 600;
   padding: 0.2rem 0;
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${e=>e.theme.radius.sm};
+  }
 `,P.textarea`
   background: ${e=>e.theme.color.surfaceSunken};
   border: 1px solid ${e=>e.theme.color.border};
@@ -1483,6 +1489,12 @@ Error generating stack: `+e.message+`
     list-style: none;
     user-select: none;
     width: fit-content;
+    border-radius: ${e=>e.theme.radius.sm};
+  }
+
+  summary:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
   }
 
   summary::-webkit-details-marker {
