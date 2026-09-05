@@ -58,8 +58,8 @@ from **manual redeem** (`isDiskManualRedeemAvailable` — good/green pulsing fil
 copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit control of any
 kind here — Storage Disks no longer feed a Data Lake at all (that mechanic now feeds lakes directly
 from pool overflow, see CLAUDE.md's "Data Lakes"); a fully-built, non-redeemable array's disk
-instead liquidates straight into Bits (`tickIdleDiskLiquidation` in `engine.js`), not through this
-component. While `intro.diskBuild?.size`
+instead just sits full and idle until its tier's level matches again (see CLAUDE.md's "Data
+Lakes"), not through this component. While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
 replaces the cache strip (disk circles stay, disabled; `<size>` via `formatDiskSize` e.g. `1 KB`,
 `<N>` is the 1-indexed disk under construction). Neither size label uses `text-transform: uppercase`
