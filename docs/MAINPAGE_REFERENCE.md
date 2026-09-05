@@ -32,39 +32,44 @@ non-null `offlineProgress` — the Byte generator's passive production and auto-
 catch up correctly during offline progress regardless of which page is active, so this page shows
 the same "Welcome back!" notice `MainPage` does, not just a silent balance jump; a centered
 `Header` with the page title (top-level navigation lives in AppNav, not here); **no** second-level
-Memory | Storage tabs — Memory controls, every DiskArrayRow, and the Data Lake panel all render
-inside one continuous `PoolCard` (`styled(StatCard)`) rather than each getting its own separately-
-boxed card — a `Divider` (`hr`, `border-top` only) marks the transition from Memory/its actions to
-the Storage sub-section within that one card. `PoolCard` holds a single `FillableStatCard`
-— deliberately a plain `styled.div`, not `styled(StatCard)` (nesting a second card inside PoolCard
-would double-box the same region) — that applies `components/Button`'s own `progressFill` gradient
-directly via its `$progress` prop, so the tile fills toward its own capacity the same visual way
-every button on this page already does, while still picking up padding/border-radius/color inline
-rather than through `StatCard`. `aria-label="byte foundry balance"` (`$progress`
-= `bits / capacity`), has a "Data Stream" label above `{bits} / {capacity}` — both numbers scaled into
-the same binary unit, picked off `capacity` (raw bits before the Byte generator exists, since before
-that Buffer is always exactly 8 bits/1 Byte with nothing meaningful to denominate in yet, then
-B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own tier symbols with
-an "i" — see "Numbers are formatted" below) — plus a hidden `role="progressbar"` (`aria-label="data stream bit
-balance"`) — followed by the production-rate readout: below `BITS_PER_BYTE` (8) bits/sec, a "+N bits/sec" line
-paired with a visible 8-block segmented `role="progressbar"` (`aria-label="data stream production
-rate"`, one block per whole bit/sec, filled left to right) showing rate progress toward 1 Byte/sec;
-at/above that, the block bar is replaced by a single "+N Byte(s)/sec" line instead
-(`getIntroProductionRate(intro) / BITS_PER_BYTE`). A StatusText line under the balance reads
-**Buffer** `{formatBitsInNearestUnit(intro.capacity)}` (the current Data Stream capacity value, not a
-range). There is no separate Cache tile — the same
-progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is now
-implicit in the Data Stream balance itself — there's no separate manual transfer UI any more (see
-below). Once `intro.mainGameUnlocked`,
-`FillableStatCard` itself becomes the tap target: rendered `as="button"` (styled-components' own
-element-swap prop) instead of `as="section"`, with `onClick={actions.tapIntroBit}`,
-`disabled={isFull}`, and `aria-label="tap to generate a bit"` replacing the plain `"byte foundry
-balance"` label — a `$tappable` prop adds the same hover/active/disabled affordance the standalone
-tap button below has. Before `mainGameUnlocked` the tile stays a plain, non-interactive `<section>`.
+Memory | Storage tabs. Data Stream and Storage are separate, independently-boxed `StatCard`s, not
+one continuous card sharing a single `Divider`: a single `DataStreamCard` (`styled(StatCard)`) holds
+Data Stream's own controls, and each VISIBLE Storage pool gets its own separate `PoolCard` (also
+`styled(StatCard)`) below it — see "Storage pools render as their own PoolCards" further down for
+that structure.
 
-A large, always-full-width tap button (`aria-label="tap to generate a bit"`, disabled once `bits >=
-capacity`) calling `actions.tapIntroBit` — renders LAST on the page, after every other section
-(Actions/Storage), rather than up near the Data Stream tile, since once `byteCreated`
+`DataStreamCard` opens with a `SectionHeaderRow` — the same 3-column
+title-top-left/gauge-top-middle/rate-top-right layout every section on this page uses (see "Put
+title on top left, speedometer in the top middle and speed or bandwidth on the top right" in
+CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`, the fill-based `MultiplierGauge` (once
+`byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and a plain rate readout
+on the right — below `BITS_PER_BYTE` (8) bits/sec a "+N bit(s)/sec" line, at/above it "+N Byte(s)/sec"
+instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`) — a single line of text; there's no
+segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"` version
+was replaced once the gauge itself started carrying the fill-multiplier reading). Below that header,
+a `FillableStatCard`
+— deliberately a plain `styled.div`, not `styled(StatCard)` (nesting a second card inside
+`DataStreamCard` would double-box the same region) — applies `components/Button`'s own
+`progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
+toward Capacity the same visual way every button on this page already does. It shows
+`{bits} / {capacity}` (`formatMemoryBalance`, see "Numbers are formatted" below) — both numbers
+scaled into the same binary unit, picked off `capacity` (raw bits before the Byte generator exists,
+since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to denominate
+in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own tier
+symbols with an "i") — plus a hidden `role="progressbar"` (`aria-label="data stream bit balance"`).
+There is no separate Cache tile — the same
+progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is
+implicit in the Data Stream balance itself — there's no separate manual transfer UI any more (see
+below). Before `intro.mainGameUnlocked` the tile is a plain, non-interactive `<section>`,
+`aria-label="data stream balance"`; once unlocked it becomes the tap target itself: rendered
+`as="button"` (styled-components' own element-swap prop), `onClick={actions.tapIntroBit}`,
+`disabled={isFull || dataStreamMultiplierCapped}`, and `aria-label="tap to generate a bit"`
+replacing the plain balance label — a `$tappable` prop adds the same hover/active/disabled
+affordance the standalone tap button below has.
+
+A large, always-full-width tap button (`aria-label="tap to generate a bit"`, `disabled={isFull ||
+dataStreamMultiplierCapped}`) calling `actions.tapIntroBit` — renders LAST on the page, after
+`DataStreamCard` and every pool's `PoolCard`, since once `byteCreated`
 passive production is the primary loop and tapping is a secondary/backup action; it stays exactly
 as clickable either way, and never shrinks or changes size — but is removed entirely, not merely
 hidden, once `intro.mainGameUnlocked` (the Data Stream tile above takes over as the tap target
@@ -76,49 +81,79 @@ fill, so a second meter on the tap button would just duplicate it; its `backgrou
 used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`; Capacity ×2 instead requires a full Buffer, drains it, and doubles
-Capacity up to the active highest-unlocked-pool end bound
-(`INTRO_CAPACITY_CAP_BITS` for pool 1, with Capacity ×2 available on the shared Data Stream
-doubling ladder). Once
-`byteCreated`, a single milestone button sits in `MilestonesRow` (`display: flex`, the button
-`flex: 1`) rather than a paired Sacrifice+Invest row. It renders its own two-line
+INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a `MilestonesRow` (`display: flex`, each child button
+`flex: 1`) holds BOTH of Data Stream's own recurring milestone actions side by side — not a single
+button — replacing the earlier paired Sacrifice+Invest row. Each renders its own two-line
 `MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
 `components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
 of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
 activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
 than crammed inline in parentheses. "Speed ×2" (was Bandwidth / Invest for Double Production; top
-line `⚡ Speed ×2`; cost line `formatBitsInNearestUnit(investCost)`, live/dynamic information worth
-keeping visible even in the shortened label; `aria-label="invest bits for double production"`
-carries the full description — cost `getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
-— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `bits >=` the
-(bits-denominated) cost **and** `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)` **and** no currently-redeemable Disk Fill
-outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md); this cost is entirely
+line `⚡ Speed ×2`; cost line `formatBitsInNearestUnit(investCost)` — or, once a Compute Boost can
+fund it instead (`isComputeFundedBandwidthAvailable`), `{COMPUTE_ENTITY_CAP} {computeBandwidthLabel}`
+— live/dynamic information worth keeping visible even in the shortened label; `aria-label="invest
+bits for double production"` (or, compute-funded, `"sacrifice {COMPUTE_ENTITY_CAP}
+{computeBandwidthLabel} for double production"`) carries the full description — cost
+`getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
+— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `intro.productionMilestoneTierClaims <
+getIntroProductionMilestoneMaxClaims(tier)`, no currently-redeemable Disk Fill
+outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md), and it is either compute-funded (when the bit cost exceeds Capacity) or `bits >=` the (bits-denominated) cost; this cost is entirely
 independent of `capacity`, so the button is frequently enabled well before Buffer is full — see
 docs/ECONOMY_REFERENCE.md's "Byte
-Foundry") — rendered as an ordinary button paired with a hidden `role="progressbar"`
+Foundry") — paired with a hidden `role="progressbar"`
 (`aria-label="byte foundry speed progress"`, max set to the Speed cost in bits, not
-`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below.
+`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below. Beside it, "Capacity ×2"
+(top line `🧠 Capacity ×2`; cost line `formatBitsInNearestUnit(capacity)`; `aria-label="double Memory
+Capacity"`; `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
+isMemoryCapacityUpgradeAvailable(state)`) requires a full Buffer, drains it, and doubles Capacity up
+to `INTRO_CAPACITY_CAP_BITS` (the active highest-unlocked-pool's end bound, though the raw Capacity multiplier tracks past this limit silently) — it carries no
+`role="progressbar"` of its own, since its own gating (a full Buffer) is already visible on the Data
+Stream tile above.
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
 INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained via `buyBooster`, bought
-instantly from the matching Data Lake's own banked units on the Byte Foundry screen's
-`DataLakePanel` (manually, or automatically once that lake's own Auto toggle is on) — not minted
+instantly from the matching Data Lake's own banked units on that pool's own `PoolCard`
+(manually, or automatically once that lake's own Auto toggle is on — see "Storage pools render as
+their own PoolCards" below) — not minted
 from Data Stream, and no longer via any Storage Disk deposit or live transfer (an earlier
 Disk-deposit-funded Booster mechanic, and before that a manual "Claim Core" button/auto-claim
 mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section).
-Speed ×2 is the only milestone action in that row; Capacity ×2 lives in the shared Data Stream
-section.
+
+**Storage pools render as their own `PoolCard`s.** Each VISIBLE Storage pool
+(`getVisibleStoragePoolCount(state)` — the smaller of how many pools have a real disk built and how
+many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
+docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
+(`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
+NOT one continuous card shared across pools or with Data Stream. Only ONE pool is expanded at a
+time by default — the largest currently visible one (`expandedPoolIndex` local state: `null`
+follows the largest unlocked pool, an explicit `0` means "all collapsed", any other value pins one
+specific pool) — toggled by clicking that pool's own `PoolSummaryButton`, a full-width `<button>`
+wrapping just its `SectionHeaderRow` (`aria-expanded`, `aria-label="expand/collapse pool {n}"`):
+title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
+or tier name in the visible text, centered since the symbol alone already uniquely identifies the
+pool), the pool's own `MultiplierGauge` (switching to `mode="lake"` once that pool's own buffer is
+full AND its Data Lake is ready to receive overflow — see "Fill-based Speed/Bandwidth multiplier"
+in CLAUDE.md), and its own Bandwidth figure on the right (`formatDiskSize(poolBandwidth)}/sec`).
+Two more tiles render right below the summary button, ALWAYS visible regardless of expand state (not
+gated behind the disclosure): a tappable `FillableStatCard` for that pool's own Memory buffer
+(`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
+`disabled={poolBufferFull || poolMultiplierCapped}`, showing `{bufferBits} / {bufferCapacity}` in
+Disk/SI units via `formatDiskSize` — a SEPARATE `<button>` from `PoolSummaryButton`, since a
+`<button>` can't nest inside another `<button>`), and a second, non-interactive `FillableStatCard`
+(`as="section"`, `aria-label="pool {n} data lake"`) showing that pool's Data Lake fill level as
+"`<symbol>` Lake · NN%". Only once expanded does the card also render that pool's own
+`components/DiskArrayRow`s and its own `components/DataLakePanel` (`bare` mode) — see both below.
 
 Storage is continuous on this same page: **Provision Disk** — the common disk-build operation —
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
 Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
-poolIndex`, right after that pool's summary/title row), not alongside Speed in the Data Stream
-section — an earlier layout had it there, standalone, but that separated the button from the pool
-it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
+poolIndex`), right after that pool's own Memory-buffer/Data-Lake tiles above and OUTSIDE its
+`isExpanded` disclosure (so it stays visible/usable without expanding that pool) — not alongside
+Speed in the Data Stream section — an earlier layout had it there, standalone, but that separated
+the button from the pool it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
 card) for the rare case where the disk ladder has already advanced past the last pool card
 currently VISIBLE (`getVisibleStoragePoolCount`, capacity-threshold-gated — see
 docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — keeping the button reachable rather than
@@ -155,10 +190,10 @@ disallowed, "the array provisioning." The Provision button renders three distinc
 isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
 the build cost, no build already in progress, the ladder not yet exhausted for every currently-active
-pool, OR while a redeemable Disk Fill/an affordable Bandwidth claim — both higher priority, see
+pool, OR while a redeemable Disk Fill/an affordable Speed claim — both higher priority, see
 "Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
 `variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Provision {size} Disk ({cost})"`,
-`title` either naming which higher-priority action to take first (`"Take Bandwidth (or redeem a full
+`title` either naming which higher-priority action to take first (`"Take Speed (or redeem a full
 Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
 corresponding tier is currently at its required level (`diskRedeemTierName`, from
 `getDiskRedeemTierName(state, diskSize)`) — `"Costs
@@ -202,7 +237,8 @@ tierIndex={poolIndex} />` — `actions` is needed for the capacity-upgrade butto
 pool's own single Lake, not a page-wide list of every lake (an earlier layout rendered one shared
 `DataLakePanel` with no `tierIndex` at the bottom of the whole page instead; each Lake now lives
 inside its own pool's card, directly below that pool's disks). Instead of its own default `StatCard`
-wrapper, `bare` mode renders a `BareDivider` (`hr`, same style as `PoolCard`'s own divider) followed
+wrapper, `bare` mode renders a `BareDivider` (`hr`, `border-top` only — mirroring the visual break a
+non-`bare` `DataLakePanel` gets for free from its own `StatCard` outer border) followed
 directly by the lake's own block, so it reads as the last sub-section of that same `PoolCard` rather
 than a second card stacked below it — a `tierIndex`-scoped lake always renders regardless of
 activity (it's a permanent part of that pool now), unlike the omitted-`tierIndex` list mode (still
