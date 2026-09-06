@@ -956,6 +956,21 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     expect(isMemoryCapacityAtCap(state)).toBe(true)
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
   })
+
+  it('is available with unspent Compute Cores because Capacity ×2 resets Compute tokens', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      computeCores: 1,
+      ...noOtherUpgradesLeft,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP, [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP },
+    })
+    expect(isComputeUpgradeAvailable(state)).toBe(true)
+    expect(isDiskFillAvailable(state)).toBe(false)
+    expect(isBandwidthAvailable(state)).toBe(false)
+    expect(isProvisionDiskAvailable(state)).toBe(false)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+  })
 })
 
 describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
@@ -2157,6 +2172,18 @@ describe('isComputeUpgradeAvailable', () => {
   it('is true once unlocked with at least 1 Compute Core available to spend', () => {
     const state = withIntro(createInitialGameState(), { capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, computeCores: 1 })
     expect(isComputeUpgradeAvailable(state)).toBe(true)
+  })
+
+  it('is false while a boost is active even if more stacks are possible', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      computeCores: 1,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 1,
+      computeBoostRemainingSeconds: 30,
+    })
+    expect(isComputeUpgradeAvailable(state)).toBe(false)
   })
 })
 
