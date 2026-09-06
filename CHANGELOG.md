@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Security
 - Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
   `constructor` keys (supersedes #478 / #480).
+- Fixed object prototype checks in `storage.js` to handle Custom and null prototype objects correctly.
 - Pin transitive `uuid` to **11.1.1** via Yarn `resolutions` (Dependabot alert #185 /
   moderate: missing buffer bounds check in v3/v5/v6 when `buf` is provided). Pulled in by
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
