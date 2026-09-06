@@ -839,10 +839,10 @@
   dependencies:
     css-tree "^3.0.0"
 
-"@capacitor/cli@^8.5.0":
-  version "8.5.0"
-  resolved "https://registry.yarnpkg.com/@capacitor/cli/-/cli-8.5.0.tgz#655bbdec95997ee723fecc1d326a08517b4eaf9f"
-  integrity sha512-rLdzMUM5QV4WITcqoWv04p32i14BXgUH2diqEH6MWQlWaJfiyNrvOyt/+d5vHAfOxOm1klBu637VDEobctlwBA==
+"@capacitor/cli@^8.5.1":
+  version "8.5.1"
+  resolved "https://registry.yarnpkg.com/@capacitor/cli/-/cli-8.5.1.tgz#1f8af6db041944078d41fa7c9b6848312e5a67a7"
+  integrity sha512-LKQFSyLg1QbTN6CGDoFqeRtAlj8C3c9OymP8OuhwlmkbSQwh9i1HQjwUCaNyVem2XkY9rv0v2UOfVlgoxH5pAw==
   dependencies:
     "@ionic/cli-framework-output" "^2.2.8"
     "@ionic/utils-subprocess" "^3.0.1"
