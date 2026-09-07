@@ -6127,3 +6127,138 @@ frozen because its source is stranded, verified via `isDiskWriteCacheCollectPaus
 — confirming the merge object is untouched by Prestige and, since purchase levels reset to 1 in the
 same call, is no longer paused afterward (the source is "too early" again rather than stranded).
 `yarn test`: 1734/1734 green (+2). `yarn build` succeeds.
+
+### Storage funding rebuilt push→pull: the manual Redeem button and autobuyer-gated auto-redeem are gone (issue #571)
+
+The maintainer's explicit spec, verbatim: "The funding of tier levels from storage pools should be
+pull based. Every time there is a new level in a tier, it will check in following order: 1. check
+whether its own balance can fulfil it if autobuyer is unlocked for the tier; 2. a built disk is
+available to fully fund it if no partial funding was done; 3. if it is the first level of the tier,
+it will also check the cache of the storage pool to fund each level block individually, if a disk
+was not available or it was partially filled before the disk availability was checked; 4. if none
+of the above is satisfied, nothing happens... Pretend that Byte Foundry does not know about Byte
+Factory at all. It simply supplies if asked and otherwise minds its own business." Step 1 (an
+unlocked tier's own autobuyer buying with money) was already existing `tickGame` behavior, untouched
+here — this redesign is entirely about steps 2–4, the Storage-funded path.
+
+**What changed.** The OLD model was push-based and manual-first: a full, `isDiskRedeemable` disk sat
+waiting for either a click on the disk itself (`redeemDisk`, always available, no autobuyer needed)
+or, once the matching tier's own autobuyer was unlocked *and* unpaused, an automatic
+`tickDiskAutoRedeem` pass that redeemed at most one size per real Prestige cycle
+(`intro.diskAutoRedeemedSizes`, so a disk that refilled later the same cycle fell back to needing a
+manual click again). The always-full read cache on the pool's smallest size had its own separate
+manual/Smart-auto release path (`releaseDiskCacheBlock`/`isDiskCacheBlockAutoReleaseEligible`) into
+raw Bits, gated on no full redeemable disk existing and the tier sitting at the required level — a
+second, independent funding lever a player had to separately manage. The NEW model removes both
+controls entirely and replaces them with two small, fully automatic `tickGame` passes, run every
+tick with no autobuyer gate and no per-cycle throttle: `tickDiskPull` (was `pullDiskForCurrentLevel`
+wrapped in a tick loop) pulls the smallest pull-eligible size's disk into its matching tier level
+each call; `tickDiskLevelOneCachePull` covers the fallback (step 3) — a tier still at its own level
+1 with no fresh disk this tick spends its pool's smallest-size cache directly, in bulk, capped at
+the level's remaining requirement. Neither existed as a concept before; both are private-adjacent
+reducers invoked only from `tickStorage`, never from a UI action.
+
+**The clean-slate rule.** The single new invariant tying steps 2 and 3 together is
+`isDiskPullEligible`: a disk (or the level-1 cache) only ever funds a level from *zero* purchase-
+level progress — `purchaseLevelProgress[tier.id] === 0`. A level already partway funded by hand, by
+an autobuyer, or by an earlier cache pull is never later topped off by a disk; the disk simply waits
+for that tier's next fresh level. This was an explicit, confirmed design decision (via
+`AskUserQuestion`), not an implementation detail — it's what makes "no partial funding was done" in
+the spec's step 2 concrete and testable. A consequence: `pullDiskForCurrentLevel` always grants the
+level's FULL purchase block (`getPurchaseBlockSize(state)`), never `blockSize - progress` the way the
+old `redeemDisk` did — since eligibility already guarantees progress is 0, there is nothing to
+subtract.
+
+**Why generalize tier01's bootstrap instead of inventing a new mechanic.** tier01's own
+pre-Storage-unlock bootstrap (`convertIntroBitsToKilobytes`, drawing straight from `intro.bits`
+before any pool or cache exists) already embodied "pull from an internal pool with no player click,"
+just for one specific tier before Storage even reveals. `tickDiskLevelOneCachePull` is that same
+shape applied to every tier's own level 1 once its matching pool's cache exists — confirmed via
+`AskUserQuestion` as the intended scope ("every tier's own level 1," not just tier01's). This keeps
+`convertIntroBitsToKilobytes` itself completely untouched (still the only path before any pool
+exists) while giving every other tier an equivalent on-ramp instead of leaving levels 2/3 the only
+ones disk-fundable and level 1 stuck needing money.
+
+**Cache release retired, not adapted.** The maintainer's own follow-up clarification (confirmed via
+`AskUserQuestion`) was to retire `releaseDiskCacheBlock`/`isDiskCacheBlockReleasable` entirely rather
+than fold them into the new automatic pull — a manual cache-to-Bits transfer had no equivalent in the
+"pretend Byte Foundry doesn't know about Byte Factory" framing (it funded the FACTORY's currency,
+Bits, directly, not a tier level) and no longer serves any purpose once the cache's only real
+funding role (level 1 of its own tier) is handled automatically. `DiskArrayRow` lost its Redeem and
+cache-release click targets as a result and became a pure status display: a disk square shows
+`$pullEligible` (about to auto-pull this tick) vs. plain full (blocked by progress, "too early," or
+stranded) vs. empty vs. not-yet-built, and cache blocks show fill/flush state only — nothing in
+either strip is a `<button>` any more. `isDiskFillAvailable` (the forced-priority-order predicate
+gating Bandwidth/Provision Disk/Capacity) keeps its name and rank but now delegates to
+`isDiskPullEligible` instead of the old plain `isDiskRedeemable` check, so a disk blocked by partial
+progress no longer permanently starves every lower-ranked action — it just isn't "available" for
+priority purposes until it's actually pullable.
+
+**Nav attention followed the mechanic away.** `hasStorageAttention`/`getStorageAttentionLevel` (the
+attention-dot predicates that used to light up Foundry for "a redeemable disk is waiting") are gone
+— there's no player action left for a dot to point at, since a pull-eligible disk resolves itself on
+the very next tick regardless of whether the player is even looking. `getNavAttention`'s `foundry`
+entry now reads straight from `getFoundryAttentionLevel`, which still covers everything genuinely
+actionable there (Combine, Invest, Provision Disk, Capacity, Memory full).
+
+**Fixing the `simulate-run-times` skill's own bot strategy.** `run-simulation.mjs` imported
+`redeemDisk` directly and implemented a "pause every unlocked autobuyer while the Foundry gate is
+closed, so `tickDiskAutoRedeem` can't fire and race tier01's cost ahead of Memory capacity (avoiding
+a softlock), then manually call `redeemDisk` once the gate opens" strategy — all now obsolete, since
+pulling is unconditional and can't be paused by bot strategy at all; the softlock-avoidance ordering
+(convert before pull) is now an engine-level fact (`tickDiskPull` runs at the very end of `tickGame`,
+after `tickIntroAutoInvest`) rather than something the bot enforces. Removed the pause/restore
+autobuyer dance and both manual `redeemDisk` calls entirely. Running the script to verify surfaced a
+SEPARATE, pre-existing, unrelated breakage: it also imported `canStartBoosterTransfer`/
+`startBoosterTransfer`, functions that don't exist in `engine.js` any more (superseded by
+`buyBooster`/`isBoosterPurchaseAvailable` from an earlier Data Lake redesign) — the script could not
+even load, regardless of this PR. Fixed that too (swapped in the current Booster-purchase API,
+correcting a stale "skip while Disk Fill is available" comment along the way — `buyBooster` was
+never part of the forced priority order to begin with) so the skill's "always re-run and publish
+after an economy-relevant change" requirement could actually be honored; re-ran and published to
+`ideal-run-strategy`.
+
+**Verification.** All ~78 references to the removed functions/field
+(`redeemDisk`/`releaseDiskCacheBlock`/`isDiskAutoRedeemEligible`/`isDiskManualRedeemAvailable`/
+`isDiskCacheBlockAutoReleaseEligible`/`isDiskCacheBlockManualReleaseAvailable`/
+`isDiskCacheBlockReleasable`/`tickDiskAutoRedeem`/`tickDiskAutoReleaseCache`/`diskAutoRedeemedSizes`)
+across `engine.js`, `engine.test.js`, `App.test.jsx`, `storage.test.js`, `useIncrementalGame.js`,
+`DiskArrayRow`, and `navAttention.js` were removed or rewritten against the new pull-based API —
+tests for the old manual/autobuyer-gated behavior were replaced with equivalents for
+`isDiskPullEligible`/`tickDiskPull`/`tickDiskLevelOneCachePull`, including a new case for the
+clean-slate/partial-progress rule that didn't exist as a concept before. `yarn test`: 1713/1713
+green (net −16 from the prior 1729: several near-duplicate manual-vs-auto-redeem test pairs
+collapsed into single automatic-pull equivalents, offset by new coverage for the level-1 cache
+fallback and the partial-progress no-op case). `yarn build` succeeds.
+
+### A second Devin Review finding on the same PR: the level-1 cache fallback could spend cache out from under an in-flight read-cache flush, leaving it stuck for its whole remaining duration then producing no disk
+
+After the mid-build lock fix above (from Devin Review's first pass on this same PR), a second pass
+caught a related but distinct gap in `tickDiskLevelOneCachePull`: nothing stopped it from spending
+straight out of a size's `diskCache` while that same size ALSO had an `intro.diskReadCacheFlush`
+entry in flight. This is reachable after a level reset (a real Prestige, or any purchase-level
+reset back to 1): a flush only ever starts once its cache is completely full
+(`tickDiskAutoFill`'s Pass 2 requires `diskCache[size] >= size`) and is meant to pour that full
+cache into one disk once its timer elapses — but `isDiskPullEligible` (which gates the cache
+fallback) only checks for an already-FULL disk, not for a flush in progress, so a tier freshly
+reset to level 1 with a full cache AND an in-flight flush for that size would have the cache
+fallback claim the cache first. The flush object itself was left untouched, so `tickDiskAutoFill`'s
+own Pass 1 kept skipping that size's refill (`if (diskReadCacheFlush[size]) continue`) for the
+flush's whole remaining duration — even though the cache it was waiting to pour was already spent —
+and once the timer ran out, Pass 3's own completion check (`cached >= size`) failed against the
+now-smaller cache, so the flush just cleared itself with no disk produced. Net effect: a stale flush
+silently stalled that size's cache refill for however long was left on its timer, for nothing.
+
+**Fix.** `tickDiskLevelOneCachePull` now cancels any `diskReadCacheFlush` entry for the size it just
+spent from, in the same state update as the cache-balance decrement — canceling immediately rather
+than letting it linger is safe because `diskCache[size]` is capped at `size` (see `tickDiskAutoFill`'s
+Pass 1), so any nonzero spend here always leaves the cache below the flush's own completion
+threshold; there is no scenario where the flush could still legitimately complete afterward. This
+frees that size's cache to start refilling again on the very next tick instead of waiting out a
+now-meaningless countdown.
+
+**Verification.** New test in `engine.test.js`'s `tickDiskLevelOneCachePull` describe block seeds a
+diskReadCacheFlush alongside a spendable cache, confirms the flush entry is gone after the pull, and
+confirms `tickDiskAutoFill` can immediately begin refilling that size's cache again afterward
+(reverting the fix reproduces the bug — the flush survives the pull and refill stays blocked).
+`yarn test`: 1717/1717 green (+1). `yarn build` succeeds.

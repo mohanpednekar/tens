@@ -261,8 +261,8 @@ const InfoPage = () => {
             same array takes N× that base time.
           </li>
           <li>
-            While an array rebuilds, every disk in it is offline — no fill, release, or redeem —
-            until provisioning finishes.
+            While an array rebuilds, every disk in it is offline — no filling or pulling — until
+            provisioning finishes.
           </li>
           <li>
             Up to {DISK_ARRAY_LADDER_CAP} disks can be provisioned at the current size before the
@@ -276,14 +276,15 @@ const InfoPage = () => {
           <li>The Provision Disk button stays on Byte Foundry; Storage shows every size you’ve reached.</li>
         </ul>
 
-        <h3>Cache, fill, release, redeem</h3>
+        <h3>Cache and automatic pulling</h3>
         <ul>
           <li>
             Only the pool's smallest array — the one that actually draws from Memory — keeps a
             Cache of {DISK_CACHE_BLOCK_COUNT} blocks totaling one disk’s worth of bits (e.g. a
             1 MB array → 8 × 1 Mb). Cache stays full as its steady state; Memory refills whole
-            blocks when a block was just released or the size was just unlocked — Memory fills
-            visibly between transfers rather than draining bit-by-bit, at up to
+            blocks when a block was just spent by the tier's own automatic pull below or the size
+            was just unlocked — Memory fills visibly between transfers rather than draining
+            bit-by-bit, at up to
             {' '}{CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER}× your current production rate, so
             even a large banked balance can't refill it instantly.
           </li>
@@ -297,25 +298,20 @@ const InfoPage = () => {
             {' '}{DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER}× — it has no read cache of its own.
           </li>
           <li>
-            A full cache block can be <strong>released into your Bits balance</strong> (not back
-            into Memory) — but only while that size’s own fixed corresponding tier currently sits
-            at its required level <strong>and no full redeemable disk of that size exists</strong>.
-            Disks always take priority; cache is fallback only.
-          </li>
-          <li>
-            With <strong>Smart</strong> on, the matching tier’s autobuyer auto-releases cache
-            blocks when no disk is available; otherwise release cache by hand.
-          </li>
-          <li>
             Every disk size has one fixed, permanent tier and level it corresponds to (KB-scale
             sizes to Kilobytes, MB-scale to Megabytes, and so on — the 1st/2nd/3rd size within each
-            maps to that tier’s own level 1/2/3). A full disk <strong>redeems</strong> only while
-            its tier is currently sitting at exactly that level, completing the tier’s whole
-            current level in one shot rather than granting a single unit.
+            maps to that tier’s own level 1/2/3). Byte Foundry <strong>pulls</strong> a full,
+            clean-slate disk automatically — every tick, with no click and no autobuyer needed —
+            the instant its tier sits at exactly that level <strong>and</strong> that level has no
+            progress toward it yet, completing the tier’s whole current level in one shot rather
+            than granting a single unit. A level with partial progress already (bought by hand or
+            by an autobuyer) is never later topped off by a disk — the disk simply waits for that
+            tier's next fresh level.
           </li>
           <li>
-            Auto-redeem fires only when that tier’s unit autobuyer is unlocked and
-            unpaused; otherwise redeem by hand.
+            A tier still sitting at its own level 1 with no fresh disk to pull draws instead from
+            its pool's own Cache directly, in bulk — an automatic fallback for that tier's entry
+            point only; a tier's later levels only ever pull from a whole disk.
           </li>
           <li>Disks are reusable and permanent across Prestige; a full disk stays full through Prestige.</li>
         </ul>

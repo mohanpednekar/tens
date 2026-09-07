@@ -31,7 +31,6 @@ import {
   hasFoundryAttention,
   hasOverclockAvailable,
   hasSpeedUpAvailable,
-  hasStorageAttention,
   hasTiersAttention,
   hasTiersGameAttention,
   maxAttention,
@@ -145,8 +144,10 @@ describe('navAttention', () => {
     expect(hasTiersGameAttention(state)).toBe(false)
   })
 
-  it('lights Foundry (via folded Storage attention) when a full disk is redeemable', () => {
-    // 8000-bit disk is tier01's own fixed level-1 disk size, and tier01 defaults to level 1.
+  it('does not light Foundry for a full, pull-eligible disk — the pull is automatic, nothing to click', () => {
+    // 8000-bit disk is tier01's own fixed level-1 disk size, and tier01 defaults to level 1: this
+    // disk is pull-eligible (see isDiskPullEligible in engine.js), but tickDiskPull resolves it on
+    // the very next tick with no player action, so there's no attention dot to light for it.
     const diskSize = 8000
     const state = withIntro({
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -155,18 +156,9 @@ describe('navAttention', () => {
       disks: { [diskSize]: 1 },
       disksBuiltTotal: { [diskSize]: 1 },
     })
-    expect(hasStorageAttention(state)).toBe(true)
-    expect(getNavAttention(state).foundry).toBe('high')
+    expect(hasFoundryAttention(state)).toBe(false)
+    expect(getNavAttention(state).foundry).toBe(false)
     expect(getNavAttention(state).storage).toBeUndefined()
-  })
-
-  it('does not light Storage before Storage unlocks', () => {
-    const state = withIntro({
-      capacity: INTRO_STARTING_CAPACITY,
-      byteCreated: true,
-      disks: { 8000: 1 },
-    })
-    expect(hasStorageAttention(state)).toBe(false)
   })
 
   it('lights Foundry at normal when a transfer block is affordable but Memory is not full', () => {
