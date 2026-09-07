@@ -2746,16 +2746,17 @@ export const isProvisionDiskAvailable = state => {
   return getPoolBufferBits(state, poolIndex) >= getDiskCost(size)
 }
 
-// "Compute" — true once Compute Core conversion is unlocked and either a brand new boost is
-// mechanically activatable from some compute-ladder tier, or the currently active boost (if any)
-// can be stacked further (see canActivateComputeBoost/canStackComputeBoost, defined further down
-// this file — issue #326).
+// "Compute" — true once Compute Core conversion is unlocked and at least one brand-new boost
+// preset is mechanically activatable from some compute-ladder tier (see canActivateComputeBoost,
+// defined further down this file). Stacking an already-active boost is intentionally NOT counted
+// here, because the lower-priority Capacity actions gated on this predicate (Memory ×2 and Data
+// Lake capacity doubling) should not be held hostage to spending every possible stack before the
+// player can make progress.
 export const isComputeUpgradeAvailable = state =>
   isComputeCoreConversionUnlocked(state) &&
-  (canStackComputeBoost(state) ||
-    COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
-      Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
-    ))
+  COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>
+    Object.keys(COMPUTE_BOOST_PRESETS).some(boostType => canActivateComputeBoost(state, boostType, index + 1))
+  )
 
 export const isPoolCapacityUpgradeAvailable = state => {
   if (state.intro.bits < state.intro.capacity) return false
@@ -2779,8 +2780,7 @@ export const isMemoryCapacityUpgradeAvailable = state =>
   isPoolCapacityUpgradeAvailable(state) &&
   !isDiskFillAvailable(state) &&
   !isBandwidthAvailable(state) &&
-  !isProvisionDiskAvailable(state) &&
-  !isComputeUpgradeAvailable(state)
+  !isProvisionDiskAvailable(state)
 
 // Rewind one Speed ×2 claim (inverse of applyIntroProductionDoublingToIntro) — used when
 // rollbackComputeFundedBandwidth undoes compute-funded Invest steps (#324).
