@@ -428,15 +428,18 @@ export const createInitialGameState = () => ({
     // an empty disk over getDiskReadCacheFlushSeconds (one block at the current production rate) —
     // see tickDiskAutoFill. Rides through Prestige untouched, same as disks/disksBuiltTotal above.
     diskCache: {},
-    // NOT permanent — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
+    // PERMANENT — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
     // totalSeconds } }. Empty at rest. Duration at start is one cache block at the current Byte
-    // Foundry production rate (see getDiskReadCacheFlushSeconds). Resets every real Prestige —
-    // operational, not banked progress (same posture as diskWriteCache).
+    // Foundry production rate (see getDiskReadCacheFlushSeconds). Rides through a real Prestige
+    // untouched, same as diskWriteCache below and disks/disksBuiltTotal above — "Prestige shall
+    // not affect Byte Foundry in any way" (see prestigeGame, docs/DESIGN_HISTORY.md).
     diskReadCacheFlush: {},
-    // NOT permanent — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
+    // PERMANENT — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
     // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
     // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
-    // drain) into one target disk. Resets every real Prestige — operational, not banked progress.
+    // drain) into one target disk. Rides through a real Prestige untouched (see prestigeGame) —
+    // a merge frozen because its source became stranded can otherwise never resolve any other
+    // way, so resetting it on Prestige would silently lose the already-consumed source disks.
     diskWriteCache: {},
     // PERMANENT — null when no array is currently mid-build, otherwise
     // { size, remainingSeconds, totalSeconds } for the one disk array build in progress (see
