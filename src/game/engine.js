@@ -4058,6 +4058,12 @@ export const tickDiskLevelOneCachePull = state => {
     if (level !== 1) continue
     const size = getDiskSizeForTierLevel(TIER_INDEX_BY_ID[tier.id] + 1, 1)
     if (size === null || isDiskPullEligible(result, size)) continue
+    // isDiskPullEligible above already returns false while this size's own array is mid-build, but
+    // that's indistinguishable there from "no disk available" — without this explicit check, a
+    // rebuild would incorrectly still let the cache fallback spend from that same size's IO-locked
+    // array. Same per-size lockout every other Storage action respects (see tickDiskAutoFill,
+    // tickDiskPull, tickProvisionDisk's own "array rebuild" comment).
+    if (result.intro.diskBuild?.size === size) continue
     const cacheBits = result.intro.diskCache?.[size] ?? 0
     const unitCost = getTierCost(tier, level)
     if (!(unitCost > 0) || cacheBits < unitCost) continue

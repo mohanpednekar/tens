@@ -454,11 +454,14 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (read cache blocks — only on
-                               the pool's smallest size, see `isDiskReadCacheEligible` — disk
-                               squares, releasing, redeeming; no deposit control, Data Lake feeding
-                               is fully automatic) for a single size, taking `{ actions, size,
-                               state }`; shared by both ByteFoundryPage and StoragePage — see
+    DiskArrayRow/index.jsx  ← one Disk array's full STATUS detail, purely a display with nothing
+                               clickable (read cache blocks — only on the pool's smallest size, see
+                               `isDiskReadCacheEligible` — and disk squares; funding a matching tier
+                               level is fully automatic via `tickDiskPull`/`tickDiskLevelOneCachePull`
+                               in `engine.js`, not a UI action here; no deposit control either, Data
+                               Lake feeding is fully automatic) for a single size, taking `{ actions,
+                               size, state }` (`actions` unused, kept for a uniform call-site shape);
+                               shared by both ByteFoundryPage and StoragePage — see
                                `docs/DESIGN_HISTORY.md` for why it's a standalone component. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     DataLakePanel/index.jsx ← one Data Lake's own self-contained block (title row, one row of disk

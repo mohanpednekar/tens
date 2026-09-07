@@ -3683,6 +3683,25 @@ describe('tickDiskLevelOneCachePull', () => {
     const state = createInitialGameState()
     expect(tickDiskLevelOneCachePull(state)).toBe(state)
   })
+
+  it('is a no-op while the size\'s own array is mid-build, even with cache banked and no disk available (Devin Review finding)', () => {
+    const state = withIntro(createInitialGameState(), {
+      // disksBuiltTotal seeded so this size stays read-cache-eligible (isDiskReadCacheEligible) —
+      // otherwise tickDiskAutoFill's own stale-cache self-heal would refund the cache into the pool
+      // buffer, masking the mid-build check this test is actually isolating.
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: unitCost * 3 },
+      // remainingSeconds well past this call's own 1-elapsed-second tick, so the build genuinely
+      // stays in progress through the assertion below (rather than completing the same tick and
+      // making the mid-build lock moot by the time tickStorage's own pull/cache-pull passes run).
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 10, totalSeconds: 10 },
+    })
+    expect(tickDiskLevelOneCachePull(state)).toBe(state)
+    const afterTick = tickGame(1)(state)
+    expect(afterTick.intro.diskBuild?.size).toBe(FIRST_DISK_SIZE) // still mid-build
+    expect(afterTick.owned[tensTier.id] ?? 0).toBe(0)
+    expect(afterTick.intro.diskCache[FIRST_DISK_SIZE]).toBe(unitCost * 3)
+  })
 })
 
 describe('isDiskRedeemable / getDiskRedeemTierName', () => {
