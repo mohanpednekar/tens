@@ -106,6 +106,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   stranded disk now simply sits full and unredeemable for the rest of the cycle instead of being
   destroyed; it becomes redeemable again after the next real Prestige resets purchase levels. See
   `docs/DESIGN_HISTORY.md`.
+- **Manual disk Redeem and cache-release-to-Bits controls** — Storage no longer has a Redeem button
+  on a full disk, an autobuyer-gated auto-redeem, or a manual/Smart-auto cache-block release. Byte
+  Foundry now funds Byte Factory tier levels **pull-based and fully automatically, every tick**,
+  with no click and no autobuyer needed — see the "Byte Foundry storage funding is now fully
+  automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
 - **A stranded Storage Disk could still be silently folded into another (possibly also-unredeemable)
@@ -240,6 +245,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Byte Foundry storage funding is now fully automatic (pull-based)** — Storage no longer pushes
+  redemption into the Byte Factory tier ladder via a click or an autobuyer gate; instead, every
+  tick, Byte Foundry pulls a full, clean-slate (zero purchase-level-progress) matching disk into
+  its own tier's current level the instant that tier sits at exactly the required level, or — for a
+  tier still sitting at its own level 1 with no fresh disk to pull — spends that tier's pool cache
+  directly instead. A level with existing progress (from a manual buy or an autobuyer) is never
+  later topped off by a disk; the disk simply waits for that tier's next fresh level. Byte Foundry
+  has no proactive knowledge of Byte Factory beyond this: "it simply supplies if asked and
+  otherwise minds its own business" (issue #571). This generalizes tier01's own pre-Storage
+  bootstrap (unchanged) to every tier's own level 1, and retires the manual Redeem button and the
+  cache-release-to-Bits control — see the matching entry under Removed above.
 - **Compute Boost's Reclaim and Forfeit controls are now mutually exclusive** — Reclaim (instant,
   no confirmation) shows only while more than 1 stack is held; Forfeit (clears the boost entirely
   with no refund, confirmation required) shows only once down to the last remaining, still-active

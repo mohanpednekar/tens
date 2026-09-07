@@ -330,15 +330,15 @@ gate only ever reappears once, on a save's very first cycle — every cycle afte
 Factory already reachable, no gate replay at all. The
 Byte generator itself (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/
 productionMilestoneTier/productionMilestoneTierClaims) and Storage (`disks`/`disksBuiltTotal`/
-`diskCache`/`diskBuild` — but NOT `diskAutoRedeemedSizes`, which resets every real Prestige) are
-both permanent and carry over regardless — a disk already FULL when Prestige fires stays full,
-giving the next cycle a head start.
-Auto-redeem (`tickDiskAutoRedeem`) is no longer gated by any persisted per-cycle toggle at all — it
-checks whether the matched tier's own autobuyer is currently active (`autobuyers[tier.id]` non-null
-AND `autobuyersEnabled[tier.id]` not `false`), so there's no `storageAutoRedeemEnabled`-style field
-to carry over or reset in the first place. Once unlocked, the page also persists as a screen the
-player can return to at any time via AppNav's Foundry item rather than disappearing for the rest of
-the cycle — and stays just as interactive there as on the gate itself.
+`diskCache`/`diskBuild`) are all permanent and carry over regardless — a disk already FULL when
+Prestige fires stays full, giving the next cycle a head start.
+Disk pulling (`tickDiskPull`/`tickDiskLevelOneCachePull`) is fully automatic and unconditional,
+every tick, with no autobuyer gate and no persisted per-cycle toggle at all — Byte Foundry has no
+proactive knowledge of Byte Factory state; it simply pulls a full, clean-slate (zero
+purchase-level-progress) matching disk (or, at a tier's own level 1 with no such disk this tick,
+spends that tier's pool cache directly) whenever a tier level is ready. Once unlocked, the page also
+persists as a screen the player can return to at any time via AppNav's Foundry item rather than
+disappearing for the rest of the cycle — and stays just as live there as on the gate itself.
 
 **Storage page** (`src/pages/StoragePage/index.jsx`). Thin reusable every-size DiskArrayRow wrapper
 kept for reuse/tests — the **primary** UI path is Foundry's continuous Memory + Disk sections
@@ -356,60 +356,53 @@ tallies stay visual on the strips. The row branches on whether that size's array
 `RebuildingText` line replaces the cache strip — `"Rebuilding <size> x <N> array - Ready in
 <ceil(remainingSeconds)>s"` (`<size>` via `formatDiskSize` e.g. `1 KB`; `<N>` =
 `(disksBuiltTotal[size] ?? 0) + 1`, the disk under construction) — since every IO operation against
-that size (cache release, redeem) is disallowed for the build's duration; otherwise, two strips
-render:
+that size (a fresh disk pull, the level-1 cache pull) is disallowed for the build's duration;
+otherwise, two strips render — neither one is ever clickable, since Byte Foundry funds Byte Factory
+automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a player action here:
 
 - A `CacheBlocksRow` (`role="group"`, `aria-label="<size> read cache"`) of exactly
   `DISK_CACHE_BLOCK_COUNT` (8) `CacheBlock`s, each worth `size / DISK_CACHE_BLOCK_COUNT` bits — the
-  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a release
-  or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over one
-  cache-block production duration when no tier claim blocks. Each block shows its bit-scale
-  size as an in-cell label. Tap-to-transfer copy lives in `title`/`aria`. A block reads **full**
-  (`$full` — a raised fill) once its own share of `intro.diskCache[size]` is filled. While full and
-  **no full redeemable disk** of that size exists, a block can be **manually released**
-  (`$manualRelease`, accent border, clickable) when `isDiskCacheBlockManualReleaseAvailable(state,
-  size)` — or **auto-released** (`$autoRelease`, info styling, disabled) when
-  `isDiskCacheBlockAutoReleaseEligible(state, size)` (matching tier's Smart autobuyer on). Disks
-  always take priority: when a full redeemable disk exists, cache blocks stay non-interactive with a
-  title explaining to use the disk first. `aria-label` is `"transfer <size> cache block N to Factory
-  Bits"` when manually releasable, `"auto-release … to Factory Bits"` when auto-eligible, else the
-  plain `"<size> cache block N"`; clicking a manually releasable block calls
-  `actions.releaseDiskCacheBlock(size)`, crediting those bits into `resources.base` (Bits). Smart
-  autobuyers also auto-release via `tickDiskAutoReleaseCache` when eligible.
+  array's always-full reserve (e.g. 1 MB → 8 × 1 Mb). Memory refills whole blocks after a
+  level-1 cache pull or new unlock (`tickDiskAutoFill`); a full cache flushes to an empty disk over
+  one cache-block production duration when no tier claim blocks. Each block shows its bit-scale
+  size as an in-cell label and its own fill fraction only — a block reads **full** (`$full` — a
+  raised fill) once its own share of `intro.diskCache[size]` is filled, or shows a partial/flushing
+  fill while a read-cache-to-disk flush is draining it. `aria-label` is the plain `"<size> cache
+  block N"` (or `"… flushing to disk"` mid-flush); `title` explains the fill/flush state only.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
   (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
   strip that **always** keeps all ten circles on one unbroken row (circles flex-shrink; never wraps
   on mobile); in-cell labels use `0.65rem` font:
-  **full** (leftmost) with clear auto vs manual redeem: `isDiskAutoRedeemEligible` → info/blue fill,
-  `aria-label="auto-redeem <size> disk for <tier>"`;
-  `isDiskManualRedeemAvailable` → good/green pulsing fill, `aria-label="redeem <size> disk for
-  <tier>"`; both call `actions.redeemDisk(size)` and are
-  never blocked by the forced priority order (Disk Fill ranks highest) — **empty** (built but not
-  yet auto-filled — a dim muted-bordered fill, `aria-label="empty <size> disk"`, always disabled) —
-  **not-yet-built** (rightmost, outline-only placeholder, `aria-label="not yet built <size> disk"`,
-  always disabled). A full square's `title` names auto vs manual redeem into the matching tier, or
-  `"Redeemable once <size>'s own fixed corresponding tier reaches its matching level"` when not yet
-  matching; an empty square's
+  **full** (leftmost), split into a full disk about to be auto-pulled THIS TICK
+  (`isDiskPullEligible` — matching its tier's current level at zero progress) rendering
+  `$pullEligible` (good/green, pulsing, `aria-label="<size> disk pulling into <tier>"`), vs any
+  other full disk (blocked by partial tier progress, "too early" ahead of the tier's current level,
+  or stranded past it — see `isDiskStrandedByAdvancedTier`) rendering as a plain full circle,
+  `aria-label="full <size> disk"` — never blocked by the forced priority order itself (Disk Fill
+  ranks highest) — **empty** (built but not yet auto-filled — a dim muted-bordered fill,
+  `aria-label="empty <size> disk"`) — **not-yet-built** (rightmost, outline-only placeholder,
+  `aria-label="not yet built <size> disk"`). A full square's `title` names the pull into the
+  matching tier when pull-eligible, or explains why not (stranded past its tier / too early / has
+  partial tier progress already) otherwise; an empty square's
   `title` is `"Built, waiting for Memory to fill it"`; a not-yet-built square's is
   `"Not yet built"`; while rebuilding (this branch doesn't render, but the
   squares' own `title` logic still accounts for it) it would read `"This array is offline while it
-  rebuilds"`. Redeeming a full disk doesn't remove it or leave it permanently spent — it becomes
+  rebuilds"`. A pull doesn't remove the disk or leave it permanently spent — it becomes
   empty again, re-entering the fillable pool. No under-strip ActionHint — color + `title`/`aria`
-  carry redeem state.
+  carry pull state.
 
-There is no pause/resume control for auto-redeem on this page, and no
-`storageAutoRedeemEnabled`-style toggle exists in state at all any more — `tickDiskAutoRedeem` is
-gated per-size by that size's own fixed corresponding tier having its own unit-buying autobuyer
-active (`autobuyers[tier.id]` non-null AND `autobuyersEnabled[tier.id]` not `false`); that toggle
-already lives on the PP Upgrades page's Tier Autobuyers category (see "PP Upgrades view" below), not
-here. Filling itself (`tickDiskAutoFill`) has no UI control at all — it's fully automatic, every
-tick, no toggle: Memory first keeps every array's Cache full (whole-block transfers), then flushes
-a full read cache into an empty disk over one cache-block production duration when no tier claim
-blocks that size, smallest size first, whenever that size isn't mid-build. This page does not show
-tier01's own current purchase-block progress — nothing on either page renders it any more, now that
-ByteFoundryPage's manual transfer-block row (which used to be the one place it was shown) is gone
-(see `docs/DESIGN_HISTORY.md`); `purchaseLevelProgress[tier01]` is still tracked internally and
-still drives disk redemption/auto-convert exactly as before, just with no dedicated progress display.
+There is no pause/resume control for Disk Fill on this page, and no
+`storageAutoRedeemEnabled`-style toggle (or any autobuyer gate at all) exists in state — pulling is
+unconditional: `tickDiskPull` and `tickDiskLevelOneCachePull` run every tick regardless of any
+tier's own autobuyer/Smart state. Filling itself (`tickDiskAutoFill`) has no UI control at all
+either — it's fully automatic, every tick, no toggle: Memory first keeps every array's Cache full
+(whole-block transfers), then flushes a full read cache into an empty disk over one cache-block
+production duration when no tier claim blocks that size, smallest size first, whenever that size
+isn't mid-build. This page does not show tier01's own current purchase-block progress — nothing on
+either page renders it any more, now that ByteFoundryPage's manual transfer-block row (which used to
+be the one place it was shown) is gone (see `docs/DESIGN_HISTORY.md`); `purchaseLevelProgress[tier01]`
+is still tracked internally and still drives the disk pull/auto-convert eligibility exactly as
+before, just with no dedicated progress display.
 
 **Compute page** (`src/pages/ComputePage/index.jsx`). Compute's own dedicated screen, split out of
 ByteFoundryPage — reached via AppNav once Compute is revealed. Takes `{ game }`. A centered title

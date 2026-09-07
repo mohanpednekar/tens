@@ -408,25 +408,25 @@ export const createInitialGameState = () => ({
     // compatibility with the historical Sacrifice flow.
     capacityUpgradeQueued: false,
     // PERMANENT — { [capacityBits]: count } of currently-FULL Disks of that size (see
-    // tickDiskAutoFill/redeemDisk below) — "never lost," survives Prestige/Speed Up/Overclock
-    // exactly like the Byte generator itself (a full disk's contents ride through a real Prestige
-    // untouched even though Memory itself resets, since a disk is a separate store, not part of
-    // Memory). Empty object, not per-denomination zeros, since the set of denominations ever built
-    // is open-ended. The number of currently EMPTY disks of a size is always
-    // disksBuiltTotal[size] - disks[size].
+    // tickDiskAutoFill/pullDiskForCurrentLevel below) — "never lost," survives Prestige/Speed
+    // Up/Overclock exactly like the Byte generator itself (a full disk's contents ride through a
+    // real Prestige untouched even though Memory itself resets, since a disk is a separate store,
+    // not part of Memory). Empty object, not per-denomination zeros, since the set of
+    // denominations ever built is open-ended. The number of currently EMPTY disks of a size is
+    // always disksBuiltTotal[size] - disks[size].
     disks: {},
     // PERMANENT — { [capacityBits]: cumulative count } of every disk ever built (constructed) at
-    // that size, full or empty, including ones since redeemed — unlike disks above, redeemDisk
-    // never decrements this. Drives getDiskSize's one-way ladder advance past
-    // DISK_ARRAY_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
+    // that size, full or empty, including ones since pulled into a tier level — unlike disks
+    // above, pullDiskForCurrentLevel never decrements this. Drives getDiskSize's one-way ladder
+    // advance past DISK_ARRAY_LADDER_CAP; see the "Byte Foundry Storage" comment in layers.js.
     disksBuiltTotal: {},
     // PERMANENT — { [capacityBits]: bits currently held } in that size array's own cache. Steady
-    // state is FULL (size bits); dips only right after a manual block release, after a completed
-    // read-cache → disk flush, or when a size is newly unlocked/built. Split into
-    // DISK_CACHE_BLOCK_COUNT equal blocks (e.g. a 1 MB array → 8 × 1 Mb) for display /
-    // releaseDiskCacheBlock. When full and no tier claim blocks ladder use, the cache flushes into
-    // an empty disk over getDiskReadCacheFlushSeconds (one block at the current production rate) —
-    // see tickDiskAutoFill. Rides through Prestige untouched, same as disks/disksBuiltTotal above.
+    // state is FULL (size bits); dips only right after a completed read-cache → disk flush, a
+    // level-1 tier's cache pull (see tickDiskLevelOneCachePull), or when a size is newly
+    // unlocked/built. Split into DISK_CACHE_BLOCK_COUNT equal blocks (e.g. a 1 MB array → 8 × 1 Mb)
+    // for display. When full and no tier claim blocks ladder use, the cache flushes into an empty
+    // disk over getDiskReadCacheFlushSeconds (one block at the current production rate) — see
+    // tickDiskAutoFill. Rides through Prestige untouched, same as disks/disksBuiltTotal above.
     diskCache: {},
     // NOT permanent — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
     // totalSeconds } }. Empty at rest. Duration at start is one cache block at the current Byte
@@ -460,11 +460,6 @@ export const createInitialGameState = () => ({
     // buffer, never the shared Data Stream Buffer directly — the shared Buffer only ever tops this
     // up, bandwidth-limited, same posture as disks/disksBuiltTotal above.
     poolBuffers: {},
-    // NOT permanent — resets to {} on every real Prestige (see prestigeGame), unlike every other
-    // Storage field above. { [capacityBits]: true } once tickDiskAutoRedeem has auto-redeemed that
-    // size this cycle, capping auto-redeem at one disk per size per cycle — further eligible disks
-    // of an already-auto-redeemed size need a manual click for the rest of the cycle.
-    diskAutoRedeemedSizes: {},
     // PERMANENT — one Data Lake per storage denomination (KB … QB), each holding up to
     // getDataLakeCapacity() units, filled continuously from that denomination's own Storage pool
     // overflow (see tickPoolBufferFill/fillDataLakeDisks below) rather than from deposited Disks.
@@ -1620,34 +1615,34 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // neither accumulates the attempt budget nor fires prestigeGame automatically while paused.
   const autoPrestigeActive = autoPrestigeLevel !== null && (stateAfterFlops.autoPrestigeEnabled ?? true)
 
-  // Storage's own auto-redeem (full disks -> each one's own fixed corresponding tier, once it's at
-  // the required level — see getMatchingTierForDiskSize) runs last, through every branch below,
-  // against this tick's FINAL tier levels (post autobuyer/Speed Up) — isDiskRedeemable depends on
-  // them, so a disk whose size only just became redeemable once its tier leveled up THIS tick still redeems the
-  // same tick. Auto-fill already ran above (see stateAfterStorage / the storage pipeline), ahead of
-  // tickIntroAutoInvest, since it has no such dependency on any tier's level. A same-reference
-  // no-op when nothing qualifies (including whenever the matching tier's own autobuyer isn't
-  // currently active — see tickDiskAutoRedeem), so calling it costs nothing when Storage isn't in
-  // play at all.
-  // When auto-redeem actually empties a disk, re-run tickDiskAutoFill so that size's cache can
-  // start topping up ASAP the same tick (smallest→largest) — scoped to a real redeem change so a
-  // no-op auto-redeem pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
-  // tickDiskAutoReleaseCache runs after that: a Smart tier's autobuyer may release cache
-  // blocks into Bits only when no full redeemable disk of that size exists (disks always win).
-  // Manual redeemDisk deliberately does NOT sync-fill: Forced Priority expects clearing the last
-  // full disk to free Memory for Bandwidth before any further Disk Fill claim (see
-  // docs/DESIGN_HISTORY.md).
+  // Storage's own pull-based funding runs last, through every branch below, against this tick's
+  // FINAL tier levels (post autobuyer/Speed Up) — isDiskPullEligible depends on them, so a level
+  // that only just became pull-eligible once its tier leveled up THIS tick still pulls the same
+  // tick. Byte Foundry has no proactive knowledge of Byte Factory state: tickDiskPull only ever
+  // fills a fresh, zero-progress level from a full built disk of the matching size — see
+  // isDiskPullEligible/pullDiskForCurrentLevel. Auto-fill already ran above (see
+  // stateAfterStorage / the storage pipeline), ahead of tickIntroAutoInvest, since it has no such
+  // dependency on any tier's level. A same-reference no-op when nothing qualifies, so calling it
+  // costs nothing when Storage isn't in play at all.
+  // When a pull actually empties a disk, re-run tickDiskAutoFill so that size's cache can start
+  // topping up ASAP the same tick (smallest→largest) — scoped to a real pull change so a no-op
+  // pass does not pull leftover Memory into caches ahead of Bandwidth/Invest.
+  // tickDiskLevelOneCachePull runs after that: every tier still sitting at its own level 1 with no
+  // fresh disk pull this tick draws directly from its pool's own local cache instead (see
+  // isDiskPullEligible's disk-vs-cache ordering) — the only path any level past 1 ever had into a
+  // built disk or cache is via a fresh, zero-progress start; a level with partial progress waits
+  // for the tier's next level instead of being topped off.
   const tickStorage = state => {
-    const afterRedeem = tickDiskAutoRedeem(state)
-    const afterCache = tickDiskAutoReleaseCache(afterRedeem)
+    const afterPull = tickDiskPull(state)
+    const afterCache = tickDiskLevelOneCachePull(afterPull)
     // A queued Provision Disk build (see queueDiskBuild) takes its turn here, once this tick's own
-    // redeem/cache-release have had first claim on the forced-priority state.
+    // disk pull/cache pull have had first claim on the forced-priority state.
     const afterQueuedBuild = tickQueuedDiskBuild(afterCache)
-    // 0 elapsed: start any newly eligible read-cache flushes after a redeem emptied a slot;
+    // 0 elapsed: start any newly eligible read-cache flushes after a pull emptied a slot;
     // countdown continues on the next ordinary tickGame pass. A queued build firing this tick
     // doesn't add any newly-fillable slot itself (its size stays IO-locked until the build
     // finishes), but re-running this is harmless and keeps the same "refresh after any Storage
-    // change" shape the redeem branch already uses.
+    // change" shape the pull branch already uses.
     return afterQueuedBuild === state ? state : tickDiskAutoFill(0)(afterQueuedBuild)
   }
 
@@ -1656,11 +1651,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // equivalent copy) lets React's setState bail out of re-rendering while frozen, same as any
   // other no-op action; that optimization only applies when Auto-Prestige isn't bought (or is
   // currently paused) at all, since its attempt budget (see below) needs to keep accumulating
-  // even while otherwise frozen. Storage's own auto-fill/auto-redeem still run through every
-  // branch here — like redeemDisk/convertIntroBitsToKilobytes, they pay from a separate currency
+  // even while otherwise frozen. Storage's own auto-fill/auto-pull still run through every
+  // branch here — like tickDiskPull/convertIntroBitsToKilobytes, they pay from a separate currency
   // pool and deliberately bypass this freeze entirely, so a player who's crossed the Prestige
-  // threshold but hasn't manually prestiged yet doesn't have to wait for that click to
-  // fill/redeem a disk.
+  // threshold hasn't manually prestiged yet still gets disks pulled into fresh tier levels
+  // automatically.
   if (isProductionFrozen(stateAfterFlops)) {
     if (!autoPrestigeActive) return tickStorage(stateAfterFlops)
     const nextBudget = (stateAfterFlops.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds
@@ -2660,14 +2655,33 @@ export const normalizePoolMemoryCapacity = state => {
 // this forced order. Each base predicate below is that action's own plain availability check; the
 // "turn"-suffixed composites fold the ordering in.
 
-// "Disk Fill" (highest priority) — true whenever ANY built disk, of any size, is both currently
-// FULL and redeemable right now (see isDiskRedeemable, defined further down this file — safe, not
-// called until this function itself is): a disk sitting full and redeemable is value already
-// earned, just waiting on a click, so nothing else is ever offered ahead of it.
+// A disk pulls into its own matching tier's CURRENT level only from a clean slate — no partial
+// progress already made toward that level, by money or by the level-1 cache pull below. Storage
+// never pushes into the Factory; the Factory pulls from Storage whenever it's ready to (see
+// docs/DESIGN_HISTORY.md) — this is the base "is there something to pull right now" check both
+// isDiskFillAvailable and the actual pull reducer (pullDiskForCurrentLevel below) share. Defined
+// ahead of isDiskRedeemable/getMatchingTierForDiskSize (further down this file) — safe, since
+// neither is invoked until this function itself is called, well after the whole module has
+// finished evaluating (an established pattern elsewhere in this file).
+export const isDiskPullEligible = (state, capacityBits) => {
+  if ((state.intro?.disks?.[capacityBits] ?? 0) <= 0) return false
+  if (state.intro?.diskBuild?.size === capacityBits) return false
+  const tier = getMatchingTierForDiskSize(state, capacityBits)
+  if (!tier) return false
+  return (state.purchaseLevelProgress?.[tier.id] ?? 0) === 0
+}
+
+// "Disk Fill" (highest priority) — true whenever ANY built disk, of any size, is ready to be
+// pulled right now (see isDiskPullEligible above): a disk sitting full, matching its tier's
+// current level, and ready to fund it from a clean slate is value already earned, so nothing else
+// is ever offered ahead of it. Deliberately does NOT fire for a disk that's merely redeemable
+// (isDiskRedeemable) but blocked by partial level progress — that disk isn't going anywhere this
+// tick regardless, so treating it as "available" would permanently starve every lower-ranked
+// action for no reason (see docs/DESIGN_HISTORY.md for the pull redesign this predicate is part of).
 export const isDiskFillAvailable = state =>
   Object.keys(state.intro?.disks ?? {})
     .map(Number)
-    .some(size => (state.intro.disks[size] ?? 0) > 0 && isDiskRedeemable(state, size))
+    .some(size => isDiskPullEligible(state, size))
 
 // "Bandwidth" ("Invest for Double Production") — true whenever a claim can fire right now: either
 // the bit-cost path (affordable and claims remain) or the compute-token overflow path (#323 —
@@ -3265,17 +3279,17 @@ export const tickIntroAutoInvest = state => {
 }
 
 // --- Byte Foundry Storage (Disks) --- see the "Byte Foundry Storage" comment in layers.js and
-// intro.disks/disksBuiltTotal/diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState
-// above. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item: building one
+// intro.disks/disksBuiltTotal/diskCache/diskBuild in createInitialGameState above. Disks are a
+// genuine storage MEDIUM, not a one-shot pre-paid item: building one
 // (provisionDisk) takes real TIME (see tickProvisionDisk) and, once complete, only constructs a
 // permanent, EMPTY container of a given size — Memory (intro.bits) then keeps each array's Cache
 // full (whole-block transfers) and flushes a full read cache into an empty disk over one
 // cache-block production duration when no tier claim blocks that size (see tickDiskAutoFill),
 // smallest size first. `intro.disks[size]` counts how many disks of that size
 // are currently FULL (this is
-// what redeemDisk spends); `intro.disksBuiltTotal[size]` is the permanent, never-decremented total
-// ever built — the number of currently EMPTY disks of a size is always
-// `disksBuiltTotal[size] - disks[size]`. Consuming (redeeming) a full disk empties it again,
+// what pullDiskForCurrentLevel spends); `intro.disksBuiltTotal[size]` is the permanent,
+// never-decremented total ever built — the number of currently EMPTY disks of a size is always
+// `disksBuiltTotal[size] - disks[size]`. Consuming (pulling) a full disk empties it again,
 // returning it to the fillable pool — disks are reusable, not single-use.
 
 // Disk ladder step `n` (1-indexed): DISK_LADDER_BASE_SIZE_BITS × DISK_LADDER_SIZE_MULTIPLIER^(n-1)
@@ -3877,52 +3891,6 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   return { ...state, intro: { ...state.intro, poolBuffers, disks, diskCache, diskReadCacheFlush } }
 }
 
-// True when a size currently has at least one FULL disk that could redeem right now — Cache is
-// always blocked while this holds (disks take priority over cache for matching level costs).
-const hasFullRedeemableDiskAtSize = (state, capacityBits) =>
-  (state.intro?.disks?.[capacityBits] ?? 0) > 0 &&
-  state.intro?.diskBuild?.size !== capacityBits &&
-  isDiskRedeemable(state, capacityBits)
-
-// Whether a size's cache currently has at least one full, releasable block (see
-// DISK_CACHE_BLOCK_COUNT in layers.js) — false while that size's array is mid-build (IO disallowed
-// — see tickProvisionDisk), while capacityBits' own fixed corresponding tier isn't currently at the
-// required level (see isDiskRedeemable below — a released block is only ever spendable toward an
-// eligible tier's own level, so with none eligible there's nothing for it to fund), OR while a full
-// redeemable disk of that same size exists (disks always take priority — cache is fallback only).
-export const isDiskCacheBlockReleasable = (state, capacityBits) =>
-  state.intro.diskBuild?.size !== capacityBits &&
-  !getDiskReadCacheFlush(state, capacityBits) &&
-  isDiskRedeemable(state, capacityBits) &&
-  !hasFullRedeemableDiskAtSize(state, capacityBits) &&
-  (state.intro.diskCache?.[capacityBits] ?? 0) >= capacityBits / DISK_CACHE_BLOCK_COUNT
-
-// Manually releases one full cache block (capacityBits / DISK_CACHE_BLOCK_COUNT bits) of a size's
-// array into resources.base (Bits) — Cache's only player-facing use: funding the matching
-// main-game tier's current level-block purchases while isDiskRedeemable holds for this size.
-// Disks fill from a timed read-cache flush (see tickDiskAutoFill), so releasing a cache block
-// never races a cache→disk pour while that size is mid-flush (isDiskCacheBlockReleasable is false
-// then); tickDiskAutoFill refills the gap in whole-block transfers once Memory has enough again.
-// No-op if nothing releasable (see isDiskCacheBlockReleasable).
-export const releaseDiskCacheBlock = capacityBits => state => {
-  if (!isDiskCacheBlockReleasable(state, capacityBits)) return state
-
-  const blockBits = capacityBits / DISK_CACHE_BLOCK_COUNT
-  const cached = state.intro.diskCache?.[capacityBits] ?? 0
-
-  return {
-    ...state,
-    resources: {
-      ...state.resources,
-      [MONEY_ID]: (state.resources[MONEY_ID] ?? 0) + blockBits,
-    },
-    intro: {
-      ...state.intro,
-      diskCache: { ...state.intro.diskCache, [capacityBits]: cached - blockBits },
-    },
-  }
-}
-
 // A Disk's size fixes, once and for all, exactly ONE (tier, level) pair it can ever redeem into —
 // a permanent "nice one to one mapping" rather than a dynamic price coincidence. The tier is
 // whichever main-game tier shares this size's Data Lake grouping (getDataLakeTierIndex — disk
@@ -3970,8 +3938,10 @@ export const isDiskRedeemable = (state, capacityBits) =>
 // progress, which still has real future redemption use and must stay eligible for everything a
 // normal disk is). Used by tickDiskWriteCache below to keep a genuinely stranded disk completely
 // untouched ("simply ignore it" — see docs/DESIGN_HISTORY.md) rather than letting write-cache
-// silently consume it into another array that may be just as unredeemable.
-const isDiskStrandedByAdvancedTier = (state, capacityBits) => {
+// silently consume it into another array that may be just as unredeemable. Also exported so the
+// UI (DiskArrayRow) can render this size's disks as genuinely stranded rather than merely "too
+// early."
+export const isDiskStrandedByAdvancedTier = (state, capacityBits) => {
   const tierIndex = getDataLakeTierIndex(capacityBits)
   const requiredLevel = getDiskRequiredTierLevel(capacityBits)
   if (!tierIndex || !requiredLevel) return false
@@ -3986,94 +3956,32 @@ const isDiskStrandedByAdvancedTier = (state, capacityBits) => {
 export const getDiskRedeemTierName = (state, capacityBits) =>
   getMatchingTierForDiskSize(state, capacityBits)?.name ?? null
 
-// Redeems one currently-FULL disk of `capacityBits`, completing its corresponding tier's CURRENT
-// level in one shot — grants exactly enough free units to finish out the level's own purchase
-// block (getPurchaseBlockSize minus whatever progress already exists, manually bought or not),
-// rolling that tier straight into its next level, via grantTierUnits — same "pays from a separate
-// currency pool, bypasses isProductionFrozen/isTierUnlocked/cost entirely" rationale as
-// convertIntroBitsToKilobytes — a disk's contents came from Memory via tickDiskAutoFill already,
-// not from a further transfer. "Fills one level" is deliberately a full level-completion, not a
-// single unit like a manual/autobuyer purchase — a disk's fixed one-to-one level correspondence
-// (see getMatchingTierForDiskSize) would otherwise take many redemptions of a size the ladder has
-// already moved past to finish that one level. The disk itself is NOT lost — it becomes
-// empty again (disksBuiltTotal is untouched), re-entering the fillable pool for tickDiskAutoFill to
-// fill again later (next tick, or same tick via tickGame's post-auto-redeem ASAP pass — never
-// sync-filled here, so clearing the last full disk can hand Memory to Bandwidth under Forced
-// Priority). No-op if no disk of that size is currently full, if that size's array is
-// currently mid-build (IO disallowed — see tickProvisionDisk), or if its corresponding tier isn't
-// currently at exactly this size's required level (see isDiskRedeemable).
-export const redeemDisk = capacityBits => state => {
-  const full = state.intro.disks?.[capacityBits] ?? 0
-  if (full <= 0) return state
-  if (state.intro.diskBuild?.size === capacityBits) return state
+// Pulls one currently-FULL, clean-slate disk of `capacityBits` into its own matching tier's
+// CURRENT level in one shot — grants exactly enough free units to finish out the level's own
+// purchase block (getPurchaseBlockSize; always the FULL block, since isDiskPullEligible already
+// requires zero progress), rolling that tier straight into its next level, via grantTierUnits —
+// same "pays from a separate currency pool, bypasses isProductionFrozen/isTierUnlocked/cost
+// entirely" rationale as convertIntroBitsToKilobytes — a disk's contents came from Memory via
+// tickDiskAutoFill already, not from a further transfer. "Fills one level" is deliberately a full
+// level-completion, not a single unit like a manual/autobuyer purchase — a disk's fixed
+// one-to-one level correspondence (see getMatchingTierForDiskSize) would otherwise take many
+// pulls of a size the ladder has already moved past to finish that one level. The disk itself is
+// NOT lost — it becomes empty again (disksBuiltTotal is untouched), re-entering the fillable pool
+// for tickDiskAutoFill to fill again later. Fully automatic — Storage never waits on a click; see
+// isDiskPullEligible above for the complete eligibility rule (full, not mid-build, matching tier
+// currently at exactly this size's required level, AND that level has zero progress already).
+const pullDiskForCurrentLevel = capacityBits => state => {
+  if (!isDiskPullEligible(state, capacityBits)) return state
   const tier = getMatchingTierForDiskSize(state, capacityBits)
-  if (!tier) return state
-
+  const full = state.intro.disks[capacityBits]
   const { [capacityBits]: _removed, ...remainingDisks } = state.intro.disks
   const nextDisks = full > 1 ? { ...state.intro.disks, [capacityBits]: full - 1 } : remainingDisks
 
-  // getPurchaseBlockSize(state) is read once here, from the state BEFORE any units are granted, then
-  // passed as a fixed quantity into grantTierUnits' own loop below — which recomputes
-  // getPurchaseBlockSize fresh on every iteration off its own mutating state. That's only safe
-  // because the disk ladder's fixed size-to-tier mapping keeps each size within one tier's
-  // three-level boundary (see DISK_ARRAY_LADDER_CAP above), so the loop cannot cross a
-  // PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS boundary of THIS tier mid-grant and have the block
-  // size grow out from under remainingInLevel.
-  const remainingInLevel = getPurchaseBlockSize(state) - (state.purchaseLevelProgress?.[tier.id] ?? 0)
-
-  return grantTierUnits(tier.id, remainingInLevel)({
+  return grantTierUnits(tier.id, getPurchaseBlockSize(state))({
     ...state,
     intro: { ...state.intro, disks: nextDisks },
   })
 }
-
-// Whether tierId's own unit-buying autobuyer is currently actually running — unlocked (purchased,
-// autobuyers[tierId] non-null) AND not paused (autobuyersEnabled[tierId], defaulting true) — the
-// same two-part check tickGame's own autobuyer loop applies inline. Used below to gate a Disk's
-// auto-redeem on whichever tier it would currently redeem into.
-const isTierAutobuyerActive = (state, tierId) =>
-  (state.autobuyers?.[tierId] ?? null) !== null && (state.autobuyersEnabled?.[tierId] ?? true)
-
-// True when a full disk of `capacityBits` will auto-redeem on the next tickDiskAutoRedeem /
-// tickGame pass: currently full, not mid-build, not already auto-redeemed this Prestige cycle,
-// and the matching tier's unit-buying autobuyer is unlocked and unpaused. DiskArrayRow uses this
-// to visually distinguish "will auto-redeem" from "tap to redeem" (manual — matching tier has no
-// active autobuyer, or this size already used its one auto-redeem this cycle). Cache blocks auto-
-// transfer only via tickDiskAutoReleaseCache when the matching tier's Smart autobuyer is active
-// and no full redeemable disk of that size exists (see isDiskCacheBlockAutoReleaseEligible).
-export const isDiskAutoRedeemEligible = (state, capacityBits) => {
-  if ((state.intro?.disks?.[capacityBits] ?? 0) <= 0) return false
-  if (state.intro?.diskBuild?.size === capacityBits) return false
-  if (state.intro?.diskAutoRedeemedSizes?.[capacityBits]) return false
-  const tier = getMatchingTierForDiskSize(state, capacityBits)
-  return tier !== undefined && isTierAutobuyerActive(state, tier.id)
-}
-
-// True when a full disk of `capacityBits` is redeemable right now but will NOT auto-redeem — the
-// player must click (see redeemDisk). Complementary to isDiskAutoRedeemEligible for UI affordances.
-export const isDiskManualRedeemAvailable = (state, capacityBits) =>
-  (state.intro?.disks?.[capacityBits] ?? 0) > 0 &&
-  state.intro?.diskBuild?.size !== capacityBits &&
-  isDiskRedeemable(state, capacityBits) &&
-  !isDiskAutoRedeemEligible(state, capacityBits)
-
-// True when a cache block of `capacityBits` will auto-release on the next tickDiskAutoReleaseCache
-// / tickGame pass: releasable right now (no full redeemable disk of that size), and the matching
-// tier's unit autobuyer is active AND Smart. DiskArrayRow uses this to distinguish auto cache
-// release from manual-only release (non-Smart tiers, or Smart with a disk still available).
-export const isDiskCacheBlockAutoReleaseEligible = (state, capacityBits) => {
-  if (!isDiskCacheBlockReleasable(state, capacityBits)) return false
-  const tier = getMatchingTierForDiskSize(state, capacityBits)
-  return tier !== undefined &&
-    isTierAutobuyerActive(state, tier.id) &&
-    Boolean(state.smartAutobuyer?.[tier.id])
-}
-
-// True when a cache block is releasable right now but will NOT auto-release — the player must
-// click (see releaseDiskCacheBlock). Complementary to isDiskCacheBlockAutoReleaseEligible.
-export const isDiskCacheBlockManualReleaseAvailable = (state, capacityBits) =>
-  isDiskCacheBlockReleasable(state, capacityBits) &&
-  !isDiskCacheBlockAutoReleaseEligible(state, capacityBits)
 
 // Every Disk size currently "relevant" for a matching-tier Foundry subset: any size from
 // getDiskSizesToShow whose own fixed corresponding tier is currently at that size's required level
@@ -4090,65 +3998,81 @@ export const getRelevantDiskSizesForFoundry = state => {
   return [...matching, highest]
 }
 
-// Auto-redeem convenience — a no-op for any size whose currently-matching tier (see
-// getMatchingTierForDiskSize above) doesn't have its own unit-buying autobuyer currently active
-// (see isTierAutobuyerActive above), or that matches no tier at all right now: "whenever there is
-// a level whose cost equals a Disk, it shall be redeemed to fulfill it if [the] autobuyer is
-// enable[d] for the corresponding tier." With no active autobuyer for the matching tier, a
-// full/redeemable disk simply waits for a manual click (see redeemDisk) instead. A given size
-// auto-redeems at most ONCE per real Prestige cycle (see diskAutoRedeemedSizes, which resets fresh
-// every real Prestige — prestigeGame) — a disk that refills later the same cycle (see
-// tickDiskAutoFill) needs a manual click for the rest of it. Redeems only the smallest eligible
-// size per call — redeeming can itself grant a whole level's worth of units and advance that
-// tier's level (via grantTierUnits), which can in turn change whether OTHER sizes' own fixed tier
-// is now sitting at ITS required level, so redeeming more than one size correctly needs everything
-// recomputed in between; rather than looping that here,
-// this piggybacks on tickGame's own ~10Hz cadence (see TICK_RATE_MS) to work through multiple
-// eligible disks over the next several ticks — imperceptibly fast in practice. Called from every
-// branch of tickGame, frozen or not (see there), so it always reacts to every tier's truly final
-// level for the tick, not a stale mid-tick one. tickGame re-runs tickDiskAutoFill only when this
-// actually changes state, so the emptied container's cache can top up ASAP the same tick when
-// Memory allows — without a trailing fill on every no-op pass.
-export const tickDiskAutoRedeem = state => {
-  const alreadyRedeemedThisCycle = state.intro?.diskAutoRedeemedSizes ?? {}
-  const buildingSize = state.intro.diskBuild?.size
+// Pull convenience — "Byte Foundry does not know about Byte Factory at all; it simply supplies if
+// asked" (see docs/DESIGN_HISTORY.md): fully automatic, unconditional on any autobuyer being
+// unlocked, no per-cycle throttle. Pulls only the smallest eligible size per call — a pull can
+// itself grant a whole level's worth of units and advance that tier's level (via grantTierUnits),
+// which can in turn change whether OTHER sizes' own fixed tier is now sitting at ITS required
+// level with zero progress, so pulling more than one size correctly needs everything recomputed in
+// between; rather than looping that here, this piggybacks on tickGame's own ~10Hz cadence (see
+// TICK_RATE_MS) to work through multiple eligible disks over the next several ticks —
+// imperceptibly fast in practice. Called from every branch of tickGame, frozen or not (see there),
+// so it always reacts to every tier's truly final level for the tick, not a stale mid-tick one.
+// tickGame re-runs tickDiskAutoFill only when this actually changes state, so the emptied
+// container's cache can top up ASAP the same tick when Memory allows — without a trailing fill on
+// every no-op pass.
+export const tickDiskPull = state => {
   const eligibleSize = Object.keys(state.intro.disks ?? {})
     .map(Number)
-    .filter(size => (state.intro.disks[size] ?? 0) > 0)
-    .filter(size => size !== buildingSize)
-    .filter(size => !alreadyRedeemedThisCycle[size])
-    .filter(size => {
-      const tier = getMatchingTierForDiskSize(state, size)
-      return tier !== undefined && isTierAutobuyerActive(state, tier.id)
-    })
+    .filter(size => isDiskPullEligible(state, size))
     .sort((a, b) => a - b)[0]
   if (eligibleSize === undefined) return state
-
-  const redeemed = redeemDisk(eligibleSize)(state)
-  return {
-    ...redeemed,
-    intro: {
-      ...redeemed.intro,
-      diskAutoRedeemedSizes: { ...redeemed.intro.diskAutoRedeemedSizes, [eligibleSize]: true },
-    },
-  }
+  return pullDiskForCurrentLevel(eligibleSize)(state)
 }
 
-// Auto-release convenience for Smart autobuyers — a no-op unless there's an eligible size whose
-// cache holds at least one full block, no full redeemable disk of that size exists, and the
-// currently-matching tier's own unit-buying autobuyer is active AND Smart. Non-Smart tiers (or
-// Smart tiers while a matching disk is still full) leave cache for manual release only. Releases
-// the smallest eligible size per call — same cadence as tickDiskAutoRedeem. Called from every
-// branch of tickGame via tickStorage, frozen or not.
-export const tickDiskAutoReleaseCache = state => {
-  const buildingSize = state.intro?.diskBuild?.size
-  const eligibleSize = Object.keys(state.intro.diskCache ?? {})
-    .map(Number)
-    .filter(size => size !== buildingSize)
-    .filter(size => isDiskCacheBlockAutoReleaseEligible(state, size))
-    .sort((a, b) => a - b)[0]
-  if (eligibleSize === undefined) return state
-  return releaseDiskCacheBlock(eligibleSize)(state)
+// The forward inverse of getDiskRequiredTierLevel/getDataLakeTierIndex above (size → tier+level):
+// given a main-game tier's own 1-based Data Lake tierIndex and one of its three levels (1/2/3),
+// the disk-ladder size that tier+level pair fixes to, or null when no such size exists (tierIndex
+// beyond DATA_LAKE_TIER_COUNT, or a level beyond the 3-step group every tier gets). Used below to
+// find "my own level 1's disk size" without scanning every built disk size the way
+// getMatchingTierForDiskSize's own reverse direction does.
+const getDiskSizeForTierLevel = (tierIndex, level) => {
+  if (tierIndex < 1 || tierIndex > DATA_LAKE_TIER_COUNT) return null
+  const subSize = DATA_LAKE_SUB_SIZES[level - 1]
+  if (subSize === undefined) return null
+  return getDiskLadderSizeBits(getDataLakeSubSizeStep(tierIndex, subSize))
+}
+
+// Generalizes tier01's own pre-Storage-unlock bootstrap (convertIntroBitsToKilobytes — untouched;
+// it draws from intro.bits, before any pool/cache exists at all) to every tier's own level 1, once
+// its matching pool exists: whenever a tier sits at level 1 with no fresh disk ready to pull this
+// tick (isDiskPullEligible already covers both "no disk built yet" and "a disk exists but this
+// level already has progress from money or an earlier cache pull") pulls whole units straight from
+// that tier's own pool's smallest-size disk cache — the same diskCache a read-cache flush draws
+// into a disk from — at the tier's current per-unit cost, same "pays from an already-earned pool,
+// bypasses isProductionFrozen/isTierUnlocked/cost entirely" rationale as pullDiskForCurrentLevel/
+// convertIntroBitsToKilobytes. Never applies past level 1 — a tier's own 2nd/3rd disk-funded
+// levels only ever pull from a whole disk, never cache; cache is a fallback for the tier's own
+// entry point only, not an ongoing substitute for a disk (see docs/DESIGN_HISTORY.md). Pulls as
+// many whole units as the cache currently affords, capped at the level's own remaining
+// requirement, in one shot per tier per call — cache accumulates gradually on its own (see
+// tickDiskAutoFill), so there's no reason to throttle the spend side to one unit per tick the way
+// tickDiskPull throttles to one SIZE per tick (there's no cross-tier recomputation hazard here:
+// every tier's own level-1 cache is independent, unlike the shared money pool autobuyers compete
+// for). Called from every branch of tickGame, frozen or not, same as the disk pull above.
+export const tickDiskLevelOneCachePull = state => {
+  let result = state
+  let changed = false
+  for (const tier of TIER_DEFINITIONS) {
+    const level = result.purchaseLevels?.[tier.id] ?? 1
+    if (level !== 1) continue
+    const size = getDiskSizeForTierLevel(TIER_INDEX_BY_ID[tier.id] + 1, 1)
+    if (size === null || isDiskPullEligible(result, size)) continue
+    const cacheBits = result.intro.diskCache?.[size] ?? 0
+    const unitCost = getTierCost(tier, level)
+    if (!(unitCost > 0) || cacheBits < unitCost) continue
+    const progress = result.purchaseLevelProgress?.[tier.id] ?? 0
+    const remainingInLevel = getPurchaseBlockSize(result) - progress
+    const affordableUnits = Math.min(remainingInLevel, Math.floor(cacheBits / unitCost))
+    if (affordableUnits <= 0) continue
+    const spend = affordableUnits * unitCost
+    result = grantTierUnits(tier.id, affordableUnits)({
+      ...result,
+      intro: { ...result.intro, diskCache: { ...result.intro.diskCache, [size]: cacheBits - spend } },
+    })
+    changed = true
+  }
+  return changed ? result : state
 }
 
 // --- Data Lakes --- see DATA_LAKE_* constants in layers.js. Each pool's overflow feeds its own
@@ -5809,9 +5733,7 @@ export const prestigeGame = state => {
       // contents intact even though Memory itself resets to 0 — this is what lets banked-up
       // Storage give a new cycle a head start: the smallest size's own fixed corresponding tier is
       // tier01, whose fresh post-Prestige level 1 is exactly that size's required level, so it's
-      // immediately redeemable again. diskAutoRedeemedSizes is deliberately NOT carried over here — it falls
-      // through to initial.intro's fresh {} default below, since "once per run" resets every real
-      // Prestige (see tickDiskAutoRedeem).
+      // immediately pull-eligible again (see tickDiskPull).
       disks: state.intro?.disks ?? initial.intro.disks,
       disksBuiltTotal: state.intro?.disksBuiltTotal ?? initial.intro.disksBuiltTotal,
       diskCache: state.intro?.diskCache ?? initial.intro.diskCache,
