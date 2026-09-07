@@ -428,15 +428,18 @@ export const createInitialGameState = () => ({
     // disk over getDiskReadCacheFlushSeconds (one block at the current production rate) — see
     // tickDiskAutoFill. Rides through Prestige untouched, same as disks/disksBuiltTotal above.
     diskCache: {},
-    // NOT permanent — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
+    // PERMANENT — in-flight read-cache → disk flushes: { [sizeBits]: { remainingSeconds,
     // totalSeconds } }. Empty at rest. Duration at start is one cache block at the current Byte
-    // Foundry production rate (see getDiskReadCacheFlushSeconds). Resets every real Prestige —
-    // operational, not banked progress (same posture as diskWriteCache).
+    // Foundry production rate (see getDiskReadCacheFlushSeconds). Rides through a real Prestige
+    // untouched, same as diskWriteCache below and disks/disksBuiltTotal above — "Prestige shall
+    // not affect Byte Foundry in any way" (see prestigeGame, docs/DESIGN_HISTORY.md).
     diskReadCacheFlush: {},
-    // NOT permanent — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
+    // PERMANENT — in-flight upward merges (write cache): { [targetSizeBits]: { sourceSize,
     // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
     // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
-    // drain) into one target disk. Resets every real Prestige — operational, not banked progress.
+    // drain) into one target disk. Rides through a real Prestige untouched (see prestigeGame) —
+    // a merge frozen because its source became stranded can otherwise never resolve any other
+    // way, so resetting it on Prestige would silently lose the already-consumed source disks.
     diskWriteCache: {},
     // PERMANENT — null when no array is currently mid-build, otherwise
     // { size, remainingSeconds, totalSeconds } for the one disk array build in progress (see
@@ -3607,10 +3610,12 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
       // Pause (never resume this cycle) the instant the source becomes stranded mid-collection —
       // its own tier can only have raced past it since the merge started, never back down, so
-      // there is nothing left to wait for until the next real Prestige clears diskWriteCache and
-      // reopens the window. Whatever's already been collected stays banked in the cache exactly as
-      // is; this only stops taking MORE from a disk that's now off-limits (see
-      // canStartDiskWriteCacheMerge above for the "never even start" half of the same rule).
+      // there is nothing left to wait for until purchase levels reset low enough to un-strand the
+      // source again (a real Prestige, typically — see prestigeGame, which carries diskWriteCache
+      // itself through unchanged; only purchaseLevels resets). Whatever's already been collected
+      // stays banked in the cache exactly as is; this only stops taking MORE from a disk that's now
+      // off-limits (see canStartDiskWriteCacheMerge above for the "never even start" half of the
+      // same rule).
       if (
         isDiskRedeemable(mergeSnapshot, merge.sourceSize) ||
         isDiskStrandedByAdvancedTier(mergeSnapshot, merge.sourceSize)
@@ -5748,8 +5753,17 @@ export const prestigeGame = state => {
       // permanence as the disk state it's arming.
       diskBuildQueued: state.intro?.diskBuildQueued ?? initial.intro.diskBuildQueued,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
-      diskReadCacheFlush: initial.intro.diskReadCacheFlush,
-      diskWriteCache: initial.intro.diskWriteCache,
+      // In-flight cache transfers are just as permanent as the Disks/build state they operate on
+      // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond
+      // resetting Memory/tier01 progress themselves (see docs/DESIGN_HISTORY.md). These two used to
+      // reset unconditionally here, which — combined with the write-cache stranding-pause logic
+      // freezing a merge whose source becomes stranded — meant any segments already collected into
+      // a frozen merge were silently destroyed the next time this fired, with no way back: not
+      // liquidated to Bits, not completed into a target disk, just gone. Carrying them over lets a
+      // frozen merge's already-collected segments survive indefinitely, and lets a stranded, frozen
+      // merge naturally resume once purchase levels reset low enough to un-strand its source again.
+      diskReadCacheFlush: state.intro?.diskReadCacheFlush ?? initial.intro.diskReadCacheFlush,
+      diskWriteCache: state.intro?.diskWriteCache ?? initial.intro.diskWriteCache,
       // Data Lakes (deposits / purchased Boosters / in-flight transfers / capacityLevel) are just
       // as permanent as Disks above — prepaid lake stock and capacity doublings survive a real
       // Prestige so a new cycle keeps its Booster funding path. Era ascension still resets them

@@ -6076,6 +6076,58 @@ merge whose source becomes stranded mid-collection freezes at whatever was alrea
 never resumes. `yarn test`: 1729/1729 green (+3 net: 2 existing tests' scenarios/assertions
 rewritten, 3 new tests added). `yarn build` succeeds.
 
+### A further Devin Review finding on the same area: pausing a stranded write-cache merge still lost its progress to Prestige — fixed by making diskWriteCache/diskReadCacheFlush Prestige-permanent
+
+The previous entry's fix (making `tickDiskWriteCache` refuse to start or continue collecting from a
+stranded source) closed the "silently folded into another unusable array" gap, but a Devin Review
+pass caught the fix's own remaining edge: freezing a merge mid-collection doesn't destroy anything
+by itself, but `prestigeGame` unconditionally reset `intro.diskWriteCache`/`intro.diskReadCacheFlush`
+to empty on every real Prestige — while the segments already collected into that merge had already
+been permanently decremented from `intro.disks[sourceSize]` the moment each one was collected. A
+merge frozen because its source is stranded can, by construction, never complete on its own within
+the same cycle (the source's tier only ever moves further away from redeemable, never back) — so a
+real Prestige was not just A way this could go wrong, it was the ONLY way such a merge could ever
+end, and that ending discarded whatever it had already collected: not liquidated to Bits (the thing
+the prior PR explicitly stopped doing), not completed into a target disk, just gone.
+
+Separately, and around the same time, the maintainer stated a broader standing principle directly:
+*"Prestige shall not affect byte foundry in any way. Except in case there are any specific
+milestones that explicitly unlock something."* This is consistent with — and sharpens — what
+`CLAUDE.md` already claimed ("Disks, caches, and build state are all PERMANENT across every real
+Prestige") but the code didn't actually deliver for these two specific fields.
+
+**Fix.** `prestigeGame`'s `intro` reset now carries `diskReadCacheFlush` and `diskWriteCache` over
+from the live state (`state.intro?.X ?? initial.intro.X`), the exact same pattern every other
+permanent Foundry field already uses (`disks`, `disksBuiltTotal`, `diskCache`, `diskBuild`,
+`diskBuildQueued`, `poolBuffers`, `dataLakes`, every compute-ladder entity, …) — matching `diskBuild`
+specifically, which was already Prestige-permanent even though it represents the exact same class of
+"in-flight, already-paid-for work in progress" as these two. `buildEraIntroReset` (Era ascension) was
+deliberately left untouched: unlike a real Prestige, Era ascension is its own, separately documented
+full-Foundry reset ("resets the full Foundry — generator upgrades, Disks, Data Lakes, compute ladder
+entities, Memory/gate"), so wiping these two fields there remains correct and intentional.
+
+A pleasant emergent property of the fix: a write-cache merge frozen because its source became
+stranded doesn't just survive a real Prestige unharmed — it can actually RESUME once purchase levels
+reset low enough to un-strand its source again (`isDiskStrandedByAdvancedTier` is a live check against
+current `purchaseLevels`, not a frozen snapshot), so a merge that looked permanently stuck within one
+cycle isn't necessarily stuck across cycles either.
+
+**Scope note.** This fixes the specific, now-*guaranteed* loss scenario (a stranded, frozen merge —
+guaranteed because it can only ever end via Prestige). It does not fully close the more general,
+lower-severity, and pre-existing "any in-flight merge interrupted by Prestige mid-collection could
+still theoretically race a same-tick edge case" concern for a merge whose source is still perfectly
+redeemable — but since `diskWriteCache` is now Prestige-permanent full stop, that concern is actually
+resolved as a side effect too: there is no longer ANY code path where a real Prestige clears
+`diskWriteCache`/`diskReadCacheFlush`, stranded source or not.
+
+**Verification.** Two new tests in `engine.test.js`'s `prestigeGame keeps Storage permanent` describe
+block: one confirms an arbitrary in-flight `diskWriteCache` merge and `diskReadCacheFlush` entry
+survive a real Prestige byte-for-byte; the other reproduces the exact reported scenario — a merge
+frozen because its source is stranded, verified via `isDiskWriteCacheCollectPaused` before and after
+— confirming the merge object is untouched by Prestige and, since purchase levels reset to 1 in the
+same call, is no longer paused afterward (the source is "too early" again rather than stranded).
+`yarn test`: 1734/1734 green (+2). `yarn build` succeeds.
+
 ### Storage funding rebuilt push→pull: the manual Redeem button and autobuyer-gated auto-redeem are gone (issue #571)
 
 The maintainer's explicit spec, verbatim: "The funding of tier levels from storage pools should be

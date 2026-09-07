@@ -688,12 +688,17 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    narrower matching-size subset (plus always the highest shown size — issue #389). Disk circles
    always render all `DISK_ARRAY_LADDER_CAP` slots in one row.
 
-   `disks`/`disksBuiltTotal`/`diskCache`/`diskBuild` are all **PERMANENT**, carried through
-   `prestigeGame` unchanged exactly like the Byte generator itself — a disk already FULL when
-   Prestige fires stays full, its contents intact even though Memory itself resets to 0, letting
-   banked-up Disks give a fresh cycle a head start. `diskWriteCache` and `diskReadCacheFlush` reset
-   to `{}` each Prestige (in-flight ladder merges do not survive) — there is no `diskAutoRedeemedSizes`
-   any more, so no exception to carve out here.
+   `disks`/`disksBuiltTotal`/`diskCache`/`diskBuild`/`diskWriteCache`/`diskReadCacheFlush` are all
+   **PERMANENT**, carried through `prestigeGame` unchanged exactly like the Byte generator itself —
+   a disk already FULL when Prestige fires stays full, its contents intact even though Memory
+   itself resets to 0, letting banked-up Disks give a fresh cycle a head start; an in-flight
+   write-cache merge or read-cache flush survives too, including one frozen mid-collection because
+   its source became stranded (a real Prestige resetting purchase levels is, in fact, exactly what
+   un-strands it again — see "Stranded disks are never touched" above and `docs/DESIGN_HISTORY.md`
+   for the Devin Review finding that caught these two fields still resetting unconditionally). There
+   is no `diskAutoRedeemedSizes` any more (the old auto-redeem throttle was removed along with the
+   manual/autobuyer-gated funding model it belonged to — see `docs/DESIGN_HISTORY.md`), so no
+   exception to carve out here.
 9. **Compute Cores/Nodes** (`intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`,
    all PERMANENT, carried over every real Prestige exactly like the Byte generator/Disks above) —
    earlier versions of this mechanic gated conversion on every Disk array size being built and full
@@ -2405,7 +2410,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // 0..size, conceptually split into
                                                           // DISK_CACHE_BLOCK_COUNT (8) equal blocks for
                                                           // display — see tickDiskLevelOneCachePull
-    diskReadCacheFlush: {},                               // NOT permanent — resets every real Prestige.
+    diskReadCacheFlush: {},                               // PERMANENT. Carried through a real Prestige
+                                                          // unchanged, same as diskBuild below.
                                                           // { [sizeBits]: { remainingSeconds, totalSeconds } }
                                                           // while a read-cache → disk flush is in flight.
                                                           // Duration at start = one block ÷ production rate.
@@ -2421,7 +2427,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Disk fires itself (tickQueuedDiskBuild) once
                                                           // affordable and nothing outranks it; clears the
                                                           // moment ANY build starts, queued or manual.
-    diskWriteCache: {},                                   // NOT permanent — resets every real Prestige.
+    diskWriteCache: {},                                   // PERMANENT. Carried through a real Prestige
+                                                          // unchanged, same as diskBuild above.
                                                           // In-flight upward merges; empty at rest.
                                                           // See tickDiskWriteCache.
     dataLakes: { … },                                     // PERMANENT across real Prestige (see prestigeGame).

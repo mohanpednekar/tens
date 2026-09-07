@@ -113,6 +113,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **A real Prestige could silently destroy an in-flight write-cache merge or read-cache flush** —
+  `intro.diskWriteCache`/`intro.diskReadCacheFlush` reset unconditionally on every real Prestige even
+  though the Disks/build state they operate on is otherwise permanent. Combined with the write-cache
+  stranding-pause fix below, a merge frozen because its source became stranded was *guaranteed* to
+  eventually lose whatever segments it had already collected, with nothing to show for it — not
+  liquidated to Bits, not completed into a target disk, just gone the next time Prestige fired. Both
+  fields now carry through a real Prestige unchanged, same as `diskBuild` already did; a frozen,
+  stranded merge now survives indefinitely and can even resume once reset purchase levels un-strand
+  its source again. See `docs/DESIGN_HISTORY.md`.
 - **A stranded Storage Disk could still be silently folded into another (possibly also-unredeemable)
   array by the write-cache upward-merge mechanism**, undermining the idle-disk-liquidation removal
   above — `tickDiskWriteCache` never checked whether a merge's source size was stranded before
