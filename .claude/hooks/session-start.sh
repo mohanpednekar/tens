@@ -52,8 +52,11 @@ elif last_epoch=$(date -d "$last_pass_iso" +%s 2>/dev/null) && now_epoch=$(date 
     echo "ℹ️  Last AI-instruction-file cost-optimization pass trailer ($last_pass_iso) is in the"
     echo "   future — ignoring it rather than treating it as fresh; check for a bad timestamp."
   else
-    days=$(( (now_epoch - last_epoch) / 86400 ))
-    if [ "$days" -gt 30 ]; then
+    # Threshold the raw age in seconds, not the truncated day count: at an age between 30 and 31
+    # days, "days" truncates down to 30, which would make "-gt 30" report fresh nearly a day late.
+    age_seconds=$(( now_epoch - last_epoch ))
+    days=$(( age_seconds / 86400 ))
+    if [ "$age_seconds" -gt $(( 30 * 86400 )) ]; then
       echo "ℹ️  Last AI-instruction-file cost-optimization pass was $days day(s) ago (> 30-day target)."
       echo "   Consider running the optimize-ai-files skill this session."
     else
