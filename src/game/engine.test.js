@@ -3702,6 +3702,24 @@ describe('tickDiskLevelOneCachePull', () => {
     expect(afterTick.owned[tensTier.id] ?? 0).toBe(0)
     expect(afterTick.intro.diskCache[FIRST_DISK_SIZE]).toBe(unitCost * 3)
   })
+
+  it('cancels an in-flight read-cache flush for the same size it just spent from (Devin Review finding — a preserved flush after a level reset otherwise blocks refill for its whole remaining duration, then produces no disk)', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: unitCost * 3 },
+      diskReadCacheFlush: { [FIRST_DISK_SIZE]: { remainingSeconds: 5, totalSeconds: 10 } },
+    })
+
+    const after = tickDiskLevelOneCachePull(state)
+    expect(after.owned[tensTier.id]).toBe(3)
+    expect(after.intro.diskCache[FIRST_DISK_SIZE]).toBe(0)
+    expect(after.intro.diskReadCacheFlush[FIRST_DISK_SIZE]).toBeUndefined()
+
+    // With the stale flush gone, the cache is immediately free to start refilling again — nothing
+    // left over there to block Pass 1 of tickDiskAutoFill on the very next tick.
+    const refilled = tickDiskAutoFill(1)(withIntro(after, { poolBuffers: { 1: unitCost * 3 } }))
+    expect(refilled.intro.diskCache[FIRST_DISK_SIZE]).toBeGreaterThan(0)
+  })
 })
 
 describe('isDiskRedeemable / getDiskRedeemTierName', () => {

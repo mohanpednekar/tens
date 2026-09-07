@@ -6230,3 +6230,35 @@ clean-slate/partial-progress rule that didn't exist as a concept before. `yarn t
 green (net −16 from the prior 1729: several near-duplicate manual-vs-auto-redeem test pairs
 collapsed into single automatic-pull equivalents, offset by new coverage for the level-1 cache
 fallback and the partial-progress no-op case). `yarn build` succeeds.
+
+### A second Devin Review finding on the same PR: the level-1 cache fallback could spend cache out from under an in-flight read-cache flush, leaving it stuck for its whole remaining duration then producing no disk
+
+After the mid-build lock fix above (from Devin Review's first pass on this same PR), a second pass
+caught a related but distinct gap in `tickDiskLevelOneCachePull`: nothing stopped it from spending
+straight out of a size's `diskCache` while that same size ALSO had an `intro.diskReadCacheFlush`
+entry in flight. This is reachable after a level reset (a real Prestige, or any purchase-level
+reset back to 1): a flush only ever starts once its cache is completely full
+(`tickDiskAutoFill`'s Pass 2 requires `diskCache[size] >= size`) and is meant to pour that full
+cache into one disk once its timer elapses — but `isDiskPullEligible` (which gates the cache
+fallback) only checks for an already-FULL disk, not for a flush in progress, so a tier freshly
+reset to level 1 with a full cache AND an in-flight flush for that size would have the cache
+fallback claim the cache first. The flush object itself was left untouched, so `tickDiskAutoFill`'s
+own Pass 1 kept skipping that size's refill (`if (diskReadCacheFlush[size]) continue`) for the
+flush's whole remaining duration — even though the cache it was waiting to pour was already spent —
+and once the timer ran out, Pass 3's own completion check (`cached >= size`) failed against the
+now-smaller cache, so the flush just cleared itself with no disk produced. Net effect: a stale flush
+silently stalled that size's cache refill for however long was left on its timer, for nothing.
+
+**Fix.** `tickDiskLevelOneCachePull` now cancels any `diskReadCacheFlush` entry for the size it just
+spent from, in the same state update as the cache-balance decrement — canceling immediately rather
+than letting it linger is safe because `diskCache[size]` is capped at `size` (see `tickDiskAutoFill`'s
+Pass 1), so any nonzero spend here always leaves the cache below the flush's own completion
+threshold; there is no scenario where the flush could still legitimately complete afterward. This
+frees that size's cache to start refilling again on the very next tick instead of waiting out a
+now-meaningless countdown.
+
+**Verification.** New test in `engine.test.js`'s `tickDiskLevelOneCachePull` describe block seeds a
+diskReadCacheFlush alongside a spendable cache, confirms the flush entry is gone after the pull, and
+confirms `tickDiskAutoFill` can immediately begin refilling that size's cache again afterward
+(reverting the fix reproduces the bug — the flush survives the pull and refill stays blocked).
+`yarn test`: 1717/1717 green (+1). `yarn build` succeeds.

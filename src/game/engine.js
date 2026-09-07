@@ -4077,9 +4077,22 @@ export const tickDiskLevelOneCachePull = state => {
     const affordableUnits = Math.min(remainingInLevel, Math.floor(cacheBits / unitCost))
     if (affordableUnits <= 0) continue
     const spend = affordableUnits * unitCost
+    // Spending straight from this size's cache invalidates any read-cache flush already in flight
+    // for it (Devin Review finding) — a flush only ever completes into a disk once its cache holds
+    // a FULL `size` (see tickDiskAutoFill's Pass 2/3), and any spend here always leaves it below
+    // that (diskCache is capped at `size`, and affordableUnits > 0 requires spend > 0). Left alone,
+    // the stale flush would keep blocking this size's cache refill (Pass 1 skips any size with an
+    // active flush) for its own remaining duration, then finish with too little cache to produce a
+    // disk after all — cache spent for nothing and refill blocked the whole time. Canceling it here
+    // frees the cache to start refilling again on the very next tick instead.
+    const { [size]: _removedFlush, ...restFlush } = result.intro.diskReadCacheFlush ?? {}
     result = grantTierUnits(tier.id, affordableUnits)({
       ...result,
-      intro: { ...result.intro, diskCache: { ...result.intro.diskCache, [size]: cacheBits - spend } },
+      intro: {
+        ...result.intro,
+        diskCache: { ...result.intro.diskCache, [size]: cacheBits - spend },
+        diskReadCacheFlush: restFlush,
+      },
     })
     changed = true
   }
