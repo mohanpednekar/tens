@@ -5012,6 +5012,62 @@ describe('prestigeGame keeps Storage permanent', () => {
     const after = prestigeGame(state)
     expect(after.intro.diskAutoRedeemedSizes).toEqual({})
   })
+
+  it('carries an in-flight write-cache merge and read-cache flush through a real Prestige unchanged (Devin Review finding — these used to reset unconditionally, silently destroying any segments already collected)', () => {
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const merge = {
+      sourceSize: FIRST_DISK_SIZE,
+      segmentsCollected: 4,
+      segmentRemainingSeconds: 1,
+      segmentTotalSeconds: 1,
+      flushRemainingSeconds: 10,
+      flushTotalSeconds: 10,
+    }
+    const readFlush = { remainingSeconds: 2, totalSeconds: 5 }
+    const state = withMoney(
+      withIntro(createInitialGameState(), {
+        diskWriteCache: { [level2Size]: merge },
+        diskReadCacheFlush: { [FIRST_DISK_SIZE]: readFlush },
+      }),
+      PRESTIGE_THRESHOLD
+    )
+
+    const after = prestigeGame(state)
+    expect(after.intro.diskWriteCache[level2Size]).toEqual(merge)
+    expect(after.intro.diskReadCacheFlush[FIRST_DISK_SIZE]).toEqual(readFlush)
+  })
+
+  it('a write-cache merge frozen because its source became stranded survives a real Prestige, then resumes once the reset purchase level un-strands it again', () => {
+    // level2Size (required tier01 level 2) as the source, level3Size (required level 3) as the
+    // target — tier01 at level 4 strands level2Size, freezing the merge mid-collection.
+    const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
+    const level3Size = getTierCost(tensTier, 3) * BITS_PER_BYTE
+    const merge = {
+      sourceSize: level2Size,
+      segmentsCollected: 3,
+      segmentRemainingSeconds: 1,
+      segmentTotalSeconds: 1,
+      flushRemainingSeconds: 10,
+      flushTotalSeconds: 10,
+    }
+    const state = withMoney(
+      withPurchaseLevel(
+        withIntro(createInitialGameState(), { diskWriteCache: { [level3Size]: merge } }),
+        tensTier.id,
+        4
+      ),
+      PRESTIGE_THRESHOLD
+    )
+    expect(isDiskWriteCacheCollectPaused(state, level3Size)).toBe(true)
+
+    const after = prestigeGame(state)
+    // Purchase levels reset to 1 on a real Prestige — level2Size (required level 2) is now "too
+    // early" rather than stranded, and the already-collected 3 segments are still exactly where
+    // they were, free to keep collecting again instead of being lost.
+    expect(after.purchaseLevels[tensTier.id]).toBe(1)
+    expect(after.intro.diskWriteCache[level3Size]).toEqual(merge)
+    expect(isDiskWriteCacheCollectPaused(after, level3Size)).toBe(false)
+  })
 })
 
 // ─── formatAmount ────────────────────────────────────────────────────────────

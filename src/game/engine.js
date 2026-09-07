@@ -5820,8 +5820,17 @@ export const prestigeGame = state => {
       // permanence as the disk state it's arming.
       diskBuildQueued: state.intro?.diskBuildQueued ?? initial.intro.diskBuildQueued,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
-      diskReadCacheFlush: initial.intro.diskReadCacheFlush,
-      diskWriteCache: initial.intro.diskWriteCache,
+      // In-flight cache transfers are just as permanent as the Disks/build state they operate on
+      // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond
+      // resetting Memory/tier01 progress themselves (see docs/DESIGN_HISTORY.md). These two used to
+      // reset unconditionally here, which — combined with the write-cache stranding-pause logic
+      // freezing a merge whose source becomes stranded — meant any segments already collected into
+      // a frozen merge were silently destroyed the next time this fired, with no way back: not
+      // liquidated to Bits, not completed into a target disk, just gone. Carrying them over lets a
+      // frozen merge's already-collected segments survive indefinitely, and lets a stranded, frozen
+      // merge naturally resume once purchase levels reset low enough to un-strand its source again.
+      diskReadCacheFlush: state.intro?.diskReadCacheFlush ?? initial.intro.diskReadCacheFlush,
+      diskWriteCache: state.intro?.diskWriteCache ?? initial.intro.diskWriteCache,
       // Data Lakes (deposits / purchased Boosters / in-flight transfers / capacityLevel) are just
       // as permanent as Disks above — prepaid lake stock and capacity doublings survive a real
       // Prestige so a new cycle keeps its Booster funding path. Era ascension still resets them
