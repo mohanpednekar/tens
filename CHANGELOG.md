@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
+- Added `focus-visible` outline styles to TierNameTrigger and other interactive components.
 
 ### Security
 - Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
