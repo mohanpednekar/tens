@@ -454,11 +454,14 @@ src/
     Button/index.jsx        ← styled button (`.jsx` — needs JSX for `ButtonContent`); semantic
                                `variant` prop resolved against theme color tokens, deprecated raw
                                `color` prop still supported. Full contract: `docs/COMPONENTS_REFERENCE.md`
-    DiskArrayRow/index.jsx  ← one Disk array's full interactive detail (read cache blocks — only on
-                               the pool's smallest size, see `isDiskReadCacheEligible` — disk
-                               squares, releasing, redeeming; no deposit control, Data Lake feeding
-                               is fully automatic) for a single size, taking `{ actions, size,
-                               state }`; shared by both ByteFoundryPage and StoragePage — see
+    DiskArrayRow/index.jsx  ← one Disk array's full STATUS detail, purely a display with nothing
+                               clickable (read cache blocks — only on the pool's smallest size, see
+                               `isDiskReadCacheEligible` — and disk squares; funding a matching tier
+                               level is fully automatic via `tickDiskPull`/`tickDiskLevelOneCachePull`
+                               in `engine.js`, not a UI action here; no deposit control either, Data
+                               Lake feeding is fully automatic) for a single size, taking `{ actions,
+                               size, state }` (`actions` unused, kept for a uniform call-site shape);
+                               shared by both ByteFoundryPage and StoragePage — see
                                `docs/DESIGN_HISTORY.md` for why it's a standalone component. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
     DataLakePanel/index.jsx ← one Data Lake's own self-contained block (title row, one row of disk
@@ -761,13 +764,14 @@ Strict three-layer separation:
    disk-array rows, inside the same expanded disclosure — not a single shared panel listing every
    lake after all the pool cards, as an earlier iteration had it (see `docs/DESIGN_HISTORY.md`).
    Starting the next Disk's
-   build (its own core-loop action, alongside Speed) and every shown size's full
-   interactive detail — read cache blocks (only on the pool's smallest size — see
-   "Economy model" below), disk squares, releasing (Disk Fill's manual-release half →
-   Factory Bits only), and redeeming (Disk Fill itself; auto when the matching tier's autobuyer is
-   on, else manual) — both stay here, rendered via the shared `components/DiskArrayRow` (see "Repo
-   layout" above), ascending smallest→largest with Cache of a row immediately above that row's
-   Disks. The Provision Disk button is a single shared control (one disk ladder spans every pool,
+   build (its own core-loop action, alongside Speed) and every shown size's full status detail —
+   read cache blocks (only on the pool's smallest size — see "Economy model" below) and disk
+   squares — stay here, rendered via the shared `components/DiskArrayRow` (see "Repo layout"
+   above), ascending smallest→largest with Cache of a row immediately above that row's Disks.
+   Neither is interactive any more: Disk Fill (funding a matching tier level from a full disk, or
+   from the pool's own cache at that tier's level 1) is fully automatic every tick — see
+   "Economy model" below — so `DiskArrayRow` is a pure status display, not a click target. The
+   Provision Disk button is a single shared control (one disk ladder spans every pool,
    not a per-pool one — see "Economy model" below) but renders INSIDE whichever ONE `PoolCard` the
    disk ladder's current offer (`getDiskSize`) currently belongs to (`getPoolIndexForDiskSize`),
    just below that pool's own buffer block and outside its `isExpanded` disclosure, so it stays
@@ -1025,8 +1029,8 @@ units at tier01's own current per-unit cost every tick, with no manual UI trigge
 cap — this funds tier01 purchases continuously, every cycle, forever, but neither function touches
 `mainGameUnlocked` any more (see `latchMainGameUnlocked` above for what does). `ByteFoundryPage` no
 longer renders a manual transfer-block row for this at all (removed — see
-`docs/DESIGN_HISTORY.md`): once Storage Pool cards start appearing, Disk redemption (below) is the
-player-facing path to tier units, and before that (on a save's very first, still-gated cycle),
+`docs/DESIGN_HISTORY.md`): once Storage Pool cards start appearing, Disk pulls (below) are the
+automatic path to tier units, and before that (on a save's very first, still-gated cycle),
 auto-convert alone carries the player through the mandatory gate with no click needed.
 `convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
 was removed.
@@ -1065,19 +1069,26 @@ end bound. Full formulas, the `getCoreEarnTimeSeconds` raw-`intro.capacity` paci
 constant name are in `docs/ECONOMY_REFERENCE.md`.
 
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/`diskBuildQueued`,
-`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickDiskAutoFill`/`isDiskRedeemable`/`redeemDisk` in
-`engine.js`) are a real storage medium, not tier01-only: a size's ladder (1 KB → 10 KB → 100 KB, …,
-`DISK_LADDER_SIZE_MULTIPLIER`) advances every `DISK_ARRAY_LADDER_CAP` (10) disks built at that size,
-up to the highest size any unlocked pool can fund. `provisionDisk` spends the cost and takes real
-build time (scaled by production rate, snapshotted at start); a pin-icon **queue toggle**
-(`diskBuildQueued`) can auto-start the next build. The smallest size per pool has an always-full
-**read cache** (8 blocks); every larger size fills via **write cache** instead — both feed disks at
-their own bandwidth-multiplier rates. Each disk size has a fixed one-to-one (tier, level)
-correspondence (`getDataLakeTierIndex` grouping); `redeemDisk` only fires while that tier sits at
-exactly the required level, completing the tier's whole current purchase block in one shot. Disks,
-caches, and build state are all PERMANENT across every real Prestige. Full cost/timing formulas,
-cache-fill bandwidth multipliers, and auto-redeem/auto-release conditions are in
-`docs/ECONOMY_REFERENCE.md`.
+`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickDiskAutoFill`/`isDiskPullEligible`/`tickDiskPull`/
+`tickDiskLevelOneCachePull` in `engine.js`) are a real storage medium, not tier01-only: a size's
+ladder (1 KB → 10 KB → 100 KB, …, `DISK_LADDER_SIZE_MULTIPLIER`) advances every
+`DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the highest size any unlocked pool can
+fund. `provisionDisk` spends the cost and takes real build time (scaled by production rate,
+snapshotted at start); a pin-icon **queue toggle** (`diskBuildQueued`) can auto-start the next
+build. The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
+fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
+Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
+`tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed
+(tier, level) correspondence (`getDataLakeTierIndex` grouping) whenever that tier currently sits at
+exactly the disk's required level, completing the tier's whole current purchase block in one shot;
+`tickDiskLevelOneCachePull` then covers every tier still sitting at its own level 1 with no fresh
+disk pull this tick, spending its pool's own smallest-size read cache directly (bulk units, capped
+at the level's remaining requirement) as a fallback entry point — never past level 1, and never atop
+a level with existing progress. Both are fully automatic, every tick, with no player click and no
+autobuyer-unlock gate; the manual Redeem button and the old cache-release-to-Bits control are gone
+(retired in favor of this pull — see `docs/DESIGN_HISTORY.md`). Disks, caches, and build state are
+all PERMANENT across every real Prestige. Full cost/timing formulas and the pull-eligibility rule
+are in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
 `tickDataLakeAutoBuy` in `engine.js`) — ten permanent lakes (KB…QB), each fed continuously by its own
@@ -1094,12 +1105,12 @@ advancing only once the CORRESPONDING Storage array size is fully built. **Buyin
 available the instant affordable — at a `purchased + 1` cost (capped once the lake is
 capacity-maxed) and grants 1 compute-ladder entity instantly; `toggleDataLakeAutoBuy` auto-buys.
 **Stranded disks are never touched.** A disk whose corresponding tier has already moved past the
-level it requires simply sits full and unredeemable for the rest of the cycle — nothing sweeps it
+level it requires simply sits full and un-pullable for the rest of the cycle — nothing sweeps it
 into Bits (an earlier "idle disk liquidation" mechanic that did convert such disks to Bits was
 removed per the maintainer's explicit instruction), and `tickDiskWriteCache` refuses to fold it into
 another array either (never starts a new merge from a stranded source, and permanently pauses one
 already mid-collection the instant its source becomes stranded) — it waits for the next real
-Prestige to reset purchase levels and reopen its redemption window. See `docs/DESIGN_HISTORY.md`.
+Prestige to reset purchase levels and reopen its pull window. See `docs/DESIGN_HISTORY.md`.
 Full overflow-segment math, the disk-breakdown mixed-radix proof, and every gating predicate are in
 `docs/ECONOMY_REFERENCE.md`.
 
@@ -1219,7 +1230,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1729 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1717 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

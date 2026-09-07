@@ -214,11 +214,16 @@ Stream → read cache → timed flush to disk when tier allows; the Memory→cac
 bandwidth-capped at 10x rate, and the cache→disk flush duration is one cache block at 2x rate) —
 every larger size fills exclusively via write-cache upward merges from the size below (collect from
 Disks at 2x rate, flush into the disk at 2x rate), never its own read cache (running both was
-redundant); as fallback tier funding when no matching disk exists, Smart autobuyers auto-release
-read cache; disks always take priority) — each disk size has a fixed, permanent one-to-one mapping
-to one tier+level (KB sizes → Kilobytes, MB sizes → Megabytes, etc., 1st/2nd/3rd size → that tier's
-level 1/2/3); redeeming only fires while the tier is currently at exactly that level, and completes
-the whole level in one shot rather than granting 1 unit) and Compute Cores/Nodes/Compute Boost
+redundant)) — each disk size has a fixed, permanent one-to-one mapping to one tier+level (KB sizes
+→ Kilobytes, MB sizes → Megabytes, etc., 1st/2nd/3rd size → that tier's level 1/2/3). Byte Foundry
+funds Byte Factory **pull-based, fully automatically, every tick**, with no player click and no
+manual Redeem/cache-release control (Foundry has no proactive knowledge of Factory state — it just
+supplies when a tier level is ready to pull): `tickDiskPull` pulls one FULL, clean-slate (zero
+purchase-level progress) disk into its matching tier level whenever that tier sits at exactly the
+disk's required level, completing the whole level in one shot; `tickDiskLevelOneCachePull` is the
+fallback for a tier still sitting at its own level 1 with no fresh disk to pull, spending its pool's
+own read cache directly instead — never past level 1, never atop existing progress. Compute
+Cores/Nodes/Compute Boost
 (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund Boosters, escalating cost (nth = n
 units) — fully decoupled from Storage Disks now: each lake is fed directly and continuously by its
 own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full),
