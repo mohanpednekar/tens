@@ -3593,10 +3593,12 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
       // Pause (never resume this cycle) the instant the source becomes stranded mid-collection —
       // its own tier can only have raced past it since the merge started, never back down, so
-      // there is nothing left to wait for until the next real Prestige clears diskWriteCache and
-      // reopens the window. Whatever's already been collected stays banked in the cache exactly as
-      // is; this only stops taking MORE from a disk that's now off-limits (see
-      // canStartDiskWriteCacheMerge above for the "never even start" half of the same rule).
+      // there is nothing left to wait for until purchase levels reset low enough to un-strand the
+      // source again (a real Prestige, typically — see prestigeGame, which carries diskWriteCache
+      // itself through unchanged; only purchaseLevels resets). Whatever's already been collected
+      // stays banked in the cache exactly as is; this only stops taking MORE from a disk that's now
+      // off-limits (see canStartDiskWriteCacheMerge above for the "never even start" half of the
+      // same rule).
       if (
         isDiskRedeemable(mergeSnapshot, merge.sourceSize) ||
         isDiskStrandedByAdvancedTier(mergeSnapshot, merge.sourceSize)

@@ -9429,7 +9429,10 @@ describe('eraGame', () => {
   })
 
   it('wipes Foundry assets ordinary Prestige kept but keeps byteCreated and mainGameUnlocked permanent, and resets Buffer', () => {
-    const state = eraEligibleState()
+    const state = withIntro(eraEligibleState(), {
+      diskWriteCache: { [FIRST_DISK_SIZE * 10]: { sourceSize: FIRST_DISK_SIZE, segmentsCollected: 2 } },
+      diskReadCacheFlush: { [FIRST_DISK_SIZE]: { remainingSeconds: 1, totalSeconds: 5 } },
+    })
     const after = eraGame(state)
     expect(after.intro.byteCreated).toBe(true)
     // mainGameUnlocked is PERMANENT now (see latchMainGameUnlocked) — even Era ascension, a much
@@ -9443,6 +9446,11 @@ describe('eraGame', () => {
     expect(after.intro.foundryResetCaps).toEqual({})
     expect(after.autobuyers[TIER_DEFINITIONS[0].id]).toBe(1)
     expect(after.smartAutobuyer[TIER_DEFINITIONS[0].id]).toBe(true)
+    // Unlike a real Prestige (which now carries these through, see prestigeGame), Era ascension is
+    // its own, deliberately much bigger full-Foundry reset — diskWriteCache/diskReadCacheFlush wipe
+    // along with everything else above.
+    expect(after.intro.diskWriteCache).toEqual({})
+    expect(after.intro.diskReadCacheFlush).toEqual({})
   })
 
   it('resets computeFlops owned and cumulativeBoost but keeps pageUnlocked', () => {
