@@ -67,8 +67,10 @@ yarn test -t "buyTier"                     # filter by test name
 `.claude/settings.json` registers a `SessionStart` hook (`.claude/hooks/session-start.sh`) that runs
 `yarn install --frozen-lockfile` then `yarn test` synchronously before an interactive session starts
 working, printing a `✅`/`‼️` pass/fail summary for each step — so work begins from a confirmed baseline
-instead of discovering broken state mid-task. It always exits 0 regardless of outcome (the point is
-visibility, not blocking session start) and is idempotent/non-interactive. This is interactive-session-only
+instead of discovering broken state mid-task. It also prints a third, informational-only staleness
+note for AI-instruction file cost hygiene (see "AI-instruction file cost hygiene" below). It always
+exits 0 regardless of outcome (the point is visibility, not blocking session start) and is
+idempotent/non-interactive. This is interactive-session-only
 setup — the autonomous workflow (`autonomous-maintenance.yml`) already does equivalent setup via its own
 `Enable Corepack`/`Set up Node` steps before invoking Claude, so there's no duplication to reconcile.
 `.claude/settings.json`/`.claude/hooks/` are otherwise a protected path for unattended runs — the
@@ -98,6 +100,18 @@ and nothing further is planned), mark it ready for review — don't leave it sit
 there's nothing left to do. A draft doesn't get reviewed and isn't eligible for auto-merge, so an
 indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
 every PR in this repo, autonomous or interactive.
+
+**Verification effort scales with how public the PR is**: minimal testing (one `yarn test` after a
+coherent batch of changes, not after every edit) while nothing's been opened yet; one full local
+check at draft creation; multiple rounds of adversarial review (Claude plus any other reviewer —
+bots, humans) once marked ready, looping until nothing new turns up. This does not slow down any of
+`pr-auto-merge.yml`'s three enabled paths (below, and in "Automation workflows") — a qualifying
+human GitHub approval, a low-risk diff on green checks, or an adversarial `APPROVE` on a low-risk
+diff — all of which stay immediate by design. The 10-minute quiet period only applies on the rare
+occasion none of those three paths fires and a session is merging a PR directly itself (e.g. `gh pr
+merge`) rather than through `pr-auto-merge.yml` at all: wait for CI green plus 10 minutes with no
+further review activity before doing so, rather than merging the instant the last blocker clears.
+Full detail: `docs/AUTOMATION.md`'s "PR review & testing cadence".
 
 **After the final commit** on a finished PR (nothing further planned; local checks green), always
 run the adversarial `code-reviewer` subagent (`.claude/agents/code-reviewer.md`) against that head
@@ -392,6 +406,19 @@ empty subheadings. No-op (exit 0) when Unreleased has no bullet entries. The bum
 diff like any other change (never a direct commit to `main`). Post-merge tag push + GitHub Release
 creation is the remaining half of #52 (`release.yml`), blocked on historical tags from #51.
 
+## AI-instruction file cost hygiene
+
+`CLAUDE.md`/`.claude/CLAUDE.md` load into every session unconditionally, `AGENTS.md`/
+`.claude/agents/*.md`/`.claude/skills/*/SKILL.md` whenever a non-Claude tool or that agent/skill
+runs — so their size is a recurring cost across every future session, not a one-time one.
+`.claude/skills/optimize-ai-files/SKILL.md` defines a content-independent, meaning-preserving
+process for trimming that footprint (it re-derives what's redundant each run rather than hardcoding
+today's text, so it doesn't go stale as these files change). An interactive session gets a
+non-blocking staleness note from `.claude/hooks/session-start.sh`; a monthly Claude Code Remote
+Routine also runs it end-to-end, PR included, so this doesn't depend on a human or an interactive
+session remembering to do it. Full detail: `docs/AUTOMATION.md`'s "AI-instruction file cost
+hygiene" / "PR review & testing cadence".
+
 ## Repo layout
 
 ```
@@ -414,6 +441,9 @@ creation is the remaining half of #52 (`release.yml`), blocked on historical tag
                                tracking for interactive sessions" above)
     simulate-run-times/       ← simulates playthroughs to show how starting PP affects time-to-prestige
                                (see "Economy model" below)
+    optimize-ai-files/        ← content-independent, meaning-preserving token-reduction pass over
+                               CLAUDE.md/AGENTS.md/agent+skill files (see "AI-instruction file cost
+                               hygiene" below)
     graphify/                 ← third-party skill (see "graphify" below), tool-generated — not hand-edited
 docs/
   DESIGN_HISTORY.md            ← the "why" behind superseded formulas, incident write-ups, rejected

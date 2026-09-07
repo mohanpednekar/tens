@@ -478,3 +478,71 @@ hygiene runs deterministically in housekeeping GHA via `scripts/backlog-issue-hy
    `claude/auto-*` PRs will exist), so it can be simplified out later if desired but doesn't have to
    be.
 
+### PR review & testing cadence
+
+Applies to every PR (interactive or autonomous), on top of the general "Pull requests" rules in
+`CLAUDE.md`. The verification effort deliberately scales with how public the PR's state is —
+cheap while work is still private to the session, heavier once other reviewers can see it:
+
+1. **Mid-session, before a PR exists.** Follow the standard budget-discipline default: run
+   `yarn test` (or a targeted `yarn test -t "…"` / single-file run for fast iteration) once after
+   completing a coherent set of related changes, not after every individual edit. Don't re-run a
+   full suite that hasn't been invalidated by a subsequent change.
+2. **At PR creation (draft).** Run one full local check before opening it — `yarn test`, plus
+   `yarn build` when the change could plausibly affect the build — so the draft starts from a
+   confirmed-green baseline rather than surfacing a break to reviewers first.
+3. **Once marked ready for review.** This is where review effort goes up, not down: run the
+   adversarial `code-reviewer` subagent, and expect/incorporate findings from other reviewers too
+   (human, Copilot, other bots) — per `CLAUDE.md`'s existing "keep repeating check → address → push
+   until status quo" loop. Don't stop after the first round just because it was addressed; a
+   finding that recurs after a fix means dig for the root cause, not declare done.
+4. **Quiet-period merge trigger (only for a direct merge outside all three `pr-auto-merge.yml`
+   paths).** All three paths in the "Auto-merge" section above stay immediate by design and this
+   cadence step never delays or gates any of them: Path 1 fires unconditionally on any qualifying
+   human GitHub approval regardless of size/risk, and Paths 2/3 fire immediately once a diff is
+   low-risk-eligible (with or without the adversarial marker). Between the three, essentially every
+   normal case is already covered the instant its trigger condition is met — there is no "human
+   approval on a non-low-risk PR" gap the quiet period needs to fill, since Path 1 already handles
+   that immediately. This step is only for the narrow remaining case: a session about to merge a PR
+   **directly itself** (e.g. `gh pr merge`, bypassing `pr-auto-merge.yml` entirely) because none of
+   the three paths applies — most plausibly, a sign-off that doesn't take the form of a qualifying
+   GitHub review approval. There, once the PR is ready for review and CI is green, wait until **10
+   minutes pass with no new review activity** (no new comment, review, or push) before merging
+   directly, rather than merging the instant the sign-off lands. A session actively driving such a
+   PR should use `send_later` (or an equivalent short check-in) to re-check after the quiet window.
+   The point is to give a concurrently-posting reviewer a moment to land one more comment before the
+   PR locks in. This never overrides the existing rule that a PR touching `.github/workflows/**` stays
+   human-gated via CODEOWNERS.
+
+### AI-instruction file cost hygiene
+
+The repo's AI-instruction files (`CLAUDE.md`, `.claude/CLAUDE.md`, `AGENTS.md`,
+`.claude/agents/*.md`, `.claude/skills/*/SKILL.md`) are loaded into session context on every run —
+`CLAUDE.md`/`.claude/CLAUDE.md` unconditionally, the rest whenever that agent/skill fires — so their
+size is a direct, recurring cost multiplied across every future session, autonomous and
+interactive alike. `.claude/skills/optimize-ai-files/SKILL.md` defines a content-independent,
+meaning-preserving compaction process for these files: it doesn't hardcode what to cut (that would
+go stale the moment the files change), it defines *how* to find genuine redundancy/verbosity and
+verify nothing behavior-relevant was lost before keeping an edit.
+
+Two ways this runs — running it at least once per interactive session that notices staleness is
+enough, but a fully automated recurring routine needs nobody to notice at all, so that's preferred
+where available:
+
+- **Interactive sessions.** `.claude/hooks/session-start.sh` prints a non-blocking staleness note
+  (based on the most recent commit carrying an `AI-File-Cost-Pass: <timestamp>` trailer, searched
+  within `main`'s own ancestry — not every ref — so a stray trailer on an unmerged/abandoned branch
+  can't under-report staleness) — informational only, matching that hook's existing "visibility, not
+  blocking" philosophy. A session seeing a stale/missing pass can invoke the skill directly; this is
+  a nudge, not a gate.
+- **Scheduled routine.** A recurring Claude Code Remote trigger (Routine) fires a fresh session
+  monthly to run the skill end-to-end: clone the repo, follow the skill's process, and open a PR
+  through the normal PR workflow above (draft while pending, adversarial review before merge,
+  same auto-merge policy as any other PR — this pass gets no special exemption from review). The
+  routine's cadence and prompt are managed via `update_trigger`/`list_triggers`, not by editing a
+  file in this repo.
+
+This pass is scoped to the AI-instruction files themselves — it never touches source code,
+`TIER_DEFINITIONS`, or workflow YAML behavior, and it must preserve every documented fact, safety
+rule, and `docs/DESIGN_HISTORY.md` pointer even while shortening the prose around them.
+

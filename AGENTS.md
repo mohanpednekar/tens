@@ -405,13 +405,26 @@ branch.
   cross-check for diffs touching `TIER_DEFINITIONS`/economy constants in `src/game/layers.js`; the
   code-reviewer agent invokes its checklist as a required step on economy-touching diffs.
 
+Verification effort scales with how public a PR is — minimal testing before one exists, one full
+check at draft creation, multiple adversarial-review rounds once ready, then a 10-minute
+no-new-activity quiet period before merging a PR not already covered by an automatic auto-merge
+path (see below). Full detail: `docs/AUTOMATION.md`'s "PR review & testing cadence".
+
 **After the final commit** on a finished PR: run the adversarial `code-reviewer`, post its
 `<!-- adversarial-review sha=… verdict=… -->` marker as a PR comment, mark the PR ready, and —
-when the verdict is `APPROVE` and the PR meets the low-risk bar — **always** enable auto-merge via
-`scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or rely on
-`pr-auto-merge.yml` Path 3 reacting to the marker). That enables GitHub auto-merge only; never
-force-merge, never push to `main`, never GitHub-approve your own PR. Full detail:
-`CLAUDE.md` Pull requests + `docs/AUTOMATION.md` Auto-merge.
+when the verdict is `APPROVE` and the PR meets the low-risk bar — **always** enable auto-merge
+immediately via `scripts/enable-auto-merge-if-eligible.sh <pr> --require-adversarial-approve` (or
+rely on `pr-auto-merge.yml` Path 3 reacting to the marker) — this automatic path is not subject to
+the quiet period above. That enables GitHub auto-merge only; never force-merge, never push to
+`main`, never GitHub-approve your own PR. Full detail: `CLAUDE.md` Pull requests +
+`docs/AUTOMATION.md` Auto-merge.
+
+## AI-instruction file cost hygiene
+
+`.claude/skills/optimize-ai-files/SKILL.md` trims the token footprint of `CLAUDE.md`/this file/
+agent+skill files without changing behavior (content-independent — it re-derives redundancy each
+run, no hardcoded cut list). Runs via a staleness note in `.claude/hooks/session-start.sh` and a
+monthly automated Routine. Detail: `docs/AUTOMATION.md`.
 
 ## Issue-authoring tooling
 
