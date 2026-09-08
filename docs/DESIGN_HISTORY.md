@@ -30,8 +30,9 @@ just landed for the partial-pass replay gap (previous entry below), both in the 
 Both caught by inspection, not by test failure — the existing/prior test suite exercised neither the
 repeated-reset merge collision nor the mid-build-reset timing window. New tests added for both:
 `mergeFoundryUpgradeCaps` given the exact 2-disks-9-passes / 5-disks-0-passes scenario above, and
-`captureFoundryUpgradeCaps` given a seeded `intro.diskBuild` with no matching `disksBuiltTotal` entry
-yet. `yarn test`: 1727/1727 green.
+`captureFoundryUpgradeCaps` given a seeded `intro.diskBuild` alongside an EXISTING `disksBuiltTotal`
+entry for that same size, asserting the `+1` credit correctly adds to it (2 → 3) rather than
+overwriting it. `yarn test`: 1727/1727 green.
 
 ### Reset Byte Foundry's convenience replay didn't cover partial Provision Disk passes — 2026-09-08
 
