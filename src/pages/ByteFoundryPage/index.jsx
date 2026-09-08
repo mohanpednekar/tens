@@ -35,10 +35,11 @@ const Header = styled.header`
 `
 
 // The section's own current balance — bigger font, centered (see "Put title on top left, current
-// disks status on the top right, a center-grow multiplier bar below that, the balance in a bigger
-// centered font, then Speed/Bandwidth and Capacity split across the bottom row's two halves" in
-// CLAUDE.md's UI conventions) — sized a step above the rest of the tile's text but below the page's
-// own H1 so a stack of several pool cards doesn't read as several competing headlines.
+// disks status on the top right, the balance in a bigger centered font below that, a center-grow
+// multiplier bar (with its own percent readout below it) below the balance, then Speed/Bandwidth
+// and Capacity split across the bottom row's two halves" in CLAUDE.md's UI conventions) — sized a
+// step above the rest of the tile's text but below the page's own H1 so a stack of several pool
+// cards doesn't read as several competing headlines.
 const BalanceText = styled.p`
   margin: 0;
   font-family: ${props => props.theme.font.display};
@@ -178,7 +179,7 @@ const ExpandToggleButton = styled.button`
 // that section's own current disks status top-right (see MultiplierBar below for what replaced
 // the old middle gauge column, and getFullDisksCount for the count itself) — a plain flex row
 // (not a grid) since there's no longer a middle column to keep centered between the two ends. The
-// multiplier bar, balance, and Speed/Bandwidth + Capacity figures all render as their own rows
+// balance, multiplier bar, and Speed/Bandwidth + Capacity figures all render as their own rows
 // below this one, in the tile beneath it — see docs/DESIGN_HISTORY.md for the corner-speedometer →
 // center-grow-bar redesign this replaced.
 const TitleRow = styled.div`
@@ -243,8 +244,8 @@ const FooterText = styled.span`
 // (tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
 // fill-based multiplier bonus (see FILL_MULTIPLIER_* in game/layers), it never credits bits
 // directly. Everything for that section lives inside this one tile — TitleRow (title/disks status),
-// the MultiplierBar, the big centered BalanceText, and the FooterRow (Speed/Bandwidth left half,
-// Capacity right half) — see CLAUDE.md's UI conventions.
+// the big centered BalanceText, the MultiplierBar (with its own percent readout below it), and the
+// FooterRow (Speed/Bandwidth left half, Capacity right half) — see CLAUDE.md's UI conventions.
 const FillableStatCard = styled.div`
   width: 100%;
   display: flex;
@@ -344,15 +345,15 @@ const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTI
 
 const BarRow = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: ${props => props.theme.space.xs};
+  gap: 2px;
   width: 100%;
 `
 
 const BarTrack = styled.div`
   position: relative;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   height: ${BAR_HEIGHT}px;
   border-radius: ${props => props.theme.radius.pill};
   background: ${props => props.theme.color.surfaceSunken};
@@ -381,9 +382,6 @@ const BarFillLake = styled(BarFillBase)`
 `
 
 const BarPercentLabel = styled.span`
-  flex-shrink: 0;
-  min-width: 2.4em;
-  text-align: right;
   color: ${props => props.theme.color.textMuted};
   font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
@@ -585,6 +583,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               </DiskStatusText>
             )}
           </TitleRow>
+          <BalanceText>{formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           {intro.byteCreated && (
             <MultiplierBar
               basePercent={dataStreamBaseMultiplierPercent}
@@ -592,7 +591,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               ariaLabel="data stream fill-based speed multiplier"
             />
           )}
-          <BalanceText>{formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <FooterRow>
             <FooterText>{dataStreamRateText}</FooterText>
             <FooterText>{formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}</FooterText>
@@ -771,6 +769,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   💾 {poolDisksCount}
                 </DiskStatusText>
               </TitleRow>
+              <BalanceText>{formatDiskSizeStable(poolBufferBits)}</BalanceText>
               <MultiplierBar
                 basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
                 totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
@@ -781,7 +780,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 }
                 mode={showLakeMode ? 'lake' : 'multiplier'}
               />
-              <BalanceText>{formatDiskSizeStable(poolBufferBits)}</BalanceText>
               <FooterRow>
                 <FooterText>{formatDiskSize(poolBandwidth)}/s</FooterText>
                 <FooterText>{formatDiskSize(poolBufferCapacity)}</FooterText>

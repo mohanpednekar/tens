@@ -299,10 +299,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Byte Foundry's corner needle-speedometer replaced with a center-grow multiplier bar** — the
   fill-based Speed/Bandwidth multiplier now shows as a compact bar that grows and shrinks from the
   middle (200% fills the full width) instead of a tall dial, with a live tap bonus rendered as a
-  highlighted band in the bar's own middle. Each tile (Data Stream and every pool) was reorganized
-  around it: title top-left with that section's own current full-disk count top-right, the bar
-  full-width below that, the balance alone in a bigger centered font, then Speed/Bandwidth and
-  Capacity split across the bottom row's left and right halves.
+  highlighted band in the bar's own middle, and its own percent readout on a line below the bar.
+  Each tile (Data Stream and every pool) was reorganized around it: title top-left with that
+  section's own current full-disk count top-right, the balance alone in a bigger centered font
+  below that, the bar full-width below the balance, then Speed/Bandwidth and Capacity split across
+  the bottom row's left and right halves.
 - **The Data Stream/pool balance now shows a stable, non-trimmed decimal digit count** — a balance
   that floors to a round fraction now reads e.g. "5.600 KiB" instead of "5.6 KiB", matching the 3
   decimal places a non-round balance ("3.578 KiB") already showed, so the balance's own displayed

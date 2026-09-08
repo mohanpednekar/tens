@@ -85,11 +85,12 @@ common Provision Disk control. It renders one derived `PoolCard` per VISIBLE sto
 crossed that pool's `getPoolCapacityUnlockThresholdBits`, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
-(title top-left, that pool's own current full-disk count top-right), then a full-width
-`MultiplierBar` (switching to that pool's own Data Lake overflow-rate reading once the Memory
-buffer is completely full — see CLAUDE.md's "Fill-based Speed/Bandwidth multiplier"), then the
-Memory buffer balance alone in a bigger centered `BalanceText`, then a `FooterRow` splitting
-Bandwidth (left half) and Capacity (right half) across the bottom. Pool 1's own threshold — 1 KiB — is
+(title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
+alone in a bigger centered `BalanceText`, then a full-width `MultiplierBar` below the balance
+(switching to that pool's own Data Lake overflow-rate reading once the Memory buffer is completely
+full — see CLAUDE.md's "Fill-based Speed/Bandwidth multiplier" — with its own percent readout on a
+row below the bar itself), then a `FooterRow` splitting Bandwidth (left half) and Capacity (right
+half) across the bottom. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded

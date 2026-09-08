@@ -6628,3 +6628,23 @@ is a repo-governance decision for the maintainer — flagged here rather than de
 drifted to a stale "1729" through the same conflict-resolution commit). `graphify-out/graph.json`
 and its siblings parse as valid JSON again; `graphify update .` runs cleanly. No source, test, or
 documentation content otherwise changed.
+
+### The multiplier bar moved below the balance, with its percent readout below the bar itself
+
+Further player feedback on the bar redesign above: "The speed bar should be below the balance and
+percentage should be shown below it." The bar had originally rendered ABOVE the balance (`TitleRow`
+→ `MultiplierBar` → `BalanceText` → `FooterRow`), with its percent readout to the bar's own right
+(`BarRow` as a horizontal flex row: `BarTrack` + `BarPercentLabel` side by side).
+
+**Fix.** Reordered each tile's rows to `TitleRow` → `BalanceText` → `MultiplierBar` → `FooterRow`
+(both the Data Stream card and every pool card in `ByteFoundryPage/index.jsx`) — the balance now
+reads immediately below the title, with the bar as a visually secondary element beneath it. Within
+`MultiplierBar` itself, `BarRow` switched from a horizontal flex row to a vertical one
+(`flex-direction: column`), so `BarPercentLabel` now sits centered on its own line below `BarTrack`
+instead of to its right — `BarTrack` itself now spans the row's full width (previously `flex: 1`
+shared with the label). No change to the bar's own fill math, center-grow behavior, or
+`mode="lake"` handoff — purely a layout/ordering change.
+
+**Verification.** `yarn test`: 1738/1738 green, unchanged count — no test asserted on the relative
+DOM order between `BalanceText` and `MultiplierBar`, or on `BarPercentLabel`'s position relative to
+`BarTrack` within `BarRow`, so nothing needed rewriting.
