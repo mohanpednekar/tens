@@ -45,8 +45,12 @@ component used to expose were both retired along with that mechanic. Only when
 sub-slot is ×1 — every larger size fills exclusively via write-cache ripple and renders no read
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
 (`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
-— e.g. `1 Kb`) and showing only its fill fraction (full/partial/empty, plus a flush-in-progress
-fill when draining into a disk). Then an optional **write cache** progress row when
+— e.g. `1 Kb`). A full block gets an accent-colored border (matching a full `DiskSquare`'s own
+convention below); a partially-filled block (whether filling UP from Memory or draining DOWN during
+a flush to disk) renders a proportional `CacheFillIndicator` overlay growing left-to-right — accent-
+colored while filling, info-colored while flushing — so the fill level itself is always visible, not
+just the full/empty extremes (`title` also reads e.g. "Filling from Memory (40%)" once partially
+filled). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
 below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
 does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip that **always** keeps all ten
@@ -85,11 +89,12 @@ common Provision Disk control. It renders one derived `PoolCard` per VISIBLE sto
 crossed that pool's `getPoolCapacityUnlockThresholdBits`, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
-(title top-left, that pool's own current full-disk count top-right), then a full-width
-`MultiplierBar` (switching to that pool's own Data Lake overflow-rate reading once the Memory
-buffer is completely full — see CLAUDE.md's "Fill-based Speed/Bandwidth multiplier"), then the
-Memory buffer balance alone in a bigger centered `BalanceText`, then a `FooterRow` splitting
-Bandwidth (left half) and Capacity (right half) across the bottom. Pool 1's own threshold — 1 KiB — is
+(title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance
+alone in a bigger centered `BalanceText`, then a full-width `MultiplierBar` below the balance
+(switching to that pool's own Data Lake overflow-rate reading once the Memory buffer is completely
+full — see CLAUDE.md's "Fill-based Speed/Bandwidth multiplier" — with its own percent readout on a
+row below the bar itself), then a `FooterRow` splitting a ⚡-prefixed Bandwidth figure (left half)
+and a 🪣-prefixed Capacity figure (right half) across the bottom. Pool 1's own threshold — 1 KiB — is
 deliberately set equal to `isStorageUnlocked`'s own reveal gate (`INTRO_DISK_UNLOCK_CAPACITY`), so
 the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already showing
 a clean "1 KB" Capacity rather than a value mid-decade. Only the largest unlocked pool is expanded

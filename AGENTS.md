@@ -155,9 +155,10 @@ is always lost instantly rather than banked for later. `ByteFoundryPage` shows a
 `MultiplierBar` for both the Data Stream and every pool — a bar that grows/shrinks from the MIDDLE
 (200% fills the full track width, 0% is a zero-width point at center), replacing an earlier corner
 needle-speedometer that took too much vertical space. Each tile's own top row is title top-left,
-that section's own current full-disk count top-right; the bar renders as its own full-width row
-below that; the balance sits below the bar in a bigger centered font; Speed/Bandwidth (left half)
-and Capacity (right half) split across a footer row at the bottom. For a pool, the SAME bar does
+that section's own current full-disk count top-right; the balance sits below that in a bigger
+centered font; the bar renders as its own full-width row below the balance, with its own percent
+readout below the bar itself; Speed/Bandwidth (left half) and Capacity (right half) split across a
+footer row at the bottom. For a pool, the SAME bar does
 double duty rather than a second stacked bar: once that pool's own Memory buffer is completely
 full, it switches from the fill-based multiplier reading to that pool's own Data Lake overflow RATE
 instead (progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as

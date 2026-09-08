@@ -131,7 +131,11 @@ const CacheBlock = styled.div`
   padding: 0;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
-    props.$flushing ? props.theme.color.info : props.theme.color.surfaceSunken};
+    props.$flushing
+      ? props.theme.color.info
+      : props.$full
+        ? props.theme.color.accent
+        : props.theme.color.surfaceSunken};
   background: ${props =>
     props.$full
       ? (props.$flushing ? props.theme.color.info : props.theme.color.surfaceRaised)
@@ -140,10 +144,15 @@ const CacheBlock = styled.div`
   position: relative;
 `
 
-const CacheFlushFill = styled.div`
+// Proportional fill overlay, reused for both directions a block's level can move: filling UP from
+// Memory (an accent-colored bar, growing left-to-right, matching the same accent `CacheBlock`
+// itself turns to once full — see above) and draining DOWN during a read-cache flush to disk (the
+// existing info-colored bar). Previously only rendered during a flush, so a block filling up from
+// empty showed no fill level at all until it snapped straight to full — see docs/DESIGN_HISTORY.md.
+const CacheFillIndicator = styled.div`
   position: absolute;
   inset: 0;
-  background: ${props => props.theme.color.info};
+  background: ${props => (props.$flushing ? props.theme.color.info : props.theme.color.accent)};
   transform-origin: left center;
   transform: scaleX(${props => props.$fill});
   opacity: 0.85;
@@ -270,13 +279,15 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                       : `Flushing read cache to disk (${Math.ceil(readFlush.remainingSeconds)}s)`)
                     : isFull
                       ? `${blockLabel} banked toward ${redeemTierName ?? 'the matching tier'}`
-                      : 'Filling from Memory'
+                      : partialFill > 0
+                        ? `Filling from Memory (${Math.round(partialFill * 100)}%)`
+                        : 'Filling from Memory'
                 }
                 $full={isFull}
                 $flushing={readFlushing && (isFull || partialFill > 0)}
               >
-                {readFlushing && partialFill > 0 ? (
-                  <CacheFlushFill $fill={partialFill} />
+                {partialFill > 0 ? (
+                  <CacheFillIndicator $fill={partialFill} $flushing={readFlushing} />
                 ) : null}
                 <CellLabel $emphasis={isFull || readFlushing}>{blockLabel}</CellLabel>
               </CacheBlock>
