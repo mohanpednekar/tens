@@ -1145,6 +1145,90 @@
       "source_location": "L15"
     },
     {
+      "id": "src_game_engine_eraseallcomputetokens",
+      "label": "eraseAllComputeTokens()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "eraseallcomputetokens()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2917"
+    },
+    {
+      "id": "src_game_engine_isstorageunlocked",
+      "label": "isStorageUnlocked()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "isstorageunlocked()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3065"
+    },
+    {
+      "id": "src_game_engine_latchmaingameunlocked",
+      "label": "latchMainGameUnlocked()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "latchmaingameunlocked()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3216"
+    },
+    {
+      "id": "src_game_engine_pickintrocapacitymilestone",
+      "label": "pickIntroCapacityMilestone()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "pickintrocapacitymilestone()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2887"
+    },
+    {
+      "id": "src_game_engine_rewindoneintroproductionclaim",
+      "label": "rewindOneIntroProductionClaim()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "rewindoneintroproductionclaim()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2817"
+    },
+    {
+      "id": "src_game_engine_rollbackcomputefundedbandwidth",
+      "label": "rollbackComputeFundedBandwidth()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "rollbackcomputefundedbandwidth()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2846"
+    },
+    {
+      "id": "src_game_engine_upgradepoolcapacity",
+      "label": "upgradePoolCapacity()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "pickIntroCapacityMilestone",
+      "file_type": "code",
+      "norm_label": "upgradepoolcapacity()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2869"
+    },
+    {
       "id": "src_game_engine_applyautobuyermilestones",
       "label": "applyAutobuyerMilestones()",
       "_callable": true,
@@ -1349,6 +1433,18 @@
       "source_location": "L3133"
     },
     {
+      "id": "src_game_engine_formatbitsinnearestsiunit",
+      "label": "formatBitsInNearestSiUnit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "formatbitsinnearestsiunit()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3171"
+    },
+    {
       "id": "src_game_engine_formatbitsinnearestunit",
       "label": "formatBitsInNearestUnit()",
       "_callable": true,
@@ -1457,6 +1553,18 @@
       "source_location": "L3119"
     },
     {
+      "id": "src_game_engine_getsibyteunit",
+      "label": "getSiByteUnit()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "getsibyteunit()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3093"
+    },
+    {
       "id": "src_game_engine_isbitfundedbandwidthavailable",
       "label": "isBitFundedBandwidthAvailable()",
       "_callable": true,
@@ -1481,30 +1589,6 @@
       "source_location": "L2737"
     },
     {
-      "id": "src_game_engine_isstorageunlocked",
-      "label": "isStorageUnlocked()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "isstorageunlocked()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3065"
-    },
-    {
-      "id": "src_game_engine_latchmaingameunlocked",
-      "label": "latchMainGameUnlocked()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "latchmaingameunlocked()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3216"
-    },
-    {
       "id": "src_game_engine_pickintroproductionmilestone",
       "label": "pickIntroProductionMilestone()",
       "_callable": true,
@@ -1515,30 +1599,6 @@
       "norm_label": "pickintroproductionmilestone()",
       "source_file": "src/game/engine.js",
       "source_location": "L3023"
-    },
-    {
-      "id": "src_game_engine_rewindoneintroproductionclaim",
-      "label": "rewindOneIntroProductionClaim()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "rewindoneintroproductionclaim()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2817"
-    },
-    {
-      "id": "src_game_engine_rollbackcomputefundedbandwidth",
-      "label": "rollbackComputeFundedBandwidth()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "rollbackcomputefundedbandwidth()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2846"
     },
     {
       "id": "src_game_layers_getstoragepoolmemorybounds",
@@ -1562,7 +1622,7 @@
       "file_type": "code",
       "norm_label": "bytefoundrypage()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L435"
+      "source_location": "L443"
     },
     {
       "id": "src_pages_bytefoundrypage_index_clampgaugevalue",
@@ -1574,7 +1634,7 @@
       "file_type": "code",
       "norm_label": "clampgaugevalue()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L322"
+      "source_location": "L330"
     },
     {
       "id": "src_pages_bytefoundrypage_index_clamppercent",
@@ -1610,7 +1670,7 @@
       "file_type": "code",
       "norm_label": "gaugearcpath()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L333"
+      "source_location": "L341"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugepoint",
@@ -1622,7 +1682,7 @@
       "file_type": "code",
       "norm_label": "gaugepoint()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L327"
+      "source_location": "L335"
     },
     {
       "id": "src_pages_bytefoundrypage_index_multipliergauge",
@@ -1634,7 +1694,7 @@
       "file_type": "code",
       "norm_label": "multipliergauge()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L392"
+      "source_location": "L400"
     },
     {
       "id": "src_pages_bytefoundrypage_index_percenttogaugeangle",
@@ -1646,7 +1706,7 @@
       "file_type": "code",
       "norm_label": "percenttogaugeangle()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L324"
+      "source_location": "L332"
     },
     {
       "id": "src_pages_infopage_index_infopage",
@@ -2069,18 +2129,6 @@
       "source_location": "L5192"
     },
     {
-      "id": "src_game_engine_formatbitsinnearestsiunit",
-      "label": "formatBitsInNearestSiUnit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 51,
-      "community_name": "engine.js",
-      "file_type": "code",
-      "norm_label": "formatbitsinnearestsiunit()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3171"
-    },
-    {
       "id": "src_game_engine_gethyperscalereoncost",
       "label": "getHyperscalerEonCost()",
       "_callable": true,
@@ -2103,18 +2151,6 @@
       "norm_label": "getofflineeffectiveseconds()",
       "source_file": "src/game/engine.js",
       "source_location": "L1895"
-    },
-    {
-      "id": "src_game_engine_getsibyteunit",
-      "label": "getSiByteUnit()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 51,
-      "community_name": "engine.js",
-      "file_type": "code",
-      "norm_label": "getsibyteunit()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3093"
     },
     {
       "id": "src_game_engine_isupgradecomputemergedurationavailable",
@@ -4781,18 +4817,6 @@
       "source_location": "L3192"
     },
     {
-      "id": "src_game_engine_eraseallcomputetokens",
-      "label": "eraseAllComputeTokens()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 69,
-      "community_name": "run-simulation.mjs",
-      "file_type": "code",
-      "norm_label": "eraseallcomputetokens()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2917"
-    },
-    {
       "id": "src_game_engine_getbiggestcomputetierwaitingonmerge",
       "label": "getBiggestComputeTierWaitingOnMerge()",
       "_callable": true,
@@ -4985,18 +5009,6 @@
       "source_location": "L6084"
     },
     {
-      "id": "src_game_engine_pickintrocapacitymilestone",
-      "label": "pickIntroCapacityMilestone()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 69,
-      "community_name": "run-simulation.mjs",
-      "file_type": "code",
-      "norm_label": "pickintrocapacitymilestone()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2887"
-    },
-    {
       "id": "src_game_engine_reclaimcomputeboost",
       "label": "reclaimComputeBoost()",
       "_callable": true,
@@ -5055,18 +5067,6 @@
       "norm_label": "tickqueuedcapacityupgrade()",
       "source_file": "src/game/engine.js",
       "source_location": "L2950"
-    },
-    {
-      "id": "src_game_engine_upgradepoolcapacity",
-      "label": "upgradePoolCapacity()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 69,
-      "community_name": "run-simulation.mjs",
-      "file_type": "code",
-      "norm_label": "upgradepoolcapacity()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2869"
     },
     {
       "id": "src_pages_computepage_index_computepage",
@@ -7620,7 +7620,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier outcomes are floored",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1299"
+      "source_location": "L1304"
     },
     {
       "id": "docs_economy_reference_production_figure_tick_progress_ring_removed",
@@ -7632,7 +7632,7 @@
       "node_kind": "heading",
       "norm_label": "production figure (tick-progress ring removed)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1322"
+      "source_location": "L1327"
     },
     {
       "id": "docs_economy_reference_tier_production_tickspeed",
@@ -7644,7 +7644,7 @@
       "node_kind": "heading",
       "norm_label": "tier production tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1255"
+      "source_location": "L1260"
     },
     {
       "id": "claude_changelog_convention",
@@ -8956,7 +8956,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.0] - 2026-07-05",
       "source_file": "CHANGELOG.md",
-      "source_location": "L913"
+      "source_location": "L924"
     },
     {
       "id": "changelog_0_2_0_2026_07_12",
@@ -8968,7 +8968,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2026-07-12",
       "source_file": "CHANGELOG.md",
-      "source_location": "L901"
+      "source_location": "L912"
     },
     {
       "id": "changelog_0_3_0_2026_07_13",
@@ -8980,7 +8980,7 @@
       "node_kind": "heading",
       "norm_label": "[0.3.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L884"
+      "source_location": "L895"
     },
     {
       "id": "changelog_0_4_0_2026_07_13",
@@ -8992,7 +8992,7 @@
       "node_kind": "heading",
       "norm_label": "[0.4.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L868"
+      "source_location": "L879"
     },
     {
       "id": "changelog_0_5_0_2026_07_14",
@@ -9004,7 +9004,7 @@
       "node_kind": "heading",
       "norm_label": "[0.5.0] - 2026-07-14",
       "source_file": "CHANGELOG.md",
-      "source_location": "L855"
+      "source_location": "L866"
     },
     {
       "id": "changelog_accessibility",
@@ -9031,7 +9031,7 @@
       "source_location": "L22"
     },
     {
-      "id": "changelog_added_563",
+      "id": "changelog_added_574",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9040,10 +9040,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L563"
+      "source_location": "L574"
     },
     {
-      "id": "changelog_added_648",
+      "id": "changelog_added_659",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9052,10 +9052,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L648"
+      "source_location": "L659"
     },
     {
-      "id": "changelog_added_857",
+      "id": "changelog_added_868",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9064,10 +9064,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L857"
+      "source_location": "L868"
     },
     {
-      "id": "changelog_added_870",
+      "id": "changelog_added_881",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9076,10 +9076,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L870"
+      "source_location": "L881"
     },
     {
-      "id": "changelog_added_886",
+      "id": "changelog_added_897",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9088,10 +9088,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L886"
+      "source_location": "L897"
     },
     {
-      "id": "changelog_added_903",
+      "id": "changelog_added_914",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9100,10 +9100,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L903"
+      "source_location": "L914"
     },
     {
-      "id": "changelog_added_915",
+      "id": "changelog_added_926",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9112,7 +9112,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L915"
+      "source_location": "L926"
     },
     {
       "id": "changelog_changed",
@@ -9127,7 +9127,7 @@
       "source_location": "L261"
     },
     {
-      "id": "changelog_changed_594",
+      "id": "changelog_changed_605",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9136,10 +9136,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L594"
+      "source_location": "L605"
     },
     {
-      "id": "changelog_changed_702",
+      "id": "changelog_changed_713",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9148,10 +9148,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L702"
+      "source_location": "L713"
     },
     {
-      "id": "changelog_changed_861",
+      "id": "changelog_changed_872",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9160,10 +9160,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L861"
+      "source_location": "L872"
     },
     {
-      "id": "changelog_changed_874",
+      "id": "changelog_changed_885",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9172,10 +9172,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L874"
+      "source_location": "L885"
     },
     {
-      "id": "changelog_changed_891",
+      "id": "changelog_changed_902",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9184,7 +9184,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L891"
+      "source_location": "L902"
     },
     {
       "id": "changelog_changelog",
@@ -9211,7 +9211,7 @@
       "source_location": "L120"
     },
     {
-      "id": "changelog_fixed_829",
+      "id": "changelog_fixed_840",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9220,10 +9220,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L829"
+      "source_location": "L840"
     },
     {
-      "id": "changelog_fixed_865",
+      "id": "changelog_fixed_876",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9232,10 +9232,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L865"
+      "source_location": "L876"
     },
     {
-      "id": "changelog_fixed_878",
+      "id": "changelog_fixed_889",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9244,19 +9244,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L878"
-    },
-    {
-      "id": "changelog_fixed_897",
-      "label": "Fixed",
-      "_origin": "ast",
-      "community": 22,
-      "community_name": "[Unreleased]",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "fixed",
-      "source_file": "CHANGELOG.md",
-      "source_location": "L897"
+      "source_location": "L889"
     },
     {
       "id": "changelog_fixed_908",
@@ -9271,6 +9259,18 @@
       "source_location": "L908"
     },
     {
+      "id": "changelog_fixed_919",
+      "label": "Fixed",
+      "_origin": "ast",
+      "community": 22,
+      "community_name": "[Unreleased]",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "fixed",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L919"
+    },
+    {
       "id": "changelog_removed",
       "label": "Removed",
       "_origin": "ast",
@@ -9283,7 +9283,7 @@
       "source_location": "L92"
     },
     {
-      "id": "changelog_removed_587",
+      "id": "changelog_removed_598",
       "label": "Removed",
       "_origin": "ast",
       "community": 22,
@@ -9292,7 +9292,7 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L587"
+      "source_location": "L598"
     },
     {
       "id": "changelog_security",
@@ -9307,7 +9307,7 @@
       "source_location": "L14"
     },
     {
-      "id": "changelog_security_851",
+      "id": "changelog_security_862",
       "label": "Security",
       "_origin": "ast",
       "community": 22,
@@ -9316,7 +9316,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L851"
+      "source_location": "L862"
     },
     {
       "id": "changelog_unreleased",
@@ -9364,7 +9364,7 @@
       "node_kind": "heading",
       "norm_label": "constants (`src/game/layers.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2754"
+      "source_location": "L2759"
     },
     {
       "id": "docs_economy_reference_economy_model_reference",
@@ -9388,7 +9388,7 @@
       "node_kind": "heading",
       "norm_label": "game state shape",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2102"
+      "source_location": "L2107"
     },
     {
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
@@ -9400,7 +9400,7 @@
       "node_kind": "heading",
       "norm_label": "key engine functions (`src/game/engine.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2570"
+      "source_location": "L2575"
     },
     {
       "id": "docs_economy_reference_offline_progress",
@@ -9412,7 +9412,7 @@
       "node_kind": "heading",
       "norm_label": "offline progress",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1336"
+      "source_location": "L1341"
     },
     {
       "id": "docs_economy_reference_overclock",
@@ -9424,7 +9424,7 @@
       "node_kind": "heading",
       "norm_label": "overclock",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1976"
+      "source_location": "L1981"
     },
     {
       "id": "docs_economy_reference_pp_compute_flops",
@@ -9436,7 +9436,7 @@
       "node_kind": "heading",
       "norm_label": "pp compute (flops)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1398"
+      "source_location": "L1403"
     },
     {
       "id": "docs_economy_reference_prestige_and_the_googol_freeze",
@@ -9448,7 +9448,7 @@
       "node_kind": "heading",
       "norm_label": "prestige and the googol freeze",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1861"
+      "source_location": "L1866"
     },
     {
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
@@ -9460,7 +9460,7 @@
       "node_kind": "heading",
       "norm_label": "prestige info is hidden until first prestige",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2060"
+      "source_location": "L2065"
     },
     {
       "id": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -9472,7 +9472,7 @@
       "node_kind": "heading",
       "norm_label": "prestige points, autobuyer unlock, and the tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1439"
+      "source_location": "L1444"
     },
     {
       "id": "docs_economy_reference_reset",
@@ -9484,7 +9484,7 @@
       "node_kind": "heading",
       "norm_label": "reset",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2079"
+      "source_location": "L2084"
     },
     {
       "id": "docs_economy_reference_speed_up",
@@ -9496,7 +9496,7 @@
       "node_kind": "heading",
       "norm_label": "speed up",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1905"
+      "source_location": "L1910"
     },
     {
       "id": "docs_economy_reference_the_configurable_purchase_block_size_and_tier_levels",
@@ -9556,7 +9556,7 @@
       "node_kind": "heading",
       "norm_label": "capacitor foundation (in progress \u2014 #70)",
       "source_file": "CLAUDE.md",
-      "source_location": "L1215"
+      "source_location": "L1217"
     },
     {
       "id": "claude_commands",
@@ -9580,7 +9580,7 @@
       "node_kind": "heading",
       "norm_label": "dev mode",
       "source_file": "CLAUDE.md",
-      "source_location": "L914"
+      "source_location": "L916"
     },
     {
       "id": "claude_economy_model",
@@ -9592,7 +9592,7 @@
       "node_kind": "heading",
       "norm_label": "economy model",
       "source_file": "CLAUDE.md",
-      "source_location": "L1000"
+      "source_location": "L1002"
     },
     {
       "id": "claude_end_to_end_testing",
@@ -9604,7 +9604,7 @@
       "node_kind": "heading",
       "norm_label": "end-to-end testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1298"
+      "source_location": "L1300"
     },
     {
       "id": "claude_funding",
@@ -9616,7 +9616,7 @@
       "node_kind": "heading",
       "norm_label": "funding",
       "source_file": "CLAUDE.md",
-      "source_location": "L1228"
+      "source_location": "L1230"
     },
     {
       "id": "claude_graphify",
@@ -9628,7 +9628,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L1342"
+      "source_location": "L1344"
     },
     {
       "id": "claude_interactive_session_startup",
@@ -9652,7 +9652,7 @@
       "node_kind": "heading",
       "norm_label": "license",
       "source_file": "CLAUDE.md",
-      "source_location": "L1235"
+      "source_location": "L1237"
     },
     {
       "id": "claude_md_claude_claude",
@@ -9676,7 +9676,7 @@
       "node_kind": "heading",
       "norm_label": "path aliases",
       "source_file": "CLAUDE.md",
-      "source_location": "L1182"
+      "source_location": "L1184"
     },
     {
       "id": "claude_project",
@@ -9712,7 +9712,7 @@
       "node_kind": "heading",
       "norm_label": "pwa support",
       "source_file": "CLAUDE.md",
-      "source_location": "L1204"
+      "source_location": "L1206"
     },
     {
       "id": "claude_repo_layout",
@@ -9736,7 +9736,7 @@
       "node_kind": "heading",
       "norm_label": "security notes",
       "source_file": "CLAUDE.md",
-      "source_location": "L1332"
+      "source_location": "L1334"
     },
     {
       "id": "claude_tech_stack",
@@ -9760,7 +9760,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1247"
+      "source_location": "L1249"
     },
     {
       "id": "claude_theming",
@@ -9772,7 +9772,7 @@
       "node_kind": "heading",
       "norm_label": "theming",
       "source_file": "CLAUDE.md",
-      "source_location": "L1189"
+      "source_location": "L1191"
     },
     {
       "id": "agents",
@@ -10558,6 +10558,17 @@
       "source_location": "L138"
     },
     {
+      "id": "src_pages_bytefoundrypage_index_expandtogglebutton",
+      "label": "ExpandToggleButton",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "expandtogglebutton",
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L148"
+    },
+    {
       "id": "src_pages_bytefoundrypage_index_fillablestatcard",
       "label": "FillableStatCard",
       "_origin": "ast",
@@ -10577,7 +10588,7 @@
       "file_type": "code",
       "norm_label": "gaugebasearc",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L351"
+      "source_location": "L359"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugebonusarc",
@@ -10588,7 +10599,7 @@
       "file_type": "code",
       "norm_label": "gaugebonusarc",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L358"
+      "source_location": "L366"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugehub",
@@ -10599,7 +10610,7 @@
       "file_type": "code",
       "norm_label": "gaugehub",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L378"
+      "source_location": "L386"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugelabel",
@@ -10610,7 +10621,7 @@
       "file_type": "code",
       "norm_label": "gaugelabel",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L382"
+      "source_location": "L390"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugelakearc",
@@ -10621,7 +10632,7 @@
       "file_type": "code",
       "norm_label": "gaugelakearc",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L365"
+      "source_location": "L373"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugeneedle",
@@ -10632,7 +10643,7 @@
       "file_type": "code",
       "norm_label": "gaugeneedle",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L372"
+      "source_location": "L380"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugetrack",
@@ -10643,7 +10654,7 @@
       "file_type": "code",
       "norm_label": "gaugetrack",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L344"
+      "source_location": "L352"
     },
     {
       "id": "src_pages_bytefoundrypage_index_gaugewrap",
@@ -10654,7 +10665,7 @@
       "file_type": "code",
       "norm_label": "gaugewrap",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L340"
+      "source_location": "L348"
     },
     {
       "id": "src_pages_bytefoundrypage_index_header",
@@ -10710,17 +10721,6 @@
       "norm_label": "poolcard",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L133"
-    },
-    {
-      "id": "src_pages_bytefoundrypage_index_poolsummarybutton",
-      "label": "PoolSummaryButton",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "poolsummarybutton",
-      "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L149"
     },
     {
       "id": "src_pages_bytefoundrypage_index_pooltitlesymbol",
@@ -18407,7 +18407,7 @@
       "node_kind": "heading",
       "norm_label": "era ascension and eons (#407)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1457"
+      "source_location": "L1462"
     },
     {
       "id": "docs_economy_reference_multiplier_overflow_safety",
@@ -18419,7 +18419,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier overflow safety",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1844"
+      "source_location": "L1849"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_per_tier_automations",
@@ -18431,7 +18431,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for per-tier automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1634"
+      "source_location": "L1639"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_the_global_automations",
@@ -18443,7 +18443,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for the global automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1609"
+      "source_location": "L1614"
     },
     {
       "id": "docs_economy_reference_the_global_tickspeed_multiplier",
@@ -18455,7 +18455,7 @@
       "node_kind": "heading",
       "norm_label": "the global tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1696"
+      "source_location": "L1701"
     },
     {
       "id": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
@@ -18467,7 +18467,7 @@
       "node_kind": "heading",
       "norm_label": "the last tier's xp-funded tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1761"
+      "source_location": "L1766"
     },
     {
       "id": "docs_economy_reference_tickspeed_multiplier",
@@ -18479,7 +18479,7 @@
       "node_kind": "heading",
       "norm_label": "tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1666"
+      "source_location": "L1671"
     },
     {
       "id": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
@@ -18491,7 +18491,7 @@
       "node_kind": "heading",
       "norm_label": "tier autobuyer/tier-tickspeed-autobuyer milestones",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1573"
+      "source_location": "L1578"
     }
   ],
   "links": [
@@ -29592,7 +29592,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L441",
+      "source_location": "L449",
       "weight": 1.0
     },
     {
@@ -29604,7 +29604,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L442",
+      "source_location": "L450",
       "weight": 1.0
     },
     {
@@ -29616,7 +29616,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L449",
+      "source_location": "L457",
       "weight": 1.0
     },
     {
@@ -29628,7 +29628,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L457",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
@@ -29640,7 +29640,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L462",
+      "source_location": "L470",
       "weight": 1.0
     },
     {
@@ -29652,7 +29652,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L463",
+      "source_location": "L471",
       "weight": 1.0
     },
     {
@@ -29664,7 +29664,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L470",
+      "source_location": "L478",
       "weight": 1.0
     },
     {
@@ -29676,7 +29676,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L472",
+      "source_location": "L480",
       "weight": 1.0
     },
     {
@@ -29688,7 +29688,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L473",
+      "source_location": "L481",
       "weight": 1.0
     },
     {
@@ -29700,7 +29700,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L474",
+      "source_location": "L482",
       "weight": 1.0
     },
     {
@@ -29712,7 +29712,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L477",
+      "source_location": "L485",
       "weight": 1.0
     },
     {
@@ -29724,7 +29724,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L478",
+      "source_location": "L486",
       "weight": 1.0
     },
     {
@@ -29736,7 +29736,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L481",
+      "source_location": "L489",
       "weight": 1.0
     },
     {
@@ -29748,7 +29748,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L482",
+      "source_location": "L490",
       "weight": 1.0
     },
     {
@@ -29760,7 +29760,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L487",
+      "source_location": "L495",
       "weight": 1.0
     },
     {
@@ -29772,7 +29772,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L488",
+      "source_location": "L496",
       "weight": 1.0
     },
     {
@@ -29784,7 +29784,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L489",
+      "source_location": "L497",
       "weight": 1.0
     },
     {
@@ -29796,7 +29796,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L490",
+      "source_location": "L498",
       "weight": 1.0
     },
     {
@@ -29808,7 +29808,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L491",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -29820,7 +29820,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L492",
+      "source_location": "L500",
       "weight": 1.0
     },
     {
@@ -29832,7 +29832,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L498",
+      "source_location": "L506",
       "weight": 1.0
     },
     {
@@ -29844,7 +29844,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L501",
+      "source_location": "L509",
       "weight": 1.0
     },
     {
@@ -29856,7 +29856,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L508",
+      "source_location": "L516",
       "weight": 1.0
     },
     {
@@ -29868,7 +29868,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L509",
+      "source_location": "L517",
       "weight": 1.0
     },
     {
@@ -29880,7 +29880,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L514",
+      "source_location": "L522",
       "weight": 1.0
     },
     {
@@ -29892,7 +29892,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L531",
+      "source_location": "L539",
       "weight": 1.0
     },
     {
@@ -29904,7 +29904,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L533",
+      "source_location": "L541",
       "weight": 1.0
     },
     {
@@ -29916,7 +29916,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L592",
+      "source_location": "L600",
       "weight": 1.0
     },
     {
@@ -29928,7 +29928,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L693",
+      "source_location": "L701",
       "weight": 1.0
     },
     {
@@ -29940,7 +29940,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L695",
+      "source_location": "L703",
       "weight": 1.0
     },
     {
@@ -29952,7 +29952,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L701",
+      "source_location": "L709",
       "weight": 1.0
     },
     {
@@ -29964,7 +29964,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L702",
+      "source_location": "L710",
       "weight": 1.0
     },
     {
@@ -29976,7 +29976,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L710",
+      "source_location": "L718",
       "weight": 1.0
     },
     {
@@ -29988,7 +29988,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L720",
+      "source_location": "L728",
       "weight": 1.0
     },
     {
@@ -30024,7 +30024,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L335",
+      "source_location": "L343",
       "weight": 1.0
     },
     {
@@ -30036,7 +30036,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L394",
+      "source_location": "L402",
       "weight": 1.0
     },
     {
@@ -30048,7 +30048,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L396",
+      "source_location": "L404",
       "weight": 1.0
     },
     {
@@ -30060,7 +30060,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L398",
+      "source_location": "L406",
       "weight": 1.0
     },
     {
@@ -30072,7 +30072,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L413",
+      "source_location": "L421",
       "weight": 1.0
     },
     {
@@ -30084,7 +30084,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L325",
+      "source_location": "L333",
       "weight": 1.0
     },
     {
@@ -48161,28 +48161,61 @@
     },
     {
       "source": "changelog_0_1_0_2026_07_05",
-      "target": "changelog_added_915",
+      "target": "changelog_added_926",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L915",
+      "source_location": "L926",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_added_903",
+      "target": "changelog_added_914",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L903",
+      "source_location": "L914",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
+      "target": "changelog_fixed_919",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L919",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_3_0_2026_07_13",
+      "target": "changelog_added_897",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L897",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_3_0_2026_07_13",
+      "target": "changelog_changed_902",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L902",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_3_0_2026_07_13",
       "target": "changelog_fixed_908",
       "relation": "contains",
       "_origin": "ast",
@@ -48193,102 +48226,69 @@
       "weight": 1.0
     },
     {
-      "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_added_886",
+      "source": "changelog_0_4_0_2026_07_13",
+      "target": "changelog_added_881",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L886",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_changed_891",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L891",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_fixed_897",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L897",
+      "source_location": "L881",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_added_870",
+      "target": "changelog_changed_885",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L870",
+      "source_location": "L885",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_changed_874",
+      "target": "changelog_fixed_889",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L874",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_fixed_878",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L878",
+      "source_location": "L889",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_added_857",
+      "target": "changelog_added_868",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L857",
+      "source_location": "L868",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_changed_861",
+      "target": "changelog_changed_872",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L861",
+      "source_location": "L872",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_fixed_865",
+      "target": "changelog_fixed_876",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L865",
+      "source_location": "L876",
       "weight": 1.0
     },
     {
@@ -48310,7 +48310,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L855",
+      "source_location": "L866",
       "weight": 1.0
     },
     {
@@ -48321,7 +48321,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L868",
+      "source_location": "L879",
       "weight": 1.0
     },
     {
@@ -48332,7 +48332,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L884",
+      "source_location": "L895",
       "weight": 1.0
     },
     {
@@ -48343,7 +48343,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L901",
+      "source_location": "L912",
       "weight": 1.0
     },
     {
@@ -48354,7 +48354,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L913",
+      "source_location": "L924",
       "weight": 1.0
     },
     {
@@ -48414,79 +48414,79 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_563",
+      "target": "changelog_added_574",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L563",
+      "source_location": "L574",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_removed_587",
+      "target": "changelog_removed_598",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L587",
+      "source_location": "L598",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_594",
+      "target": "changelog_changed_605",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L594",
+      "source_location": "L605",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_648",
+      "target": "changelog_added_659",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L648",
+      "source_location": "L659",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_702",
+      "target": "changelog_changed_713",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L702",
+      "source_location": "L713",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_829",
+      "target": "changelog_fixed_840",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L829",
+      "source_location": "L840",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_security_851",
+      "target": "changelog_security_862",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L851",
+      "source_location": "L862",
       "weight": 1.0
     },
     {
@@ -48673,7 +48673,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1000",
+      "source_location": "L1002",
       "weight": 1.0
     },
     {
@@ -48684,7 +48684,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1182",
+      "source_location": "L1184",
       "weight": 1.0
     },
     {
@@ -48695,7 +48695,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1189",
+      "source_location": "L1191",
       "weight": 1.0
     },
     {
@@ -48706,7 +48706,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1204",
+      "source_location": "L1206",
       "weight": 1.0
     },
     {
@@ -48717,7 +48717,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1228",
+      "source_location": "L1230",
       "weight": 1.0
     },
     {
@@ -48728,7 +48728,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1235",
+      "source_location": "L1237",
       "weight": 1.0
     },
     {
@@ -48739,7 +48739,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1247",
+      "source_location": "L1249",
       "weight": 1.0
     },
     {
@@ -48750,7 +48750,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1332",
+      "source_location": "L1334",
       "weight": 1.0
     },
     {
@@ -48761,7 +48761,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1342",
+      "source_location": "L1344",
       "weight": 1.0
     },
     {
@@ -48893,7 +48893,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L914",
+      "source_location": "L916",
       "weight": 1.0
     },
     {
@@ -48904,7 +48904,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1215",
+      "source_location": "L1217",
       "weight": 1.0
     },
     {
@@ -49993,7 +49993,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1298",
+      "source_location": "L1300",
       "weight": 1.0
     },
     {
@@ -51808,7 +51808,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1255",
+      "source_location": "L1260",
       "weight": 1.0
     },
     {
@@ -51819,7 +51819,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1336",
+      "source_location": "L1341",
       "weight": 1.0
     },
     {
@@ -51830,7 +51830,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1398",
+      "source_location": "L1403",
       "weight": 1.0
     },
     {
@@ -51841,7 +51841,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1439",
+      "source_location": "L1444",
       "weight": 1.0
     },
     {
@@ -51852,7 +51852,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1457",
+      "source_location": "L1462",
       "weight": 1.0
     },
     {
@@ -51863,7 +51863,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1861",
+      "source_location": "L1866",
       "weight": 1.0
     },
     {
@@ -51874,7 +51874,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1905",
+      "source_location": "L1910",
       "weight": 1.0
     },
     {
@@ -51885,7 +51885,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1976",
+      "source_location": "L1981",
       "weight": 1.0
     },
     {
@@ -51896,7 +51896,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2060",
+      "source_location": "L2065",
       "weight": 1.0
     },
     {
@@ -51907,7 +51907,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2079",
+      "source_location": "L2084",
       "weight": 1.0
     },
     {
@@ -51918,7 +51918,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2102",
+      "source_location": "L2107",
       "weight": 1.0
     },
     {
@@ -51929,7 +51929,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2570",
+      "source_location": "L2575",
       "weight": 1.0
     },
     {
@@ -51940,7 +51940,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2754",
+      "source_location": "L2759",
       "weight": 1.0
     },
     {
@@ -51973,7 +51973,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1573",
+      "source_location": "L1578",
       "weight": 1.0
     },
     {
@@ -51984,7 +51984,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1609",
+      "source_location": "L1614",
       "weight": 1.0
     },
     {
@@ -51995,7 +51995,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1634",
+      "source_location": "L1639",
       "weight": 1.0
     },
     {
@@ -52006,7 +52006,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1666",
+      "source_location": "L1671",
       "weight": 1.0
     },
     {
@@ -52017,7 +52017,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1696",
+      "source_location": "L1701",
       "weight": 1.0
     },
     {
@@ -52028,7 +52028,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1761",
+      "source_location": "L1766",
       "weight": 1.0
     },
     {
@@ -52039,7 +52039,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1844",
+      "source_location": "L1849",
       "weight": 1.0
     },
     {
@@ -52050,7 +52050,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1299",
+      "source_location": "L1304",
       "weight": 1.0
     },
     {
@@ -52061,7 +52061,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1322",
+      "source_location": "L1327",
       "weight": 1.0
     },
     {
@@ -61086,13 +61086,13 @@
     },
     {
       "source": "src_pages_bytefoundrypage_index",
-      "target": "src_pages_bytefoundrypage_index_poolsummarybutton",
+      "target": "src_pages_bytefoundrypage_index_expandtogglebutton",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L149",
+      "source_location": "L148",
       "weight": 1.0
     },
     {
@@ -61202,7 +61202,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L322",
+      "source_location": "L330",
       "weight": 1.0
     },
     {
@@ -61213,7 +61213,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L324",
+      "source_location": "L332",
       "weight": 1.0
     },
     {
@@ -61224,7 +61224,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L327",
+      "source_location": "L335",
       "weight": 1.0
     },
     {
@@ -61235,7 +61235,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L333",
+      "source_location": "L341",
       "weight": 1.0
     },
     {
@@ -61246,7 +61246,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L340",
+      "source_location": "L348",
       "weight": 1.0
     },
     {
@@ -61257,7 +61257,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L344",
+      "source_location": "L352",
       "weight": 1.0
     },
     {
@@ -61268,7 +61268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L351",
+      "source_location": "L359",
       "weight": 1.0
     },
     {
@@ -61279,18 +61279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L358",
-      "weight": 1.0
-    },
-    {
-      "source": "src_pages_bytefoundrypage_index",
-      "target": "src_pages_bytefoundrypage_index_gaugelakearc",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L365",
+      "source_location": "L366",
       "weight": 1.0
     },
     {
@@ -61306,13 +61295,24 @@
     },
     {
       "source": "src_pages_bytefoundrypage_index",
+      "target": "src_pages_bytefoundrypage_index_gaugelakearc",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/pages/ByteFoundryPage/index.jsx",
+      "source_location": "L373",
+      "weight": 1.0
+    },
+    {
+      "source": "src_pages_bytefoundrypage_index",
       "target": "src_pages_bytefoundrypage_index_gaugeneedle",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L372",
+      "source_location": "L380",
       "weight": 1.0
     },
     {
@@ -61323,7 +61323,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L378",
+      "source_location": "L386",
       "weight": 1.0
     },
     {
@@ -61334,7 +61334,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L382",
+      "source_location": "L390",
       "weight": 1.0
     },
     {
@@ -61345,7 +61345,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L392",
+      "source_location": "L400",
       "weight": 1.0
     },
     {
@@ -61356,7 +61356,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L435",
+      "source_location": "L443",
       "weight": 1.0
     },
     {
@@ -64807,5 +64807,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d5435f1543a2b59f839e63a1950a909bdd0fbdf8"
+  "built_at_commit": "94555e32a630b5cc172147a02bffc473bba65507"
 }

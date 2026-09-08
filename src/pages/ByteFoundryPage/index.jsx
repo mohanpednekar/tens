@@ -140,32 +140,32 @@ const DataStreamCard = styled(StatCard)`
   gap: ${props => props.theme.space.md};
 `
 
-// Structured header + stats block, replacing the earlier single concatenated text line — matches
-// the tier row's own name/stat layout convention elsewhere in the app (see MainPage's TierName/
-// OwnedText/ProductionText) rather than staying a plain sentence. Wraps just SectionHeaderRow
-// (title/gauge/Bandwidth) — the pool's own Memory buffer block used to render inside this same
-// button too, but it's now a separate tappable control of its own (see FillableStatCard below /
-// tapPoolBuffer in game/engine), and a <button> can't nest inside another <button>.
-const PoolSummaryButton = styled.button`
+// Expand/collapse a pool card. Title/gauge/Bandwidth now render INSIDE the pool's own tappable
+// Memory buffer button (see FillableStatCard below) rather than a separate header button above
+// it — a <button> can't nest inside another <button>, so this is a plain sibling: a slim,
+// full-width strip right below the merged button, just a centered chevron, rather than a second
+// full header row.
+const ExpandToggleButton = styled.button`
   width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.75em;
+  line-height: 1;
   cursor: pointer;
-  // Less on the bottom than the other three sides — PoolCard's own gap already separates this
-  // button from the Memory buffer tile right below it, so full padding on all four sides doubled
-  // up into a visibly larger gap than the rest of the card's own rhythm.
-  padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm} 0.15rem;
+  padding: 0.2rem;
+  border-radius: ${props => props.theme.radius.sm};
+
+  &:hover {
+    background: ${props => props.theme.color.surfaceSunken};
+  }
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 `
 
@@ -576,17 +576,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       </Header>
 
       <DataStreamCard aria-label="Data Stream">
-        <SectionHeaderRow>
-          <SectionTitle>Data Stream</SectionTitle>
-          {intro.byteCreated && (
-            <MultiplierGauge
-              basePercent={dataStreamBaseMultiplierPercent}
-              totalPercent={dataStreamMultiplierPercent}
-              ariaLabel="data stream fill-based speed multiplier"
-            />
-          )}
-          <SectionRateText>{dataStreamRateText}</SectionRateText>
-        </SectionHeaderRow>
         <FillableStatCard
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
@@ -597,6 +586,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
+          <SectionHeaderRow>
+            <SectionTitle>Data Stream</SectionTitle>
+            {intro.byteCreated && (
+              <MultiplierGauge
+                basePercent={dataStreamBaseMultiplierPercent}
+                totalPercent={dataStreamMultiplierPercent}
+                ariaLabel="data stream fill-based speed multiplier"
+              />
+            )}
+            <SectionRateText>{dataStreamRateText}</SectionRateText>
+          </SectionHeaderRow>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <VisuallyHidden
             role="progressbar"
@@ -739,11 +739,27 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
-            <PoolSummaryButton
-              aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
-              onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
+            {/* Title/gauge/Bandwidth render INSIDE this same tappable button now (not a separate
+                header button above it — two buttons can't nest), so one tap both boosts this
+                pool's own multiplier bonus (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
+                game/layers) and shows the full summary in one control. Expand/collapse moves to
+                the slim ExpandToggleButton strip below. Same FillableStatCard component Data
+                Stream's own tap tile uses — see FillableStatCard above. */}
+            <FillableStatCard
+              as="button"
               type="button"
+              onClick={() => actions.tapPoolBuffer(poolIndex)}
+              disabled={poolBufferFull || poolMultiplierCapped}
+              aria-label={`tap pool ${poolIndex} memory`}
+              title={
+                poolBufferFull
+                  ? undefined
+                  : poolMultiplierCapped
+                    ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap`
+                    : undefined
+              }
+              $progress={poolBufferPercent}
+              $tappable
             >
               <SectionHeaderRow>
                 <SectionTitle>
@@ -762,28 +778,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 />
                 <SectionRateText>{formatDiskSize(poolBandwidth)}/sec</SectionRateText>
               </SectionHeaderRow>
-            </PoolSummaryButton>
-            {/* A separate control from PoolSummaryButton above (not nested inside it — two
-                buttons can't nest) so tapping Memory to boost this pool's own multiplier bonus
-                (see tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and game/layers) doesn't also
-                toggle the card's expanded state. Same FillableStatCard component Data Stream's own
-                tap tile uses — see FillableStatCard above. */}
-            <FillableStatCard
-              as="button"
-              type="button"
-              onClick={() => actions.tapPoolBuffer(poolIndex)}
-              disabled={poolBufferFull || poolMultiplierCapped}
-              aria-label={`tap pool ${poolIndex} memory`}
-              title={
-                poolBufferFull
-                  ? undefined
-                  : poolMultiplierCapped
-                    ? `Multiplier already at the ${FILL_MULTIPLIER_TAP_CAP_PERCENT}% cap`
-                    : undefined
-              }
-              $progress={poolBufferPercent}
-              $tappable
-            >
               <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
               <VisuallyHidden
                 role="progressbar"
@@ -793,6 +787,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 aria-valuemax={100}
               />
             </FillableStatCard>
+            <ExpandToggleButton
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
+              onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
+              type="button"
+            >
+              {isExpanded ? '▲' : '▼'}
+            </ExpandToggleButton>
             {isActiveDiskPool && provisionDiskButton}
             {isExpanded && (
               <>

@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-09-08)
 
 ## Corpus Check
-- 108 files · ~413,260 words
+- 108 files · ~413,689 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1577 nodes · 3980 edges · 91 communities (72 shown, 16 thin omitted)
+- 1577 nodes · 3980 edges · 92 communities (73 shown, 16 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 84 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d5435f15`
+- Built from commit: `94555e32`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -33,6 +33,7 @@
 - vitest
 - Automation workflows
 - package.json
+- pickIntroCapacityMilestone
 - prestigeGame
 - [Unreleased]
 - Economy model reference
@@ -131,7 +132,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (91 total, 16 thin omitted)
+## Communities (92 total, 16 thin omitted)
 
 ### Community 0 - "storage.js"
 Cohesion: 0.08
@@ -146,8 +147,8 @@ Cohesion: 0.05
 Nodes (55): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS (+47 more)
 
 ### Community 3 - "ByteFoundryPage/index.jsx"
-Cohesion: 0.05
-Nodes (56): applyIntroProductionDoublingToIntro(), flooredBitsLabel(), floorToDecimals(), formatBitsInNearestUnit(), formatMemoryAmount(), getComputeBandwidthSacrificeField(), getComputeBandwidthSacrificeLabel(), getDiskCost() (+48 more)
+Cohesion: 0.06
+Nodes (54): applyIntroProductionDoublingToIntro(), flooredBitsLabel(), floorToDecimals(), formatBitsInNearestSiUnit(), formatBitsInNearestUnit(), formatMemoryAmount(), getComputeBandwidthSacrificeField(), getComputeBandwidthSacrificeLabel() (+46 more)
 
 ### Community 4 - "tokens.js"
 Cohesion: 0.17
@@ -196,6 +197,10 @@ Nodes (13): Auto-merge merge method must match the Main ruleset (2026-08-20), Au
 ### Community 18 - "package.json"
 Cohesion: 0.12
 Nodes (16): name, packageManager, private, type, version, @capacitor/cli, @capacitor/core, @fontsource/inter (+8 more)
+
+### Community 19 - "pickIntroCapacityMilestone"
+Cohesion: 0.29
+Nodes (7): eraseAllComputeTokens(), isStorageUnlocked(), latchMainGameUnlocked(), pickIntroCapacityMilestone(), rewindOneIntroProductionClaim(), rollbackComputeFundedBandwidth(), upgradePoolCapacity()
 
 ### Community 20 - "prestigeGame"
 Cohesion: 0.19
@@ -283,7 +288,7 @@ Nodes (33): getNextComputeMergeDurationUpgradeIndex(), COMPUTE_ENTITY_CAP, COMPU
 
 ### Community 51 - "engine.js"
 Cohesion: 0.05
-Nodes (68): applyOfflineProgress(), AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, buyHyperscaler(), canBuyHyperscaler(), canForfeitComputeBoost(), captureFoundryUpgradeCaps(), clearDiskBuildQueue() (+60 more)
+Nodes (66): applyOfflineProgress(), AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, buyHyperscaler(), canBuyHyperscaler(), canForfeitComputeBoost(), captureFoundryUpgradeCaps(), clearDiskBuildQueue() (+58 more)
 
 ### Community 52 - "DevModePage/index.jsx"
 Cohesion: 0.11
@@ -343,7 +348,7 @@ Nodes (14): seedDataLakeSave(), COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE
 
 ### Community 69 - "run-simulation.mjs"
 Cohesion: 0.09
-Nodes (44): actFoundry(), actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges (+36 more)
+Nodes (41): actFoundry(), actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges (+33 more)
 
 ### Community 70 - "AppMenu/index.jsx"
 Cohesion: 0.29

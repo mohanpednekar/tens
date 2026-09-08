@@ -765,21 +765,23 @@ Strict three-layer separation:
    (`DISK_BUILD_COST_MULTIPLIER`/`provisionDisk` in `engine.js` — the full build cost is paid across
    `DISK_BUILD_COST_MULTIPLIER` such passes, not this buffer alone in one lump sum); any meaningfully
    smaller buffer ceiling would leave that size unable to fund even a single pass — see
-   `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
-   `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
-   tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
-   a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
-   own Capacity — see above), unlabelled. Always a real `<button>` (`actions.tapPoolBuffer(poolIndex)`,
-   `$tappable`) — tapping it boosts that one pool's own fill-based multiplier bonus (see "Fill-based
-   Speed/Bandwidth multiplier" below); it's rendered as a sibling of `PoolSummaryButton`, not nested
-   inside it, since a `<button>` can't nest inside another `<button>`.
-   Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
-   name — laid out in a shared `SectionHeaderRow` (a 3-column grid: title top-left, the
-   `MultiplierGauge` top-middle, the pool's own Bandwidth figure top-right — see "Fill-based
-   Speed/Bandwidth multiplier" below for the gauge itself), so a pool's throughput reads at a glance
-   without expanding to the buffer detail — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
-   `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
-   the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
+   `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary is ONE full-width `FillableStatCard`
+   button (`actions.tapPoolBuffer(poolIndex)`, `$tappable`) — the same reused component/visual style
+   as the Data Stream card's own tile (fill-gradient background, `BalanceText`, a hidden
+   `role="progressbar"` for a11y) rather than a bespoke bar — containing BOTH the pool's header
+   (title/gauge/Bandwidth, see below) and the buffer balance line (the buffer/capacity fraction,
+   equal to the pool's own Capacity — see above) inside the same button, so tapping anywhere in it
+   boosts that one pool's own fill-based multiplier bonus (see "Fill-based Speed/Bandwidth
+   multiplier" below). Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no
+   index number or tier name — laid out in a shared `SectionHeaderRow` (a 3-column grid: title
+   top-left, the `MultiplierGauge` top-middle, the pool's own Bandwidth figure top-right — see
+   "Fill-based Speed/Bandwidth multiplier" below for the gauge itself) as the button's own first
+   line, so a pool's throughput reads at a glance without expanding to the buffer detail — centered,
+   since the symbol alone already uniquely identifies the pool. Expand/collapse lives on a separate,
+   slim `ExpandToggleButton` strip (a plain ▲/▼ chevron) rendered as a sibling right below the tap
+   button, not nested inside it, since a `<button>` can't nest inside another `<button>` — its
+   `aria-label="expand/collapse pool `<n>`"` (plus `aria-label="pool `<n>`"` on the card itself)
+   still carries the numeric index for a11y/tests, independent of the visible chevron glyph. One `PoolCard` renders for each
    VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
    `getUnlockedStoragePoolCount`'s own disk-build-based count and how many pools' own capacity
    threshold `getPoolCapacityUnlockThresholdBits` the Data Stream's raw Capacity (`intro.capacity`)

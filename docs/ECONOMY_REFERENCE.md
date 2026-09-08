@@ -345,10 +345,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still screen-reader-visible
      as a progress indicator and every test asserting on that contract is unaffected by the visual
      swap. Each pool's own Memory buffer tile is now always a real tap target (`FillableStatCard`
-     rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — a sibling of `PoolSummaryButton`
-     rather than nested inside it, since a `<button>` can't nest inside another `<button>` (the same
-     constraint `ComputePage`'s own `TierSelectButton` already works around); its own gauge lives
-     inside that `FillableStatCard`, the identical structure the Data Stream's own tile uses.
+     rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own header (title/gauge/
+     Bandwidth, a `SectionHeaderRow`) renders as the FIRST line INSIDE that same button, with the
+     buffer balance as its second line, the identical two-line-in-one-button structure the Data
+     Stream's own tile uses. Expand/collapse lives on a separate, slim `ExpandToggleButton` (a plain
+     ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a
+     `<button>` can't nest inside another `<button>` (the same constraint `ComputePage`'s own
+     `TierSelectButton` already works around) — an earlier iteration had the header in its own
+     separate `PoolSummaryButton` (itself the expand/collapse toggle) sitting above the balance tile
+     instead of merged into it.
 5. **Speed ×2** (was Bandwidth / Invest for Double Production — `pickIntroProductionMilestone`) runs
    on its own **independent cost ladder**, entirely decoupled from Capacity — a separate, permanent
    progression tracked by `productionMilestoneTier` (0-based). Tier `t`'s cost is

@@ -2788,7 +2788,7 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
   expect(balanceBar.closest('section')).toHaveTextContent('4 bits / 1 MiB')
 })
 
-test('Pool header row pairs the pool\'s own Bandwidth with its title on one line, not inside the Memory buffer block below', () => {
+test('Pool header row pairs the pool\'s own Bandwidth with its title on one line', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 

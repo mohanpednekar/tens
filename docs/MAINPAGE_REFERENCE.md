@@ -38,18 +38,22 @@ Data Stream's own controls, and each VISIBLE Storage pool gets its own separate 
 `styled(StatCard)`) below it — see "Storage pools render as their own PoolCards" further down for
 that structure.
 
-`DataStreamCard` opens with a `SectionHeaderRow` — the same 3-column
-title-top-left/gauge-top-middle/rate-top-right layout every section on this page uses (see "Put
-title on top left, speedometer in the top middle and speed or bandwidth on the top right" in
-CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`, the fill-based `MultiplierGauge` (once
-`byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and a plain rate readout
-on the right — below `BITS_PER_BYTE` (8) bits/sec a "+N bit(s)/sec" line, at/above it "+N Byte(s)/sec"
-instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`) — a single line of text; there's no
-segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"` version
-was replaced once the gauge itself started carrying the fill-multiplier reading). Below that header,
-a `FillableStatCard`
+`DataStreamCard` holds a single `FillableStatCard`
 — deliberately a plain `styled.div`, not `styled(StatCard)` (nesting a second card inside
-`DataStreamCard` would double-box the same region) — applies `components/Button`'s own
+`DataStreamCard` would double-box the same region) — containing BOTH the header and the balance as
+its two lines, so the whole thing reads (and, once interactive, taps) as one control rather than a
+separate header sitting above a boxed balance tile. Its first line is a `SectionHeaderRow` — the
+same 3-column title-top-left/gauge-top-middle/rate-top-right layout every section on this page uses
+(see "Put title on top left, speedometer in the top middle and speed or bandwidth on the top right"
+in CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`, the fill-based `MultiplierGauge`
+(once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and a plain rate
+readout on the right — below `BITS_PER_BYTE` (8) bits/sec a "+N bit(s)/sec" line, at/above it "+N
+Byte(s)/sec" instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`) — a single line of text;
+there's no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"`
+version was replaced once the gauge itself started carrying the fill-multiplier reading). An earlier
+iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
+inside it — merged together per player feedback that the two read as disconnected pieces. Its second
+line applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
 toward Capacity the same visual way every button on this page already does. It shows
 `{bits} / {capacity}` (`formatMemoryBalance`, see "Numbers are formatted" below) — both numbers
@@ -125,27 +129,31 @@ mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" 
 many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
 docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
-NOT one continuous card shared across pools or with Data Stream. Only ONE pool is expanded at a
-time by default — the largest currently visible one (`expandedPoolIndex` local state: `null`
-follows the largest unlocked pool, an explicit `0` means "all collapsed", any other value pins one
-specific pool) — toggled by clicking that pool's own `PoolSummaryButton`, a full-width `<button>`
-wrapping just its `SectionHeaderRow` (`aria-expanded`, `aria-label="expand/collapse pool {n}"`):
-title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
-or tier name in the visible text, centered since the symbol alone already uniquely identifies the
-pool), the pool's own `MultiplierGauge` (switching to `mode="lake"` once that pool's own buffer is
-full AND its Data Lake is ready to receive overflow — see "Fill-based Speed/Bandwidth multiplier"
-in CLAUDE.md), and its own Bandwidth figure on the right (`formatDiskSize(poolBandwidth)}/sec`).
-One more tile renders right below the summary button, ALWAYS visible regardless of expand state (not
-gated behind the disclosure): a tappable `FillableStatCard` for that pool's own Memory buffer
-(`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
-`disabled={poolBufferFull || poolMultiplierCapped}`, showing `{bufferBits} / {bufferCapacity}` in
-Disk/SI units via `formatDiskSize` — a SEPARATE `<button>` from `PoolSummaryButton`, since a
-`<button>` can't nest inside another `<button>`). An earlier iteration also rendered a second,
-always-visible, non-interactive tile here showing that pool's Data Lake fill level as "`<symbol>`
-Lake · NN%" — removed as redundant with the equivalent live fill level `components/DataLakePanel`'s
-own `LakePoolTile` already shows once the card is expanded (see below); the standalone copy only
-duplicated it a second time above the fold. Only once expanded does the card also render that pool's
-own `components/DiskArrayRow`s and its own `components/DataLakePanel` (`bare` mode) — see both below.
+NOT one continuous card shared across pools or with Data Stream. A pool's own header
+(title/gauge/Bandwidth, a `SectionHeaderRow`) and its Memory buffer balance both render INSIDE the
+SAME tappable `FillableStatCard` `<button>` (`aria-label="tap pool {n} memory"`, calling
+`actions.tapPoolBuffer(poolIndex)`, `disabled={poolBufferFull || poolMultiplierCapped}`) — the
+header row is the button's first line: title "`<symbol>` Pool" (e.g. "KB Pool" —
+`TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number or tier name in the visible text, centered
+since the symbol alone already uniquely identifies the pool), the pool's own `MultiplierGauge`
+(switching to `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to
+receive overflow — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and its own Bandwidth
+figure on the right (`formatDiskSize(poolBandwidth)}/sec`); the balance line
+(`{bufferBits} / {bufferCapacity}` in Disk/SI units via `formatDiskSize`) is the button's second
+line, same as Data Stream's own tile below. Only ONE pool is expanded at a time by default — the
+largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
+pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
+separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,
+`aria-label="expand/collapse pool {n}"`) rendered right below the tap button, not nested inside it
+(a `<button>` can't nest inside another `<button>`). An earlier iteration had the header in its own
+separate `PoolSummaryButton` (toggling expand/collapse) ABOVE the balance tile instead of merged
+into it — folded together per player feedback that the two looked like disconnected pieces rather
+than one control. A still-earlier iteration also rendered a second, always-visible, non-interactive
+tile here showing that pool's Data Lake fill level as "`<symbol>` Lake · NN%" — removed as redundant
+with the equivalent live fill level `components/DataLakePanel`'s own `LakePoolTile` already shows
+once the card is expanded (see below); the standalone copy only duplicated it a second time above
+the fold. Only once expanded does the card also render that pool's own `components/DiskArrayRow`s
+and its own `components/DataLakePanel` (`bare` mode) — see both below.
 
 Storage is continuous on this same page: **Provision Disk** — the common disk-build operation —
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary

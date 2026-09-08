@@ -259,6 +259,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Data Stream and pool header rows now render inside the same tappable balance button** instead
+  of sitting as a separate header above it — title, fill-multiplier gauge, and Speed/Bandwidth
+  figure are now the first line of the one bordered tap button, with the bits/Buffer (or Memory
+  buffer) balance as its second line, so the whole thing reads as one control. For pool cards,
+  where the header used to also toggle that pool's expand/collapse, that action moved to a new
+  slim chevron (▲/▼) strip rendered just below the merged button.
 - **Trimmed dead space below the Data Stream/pool fill-multiplier gauge** — the dial's SVG canvas
   used to reserve a full circle's worth of height even though the needle only ever sweeps the top
   half, leaving a large empty band below the percent label. The canvas now crops to just past the
