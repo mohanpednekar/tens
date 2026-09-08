@@ -6628,3 +6628,72 @@ is a repo-governance decision for the maintainer — flagged here rather than de
 drifted to a stale "1729" through the same conflict-resolution commit). `graphify-out/graph.json`
 and its siblings parse as valid JSON again; `graphify update .` runs cleanly. No source, test, or
 documentation content otherwise changed.
+
+### Provision Disk: ordinal-scaled pass counts, and passes auto-continue after a manual start
+
+Player feedback: "Disk Provisioning passes should not need manual action between two passes. First
+disk in an array needs one pass. Nth disk needs N passes." This asked for two independent changes to
+`provisionDisk` (see the still-unreleased "Provision Disk's build cost is now paid in installments"
+`CHANGELOG.md` entry that introduced the pass-funding mechanic this builds on): (1) every disk in an
+array previously cost a flat `DISK_BUILD_COST_MULTIPLIER` (10) passes regardless of its position in
+the array — the very first disk cost exactly as much as the tenth; (2) a manual click that only
+partially funded a build left the player needing to click again (possibly several times) as the pool
+buffer refilled, even though `intro.diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild` already
+existed in `engine.js`, fully implemented and tested, to auto-fire a queued build's passes — just
+never armed by anything a player could actually trigger through normal play.
+
+Presented with a build-vs-design choice on the second point (fully automatic disk provisioning with
+no button at all, vs. keeping a manual "start" click that then auto-continues), the maintainer chose
+the latter: Provision Disk stays a deliberate action to START a new disk, but once started, no
+further clicks are needed to finish it.
+
+**Fix.**
+1. **Ordinal-scaled pass count.** Added `getDiskProvisionPassesRequired(state, size)` =
+   `Math.min(DISK_BUILD_COST_MULTIPLIER, (disksBuiltTotal[size] ?? 0) + 1)` — the same ordinal
+   `getProvisionDiskSeconds` already read to scale BUILD TIME by, now also driving pass COUNT. Since
+   `DISK_BUILD_COST_MULTIPLIER` happens to equal `DISK_ARRAY_LADDER_CAP`, the `Math.min` cap is
+   purely defensive (the ordinal never actually reaches it in play — the ladder always advances to
+   the next size once `DISK_ARRAY_LADDER_CAP` disks are built) rather than a real gameplay ceiling.
+   `getDiskCost` changed signature from `capacityBits → number` to `(state, capacityBits) → number`
+   so it can read the ordinal too, becoming `capacityBits * getDiskProvisionPassesRequired(state,
+   capacityBits)`. `provisionDisk` swapped its `DISK_BUILD_COST_MULTIPLIER` references for the new
+   function; `passesRemaining` is now `Math.max(0, passesRequired - alreadyCollected)` rather than a
+   bare subtraction — without the clamp, a save carrying a `diskProvisionPasses[size]` value banked
+   under the OLD flat-10 system (now exceeding a smaller ordinal's own requirement) would read as a
+   NEGATIVE amount still owed, and `provisionDisk`'s `poolBuffers[poolIndex] = bufferBits -
+   affordablePasses * size` would then ADD bits back into the buffer instead of completing the build
+   — a real self-heal bug this clamp exists specifically to prevent, covered by its own regression
+   test ("self-heals a stale, already-over-required pass count…") rather than left to chance.
+   `INTRO_CAPACITY_CAP_BITS`/`getStoragePoolMemoryBounds`'s pool-boundary formulas were NOT touched —
+   they were already sized to fund exactly ONE pass of a pool's largest disk (not the flat whole
+   cost), a relationship this change doesn't disturb at all.
+2. **Auto-continue after a manual start.** `provisionDisk`'s own partial-funding branch now sets
+   `intro.diskBuildQueued = true` unconditionally (previously left untouched) — since
+   `tickQueuedDiskBuild` was ALREADY unconditionally wired into `tickGame`'s `tickStorage` pipeline
+   every tick (just never armed by anything reachable from the UI), this one-line addition was enough
+   to make every remaining pass of an already-started build fire itself as the pool buffer refills,
+   with zero further engine or UI wiring needed. Starting a NEW disk's build still requires one
+   click — `diskBuildQueued` still resets to `false` the instant a build fully completes, same as
+   before. `queueDiskBuild` itself (arming the queue BEFORE even the first pass is affordable) stays
+   available for that narrower case, still with no dedicated UI control, same posture as Capacity's
+   own `queueIntroCapacityUpgrade`.
+
+Every UI/doc reference to the flat "`DISK_BUILD_COST_MULTIPLIER` passes always" wording — the
+Provision Disk button's own cost/progress label and title text on `ByteFoundryPage`, and every
+`CLAUDE.md`/`AGENTS.md`/`docs/ECONOMY_REFERENCE.md`/`docs/MAINPAGE_REFERENCE.md` passage describing
+it — was updated in the same commit to describe the ordinal-scaled figure instead; historical
+`docs/DESIGN_HISTORY.md` entries from when the flat-10 mechanic was originally introduced were left
+untouched, since they correctly describe what was true at the time they were written.
+
+**Verification.** `yarn test`: 1741/1741 green (+3 from a new `getDiskProvisionPassesRequired`
+describe block, a new self-heal regression test, and a new "6th disk needs 6 passes, funds in one
+call" test). Roughly a dozen existing `engine.test.js`/`App.test.jsx` tests that seeded a fresh
+size's flat 10-pass cost, or asserted the old flat pass-count label, were rewritten to seed a
+specific disk ordinal (via `disksBuiltTotal`) matching what each test was actually trying to
+exercise — a test genuinely about the array's very first disk kept ordinal 1; a test whose real
+point was "collects several passes at once" or "stays mid-funding after a partial pass" moved to a
+later ordinal (2, 5, or 6) so the scenario stayed meaningful rather than completing in a single pass
+by coincidence. The one test whose real invariant was structurally unrelated to any specific ordinal
+(the decade-power Capacity ladder's fixed relationship to the flat `DISK_BUILD_COST_MULTIPLIER`
+constant) kept that literal constant rather than switching to `getDiskCost`, since the ordinal-scaled
+function no longer represents what that test needed to check.

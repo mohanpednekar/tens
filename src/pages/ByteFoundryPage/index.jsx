@@ -3,8 +3,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { COMPUTE_ENTITY_CAP, DISK_BUILD_COST_MULTIPLIER, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { COMPUTE_ENTITY_CAP, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -484,15 +484,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // third in the forced priority order — see isProvisionDiskTurnAvailable. Every shown size's
   // DiskArrayRow (Cache then Disks per size, ascending) renders below as continuous sections.
   const diskSize = getDiskSize(state)
-  const diskCost = getDiskCost(diskSize)
+  const diskCost = getDiskCost(state, diskSize)
+  const diskPassesRequired = getDiskProvisionPassesRequired(state, diskSize)
   const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
   const diskPoolBufferBits = getPoolBufferBits(state, diskPoolIndex)
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
-  // The build cost is paid in DISK_BUILD_COST_MULTIPLIER passes of the disk's own face-value size
-  // each (see provisionDisk in game/engine) — "blocked by priority" now only needs a single pass's
-  // worth in the buffer, not the whole cost, to be a real (if lower-priority) option.
+  // The build cost is paid in diskPassesRequired passes of the disk's own face-value size each (N
+  // for the array's Nth disk, capped at DISK_BUILD_COST_MULTIPLIER — see provisionDisk/
+  // getDiskProvisionPassesRequired in game/engine) — "blocked by priority" now only needs a single
+  // pass's worth in the buffer, not the whole cost, to be a real (if lower-priority) option.
   const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
   const diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)
   const diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress
@@ -533,8 +535,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             : diskBuildBlockedByPriority
               ? 'Take Speed (or redeem a full Disk) first'
               : diskRedeemTierName
-                ? `Costs ${formatDiskSize(diskCost)}, paid in ${DISK_BUILD_COST_MULTIPLIER} passes of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${DISK_BUILD_COST_MULTIPLIER} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                : `Costs ${formatDiskSize(diskCost)}, paid in ${DISK_BUILD_COST_MULTIPLIER} passes of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${DISK_BUILD_COST_MULTIPLIER} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+                ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
       }
       type="button"
       variant={canStartDiskBuild ? 'info' : 'neutral'}
@@ -546,7 +548,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           : diskLadderExhausted
             ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
             : diskFundingInProgress
-              ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${DISK_BUILD_COST_MULTIPLIER}`
+              ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${diskPassesRequired}`
               : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
       </ButtonContent>
       <VisuallyHidden

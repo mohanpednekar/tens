@@ -212,10 +212,12 @@ buffer's own ceiling matches that pool's Capacity exactly (not a smaller fractio
 operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
 targets the next disk size and renders INSIDE the pool card matching that size (not standalone in
 the Data Stream section), with a fallback copy below the Data Stream card for the rare case where
-the disk ladder has outrun the last currently-visible pool card. Its cost is paid in
-`DISK_BUILD_COST_MULTIPLIER` (10) passes of the disk's own face-value size each
-(`intro.diskProvisionPasses`) rather than as one lump sum, so a pool's buffer only ever needs to hold
-one pass at a time; only once all 10 land does the real timed build start. Only the largest unlocked pool is expanded; earlier pools remain as
+the disk ladder has outrun the last currently-visible pool card. Its cost is paid in N passes of the disk's own face-value size each — N for the array's Nth disk
+(1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER` (10) for its last) rather than a flat count
+for every disk — (`intro.diskProvisionPasses`) rather than as one lump sum, so a pool's buffer only
+ever needs to hold one pass at a time; only once every required pass lands does the real timed build
+start, and a manual click that doesn't finish it in one call auto-arms a queue so the remaining
+passes fire themselves as the buffer refills, no further click needed. Only the largest unlocked pool is expanded; earlier pools remain as
 compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a
 fresh disk takes exactly the time to fill it at 1x Memory bandwidth (current production rate), ×N
 for the array's Nth disk; only the pool's smallest size gets an always-full **read cache** (Data
