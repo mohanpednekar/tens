@@ -1514,6 +1514,18 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: expect.any(Number), totalSeconds: expect.any(Number) })
   })
 
+  it('tickQueuedDiskBuild collects a single partial pass and stays armed for the next one', () => {
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      poolBuffers: { 1: FIRST_DISK_SIZE },
+    })
+    const after = tickQueuedDiskBuild(state)
+    expect(after.intro.diskBuildQueued).toBe(true)
+    expect(after.intro.diskProvisionPasses).toEqual({ [FIRST_DISK_SIZE]: 1 })
+    expect(after.intro.diskBuild).toBeNull()
+  })
+
   it('a manual provisionDisk click also clears a stale queue, not just a queued fire', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,

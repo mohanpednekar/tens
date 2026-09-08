@@ -49,9 +49,11 @@ depend on pool 1's Bandwidth, which itself dropped from 8,000 to 2,000 bits/sec 
 Capacity ceiling — and therefore its `sqrt(Capacity)` Bandwidth cap — shrunk). `App.test.jsx`'s two
 Data Stream binary-unit-display tests needed their expected KiB text updated too (the binary
 display of the same, now 10x smaller, `INTRO_CAPACITY_CAP_BITS` value naturally renders as
-different KiB figures). `yarn test`: 1721/1721 green. `yarn build` succeeds. Verified visually via a
-`yarn dev` + Playwright check that the KB Pool's Memory buffer now caps at "1 KB" (matching the new
-100x-smaller-than-Data-Lake-capacity ceiling) and that the pin-icon toggle no longer renders.
+different KiB figures). `yarn test`: 1724/1724 green (including a follow-up test added for
+`tickQueuedDiskBuild` collecting a single partial pass while staying armed). `yarn build` succeeds.
+Verified visually via a `yarn dev` + Playwright check that the KB Pool's Memory buffer now caps at
+"100 KB" (matching the new 100x-smaller-than-Data-Lake-capacity ceiling) and that the pin-icon
+toggle no longer renders.
 
 ### Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04
 
