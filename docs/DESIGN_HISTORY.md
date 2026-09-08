@@ -6452,3 +6452,67 @@ rewritten to assert on the balance (`section.querySelector('p')`, since `Balance
 only `<p>`) and the Capacity figure separately; a test pairing the pool's heading with its Bandwidth
 figure as DOM siblings was rewritten to pair Bandwidth with Capacity as `FooterRow` siblings instead,
 matching the new layout.
+
+### The balance's decimal digit count wasn't actually stable — Intl.NumberFormat's default trimming undid the fixed 3-decimal floor
+
+Player feedback, on the just-shipped bar redesign above: "The balance should use stable number of
+digits per range to ensure readability when there are fast changes. For example, if 3.578 is a
+number shown, then 5.6 should be shown as 5.600 while keeping the trailing zeros. Decide the ideal
+number of significant digits per range and use it as guiding principle."
+
+`formatMemoryAmount` already floored every unit-scaled amount to a fixed `MEMORY_AMOUNT_DECIMAL_PLACES`
+(3) decimal places (`floorToDecimals`) — but the final render step, `formatAmount(scaled)`, calls
+through to a `plainNumberFormatter = new Intl.NumberFormat('en-US')` with no `minimumFractionDigits`
+set, so `Intl` trims a trailing zero by default: `5.6` renders as `"5.6"`, not `"5.600"`, even though
+the underlying value was floored to the identical precision as `3.578`. For a BALANCE specifically —
+a reading that changes nearly every tick — that trim makes the displayed width jitter from one tick
+to the next for no reason tied to the actual magnitude of change, exactly the "fast changes"
+readability problem the feedback names.
+
+**Decision: 3 decimal places, always, is this app's guiding precision for a unit-scaled amount —
+apply it project-wide already (`MEMORY_AMOUNT_DECIMAL_PLACES`), don't reinvent a magnitude-dependent
+scheme.** A magnitude-tiered alternative was considered (fewer decimals as the integer part grows,
+keeping a constant total significant-digit count, e.g. 2 decimals once the integer part reaches 2
+digits) — rejected because the app's existing, already-tested convention already fixes 3 decimals
+regardless of the scaled value's own integer-digit count (`"48.828 KiB"`, `"97.656 KiB"`,
+`"30.031 KiB"` are all pre-existing tested outputs with 2-digit integer parts and 3 decimals each);
+switching to a variable scheme would have been a much larger, unrequested behavior change breaking
+that established precision everywhere it's used (Capacity, Bandwidth, Disk/Cache sizes), not just
+fixing the specific trimming bug the feedback described. "Per range" in the feedback reads as "per
+unit" here — within whatever unit a value lands in, the digit count should be stable — which the
+existing flat 3-decimal floor already delivers once the trim itself is fixed.
+
+**Fix, scoped to balances only.** Rather than changing `formatMemoryAmount` itself (used everywhere
+on `ByteFoundryPage` for mostly-round, slow-changing, or exact-by-design figures — "1 KB", "100 KB"
+Disk sizes, Capacity, Bandwidth — where a forced ".000" would be visual noise, not a fix), added a
+parallel `formatMemoryAmountStable`/`formatDiskSizeStable` pair (`engine.js`) that floors to the
+identical `MEMORY_AMOUNT_DECIMAL_PLACES` precision but formats the nonzero-and-≥1 case through a
+dedicated `Intl.NumberFormat` with `minimumFractionDigits`/`maximumFractionDigits` both pinned to
+that same constant, so a trailing zero is never trimmed. A true zero is still exempted (renders bare
+"0 <unit>", not "0.000 <unit>"), matching `formatMemoryAmount`'s own zero handling exactly. Only the
+two BALANCE call sites in `ByteFoundryPage/index.jsx` were switched to the stable variant:
+`formatMemoryBalanceValue` (Data Stream) and the pool card's own buffer-balance `BalanceText`
+(now `formatDiskSizeStable`) — every other figure on the same tiles (Capacity, Bandwidth, disk
+sizes/costs elsewhere on the page) keeps using the ordinary trimmed formatters.
+
+**Verification.** New `engine.test.js` coverage for both new exports (trailing-zero preservation,
+identical flooring precision to the untrimmed variant, the shared below-1-fallback/true-zero
+exemptions). New `App.test.jsx` component tests seed a balance that floors to a round decimal (5.6
+MiB / 5.6 KB) and assert the rendered `BalanceText` shows `"5.600 MiB"`/`"5.600 KB"` rather than the
+trimmed `"5.6"`. `yarn test`: 1736/1736 green (+9).
+
+### An adversarial review of the bar-redesign PR found the new disk-status figure had zero test coverage
+
+The `code-reviewer` subagent's pass on the speedometer→bar PR (above) found no functional defects in
+the bar math or layout refactor, but flagged that `getFullDisksCount`/`DiskStatusText` — a genuinely
+new, user-visible feature (the top-right "💾 N" figure on the Data Stream and each pool's own tile)
+— shipped with no test that would catch a regression (an off-by-one in the sum, a wrong `poolSizes`
+filter scoping the count to the wrong pool, or the figure silently disappearing).
+
+**Fix.** Added `App.test.jsx` coverage seeding `intro.disks` across two sizes belonging to the same
+pool, asserting both the Data Stream's own whole-Foundry total and that pool's own scoped total
+render the expected `"💾 N"` text via their respective `aria-label`s, plus a test confirming the
+figure is omitted entirely before Storage is revealed (matching the same reveal-gating convention
+`DiskArrayRow` already follows elsewhere on the page). Landed in the same PR as the stable-decimal
+balance fix above rather than as a separate follow-up, since both were still pre-merge findings on
+the same not-yet-reviewed-clean branch.

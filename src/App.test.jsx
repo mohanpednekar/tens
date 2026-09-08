@@ -2806,6 +2806,54 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
   expect(section).toHaveTextContent('1 MiB')
 })
 
+test('Data Stream balance shows a stable, non-trimmed decimal digit count — a round-fraction reading still shows all 3 places', () => {
+  // 46,976,205 bits floors to exactly 5.6 MiB — formatMemoryAmount (used elsewhere on this same
+  // page, e.g. Capacity) would trim this to "5.6 MiB" via Intl.NumberFormat's default fraction-digit
+  // handling; the balance specifically renders via formatMemoryAmountStable so a fast-changing
+  // reading doesn't visibly change width tick to tick purely because a digit lands on zero.
+  const capacity = 100 * 1024 * 1024 * BITS_PER_BYTE // 100 MiB
+  seedIntroState({ bits: 46_976_205, capacity, byteCreated: true })
+  render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 MiB')
+})
+
+test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decimal digit count', () => {
+  // 44,800 bits is exactly 5.6 KB — formatDiskSize (used elsewhere on this same tile, e.g.
+  // Bandwidth/Capacity) would trim this to "5.6 KB"; the balance specifically renders via
+  // formatDiskSizeStable instead.
+  seedIntroState({
+    bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true,
+    poolBuffers: { 1: 44_800 },
+  })
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
+})
+
+test('the top-right disk-status figure sums full disks per section — the whole Foundry for Data Stream, just that pool\'s own sizes for a pool card', () => {
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    disks: { 8_000: 3, 80_000: 2 }, // both 1 KB and 10 KB belong to pool 1
+  })
+  render(<App />)
+
+  const dataStreamSection = screen.getByRole('progressbar', { name: /data stream bit balance/i }).closest('section')
+  expect(within(dataStreamSection).getByLabelText('5 full disks')).toHaveTextContent('💾 5')
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  expect(within(pool1).getByLabelText('pool 1 5 full disks')).toHaveTextContent('💾 5')
+})
+
+test('the disk-status figure is omitted before Storage is revealed', () => {
+  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
+  render(<App />)
+
+  expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
+})
+
 test('Pool footer row pairs the pool\'s own Bandwidth with its Capacity across the bottom row\'s two halves', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)

@@ -329,17 +329,27 @@ flips — no button or handler needed for that transition.
 
 Numbers are formatted via `formatMemoryBalanceValue`/`formatMemoryCapacityValue`
 (`ByteFoundryPage`-local helpers, calling into `engine.js`'s own
-`getMemoryUnit`/`formatMemoryAmount` exports): raw
+`getMemoryUnit`/`formatMemoryAmountStable`/`formatMemoryAmount` exports): raw
 bits below 1 Byte, then B/KiB/MiB/…/QiB by **1024** each step once above it (`getMemoryUnit`,
 extending `TIER_DEFINITIONS`' own tier symbols with an "i" — `1 KiB = 1024 Bytes = 1.024 KB`),
-floored (not rounded) at up to 3 decimal places once converted into a binary unit — same
+floored (not rounded) at exactly 3 decimal places once converted into a binary unit — same
 never-overstate rationale as `formatCurrency` in `engine.js`, so a balance never reads as a complete
 unit ("1 KiB") one tick before it actually is — a display-only convention, internal state always
-stores raw bits. Capacity always renders in its own unit; the balance shares it unless that would
-floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into its
-own finer unit instead (e.g. "30.031 KiB / 1 MiB") — only a genuinely sub-Byte balance still falls
-back to a raw bit count, since neither unit ladder defines anything smaller than a whole Byte. See
-`docs/ECONOMY_REFERENCE.md` and `docs/DESIGN_HISTORY.md` for the full three-way breakdown. Every
+stores raw bits. The balance specifically renders via `formatMemoryAmountStable`/`formatDiskSizeStable`
+(a pool's own buffer balance) rather than the ordinary `formatMemoryAmount`/`formatDiskSize` every
+other memory-scaled reading on the page uses: the ordinary pair trims a trailing zero via
+`Intl.NumberFormat`'s own default fraction-digit handling ("5.6", not "5.600"), which is fine for a
+mostly-round, slow-changing figure (Capacity, Bandwidth, a Disk's own size) but would make a
+BALANCE — changing nearly every tick — visibly change display width from one tick to the next purely
+because a digit happened to land on zero. The stable variant always shows exactly 3 decimal places
+once ≥ 1 in its unit (a true zero still renders bare, "0 <unit>") so "3.578" and "5.600" read as the
+same precision instead of "3.578" and "5.6" reading like a bigger jump than actually occurred — see
+`docs/DESIGN_HISTORY.md`. Capacity always renders in its own unit; the balance shares it unless that
+would floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into
+its own finer unit instead (e.g. "30.031 KiB" alongside a "1 MiB" capacity) — only a genuinely
+sub-Byte balance still falls back to a raw bit count, since neither unit ladder defines anything
+smaller than a whole Byte. See `docs/ECONOMY_REFERENCE.md` and `docs/DESIGN_HISTORY.md` for the full
+three-way breakdown. Every
 standalone Memory-denominated cost (Sacrifice, Invest, tier01's own dynamic conversion cost)
 reuses this exact binary scale via `engine.js`'s own
 `formatBitsInNearestUnit = bits => formatMemoryAmount(bits, getMemoryUnit(bits, true))` — calling

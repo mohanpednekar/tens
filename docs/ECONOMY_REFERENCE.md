@@ -1221,10 +1221,19 @@ pool Memory Capacity
 start–end label once `byteCreated`) render in **binary** units — `B`/`KiB`/`MiB`/…/`QiB`, step 1024
 (`getMemoryUnit`/`MEMORY_BINARY_UNIT_STEP`) — so `1 KiB = 1024 Bytes = 1.024 KB`, distinct from
 Disks/Data Lake/caches, which stay on the original SI (step 1000) scale (see below). The unit
-conversion (`floorToDecimals`, 3 decimal places — matching `formatAmount`'s own default
-max-fraction-digits) floors rather than rounds, the same never-overstate rationale as
-`formatCurrency` in `engine.js`: an Intl-rounded 8191/8192 bits would otherwise read as "1 KiB"
-one tick before it's actually full. Once `byteCreated`, the tile also shows the current production
+conversion (`floorToDecimals`, `MEMORY_AMOUNT_DECIMAL_PLACES` = 3 decimal places) floors rather than
+rounds, the same never-overstate rationale as `formatCurrency` in `engine.js`: an Intl-rounded
+8191/8192 bits would otherwise read as "1 KiB" one tick before it's actually full. A BALANCE
+specifically (`formatMemoryBalanceValue`'s own `formatMemoryAmountStable` call, and a pool's own
+`formatDiskSizeStable`) always shows all 3 of those decimal places — `Intl.NumberFormat` with
+`minimumFractionDigits`/`maximumFractionDigits` both pinned to `MEMORY_AMOUNT_DECIMAL_PLACES` — rather
+than `formatAmount`'s own default trimming (which every OTHER memory-scaled reading on the page
+still uses, since Capacity/Bandwidth/a Disk's own size are mostly round and slow-changing, where a
+forced ".000" would be noise): a balance changes nearly every tick, so trimming a trailing zero
+would visibly change its own displayed width from one tick to the next for no real reason — "3.578"
+then "5.6" reads as a bigger jump than "3.578" then "5.600" does, even though the underlying
+precision never changed. A true zero is still exempt either way ("0 <unit>", not "0.000 <unit>").
+See `docs/DESIGN_HISTORY.md`. Once `byteCreated`, the tile also shows the current production
 rate. The Tap button itself carries no `$progress`/hidden progressbar of its own — the Data Stream
 tile above already shows the identical bits/Buffer fill, so a second meter on the tap button would
 just duplicate it.

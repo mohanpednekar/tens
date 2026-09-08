@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
 import { COMPUTE_ENTITY_CAP, DISK_BUILD_COST_MULTIPLIER, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -291,7 +291,7 @@ const formatMemoryBalanceValue = (bits, capacityBits, byteCreated) => {
   const balanceUnit = capacityUnit && bits > 0 && bits < capacityUnit.divisor
     ? getMemoryUnit(bits, byteCreated)
     : capacityUnit
-  return formatMemoryAmount(bits, balanceUnit)
+  return formatMemoryAmountStable(bits, balanceUnit)
 }
 
 const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
@@ -781,7 +781,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 }
                 mode={showLakeMode ? 'lake' : 'multiplier'}
               />
-              <BalanceText>{formatDiskSize(poolBufferBits)}</BalanceText>
+              <BalanceText>{formatDiskSizeStable(poolBufferBits)}</BalanceText>
               <FooterRow>
                 <FooterText>{formatDiskSize(poolBandwidth)}/s</FooterText>
                 <FooterText>{formatDiskSize(poolBufferCapacity)}</FooterText>
