@@ -6671,3 +6671,31 @@ regex assertions in `App.test.jsx` against the Data Stream rate text (`/^1 bit\/
 needed their leading `^` anchor dropped to tolerate the new `⚡ ` prefix; every other assertion
 touching these figures already used substring (`toHaveTextContent`) or unanchored-at-start matching
 and needed no change.
+
+### Read cache blocks (`DiskArrayRow`) render a proportional fill overlay, not just full/empty
+
+Player feedback: "Cache blocks fill state is not visually clear. Make it more intuitive." Each
+`CacheBlock` in the read-cache strip only ever rendered two visually distinct states — `$full`
+(solid `surfaceRaised` background) or empty (`transparent`) — regardless of how much of that
+block's own bits were actually banked. A block filling up from Memory (the common steady-state
+case, not just the rarer flush-to-disk case) looked completely empty right up until the instant it
+crossed the full threshold, giving no sense of progress. The existing `CacheFlushFill` overlay
+already solved this for the ONE direction it was built for (draining a block during a flush), but
+was gated behind `readFlushing` so it never rendered while a block was simply filling up.
+
+**Fix.** Generalized `CacheFlushFill` into `CacheFillIndicator`, dropping the `readFlushing` gate so
+it renders whenever `partialFill > 0`, in either direction — accent-colored while filling up
+(`$flushing={false}`), the existing info-colored while draining down during a flush
+(`$flushing={true}`). Also gave a full, non-flushing `CacheBlock` an accent-colored border
+(previously `surfaceSunken`, visually identical to an empty block's border) — the same convention a
+full `DiskSquare` already used, so "this slot is full" now reads consistently across both the disk
+and cache rows on the same screen. The non-flushing, partially-filled `title` also now reports a
+percentage (e.g. "Filling from Memory (40%)") rather than a flat "Filling from Memory" regardless of
+how close to full the block actually was.
+
+**Verification.** `yarn test`: 1738/1738 green, unchanged count — no existing test asserted on
+`CacheBlock`'s border/background styling or on the presence/absence of a fill overlay, only on
+`aria-label`/role/tag (never a `<button>`), all of which are unchanged. Visually confirmed via a
+seeded save (a read-cache block sitting mid-fill) in a real browser: the previously-indistinguishable
+partial block now shows a clearly proportional accent bar against the three fully-filled blocks
+ahead of it and the four still-empty ones behind it.

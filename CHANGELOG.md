@@ -307,6 +307,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Speed/Bandwidth, 🪣 for Capacity) for at-a-glance scanning; the "Capacity ×2" milestone button's
   icon was also switched from 🧠 to the same 🪣, since the brain emoji was already doing double duty
   elsewhere for the unrelated "Smart" autobuyer concept.
+- **Read cache blocks now show their fill level, not just full/empty** — a partially-filled block
+  (whether filling up from Memory or draining down during a flush to disk) now renders a
+  proportional fill overlay instead of looking identical to an empty block until it snapped
+  straight to full; a full block also gets the same accent-colored border a full Disk circle
+  already used, for a consistent "this slot is full" signal across both rows.
 - **The Data Stream/pool balance now shows a stable, non-trimmed decimal digit count** — a balance
   that floors to a round fraction now reads e.g. "5.600 KiB" instead of "5.6 KiB", matching the 3
   decimal places a non-round balance ("3.578 KiB") already showed, so the balance's own displayed

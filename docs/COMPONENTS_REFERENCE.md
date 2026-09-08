@@ -45,8 +45,12 @@ component used to expose were both retired along with that mechanic. Only when
 sub-slot is ×1 — every larger size fills exclusively via write-cache ripple and renders no read
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
 (`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
-— e.g. `1 Kb`) and showing only its fill fraction (full/partial/empty, plus a flush-in-progress
-fill when draining into a disk). Then an optional **write cache** progress row when
+— e.g. `1 Kb`). A full block gets an accent-colored border (matching a full `DiskSquare`'s own
+convention below); a partially-filled block (whether filling UP from Memory or draining DOWN during
+a flush to disk) renders a proportional `CacheFillIndicator` overlay growing left-to-right — accent-
+colored while filling, info-colored while flushing — so the fill level itself is always visible, not
+just the full/empty extremes (`title` also reads e.g. "Filling from Memory (40%)" once partially
+filled). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
 below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
 does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip that **always** keeps all ten
