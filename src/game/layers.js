@@ -158,7 +158,16 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
   const index = Math.max(1, Math.floor(Number(poolIndex) || 1))
   return {
     startBits: INTRO_STARTING_CAPACITY,
-    endBits: (BITS_PER_BYTE * (POOL_CAPACITY_SI_STEP ** (index + 1))) / DISK_BUILD_COST_MULTIPLIER,
+    // Divide BITS_PER_BYTE by DISK_BUILD_COST_MULTIPLIER FIRST, then multiply by the SI_STEP power
+    // — not the other way around. At pool 10 (the last pool), multiplying first and dividing after
+    // loses the last IEEE-754 bit (8e32 computed as 7.999999999999999e32), landing the ceiling
+    // JUST below getDiskLadderSizeBits(30) — its own largest disk's face value — so
+    // Math.floor(bufferBits / size) in provisionDisk would permanently read 0 for a completely full
+    // buffer, blocking that pool's final disk array from ever collecting even one funding pass.
+    // This ordering is exact (to within a few ULPs, well inside toBeCloseTo(1, 9)) for every pool
+    // 1-10 — see the "each pool's Capacity end bound exactly equals its own largest disk's FACE
+    // VALUE" test in engine.test.js, now covering the full range.
+    endBits: (BITS_PER_BYTE / DISK_BUILD_COST_MULTIPLIER) * (POOL_CAPACITY_SI_STEP ** (index + 1)),
   }
 }
 // "Speed ×2" (was Bandwidth / Invest) cost ladder steps ×4 per tier — see

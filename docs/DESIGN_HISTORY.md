@@ -1,5 +1,35 @@
 # Design history & rationale
 
+### Pool 10's buffer ceiling landed a ULP below its own largest disk's face value — 2026-09-08
+
+Devin's automated review on PR #597 flagged a real bug in `getStoragePoolMemoryBounds`'s `endBits`
+formula (introduced by the very same PR, in the entry directly below this one): computing
+`(BITS_PER_BYTE * (POOL_CAPACITY_SI_STEP ** (index + 1))) / DISK_BUILD_COST_MULTIPLIER` — multiply
+first, divide after — loses the last IEEE-754 bit at pool 10's ~1e32 magnitude
+(`7.999999999999999e32` where exact math gives `8e32`), landing the buffer ceiling a hair BELOW
+`getDiskLadderSizeBits(30)`, pool 10's own largest disk's face value. Since `provisionDisk` gates a
+funding pass on `Math.floor(bufferBits / size) >= 1`, even a completely, permanently full buffer
+would floor to 0 affordable passes — pool 10's (QB Pool's) largest disk array could never start a
+single pass, forever. The new "FACE VALUE" invariant test the same PR added only looped
+`poolIndex` 1 through 8, so it never exercised pool 10 at all; worse, its `toBeCloseTo(1, 9)` RATIO
+comparison wouldn't have caught this regardless, since a ULP-sized shortfall passes that tolerance
+trivially — the actual invariant that matters is the hard `Math.floor` cutoff `provisionDisk` uses,
+not how close the ratio is to 1.
+
+Fix: reorder to divide `BITS_PER_BYTE` by `DISK_BUILD_COST_MULTIPLIER` FIRST, then multiply by the
+SI-step power — `(BITS_PER_BYTE / DISK_BUILD_COST_MULTIPLIER) * (POOL_CAPACITY_SI_STEP ** (index +
+1))`. Verified numerically (both directly in Node and via the widened test) exact or within a few
+ULPs above 1 for every pool 1 through 10 (`DATA_LAKE_TIER_COUNT`), never below. The pre-existing
+`getStoragePoolMemoryBounds` test was widened from a hardcoded `poolIndex <= 8` loop to
+`poolIndex <= DATA_LAKE_TIER_COUNT`, with a second, functional assertion alongside the existing
+ratio one: `Math.floor(endBits / largestDiskFaceValue)` must be `>= 1` for every pool — the actual
+invariant `provisionDisk` depends on, which the ratio-only check couldn't have caught. Notably, the
+OLD (pre-this-PR) formula — `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (index + 1)`, sized to fund
+the disk's full `DISK_BUILD_COST_MULTIPLIER`-times build cost in one lump sum rather than one pass —
+had the identical precision problem at pool 10 (verified: `8e33` vs. a `7.999999999999999e33`-ish
+full cost), so this wasn't a regression the pass-funding PR introduced from scratch; it just never
+had a test that would have caught it before now.
+
 ### Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08
 
 Three related interactive-session changes to Byte Foundry Storage, landed together because the

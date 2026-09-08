@@ -1199,13 +1199,20 @@ describe('storage pools', () => {
     // directly to the disk ladder itself, rather than asserting a parallel but independently
     // hardcoded number, so it would catch future drift if DISK_BUILD_COST_MULTIPLIER,
     // DISK_LADDER_SIZE_MULTIPLIER, or the "3 sizes per pool" grouping ever changed independently.
-    for (let poolIndex = 1; poolIndex <= 8; poolIndex += 1) {
+    for (let poolIndex = 1; poolIndex <= DATA_LAKE_TIER_COUNT; poolIndex += 1) {
       const largestDiskFaceValue = getDiskLadderSizeBits(poolIndex * 3)
       const endBits = getStoragePoolMemoryBounds(poolIndex).endBits
       // Compares the RATIO, not the raw values — both sides are computed via different floating-
       // point paths (a divided power-of-1000 vs. a repeated ×10 ladder walk) that can drift by a
-      // few ULPs at pool 8's 1e26 magnitude despite being mathematically identical.
+      // few ULPs at large magnitudes despite being mathematically identical.
       expect(endBits / largestDiskFaceValue).toBeCloseTo(1, 9)
+      // The ratio check above tolerates a few ULPs either side of 1, but provisionDisk's
+      // Math.floor(bufferBits / size) is a hard cutoff: even a ULP short of the disk's face value
+      // reads as 0 affordable passes. A fully-funded buffer must always afford at least one pass of
+      // its own pool's largest disk, or that pool's final disk array could never start (this is
+      // exactly the pool-10 regression a divide-then-multiply ordering in
+      // getStoragePoolMemoryBounds previously introduced).
+      expect(Math.floor(endBits / largestDiskFaceValue)).toBeGreaterThanOrEqual(1)
     }
   })
 

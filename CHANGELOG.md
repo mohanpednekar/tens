@@ -111,6 +111,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **Pool 10 (QB Pool)'s final disk array could never start a single Provision Disk funding pass** —
+  `getStoragePoolMemoryBounds`'s `endBits` formula multiplied by the SI-step power before dividing
+  by `DISK_BUILD_COST_MULTIPLIER`, losing the last IEEE-754 bit at that pool's magnitude
+  (`7.999999999999999e32` instead of `8e32`) and landing the buffer ceiling a hair below its own
+  largest disk's face value — so even a completely full buffer read as 0 affordable passes via
+  `Math.floor(bufferBits / size)`, permanently blocking that array. Dividing first, then
+  multiplying, is exact for all 10 pools. Caught by Devin's automated review on PR #597.
 - **A real Prestige could silently destroy an in-flight write-cache merge or read-cache flush** —
   `intro.diskWriteCache`/`intro.diskReadCacheFlush` reset unconditionally on every real Prestige even
   though the Disks/build state they operate on is otherwise permanent. Combined with the write-cache
