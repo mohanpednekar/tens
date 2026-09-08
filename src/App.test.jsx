@@ -2427,7 +2427,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // Consumes the full cost (8), leaving the balance at 0; Capacity remains at its starting value.
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+  expect(screen.getByText(/^1 bit\/s$/i)).toBeInTheDocument()
 })
 
 test('the Speed ×2 offer stays disabled while the bit balance is below its cost', () => {
@@ -2461,7 +2461,11 @@ test('Invest for Double Production spends its own cost and doubles production wi
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
+  // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the exact
+  // same "2 bits/s" text at this tiny a production rate, since both the binary and SI sub-Byte
+  // fallback formatters use the identical "N bit(s)" wording.
+  const dataStream = screen.getByRole('region', { name: 'Data Stream' })
+  expect(within(dataStream).getByText(/^2 bits\/s$/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
@@ -2573,16 +2577,19 @@ test('the "Data Stream" label is shown on the balance card', () => {
   expect(screen.getByText('Data Stream')).toBeInTheDocument()
 })
 
-test('the Data Stream header shows a plain bits/sec rate below 1 Byte/sec, and switches to a Byte/sec label at/above it', () => {
+test('the Data Stream header shows a plain bits/s rate below 1 B/s, and switches to a B/s label at/above it', () => {
+  // Both assertions are scoped to the Data Stream region — pool 1's own Bandwidth can
+  // coincidentally render the exact same "N bit(s)/s" or "N B/s" text at these tiny production
+  // rates, since both the binary and SI sub-Byte fallback formatters share identical wording.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
   const { unmount } = render(<App />)
 
-  expect(screen.getByText(/\+4 bits\/sec/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/^4 bits\/s$/i)).toBeInTheDocument()
   unmount()
 
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
   render(<App />)
-  expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/^1 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Invest for Double Production shows its cost on its own line below the label, with no stray comma', () => {
@@ -2794,7 +2801,7 @@ test('Pool header row pairs the pool\'s own Bandwidth with its title on one line
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const heading = within(pool1).getByRole('heading', { level: 3 })
-  const bandwidthText = within(pool1).getByText(/\/sec/)
+  const bandwidthText = within(pool1).getByText(/\/s$/)
   expect(bandwidthText.parentElement).toBe(heading.parentElement)
 })
 
@@ -3021,8 +3028,8 @@ describe('Byte Foundry Storage', () => {
     // Stream-style fillable block (see FillableStatCard/BalanceText/StatusText in
     // ByteFoundryPage/index.jsx) rather than a labelled Bandwidth/Capacity/Memory stat row.
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/sec`)
-    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/sec`)
+    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
+    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
     expect(pool1).toHaveTextContent(
       `${formatDiskSize(getPoolBufferBits(savedState, 1))} / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`
     )

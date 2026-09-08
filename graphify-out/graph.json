@@ -2822,7 +2822,7 @@
       "file_type": "code",
       "norm_label": "opendevmode()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L4418"
+      "source_location": "L4425"
     },
     {
       "id": "src_app_test_opensettings",
@@ -8956,7 +8956,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.0] - 2026-07-05",
       "source_file": "CHANGELOG.md",
-      "source_location": "L924"
+      "source_location": "L929"
     },
     {
       "id": "changelog_0_2_0_2026_07_12",
@@ -8968,7 +8968,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2026-07-12",
       "source_file": "CHANGELOG.md",
-      "source_location": "L912"
+      "source_location": "L917"
     },
     {
       "id": "changelog_0_3_0_2026_07_13",
@@ -8980,7 +8980,7 @@
       "node_kind": "heading",
       "norm_label": "[0.3.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L895"
+      "source_location": "L900"
     },
     {
       "id": "changelog_0_4_0_2026_07_13",
@@ -8992,7 +8992,7 @@
       "node_kind": "heading",
       "norm_label": "[0.4.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L879"
+      "source_location": "L884"
     },
     {
       "id": "changelog_0_5_0_2026_07_14",
@@ -9004,7 +9004,7 @@
       "node_kind": "heading",
       "norm_label": "[0.5.0] - 2026-07-14",
       "source_file": "CHANGELOG.md",
-      "source_location": "L866"
+      "source_location": "L871"
     },
     {
       "id": "changelog_accessibility",
@@ -9031,7 +9031,7 @@
       "source_location": "L22"
     },
     {
-      "id": "changelog_added_574",
+      "id": "changelog_added_579",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9040,10 +9040,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L574"
+      "source_location": "L579"
     },
     {
-      "id": "changelog_added_659",
+      "id": "changelog_added_664",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9052,10 +9052,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L659"
+      "source_location": "L664"
     },
     {
-      "id": "changelog_added_868",
+      "id": "changelog_added_873",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9064,10 +9064,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L868"
+      "source_location": "L873"
     },
     {
-      "id": "changelog_added_881",
+      "id": "changelog_added_886",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9076,10 +9076,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L881"
+      "source_location": "L886"
     },
     {
-      "id": "changelog_added_897",
+      "id": "changelog_added_902",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9088,10 +9088,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L897"
+      "source_location": "L902"
     },
     {
-      "id": "changelog_added_914",
+      "id": "changelog_added_919",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9100,10 +9100,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L914"
+      "source_location": "L919"
     },
     {
-      "id": "changelog_added_926",
+      "id": "changelog_added_931",
       "label": "Added",
       "_origin": "ast",
       "community": 22,
@@ -9112,7 +9112,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L926"
+      "source_location": "L931"
     },
     {
       "id": "changelog_changed",
@@ -9127,7 +9127,7 @@
       "source_location": "L261"
     },
     {
-      "id": "changelog_changed_605",
+      "id": "changelog_changed_610",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9136,10 +9136,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L605"
+      "source_location": "L610"
     },
     {
-      "id": "changelog_changed_713",
+      "id": "changelog_changed_718",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9148,10 +9148,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L713"
+      "source_location": "L718"
     },
     {
-      "id": "changelog_changed_872",
+      "id": "changelog_changed_877",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9160,10 +9160,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L872"
+      "source_location": "L877"
     },
     {
-      "id": "changelog_changed_885",
+      "id": "changelog_changed_890",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9172,10 +9172,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L885"
+      "source_location": "L890"
     },
     {
-      "id": "changelog_changed_902",
+      "id": "changelog_changed_907",
       "label": "Changed",
       "_origin": "ast",
       "community": 22,
@@ -9184,7 +9184,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L902"
+      "source_location": "L907"
     },
     {
       "id": "changelog_changelog",
@@ -9211,7 +9211,7 @@
       "source_location": "L120"
     },
     {
-      "id": "changelog_fixed_840",
+      "id": "changelog_fixed_845",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9220,10 +9220,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L840"
+      "source_location": "L845"
     },
     {
-      "id": "changelog_fixed_876",
+      "id": "changelog_fixed_881",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9232,10 +9232,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L876"
+      "source_location": "L881"
     },
     {
-      "id": "changelog_fixed_889",
+      "id": "changelog_fixed_894",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9244,10 +9244,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L889"
+      "source_location": "L894"
     },
     {
-      "id": "changelog_fixed_908",
+      "id": "changelog_fixed_913",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9256,10 +9256,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L908"
+      "source_location": "L913"
     },
     {
-      "id": "changelog_fixed_919",
+      "id": "changelog_fixed_924",
       "label": "Fixed",
       "_origin": "ast",
       "community": 22,
@@ -9268,7 +9268,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L919"
+      "source_location": "L924"
     },
     {
       "id": "changelog_removed",
@@ -9283,7 +9283,7 @@
       "source_location": "L92"
     },
     {
-      "id": "changelog_removed_598",
+      "id": "changelog_removed_603",
       "label": "Removed",
       "_origin": "ast",
       "community": 22,
@@ -9292,7 +9292,7 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L598"
+      "source_location": "L603"
     },
     {
       "id": "changelog_security",
@@ -9307,7 +9307,7 @@
       "source_location": "L14"
     },
     {
-      "id": "changelog_security_862",
+      "id": "changelog_security_867",
       "label": "Security",
       "_origin": "ast",
       "community": 22,
@@ -9316,7 +9316,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L862"
+      "source_location": "L867"
     },
     {
       "id": "changelog_unreleased",
@@ -10492,17 +10492,6 @@
       "source_location": "L72"
     },
     {
-      "id": "src_game_layers_bits_per_byte",
-      "label": "BITS_PER_BYTE",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "ByteFoundryPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "bits_per_byte",
-      "source_file": "src/game/layers.js",
-      "source_location": "L81"
-    },
-    {
       "id": "src_game_layers_disk_build_cost_multiplier",
       "label": "DISK_BUILD_COST_MULTIPLIER",
       "_origin": "ast",
@@ -10512,6 +10501,17 @@
       "norm_label": "disk_build_cost_multiplier",
       "source_file": "src/game/layers.js",
       "source_location": "L281"
+    },
+    {
+      "id": "src_game_layers_fill_multiplier_tap_cap_percent",
+      "label": "FILL_MULTIPLIER_TAP_CAP_PERCENT",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "ByteFoundryPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "fill_multiplier_tap_cap_percent",
+      "source_file": "src/game/layers.js",
+      "source_location": "L237"
     },
     {
       "id": "src_pages_bytefoundrypage_index",
@@ -12085,15 +12085,26 @@
       "source_location": "L155"
     },
     {
-      "id": "src_game_layers_compute_entity_cap",
-      "label": "COMPUTE_ENTITY_CAP",
+      "id": "src_game_layers_compute_auto_boost_unlock_cost",
+      "label": "COMPUTE_AUTO_BOOST_UNLOCK_COST",
       "_origin": "ast",
       "community": 50,
       "community_name": "ComputePage/index.jsx",
       "file_type": "code",
-      "norm_label": "compute_entity_cap",
+      "norm_label": "compute_auto_boost_unlock_cost",
       "source_file": "src/game/layers.js",
-      "source_location": "L368"
+      "source_location": "L720"
+    },
+    {
+      "id": "src_game_layers_compute_boost_max_stacks",
+      "label": "COMPUTE_BOOST_MAX_STACKS",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "ComputePage/index.jsx",
+      "file_type": "code",
+      "norm_label": "compute_boost_max_stacks",
+      "source_file": "src/game/layers.js",
+      "source_location": "L478"
     },
     {
       "id": "src_game_layers_compute_merge_step_multiplier",
@@ -12105,17 +12116,6 @@
       "norm_label": "compute_merge_step_multiplier",
       "source_file": "src/game/layers.js",
       "source_location": "L411"
-    },
-    {
-      "id": "src_game_layers_compute_merge_step_multiplier_upgraded",
-      "label": "COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED",
-      "_origin": "ast",
-      "community": 50,
-      "community_name": "ComputePage/index.jsx",
-      "file_type": "code",
-      "norm_label": "compute_merge_step_multiplier_upgraded",
-      "source_file": "src/game/layers.js",
-      "source_location": "L412"
     },
     {
       "id": "src_pages_computepage_index",
@@ -13009,15 +13009,15 @@
       "source_location": "L738"
     },
     {
-      "id": "src_game_layers_compute_boost_max_stacks",
-      "label": "COMPUTE_BOOST_MAX_STACKS",
+      "id": "src_game_layers_bits_per_byte",
+      "label": "BITS_PER_BYTE",
       "_origin": "ast",
       "community": 53,
       "community_name": "App.test.jsx",
       "file_type": "code",
-      "norm_label": "compute_boost_max_stacks",
+      "norm_label": "bits_per_byte",
       "source_file": "src/game/layers.js",
-      "source_location": "L478"
+      "source_location": "L81"
     },
     {
       "id": "src_game_layers_compute_boost_presets",
@@ -13040,6 +13040,17 @@
       "norm_label": "compute_cores_per_node",
       "source_file": "src/game/layers.js",
       "source_location": "L360"
+    },
+    {
+      "id": "src_game_layers_compute_entity_cap",
+      "label": "COMPUTE_ENTITY_CAP",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "App.test.jsx",
+      "file_type": "code",
+      "norm_label": "compute_entity_cap",
+      "source_file": "src/game/layers.js",
+      "source_location": "L368"
     },
     {
       "id": "src_game_layers_data_lake_capacity_max_level",
@@ -13075,26 +13086,15 @@
       "source_location": "L229"
     },
     {
-      "id": "src_game_layers_fill_multiplier_min_percent",
-      "label": "FILL_MULTIPLIER_MIN_PERCENT",
+      "id": "src_game_layers_fill_multiplier_tap_bonus_percent",
+      "label": "FILL_MULTIPLIER_TAP_BONUS_PERCENT",
       "_origin": "ast",
       "community": 53,
       "community_name": "App.test.jsx",
       "file_type": "code",
-      "norm_label": "fill_multiplier_min_percent",
+      "norm_label": "fill_multiplier_tap_bonus_percent",
       "source_file": "src/game/layers.js",
-      "source_location": "L230"
-    },
-    {
-      "id": "src_game_layers_fill_multiplier_tap_cap_percent",
-      "label": "FILL_MULTIPLIER_TAP_CAP_PERCENT",
-      "_origin": "ast",
-      "community": 53,
-      "community_name": "App.test.jsx",
-      "file_type": "code",
-      "norm_label": "fill_multiplier_tap_cap_percent",
-      "source_file": "src/game/layers.js",
-      "source_location": "L237"
+      "source_location": "L231"
     },
     {
       "id": "src_game_layers_intro_bandwidth_cost_multiplier",
@@ -13680,17 +13680,6 @@
       "source_location": "L325"
     },
     {
-      "id": "src_game_layers_compute_auto_boost_unlock_cost",
-      "label": "COMPUTE_AUTO_BOOST_UNLOCK_COST",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "InfoPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "compute_auto_boost_unlock_cost",
-      "source_file": "src/game/layers.js",
-      "source_location": "L720"
-    },
-    {
       "id": "src_game_layers_compute_boost_tier_power_step",
       "label": "COMPUTE_BOOST_TIER_POWER_STEP",
       "_origin": "ast",
@@ -13733,6 +13722,17 @@
       "norm_label": "compute_merge_reserve_cap",
       "source_file": "src/game/layers.js",
       "source_location": "L404"
+    },
+    {
+      "id": "src_game_layers_compute_merge_step_multiplier_upgraded",
+      "label": "COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "InfoPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "compute_merge_step_multiplier_upgraded",
+      "source_file": "src/game/layers.js",
+      "source_location": "L412"
     },
     {
       "id": "src_game_layers_data_lake_overflow_min_percent",
@@ -13779,15 +13779,15 @@
       "source_location": "L805"
     },
     {
-      "id": "src_game_layers_fill_multiplier_tap_bonus_percent",
-      "label": "FILL_MULTIPLIER_TAP_BONUS_PERCENT",
+      "id": "src_game_layers_fill_multiplier_min_percent",
+      "label": "FILL_MULTIPLIER_MIN_PERCENT",
       "_origin": "ast",
       "community": 58,
       "community_name": "InfoPage/index.jsx",
       "file_type": "code",
-      "norm_label": "fill_multiplier_tap_bonus_percent",
+      "norm_label": "fill_multiplier_min_percent",
       "source_file": "src/game/layers.js",
-      "source_location": "L231"
+      "source_location": "L230"
     },
     {
       "id": "src_game_layers_fill_multiplier_tap_decay_percent_per_second",
@@ -29621,14 +29621,14 @@
     },
     {
       "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "target": "src_game_engine_formatamount",
+      "target": "src_game_engine_formatbitsinnearestunit",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L465",
+      "source_location": "L468",
       "weight": 1.0
     },
     {
@@ -29640,7 +29640,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L470",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -29652,7 +29652,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L471",
+      "source_location": "L473",
       "weight": 1.0
     },
     {
@@ -29664,7 +29664,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L478",
+      "source_location": "L480",
       "weight": 1.0
     },
     {
@@ -29676,7 +29676,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L480",
+      "source_location": "L482",
       "weight": 1.0
     },
     {
@@ -29688,7 +29688,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L481",
+      "source_location": "L483",
       "weight": 1.0
     },
     {
@@ -29700,19 +29700,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L482",
-      "weight": 1.0
-    },
-    {
-      "source": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "target": "src_game_engine_formatbitsinnearestunit",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L485",
+      "source_location": "L484",
       "weight": 1.0
     },
     {
@@ -29724,7 +29712,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L486",
+      "source_location": "L488",
       "weight": 1.0
     },
     {
@@ -29736,7 +29724,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L489",
+      "source_location": "L491",
       "weight": 1.0
     },
     {
@@ -29748,7 +29736,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L490",
+      "source_location": "L492",
       "weight": 1.0
     },
     {
@@ -29760,7 +29748,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L495",
+      "source_location": "L497",
       "weight": 1.0
     },
     {
@@ -29772,7 +29760,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L496",
+      "source_location": "L498",
       "weight": 1.0
     },
     {
@@ -29784,7 +29772,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L497",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -29796,7 +29784,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L498",
+      "source_location": "L500",
       "weight": 1.0
     },
     {
@@ -29808,7 +29796,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L499",
+      "source_location": "L501",
       "weight": 1.0
     },
     {
@@ -29820,7 +29808,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L500",
+      "source_location": "L502",
       "weight": 1.0
     },
     {
@@ -29832,7 +29820,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L506",
+      "source_location": "L508",
       "weight": 1.0
     },
     {
@@ -29844,7 +29832,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L509",
+      "source_location": "L511",
       "weight": 1.0
     },
     {
@@ -29856,7 +29844,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L516",
+      "source_location": "L518",
       "weight": 1.0
     },
     {
@@ -29868,7 +29856,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L517",
+      "source_location": "L519",
       "weight": 1.0
     },
     {
@@ -29880,7 +29868,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L522",
+      "source_location": "L524",
       "weight": 1.0
     },
     {
@@ -29892,7 +29880,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L539",
+      "source_location": "L541",
       "weight": 1.0
     },
     {
@@ -29904,7 +29892,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L541",
+      "source_location": "L543",
       "weight": 1.0
     },
     {
@@ -29916,7 +29904,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L600",
+      "source_location": "L602",
       "weight": 1.0
     },
     {
@@ -29928,7 +29916,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L701",
+      "source_location": "L703",
       "weight": 1.0
     },
     {
@@ -29940,7 +29928,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L703",
+      "source_location": "L705",
       "weight": 1.0
     },
     {
@@ -29952,7 +29940,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L709",
+      "source_location": "L711",
       "weight": 1.0
     },
     {
@@ -29964,7 +29952,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L710",
+      "source_location": "L712",
       "weight": 1.0
     },
     {
@@ -29976,7 +29964,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L718",
+      "source_location": "L720",
       "weight": 1.0
     },
     {
@@ -29988,7 +29976,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L728",
+      "source_location": "L730",
       "weight": 1.0
     },
     {
@@ -42726,18 +42714,6 @@
     },
     {
       "source": "src_pages_bytefoundrypage_index",
-      "target": "src_game_engine_formatamount",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "src_pages_bytefoundrypage_index",
       "target": "src_game_engine_formatbitsinnearestunit",
       "relation": "imports",
       "_origin": "ast",
@@ -43130,18 +43106,6 @@
       "context": "import",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
       "source_location": "L6",
-      "weight": 1.0
-    },
-    {
-      "source": "src_pages_bytefoundrypage_index",
-      "target": "src_game_layers_bits_per_byte",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -48173,29 +48137,18 @@
     },
     {
       "source": "changelog_0_1_0_2026_07_05",
-      "target": "changelog_added_926",
+      "target": "changelog_added_931",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L926",
+      "source_location": "L931",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_added_914",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L914",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_fixed_919",
+      "target": "changelog_added_919",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -48205,19 +48158,19 @@
       "weight": 1.0
     },
     {
-      "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_added_897",
+      "source": "changelog_0_2_0_2026_07_12",
+      "target": "changelog_fixed_924",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L897",
+      "source_location": "L924",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_changed_902",
+      "target": "changelog_added_902",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -48228,79 +48181,90 @@
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_fixed_908",
+      "target": "changelog_changed_907",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L908",
+      "source_location": "L907",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_3_0_2026_07_13",
+      "target": "changelog_fixed_913",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L913",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_added_881",
+      "target": "changelog_added_886",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L886",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_4_0_2026_07_13",
+      "target": "changelog_changed_890",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L890",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_4_0_2026_07_13",
+      "target": "changelog_fixed_894",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L894",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_5_0_2026_07_14",
+      "target": "changelog_added_873",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L873",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_5_0_2026_07_14",
+      "target": "changelog_changed_877",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L877",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_0_5_0_2026_07_14",
+      "target": "changelog_fixed_881",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
       "source_location": "L881",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_changed_885",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L885",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_fixed_889",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L889",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_added_868",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L868",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_changed_872",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L872",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_fixed_876",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L876",
       "weight": 1.0
     },
     {
@@ -48322,7 +48286,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L866",
+      "source_location": "L871",
       "weight": 1.0
     },
     {
@@ -48333,7 +48297,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L879",
+      "source_location": "L884",
       "weight": 1.0
     },
     {
@@ -48344,7 +48308,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L895",
+      "source_location": "L900",
       "weight": 1.0
     },
     {
@@ -48355,7 +48319,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L912",
+      "source_location": "L917",
       "weight": 1.0
     },
     {
@@ -48366,7 +48330,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L924",
+      "source_location": "L929",
       "weight": 1.0
     },
     {
@@ -48426,79 +48390,79 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_574",
+      "target": "changelog_added_579",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L574",
+      "source_location": "L579",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_removed_598",
+      "target": "changelog_removed_603",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L598",
+      "source_location": "L603",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_605",
+      "target": "changelog_changed_610",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L605",
+      "source_location": "L610",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_659",
+      "target": "changelog_added_664",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L659",
+      "source_location": "L664",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_713",
+      "target": "changelog_changed_718",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L713",
+      "source_location": "L718",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_840",
+      "target": "changelog_fixed_845",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L840",
+      "source_location": "L845",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_security_862",
+      "target": "changelog_security_867",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L862",
+      "source_location": "L867",
       "weight": 1.0
     },
     {
@@ -53470,7 +53434,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L4418",
+      "source_location": "L4425",
       "weight": 1.0
     },
     {
@@ -64819,5 +64783,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7b1db4807afc7034b4e8f622d6f69f425e320ebf"
+  "built_at_commit": "614d278fb49d66185afa3e2a433d8fa929b5e257"
 }

@@ -259,6 +259,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Consistent, properly-scaled rate units on Byte Foundry** — the Data Stream's own rate readout
+  now reads e.g. "4 bits/s" / "1 B/s" / "2 KiB/s" (the same binary B/KiB/MiB/… ladder its balance
+  line already uses, scaling up automatically instead of showing an unscaled raw Byte count like
+  "2048 B/s") instead of the old spelled-out "+4 bits/sec" / "+1 Byte/sec", with no leading "+".
+  Pool Bandwidth figures switch from "/sec" to the same short "/s" suffix for consistency.
 - **Data Stream and pool header rows now render inside the same tappable balance button** instead
   of sitting as a separate header above it — title, fill-multiplier gauge, and Speed/Bandwidth
   figure are now the first line of the one bordered tap button, with the bits/Buffer (or Memory

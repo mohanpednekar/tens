@@ -47,9 +47,12 @@ same 3-column title-top-left/gauge-top-middle/rate-top-right layout every sectio
 (see "Put title on top left, speedometer in the top middle and speed or bandwidth on the top right"
 in CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`, the fill-based `MultiplierGauge`
 (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and a plain rate
-readout on the right — below `BITS_PER_BYTE` (8) bits/sec a "+N bit(s)/sec" line, at/above it "+N
-Byte(s)/sec" instead (`getIntroProductionRate(intro) / BITS_PER_BYTE`) — a single line of text;
-there's no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"`
+readout on the right — `` `${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "4
+bits/s" below 1 Byte/sec, "1 B/s" at/above it, "2 KiB/s" once the rate itself crosses the next
+binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line right below it renders
+in, not a bespoke bit-vs-Byte branch with no further unit scaling as an earlier version had, and no
+leading "+" any more either, matching the pool's own Bandwidth figure's plain "unit/s" convention)
+— a single line of text; there's no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"`
 version was replaced once the gauge itself started carrying the fill-multiplier reading). An earlier
 iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
 inside it — merged together per player feedback that the two read as disconnected pieces. Its second
@@ -138,7 +141,7 @@ header row is the button's first line: title "`<symbol>` Pool" (e.g. "KB Pool" �
 since the symbol alone already uniquely identifies the pool), the pool's own `MultiplierGauge`
 (switching to `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to
 receive overflow — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and its own Bandwidth
-figure on the right (`formatDiskSize(poolBandwidth)}/sec`); the balance line
+figure on the right (`formatDiskSize(poolBandwidth)}/s`); the balance line
 (`{bufferBits} / {bufferCapacity}` in Disk/SI units via `formatDiskSize`) is the button's second
 line, same as Data Stream's own tile below. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked

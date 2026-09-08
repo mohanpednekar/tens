@@ -1,16 +1,16 @@
 # Graph Report - tens  (2026-09-08)
 
 ## Corpus Check
-- 108 files · ~413,895 words
+- 108 files · ~414,178 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1577 nodes · 3981 edges · 99 communities (80 shown, 16 thin omitted)
+- 1577 nodes · 3978 edges · 99 communities (80 shown, 16 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 84 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7b1db480`
+- Built from commit: `614d278f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -120,7 +120,7 @@
 5. `tickGame()` - 52 edges
 6. `MainPage()` - 49 edges
 7. `isProductionFrozen()` - 36 edges
-8. `ByteFoundryPage()` - 36 edges
+8. `ByteFoundryPage()` - 35 edges
 9. `DataLakePanel()` - 25 edges
 10. `createInitialGameState()` - 24 edges
 
@@ -155,7 +155,7 @@ Nodes (55): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTI
 
 ### Community 3 - "ByteFoundryPage/index.jsx"
 Cohesion: 0.07
-Nodes (32): BITS_PER_BYTE, DISK_BUILD_COST_MULTIPLIER, ActionsRow, BalanceText, clampGaugeValue(), DataStreamCard, ExpandToggleButton, FillableStatCard (+24 more)
+Nodes (32): DISK_BUILD_COST_MULTIPLIER, FILL_MULTIPLIER_TAP_CAP_PERCENT, ActionsRow, BalanceText, clampGaugeValue(), DataStreamCard, ExpandToggleButton, FillableStatCard (+24 more)
 
 ### Community 4 - "tokens.js"
 Cohesion: 0.13
@@ -295,7 +295,7 @@ Nodes (9): dependencies, @capacitor/core, @fontsource/inter, @fontsource/space-g
 
 ### Community 50 - "ComputePage/index.jsx"
 Cohesion: 0.06
-Nodes (33): getNextComputeMergeDurationUpgradeIndex(), COMPUTE_ENTITY_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow (+25 more)
+Nodes (33): getNextComputeMergeDurationUpgradeIndex(), COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_MERGE_STEP_MULTIPLIER, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow (+25 more)
 
 ### Community 51 - "engine.test.js"
 Cohesion: 0.04
@@ -307,7 +307,7 @@ Nodes (23): COMPUTE_FLOPS_TIER_DEFINITIONS, TIER_DEFINITIONS, ButtonGrid, coerce
 
 ### Community 53 - "App.test.jsx"
 Cohesion: 0.10
-Nodes (17): ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, DATA_LAKE_CAPACITY_MAX_LEVEL (+9 more)
+Nodes (17): ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP (+9 more)
 
 ### Community 54 - "MilestonesPage/index.jsx"
 Cohesion: 0.17
@@ -327,7 +327,7 @@ Nodes (18): getEonsAwarded(), MUSEUM_PIN_CAP, buildSparklinePath(), CodeForm, Co
 
 ### Community 58 - "InfoPage/index.jsx"
 Cohesion: 0.10
-Nodes (19): CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_LAST_TIER_COST_PP, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_OVERFLOW_MIN_PERCENT (+11 more)
+Nodes (19): CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_LAST_TIER_COST_PP, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_OVERFLOW_MIN_PERCENT (+11 more)
 
 ### Community 59 - "Button/index.jsx"
 Cohesion: 0.13

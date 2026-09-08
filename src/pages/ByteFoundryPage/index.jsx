@@ -3,8 +3,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, DISK_BUILD_COST_MULTIPLIER, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { COMPUTE_ENTITY_CAP, DISK_BUILD_COST_MULTIPLIER, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -458,12 +458,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // The Data Stream header row's own top-right figure (see "Put title on top left, speedometer in
   // the top middle and speed or bandwidth on the top right" in CLAUDE.md) — plain text, same
   // convention a pool's own Bandwidth figure uses in its header, replacing the earlier segmented
-  // sub-Byte rate bar.
+  // sub-Byte rate bar. Reuses formatBitsInNearestUnit (the same binary B/KiB/MiB/… ladder the
+  // balance line right below it already renders in) rather than a bespoke bit-vs-Byte branch, so a
+  // large rate reads as "2 KiB/s" instead of an unscaled "2048 B/s" — consistent short "B"/"KiB"
+  // unit symbols throughout, matching the pool's own Bandwidth figure's "/s" convention (see
+  // SectionRateText usage below) rather than the longer "bytes/sec" this used to spell out.
   const dataStreamRateText = !intro.byteCreated
     ? null
-    : productionRate < BITS_PER_BYTE
-      ? `+${formatAmount(productionRate)} bit${productionRate === 1 ? '' : 's'}/sec`
-      : `+${formatAmount(productionRate / BITS_PER_BYTE)} Byte${productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec`
+    : `${formatBitsInNearestUnit(productionRate)}/s`
   // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): productionRate above stays
   // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
   // instead (see getDataStreamEffectMultiplier in game/engine).
@@ -776,7 +778,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   }
                   mode={showLakeMode ? 'lake' : 'multiplier'}
                 />
-                <SectionRateText>{formatDiskSize(poolBandwidth)}/sec</SectionRateText>
+                <SectionRateText>{formatDiskSize(poolBandwidth)}/s</SectionRateText>
               </SectionHeaderRow>
               <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
               <VisuallyHidden
