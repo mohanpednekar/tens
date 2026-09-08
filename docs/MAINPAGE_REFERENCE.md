@@ -219,13 +219,20 @@ array's first disk 80,000 seconds, all shrinking together as the rate grows), ti
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." The Provision button's idle state has two label variants
-depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)`: still visible
-text `"🏦 Provision {size} Disk ({cost})"` before any pass has landed, or `"🏦 Provision {size} Disk —
-{passesCollected}/{passesRequired}"` once funding is under way (`diskFundingInProgress =
-diskPassesCollected > 0 && !diskBuildInProgress`) — the button itself stays enabled/disabled and
-clickable exactly the same way in both (funding-in-progress is not a separate `disabled` state; only
-the visible label changes). Overall the button renders three distinct states off
+disallowed, "the array provisioning." The Provision button's idle state has three label variants
+depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)` (clamped at
+`diskPassesRequired` for display, so a save carrying a stale, already-over-required stored value
+from an earlier flat-multiplier version of this ladder never shows a nonsensical "N/M" with N > M —
+see `docs/DESIGN_HISTORY.md`) and `diskPassesRequired = getDiskProvisionPassesRequired(state,
+diskSize)`: plain `"🏦 Provision {size} Disk ({cost})"` before any pass has landed on a single-pass
+disk (an array's first); `"🏦 Provision {size} Disk — 0/{passesRequired} ({cost})"` before any pass
+has landed on a disk needing MORE than one pass, so the pass count is visible up front rather than
+only after the first pass lands; or `"🏦 Provision {size} Disk — {passesCollected}/{passesRequired}"`
+once funding is under way (`diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress`)
+— the button itself stays enabled/disabled and clickable exactly the same way across all three
+(funding-in-progress is not a separate `disabled` state; only the visible label changes). Overall
+the button renders three distinct BEHAVIORAL states (idle/mid-build/ladder-complete, each covering
+its own label variants above) off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
 isDiskLadderExhaustedForActivePools(state)`: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,

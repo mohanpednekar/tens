@@ -494,7 +494,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // getDiskProvisionPassesRequired in game/engine) — "blocked by priority" now only needs a single
   // pass's worth in the buffer, not the whole cost, to be a real (if lower-priority) option.
   const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
-  const diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)
+  // Clamped at diskPassesRequired: a save carrying a diskProvisionPasses value banked under an
+  // earlier flat-multiplier version of this ladder (now exceeding a smaller ordinal's own
+  // requirement) would otherwise display a nonsensical "N/M" with N > M until the engine's own
+  // provisionDisk clamp self-heals it on the next call — this only affects what's SHOWN, not the
+  // stored value or the engine's own funding math (see getDiskProvisionPassesRequired in
+  // game/engine).
+  const diskPassesCollected = Math.min(diskPassesRequired, getDiskProvisionPassesCollected(state, diskSize))
   const diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress
   const diskBuildProgress = diskBuildInProgress
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)

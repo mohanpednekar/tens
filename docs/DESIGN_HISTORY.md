@@ -6802,12 +6802,23 @@ follows it), rather than coincidentally equal. Updated the one test and the `doc
 passages that had asserted/described the now-obsolete "happens to take the same total time"
 coincidence.
 
-**Verification.** `yarn test`: 1743/1743 green (+2 new tests: the multi-pass idle label showing
-"0/N", and the single-pass idle label NOT showing "0/1"). Visually confirmed the new idle label in a
-real browser via a seeded save at a disk needing 10 passes: `"🏦 Provision 1 KB Disk — 0/10 (10
-KB)"`. Did not re-run `simulate-run-times` for the collect-rate change: write-cache collect/flush
-run automatically regardless of the bot's own strategy (the simulator's ideal-player script doesn't
-gate any of its own actions on write-cache timing), so a faster collect phase only speeds up a
-background, secondary path — restocking higher disk sizes for Data Lakes/Compute — not anything on
-the critical path to Foundry unlock or 1 Googol Prestige the sim actually measures. The disk-passes
-ordinal change above was the change with a real, measured pacing effect and was re-run/published.
+**Verification.** `yarn test`: 1744/1744 green (+3 tests over the pre-follow-up 1743: the multi-pass
+idle label showing "0/N", the single-pass idle label NOT showing "0/1", and a stale-over-required
+`diskProvisionPasses` value clamping the DISPLAYED count rather than showing a nonsensical "N/M"
+with N > M — an adversarial review round caught that `ByteFoundryPage`'s own `diskPassesCollected`
+read the raw, unclamped stored value directly, so a save carrying passes banked under the earlier
+flat-multiplier system could show e.g. "5/1" until its next `provisionDisk` call self-healed the
+underlying number; fixed by clamping the value used for DISPLAY at `diskPassesRequired`, same review
+round also added direct `diskBuildQueued` assertions to the existing partial/full-funding
+`provisionDisk` tests above, since none of them had actually asserted on the queue-arming behavior
+that whole section is about). Visually confirmed the new idle label in a real browser via a seeded
+save at a disk needing 10 passes: `"🏦 Provision 1 KB Disk — 0/10 (10 KB)"`. `simulate-run-times` was
+re-run and republished against this PR's actual final commit (the first publish attempt, made before
+this commit existed, stamped a stale sha) — Main → Googol time for a fresh 0-prestige career cycle
+moved from 21h 45m 31s to 21h 32m 59s, confirming the ordinal pass-count change has a real, measured
+pacing effect; Foundry time itself (1m 5s) is unchanged either way, since that phase's own bottleneck
+is Capacity/Combine/Invest progress, not disk-array build cost. The write-cache collect-rate change
+wasn't isolated in a separate run: collect/flush run automatically regardless of the bot's own
+strategy (the simulator's ideal-player script doesn't gate any of its own actions on write-cache
+timing), so a faster collect phase only speeds up a background, secondary path — restocking higher
+disk sizes for Data Lakes/Compute — not anything on the critical path the sim measures.

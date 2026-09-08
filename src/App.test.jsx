@@ -3107,6 +3107,21 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).not.toHaveTextContent('0/1')
   })
 
+  test('Provision Disk clamps a stale, over-required collected-pass count in the DISPLAYED label rather than showing a nonsensical "N/M" with N > M', () => {
+    // A save carrying diskProvisionPasses banked under the old flat-10-passes-always system, on a
+    // disk whose real ordinal only needs 1 pass now — the raw stored value (5) exceeds what's
+    // required (1); the label must clamp what it SHOWS to "1/1", never the literal stored "5/1".
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2,
+      diskProvisionPasses: { [currentBankSize]: 5 },
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent('1/1')
+    expect(buildButton).not.toHaveTextContent('5/1')
+  })
+
   test('Provision Disk advances to the next pool after the current pool is fully built', () => {
     // Completing all three pool-1 arrays derives pool 2 and advances the common operation to 1 MB.
     const size10kb = currentBankSize * 10

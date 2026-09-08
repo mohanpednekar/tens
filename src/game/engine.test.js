@@ -3008,6 +3008,8 @@ describe('provisionDisk', () => {
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
     // Fully funded in one call — no leftover pass counter for this size.
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+    // A build that fully completes in one call never needs auto-continue — the queue stays off.
+    expect(after.intro.diskBuildQueued).toBe(false)
   })
 
   it('the array\'s 6th disk needs 6 passes — a fully-funded buffer completes all of them in one call', () => {
@@ -3019,6 +3021,7 @@ describe('provisionDisk', () => {
     expect(after.intro.poolBuffers[1]).toBe(0)
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 6, totalSeconds: FIRST_DISK_SIZE * 6 })
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+    expect(after.intro.diskBuildQueued).toBe(false)
   })
 
   it('collects a single pass (one disk face-value size) and stays mid-funding when only one pass is affordable', () => {
@@ -3032,6 +3035,10 @@ describe('provisionDisk', () => {
     expect(after.intro.poolBuffers[1]).toBe(0)
     expect(after.intro.diskBuild).toBeNull()
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(1)
+    // A manual click that leaves the build only partially funded auto-arms the queue, so the
+    // remaining pass fires itself (tickQueuedDiskBuild) as the buffer refills — no further click
+    // needed (see docs/DESIGN_HISTORY.md).
+    expect(after.intro.diskBuildQueued).toBe(true)
   })
 
   it('collects as many WHOLE passes as the buffer currently affords in one call, leaving the remainder banked', () => {
@@ -3045,6 +3052,7 @@ describe('provisionDisk', () => {
     expect(after.intro.poolBuffers[1]).toBe(10) // leftover, not enough for a 4th whole pass
     expect(after.intro.diskBuild).toBeNull()
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(3)
+    expect(after.intro.diskBuildQueued).toBe(true)
   })
 
   it('completes funding and starts the timed build once the final pass lands, clearing the per-size pass counter', () => {
