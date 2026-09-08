@@ -228,17 +228,19 @@ export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
 export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 200
 
 // --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
-// redeemDisk/tickDiskAutoRedeem/getDiskSize in engine.js and intro.disks/disksBuiltTotal/
-// diskCache/diskBuild/diskAutoRedeemedSizes in createInitialGameState. Disks are a genuine
-// storage MEDIUM, not a one-shot pre-paid item: building one only constructs a permanent, EMPTY
-// container (after a real build TIME — see below); Data Stream (intro.bits) then keeps each array's
-// Cache full (whole-block transfers — see the cache comment / tickDiskAutoFill) and flushes a full
-// read cache into an empty disk over one cache-block production duration when no tier claim
-// blocks that size — leftover Data Stream stays as its own balance. Redeeming a
-// FULL disk grants 1 free tier01 unit once tier01's own current per-unit level cost actually
-// reaches that size, and empties the disk again — reusable, not single-use. Distinct from ordinary
-// bit-to-Kilobyte conversion (see convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a
-// disk's contents came from Data Stream via the read-cache flush, not a further transfer out of it at redeem time.
+// tickDiskPull/getDiskSize in engine.js and intro.disks/disksBuiltTotal/diskCache/diskBuild in
+// createInitialGameState. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item:
+// building one only constructs a permanent, EMPTY container (after a real build TIME — see
+// below); Data Stream (intro.bits) then keeps each array's Cache full (whole-block transfers —
+// see the cache comment / tickDiskAutoFill) and flushes a full read cache into an empty disk over
+// one cache-block production duration when no tier claim blocks that size — leftover Data Stream
+// stays as its own balance. Pulling a FULL disk grants 1 free tier01 unit once tier01's own
+// current per-unit level cost actually reaches that size AND that level has zero progress
+// already, and empties the disk again — reusable, not single-use; this happens fully
+// automatically, every tick (see tickDiskPull) — Byte Foundry has no manual redemption control.
+// Distinct from ordinary bit-to-Kilobyte conversion (see
+// convertIntroBitsToKilobytes/tickIntroAutoInvest in engine.js): a disk's contents came from Data
+// Stream via the read-cache flush, not a further transfer out of it at pull time.
 // Disks (and their arrays' cache) are themselves PERMANENT, like the Byte generator itself (see
 // prestigeGame) — "never lost," and a full disk's contents ride through a real Prestige untouched
 // even though Data Stream itself resets, letting banked-up Storage give a fresh cycle a head start.
@@ -283,11 +285,12 @@ export const DISK_ARRAY_LADDER_CAP = 10
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
 // array → 8 × 1 Mb — lowercase 'b' bit-scale via formatCacheSize, distinct from Disks' uppercase
-// Byte-scale). Cache funds matching main-game tier level blocks via manual release
-// (releaseDiskCacheBlock, only while this size's own fixed corresponding tier currently sits at
-// its required level and no full redeemable disk exists). When full, it also flushes into an empty disk over one block's
-// production duration (getDiskReadCacheFlushSeconds). Steady state is full; gaps only right after
-// a release, a completed flush, or when a size is newly unlocked/built.
+// Byte-scale). The pool's smallest size's cache also funds its own tier's level 1 automatically
+// (tickDiskLevelOneCachePull in engine.js), spending whole units in bulk rather than by these
+// display blocks — only while that tier still sits at level 1 with no fresh disk pull-eligible
+// this tick. When full, the cache also flushes into an empty disk over one block's production
+// duration (getDiskReadCacheFlushSeconds). Steady state is full; gaps only right after a
+// level-1 cache pull, a completed flush, or when a size is newly unlocked/built.
 export const DISK_CACHE_BLOCK_COUNT = 8
 
 // --- Disk/Cache fill bandwidth --- every timed Byte Foundry storage transfer (disk build,

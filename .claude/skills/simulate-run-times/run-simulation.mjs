@@ -8,16 +8,18 @@
 //       Speed/Bandwidth multiplier — FILL_MULTIPLIER_* in layers.js — is independent per Data
 //       Stream/pool, so an attentive player keeps every one of them boosted, not just the Data
 //       Stream tile); Combine into a Byte when affordable.
-//     - While mainGameUnlocked is false: pause every unlocked tier autobuyer (so
-//       tickDiskAutoRedeem cannot advance tier01's cost), skip Disk Fill/Build, Invest/Sacrifice
-//       as gated, and convert Memory → Kilobytes until the gate opens. Redeeming permanent full
-//       Disks before that convert advances purchase levels without flipping mainGameUnlocked and
-//       softlocks once conversion cost exceeds capacity.
-//     - After unlock: restore autobuyers; Disk Fill → Invest → Disk Build → queue Capacity when
-//       Invest can't take the next spend (fires on full Memory, erases Compute tokens, then
-//       Sacrifices) → convert → redeem again if convert unlocked a waiting disk → Data Lake
-//       Booster buys (startBoosterTransfer; deposits via tickDiskAutoDeposit; skipped while Disk
-//       Fill is available) → Boosts. Never enable permanent auto-merge.
+//     - Byte Foundry funds Byte Factory pull-based and fully automatically now (tickDiskPull /
+//       tickDiskLevelOneCachePull, unconditional inside tickGame every tick, no autobuyer gate —
+//       issue #571) — there is nothing left for this bot to pause or redeem manually.
+//     - While mainGameUnlocked is false: skip Disk Fill/Build, Invest/Sacrifice as gated, and
+//       convert Memory → Kilobytes until the gate opens. The convert-before-pull ordering that
+//       used to matter for avoiding a softlock is now an engine-level fact (tickDiskPull runs at
+//       the very end of tickGame's own pipeline), not something this bot influences.
+//     - After unlock: Disk Fill → Invest → Disk Build → queue Capacity when Invest can't take the
+//       next spend (fires on full Memory, erases Compute tokens, then Sacrifices) → convert →
+//       Data Lake Booster buys (buyBooster; funded only from that lake's own banked units — outside
+//       the forced priority order entirely, always available the instant affordable) → Boosts.
+//       Never enable permanent auto-merge.
 //   Main ladder (every tick):
 //     - Autobuyers wherever applicable: unlocked tiers (autobuyers[tierId] non-null from
 //       applyAutobuyerMilestones / prestige.count) are left to tickGame's autobuyer loop with the
@@ -51,12 +53,12 @@ import { writeFileSync } from 'node:fs'
 import {
   activateComputeBoost,
   applyAutobuyerMilestones,
+  buyBooster,
   buyGlobalTickspeedMultiplier,
   buyPrestigeSpeedBonus,
   buyTierQuantity,
   buyTickspeedMultiplier,
   canActivateComputeBoost,
-  canStartBoosterTransfer,
   combineIntroByte,
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
@@ -71,8 +73,7 @@ import {
   getTierSpendableAmount,
   getVisibleStoragePoolCount,
   isBandwidthAvailable,
-  isDiskFillAvailable,
-  isDiskRedeemable,
+  isBoosterPurchaseAvailable,
   isProductionFrozen,
   isTierUnlocked,
   overclockGame,
@@ -80,11 +81,8 @@ import {
   pickIntroProductionMilestone,
   prestigeGame,
   queueIntroCapacityUpgrade,
-  redeemDisk,
-  setAutobuyerEnabled,
   speedUpGame,
   stackComputeBoost,
-  startBoosterTransfer,
   provisionDisk,
   tapIntroBit,
   tapPoolBuffer,
@@ -153,18 +151,16 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   const canGrowCapacity =
     capacityCapBits == null || (s.intro?.capacity ?? 0) < capacityCapBits
 
-  // Convert FIRST while the gate is still closed. Full permanent Disks carried across Prestige are
-  // redeemable immediately at tier01's fresh level-1 cost — redeeming them (manual Disk Fill or
-  // tickDiskAutoRedeem once that tier's autobuyer is live) advances purchase levels / conversion
-  // cost without ever flipping mainGameUnlocked (only convertIntroBitsToKilobytes does). Once
-  // cost exceeds Memory capacity, the gate softlocks. Pause every unlocked autobuyer during the
-  // gate so auto-redeem can't fire, unlock via Memory transfer, then re-enable.
+  // Byte Foundry funds Byte Factory pull-based and fully automatically now (tickDiskPull /
+  // tickDiskLevelOneCachePull, run unconditionally inside tickGame every tick — issue #571): a
+  // full permanent Disk carried across Prestige, sitting at tier01's fresh level-1 cost with zero
+  // purchase-level progress, gets pulled the very next tick regardless of anything this bot does —
+  // there is no autobuyer gate left to pause, and no manual redeem call left to make or defer. The
+  // convert-before-pull ordering that used to matter for avoiding a Foundry-gate softlock (tier01's
+  // level racing ahead of Memory capacity before convertIntroBitsToKilobytes ever flips
+  // mainGameUnlocked) is now an engine-level fact (tickDiskPull runs at the very end of tickGame's
+  // own pipeline, after tickIntroAutoInvest), not something bot strategy can influence either way.
   if (!s.intro?.mainGameUnlocked) {
-    for (const tier of TIER_DEFINITIONS) {
-      if ((s.autobuyers?.[tier.id] ?? null) !== null) {
-        s = setAutobuyerEnabled(tier.id, false)(s)
-      }
-    }
     for (let i = 0; i < 64; i += 1) {
       const next = convertIntroBitsToKilobytes(s)
       if (next === s) break
@@ -191,19 +187,6 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     return s
   }
 
-  // Gate just opened (or already open): restore autobuyers the gate pause may have disabled.
-  for (const tier of TIER_DEFINITIONS) {
-    if ((s.autobuyers?.[tier.id] ?? null) !== null && !(s.autobuyersEnabled?.[tier.id] ?? true)) {
-      s = setAutobuyerEnabled(tier.id, true)(s)
-    }
-  }
-
-  for (const size of Object.keys(s.intro?.disks ?? {}).map(Number)) {
-    if ((s.intro.disks[size] ?? 0) > 0 && isDiskRedeemable(s, size)) {
-      s = redeemDisk(size)(s)
-    }
-  }
-
   s = pickIntroProductionMilestone(s)
   s = provisionDisk(s)
 
@@ -228,36 +211,24 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     s = next
   }
 
-  // Convert can advance tier01 onto a waiting disk's required level — redeem again before
-  // any Booster buy so Disk Fill keeps priority over live lake funding (planLiveDiskFunding
-  // does not skip redeemable sizes the way tickDiskAutoDeposit does).
-  for (const size of Object.keys(s.intro?.disks ?? {}).map(Number)) {
-    if ((s.intro.disks[size] ?? 0) > 0 && isDiskRedeemable(s, size)) {
-      s = redeemDisk(size)(s)
-    }
-  }
-
   // Optional manual Capacity only when not relying on a queue (queue path already handled above).
   if (canGrowCapacity && !(s.intro.capacityUpgradeQueued ?? false)) {
     s = pickIntroCapacityMilestone(s)
   }
 
-  // Data Lake → Booster buys (replaces the removed Memory→Core claim). Deposits land via
-  // tickDiskAutoDeposit inside tickGame; buy before activating Boosts so an instant
-  // deposit-funded Core can fund a Boost the same tick. Prefer lower tiers first (Cores).
-  // Skip while Disk Fill is available — same Fill-over-Compute priority the old Core-claim
-  // path enforced (live transfers can otherwise empty a just-redeemable disk).
+  // Data Lake → Booster buys: each lake is fed continuously by its own matching Storage pool's
+  // buffer overflow (tickPoolBufferFill, inside tickGame); buyBooster spends only that lake's own
+  // banked units — no other resource involved, so (unlike Disk Fill/Speed/Provision Disk/Compute
+  // Boost) it's outside the forced priority order entirely and always available the instant
+  // affordable, with nothing else to skip it for. Prefer lower tiers first (Cores) so an instant
+  // Core can fund a Boost the same tick.
   for (let i = 0; i < 16; i += 1) {
-    if (isDiskFillAvailable(s)) break
     let bought = false
     for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
-      if (canStartBoosterTransfer(s, tierIndex)) {
-        const next = startBoosterTransfer(tierIndex)(s)
-        if (next !== s) {
-          s = next
-          bought = true
-          break
-        }
+      if (isBoosterPurchaseAvailable(s, tierIndex)) {
+        s = buyBooster(tierIndex)(s)
+        bought = true
+        break
       }
     }
     if (!bought) break
@@ -676,8 +647,8 @@ Published by \`publish-strategy.sh\` — **do not merge** that branch into \`mai
 
 Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-times/SKILL.md\` on the code branches):
 
-1. **Foundry gate:** Tap / Combine; pause tier autobuyers while gated; convert Memory → Kilobytes before redeeming permanent Disks (avoids softlock).
-2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → redeem again if convert unlocked a waiting disk → **Data Lake Booster buys** (\`startBoosterTransfer\`; deposits via \`tickDiskAutoDeposit\` in \`tickGame\`; skipped while Disk Fill is available) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
+1. **Foundry gate:** Tap / Combine; convert Memory → Kilobytes until the gate opens. Byte Foundry pulls a matching permanent Disk into tier01 automatically and unconditionally, every tick (\`tickDiskPull\`) — nothing to pause or redeem by hand.
+2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).

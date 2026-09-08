@@ -12,7 +12,6 @@ import {
 import {
   canBuyComputeFlopsTier,
   getAutoPrestigeCost,
-  getDiskSizesToShow,
   getGlobalTickspeedMultiplierCost,
   getIntroKilobyteConversionCost,
   getOverclockRequirement,
@@ -45,13 +44,10 @@ import {
   isComputeSupercomputersMergeStartAvailable,
   isComputeUpgradeTurnAvailable,
   isProvisionDiskTurnAvailable,
-  isDiskCacheBlockReleasable,
-  isDiskFillAvailable,
   isGlobalTickspeedMultiplierUnlocked,
   isIntroConversionUnlocked,
   isMemoryCapacityUpgradeAvailable,
   isProductionFrozen,
-  isStorageUnlocked,
   isTierUnlocked,
 } from 'game/engine'
 
@@ -203,34 +199,25 @@ export const getTiersAttentionLevel = state =>
     hasTiersAttention(state),
   )
 
+// Disk Fill is no longer a player action — Byte Foundry pulls a matching, clean-slate disk (or a
+// level-1 tier's own pool cache) into a tier level fully automatically, every tick, with no click
+// involved (see isDiskPullEligible/tickDiskPull/tickDiskLevelOneCachePull in engine.js). There is
+// nothing left for a nav attention dot to point the player at for it, so Storage no longer
+// contributes its own attention signal — Foundry's dot reflects only what's still genuinely
+// player-actionable there (Combine, Invest, Provision Disk, Capacity, Memory full).
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
   isMemoryCapacityUpgradeAvailable(state) ||
   isBandwidthTurnAvailable(state) ||
   isProvisionDiskTurnAvailable(state) ||
-  isTransferBlockAffordable(state) ||
-  isDiskFillAvailable(state)
+  isTransferBlockAffordable(state)
 
 export const getFoundryAttentionLevel = state =>
   pickLevel(
-    isMemoryFull(state) || isCombineAvailable(state) || isDiskFillAvailable(state),
+    isMemoryFull(state) || isCombineAvailable(state),
     hasFoundryAttention(state),
   )
-
-export const hasStorageAttention = state => {
-  if (!isStorageUnlocked(state)) return false
-  if (isDiskFillAvailable(state)) return true
-  return getDiskSizesToShow(state).some(size => isDiskCacheBlockReleasable(state, size))
-}
-
-export const getStorageAttentionLevel = state => {
-  if (!isStorageUnlocked(state)) return false
-  return pickLevel(
-    isDiskFillAvailable(state),
-    hasStorageAttention(state),
-  )
-}
 
 const hasInstantMergeAvailable = state =>
   COMPUTE_INSTANT_MERGE_BOUNDARIES.some(({ input, output, auto }) => {
@@ -276,11 +263,13 @@ export const maxAttention = (a, b) => {
 
 /**
  * Map of AppNav page id → 'high' | 'normal' | false.
- * Storage attention folds into Foundry (continuous Memory + Disk sections).
+ * Storage's own disk arrays are continuous Foundry sections; Disk Fill/pull is fully automatic
+ * (no click), so Foundry's own attention level already covers everything Storage-adjacent that's
+ * still player-actionable (Provision Disk).
  */
 export const getNavAttention = state => ({
   game: getTiersAttentionLevel(state),
-  foundry: maxAttention(getFoundryAttentionLevel(state), getStorageAttentionLevel(state)),
+  foundry: getFoundryAttentionLevel(state),
   boosters: getComputeAttentionLevel(state),
   compute: getComputeFlopsAttentionLevel(state),
 })
