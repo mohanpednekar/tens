@@ -278,7 +278,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1193,6 +1193,22 @@ describe('storage pools', () => {
     expect(getStoragePoolCapacity(state, 8)).toBe(1e26 * BITS_PER_BYTE)
   })
 
+  it('each pool\'s Capacity end bound exactly equals its own largest disk\'s FACE VALUE (one Provision Disk funding pass) — not that disk\'s own build cost', () => {
+    // Each pool spans exactly 3 disk-ladder steps (DISK_LADDER_SIZE_MULTIPLIER progression), so
+    // pool n's own largest disk sits at ladder step 3n — this ties the pool boundary formula
+    // directly to the disk ladder itself, rather than asserting a parallel but independently
+    // hardcoded number, so it would catch future drift if DISK_BUILD_COST_MULTIPLIER,
+    // DISK_LADDER_SIZE_MULTIPLIER, or the "3 sizes per pool" grouping ever changed independently.
+    for (let poolIndex = 1; poolIndex <= 8; poolIndex += 1) {
+      const largestDiskFaceValue = getDiskLadderSizeBits(poolIndex * 3)
+      const endBits = getStoragePoolMemoryBounds(poolIndex).endBits
+      // Compares the RATIO, not the raw values — both sides are computed via different floating-
+      // point paths (a divided power-of-1000 vs. a repeated ×10 ladder walk) that can drift by a
+      // few ULPs at pool 8's 1e26 magnitude despite being mathematically identical.
+      expect(endBits / largestDiskFaceValue).toBeCloseTo(1, 9)
+    }
+  })
+
   it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below sqrt(Capacity)', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
@@ -1345,11 +1361,11 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1000,
-      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (8,000,000 bits =
-      // 1,000,000 Bytes) regardless of this seeded value; sqrt(1,000,000 Bytes) = 1,000
-      // Bytes/sec = 8,000 bits/sec pool 1 Bandwidth cap — plenty above the 1,000-bit balance
-      // below, so it doesn't matter that this comment's own bound is only a guideline (see
-      // getStoragePoolBandwidth) rather than the exact number.
+      // Pool 1's own Capacity is hard-clamped to INTRO_CAPACITY_CAP_BITS (800,000 bits =
+      // 100,000 Bytes) regardless of this seeded value; sqrt(100,000 Bytes) ≈ 316.23
+      // Bytes/sec, SI-clean-floored to 250 Bytes/sec = 2,000 bits/sec pool 1 Bandwidth cap —
+      // plenty above the 1,000-bit balance below, so it doesn't matter that this comment's own
+      // bound is only a guideline (see getStoragePoolBandwidth) rather than the exact number.
       capacity: 32_000_000,
       productionMultiplier: 999_999, // far above the cap, so the cap (not the rate) binds
     })
@@ -1529,6 +1545,13 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
   it('diskBuildQueued is permanent — carried over unchanged by a real Prestige', () => {
     const state = withMoney(withIntro(createInitialGameState(), { diskBuildQueued: true }), PRESTIGE_THRESHOLD)
     expect(prestigeGame(state).intro.diskBuildQueued).toBe(true)
+  })
+
+  it('diskProvisionPasses is permanent — a partially-funded disk keeps its passes through a real Prestige', () => {
+    const state = withMoney(withIntro(createInitialGameState(), {
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 3 },
+    }), PRESTIGE_THRESHOLD)
+    expect(prestigeGame(state).intro.diskProvisionPasses).toEqual({ [FIRST_DISK_SIZE]: 3 })
   })
 })
 

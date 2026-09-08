@@ -121,8 +121,8 @@ export const INTRO_CAPACITY_DOUBLING_STEP = 2
 // display rounding only. It no longer governs where a pool's own Capacity end bound actually
 // lands (see POOL_CAPACITY_SI_STEP below) — Storage pools use SI units for all purposes.
 export const MEMORY_BINARY_UNIT_STEP = 1024
-// Per-pool Memory Capacity end bounds land on clean SI powers of 1000 Bytes (1 MB, 1 GB, 1 TB, …),
-// not the binary powers of 1024 a raw Capacity-×2 doubling ladder would naturally produce (1 MiB,
+// Per-pool Memory Capacity end bounds land on clean SI powers of 1000 Bytes (100 KB, 100 MB,
+// 100 GB, …), not the binary powers of 1024 a raw Capacity-×2 doubling ladder would naturally produce (1 MiB,
 // 1 GiB, …) — Storage pools use SI units for all purposes, including their own Capacity ceiling,
 // so the underlying value itself must land on an SI-round number, not merely its display. A pure
 // binary doubling sequence (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, …) can be corrected onto
