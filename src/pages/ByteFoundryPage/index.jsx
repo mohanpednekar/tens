@@ -592,8 +592,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             />
           )}
           <FooterRow>
-            <FooterText>{dataStreamRateText}</FooterText>
-            <FooterText>{formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}</FooterText>
+            <FooterText>{dataStreamRateText && `⚡ ${dataStreamRateText}`}</FooterText>
+            <FooterText>🪣 {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}</FooterText>
           </FooterRow>
           <VisuallyHidden
             role="progressbar"
@@ -678,7 +678,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 variant={capacityUpgradeAvailable ? 'prestige' : 'neutral'}
               >
                 <MilestoneButtonContent>
-                  <span>🧠 Capacity ×2</span>
+                  <span>🪣 Capacity ×2</span>
                   <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
                 </MilestoneButtonContent>
               </Button>
@@ -781,8 +781,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 mode={showLakeMode ? 'lake' : 'multiplier'}
               />
               <FooterRow>
-                <FooterText>{formatDiskSize(poolBandwidth)}/s</FooterText>
-                <FooterText>{formatDiskSize(poolBufferCapacity)}</FooterText>
+                <FooterText>⚡ {formatDiskSize(poolBandwidth)}/s</FooterText>
+                <FooterText>🪣 {formatDiskSize(poolBufferCapacity)}</FooterText>
               </FooterRow>
               <VisuallyHidden
                 role="progressbar"

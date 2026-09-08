@@ -62,10 +62,10 @@ denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extend
 compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
 percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
 took too much vertical space. A fourth line, a `FooterRow` (a 2-column grid), splits
-the production rate — `` `${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "4
-bits/s" below 1 Byte/sec, "1 B/s" at/above it, "2 KiB/s" once the rate itself crosses the next
+the production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
+bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
-on the left half, and the Capacity figure (`formatMemoryCapacityValue`, the same unit `BalanceText`
+on the left half, and the Capacity figure (`🪣 ` + `formatMemoryCapacityValue`, the same unit `BalanceText`
 picked) on the right half, each centered within its own half; there's no segmented block-bar rate
 meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
 itself started carrying the fill-multiplier reading). There is no separate Cache tile — the same
@@ -114,7 +114,10 @@ docs/ECONOMY_REFERENCE.md's "Byte
 Foundry") — paired with a hidden `role="progressbar"`
 (`aria-label="byte foundry speed progress"`, max set to the Speed cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below. Beside it, "Capacity ×2"
-(top line `🧠 Capacity ×2`; cost line `formatBitsInNearestUnit(capacity)`; `aria-label="double Memory
+(top line `🪣 Capacity ×2` — the bucket icon reused from the Capacity footer figure, replacing an
+earlier 🧠 brain icon that was already doing double duty for the unrelated "Smart" autobuyer concept
+elsewhere in the app, see docs/DESIGN_HISTORY.md; cost line `formatBitsInNearestUnit(capacity)`;
+`aria-label="double Memory
 Capacity"`; `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
 isMemoryCapacityUpgradeAvailable(state)`) requires a full Buffer, drains it, and doubles Capacity up
 to `INTRO_CAPACITY_CAP_BITS` (the active highest-unlocked-pool's end bound, though the raw Capacity multiplier tracks past this limit silently) — it carries no
@@ -148,8 +151,9 @@ above. Its third line, below the balance, is the pool's own `MultiplierBar` (swi
 `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow —
 see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
 bar itself. Its fourth line is a `FooterRow` splitting that pool's own
-Bandwidth figure (`` `${formatDiskSize(poolBandwidth)}/s` ``, left half) and its Capacity
-(`formatDiskSize(bufferCapacity)`, right half). Only ONE pool is expanded at a time by default — the
+Bandwidth figure (`` `⚡ ${formatDiskSize(poolBandwidth)}/s` ``, left half) and its Capacity
+(`🪣 ` + `formatDiskSize(bufferCapacity)`, right half) — the same ⚡/🪣 icons the Data Stream card's
+own `FooterRow` uses, for the same rate/capacity concepts. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,

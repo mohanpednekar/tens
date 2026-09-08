@@ -6648,3 +6648,26 @@ shared with the label). No change to the bar's own fill math, center-grow behavi
 **Verification.** `yarn test`: 1738/1738 green, unchanged count — no test asserted on the relative
 DOM order between `BalanceText` and `MultiplierBar`, or on `BarPercentLabel`'s position relative to
 `BarTrack` within `BarRow`, so nothing needed rewriting.
+
+### Icons added to the Byte Foundry footer figures; 🧠 replaced on "Capacity ×2"
+
+Further player feedback on the bar redesign: "Use icons in front of speed and capacity. Let's use
+relevant icons. Current icons are not intuitive." The `FooterRow` Speed/Bandwidth and Capacity
+figures (both the Data Stream card and every pool card) had no icon at all, and the pre-existing
+"Capacity ×2" milestone button used 🧠 (brain) — not obviously related to storage capacity, and
+already reused elsewhere in `pages/MainPage/index.jsx` for the unrelated "Smart" autobuyer concept,
+so it carried no consistent meaning across the app.
+
+**Fix.** Reused the already-intuitive ⚡ (already used elsewhere for rate/speed, e.g. "Speed ×2" and
+the Compute nav button) for both footer rate figures — the Data Stream production rate and each
+pool's own Bandwidth — and introduced 🪣 (bucket, evoking storage/holding capacity) for every
+Capacity figure: both `FooterRow` Capacity readouts and the "Capacity ×2" milestone button itself
+(replacing 🧠), so the same icon now consistently marks "capacity" everywhere it appears on this
+page. The Data Stream rate icon is guarded against `dataStreamRateText` being falsy (before
+`byteCreated`, there's no rate yet) so no dangling icon renders with empty text.
+
+**Verification.** `yarn test`: 1738/1738 green, unchanged count — 4 pre-existing fully-anchored
+regex assertions in `App.test.jsx` against the Data Stream rate text (`/^1 bit\/s$/i` and similar)
+needed their leading `^` anchor dropped to tolerate the new `⚡ ` prefix; every other assertion
+touching these figures already used substring (`toHaveTextContent`) or unanchored-at-start matching
+and needed no change.

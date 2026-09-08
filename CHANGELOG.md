@@ -303,7 +303,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Each tile (Data Stream and every pool) was reorganized around it: title top-left with that
   section's own current full-disk count top-right, the balance alone in a bigger centered font
   below that, the bar full-width below the balance, then Speed/Bandwidth and Capacity split across
-  the bottom row's left and right halves.
+  the bottom row's left and right halves — each now prefixed with its own icon (⚡ for
+  Speed/Bandwidth, 🪣 for Capacity) for at-a-glance scanning; the "Capacity ×2" milestone button's
+  icon was also switched from 🧠 to the same 🪣, since the brain emoji was already doing double duty
+  elsewhere for the unrelated "Smart" autobuyer concept.
 - **The Data Stream/pool balance now shows a stable, non-trimmed decimal digit count** — a balance
   that floors to a round fraction now reads e.g. "5.600 KiB" instead of "5.6 KiB", matching the 3
   decimal places a non-round balance ("3.578 KiB") already showed, so the balance's own displayed
