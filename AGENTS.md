@@ -152,20 +152,24 @@ total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TA
 both tap actions no-op once already at that cap, AND `tickFillMultiplierDecay` truncates any stored
 excess down to the cap's current headroom every tick (not just at tap time), so effect beyond 200%
 is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
-`MultiplierGauge` in the middle column of a shared header row (title top-left, gauge top-middle,
-Speed/Bandwidth top-right — above the balance tile, not overlaid on it) for both the Data Stream
-and every pool: a 0–200% speedometer with a percent readout. For a pool, the SAME dial does double
-duty rather than a second stacked gauge: once that pool's own Memory buffer is completely full, it
-switches from the fill-based multiplier reading to that pool's own Data Lake overflow RATE instead
-(progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as that disk
-fills, back to 50% once it completes, drawn in `theme.color.info` on the SAME 0–200% scale so the
-needle doesn't jump at the transition — both readings hit 50 at that exact boundary by design; see
-"Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) is shown by
-`DataLakePanel`'s own fill tile once that pool's card is expanded, not a second always-visible bar on
-the pool card itself. In its default multiplier mode the fill-based
-arc reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
-the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
-pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
+`MultiplierBar` for both the Data Stream and every pool — a bar that grows/shrinks from the MIDDLE
+(200% fills the full track width, 0% is a zero-width point at center), replacing an earlier corner
+needle-speedometer that took too much vertical space. Each tile's own top row is title top-left,
+that section's own current full-disk count top-right; the bar renders as its own full-width row
+below that; the balance sits below the bar in a bigger centered font; Speed/Bandwidth (left half)
+and Capacity (right half) split across a footer row at the bottom. For a pool, the SAME bar does
+double duty rather than a second stacked bar: once that pool's own Memory buffer is completely
+full, it switches from the fill-based multiplier reading to that pool's own Data Lake overflow RATE
+instead (progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as
+that disk fills, back to 50% once it completes, drawn in `theme.color.info` on the SAME 0–200% scale
+so the bar's width doesn't jump at the transition — both readings hit 50 at that exact boundary by
+design; see "Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) is
+shown by `DataLakePanel`'s own fill tile once that pool's card is expanded, not a second
+always-visible bar on the pool card itself. In its default multiplier mode, an outer layer sized to
+the TOTAL (fill + tap bonus) reading reads in the accent color, with a narrower inner layer — sized
+to just the tap-bonus portion — nested in the middle of it in `theme.color.warn` (gold/caution — the
+closest existing token to orange): a live tap bonus reads as a highlighted band right in the bar's
+own middle, pushing the accent-colored edges outward as it grows.
 
 **Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
 values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
@@ -234,7 +238,7 @@ units) — fully decoupled from Storage Disks now: each lake is fed directly and
 own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full),
 at a rate based on the ONE disk currently being filled, not the lake's overall total
 (`DATA_LAKE_OVERFLOW_MAX_PERCENT` 50% at that disk empty down to 0% as it's about to complete, then
-back to 50% once it completes and the next opens — the SAME `MultiplierGauge` switching into its
+back to 50% once it completes and the next opens — the SAME `MultiplierBar` switching into its
 lake-rate mode once the pool's buffer is full, see above), completing the lake's ×1/×10/×100 disks
 smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
 the maxed level's 1,000-unit capacity). A lake is gated on `isDataLakePoolReady` — its own matching

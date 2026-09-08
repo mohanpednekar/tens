@@ -34,10 +34,15 @@ const Header = styled.header`
   width: 100%;
 `
 
+// The section's own current balance — bigger font, centered (see "Put title on top left, current
+// disks status on the top right, a center-grow multiplier bar below that, the balance in a bigger
+// centered font, then Speed/Bandwidth and Capacity split across the bottom row's two halves" in
+// CLAUDE.md's UI conventions) — sized a step above the rest of the tile's text but below the page's
+// own H1 so a stack of several pool cards doesn't read as several competing headlines.
 const BalanceText = styled.p`
   margin: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.lg.size};
+  font-size: ${props => props.theme.type.scale.xl.size};
   font-weight: 700;
   text-align: center;
 `
@@ -140,7 +145,7 @@ const DataStreamCard = styled(StatCard)`
   gap: ${props => props.theme.space.md};
 `
 
-// Expand/collapse a pool card. Title/gauge/Bandwidth now render INSIDE the pool's own tappable
+// Expand/collapse a pool card. Title/bar/Bandwidth now render INSIDE the pool's own tappable
 // Memory buffer button (see FillableStatCard below) rather than a separate header button above
 // it — a <button> can't nest inside another <button>, so this is a plain sibling: a slim,
 // full-width strip right below the merged button, just a centered chevron, rather than a second
@@ -169,16 +174,17 @@ const ExpandToggleButton = styled.button`
   }
 `
 
-// Shared 3-column header row for both the Data Stream card and every pool's own summary: title
-// top-left, the fill-based MultiplierGauge top-middle, and the section's own Speed/Bandwidth
-// figure top-right — a CSS grid (not flex space-between) so the middle gauge column stays
-// genuinely centered regardless of how wide the title/speed text on either side are. The section's
-// own balance (bits/capacity, or a pool's own Memory buffer) always renders as a second line below
-// this row, in the tile beneath it.
-const SectionHeaderRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+// Shared top row for both the Data Stream card and every pool's own summary: title top-left,
+// that section's own current disks status top-right (see MultiplierBar below for what replaced
+// the old middle gauge column, and getFullDisksCount for the count itself) — a plain flex row
+// (not a grid) since there's no longer a middle column to keep centered between the two ends. The
+// multiplier bar, balance, and Speed/Bandwidth + Capacity figures all render as their own rows
+// below this one, in the tile beneath it — see docs/DESIGN_HISTORY.md for the corner-speedometer →
+// center-grow-bar redesign this replaced.
+const TitleRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: ${props => props.theme.space.sm};
   width: 100%;
 `
@@ -189,7 +195,6 @@ const SectionTitle = styled.h3`
   gap: ${props => props.theme.space.xs};
   margin: 0;
   min-width: 0;
-  justify-self: start;
   font-family: ${props => props.theme.font.display};
   font-size: ${props => props.theme.type.scale.md.size};
   line-height: ${props => props.theme.type.scale.md.lineHeight};
@@ -201,8 +206,24 @@ const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
-const SectionRateText = styled.span`
-  justify-self: end;
+const DiskStatusText = styled.span`
+  flex-shrink: 0;
+  color: ${props => props.theme.color.textMuted};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
+// Speed/Bandwidth (left half) and Capacity (right half) sit below the balance, each centered
+// within its own half of the tile — a 2-column grid rather than flex so the halves stay exactly
+// even regardless of either figure's own text length.
+const FooterRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+`
+
+const FooterText = styled.span`
+  justify-self: center;
   color: ${props => props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -221,9 +242,9 @@ const SectionRateText = styled.span`
 // Memory buffer block reuses this SAME component, always rendered as a real <button>
 // (tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
 // fill-based multiplier bonus (see FILL_MULTIPLIER_* in game/layers), it never credits bits
-// directly. This tile is always exactly the section's own second line — title/gauge/rate live in
-// SectionHeaderRow above it instead (see "Put title on top left, speedometer in the top middle and
-// speed or bandwidth on the top right" in CLAUDE.md's UI conventions).
+// directly. Everything for that section lives inside this one tile — TitleRow (title/disks status),
+// the MultiplierBar, the big centered BalanceText, and the FooterRow (Speed/Bandwidth left half,
+// Capacity right half) — see CLAUDE.md's UI conventions.
 const FillableStatCard = styled.div`
   width: 100%;
   display: flex;
@@ -258,180 +279,146 @@ const FillableStatCard = styled.div`
   `}
 `
 
-// Renders "<bits> / <capacity>". Capacity always renders in its own unit (picked off capacity —
-// see getMemoryUnit in game/engine). The balance shares that same unit UNLESS doing so would put
-// it below 1 (e.g. "0.234 MiB / 1 MiB" territory) — in that case it self-sizes into its own finer
-// unit instead (e.g. "30.031 KiB / 1 MiB"), which still reads as a real magnitude rather than
+// The balance (BalanceText) and Capacity (FooterText) figures share ONE unit — capacity's own (see
+// getMemoryUnit in game/engine) — UNLESS that would put the balance below 1 (e.g. "0.234 MiB"
+// alongside a "1 MiB" capacity) — in that case the balance self-sizes into its own finer unit
+// instead (e.g. "30.031 KiB" alongside "1 MiB"), which still reads as a real magnitude rather than
 // falling all the way back to a raw bit count. Only a genuinely sub-Byte balance (no named unit
 // finer than a Byte exists) still falls back to raw bits, via formatMemoryAmount's own bottom-rung
 // handling — see docs/DESIGN_HISTORY.md.
-const formatMemoryBalance = (bits, capacityBits, byteCreated) => {
+const formatMemoryBalanceValue = (bits, capacityBits, byteCreated) => {
   const capacityUnit = getMemoryUnit(capacityBits, byteCreated)
   const balanceUnit = capacityUnit && bits > 0 && bits < capacityUnit.divisor
     ? getMemoryUnit(bits, byteCreated)
     : capacityUnit
-  return `${formatMemoryAmount(bits, balanceUnit)} / ${formatMemoryAmount(capacityBits, capacityUnit)}`
+  return formatMemoryAmount(bits, balanceUnit)
 }
+
+const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
+  formatMemoryAmount(capacityBits, getMemoryUnit(capacityBits, byteCreated))
+
+// Top-right "current disks status" figure (see TitleRow above) — a rough at-a-glance count of full
+// disks across every size this section covers (the whole Foundry for the Data Stream card, just
+// this one pool's own sizes for a pool card), visible without expanding that pool's disclosure.
+const getFullDisksCount = (state, sizes) =>
+  sizes.reduce((total, size) => total + (state.intro.disks?.[size] ?? 0), 0)
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-// Fill-based Speed/Bandwidth multiplier gauge (see FILL_MULTIPLIER_* in game/layers and
-// getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact speedometer
-// rendered inline in SectionHeaderRow's own middle column, replacing the earlier full-width linear
-// bar + separate "NN% Speed"/"· NN%" text (and, before that, a corner-badge overlay, and before
-// that, a second bottom-half arc for the Data Lake reading — see docs/DESIGN_HISTORY.md for why
-// that was dropped in favor of the single dial below). The dial sweeps left (0%) through straight-up
-// (100%) to right (FILL_MULTIPLIER_TAP_CAP_PERCENT, 200%) — the same needle-gauge convention as a
-// car speedometer. In its default `mode="multiplier"`, the base (fill-based) arc reads in the
-// ordinary accent color; when a live tap bonus pushes the total past the base value, a second arc
-// segment extends in `theme.color.warn` (the app's existing gold/caution token, the closest
-// semantic stand-in for "orange") so the two contributions stay visually distinguishable. The
-// needle itself is a separate, neutral `theme.color.text` pointer swept to the current TOTAL (fill
-// + tap bonus) reading — not tied to the accent/warn split, so it never mismatches whichever arc
-// zone it happens to point into.
+// Fill-based Speed/Bandwidth multiplier bar (see FILL_MULTIPLIER_* in game/layers and
+// getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact, full-width
+// bar that grows and shrinks from the MIDDLE, replacing the earlier corner needle-speedometer (too
+// tall for how little it showed — see docs/DESIGN_HISTORY.md for the swap). The bar is centered in
+// its track: FILL_MULTIPLIER_TAP_CAP_PERCENT (200%) fills the FULL track width, 0% is a zero-width
+// point at dead center. In its default `mode="multiplier"`, two layers share that same center
+// point: an OUTER layer (accent color) sized to the TOTAL (fill + tap bonus) reading, and a
+// narrower INNER layer (warn color) sized to just the tap-bonus portion (total − base) nested
+// inside it. A live tap bonus therefore reads as a highlighted band right in the bar's own middle,
+// pushing the outer (base) edges outward on both sides as it grows and pulling them back toward
+// that same center point as the bonus decays.
 //
-// For a POOL specifically, once its own Memory buffer is completely full, the SAME dial switches to
+// For a POOL specifically, once its own Memory buffer is completely full, the SAME bar switches to
 // `mode="lake"` and represents a different quantity entirely: that pool's own Data Lake overflow
 // rate (DATA_LAKE_OVERFLOW_MAX_PERCENT at an empty currently-filling disk, down toward
 // DATA_LAKE_OVERFLOW_MIN_PERCENT as it nears completion — see getDataLakeOverflowRatePercent in
-// game/engine, NOT the lake's overall total), drawn as a single `theme.color.info` arc from 0 on the
-// SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT angle scale the multiplier reading already uses — not a
-// separately-scaled arc. This is what makes the transition between the two readings clean rather
+// game/engine, NOT the lake's overall total), drawn as a single `theme.color.info` layer on the
+// SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT scale the multiplier reading already uses — not a
+// separately-scaled bar. This is what makes the transition between the two readings clean rather
 // than a jump: FILL_MULTIPLIER_MIN_PERCENT (the fill-based multiplier's own floor, reached exactly
 // when the buffer is full) and DATA_LAKE_OVERFLOW_MAX_PERCENT (the lake reading's own ceiling, at
 // its highest right as the buffer transitions to full and overflow starts) are numerically the same
-// value (50) by design, so the needle doesn't jump position when the dial's meaning switches — it's
-// already sitting exactly where the lake reading picks up. Whichever quantity is live, the actual
+// value (50) by design, so the bar's width doesn't jump when its meaning switches — it's already
+// sitting exactly where the lake reading picks up. Whichever quantity is live, the actual
 // accumulation into the lake itself (fed by that overflow) has its own separate bar — see
-// FillableStatCard usage below with the 🌊 lake label — this gauge only ever shows a RATE, never a
+// FillableStatCard usage below with the 🌊 lake label — this bar only ever shows a RATE, never a
 // level. The Data Stream card has no lake of its own, so it always renders in `mode="multiplier"`.
-// Keeps the exact same role="progressbar"/aria-label/aria-valuenow/min/max contract throughout —
-// always 0..FILL_MULTIPLIER_TAP_CAP_PERCENT regardless of mode, since both readings share that one
-// scale — so existing tests asserting on it are unaffected.
-const GAUGE_SIZE = 52
-const GAUGE_STROKE_WIDTH = 5
-const GAUGE_CENTER = GAUGE_SIZE / 2
-const GAUGE_RADIUS = GAUGE_CENTER - GAUGE_STROKE_WIDTH
-const GAUGE_NEEDLE_RADIUS = GAUGE_RADIUS - 3
-const GAUGE_LABEL_GAP = 11
-// The dial only ever sweeps the TOP half of the GAUGE_SIZE circle (angles -90..90, i.e. left
-// through straight-up to right) — the bottom half of a full GAUGE_SIZE-tall box is always empty
-// canvas. The percent label sits just below the dial's own horizontal midline
-// (GAUGE_CENTER + GAUGE_LABEL_GAP), comfortably inside that otherwise-unused bottom half, so the
-// SVG only needs to be tall enough to reach a few px past the label's own text — not a full
-// GAUGE_SIZE + GAUGE_LABEL_GAP, which left ~20px of pure dead space below the label. Trimming this
-// only crops empty canvas; every drawn coordinate (arc/needle/label) is unchanged.
-const GAUGE_BOTTOM_MARGIN = 6
-const GAUGE_HEIGHT = GAUGE_CENTER + GAUGE_LABEL_GAP + GAUGE_BOTTOM_MARGIN
-// -90deg = left (0%), 0deg = straight up (100%), +90deg = right (FILL_MULTIPLIER_TAP_CAP_PERCENT).
-const GAUGE_MIN_ANGLE = -90
-const GAUGE_MAX_ANGLE = 90
+// Keeps the exact same role="progressbar"/aria-label/aria-valuenow/min/max contract as the old
+// gauge (always 0..FILL_MULTIPLIER_TAP_CAP_PERCENT regardless of mode) — existing tests asserting
+// on it are unaffected by the visual swap.
+const BAR_HEIGHT = 8
 
-const clampGaugeValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.max(0, value))
+const clampBarValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.max(0, value))
 
-const percentToGaugeAngle = percent =>
-  GAUGE_MIN_ANGLE + (clampGaugeValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * (GAUGE_MAX_ANGLE - GAUGE_MIN_ANGLE)
+// 0% -> 0 width (a point at the track's own center), FILL_MULTIPLIER_TAP_CAP_PERCENT -> full width.
+const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100
 
-const gaugePoint = (radius, angleDeg) => {
-  const angleRad = (angleDeg * Math.PI) / 180
-  return { x: GAUGE_CENTER + radius * Math.sin(angleRad), y: GAUGE_CENTER - radius * Math.cos(angleRad) }
-}
-
-// A single SVG arc segment (never more than a 180deg sweep here, so largeArcFlag is always 0).
-const gaugeArcPath = (radius, startAngle, endAngle) => {
-  if (endAngle <= startAngle) return ''
-  const start = gaugePoint(radius, startAngle)
-  const end = gaugePoint(radius, endAngle)
-  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`
-}
-
-const GaugeWrap = styled.div`
-  justify-self: center;
+const BarRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.space.xs};
+  width: 100%;
 `
 
-const GaugeTrack = styled.path`
-  fill: none;
-  stroke: ${props => props.theme.color.surfaceSunken};
-  stroke-width: ${GAUGE_STROKE_WIDTH};
-  stroke-linecap: round;
+const BarTrack = styled.div`
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: ${BAR_HEIGHT}px;
+  border-radius: ${props => props.theme.radius.pill};
+  background: ${props => props.theme.color.surfaceSunken};
+  overflow: hidden;
 `
 
-const GaugeBaseArc = styled.path`
-  fill: none;
-  stroke: ${props => props.theme.color.accent};
-  stroke-width: ${GAUGE_STROKE_WIDTH};
-  stroke-linecap: round;
+// Centered via left: 50% + translateX(-50%) — the growth anchor that makes the bar expand and
+// contract from the middle rather than from either edge, the way an ordinary progress bar would.
+const BarFillBase = styled.div`
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: ${props => props.$widthPercent}%;
+  border-radius: inherit;
+  background: ${props => props.theme.color.accent};
 `
 
-const GaugeBonusArc = styled.path`
-  fill: none;
-  stroke: ${props => props.theme.color.warn};
-  stroke-width: ${GAUGE_STROKE_WIDTH};
-  stroke-linecap: round;
+const BarFillBonus = styled(BarFillBase)`
+  background: ${props => props.theme.color.warn};
 `
 
-const GaugeLakeArc = styled.path`
-  fill: none;
-  stroke: ${props => props.theme.color.info};
-  stroke-width: ${GAUGE_STROKE_WIDTH};
-  stroke-linecap: round;
+const BarFillLake = styled(BarFillBase)`
+  background: ${props => props.theme.color.info};
 `
 
-const GaugeNeedle = styled.line`
-  stroke: ${props => props.theme.color.text};
-  stroke-width: 2;
-  stroke-linecap: round;
+const BarPercentLabel = styled.span`
+  flex-shrink: 0;
+  min-width: 2.4em;
+  text-align: right;
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
 `
 
-const GaugeHub = styled.circle`
-  fill: ${props => props.theme.color.text};
-`
-
-const GaugeLabel = styled.text`
-  font-family: ${props => props.theme.font.body};
-  font-size: 8px;
-  font-weight: 700;
-  fill: ${props => props.theme.color.textMuted};
-  text-anchor: middle;
-`
-
-// `mode="lake"` renders a single info-colored arc (see the doc comment above) instead of the
+// `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
 // default accent/warn base+bonus split — there is no "bonus" concept for a lake overflow reading.
-const MultiplierGauge = ({ basePercent, totalPercent, ariaLabel, mode = 'multiplier' }) => {
+const MultiplierBar = ({ basePercent, totalPercent, ariaLabel, mode = 'multiplier' }) => {
   const isLakeMode = mode === 'lake'
-  const clampedBase = clampGaugeValue(isLakeMode ? 0 : basePercent)
-  const clampedTotal = clampGaugeValue(totalPercent)
-  const baseAngle = percentToGaugeAngle(clampedBase)
-  const totalAngle = percentToGaugeAngle(clampedTotal)
-  const needleTip = gaugePoint(GAUGE_NEEDLE_RADIUS, totalAngle)
+  const clampedBase = clampBarValue(isLakeMode ? 0 : basePercent)
+  const clampedTotal = clampBarValue(totalPercent)
+  const totalWidthPercent = percentToBarWidthPercent(clampedTotal)
+  const bonusWidthPercent = percentToBarWidthPercent(Math.max(0, clampedTotal - clampedBase))
   const hasBonus = !isLakeMode && clampedTotal > clampedBase
 
   return (
-    <GaugeWrap>
-      <svg
+    <BarRow>
+      <BarTrack
         role="progressbar"
         aria-label={ariaLabel}
         aria-valuenow={Math.round(clampedTotal)}
         aria-valuemin={0}
         aria-valuemax={FILL_MULTIPLIER_TAP_CAP_PERCENT}
-        width={GAUGE_SIZE}
-        height={GAUGE_HEIGHT}
-        viewBox={`0 0 ${GAUGE_SIZE} ${GAUGE_HEIGHT}`}
       >
-        <GaugeTrack d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, GAUGE_MAX_ANGLE)} />
         {isLakeMode
-          ? clampedTotal > 0 && <GaugeLakeArc d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, totalAngle)} />
+          ? totalWidthPercent > 0 && <BarFillLake $widthPercent={totalWidthPercent} />
           : (
             <>
-              {clampedBase > 0 && <GaugeBaseArc d={gaugeArcPath(GAUGE_RADIUS, GAUGE_MIN_ANGLE, baseAngle)} />}
-              {hasBonus && <GaugeBonusArc d={gaugeArcPath(GAUGE_RADIUS, baseAngle, totalAngle)} />}
+              {totalWidthPercent > 0 && <BarFillBase $widthPercent={totalWidthPercent} />}
+              {hasBonus && <BarFillBonus $widthPercent={bonusWidthPercent} />}
             </>
           )}
-        <GaugeNeedle x1={GAUGE_CENTER} y1={GAUGE_CENTER} x2={needleTip.x} y2={needleTip.y} />
-        <GaugeHub cx={GAUGE_CENTER} cy={GAUGE_CENTER} r={2} />
-        <GaugeLabel x={GAUGE_CENTER} y={GAUGE_CENTER + GAUGE_LABEL_GAP - 2}>{Math.round(clampedTotal)}%</GaugeLabel>
-      </svg>
-    </GaugeWrap>
+      </BarTrack>
+      <BarPercentLabel>{Math.round(clampedTotal)}%</BarPercentLabel>
+    </BarRow>
   )
 }
 
@@ -455,14 +442,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   }, [visiblePoolCount])
   const visibleExpandedPool = expandedPoolIndex === 0 ? null : expandedPoolIndex ?? visiblePoolCount
   const productionRate = getIntroProductionRate(intro)
-  // The Data Stream header row's own top-right figure (see "Put title on top left, speedometer in
-  // the top middle and speed or bandwidth on the top right" in CLAUDE.md) — plain text, same
-  // convention a pool's own Bandwidth figure uses in its header, replacing the earlier segmented
-  // sub-Byte rate bar. Reuses formatBitsInNearestUnit (the same binary B/KiB/MiB/… ladder the
-  // balance line right below it already renders in) rather than a bespoke bit-vs-Byte branch, so a
-  // large rate reads as "2 KiB/s" instead of an unscaled "2048 B/s" — consistent short "B"/"KiB"
-  // unit symbols throughout, matching the pool's own Bandwidth figure's "/s" convention (see
-  // SectionRateText usage below) rather than the longer "bytes/sec" this used to spell out.
+  // Bottom-left-half figure (see "Speed/Bandwidth at bottom centre of left half" in CLAUDE.md) —
+  // plain text, same convention a pool's own Bandwidth figure uses in its own footer row. Reuses
+  // formatBitsInNearestUnit (the same binary B/KiB/MiB/… ladder the balance line above it already
+  // renders in) rather than a bespoke bit-vs-Byte branch, so a large rate reads as "2 KiB/s" instead
+  // of an unscaled "2048 B/s" — consistent short "B"/"KiB" unit symbols throughout, matching the
+  // pool's own Bandwidth figure's "/s" convention (see FooterText usage below) rather than the
+  // longer "bytes/sec" this used to spell out.
   const dataStreamRateText = !intro.byteCreated
     ? null
     : `${formatBitsInNearestUnit(productionRate)}/s`
@@ -478,6 +464,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
+  // Top-right of the Data Stream card (see TitleRow) — the whole Foundry's own full-disk count,
+  // across every size shown anywhere on the page.
+  const dataStreamDisksCount = getFullDisksCount(state, diskSizesToShow)
 
   const investCost = getIntroProductionMilestoneCost(intro.productionMilestoneTier)
   const computeBandwidthLabel = getComputeBandwidthSacrificeLabel(state)
@@ -588,18 +577,26 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
-          <SectionHeaderRow>
+          <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
-            {intro.byteCreated && (
-              <MultiplierGauge
-                basePercent={dataStreamBaseMultiplierPercent}
-                totalPercent={dataStreamMultiplierPercent}
-                ariaLabel="data stream fill-based speed multiplier"
-              />
+            {storageRevealed && (
+              <DiskStatusText aria-label={`${dataStreamDisksCount} full disks`}>
+                💾 {dataStreamDisksCount}
+              </DiskStatusText>
             )}
-            <SectionRateText>{dataStreamRateText}</SectionRateText>
-          </SectionHeaderRow>
-          <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
+          </TitleRow>
+          {intro.byteCreated && (
+            <MultiplierBar
+              basePercent={dataStreamBaseMultiplierPercent}
+              totalPercent={dataStreamMultiplierPercent}
+              ariaLabel="data stream fill-based speed multiplier"
+            />
+          )}
+          <BalanceText>{formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
+          <FooterRow>
+            <FooterText>{dataStreamRateText}</FooterText>
+            <FooterText>{formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}</FooterText>
+          </FooterRow>
           <VisuallyHidden
             role="progressbar"
             aria-label="data stream bit balance"
@@ -713,8 +710,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolMultiplierCapped = poolMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
-        // This pool's own Data Lake overflow rate — feeds the gauge's `mode="lake"` reading above
-        // (once poolBufferFull). The lake's own current-disk-fill LEVEL renders inside
+        // This pool's own Data Lake overflow rate — feeds the MultiplierBar's `mode="lake"` reading
+        // above (once poolBufferFull). The lake's own current-disk-fill LEVEL renders inside
         // DataLakePanel itself (the "data lake area," see LakePoolTile in components/DataLakePanel)
         // once the pool card is expanded, not as a second standalone bar here.
         const lakeRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
@@ -723,13 +720,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // poolBufferFull: tickPoolBufferFill's overflow branch (engine.js) won't credit this lake
         // at all until a real Storage disk has been built for it, so a pool whose buffer fills
         // before that (the common, non-legacy case — pool 1 in particular, visible from the very
-        // start) would otherwise switch the gauge to "lake" mode and show a constant nonzero
+        // start) would otherwise switch the bar to "lake" mode and show a constant nonzero
         // "incoming rate" that can never actually turn into real progress — the exact
         // stalled-tile-shown-as-active misrepresentation Devin Review flagged for LakePoolTile,
-        // just on this page's own gauge/bar instead.
+        // just on this page's own bar instead.
         const poolReady = isDataLakePoolReady(state, poolIndex)
         const showLakeMode = poolBufferFull && poolReady
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
+        // Top-right of this pool's own tile (see TitleRow) — this pool's own full-disk count only.
+        const poolDisksCount = getFullDisksCount(state, poolSizes)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
         // currently offers (getDiskSize) — a single ladder spanning every pool, not a per-pool
@@ -741,9 +740,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
-            {/* Title/gauge/Bandwidth render INSIDE this same tappable button now (not a separate
-                header button above it — two buttons can't nest), so one tap both boosts this
-                pool's own multiplier bonus (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
+            {/* Title/disks-status/bar/Bandwidth render INSIDE this same tappable button now (not a
+                separate header button above it — two buttons can't nest), so one tap both boosts
+                this pool's own multiplier bonus (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) and shows the full summary in one control. Expand/collapse moves to
                 the slim ExpandToggleButton strip below. Same FillableStatCard component Data
                 Stream's own tap tile uses — see FillableStatCard above. */}
@@ -763,24 +762,30 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               $progress={poolBufferPercent}
               $tappable
             >
-              <SectionHeaderRow>
+              <TitleRow>
                 <SectionTitle>
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
                   <span>Pool</span>
                 </SectionTitle>
-                <MultiplierGauge
-                  basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
-                  totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
-                  ariaLabel={
-                    showLakeMode
-                      ? `pool ${poolIndex} data lake overflow rate`
-                      : `pool ${poolIndex} fill-based bandwidth multiplier`
-                  }
-                  mode={showLakeMode ? 'lake' : 'multiplier'}
-                />
-                <SectionRateText>{formatDiskSize(poolBandwidth)}/s</SectionRateText>
-              </SectionHeaderRow>
-              <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
+                <DiskStatusText aria-label={`pool ${poolIndex} ${poolDisksCount} full disks`}>
+                  💾 {poolDisksCount}
+                </DiskStatusText>
+              </TitleRow>
+              <MultiplierBar
+                basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
+                totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
+                ariaLabel={
+                  showLakeMode
+                    ? `pool ${poolIndex} data lake overflow rate`
+                    : `pool ${poolIndex} fill-based bandwidth multiplier`
+                }
+                mode={showLakeMode ? 'lake' : 'multiplier'}
+              />
+              <BalanceText>{formatDiskSize(poolBufferBits)}</BalanceText>
+              <FooterRow>
+                <FooterText>{formatDiskSize(poolBandwidth)}/s</FooterText>
+                <FooterText>{formatDiskSize(poolBufferCapacity)}</FooterText>
+              </FooterRow>
               <VisuallyHidden
                 role="progressbar"
                 aria-label={`pool ${poolIndex} memory buffer`}

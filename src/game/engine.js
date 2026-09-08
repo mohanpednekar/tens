@@ -2453,8 +2453,8 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
     const poolIndex = Number(poolIndexKey)
     const priorBonus = priorPoolBonuses[poolIndexKey]
     // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired —
-    // ByteFoundryPage's gauge switches to that pool's Data Lake overflow-rate reading instead (see
-    // MultiplierGauge's mode="lake"), which shares the SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
+    // ByteFoundryPage's bar switches to that pool's Data Lake overflow-rate reading instead (see
+    // MultiplierBar's mode="lake"), which shares the SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
     // scale specifically so the transition is seamless (both readings meet at exactly 50 —
     // FILL_MULTIPLIER_MIN_PERCENT == DATA_LAKE_OVERFLOW_MAX_PERCENT). A leftover tap bonus riding on
     // top of the now-retired base reading would break that seam — the pre-switch total could sit

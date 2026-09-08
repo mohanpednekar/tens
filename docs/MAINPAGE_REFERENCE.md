@@ -40,31 +40,34 @@ that structure.
 
 `DataStreamCard` holds a single `FillableStatCard`
 — deliberately a plain `styled.div`, not `styled(StatCard)` (nesting a second card inside
-`DataStreamCard` would double-box the same region) — containing BOTH the header and the balance as
-its two lines, so the whole thing reads (and, once interactive, taps) as one control rather than a
-separate header sitting above a boxed balance tile. Its first line is a `SectionHeaderRow` — the
-same 3-column title-top-left/gauge-top-middle/rate-top-right layout every section on this page uses
-(see "Put title on top left, speedometer in the top middle and speed or bandwidth on the top right"
-in CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`, the fill-based `MultiplierGauge`
-(once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and a plain rate
-readout on the right — `` `${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "4
-bits/s" below 1 Byte/sec, "1 B/s" at/above it, "2 KiB/s" once the rate itself crosses the next
-binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line right below it renders
-in, not a bespoke bit-vs-Byte branch with no further unit scaling as an earlier version had, and no
-leading "+" any more either, matching the pool's own Bandwidth figure's plain "unit/s" convention)
-— a single line of text; there's no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"`
-version was replaced once the gauge itself started carrying the fill-multiplier reading). An earlier
-iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
-inside it — merged together per player feedback that the two read as disconnected pieces. Its second
+`DataStreamCard` would double-box the same region) — containing everything for that section (title,
+disk status, bar, balance, and footer figures) as one control, so the whole thing reads (and, once
+interactive, taps) as one piece rather than a separate header sitting above a boxed balance tile.
+Its first line is a `TitleRow` — the same title-top-left/current-disks-status-top-right layout
+every section on this page uses (see CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`
+and, once Storage is revealed, a `DiskStatusText` showing the Foundry's own total full-disk count
+(`getFullDisksCount`, e.g. "💾 12" — every size shown anywhere on the page, summed). Its second line
+is the fill-based `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier"
+in CLAUDE.md) — a compact bar that grows/shrinks from the MIDDLE (200% fills the full track width),
+replacing an earlier corner needle-speedometer that took too much vertical space. An earlier
+iteration rendered the header row as a separate element ABOVE the `FillableStatCard` instead of
+inside it — merged together per player feedback that the two read as disconnected pieces. Its third
 line applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
-toward Capacity the same visual way every button on this page already does. It shows
-`{bits} / {capacity}` (`formatMemoryBalance`, see "Numbers are formatted" below) — both numbers
-scaled into the same binary unit, picked off `capacity` (raw bits before the Byte generator exists,
-since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to denominate
-in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own tier
-symbols with an "i") — plus a hidden `role="progressbar"` (`aria-label="data stream bit balance"`).
-There is no separate Cache tile — the same
+toward Capacity the same visual way every button on this page already does, and shows the balance
+ALONE in a bigger, centered `BalanceText` (`formatMemoryBalanceValue`, see "Numbers are formatted"
+below) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
+exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
+denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
+`TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
+(`aria-label="data stream bit balance"`). A fourth line, a `FooterRow` (a 2-column grid), splits
+the production rate — `` `${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "4
+bits/s" below 1 Byte/sec, "1 B/s" at/above it, "2 KiB/s" once the rate itself crosses the next
+binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
+on the left half, and the Capacity figure (`formatMemoryCapacityValue`, the same unit `BalanceText`
+picked) on the right half, each centered within its own half; there's no segmented block-bar rate
+meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
+itself started carrying the fill-multiplier reading). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is
 implicit in the Data Stream balance itself — there's no separate manual transfer UI any more (see
 below). Before `intro.mainGameUnlocked` the tile is a plain, non-interactive `<section>`,
@@ -132,18 +135,19 @@ mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" 
 many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
 docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
-NOT one continuous card shared across pools or with Data Stream. A pool's own header
-(title/gauge/Bandwidth, a `SectionHeaderRow`) and its Memory buffer balance both render INSIDE the
-SAME tappable `FillableStatCard` `<button>` (`aria-label="tap pool {n} memory"`, calling
-`actions.tapPoolBuffer(poolIndex)`, `disabled={poolBufferFull || poolMultiplierCapped}`) — the
-header row is the button's first line: title "`<symbol>` Pool" (e.g. "KB Pool" —
-`TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number or tier name in the visible text, centered
-since the symbol alone already uniquely identifies the pool), the pool's own `MultiplierGauge`
+NOT one continuous card shared across pools or with Data Stream. A pool's own title/disks-status,
+`MultiplierBar`, balance, and footer figures all render INSIDE the SAME tappable `FillableStatCard`
+`<button>` (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
+`disabled={poolBufferFull || poolMultiplierCapped}`) — a `TitleRow` is the button's first line:
+title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
+or tier name in the visible text) on the left, and that pool's own current full-disk count
+(`getFullDisksCount`, e.g. "💾 3") on the right. Its second line is the pool's own `MultiplierBar`
 (switching to `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to
-receive overflow — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), and its own Bandwidth
-figure on the right (`formatDiskSize(poolBandwidth)}/s`); the balance line
-(`{bufferBits} / {bufferCapacity}` in Disk/SI units via `formatDiskSize`) is the button's second
-line, same as Data Stream's own tile below. Only ONE pool is expanded at a time by default — the
+receive overflow — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md). Its third line is the
+Memory buffer balance ALONE (`formatDiskSize(bufferBits)`) in a bigger, centered `BalanceText`, same
+as Data Stream's own tile above. Its fourth line is a `FooterRow` splitting that pool's own
+Bandwidth figure (`` `${formatDiskSize(poolBandwidth)}/s` ``, left half) and its Capacity
+(`formatDiskSize(bufferCapacity)`, right half). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,
@@ -323,8 +327,9 @@ it the instant Storage's own capacity threshold is crossed instead. `App.jsx`'s 
 render check reveals whatever page the player was last on (typically `'game'`) the instant that
 flips — no button or handler needed for that transition.
 
-Numbers are formatted via `formatMemoryBalance` (`ByteFoundryPage`-local helper, calling into
-`engine.js`'s own `getMemoryUnit`/`formatMemoryAmount` exports): raw
+Numbers are formatted via `formatMemoryBalanceValue`/`formatMemoryCapacityValue`
+(`ByteFoundryPage`-local helpers, calling into `engine.js`'s own
+`getMemoryUnit`/`formatMemoryAmount` exports): raw
 bits below 1 Byte, then B/KiB/MiB/…/QiB by **1024** each step once above it (`getMemoryUnit`,
 extending `TIER_DEFINITIONS`' own tier symbols with an "i" — `1 KiB = 1024 Bytes = 1.024 KB`),
 floored (not rounded) at up to 3 decimal places once converted into a binary unit — same

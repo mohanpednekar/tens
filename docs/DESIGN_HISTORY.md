@@ -6404,3 +6404,51 @@ diskReadCacheFlush alongside a spendable cache, confirms the flush entry is gone
 confirms `tickDiskAutoFill` can immediately begin refilling that size's cache again afterward
 (reverting the fix reproduces the bug — the flush survives the pull and refill stays blocked).
 `yarn test`: 1717/1717 green (+1). `yarn build` succeeds.
+
+### The corner needle-speedometer was replaced with a center-grow bar, and each tile's header/footer reorganized around it
+
+Player feedback: "Speedometer is taking too much space. Let's use a bar that grows and shrinks from
+the middle. The 200% shall be full width. Tap bonus will be shown as the middle part of the bar.
+Speed/Bandwidth at bottom centre of left half. Capacity at bottom centre of right half. The current
+balance is shown in a bigger font and centred. The top left shows title and top right shows current
+disks status."
+
+The half-circle needle dial (`MultiplierGauge`, itself already the second design for this reading —
+see "Pool gauge's separate bottom-half Data Lake arc replaced with one dial that switches meaning
+once the buffer is full" above) was tall relative to how little information it actually conveyed: a
+single percent reading, on a tile that also needed room for a title, a rate figure, and a balance.
+
+**Fix.** `MultiplierGauge` was replaced with `MultiplierBar` (`ByteFoundryPage/index.jsx`) — a thin
+horizontal bar that grows and shrinks from the track's own CENTER rather than from either edge:
+`FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) fills the full track width, 0% is a zero-width point at
+dead center. In its default `mode="multiplier"`, an outer layer (accent color) is sized to the TOTAL
+(fill + tap bonus) reading, and a narrower inner layer (warn color) — sized to just the tap-bonus
+portion — is nested in the middle of it, sharing that same center point: a live tap bonus reads as a
+highlighted band right in the bar's own middle, pushing the outer edges outward as it grows and
+pulling them back toward center as it decays, matching "tap bonus will be shown as the middle part
+of the bar" literally. `mode="lake"` keeps a single info-colored layer, same as before. The bar
+keeps the dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/min/max contract, so no
+test asserting on the readout's VALUE needed to change — only ones asserting on adjacent DOM
+structure (see Verification).
+
+Every section's tile (`FillableStatCard`, shared by the Data Stream card and each pool's own card)
+was reorganized around the new bar's own compactness: a `TitleRow` (title top-left, that section's
+own current full-disk count top-right — `getFullDisksCount`, new, replacing the rate/Bandwidth
+figure that used to sit there) replaces the old 3-column `SectionHeaderRow` (title/gauge/rate) now
+that there's no middle gauge column to keep centered; the `MultiplierBar` renders as its own
+full-width row below that; the balance renders ALONE (no more "`<balance>` / `<capacity>`" combined
+string) in a bigger `BalanceText` (bumped from `type.scale.lg` to `xl`), centered; and a new
+`FooterRow` (a 2-column grid) splits the old rate/Bandwidth figure into its own left half and the
+Capacity figure (previously the second half of the combined balance string) into its own right half,
+each centered within its half. `formatMemoryBalance` (which built the combined "`<bits>` /
+`<capacity>`" string) was split into `formatMemoryBalanceValue` and `formatMemoryCapacityValue`,
+sharing the same shared-unit-with-self-sizing-fallback logic as before — the formatting RULE didn't
+change, only that the two figures now render in different DOM locations instead of one joined
+string.
+
+**Verification.** `yarn test`: 1727/1727 green. Several `App.test.jsx` tests that asserted on the
+old combined "`<balance>` / `<capacity>`" string (`toHaveTextContent('4 bits / 1 MiB')`, etc.) were
+rewritten to assert on the balance (`section.querySelector('p')`, since `BalanceText` is the tile's
+only `<p>`) and the Capacity figure separately; a test pairing the pool's heading with its Bandwidth
+figure as DOM siblings was rewritten to pair Bandwidth with Capacity as `FooterRow` siblings instead,
+matching the new layout.

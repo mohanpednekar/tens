@@ -768,16 +768,17 @@ Strict three-layer separation:
    `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary is ONE full-width `FillableStatCard`
    button (`actions.tapPoolBuffer(poolIndex)`, `$tappable`) — the same reused component/visual style
    as the Data Stream card's own tile (fill-gradient background, `BalanceText`, a hidden
-   `role="progressbar"` for a11y) rather than a bespoke bar — containing BOTH the pool's header
-   (title/gauge/Bandwidth, see below) and the buffer balance line (the buffer/capacity fraction,
-   equal to the pool's own Capacity — see above) inside the same button, so tapping anywhere in it
-   boosts that one pool's own fill-based multiplier bonus (see "Fill-based Speed/Bandwidth
-   multiplier" below). Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no
-   index number or tier name — laid out in a shared `SectionHeaderRow` (a 3-column grid: title
-   top-left, the `MultiplierGauge` top-middle, the pool's own Bandwidth figure top-right — see
-   "Fill-based Speed/Bandwidth multiplier" below for the gauge itself) as the button's own first
-   line, so a pool's throughput reads at a glance without expanding to the buffer detail — centered,
-   since the symbol alone already uniquely identifies the pool. Expand/collapse lives on a separate,
+   `role="progressbar"` for a11y) — containing the pool's `TitleRow` (title/disks-status), the
+   `MultiplierBar`, the big centered `BalanceText` (the buffer balance alone), and a `FooterRow`
+   (Bandwidth left half, Capacity — equal to the pool's own Capacity, see above — right half) all
+   inside the same button, so tapping anywhere in it boosts that one pool's own fill-based
+   multiplier bonus (see "Fill-based Speed/Bandwidth multiplier" below). Each `PoolCard`'s own title
+   reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier name — laid out in a shared
+   `TitleRow` (title top-left, that section's own current full-disk count top-right — see
+   `getFullDisksCount` in `ByteFoundryPage`) as the button's own first line, so a pool's disk
+   holdings read at a glance without expanding to the buffer detail — the `MultiplierBar` (see
+   "Fill-based Speed/Bandwidth multiplier" below) renders as its own full-width row right below,
+   growing/shrinking from the middle rather than sitting inline with the title. Expand/collapse lives on a separate,
    slim `ExpandToggleButton` strip (a plain ▲/▼ chevron) rendered as a sibling right below the tap
    button, not nested inside it, since a `<button>` can't nest inside another `<button>` — its
    `aria-label="expand/collapse pool `<n>`"` (plus `aria-label="pool `<n>`"` on the card itself)
@@ -1085,9 +1086,11 @@ live indefinitely, every cycle.
 `engine.js`) — the Data Stream's displayed Speed and each pool's displayed Bandwidth never change; a
 separate fill-dependent multiplier (150% empty → 100% at 50% full → 50% at full buffer) scales only the
 real per-tick amount delivered into the buffer, boosted temporarily by tapping (+5%, decaying 1%/sec,
-hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierGauge` needle dial; for a pool
-specifically, once that pool's buffer is full AND its Data Lake is ready to receive overflow
-(`isDataLakePoolReady`), the same gauge switches `mode="lake"` to show that pool's Data Lake overflow
+hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierBar` — a compact bar that
+grows/shrinks from the MIDDLE (200% fills the full track width, 0% is a zero-width point at center),
+replacing an earlier corner needle-speedometer that took too much vertical space (see
+`docs/DESIGN_HISTORY.md`); for a pool specifically, once that pool's buffer is full AND its Data Lake
+is ready to receive overflow (`isDataLakePoolReady`), the same bar switches `mode="lake"` to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
 itself). Full formula/UI detail,

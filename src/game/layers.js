@@ -537,9 +537,9 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // (0) as it approaches completion — then straight back up to MAX the instant it completes and the
 // next disk opens, a repeating per-disk taper rather than one slow lake-wide ramp. Deliberately
 // independent of the pool's own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) —
-// these are two separate dials on the same gauge (see ByteFoundryPage's pool MultiplierGauge,
-// extended into a full circle for pools: the top half stays the existing pool fill multiplier, the
-// bottom half is this lake overflow rate/current-disk progress), not compounded into one.
+// these are two separate readings on the SAME bar (see ByteFoundryPage's pool MultiplierBar, which
+// switches from `mode="multiplier"` to `mode="lake"` once the pool's buffer is full rather than
+// showing both at once), not compounded into one.
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 // A rate PROPORTIONAL to the still-open disk's own remaining gap (the taper above) is a pure

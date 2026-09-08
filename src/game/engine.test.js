@@ -2433,8 +2433,8 @@ describe('formatMemoryAmount', () => {
   it('never renders a "0.xyz <unit>" fraction — falls back to raw bits instead, regardless of which unit was picked', () => {
     const kib = { symbol: 'KiB', divisor: 1024 }
     // 500 bits in a KiB-sized unit (e.g. a small balance shown alongside a much larger capacity —
-    // see formatMemoryBalance in ByteFoundryPage/index.jsx, which shares one capacity-sized unit
-    // across both numbers) would floor to a nonzero 0.488 — falls back to raw bits instead.
+    // see formatMemoryBalanceValue in ByteFoundryPage/index.jsx, which shares one capacity-sized
+    // unit across both figures) would floor to a nonzero 0.488 — falls back to raw bits instead.
     expect(formatMemoryAmount(500, kib)).toBe('500 bits')
     // 4 bits in a KiB-sized unit floors to a still-nonzero 0.003 at 3 decimals — also falls back.
     expect(formatMemoryAmount(4, kib)).toBe('4 bits')
