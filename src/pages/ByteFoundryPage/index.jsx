@@ -314,7 +314,15 @@ const GAUGE_CENTER = GAUGE_SIZE / 2
 const GAUGE_RADIUS = GAUGE_CENTER - GAUGE_STROKE_WIDTH
 const GAUGE_NEEDLE_RADIUS = GAUGE_RADIUS - 3
 const GAUGE_LABEL_GAP = 11
-const GAUGE_HEIGHT = GAUGE_SIZE + GAUGE_LABEL_GAP
+// The dial only ever sweeps the TOP half of the GAUGE_SIZE circle (angles -90..90, i.e. left
+// through straight-up to right) — the bottom half of a full GAUGE_SIZE-tall box is always empty
+// canvas. The percent label sits just below the dial's own horizontal midline
+// (GAUGE_CENTER + GAUGE_LABEL_GAP), comfortably inside that otherwise-unused bottom half, so the
+// SVG only needs to be tall enough to reach a few px past the label's own text — not a full
+// GAUGE_SIZE + GAUGE_LABEL_GAP, which left ~20px of pure dead space below the label. Trimming this
+// only crops empty canvas; every drawn coordinate (arc/needle/label) is unchanged.
+const GAUGE_BOTTOM_MARGIN = 6
+const GAUGE_HEIGHT = GAUGE_CENTER + GAUGE_LABEL_GAP + GAUGE_BOTTOM_MARGIN
 // -90deg = left (0%), 0deg = straight up (100%), +90deg = right (FILL_MULTIPLIER_TAP_CAP_PERCENT).
 const GAUGE_MIN_ANGLE = -90
 const GAUGE_MAX_ANGLE = 90

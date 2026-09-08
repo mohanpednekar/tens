@@ -259,6 +259,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Trimmed dead space below the Data Stream/pool fill-multiplier gauge** — the dial's SVG canvas
+  used to reserve a full circle's worth of height even though the needle only ever sweeps the top
+  half, leaving a large empty band below the percent label. The canvas now crops to just past the
+  label itself; the dial, needle, and label render at identical coordinates, only the unused canvas
+  beneath them is gone.
 - **Provision Disk's build cost is now paid in 10 installments ("passes") instead of one lump sum**
   — each pass costs exactly the disk's own face-value size (a 10 KB disk still costs 100 KB total,
   paid as 10 passes of 10 KB each), so a pool's local buffer only ever needs to hold one pass at a
