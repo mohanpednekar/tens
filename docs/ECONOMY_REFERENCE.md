@@ -325,30 +325,30 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      delivery is now continuous (`getDataStreamEffectMultiplier` is rarely exactly 1); every existing
      consumer of `intro.bits` only ever compares (`>=`/`<`) or subtracts/floor-divides it, so this is
      safe.
-   - `ByteFoundryPage` displays the live multiplier via a compact `MultiplierGauge` (own component in
-     that file) — a half-circle speedometer needle-gauge, sweeping 0% (left) through 100% (straight
-     up) to `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%, right), with its own rounded percent readout
-     printed beneath the dial — rendered INSIDE the same tappable tile (`FillableStatCard`) for both
-     the Data Stream and every pool, in IDENTICAL layout, `position: absolute` to that tile's own
-     top-right corner (`FillableStatCard` itself is `position: relative` for this; the gauge is
-     `pointer-events: none` so it never intercepts a click meant for the tap button it's layered on
-     top of, verified by clicking directly on the gauge's own screen position and confirming the
-     underlying tap still fires). This replaced an earlier full-width linear two-tone bar plus a
-     separate "NN% Speed"/"· NN%" text line; the fill-based portion of the arc still fills in
-     `theme.color.accent`, any live tap bonus on top of it still extends the arc in
-     `theme.color.warn` (the existing gold/caution token — the closest semantic stand-in for
-     orange) so the two read as visually distinct at a glance — same color semantics as the bar it
-     replaced. The needle itself is a separate, neutral `theme.color.text` pointer swept to the
-     current TOTAL (fill + tap bonus) reading — not tied to the accent/warn split, so it never
-     mismatches whichever arc zone it happens to point into. The gauge keeps the bar's exact
-     `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax` contract
-     (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still screen-reader-visible
-     as a progress indicator and every test asserting on that contract is unaffected by the visual
-     swap. Each pool's own Memory buffer tile is now always a real tap target (`FillableStatCard`
-     rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own header (title/gauge/
-     Bandwidth, a `SectionHeaderRow`) renders as the FIRST line INSIDE that same button, with the
-     buffer balance as its second line, the identical two-line-in-one-button structure the Data
-     Stream's own tile uses. Expand/collapse lives on a separate, slim `ExpandToggleButton` (a plain
+   - `ByteFoundryPage` displays the live multiplier via a compact `MultiplierBar` (own component in
+     that file) — a bar that grows and shrinks from the MIDDLE: `FILL_MULTIPLIER_TAP_CAP_PERCENT`
+     (200%) fills the full track width, 0% is a zero-width point at dead center — rendered INSIDE
+     the same tappable tile (`FillableStatCard`) for both the Data Stream and every pool, as its own
+     full-width row between the tile's `TitleRow` and its balance. This replaced an earlier
+     corner needle-speedometer (a half-circle dial sweeping 0%→100%→200% with a percent readout
+     beneath it, itself replacing a still-earlier full-width linear two-tone bar) — the dial took too
+     much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
+     `mode="multiplier"`, two layers share the bar's own center point: an OUTER layer (accent color)
+     sized to the TOTAL (fill + tap bonus) reading, and a narrower INNER layer (`theme.color.warn` —
+     the existing gold/caution token, the closest semantic stand-in for orange) sized to just the
+     tap-bonus portion, nested in the middle of the outer layer — a live tap bonus therefore reads as
+     a highlighted band right in the bar's own middle, pushing the outer (base) edges outward on both
+     sides as it grows and pulling them back toward center as the bonus decays. The bar keeps the old
+     dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`
+     contract (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still
+     screen-reader-visible as a progress indicator and every test asserting on that contract is
+     unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
+     target (`FillableStatCard` rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own
+     `TitleRow` (title left, current full-disk count right — `getFullDisksCount`) renders as the
+     FIRST line inside that same button, the `MultiplierBar` as the second line, the buffer balance
+     alone (bigger, centered) as the third, and a `FooterRow` (Bandwidth left half, Capacity right
+     half) as the fourth — the identical four-line-in-one-button structure the Data Stream's own tile
+     uses. Expand/collapse lives on a separate, slim `ExpandToggleButton` (a plain
      ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a
      `<button>` can't nest inside another `<button>` (the same constraint `ComputePage`'s own
      `TierSelectButton` already works around) — an earlier iteration had the header in its own
@@ -789,7 +789,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    single-tick overflow against a small/fresh lake) survives as ordinary spendable Bits instead of
    being destroyed. Deliberately independent of the pool's own fill-based Speed/Bandwidth
    multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's value — even
-   though the two readings share the SAME `MultiplierGauge` (see `ByteFoundryPage`): the gauge
+   though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the bar
    switches from the fill-based multiplier reading to this lake overflow rate (`mode="lake"`,
    rendered in `theme.color.info`) once that pool's own Memory buffer is completely full AND
    `isDataLakePoolReady` — both, not the buffer alone, since `tickPoolBufferFill`'s overflow branch
@@ -1216,23 +1216,34 @@ meaningfully denominate in yet — a fractional Byte reads worse than the raw co
 small), then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own
 `KB`..`QB` symbols with an "i" (pool Memory Capacity end bounds are evenly divisible by
 `BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Capacity always renders in its
-own unit (picked off `capacity` itself). The balance shares that SAME unit as long as doing so
-wouldn't floor it to a nonzero fraction below 1 (e.g. "0.488 KiB") — a balance never reads in a
-coarser unit than its own Buffer. When it WOULD floor below 1 in the shared unit, the balance instead
-self-sizes into its own finer unit (`getMemoryUnit` applied to the balance itself, the same
-self-sizing `formatBitsInNearestUnit` already uses below) — e.g. "30.031 KiB / 1 MiB" rather than a
-bare "0.488 KiB / 1 MiB" fraction. Only when even that self-sized unit still floors below 1 — a
-genuinely sub-Byte balance, since neither unit ladder defines anything smaller than a whole Byte —
-does it fall back to a raw `"N bit(s)"` count instead (`formatMemoryBalance` in
-`ByteFoundryPage/index.jsx`; see `docs/DESIGN_HISTORY.md` for both the original "0.xyz elimination"
-fix and this later narrowing of it). Data Stream balance/Buffer (and the pool Memory Capacity
+own unit (picked off `capacity` itself). The balance (shown separately, in `BalanceText`, from
+Capacity's own `FooterRow` figure — see "Fill-based Speed/Bandwidth multiplier" above) shares that
+SAME unit as long as doing so wouldn't floor it to a nonzero fraction below 1 (e.g. "0.488 KiB") — a
+balance never reads in a coarser unit than its own Buffer. When it WOULD floor below 1 in the shared
+unit, the balance instead self-sizes into its own finer unit (`getMemoryUnit` applied to the balance
+itself, the same self-sizing `formatBitsInNearestUnit` already uses below) — e.g. "30.031 KiB"
+alongside a "1 MiB" capacity, rather than a bare "0.488 KiB" fraction. Only when even that
+self-sized unit still floors below 1 — a genuinely sub-Byte balance, since neither unit ladder
+defines anything smaller than a whole Byte — does it fall back to a raw `"N bit(s)"` count instead
+(`formatMemoryBalanceValue` in `ByteFoundryPage/index.jsx`; see `docs/DESIGN_HISTORY.md` for both the
+original "0.xyz elimination" fix and this later narrowing of it). Data Stream balance/Buffer (and the
+pool Memory Capacity
 start–end label once `byteCreated`) render in **binary** units — `B`/`KiB`/`MiB`/…/`QiB`, step 1024
 (`getMemoryUnit`/`MEMORY_BINARY_UNIT_STEP`) — so `1 KiB = 1024 Bytes = 1.024 KB`, distinct from
 Disks/Data Lake/caches, which stay on the original SI (step 1000) scale (see below). The unit
-conversion (`floorToDecimals`, 3 decimal places — matching `formatAmount`'s own default
-max-fraction-digits) floors rather than rounds, the same never-overstate rationale as
-`formatCurrency` in `engine.js`: an Intl-rounded 8191/8192 bits would otherwise read as "1 KiB"
-one tick before it's actually full. Once `byteCreated`, the tile also shows the current production
+conversion (`floorToDecimals`, `MEMORY_AMOUNT_DECIMAL_PLACES` = 3 decimal places) floors rather than
+rounds, the same never-overstate rationale as `formatCurrency` in `engine.js`: an Intl-rounded
+8191/8192 bits would otherwise read as "1 KiB" one tick before it's actually full. A BALANCE
+specifically (`formatMemoryBalanceValue`'s own `formatMemoryAmountStable` call, and a pool's own
+`formatDiskSizeStable`) always shows all 3 of those decimal places — `Intl.NumberFormat` with
+`minimumFractionDigits`/`maximumFractionDigits` both pinned to `MEMORY_AMOUNT_DECIMAL_PLACES` — rather
+than `formatAmount`'s own default trimming (which every OTHER memory-scaled reading on the page
+still uses, since Capacity/Bandwidth/a Disk's own size are mostly round and slow-changing, where a
+forced ".000" would be noise): a balance changes nearly every tick, so trimming a trailing zero
+would visibly change its own displayed width from one tick to the next for no real reason — "3.578"
+then "5.6" reads as a bigger jump than "3.578" then "5.600" does, even though the underlying
+precision never changed. A true zero is still exempt either way ("0 <unit>", not "0.000 <unit>").
+See `docs/DESIGN_HISTORY.md`. Once `byteCreated`, the tile also shows the current production
 rate. The Tap button itself carries no `$progress`/hidden progressbar of its own — the Data Stream
 tile above already shows the identical bits/Buffer fill, so a second meter on the tap button would
 just duplicate it.

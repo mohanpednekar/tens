@@ -77,7 +77,9 @@ import {
   formatBytes,
   formatCurrency,
   formatDiskSize,
+  formatDiskSizeStable,
   formatMemoryAmount,
+  formatMemoryAmountStable,
   formatMoneyBalance,
   formatOfflineDuration,
   getAutobuyerUnlockCost,
@@ -2434,8 +2436,8 @@ describe('formatMemoryAmount', () => {
   it('never renders a "0.xyz <unit>" fraction — falls back to raw bits instead, regardless of which unit was picked', () => {
     const kib = { symbol: 'KiB', divisor: 1024 }
     // 500 bits in a KiB-sized unit (e.g. a small balance shown alongside a much larger capacity —
-    // see formatMemoryBalance in ByteFoundryPage/index.jsx, which shares one capacity-sized unit
-    // across both numbers) would floor to a nonzero 0.488 — falls back to raw bits instead.
+    // see formatMemoryBalanceValue in ByteFoundryPage/index.jsx, which shares one capacity-sized
+    // unit across both figures) would floor to a nonzero 0.488 — falls back to raw bits instead.
     expect(formatMemoryAmount(500, kib)).toBe('500 bits')
     // 4 bits in a KiB-sized unit floors to a still-nonzero 0.003 at 3 decimals — also falls back.
     expect(formatMemoryAmount(4, kib)).toBe('4 bits')
@@ -2463,6 +2465,46 @@ describe('formatMemoryAmount', () => {
     // equal `bits` itself, so 0.3 lands in the fallback and must floor the same way.
     const bitUnit = { symbol: 'b', divisor: 1 }
     expect(formatMemoryAmount(0.3, bitUnit)).toBe('0 bits')
+  })
+})
+
+describe('formatMemoryAmountStable', () => {
+  it('never trims a trailing zero — a balance that floors to a round decimal still shows all 3 places', () => {
+    // formatMemoryAmount itself would trim this to "5.6 KiB" (Intl.NumberFormat's default
+    // fraction-digit handling) — a fast-changing balance reading "3.578" one tick and "5.6" the
+    // next reads as a bigger jump than actually happened, purely because a digit landed on zero.
+    const kib = { symbol: 'KiB', divisor: 1 }
+    expect(formatMemoryAmountStable(5.6, kib)).toBe('5.600 KiB')
+    expect(formatMemoryAmount(5.6, kib)).toBe('5.6 KiB')
+  })
+
+  it('still floors (never rounds), matching formatMemoryAmount\'s own precision exactly', () => {
+    const kib = { symbol: 'KiB', divisor: 1024 }
+    expect(formatMemoryAmountStable(2047, kib)).toBe('1.999 KiB')
+  })
+
+  it('shares the below-1-in-its-unit raw-bits fallback and the true-zero exemption with formatMemoryAmount', () => {
+    const kib = { symbol: 'KiB', divisor: 1024 }
+    expect(formatMemoryAmountStable(500, kib)).toBe('500 bits')
+    expect(formatMemoryAmountStable(4, kib)).toBe('4 bits')
+    const mib = { symbol: 'MiB', divisor: 1024 * 1024 }
+    expect(formatMemoryAmountStable(0, mib)).toBe('0 MiB')
+    expect(formatMemoryAmountStable(3, mib)).toBe('0 MiB')
+  })
+
+  it('falls back to flooredBitsLabel with no unit, same as formatMemoryAmount', () => {
+    expect(formatMemoryAmountStable(1, null)).toBe('1 bit')
+    expect(formatMemoryAmountStable(2, null)).toBe('2 bits')
+  })
+})
+
+describe('formatDiskSizeStable', () => {
+  it('is formatDiskSize\'s fixed-decimal counterpart — same SI unit, trailing zeros preserved', () => {
+    // 5.6 KB in Bytes (BITS_PER_BYTE-scaled), a round-looking decimal that formatDiskSize itself
+    // would trim to "5.6 KB".
+    const bits = Math.floor(5.6 * 1000) * BITS_PER_BYTE
+    expect(formatDiskSizeStable(bits)).toBe('5.600 KB')
+    expect(formatDiskSize(bits)).toBe('5.6 KB')
   })
 })
 

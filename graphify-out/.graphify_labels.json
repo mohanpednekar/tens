@@ -3,8 +3,16 @@
   "1": "MainPage/index.jsx",
   "2": "layers.js",
   "3": "ByteFoundryPage/index.jsx",
+<<<<<<< HEAD
+  "4": "tokens.js",
+  "5": "getStoragePoolBandwidth",
+||||||| 9ad631f
+  "4": "styled-components",
+  "5": "contrast.js",
+=======
   "4": "styled-components",
   "5": "engine.js",
+>>>>>>> main
   "6": "devDependencies",
   "7": "Economy model",
   "8": "optimize-ai-files/SKILL.md",
@@ -14,12 +22,28 @@
   "12": "session-start.sh",
   "13": "ext-loader.mjs",
   "14": "@playwright/test",
+<<<<<<< HEAD
+  "15": "engine.test.js",
+  "16": "vitest",
+||||||| 9ad631f
+  "15": "getUnlockedStoragePoolCount",
+  "16": "vitest",
+=======
   "15": "getStoragePoolBandwidth",
   "16": "capacitorConfig.test.js",
+>>>>>>> main
   "17": "Automation workflows",
   "18": "package.json",
+<<<<<<< HEAD
+  "19": "provisionDisk",
+  "20": "getDiskLadderSizeBits",
+||||||| 9ad631f
+  "19": "actFoundry",
+  "20": "getStoragePoolBandwidth",
+=======
   "19": "getDataStreamBaseMultiplierPercent",
   "20": "getDiskLadderSizeBits",
+>>>>>>> main
   "21": "setupTests.js",
   "22": "[Unreleased]",
   "23": "Economy model reference",
@@ -47,51 +71,116 @@
   "45": "MAINPAGE_REFERENCE.md",
   "46": "PWA_REFERENCE.md",
   "47": "THEMING_REFERENCE.md",
+<<<<<<< HEAD
+  "48": "ComputePage",
+||||||| 9ad631f
+  "48": "activateComputeBoost",
+=======
   "48": "tickGame",
+>>>>>>> main
   "49": "dependencies",
   "50": "ComputePage/index.jsx",
+<<<<<<< HEAD
+  "51": "engine.js",
+||||||| 9ad631f
+  "51": "engine.test.js",
+=======
   "51": "useIncrementalGame.js",
+>>>>>>> main
   "52": "DevModePage/index.jsx",
   "53": "App.test.jsx",
   "54": "MilestonesPage/index.jsx",
   "55": "browserslist",
+<<<<<<< HEAD
+  "56": "ByteFoundryPage",
+||||||| 9ad631f
+  "56": "pickIntroProductionMilestone",
+=======
   "56": "applyDevGameStateJson",
+>>>>>>> main
   "57": "SettingsPage/index.jsx",
   "58": "InfoPage/index.jsx",
   "59": "Button/index.jsx",
   "60": "scripts",
   "61": "DiskArrayRow/index.jsx",
-  "62": "ByteFoundryPage",
+  "62": "tickGame",
   "63": "bump-version.mjs",
   "64": "App.jsx",
+<<<<<<< HEAD
+  "65": "storage.test.js",
+  "66": "tickComputeMergeBoundary",
+||||||| 9ad631f
+  "65": "isAutoMergeUnlockAvailable",
+  "66": "engine.js",
+=======
   "65": "save-migration/index.js",
   "66": "engine.test.js",
+>>>>>>> main
   "67": "navAttention.js",
   "68": "navAttention.test.js",
+<<<<<<< HEAD
+  "69": "loadSavesMeta",
+  "70": "styled-components",
+||||||| 9ad631f
+  "69": "run-simulation.mjs",
+  "70": "ConfirmDialog/index.jsx",
+=======
   "69": "createInitialGameState",
   "70": "ConfirmDialog/index.jsx",
+>>>>>>> main
   "71": "DataLakePanel/index.jsx",
+<<<<<<< HEAD
+  "72": "getOverclockRequirement",
+||||||| 9ad631f
+  "72": "AppNav/index.jsx",
+=======
   "72": "contrast.js",
+>>>>>>> main
   "73": "clampNonNegative",
   "74": "Testing",
+<<<<<<< HEAD
+  "75": "isTierUnlocked",
+||||||| 9ad631f
+=======
   "75": "pickIntroProductionMilestone",
+>>>>>>> main
   "76": "sentinel.md",
   "77": "palette.md",
   "78": "Design history & rationale",
+<<<<<<< HEAD
+  "79": "save-migration/index.js",
+  "80": "tapPoolBuffer",
+||||||| 9ad631f
+  "80": "AppMenu/index.jsx",
+=======
   "79": "buyGlobalTickspeedMultiplier",
   "80": "isDevModeActive",
+>>>>>>> main
   "81": "backlog-issue-hygiene.sh",
   "82": "bolt.md",
   "83": "epic-407-issue-hygiene.sh",
   "85": "ComputeFlopsPage/index.jsx",
+  "86": "buyTickspeedMultiplier",
   "87": "MainPage",
   "88": "sync-release-milestones.sh",
   "89": "adversarialReviewMarker.js",
   "90": "resolutions",
+<<<<<<< HEAD
+  "91": "src/index.jsx",
+||||||| 9ad631f
+  "91": "react",
+=======
+>>>>>>> main
   "92": "publish-strategy.sh",
   "93": "enable-auto-merge-if-eligible.sh",
   "94": "pr-low-risk-eligible.sh",
   "95": "pr-low-risk-eligible.test.js",
+<<<<<<< HEAD
+  "96": "engine.computeFlops.test.js",
+||||||| 9ad631f
+  "96": "buyGlobalTickspeedMultiplier",
+=======
+>>>>>>> main
   "99": "Era ascension and Eons (#407)",
   "100": "Issue tracking for interactive sessions",
   "104": "README.md",

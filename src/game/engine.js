@@ -2457,8 +2457,8 @@ export const tickFillMultiplierDecay = elapsedSeconds => state => {
     const poolIndex = Number(poolIndexKey)
     const priorBonus = priorPoolBonuses[poolIndexKey]
     // Once a pool's own buffer is completely full, its fill-based multiplier reading is retired —
-    // ByteFoundryPage's gauge switches to that pool's Data Lake overflow-rate reading instead (see
-    // MultiplierGauge's mode="lake"), which shares the SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
+    // ByteFoundryPage's bar switches to that pool's Data Lake overflow-rate reading instead (see
+    // MultiplierBar's mode="lake"), which shares the SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
     // scale specifically so the transition is seamless (both readings meet at exactly 50 —
     // FILL_MULTIPLIER_MIN_PERCENT == DATA_LAKE_OVERFLOW_MAX_PERCENT). A leftover tap bonus riding on
     // top of the now-retired base reading would break that seam — the pre-switch total could sit
@@ -3148,9 +3148,17 @@ const flooredBitsLabel = bits => {
   return `${formatAmount(flooredBits)} bit${flooredBits === 1 ? '' : 's'}`
 }
 
+// This app's guiding precision principle for any unit-scaled memory/disk/cache amount: floor to
+// MEMORY_AMOUNT_DECIMAL_PLACES (3) decimal places within whatever unit was picked — enough to stay
+// meaningful across an entire unit's own range (1 up to just under the next unit's threshold)
+// without being excessive. Shared by formatMemoryAmount (below) and formatMemoryAmountStable
+// (further below) so the two only ever differ in whether a trailing zero gets trimmed, never in
+// how many decimal places are computed in the first place.
+const MEMORY_AMOUNT_DECIMAL_PLACES = 3
+
 export const formatMemoryAmount = (bits, unit) => {
   if (unit) {
-    const scaled = floorToDecimals(bits / unit.divisor, 3)
+    const scaled = floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES)
     // Never show a "0.xyz <unit>" fraction — no significant digit before the decimal. Falls back
     // to the raw bit count instead, the one unit finer than anything either unit ladder offers
     // (both bottom out at whole Bytes, B, with no smaller SI/binary unit defined below it) — see
@@ -3160,6 +3168,28 @@ export const formatMemoryAmount = (bits, unit) => {
     return `${formatAmount(scaled)} ${unit.symbol}`
   }
   return flooredBitsLabel(bits)
+}
+
+// Fixed-decimal counterpart of formatMemoryAmount, for a BALANCE reading specifically (one that
+// changes nearly every tick) rather than a size/cost/capacity figure (mostly round, slow-changing,
+// or exact by design — "1 KB", "100 KB" — where a forced ".000" would be noise, not a fix).
+// formatMemoryAmount's own formatAmount(scaled) call trims a trailing zero via Intl.NumberFormat's
+// default fraction-digit handling, so two balance readings at the identical MEMORY_AMOUNT_DECIMAL_PLACES
+// precision can render at different widths purely because one happens to end in a zero — e.g.
+// "3.578" one tick, "5.6" the next — which reads as a bigger jump than actually happened. This
+// keeps the decimal digit count STABLE (always exactly MEMORY_AMOUNT_DECIMAL_PLACES once ≥ 1 in its
+// unit) so "5.6" renders as "5.600" instead. A true zero still renders bare ("0 <unit>", not
+// "0.000 <unit>"), matching formatMemoryAmount's own zero handling above.
+const fixedMemoryAmountFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: MEMORY_AMOUNT_DECIMAL_PLACES,
+  maximumFractionDigits: MEMORY_AMOUNT_DECIMAL_PLACES,
+})
+export const formatMemoryAmountStable = (bits, unit) => {
+  if (!unit) return flooredBitsLabel(bits)
+  const scaled = floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES)
+  if (scaled > 0 && scaled < 1) return flooredBitsLabel(bits)
+  if (scaled === 0) return `${formatAmount(scaled)} ${unit.symbol}`
+  return `${fixedMemoryAmountFormatter.format(scaled)} ${unit.symbol}`
 }
 
 // Any Memory-denominated amount (capacity, balance, Invest cost, transfer-block cost, the
@@ -3396,6 +3426,12 @@ const getProvisionDiskSeconds = (state, capacityBits) => {
 // this same SI scale originally fixed). A thin, semantically-named alias, kept so call sites read
 // "format this disk's size" rather than reaching for the SI helper directly.
 export const formatDiskSize = formatBitsInNearestSiUnit
+
+// formatDiskSize's fixed-decimal counterpart (see formatMemoryAmountStable above) — used ONLY for
+// a pool's own Memory buffer BALANCE (ByteFoundryPage's BalanceText), which changes nearly every
+// tick; every other SI-scaled Disk reading (Bandwidth, build cost, the disk's own size label) stays
+// on the ordinary trimmed formatDiskSize, since those are mostly round/exact/slow-changing figures.
+export const formatDiskSizeStable = bits => formatMemoryAmountStable(bits, getSiByteUnit(bits))
 
 // Formats a raw bit count (a Disk Cache block, or a whole cache) in its own dedicated bit-scale
 // unit (Kb/Mb/Gb/… — see BIT_UNIT_SYMBOLS/getBitUnit above) rather than formatDiskSize's
