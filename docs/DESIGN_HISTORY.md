@@ -6470,3 +6470,56 @@ container waiting); collection that was frozen mid-merge because the source beca
 resumes and continues instead of freezing forever; the double-stranded case (both source and target
 already stranded) still refuses to merge, unchanged. `yarn test`: 1728/1728 green (+1, a new
 target-stranded-mid-merge regression alongside the four rewritten tests). `yarn build` succeeds.
+
+### A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the "stranded" gate from write-cache entirely
+
+A Devin Review pass on PR #603 (the fix immediately above) caught that moving the stranded check
+from the write cache's SOURCE to its TARGET was itself still too narrow, one hop removed from the
+same mistake: "when an intermediate target is stranded, `canStartDiskWriteCacheMerge` refuses to
+create it. That disk can still feed the next usable size. Tier01 above level 3 therefore blocks
+replenishing the 1 MB array." Concretely — 100 KB is tier01's own LAST disk-ladder step
+(`getDataLakeSubSize` position 3 of 3); once tier01 advances past its own level 3, 100 KB is
+stranded relative to tier01 — but 100 KB is also the fixed SOURCE the write cache needs to ever
+build 1 MB (tier02's own first step). The immediately-preceding fix's target-stranded check saw 100
+KB (as a TARGET, fed from 10 KB) already stranded under tier01 and refused to keep building it at
+all, even though a further, perfectly redeemable 1 MB under tier02 depended on that exact 100 KB
+disk existing. Blocking one hop up from the reported bug just relocated the same starvation to the
+next tier-group boundary instead of fixing it.
+
+**Root cause, reframed.** Every one of the last three fixes (source-stranded, then target-stranded,
+now this one) shared the same false premise: that a disk which can't be redeemed by ITS OWN
+corresponding tier this cycle has "nothing to gain" from being used elsewhere. That premise is
+simply wrong for write-cache specifically, because `disks`/`disksBuiltTotal`/`diskWriteCache` are
+all Prestige-permanent (see "Storage funding rebuilt push→pull" above and "A further Devin Review
+finding..." for how that permanence was itself hard-won) — a container built or filled this cycle
+persists into every future cycle regardless of whether the tier it corresponds to can use it RIGHT
+NOW. There is also no competing use to protect against: the write-cache ladder is a strict single
+chain (source N feeds exactly one target N+1, never a choice among several), so there is never a
+scenario where filling a stranded-relative-to-its-own-tier disk instead of some OTHER use is a worse
+choice — the alternative is always just leaving the source's already-idle full disks sitting
+completely unused. The only place a genuine choice exists is between write-cache and Factory
+redemption wanting the exact same physical disk on the exact same tick — `isDiskRedeemable(source)`
+already covers that, and always did.
+
+**Fix.** Removed every `isDiskStrandedByAdvancedTier` check from `canStartDiskWriteCacheMerge` and
+`isDiskWriteCacheCollectPaused` (and the inline pause check inside `tickDiskWriteCache`'s collect
+loop, which delegates to the latter). Collection now pauses ONLY while the source has an active tier
+claim (`isDiskRedeemable(source)`) — a temporary condition that clears the moment the tier moves off
+that exact level, whether into "too early" (for a size ahead of the tier) or "stranded" (for one
+behind it) territory; neither stops the merge any more. `isDiskStrandedByAdvancedTier` itself is
+unchanged and still exported — `DiskArrayRow` still uses it to render a size's own disks as
+genuinely stranded (a fact about that size's OWN tier-redemption fate, independent of whether
+write-cache is quietly still making use of it) — it simply has no remaining callers inside
+`engine.js` itself.
+
+**Verification.** Rewrote the two tests the immediately-preceding fix had added around target-
+stranded blocking to assert the opposite (a merge starts, and continues mid-collection, even with
+both source and target stranded), and added a new dedicated regression reproducing Devin's exact
+cross-tier-boundary scenario: 100 KB (tier01's last step, stranded) still starts and feeds a merge
+into 1 MB (tier02's first step, exactly redeemable) once tier01 is past level 3 and tier02 sits at
+level 1 — this would have failed under the immediately-preceding fix's target-stranded gate. Also
+rewrote a `prestigeGame` regression test whose premise (a merge "frozen because its source became
+stranded") no longer holds — repurposed it to test the one pause reason that remains: an active tier
+claim on the source, which a real Prestige's purchase-level reset genuinely does clear. `yarn test`:
+1729/1729 green (+1 net: two tests rewritten, one new cross-tier-boundary regression, one existing
+`prestigeGame` test repurposed). `yarn build` succeeds.

@@ -112,16 +112,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - **A disk stranded by an advanced tier could never again feed the write cache, permanently
-  starving every disk size above a pool's smallest one** — after Storage funding became fully
-  automatic and instantaneous (pull-based, see above), a pool's smallest disk size becomes
-  "stranded" (its own tier has moved past the level it requires) within a tick or two of ever being
-  redeemed, since that size has no "too early" state to sit in. `canStartDiskWriteCacheMerge`/
-  `tickDiskWriteCache` previously refused to fold a stranded SOURCE disk into the next size up at
-  all, which meant a size like 10 KB could sit with a full stockpile of 10 KB disks and an empty
-  container forever, never filling. Fixed by checking the write cache's TARGET size for stranded
-  status instead of the source — a stranded disk can no longer be redeemed by its own tier this
-  cycle, so folding it into the array above is exactly the productive use left for it (it is never
-  destroyed either way).
+  starving every disk size above a pool's smallest one (and, one level deeper, every size across a
+  Factory tier-group boundary too)** — after Storage funding became fully automatic and
+  instantaneous (pull-based, see above), a pool's smallest disk size becomes "stranded" (its own
+  tier has moved past the level it requires) within a tick or two of ever being redeemed, since that
+  size has no "too early" state to sit in. `canStartDiskWriteCacheMerge`/`tickDiskWriteCache`
+  previously refused to fold a stranded disk into the next size up at all (first by checking the
+  SOURCE's stranded status, then — after a first fix — the TARGET's), which meant a size like 10 KB
+  could sit with a full stockpile of 1 KB disks and an empty container forever, never filling; a
+  target-based check fixed that case but broke crossing a tier-group boundary (a stranded 100 KB
+  still needed to build 1 MB for the next Factory tier). Fixed by removing the stranded check from
+  write-cache entirely — `disks`/`disksBuiltTotal`/`diskWriteCache` are all Prestige-permanent, so
+  folding a stranded disk upward is never wasted progress even when the next size is also currently
+  stranded. Only an active tier claim on the source (genuine contention with Factory redemption)
+  still pauses a merge.
 - **Reset Byte Foundry's convenience replay could grant unpaid disk passes across repeated resets**
   — `mergeFoundryUpgradeCaps` maximized a size's completed-disk count and its partial pass count as
   two INDEPENDENT axes, so an earlier reset's higher pass count (toward a disk that no longer
