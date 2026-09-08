@@ -139,12 +139,16 @@ onward) is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-
 units — Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via
 **Speed ×2** (Invest) and **Capacity ×2**; a separate fill-based multiplier (never the displayed
 Speed/Bandwidth figures themselves) scales the real delivery rate by buffer fullness and recent taps.
-Disks (`StoragePage`), Data Lakes, and Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**)
-build out from there — every one of them fed pull-based and fully automatically once unlocked, with
-no manual redeem/transfer step. A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav
-**Compute**) reveals at 100 PP. The generator, Disks, Data Lakes, Compute entities, and the
-`mainGameUnlocked` latch itself are all permanent across every real Prestige/Era ascension; only the
-Data Stream balance resets each cycle.
+Disks (`StoragePage`) fill and pull into Factory automatically, with no manual redeem step, and each
+Storage pool's overflow feeds its own Data Lake automatically too — but Boosters, which spend banked
+Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), are a manual
+`buyBooster` action unless the player enables that lake's own optional auto-buy (`autoBuyEnabled`,
+off by default). A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
+reveals at 100 PP. The generator, Disks, Data Lakes, and Compute entities are permanent across every
+real Prestige; Era ascension is a bigger reset (`buildEraIntroReset`) that wipes Disks/Data
+Lakes/Compute entity balances back to scratch while still keeping `byteCreated`, the
+`mainGameUnlocked` latch, and select automation-unlock flags. Only the Data Stream balance resets
+each ordinary cycle.
 
 **Same caveat as above applies here too — every formula, threshold, and UI-rendering detail behind
 this paragraph is deliberately omitted; do not guess at any of it.** Read `CLAUDE.md`'s "Economy
