@@ -749,9 +749,14 @@ Strict three-layer separation:
    "Provision Disk moved back inside its pool card" entry for why it moved there from the shared Data
    Stream section. Each disk array shows every size from `getDiskSizesToShow`, all
    `DISK_ARRAY_LADDER_CAP` (10) slots in one unbroken row. The "queue next build" pin-icon toggle was
-   removed from the UI; `intro.diskBuildQueued`/`queueDiskBuild`/`clearDiskBuildQueue`/
-   `tickQueuedDiskBuild` remain in `engine.js`, implemented and tested but unwired, same posture as
-   Capacity's own `queueIntroCapacityUpgrade`. Every action here or on either dedicated screen stays
+   removed from the UI, but `intro.diskBuildQueued`/`tickQueuedDiskBuild` are unconditionally wired
+   into `tickGame`'s own tick pipeline and live: `provisionDisk` auto-arms `diskBuildQueued` itself
+   whenever a click only partially funds a disk's current pass, so the remaining passes fire
+   themselves as the pool buffer refills, no further click needed (see "Economy model" below).
+   `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as their own UI
+   control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only matter for the
+   narrower "arm the queue before even the first pass is affordable" case. Every action here or on
+   either dedicated screen stays
    gated by the forced priority order (see "Economy model" below). Full field-by-field UI layout:
    `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
    capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
@@ -1190,7 +1195,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1744 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1750 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -1070,6 +1070,41 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     expect(normalizePoolMemoryCapacity(state).intro.poolBuffers[1]).toBe(0)
   })
+
+  it('normalizePoolMemoryCapacity auto-arms diskBuildQueued for a genuinely partial diskProvisionPasses entry left over from before provisionDisk\'s own auto-arm existed', () => {
+    // The 3rd disk needs 3 passes; 1 already banked with diskBuildQueued still false is exactly the
+    // shape a save predating provisionDisk's own auto-arm-on-partial-funding fix would carry — it
+    // would otherwise need one extra manual Provision Disk click to resume auto-continuing.
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+    })
+    expect(state.intro.diskBuildQueued).toBeFalsy()
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskBuildQueued).toBe(true)
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued when the current offer owes nothing (no diskProvisionPasses entry at all)', () => {
+    const state = withIntro(createInitialGameState(), {})
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued for a stale, already-over-required pass count — nothing is left to auto-continue', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued while a build is already in progress', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
@@ -2284,6 +2319,20 @@ describe('isProvisionDiskAvailable', () => {
     }), size100KB * DISK_BUILD_COST_MULTIPLIER)
     expect(isProvisionDiskAvailable(state)).toBe(false)
   })
+
+  it('is true for a stale, already-over-required pass count even with an EMPTY pool buffer — otherwise provisionDisk\'s own self-heal clamp could never run', () => {
+    // The 3rd disk only needs 3 passes now, but this carries a count an older, flat
+    // DISK_BUILD_COST_MULTIPLIER-passes-always version of provisionDisk could have left behind —
+    // already past what's required, and owing nothing further. Without this early check,
+    // isProvisionDiskAvailable's own buffer-size floor would gate out a disk that has nothing left
+    // to fund, making provisionDisk's self-heal branch unreachable behind an empty buffer.
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+    expect(state.intro.poolBuffers?.[1] ?? 0).toBe(0)
+    expect(isProvisionDiskAvailable(state)).toBe(true)
+  })
 })
 
 describe('isComputeUpgradeAvailable', () => {
@@ -3087,6 +3136,23 @@ describe('provisionDisk', () => {
     // there for whatever comes next (e.g. the disk after this one), rather than being consumed or
     // (worse) increased.
     expect(after.intro.poolBuffers[1]).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 3, totalSeconds: FIRST_DISK_SIZE * 3 })
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+  })
+
+  it('self-heals a stale, already-over-required pass count even with an EMPTY pool buffer, not just a topped-off one', () => {
+    // Same over-required scenario as above, but with nothing at all banked in the buffer — this is
+    // the realistic shape of the gap isProvisionDiskAvailable's own early over-required check closes:
+    // without it, this call would never even reach provisionDisk's body.
+    const state = withIntro(createInitialGameState(), {
+      ...bandwidthExhausted,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+    expect(state.intro.poolBuffers?.[1] ?? 0).toBe(0)
+
+    const after = provisionDisk(state)
+    expect(after.intro.poolBuffers?.[1] ?? 0).toBe(0)
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 3, totalSeconds: FIRST_DISK_SIZE * 3 })
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
   })

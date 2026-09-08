@@ -225,7 +225,7 @@ for the array's Nth disk; only the pool's smallest size gets an always-full **re
 Stream → read cache → timed flush to disk when tier allows; the Memory→cache refill is itself
 bandwidth-capped at 10x rate, and the cache→disk flush duration is one cache block at 2x rate) —
 every larger size fills exclusively via write-cache upward merges from the size below (collect from
-Disks at 2x rate, flush into the disk at 2x rate), never its own read cache (running both was
+Disks at 5x rate, flush into the disk at 2x rate), never its own read cache (running both was
 redundant)) — each disk size has a fixed, permanent one-to-one mapping to one tier+level (KB sizes
 → Kilobytes, MB sizes → Megabytes, etc., 1st/2nd/3rd size → that tier's level 1/2/3). Byte Foundry
 funds Byte Factory **pull-based, fully automatically, every tick**, with no player click and no

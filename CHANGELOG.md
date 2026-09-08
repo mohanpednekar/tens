@@ -347,7 +347,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   clear upfront that a multi-pass disk isn't a single-click purchase. Once a click leaves a build
   only partially funded, the remaining passes now fire themselves automatically as the buffer
   refills — no more manual re-clicking between passes; only starting a brand-new disk's build still
-  needs one click.
+  needs one click. A stale, already-over-required pass count (e.g. from a hand-edited save) now
+  completes immediately even with an empty pool buffer, rather than being gated out by Provision
+  Disk's own availability check before it ever got a chance to self-heal; and a save already
+  carrying a genuine partial pass count auto-resumes the auto-continue behavior on load, with no
+  extra click needed to "wake it up."
 - **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
   2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
   cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the

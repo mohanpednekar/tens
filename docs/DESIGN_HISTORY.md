@@ -1,5 +1,51 @@
 # Design history & rationale
 
+### Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08
+
+Devin Review posted 4 findings on PR #608 (the ordinal-scaled Provision Disk pass count + auto-continue
+feature, previous entry below) after two of my own adversarial review rounds had already returned
+APPROVE — both real bugs my own review missed, plus two stale-doc findings:
+
+1. **`isProvisionDiskAvailable` made `provisionDisk`'s own self-heal clamp unreachable.** The clamp
+   (`Math.max(0, passesRequired - alreadyCollected)`, added for a stale over-required
+   `diskProvisionPasses` entry — e.g. banked under an earlier flat-multiplier version of the ladder,
+   or a hand-edited save) only ever runs once `provisionDisk` is actually called — but `provisionDisk`
+   gates its very first line on `isProvisionDiskTurnAvailable`/`isProvisionDiskAvailable`, which
+   unconditionally required the pool buffer to hold at least one pass's worth of bits
+   (`getPoolBufferBits(state, poolIndex) >= size`). A disk that already owes nothing further sitting
+   behind an EMPTY buffer would never reach the clamp at all — the self-heal path was dead code for
+   that realistic case. My own regression test for the self-heal scenario didn't catch this because it
+   happened to seed a non-empty buffer (exactly one pass' worth) rather than an empty one. Fixed by
+   adding an early check to `isProvisionDiskAvailable`: whenever the current offer's collected passes
+   already meet or exceed what's required, it's available regardless of buffer balance, letting
+   `provisionDisk`'s own clamp run and complete the build immediately.
+2. **A save with a genuine partial `diskProvisionPasses` entry from before `provisionDisk`'s own
+   auto-arm-on-partial-funding fix would need one extra manual click to "wake up" auto-continuing.**
+   `provisionDisk` only sets `diskBuildQueued: true` on a fresh call to its own partial-funding branch
+   — a save whose partial pass count predates that behavior wouldn't have the flag set, so
+   `tickQueuedDiskBuild` (which strictly requires `diskBuildQueued`) would sit idle on it until the
+   player re-clicked Provision Disk once. Fixed by folding a small auto-arm check into
+   `normalizePoolMemoryCapacity` (the existing save-load/`setDevState` sanitization pass — see its own
+   `poolBuffers`/`dataLakes.capacityLevel` clamps above): if the currently-offered size has a
+   collected-but-incomplete pass count and `diskBuildQueued` isn't already set, arm it. Chosen over a
+   new standalone normalization function specifically so it rides the same two call sites
+   (`storage.js`'s `mergeState`, `useIncrementalGame.js`'s `setDevState`) `normalizePoolMemoryCapacity`
+   already has, rather than duplicating that wiring.
+3. **`CLAUDE.md`'s Architecture section still described `tickQueuedDiskBuild` as "implemented and
+   tested but unwired"** — stale since the very same PR wired it unconditionally into `provisionDisk`'s
+   own partial-funding branch. Corrected to describe what's actually wired (`tickQueuedDiskBuild`/
+   `diskBuildQueued`, live) vs. what still isn't exposed as its own UI control
+   (`queueDiskBuild`/`clearDiskBuildQueue`, same posture as Capacity's `queueIntroCapacityUpgrade`).
+4. **`AGENTS.md` still said write-cache collects from Disks at "2x"** after the rate was raised to 5x
+   elsewhere in the same PR (`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`) — `AGENTS.md` was never
+   touched during that edit pass since it isn't auto-synced. Corrected to 5x.
+
+New regression tests added for both bugs: `isProvisionDiskAvailable`/`provisionDisk` given a stale
+over-required pass count with an explicitly EMPTY pool buffer (the previous self-heal test only ever
+exercised a topped-off one), and `normalizePoolMemoryCapacity` given a genuine partial pass count with
+`diskBuildQueued` unset, plus negative-case coverage (no entry, already-over-required, mid-build) so
+the auto-arm doesn't fire when it shouldn't. `yarn test`: 1750/1750 green.
+
 ### Two more gaps in Reset Byte Foundry's convenience-replay caps — 2026-09-08
 
 A further round of Devin's automated review on PR #597 caught two more real bugs in the very fix

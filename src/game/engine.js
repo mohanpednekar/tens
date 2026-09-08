@@ -2669,6 +2669,23 @@ export const normalizePoolMemoryCapacity = state => {
       nextIntro.dataLakes = dataLakes
     }
   }
+  // Auto-arm the disk-build queue for a genuinely partial diskProvisionPasses entry that predates
+  // provisionDisk's own auto-arm-on-partial-funding behavior (added alongside ordinal-scaled pass
+  // counts — see docs/DESIGN_HISTORY.md): without this, such a save would sit on a partially funded
+  // disk with diskBuildQueued still false, needing one extra manual Provision Disk click to resume
+  // auto-continuing. Only ever touches the CURRENTLY offered ladder size — a stale entry for some
+  // other, no-longer-current size isn't queueable anyway, since provisionDisk/tickQueuedDiskBuild
+  // always act on getDiskSize(state)'s current offer only.
+  if (!nextIntro.diskBuild && !nextIntro.diskBuildQueued) {
+    const stateForDiskCheck = { ...state, intro: nextIntro }
+    const size = getDiskSize(stateForDiskCheck)
+    const collected = getDiskProvisionPassesCollected(stateForDiskCheck, size)
+    const required = getDiskProvisionPassesRequired(stateForDiskCheck, size)
+    if (collected > 0 && collected < required) {
+      changed = true
+      nextIntro.diskBuildQueued = true
+    }
+  }
   return changed ? { ...state, intro: nextIntro } : state
 }
 
@@ -2774,11 +2791,16 @@ export const getComputeBandwidthSacrificeLabel = state => {
 // isStorageUnlocked; that threshold only governs the button's own UI reveal. Also false once
 // isDiskLadderExhaustedForActivePools — there is no active-pool size left to build, so there is no
 // cost to become newly affordable towards; that's a distinct, permanent state from "not affordable
-// yet" (see ByteFoundryPage, which renders the two differently).
+// yet" (see ByteFoundryPage, which renders the two differently). Also true — regardless of buffer
+// balance — whenever the current size already has enough banked passes to finish outright (a stale
+// over-required diskProvisionPasses entry, e.g. left over from a since-lowered pass requirement):
+// without this, provisionDisk's own self-heal clamp (Math.max(0, passesRequired - alreadyCollected))
+// would be unreachable behind an empty buffer, since this gate runs before that clamp ever executes.
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
+  if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
   const poolIndex = getPoolIndexForDiskSize(size)
   return getPoolBufferBits(state, poolIndex) >= size
 }
