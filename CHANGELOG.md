@@ -24,13 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   showing progress toward the currently-open disk slot ("`<fillBits>` / `<size>`"), always visible
   (even before the lake unlocks, where it reads "Locked · 0 / `<size>`") rather than only a sliver
   on one small disk square.
-- **"Queue next disk build" on Provision Disk** — a small pin-icon toggle next to the Provision Disk
-  button arms the next build to fire itself the instant its own pool buffer can afford it and
-  nothing outranks it in the forced priority order, instead of requiring a click at that exact
-  affordability instant. Especially useful since a disk size never advances the ladder (e.g. 1 KB →
-  10 KB) until 10 separate builds have completed at the current size — 10 affordability instants to
-  catch by hand otherwise. One-shot (re-arm per build); armed state and the underlying queue survive
-  reload and a real Prestige, same permanence as the rest of Storage.
 - **Capacitor foundation (Part of #70)** — `@capacitor/core` + `@capacitor/cli`,
   `capacitor.config.json` (app **Tens**, `webDir: dist`), `yarn build:capacitor`
   (`CAPACITOR=1` → relative Vite base, no PWA plugin), and `.gitignore` entries for
@@ -90,6 +83,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   showing that pool's own Data Lake overflow rate/fill (see "Data Lakes" above).
 
 ### Removed
+- **"Queue next build" pin-icon toggle beside Provision Disk** — the small pin/✕ button that armed
+  auto-firing the next Provision Disk pass is gone from `ByteFoundryPage`. The underlying engine
+  action (`queueDiskBuild`/`clearDiskBuildQueue`/`tickQueuedDiskBuild`, `intro.diskBuildQueued`)
+  remains fully implemented and tested, but no UI control currently arms it — the same posture
+  Capacity's own `queueIntroCapacityUpgrade` already had.
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
   minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
   buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
@@ -113,6 +111,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **Reset Byte Foundry's convenience replay could grant unpaid disk passes across repeated resets**
+  — `mergeFoundryUpgradeCaps` maximized a size's completed-disk count and its partial pass count as
+  two INDEPENDENT axes, so an earlier reset's higher pass count (toward a disk that no longer
+  exists at that count) could combine with a later reset's higher completed-disk count, granting
+  passes the player never actually paid toward whatever disk the replay reaches next. Fixed by
+  treating (completed count, pass count) as one combined position per disk size — same principle as
+  the existing Invest tier+claims lexicographic merge — taking one side's whole pair, not each
+  field's max independently.
+- **Reset Byte Foundry's convenience replay could forget an already fully-funded, mid-timed-build
+  disk entirely** — `provisionDisk` clears a size's pass counter the instant its final pass lands
+  and the timed build starts, but `disksBuiltTotal` only increments once that timer finishes; a
+  Reset landing in between captured neither, silently discarding the whole already-paid-for disk
+  rather than just partial progress. `captureFoundryUpgradeCaps` now credits an in-flight build as
+  one additional completed disk for its size. Both caught by further rounds of Devin's automated
+  review on PR #597.
+- **Reset Byte Foundry's convenience auto-replay stopped short of partial Provision Disk progress**
+  — `captureFoundryUpgradeCaps` recorded each disk size's completed-disk count for
+  `tickFoundryResetConvenience` to auto-replay after a reset, but not any passes already paid
+  toward the next, not-yet-complete disk of that size — so the auto-clicker stopped the instant it
+  matched the pre-reset completed-disk count, silently losing whatever partial funding (up to 9 of
+  10 passes) the player had already banked toward the disk in progress at reset time. Now captured
+  and replayed alongside the completed-disk count. Caught by Devin's automated review on PR #597.
+- **Pool 10 (QB Pool)'s final disk array could never start a single Provision Disk funding pass** —
+  `getStoragePoolMemoryBounds`'s `endBits` formula multiplied by the SI-step power before dividing
+  by `DISK_BUILD_COST_MULTIPLIER`, losing the last IEEE-754 bit at that pool's magnitude
+  (`7.999999999999999e32` instead of `8e32`) and landing the buffer ceiling a hair below its own
+  largest disk's face value — so even a completely full buffer read as 0 affordable passes via
+  `Math.floor(bufferBits / size)`, permanently blocking that array. Dividing first, then
+  multiplying, is exact for all 10 pools. Caught by Devin's automated review on PR #597.
 - **A real Prestige could silently destroy an in-flight write-cache merge or read-cache flush** —
   `intro.diskWriteCache`/`intro.diskReadCacheFlush` reset unconditionally on every real Prestige even
   though the Disks/build state they operate on is otherwise permanent. Combined with the write-cache
@@ -254,6 +281,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Consistent, properly-scaled rate units on Byte Foundry** — the Data Stream's own rate readout
+  now reads e.g. "4 bits/s" / "1 B/s" / "2 KiB/s" (the same binary B/KiB/MiB/… ladder its balance
+  line already uses, scaling up automatically instead of showing an unscaled raw Byte count like
+  "2048 B/s") instead of the old spelled-out "+4 bits/sec" / "+1 Byte/sec", with no leading "+".
+  Pool Bandwidth figures switch from "/sec" to the same short "/s" suffix for consistency.
+- **Data Stream and pool header rows now render inside the same tappable balance button** instead
+  of sitting as a separate header above it — title, fill-multiplier gauge, and Speed/Bandwidth
+  figure are now the first line of the one bordered tap button, with the bits/Buffer (or Memory
+  buffer) balance as its second line, so the whole thing reads as one control. For pool cards,
+  where the header used to also toggle that pool's expand/collapse, that action moved to a new
+  slim chevron (▲/▼) strip rendered just below the merged button.
+- **Trimmed dead space below the Data Stream/pool fill-multiplier gauge** — the dial's SVG canvas
+  used to reserve a full circle's worth of height even though the needle only ever sweeps the top
+  half, leaving a large empty band below the percent label. The canvas now crops to just past the
+  label itself; the dial, needle, and label render at identical coordinates, only the unused canvas
+  beneath them is gone.
+- **Provision Disk's build cost is now paid in 10 installments ("passes") instead of one lump sum**
+  — each pass costs exactly the disk's own face-value size (a 10 KB disk still costs 100 KB total,
+  paid as 10 passes of 10 KB each), so a pool's local buffer only ever needs to hold one pass at a
+  time rather than the disk's full build cost. A click collects as many whole passes as the buffer
+  currently affords (all 10 at once if it already holds the full cost, fewer otherwise, banking the
+  remainder for a later click); the button's label and progress bar reflect passes collected so far
+  while funding is in progress. Total cost is unchanged.
+- **Storage pools now top out at 100x their own base unit instead of 1000x** — e.g. the MB Pool's
+  Memory Capacity now maxes at 100 MB instead of 1 GB (pool 1/KB Pool: 100 KB instead of 1 MB; pool
+  3/GB Pool: 100 GB instead of 1 TB; and so on). Enabled directly by the Provision Disk pass change
+  above: a pool's buffer ceiling only ever needs to fund one pass of its own largest disk (that
+  disk's own face value) now, not the disk's whole 10x build cost, so the ceiling itself shrinks by
+  the same 10x. Data Lake capacity is unaffected — a lake still climbs to 1,000 units at its own max
+  level.
+- **Removed the standalone Data Lake fill bar from each Storage pool card** — the always-visible
+  "`<symbol>` Lake · NN%" tile between the pool's Memory buffer and Provision Disk is gone; the same
+  fill level is already shown by the Data Lake panel's own tile once that pool's card is expanded,
+  so the duplicate copy above the fold added nothing.
 - **Byte Foundry storage funding is now fully automatic (pull-based)** — Storage no longer pushes
   redemption into the Byte Factory tier ladder via a click or an autobuyer gate; instead, every
   tick, Byte Foundry pulls a full, clean-slate (zero purchase-level-progress) matching disk into

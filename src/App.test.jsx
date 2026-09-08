@@ -2427,7 +2427,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // Consumes the full cost (8), leaving the balance at 0; Capacity remains at its starting value.
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/\+1 bit\/sec/i)).toBeInTheDocument()
+  expect(screen.getByText(/^1 bit\/s$/i)).toBeInTheDocument()
 })
 
 test('the Speed ×2 offer stays disabled while the bit balance is below its cost', () => {
@@ -2461,7 +2461,11 @@ test('Invest for Double Production spends its own cost and doubles production wi
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
-  expect(screen.getByText(/\+2 bits\/sec/i)).toBeInTheDocument()
+  // Scoped to the Data Stream region — pool 1's own Bandwidth can coincidentally render the exact
+  // same "2 bits/s" text at this tiny a production rate, since both the binary and SI sub-Byte
+  // fallback formatters use the identical "N bit(s)" wording.
+  const dataStream = screen.getByRole('region', { name: 'Data Stream' })
+  expect(within(dataStream).getByText(/^2 bits\/s$/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
@@ -2573,16 +2577,19 @@ test('the "Data Stream" label is shown on the balance card', () => {
   expect(screen.getByText('Data Stream')).toBeInTheDocument()
 })
 
-test('the Data Stream header shows a plain bits/sec rate below 1 Byte/sec, and switches to a Byte/sec label at/above it', () => {
+test('the Data Stream header shows a plain bits/s rate below 1 B/s, and switches to a B/s label at/above it', () => {
+  // Both assertions are scoped to the Data Stream region — pool 1's own Bandwidth can
+  // coincidentally render the exact same "N bit(s)/s" or "N B/s" text at these tiny production
+  // rates, since both the binary and SI sub-Byte fallback formatters share identical wording.
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
   const { unmount } = render(<App />)
 
-  expect(screen.getByText(/\+4 bits\/sec/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/^4 bits\/s$/i)).toBeInTheDocument()
   unmount()
 
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
   render(<App />)
-  expect(screen.getByText(/\+1 Byte\/sec/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/^1 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Invest for Double Production shows its cost on its own line below the label, with no stray comma', () => {
@@ -2732,8 +2739,8 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
 })
 
 test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit at real pool capacity', () => {
-  // Pool 1's real Capacity end bound (INTRO_CAPACITY_CAP_BITS) is now a clean SI 1 MB
-  // (8,000,000 bits), not a clean binary 1 MiB — see POOL_CAPACITY_SI_STEP in layers.js. The
+  // Pool 1's real Capacity end bound (INTRO_CAPACITY_CAP_BITS) is now a clean SI 100 KB
+  // (800,000 bits), not a clean binary KiB power — see POOL_CAPACITY_SI_STEP in layers.js. The
   // Data Stream card's own balance/Buffer display stays binary regardless, so this real value
   // renders as a plain (non-round) KiB figure rather than a whole MiB — this test pins that
   // actual rendering rather than a synthetic round number, so a future change to either the SI
@@ -2742,14 +2749,14 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('488.281 KiB / 976.562 KiB')
+  expect(balanceBar.closest('section')).toHaveTextContent('48.828 KiB / 97.656 KiB')
 })
 
 test('Data Stream balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
   // A 1-bit deficit (as the original binary-1-MiB-capacity version of this test used) is now
   // below this display's own decimal resolution at the real pool-1 Capacity's new KiB-range
-  // magnitude (976.562 KiB, not a round MiB — see the comment on the previous test): both the
-  // full capacity and a balance just 1 bit short floor to the identical "976.562 KiB" text at 3
+  // magnitude (97.656 KiB, not a round MiB — see the comment on the previous test): both the
+  // full capacity and a balance just 1 bit short floor to the identical "97.656 KiB" text at 3
   // decimal places, since the capacity itself is no longer an exact multiple of the KiB divisor
   // the way the old round-MiB cap was. A meaningfully larger (but still small) deficit still
   // demonstrably floors below the full reading, which is what this test actually verifies.
@@ -2759,10 +2766,10 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = balanceBar.closest('section').textContent
-  expect(balanceText).toContain('/ 976.562 KiB')
+  expect(balanceText).toContain('/ 97.656 KiB')
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: must not round the nearly-full balance up to match the full capacity reading.
-  expect(balanceText).not.toMatch(/(?:^|[^\d.])976\.562 KiB \/ 976\.562 KiB/)
+  expect(balanceText).not.toMatch(/(?:^|[^\d.])97\.656 KiB \/ 97\.656 KiB/)
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -2788,13 +2795,13 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
   expect(balanceBar.closest('section')).toHaveTextContent('4 bits / 1 MiB')
 })
 
-test('Pool header row pairs the pool\'s own Bandwidth with its title on one line, not inside the Memory buffer block below', () => {
+test('Pool header row pairs the pool\'s own Bandwidth with its title on one line', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const heading = within(pool1).getByRole('heading', { level: 3 })
-  const bandwidthText = within(pool1).getByText(/\/sec/)
+  const bandwidthText = within(pool1).getByText(/\/s$/)
   expect(bandwidthText.parentElement).toBe(heading.parentElement)
 })
 
@@ -2839,10 +2846,6 @@ test('the pool gauge switches from the fill-based multiplier to the Data Lake ov
   // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
   // sits at, so the needle does not jump across this transition.
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
-
-  // The Data Lake's own separate fill bar (fed by the buffer's own overflow) starts empty.
-  const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
-  expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
 })
 
 test('the pool gauge stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
@@ -2865,10 +2868,6 @@ test('the pool gauge stays in fill-based-multiplier mode (never switches to the 
   expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
   const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
   expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
-
-  // The Data Lake's own fill bar reads 0 rather than any residual/live-looking value.
-  const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
-  expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
 })
 
 test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplier, leaving the Data Stream\'s untouched', async () => {
@@ -2978,33 +2977,6 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   })
 
-  test('the queue-next-build toggle beside Provision Disk arms/disarms diskBuildQueued on click', async () => {
-    const user = userEvent.setup()
-    // mainGameUnlocked seeded true (and Foundry opened explicitly) rather than relying on the
-    // mandatory-gate render, matching the "tapping a pool's own Memory buffer" test above — this
-    // test's own `await user.click` calls leave enough real time for a live tick to fire, which
-    // would otherwise latch mainGameUnlocked mid-test and navigate away from Foundry. poolBuffers
-    // is deliberately left unseeded (defaults to 0, well under the 1 KB disk's own cost) so
-    // tickQueuedDiskBuild can never actually auto-fire the build mid-test regardless of how many
-    // real ticks elapse — this test only exercises the toggle's own arm/disarm click behavior, not
-    // Provision Disk's affordability.
-    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-
-    const queueButton = screen.getByRole('button', { name: /queue next disk build/i })
-    expect(queueButton).toHaveAttribute('aria-pressed', 'false')
-    expect(queueButton).not.toBeDisabled()
-
-    await user.click(queueButton)
-    const armedButton = screen.getByRole('button', { name: /cancel queued disk build/i })
-    expect(armedButton).toHaveAttribute('aria-pressed', 'true')
-    expect(armedButton).toBe(queueButton)
-
-    await user.click(armedButton)
-    expect(screen.getByRole('button', { name: /queue next disk build/i })).toHaveAttribute('aria-pressed', 'false')
-  })
-
   test('Provision Disk is disabled below its cost, starting at 1 KB', () => {
     // productionMilestoneTierClaims: 2 neutralizes Bandwidth, which otherwise outranks Provision Disk
     // in the forced priority order (see "Byte Foundry" in CLAUDE.md) and would disable Provision for a
@@ -3056,8 +3028,8 @@ describe('Byte Foundry Storage', () => {
     // Stream-style fillable block (see FillableStatCard/BalanceText/StatusText in
     // ByteFoundryPage/index.jsx) rather than a labelled Bandwidth/Capacity/Memory stat row.
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/sec`)
-    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/sec`)
+    expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
+    expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
     expect(pool1).toHaveTextContent(
       `${formatDiskSize(getPoolBufferBits(savedState, 1))} / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`
     )

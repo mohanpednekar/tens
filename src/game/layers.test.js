@@ -294,15 +294,15 @@ describe('constants', () => {
     expect(POOL_CAPACITY_SI_STEP).toBe(1000)
   })
 
-  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 4,000,000 bits (500 KB SI) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(4000000)
+  it('INTRO_COMPUTE_CORE_UNLOCK_CAPACITY is 400,000 bits (50 KB SI) — half of pool 1\'s INTRO_CAPACITY_CAP_BITS', () => {
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(400000)
     expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP)
-    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 500_000)
+    expect(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY).toBe(BITS_PER_BYTE * 50_000)
   })
 
-  it('INTRO_CAPACITY_CAP_BITS is 8,000,000 bits (exactly 1 MB SI) — large enough to afford building pool 1\'s own largest (100 KB) Disk', () => {
-    expect(INTRO_CAPACITY_CAP_BITS).toBe(8000000)
-    expect(INTRO_CAPACITY_CAP_BITS).toBe(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 2)
+  it('INTRO_CAPACITY_CAP_BITS is 800,000 bits (exactly 100 KB SI) — large enough to afford one Provision Disk funding pass of pool 1\'s own largest (100 KB) Disk', () => {
+    expect(INTRO_CAPACITY_CAP_BITS).toBe(800000)
+    expect(INTRO_CAPACITY_CAP_BITS).toBe((BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 2) / 10)
   })
 
   it('INTRO_CAPACITY_DOUBLING_STEP is 2 (shared binary Capacity ladder spacing)', () => {
@@ -333,10 +333,12 @@ describe('constants', () => {
       startBits: INTRO_STARTING_CAPACITY,
       endBits: INTRO_CAPACITY_CAP_BITS,
     })
-    // Pool 2 (Megabyte pool) ends at exactly 1 GB (SI), pool 3 (Gigabyte pool) at exactly 1 TB —
-    // and so on, matching Storage's own SI display convention throughout.
-    expect(getStoragePoolMemoryBounds(2).endBits).toBe(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 3)
-    expect(getStoragePoolMemoryBounds(3).endBits).toBe(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 4)
+    // Pool 2 (Megabyte pool) ends at exactly 100 MB (SI), pool 3 (Gigabyte pool) at exactly 100 GB
+    // — and so on, matching Storage's own SI display convention throughout. 10x smaller than a
+    // plain POOL_CAPACITY_SI_STEP ** (index + 1) Byte bound (see DISK_BUILD_COST_MULTIPLIER/
+    // Provision Disk's own funding-pass split in engine.js for why).
+    expect(getStoragePoolMemoryBounds(2).endBits).toBe((BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 3) / 10)
+    expect(getStoragePoolMemoryBounds(3).endBits).toBe((BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 4) / 10)
   })
 
   it('MEMORY_BINARY_UNIT_STEP is 1024 (Data Stream Buffer display\'s own binary unit ladder — 1 KiB = 1024 Bytes; no longer governs where a pool\'s Capacity end bound itself lands, see POOL_CAPACITY_SI_STEP)', () => {

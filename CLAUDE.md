@@ -744,8 +744,9 @@ Strict three-layer separation:
    Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
    **converted to Bytes** (`getStoragePoolBandwidth` —
    `Math.min(rate, Math.sqrt(capacity / BITS_PER_BYTE) * BITS_PER_BYTE)`, both sides still in
-   bits/sec for internal consistency — a 1 MB-capacity pool caps at 1 KB/s, a 1 GB-capacity pool at
-   ~32 KB/s, a 1 TB-capacity pool at 1 MB/s), so a pool with a small Capacity window can lag behind
+   bits/sec for internal consistency — a 100 KB-capacity pool caps at ~250 B/s, a 100 MB-capacity
+   pool at 8 KB/s, a 100 GB-capacity pool at 250 KB/s, both SI-clean-snapped from the raw sqrt), so
+   a pool with a small Capacity window can lag behind
    the raw rate once production outgrows it. **Storage pools display in SI units for all purposes**
    (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike Memory
    Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below); while
@@ -759,24 +760,28 @@ Strict three-layer separation:
    the next pool. Runs AFTER tier01's own bootstrap conversion (`tickIntroAutoInvest`) and Queued
    Capacity each tick, so pool funding never competes with unlocking the main game or a Capacity
    doubling in flight. `getPoolBufferCapacity` equals the pool's own Capacity exactly (not some
-   smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
-   an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
-   size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
-   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
-   `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
-   tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
-   a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
-   own Capacity — see above), unlabelled. Always a real `<button>` (`actions.tapPoolBuffer(poolIndex)`,
-   `$tappable`) — tapping it boosts that one pool's own fill-based multiplier bonus (see "Fill-based
-   Speed/Bandwidth multiplier" below); it's rendered as a sibling of `PoolSummaryButton`, not nested
-   inside it, since a `<button>` can't nest inside another `<button>`.
-   Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no index number or tier
-   name — laid out in a shared `SectionHeaderRow` (a 3-column grid: title top-left, the
-   `MultiplierGauge` top-middle, the pool's own Bandwidth figure top-right — see "Fill-based
-   Speed/Bandwidth multiplier" below for the gauge itself), so a pool's throughput reads at a glance
-   without expanding to the buffer detail — centered, since the symbol alone already uniquely identifies the pool (`aria-label="pool
-   `<n>`"` on the card and `aria-label="expand/collapse pool `<n>`"` on its summary button still carry
-   the numeric index for a11y/tests, independent of the visible text). One `PoolCard` renders for each
+   smaller fraction) — a pool's own largest disk's FACE VALUE lands exactly at that ceiling, so the
+   buffer, once full, can always fund one Provision Disk funding pass of even that largest disk
+   (`DISK_BUILD_COST_MULTIPLIER`/`provisionDisk` in `engine.js` — the full build cost is paid across
+   `DISK_BUILD_COST_MULTIPLIER` such passes, not this buffer alone in one lump sum); any meaningfully
+   smaller buffer ceiling would leave that size unable to fund even a single pass — see
+   `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary is ONE full-width `FillableStatCard`
+   button (`actions.tapPoolBuffer(poolIndex)`, `$tappable`) — the same reused component/visual style
+   as the Data Stream card's own tile (fill-gradient background, `BalanceText`, a hidden
+   `role="progressbar"` for a11y) rather than a bespoke bar — containing BOTH the pool's header
+   (title/gauge/Bandwidth, see below) and the buffer balance line (the buffer/capacity fraction,
+   equal to the pool's own Capacity — see above) inside the same button, so tapping anywhere in it
+   boosts that one pool's own fill-based multiplier bonus (see "Fill-based Speed/Bandwidth
+   multiplier" below). Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no
+   index number or tier name — laid out in a shared `SectionHeaderRow` (a 3-column grid: title
+   top-left, the `MultiplierGauge` top-middle, the pool's own Bandwidth figure top-right — see
+   "Fill-based Speed/Bandwidth multiplier" below for the gauge itself) as the button's own first
+   line, so a pool's throughput reads at a glance without expanding to the buffer detail — centered,
+   since the symbol alone already uniquely identifies the pool. Expand/collapse lives on a separate,
+   slim `ExpandToggleButton` strip (a plain ▲/▼ chevron) rendered as a sibling right below the tap
+   button, not nested inside it, since a `<button>` can't nest inside another `<button>` — its
+   `aria-label="expand/collapse pool `<n>`"` (plus `aria-label="pool `<n>`"` on the card itself)
+   still carries the numeric index for a11y/tests, independent of the visible chevron glyph. One `PoolCard` renders for each
    VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
    `getUnlockedStoragePoolCount`'s own disk-build-based count and how many pools' own capacity
    threshold `getPoolCapacityUnlockThresholdBits` the Data Stream's raw Capacity (`intro.capacity`)
@@ -815,9 +820,11 @@ Strict three-layer separation:
    and independent of capacity); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. A small pin-icon `QueueToggleButton` sits beside Provision Disk
-   (`ProvisionDiskRow` wraps the pair) arming/disarming `intro.diskBuildQueued` — see "Economy
-   model" below's Disks section for the full mechanic. Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
+   slots in one unbroken row. The "queue next build" pin-icon toggle that used to sit beside
+   Provision Disk was removed from the UI; `intro.diskBuildQueued`/`queueDiskBuild`/
+   `clearDiskBuildQueue`/`tickQueuedDiskBuild` remain in `engine.js` and fully tested (same
+   "implemented but not wired into any control" posture as Capacity's own `queueIntroCapacityUpgrade`
+   — see "Economy model" below's Disks section for the full mechanic). Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
    action — here or on either dedicated screen — stays gated by the forced priority order (see
    "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
@@ -1081,7 +1088,9 @@ real per-tick amount delivered into the buffer, boosted temporarily by tapping (
 hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierGauge` needle dial; for a pool
 specifically, once that pool's buffer is full AND its Data Lake is ready to receive overflow
 (`isDataLakePoolReady`), the same gauge switches `mode="lake"` to show that pool's Data Lake overflow
-RATE instead (a separate `FillableStatCard` bar tracks the lake's fill LEVEL). Full formula/UI detail,
+RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
+expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
+itself). Full formula/UI detail,
 including the tap-bonus headroom clamping and the lake-mode handoff, is in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or
@@ -1098,14 +1107,19 @@ decade-power shape independently. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at h
 end bound. Full formulas, the `getCoreEarnTimeSeconds` raw-`intro.capacity` pacing caveat, and every
 constant name are in `docs/ECONOMY_REFERENCE.md`.
 
-**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/`diskBuildQueued`,
-`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickDiskAutoFill`/`isDiskPullEligible`/`tickDiskPull`/
-`tickDiskLevelOneCachePull` in `engine.js`) are a real storage medium, not tier01-only: a size's
-ladder (1 KB → 10 KB → 100 KB, …, `DISK_LADDER_SIZE_MULTIPLIER`) advances every
-`DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the highest size any unlocked pool can
-fund. `provisionDisk` spends the cost and takes real build time (scaled by production rate,
-snapshotted at start); a pin-icon **queue toggle** (`diskBuildQueued`) can auto-start the next
-build. The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
+**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/
+`diskProvisionPasses`/`diskBuildQueued`,
+`getDiskSize`/`getDiskCost`/`getDiskProvisionPassesCollected`/`provisionDisk`/`tickDiskAutoFill`/
+`isDiskPullEligible`/`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js`) are a real storage
+medium, not tier01-only: a size's ladder (1 KB → 10 KB → 100 KB, …, `DISK_LADDER_SIZE_MULTIPLIER`)
+advances every `DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the highest size any
+unlocked pool can fund. `provisionDisk` collects the cost in `DISK_BUILD_COST_MULTIPLIER` (10)
+passes of the disk's own face-value size each — so a pool's buffer only ever needs to hold one pass
+at a time, not the whole cost — then takes real build time once fully funded (scaled by production
+rate, snapshotted at start); a **queue toggle** (`diskBuildQueued`/`queueDiskBuild`/
+`tickQueuedDiskBuild`) can auto-fire each pass as it becomes affordable, though no UI control
+currently arms it (removed — see "Architecture" above; the engine action stays implemented and
+tested). The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
 `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed
@@ -1260,7 +1274,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1717 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1727 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

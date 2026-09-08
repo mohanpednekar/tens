@@ -160,8 +160,9 @@ switches from the fill-based multiplier reading to that pool's own Data Lake ove
 (progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as that disk
 fills, back to 50% once it completes, drawn in `theme.color.info` on the SAME 0–200% scale so the
 needle doesn't jump at the transition — both readings hit 50 at that exact boundary by design; see
-"Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) gets its own
-separate fill bar below the Memory buffer tile instead. In its default multiplier mode the fill-based
+"Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) is shown by
+`DataLakePanel`'s own fill tile once that pool's card is expanded, not a second always-visible bar on
+the pool card itself. In its default multiplier mode the fill-based
 arc reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
 the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
 pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
@@ -173,13 +174,14 @@ Stream tile's own balance/capacity figure. Capacity requires a full Buffer, drai
 now, so it can grow past a pool's own ceiling once reached. Each Storage pool instead derives its
 OWN Capacity (`getStoragePoolCapacity`) from that same doubling count via a DECADE-POWER-OF-10
 ladder — deliberately coarser than Bandwidth's own finer SI-clean sequence below — 1 KB, 10 KB,
-100 KB, 1000 KB (pool 1's own ceiling), and so on for higher pools (`getDecadePowerEquivalentBits`,
+100 KB (pool 1's own ceiling), and so on for higher pools (`getDecadePowerEquivalentBits`,
 closed-form: `10 ** floor(N * log10(2))` Bytes off the same robust doubling-step `N` count
 `getSiCleanEquivalentBits` computes), clamped to that pool's own window — flat within a decade,
 jumping straight to the next decade the instant `intro.capacity` crosses it, with no intermediate
-steps. Each decade step exactly funds the disk-build cost one step behind it (e.g. crossing into
-"10 KB" Capacity funds a 1 KB disk's own 80,000-bit build cost) — deliberate, so a pool's buffer is
-always exactly far enough ahead to afford its own next disk the moment the threshold is crossed. A
+steps. Each decade step exactly funds the FACE VALUE of the disk-build one step behind it (e.g.
+crossing into "10 KB" Capacity funds a single Provision Disk funding pass toward a 1 KB disk, not
+that disk's own 80,000-bit full build cost) — deliberate, so a pool's buffer is always exactly far
+enough ahead to fund its own next disk's pass the moment the threshold is crossed. A
 pool's Bandwidth (`getStoragePoolBandwidth`) is unaffected — it still follows the same raw
 production rate the Data Stream tile's own rate figure uses, through the finer SI-clean transform
 (`getSiCleanEquivalentBits`, its own closed-form helper, distinct from Capacity's decade-power one
@@ -196,7 +198,7 @@ unlocked pool's own Bandwidth is the shared production rate as above (both sides
 bits/sec internally — Storage pools display in SI units for all purposes, unlike the Data Stream
 card's own balance/Buffer display, which stays binary). A pool's own Capacity end bound itself is
 also SI-aligned (`POOL_CAPACITY_SI_STEP`, not the shared ladder's binary `MEMORY_BINARY_UNIT_STEP`) —
-pool 1 caps at exactly 1 MB, pool 2 at 1 GB, pool 3 at 1 TB, … Each pool also owns a small local
+pool 1 caps at exactly 100 KB, pool 2 at 100 MB, pool 3 at 100 GB, … Each pool also owns a small local
 **buffer** (`intro.poolBuffers`) that
 every bit-costing Storage action for that pool spends from exclusively (Provision Disk's cost, the
 read-cache fill) — the shared Buffer only tops it up (`tickPoolBufferFill`, bandwidth-limited,
@@ -206,7 +208,10 @@ buffer's own ceiling matches that pool's Capacity exactly (not a smaller fractio
 operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
 targets the next disk size and renders INSIDE the pool card matching that size (not standalone in
 the Data Stream section), with a fallback copy below the Data Stream card for the rare case where
-the disk ladder has outrun the last currently-visible pool card. Only the largest unlocked pool is expanded; earlier pools remain as
+the disk ladder has outrun the last currently-visible pool card. Its cost is paid in
+`DISK_BUILD_COST_MULTIPLIER` (10) passes of the disk's own face-value size each
+(`intro.diskProvisionPasses`) rather than as one lump sum, so a pool's buffer only ever needs to hold
+one pass at a time; only once all 10 land does the real timed build start. Only the largest unlocked pool is expanded; earlier pools remain as
 compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a
 fresh disk takes exactly the time to fill it at 1x Memory bandwidth (current production rate), ×N
 for the array's Nth disk; only the pool's smallest size gets an always-full **read cache** (Data

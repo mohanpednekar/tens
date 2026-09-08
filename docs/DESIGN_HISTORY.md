@@ -1,5 +1,147 @@
 # Design history & rationale
 
+### Two more gaps in Reset Byte Foundry's convenience-replay caps — 2026-09-08
+
+A further round of Devin's automated review on PR #597 caught two more real bugs in the very fix
+just landed for the partial-pass replay gap (previous entry below), both in the same
+`captureFoundryUpgradeCaps`/`mergeFoundryUpgradeCaps` machinery:
+
+1. **`mergeFoundryUpgradeCaps` maximized completed-disk count and pass count independently.** A
+   size's `(disksBuiltTotal, diskProvisionPasses)` pair is ONE position, not two orthogonal values —
+   exactly like `productionMilestoneTier`/`productionMilestoneTierClaims` already treats Invest
+   progress as one lexicographic position rather than maximizing tier and claims separately. Taking
+   the max of each independently could combine an EARLIER reset's higher pass count (banked toward
+   a disk that, at that count, no longer exists once more disks complete) with a LATER reset's
+   higher completed-disk count — e.g. reset #1 at 2 disks + 9/10 passes, reset #2 at 5 disks + 0
+   passes; independent maximization wrongly produces "5 disks + 9 passes," a combination the player
+   never actually had, granting 9 unpaid passes toward whatever disk the replay reaches once caught
+   up to 5. Fixed by unioning every size key from both snapshots and, per size, taking one side's
+   WHOLE `(built, passes)` pair — the side with more completed disks, tie-broken by more passes —
+   never mixing fields across sides.
+2. **`captureFoundryUpgradeCaps` lost an already fully-funded, mid-timed-build disk entirely.**
+   `provisionDisk` clears `diskProvisionPasses[size]` the instant the 10th pass lands and starts the
+   timed build (`intro.diskBuild`), but `disksBuiltTotal[size]` only increments once that timer
+   actually finishes (`tickProvisionDisk`). A Reset landing in that window — all 10 passes paid,
+   build in flight, not yet complete — captured neither the (now-cleared) pass count nor the
+   (not-yet-incremented) disk count, so the whole disk's already-paid cost vanished from the cap,
+   not just its partial progress. Fixed by crediting `intro.diskBuild.size` (if any) as one
+   additional completed disk in the snapshot.
+
+Both caught by inspection, not by test failure — the existing/prior test suite exercised neither the
+repeated-reset merge collision nor the mid-build-reset timing window. New tests added for both:
+`mergeFoundryUpgradeCaps` given the exact 2-disks-9-passes / 5-disks-0-passes scenario above, and
+`captureFoundryUpgradeCaps` given a seeded `intro.diskBuild` alongside an EXISTING `disksBuiltTotal`
+entry for that same size, asserting the `+1` credit correctly adds to it (2 → 3) rather than
+overwriting it. `yarn test`: 1727/1727 green.
+
+### Reset Byte Foundry's convenience replay didn't cover partial Provision Disk passes — 2026-09-08
+
+A second Devin Review finding on PR #597: `resetByteFoundry`'s convenience auto-replay
+(`tickFoundryResetConvenience`, driven by a `foundryResetCaps` snapshot from
+`captureFoundryUpgradeCaps`) existed specifically so a Reset doesn't feel like losing everything —
+Combine/Invest/Provision Disk all auto-fire again after a reset, up to whatever the player had
+before. But the disk-build cap only ever tracked `disksBuiltTotal` (fully COMPLETED disks) — once
+this PR split Provision Disk's payment into `DISK_BUILD_COST_MULTIPLIER` passes, a player could
+have several passes already banked toward the NEXT, not-yet-complete disk at the moment they hit
+Reset, and the replay had no way to know that: `isDiskBuildBelowCap` stopped the instant
+`disksBuiltTotal[size]` matched its own pre-reset count, silently discarding up to 9 of 10 already-
+paid passes toward whatever disk was in progress.
+
+Fixed by extending the same capture/merge/replay pattern already used for `disksBuiltTotal` to
+`diskProvisionPasses`: `captureFoundryUpgradeCaps` now also snapshots per-size pass counts,
+`mergeFoundryUpgradeCaps` takes the max per size (same as disk counts), and `isDiskBuildBelowCap`
+falls through to a passes-below-cap check once the completed-disk count already matches. Consistent
+with the existing mechanism's own nature — a real-time auto-clicker, not an instant credit — the
+fix costs no new complexity or design tradeoff; it simply completes coverage the pass-funding split
+should have carried into this snapshot from the start.
+
+### Pool 10's buffer ceiling landed a ULP below its own largest disk's face value — 2026-09-08
+
+Devin's automated review on PR #597 flagged a real bug in `getStoragePoolMemoryBounds`'s `endBits`
+formula (introduced by the very same PR, in the entry directly below this one): computing
+`(BITS_PER_BYTE * (POOL_CAPACITY_SI_STEP ** (index + 1))) / DISK_BUILD_COST_MULTIPLIER` — multiply
+first, divide after — loses the last IEEE-754 bit at pool 10's ~1e32 magnitude
+(`7.999999999999999e32` where exact math gives `8e32`), landing the buffer ceiling a hair BELOW
+`getDiskLadderSizeBits(30)`, pool 10's own largest disk's face value. Since `provisionDisk` gates a
+funding pass on `Math.floor(bufferBits / size) >= 1`, even a completely, permanently full buffer
+would floor to 0 affordable passes — pool 10's (QB Pool's) largest disk array could never start a
+single pass, forever. The new "FACE VALUE" invariant test the same PR added only looped
+`poolIndex` 1 through 8, so it never exercised pool 10 at all; worse, its `toBeCloseTo(1, 9)` RATIO
+comparison wouldn't have caught this regardless, since a ULP-sized shortfall passes that tolerance
+trivially — the actual invariant that matters is the hard `Math.floor` cutoff `provisionDisk` uses,
+not how close the ratio is to 1.
+
+Fix: reorder to divide `BITS_PER_BYTE` by `DISK_BUILD_COST_MULTIPLIER` FIRST, then multiply by the
+SI-step power — `(BITS_PER_BYTE / DISK_BUILD_COST_MULTIPLIER) * (POOL_CAPACITY_SI_STEP ** (index +
+1))`. Verified numerically (both directly in Node and via the widened test) exact or within a few
+ULPs above 1 for every pool 1 through 10 (`DATA_LAKE_TIER_COUNT`), never below. The pre-existing
+`getStoragePoolMemoryBounds` test was widened from a hardcoded `poolIndex <= 8` loop to
+`poolIndex <= DATA_LAKE_TIER_COUNT`, with a second, functional assertion alongside the existing
+ratio one: `Math.floor(endBits / largestDiskFaceValue)` must be `>= 1` for every pool — the actual
+invariant `provisionDisk` depends on, which the ratio-only check couldn't have caught. Notably, the
+OLD (pre-this-PR) formula — `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (index + 1)`, sized to fund
+the disk's full `DISK_BUILD_COST_MULTIPLIER`-times build cost in one lump sum rather than one pass —
+had the identical precision problem at pool 10 (verified: an exact `8e33` ceiling against a full
+build cost that rounds to `8.000000000000001e33` — a ULP ABOVE 8e33 this time, not below, but
+`Math.floor(8e33 / 8.000000000000001e33)` still floors to `0`), so this wasn't a regression the
+pass-funding PR introduced from scratch; it just never had a test that would have caught it before
+now.
+
+### Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08
+
+Three related interactive-session changes to Byte Foundry Storage, landed together because the
+first directly enables the second:
+
+1. **Provision Disk now pays its build cost in `DISK_BUILD_COST_MULTIPLIER` (10) separate passes**
+   of the disk's own face-value size each, instead of the whole 10x cost in one lump sum
+   (`intro.diskProvisionPasses`, `getDiskProvisionPassesCollected`, both in `engine.js`). A call to
+   `provisionDisk` collects as many WHOLE passes as the pool's own local buffer currently affords in
+   that one call — a buffer already holding the full cost still completes all 10 passes and starts
+   the timed build in a single call, exactly as before, so every existing single-payment test case
+   kept passing unchanged; a smaller buffer banks a partial installment and leaves the rest for a
+   later call. Total cost is unchanged; only how it's paid changed.
+2. **Pool Memory Capacity end bounds (`getStoragePoolMemoryBounds`/`INTRO_CAPACITY_CAP_BITS` in
+   `layers.js`) shrunk 10x** — pool 1 (KB Pool) from 1 MB to 100 KB, pool 2 (MB Pool) from 1 GB to
+   100 MB, and so on (`(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)) /
+   DISK_BUILD_COST_MULTIPLIER`). This was only safe to do BECAUSE of (1): the old ceiling was sized
+   to exactly fund a pool's largest disk's own FULL 10x build cost in one sitting (a pool's buffer
+   had nowhere else to draw a lump-sum payment from); once that payment split into passes, the
+   buffer only ever needs to hold ONE pass — the disk's own face value — so the ceiling could drop
+   to match that smaller requirement instead. The pool's own decade-power Capacity ladder
+   (`getDecadePowerEquivalentBits`, unchanged) still climbs 1 KB → 10 KB → 100 KB — it simply now
+   gets clamped one decade step earlier by `getStoragePoolCapacity`'s existing `Math.min(...,
+   ceilingBits)`, with no change needed to the ladder itself. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`
+   (defined as half of `INTRO_CAPACITY_CAP_BITS`) scaled down 10x along with it, unchanged in
+   formula. Data Lake capacity (`DATA_LAKE_CAPACITY_BY_LEVEL`, maxing at 1,000 units per lake) is a
+   fully independent mechanic and was deliberately left untouched.
+3. **The "queue next build" pin-icon toggle was removed from `ByteFoundryPage`** (the
+   `QueueToggleButton`/`ProvisionDiskRow` wrapper). `intro.diskBuildQueued`/`queueDiskBuild`/
+   `clearDiskBuildQueue`/`tickQueuedDiskBuild` remain fully implemented and tested in `engine.js` —
+   removing the button just means no UI control currently arms them, the same posture Capacity's own
+   `queueIntroCapacityUpgrade` already had (see the "`diskBuildQueued` IS wired to an actual UI
+   control" entry earlier in this file for when the toggle was originally added).
+
+Also removed the standalone Data Lake fill-percentage tile that used to render, always visible,
+between a pool's Memory-buffer tile and its Provision Disk button on `ByteFoundryPage` — the
+identical fill level was already shown by `components/DataLakePanel`'s own `LakePoolTile` once that
+pool's card is expanded; the always-visible copy was pure duplication.
+
+**Test fallout from the Capacity shrink.** Every hardcoded absolute bit-count/Byte/KiB literal
+tuned to the OLD 1 MB/1 GB/1 TB pool boundaries needed updating to the new 100 KB/100 MB/100 GB
+ones across `layers.test.js` and `engine.test.js` — the pool-1-Capacity-climb test, the
+pickIntroCapacityMilestone unclamped-raw-capacity test, the pool-8 SI-clean-at-large-magnitude
+test, the lower-pool-bandwidth-fixed test, the sqrt-Capacity Bandwidth-cap test, and the entire
+Data Lake overflow-fill describe block (whose exponential-taper closed-form expectations all
+depend on pool 1's Bandwidth, which itself dropped from 8,000 to 2,000 bits/sec once pool 1's
+Capacity ceiling — and therefore its `sqrt(Capacity)` Bandwidth cap — shrunk). `App.test.jsx`'s two
+Data Stream binary-unit-display tests needed their expected KiB text updated too (the binary
+display of the same, now 10x smaller, `INTRO_CAPACITY_CAP_BITS` value naturally renders as
+different KiB figures). `yarn test`: 1724/1724 green (including a follow-up test added for
+`tickQueuedDiskBuild` collecting a single partial pass while staying armed). `yarn build` succeeds.
+Verified visually via a `yarn dev` + Playwright check that the KB Pool's Memory buffer now caps at
+"100 KB" (matching the new 100x-smaller-than-Data-Lake-capacity ceiling) and that the pin-icon
+toggle no longer renders.
+
 ### Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04
 
 Player feedback on the just-shipped Reclaim/Forfeit mechanics (previous entries) pointed out that

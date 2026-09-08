@@ -3,10 +3,10 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeCurrentDiskFillFraction, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
-import { BITS_PER_BYTE, COMPUTE_ENTITY_CAP, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { formatBitsInNearestUnit, formatDiskSize, formatMemoryAmount, getComputeBandwidthSacrificeField, getComputeBandwidthSacrificeLabel, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionMilestoneCost, getIntroProductionMilestoneMaxClaims, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isBandwidthAvailable, isBandwidthTurnAvailable, isComputeFundedBandwidthAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { COMPUTE_ENTITY_CAP, DISK_BUILD_COST_MULTIPLIER, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
-import styled, { useTheme } from 'styled-components'
+import styled from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -105,30 +105,6 @@ const MilestonesRow = styled.div`
   }
 `
 
-// Groups the Provision Disk button with its small "queue next build" toggle so the toggle sits
-// beside it rather than stacking full-width like every other ActionsRow child — the toggle is a
-// secondary aid, not a peer action.
-const ProvisionDiskRow = styled.div`
-  align-items: stretch;
-  display: flex;
-  gap: ${props => props.theme.space.sm};
-  width: 100%;
-
-  > button:first-child {
-    flex: 1;
-    min-width: 0;
-  }
-`
-
-// Small secondary control, visually subordinate to the Provision Disk button it sits beside — same
-// "plain icon toggle rather than a costed action button" shape MainPage's own autobuyer
-// PauseToggleButton uses (see #171).
-const QueueToggleButton = styled(Button)`
-  font-size: 0.75em;
-  min-width: 0;
-  padding: 0.3em 0.6em;
-`
-
 // Speed ×2's two-line content: the symbol/label/multiplier on top, its cost — what it actually
 // spends — on its own line below, in smaller/muted text, rather than crammed
 // inline in parentheses. A plain column flex wrapper (not components/Button's own `ButtonContent`,
@@ -164,32 +140,32 @@ const DataStreamCard = styled(StatCard)`
   gap: ${props => props.theme.space.md};
 `
 
-// Structured header + stats block, replacing the earlier single concatenated text line — matches
-// the tier row's own name/stat layout convention elsewhere in the app (see MainPage's TierName/
-// OwnedText/ProductionText) rather than staying a plain sentence. Wraps just SectionHeaderRow
-// (title/gauge/Bandwidth) — the pool's own Memory buffer block used to render inside this same
-// button too, but it's now a separate tappable control of its own (see FillableStatCard below /
-// tapPoolBuffer in game/engine), and a <button> can't nest inside another <button>.
-const PoolSummaryButton = styled.button`
+// Expand/collapse a pool card. Title/gauge/Bandwidth now render INSIDE the pool's own tappable
+// Memory buffer button (see FillableStatCard below) rather than a separate header button above
+// it — a <button> can't nest inside another <button>, so this is a plain sibling: a slim,
+// full-width strip right below the merged button, just a centered chevron, rather than a second
+// full header row.
+const ExpandToggleButton = styled.button`
   width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.75em;
+  line-height: 1;
   cursor: pointer;
-  // Less on the bottom than the other three sides — PoolCard's own gap already separates this
-  // button from the Memory buffer tile right below it, so full padding on all four sides doubled
-  // up into a visibly larger gap than the rest of the card's own rhythm.
-  padding: ${props => props.theme.space.sm} ${props => props.theme.space.sm} 0.15rem;
+  padding: 0.2rem;
+  border-radius: ${props => props.theme.radius.sm};
+
+  &:hover {
+    background: ${props => props.theme.color.surfaceSunken};
+  }
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 `
 
@@ -282,22 +258,6 @@ const FillableStatCard = styled.div`
   `}
 `
 
-// A pool's own Data Lake gets its own fill bar — a second, separate FillableStatCard directly below
-// the Memory buffer tile — rather than folding it into the buffer's own meter or the gauge above:
-// the buffer bar shows what's filling from the Data Stream, this one shows what's accumulating in
-// the lake from that buffer's own OVERFLOW once it's full (see tickPoolBufferFill's own overflow
-// branch in game/engine). Non-interactive (`as="section"`, no tap action of its own — buying/
-// auto-buy live in DataLakePanel once the pool card is expanded); its own fill fraction is the
-// SAME current-disk progress the gauge's "lake" mode reads (getDataLakeCurrentDiskFillFraction),
-// just shown as a level rather than a rate. Colored `theme.color.info` (via $progressColor) to
-// match the gauge's own lake-mode arc color, so the two visually read as the same subsystem.
-const LakeOverflowText = styled.p`
-  margin: 0;
-  font-family: ${props => props.theme.font.body};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  font-weight: 600;
-`
-
 // Renders "<bits> / <capacity>". Capacity always renders in its own unit (picked off capacity —
 // see getMemoryUnit in game/engine). The balance shares that same unit UNLESS doing so would put
 // it below 1 (e.g. "0.234 MiB / 1 MiB" territory) — in that case it self-sizes into its own finer
@@ -354,7 +314,15 @@ const GAUGE_CENTER = GAUGE_SIZE / 2
 const GAUGE_RADIUS = GAUGE_CENTER - GAUGE_STROKE_WIDTH
 const GAUGE_NEEDLE_RADIUS = GAUGE_RADIUS - 3
 const GAUGE_LABEL_GAP = 11
-const GAUGE_HEIGHT = GAUGE_SIZE + GAUGE_LABEL_GAP
+// The dial only ever sweeps the TOP half of the GAUGE_SIZE circle (angles -90..90, i.e. left
+// through straight-up to right) — the bottom half of a full GAUGE_SIZE-tall box is always empty
+// canvas. The percent label sits just below the dial's own horizontal midline
+// (GAUGE_CENTER + GAUGE_LABEL_GAP), comfortably inside that otherwise-unused bottom half, so the
+// SVG only needs to be tall enough to reach a few px past the label's own text — not a full
+// GAUGE_SIZE + GAUGE_LABEL_GAP, which left ~20px of pure dead space below the label. Trimming this
+// only crops empty canvas; every drawn coordinate (arc/needle/label) is unchanged.
+const GAUGE_BOTTOM_MARGIN = 6
+const GAUGE_HEIGHT = GAUGE_CENTER + GAUGE_LABEL_GAP + GAUGE_BOTTOM_MARGIN
 // -90deg = left (0%), 0deg = straight up (100%), +90deg = right (FILL_MULTIPLIER_TAP_CAP_PERCENT).
 const GAUGE_MIN_ANGLE = -90
 const GAUGE_MAX_ANGLE = 90
@@ -475,7 +443,6 @@ const MultiplierGauge = ({ basePercent, totalPercent, ariaLabel, mode = 'multipl
 const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const { intro } = state
-  const theme = useTheme()
 
   const isFull = intro.bits >= intro.capacity
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
@@ -491,12 +458,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // The Data Stream header row's own top-right figure (see "Put title on top left, speedometer in
   // the top middle and speed or bandwidth on the top right" in CLAUDE.md) — plain text, same
   // convention a pool's own Bandwidth figure uses in its header, replacing the earlier segmented
-  // sub-Byte rate bar.
+  // sub-Byte rate bar. Reuses formatBitsInNearestUnit (the same binary B/KiB/MiB/… ladder the
+  // balance line right below it already renders in) rather than a bespoke bit-vs-Byte branch, so a
+  // large rate reads as "2 KiB/s" instead of an unscaled "2048 B/s" — consistent short "B"/"KiB"
+  // unit symbols throughout, matching the pool's own Bandwidth figure's "/s" convention (see
+  // SectionRateText usage below) rather than the longer "bytes/sec" this used to spell out.
   const dataStreamRateText = !intro.byteCreated
     ? null
-    : productionRate < BITS_PER_BYTE
-      ? `+${formatAmount(productionRate)} bit${productionRate === 1 ? '' : 's'}/sec`
-      : `+${formatAmount(productionRate / BITS_PER_BYTE)} Byte${productionRate / BITS_PER_BYTE === 1 ? '' : 's'}/sec`
+    : `${formatBitsInNearestUnit(productionRate)}/s`
   // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): productionRate above stays
   // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
   // instead (see getDataStreamEffectMultiplier in game/engine).
@@ -532,21 +501,21 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
-  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskCost && !canStartDiskBuild && !diskBuildInProgress
+  // The build cost is paid in DISK_BUILD_COST_MULTIPLIER passes of the disk's own face-value size
+  // each (see provisionDisk in game/engine) — "blocked by priority" now only needs a single pass's
+  // worth in the buffer, not the whole cost, to be a real (if lower-priority) option.
+  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
+  const diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)
+  const diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress
   const diskBuildProgress = diskBuildInProgress
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : diskLadderExhausted
       ? 100
-      : clampPercent((diskPoolBufferBits / diskCost) * 100)
+      // Already-collected passes are permanent progress; whatever's currently sitting in the
+      // buffer (up to one more pass' worth) counts toward the next one, so the bar keeps moving
+      // smoothly between clicks rather than jumping only once a whole pass fires.
+      : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  // "Queue next build" (see queueDiskBuild/tickQueuedDiskBuild in engine.js) — arms an auto-fire
-  // for the NEXT Provision Disk the moment its own pool buffer can afford it and nothing outranks
-  // it, so the player doesn't have to click at that exact instant. Nothing to arm once a build is
-  // already in flight (it has its own countdown) or the ladder has nothing left to ever build.
-  const diskBuildQueued = Boolean(intro.diskBuildQueued)
-  // Canceling an already-armed queue should never be blocked — only ARMING it needs the build-in-
-  // progress/ladder-exhausted guard (matching queueDiskBuild's own no-op conditions in engine.js).
-  const diskBuildQueueDisabled = !diskBuildQueued && (!!diskBuildInProgress || diskLadderExhausted)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
 
@@ -563,61 +532,42 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
   // disk-build-driven, independent of capacity — has already moved past it).
   const provisionDiskButton = (
-    <ProvisionDiskRow>
-      <Button
-        aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-        disabled={!canStartDiskBuild || !!diskBuildInProgress}
-        onClick={actions.provisionDisk}
-        title={
-          diskBuildInProgress
-            ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
-            : diskLadderExhausted
-              ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-              : diskBuildBlockedByPriority
-                ? 'Take Speed (or redeem a full Disk) first'
-                : diskRedeemTierName
-                  ? `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                  : `Costs ${formatDiskSize(diskCost)} and takes time to provision — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
-        }
-        type="button"
-        variant={canStartDiskBuild ? 'info' : 'neutral'}
-        $progress={diskBuildProgress}
-      >
-        <ButtonContent>
-          {diskBuildInProgress
-            ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-            : diskLadderExhausted
-              ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
+    <Button
+      aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
+      disabled={!canStartDiskBuild || !!diskBuildInProgress}
+      onClick={actions.provisionDisk}
+      title={
+        diskBuildInProgress
+          ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
+          : diskLadderExhausted
+            ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
+            : diskBuildBlockedByPriority
+              ? 'Take Speed (or redeem a full Disk) first'
+              : diskRedeemTierName
+                ? `Costs ${formatDiskSize(diskCost)}, paid in ${DISK_BUILD_COST_MULTIPLIER} passes of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${DISK_BUILD_COST_MULTIPLIER} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                : `Costs ${formatDiskSize(diskCost)}, paid in ${DISK_BUILD_COST_MULTIPLIER} passes of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${DISK_BUILD_COST_MULTIPLIER} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+      }
+      type="button"
+      variant={canStartDiskBuild ? 'info' : 'neutral'}
+      $progress={diskBuildProgress}
+    >
+      <ButtonContent>
+        {diskBuildInProgress
+          ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
+          : diskLadderExhausted
+            ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
+            : diskFundingInProgress
+              ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${DISK_BUILD_COST_MULTIPLIER}`
               : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-        </ButtonContent>
-        <VisuallyHidden
-          role="progressbar"
-          aria-label="byte foundry disk build progress"
-          aria-valuenow={Math.round(diskBuildProgress)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        />
-      </Button>
-      <QueueToggleButton
-        aria-pressed={diskBuildQueued}
-        aria-label={diskBuildQueued ? 'cancel queued disk build' : 'queue next disk build'}
-        disabled={diskBuildQueueDisabled}
-        onClick={() => (diskBuildQueued ? actions.clearDiskBuildQueue() : actions.queueDiskBuild())}
-        title={
-          diskLadderExhausted
-            ? 'Nothing left to queue — every active pool is already fully built'
-            : diskBuildInProgress
-              ? 'Already building — nothing to queue until it finishes'
-              : diskBuildQueued
-                ? `Queued — will auto-provision the next ${formatDiskSize(diskSize)} disk the moment it's affordable. Click to cancel.`
-                : `Auto-provision the next ${formatDiskSize(diskSize)} disk the moment its buffer can afford it, without clicking Provision Disk yourself`
-        }
-        type="button"
-        variant={diskBuildQueued ? 'prestige' : 'ghost'}
-      >
-        {diskBuildQueued ? '✕' : '📌'}
-      </QueueToggleButton>
-    </ProvisionDiskRow>
+      </ButtonContent>
+      <VisuallyHidden
+        role="progressbar"
+        aria-label="byte foundry disk build progress"
+        aria-valuenow={Math.round(diskBuildProgress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      />
+    </Button>
   )
 
   return (
@@ -628,17 +578,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       </Header>
 
       <DataStreamCard aria-label="Data Stream">
-        <SectionHeaderRow>
-          <SectionTitle>Data Stream</SectionTitle>
-          {intro.byteCreated && (
-            <MultiplierGauge
-              basePercent={dataStreamBaseMultiplierPercent}
-              totalPercent={dataStreamMultiplierPercent}
-              ariaLabel="data stream fill-based speed multiplier"
-            />
-          )}
-          <SectionRateText>{dataStreamRateText}</SectionRateText>
-        </SectionHeaderRow>
         <FillableStatCard
           as={intro.mainGameUnlocked ? 'button' : 'section'}
           type={intro.mainGameUnlocked ? 'button' : undefined}
@@ -649,6 +588,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
+          <SectionHeaderRow>
+            <SectionTitle>Data Stream</SectionTitle>
+            {intro.byteCreated && (
+              <MultiplierGauge
+                basePercent={dataStreamBaseMultiplierPercent}
+                totalPercent={dataStreamMultiplierPercent}
+                ariaLabel="data stream fill-based speed multiplier"
+              />
+            )}
+            <SectionRateText>{dataStreamRateText}</SectionRateText>
+          </SectionHeaderRow>
           <BalanceText>{formatMemoryBalance(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
           <VisuallyHidden
             role="progressbar"
@@ -763,10 +713,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolMultiplierCapped = poolMultiplierPercent >= FILL_MULTIPLIER_TAP_CAP_PERCENT
-        // This pool's own Data Lake CURRENT disk fill progress (poolIndex === that lake's own
-        // tierIndex, one lake per pool), not the lake's overall total — feeds both the gauge's
-        // `mode="lake"` reading above (once poolBufferFull) and the standalone lake bar below.
-        const lakeFillFraction = getDataLakeCurrentDiskFillFraction(state, poolIndex)
+        // This pool's own Data Lake overflow rate — feeds the gauge's `mode="lake"` reading above
+        // (once poolBufferFull). The lake's own current-disk-fill LEVEL renders inside
+        // DataLakePanel itself (the "data lake area," see LakePoolTile in components/DataLakePanel)
+        // once the pool card is expanded, not as a second standalone bar here.
         const lakeRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
         // Same isDataLakePoolReady this pool's own DataLakePanel/LakePoolTile already keys its
         // "Locked" placeholder on (see components/DataLakePanel) — required here too, not just
@@ -779,11 +729,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // just on this page's own gauge/bar instead.
         const poolReady = isDataLakePoolReady(state, poolIndex)
         const showLakeMode = poolBufferFull && poolReady
-        // Same reasoning as above — a legacy save's own residual fillBits (banked before this
-        // pool's isDataLakePoolReady gate existed) would otherwise read as live progress on a
-        // lake the engine can no longer advance; the standalone lake bar below reads 0 until ready,
-        // matching LakePoolTile's own "Locked" convention rather than showing stale banked state.
-        const lakeFillPercent = poolReady ? clampPercent(lakeFillFraction * 100) : 0
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -796,35 +741,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
-            <PoolSummaryButton
-              aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
-              onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
-              type="button"
-            >
-              <SectionHeaderRow>
-                <SectionTitle>
-                  <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
-                  <span>Pool</span>
-                </SectionTitle>
-                <MultiplierGauge
-                  basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
-                  totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
-                  ariaLabel={
-                    showLakeMode
-                      ? `pool ${poolIndex} data lake overflow rate`
-                      : `pool ${poolIndex} fill-based bandwidth multiplier`
-                  }
-                  mode={showLakeMode ? 'lake' : 'multiplier'}
-                />
-                <SectionRateText>{formatDiskSize(poolBandwidth)}/sec</SectionRateText>
-              </SectionHeaderRow>
-            </PoolSummaryButton>
-            {/* A separate control from PoolSummaryButton above (not nested inside it — two
-                buttons can't nest) so tapping Memory to boost this pool's own multiplier bonus
-                (see tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and game/layers) doesn't also
-                toggle the card's expanded state. Same FillableStatCard component Data Stream's own
-                tap tile uses — see FillableStatCard above. */}
+            {/* Title/gauge/Bandwidth render INSIDE this same tappable button now (not a separate
+                header button above it — two buttons can't nest), so one tap both boosts this
+                pool's own multiplier bonus (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
+                game/layers) and shows the full summary in one control. Expand/collapse moves to
+                the slim ExpandToggleButton strip below. Same FillableStatCard component Data
+                Stream's own tap tile uses — see FillableStatCard above. */}
             <FillableStatCard
               as="button"
               type="button"
@@ -841,6 +763,23 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               $progress={poolBufferPercent}
               $tappable
             >
+              <SectionHeaderRow>
+                <SectionTitle>
+                  <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
+                  <span>Pool</span>
+                </SectionTitle>
+                <MultiplierGauge
+                  basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
+                  totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
+                  ariaLabel={
+                    showLakeMode
+                      ? `pool ${poolIndex} data lake overflow rate`
+                      : `pool ${poolIndex} fill-based bandwidth multiplier`
+                  }
+                  mode={showLakeMode ? 'lake' : 'multiplier'}
+                />
+                <SectionRateText>{formatDiskSize(poolBandwidth)}/s</SectionRateText>
+              </SectionHeaderRow>
               <BalanceText>{formatDiskSize(poolBufferBits)} / {formatDiskSize(poolBufferCapacity)}</BalanceText>
               <VisuallyHidden
                 role="progressbar"
@@ -850,26 +789,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 aria-valuemax={100}
               />
             </FillableStatCard>
-            {/* The Data Lake's own bar — see the styled LakeOverflowText comment above — showing
-                what's accumulating from the Memory buffer's own overflow, always visible (not
-                gated behind isExpanded) so the flow reads at a glance without opening the card. */}
-            <FillableStatCard
-              as="section"
-              aria-label={`pool ${poolIndex} data lake`}
-              $progress={lakeFillPercent}
-              $progressColor={theme.color.info}
+            <ExpandToggleButton
+              aria-expanded={isExpanded}
+              aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
+              onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
+              type="button"
             >
-              <LakeOverflowText>
-                {TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`} Lake · {Math.round(lakeFillPercent)}%
-              </LakeOverflowText>
-              <VisuallyHidden
-                role="progressbar"
-                aria-label={`pool ${poolIndex} data lake current disk fill`}
-                aria-valuenow={Math.round(lakeFillPercent)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            </FillableStatCard>
+              {isExpanded ? '▲' : '▼'}
+            </ExpandToggleButton>
             {isActiveDiskPool && provisionDiskButton}
             {isExpanded && (
               <>
