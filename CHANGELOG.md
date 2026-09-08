@@ -111,6 +111,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **Reset Byte Foundry's convenience auto-replay stopped short of partial Provision Disk progress**
+  — `captureFoundryUpgradeCaps` recorded each disk size's completed-disk count for
+  `tickFoundryResetConvenience` to auto-replay after a reset, but not any passes already paid
+  toward the next, not-yet-complete disk of that size — so the auto-clicker stopped the instant it
+  matched the pre-reset completed-disk count, silently losing whatever partial funding (up to 9 of
+  10 passes) the player had already banked toward the disk in progress at reset time. Now captured
+  and replayed alongside the completed-disk count. Caught by Devin's automated review on PR #597.
 - **Pool 10 (QB Pool)'s final disk array could never start a single Provision Disk funding pass** —
   `getStoragePoolMemoryBounds`'s `endBits` formula multiplied by the SI-step power before dividing
   by `DISK_BUILD_COST_MULTIPLIER`, losing the last IEEE-754 bit at that pool's magnitude

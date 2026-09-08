@@ -1682,6 +1682,7 @@ describe('resetByteFoundry', () => {
       productionMilestoneTier: 4,
       productionMilestoneTierClaims: 1,
       disksBuiltTotal: { [String(diskSize)]: 5 },
+      diskProvisionPasses: {},
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
     })
     expect(after.resources).toEqual(state.resources)
@@ -1812,6 +1813,32 @@ describe('tickFoundryResetConvenience', () => {
     const after = tickFoundryResetConvenience(state)
     expect(after.intro.diskBuild).not.toBeNull()
     expect(after.intro.diskBuild.size).toBe(size)
+  })
+
+  it('also replays partial Provision Disk passes toward an in-progress disk once the completed-disk count already matches the cap (Devin Review finding)', () => {
+    const size = getDiskLadderSizeBits(1)
+    // Completed-disk count already matches the cap (2 === 2) — without the diskProvisionPasses cap,
+    // isDiskBuildBelowCap would stop here and never call provisionDisk again, even though the
+    // player had already banked 4 of 10 passes toward a 3rd disk before the Foundry reset.
+    const state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: size },
+      disksBuiltTotal: { [String(size)]: 2 },
+      capacity: getDiskCost(size) * 10,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 4 },
+      },
+    })
+    const after = tickFoundryResetConvenience(state)
+    // One pass' worth was in the buffer, so provisionDisk fired once, collecting pass 1 of the
+    // still-below-cap replay — the disk itself isn't complete yet (that needs all 10 passes), but
+    // the replay kept going instead of stopping the instant disksBuiltTotal matched its own cap.
+    expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(after.intro.diskBuild).toBeNull()
   })
 
   it('is a no-op without foundryResetCaps', () => {
@@ -2000,7 +2027,7 @@ describe('pickIntroProductionMilestone', () => {
 
   it('sacrifices COMPUTE_ENTITY_CAP Cores for ×2 when bit cost exceeds capacity (#323)', () => {
     // Tier 10 costs 8 * 4^10 = 8,388,608 bits; capacity (INTRO_COMPUTE_CORE_UNLOCK_CAPACITY) is
-    // 4,194,304 bits → compute path. Rate already at floor from prior invests.
+    // 400,000 bits → compute path. Rate already at floor from prior invests.
     const state = withIntro(createInitialGameState(), {
       capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
       bits: 0,
@@ -2336,8 +2363,9 @@ describe('getMemoryUnit', () => {
   })
 
   it('steps up through multiple binary units as capacity grows, matching tier symbols with an "i"', () => {
-    // 4,194,304 bits = 512 KiB in Memory's own binary scale (see INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-    // half of pool 1's INTRO_CAPACITY_CAP_BITS / 1 MiB).
+    // 400,000 bits (INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, half of pool 1's INTRO_CAPACITY_CAP_BITS)
+    // is ~48.8 KiB in Memory's own binary scale — not a clean binary figure, but still comfortably
+    // within the KiB tier (>= 1 KiB, < 1 MiB), which is all this assertion checks.
     expect(getMemoryUnit(INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, true)).toEqual({ symbol: 'KiB', divisor: BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP })
   })
 

@@ -1,5 +1,26 @@
 # Design history & rationale
 
+### Reset Byte Foundry's convenience replay didn't cover partial Provision Disk passes — 2026-09-08
+
+A second Devin Review finding on PR #597: `resetByteFoundry`'s convenience auto-replay
+(`tickFoundryResetConvenience`, driven by a `foundryResetCaps` snapshot from
+`captureFoundryUpgradeCaps`) existed specifically so a Reset doesn't feel like losing everything —
+Combine/Invest/Provision Disk all auto-fire again after a reset, up to whatever the player had
+before. But the disk-build cap only ever tracked `disksBuiltTotal` (fully COMPLETED disks) — once
+this PR split Provision Disk's payment into `DISK_BUILD_COST_MULTIPLIER` passes, a player could
+have several passes already banked toward the NEXT, not-yet-complete disk at the moment they hit
+Reset, and the replay had no way to know that: `isDiskBuildBelowCap` stopped the instant
+`disksBuiltTotal[size]` matched its own pre-reset count, silently discarding up to 9 of 10 already-
+paid passes toward whatever disk was in progress.
+
+Fixed by extending the same capture/merge/replay pattern already used for `disksBuiltTotal` to
+`diskProvisionPasses`: `captureFoundryUpgradeCaps` now also snapshots per-size pass counts,
+`mergeFoundryUpgradeCaps` takes the max per size (same as disk counts), and `isDiskBuildBelowCap`
+falls through to a passes-below-cap check once the completed-disk count already matches. Consistent
+with the existing mechanism's own nature — a real-time auto-clicker, not an instant credit — the
+fix costs no new complexity or design tradeoff; it simply completes coverage the pass-funding split
+should have carried into this snapshot from the start.
+
 ### Pool 10's buffer ceiling landed a ULP below its own largest disk's face value — 2026-09-08
 
 Devin's automated review on PR #597 flagged a real bug in `getStoragePoolMemoryBounds`'s `endBits`
@@ -26,9 +47,11 @@ ratio one: `Math.floor(endBits / largestDiskFaceValue)` must be `>= 1` for every
 invariant `provisionDisk` depends on, which the ratio-only check couldn't have caught. Notably, the
 OLD (pre-this-PR) formula — `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (index + 1)`, sized to fund
 the disk's full `DISK_BUILD_COST_MULTIPLIER`-times build cost in one lump sum rather than one pass —
-had the identical precision problem at pool 10 (verified: `8e33` vs. a `7.999999999999999e33`-ish
-full cost), so this wasn't a regression the pass-funding PR introduced from scratch; it just never
-had a test that would have caught it before now.
+had the identical precision problem at pool 10 (verified: an exact `8e33` ceiling against a full
+build cost that rounds to `8.000000000000001e33` — a ULP ABOVE 8e33 this time, not below, but
+`Math.floor(8e33 / 8.000000000000001e33)` still floors to `0`), so this wasn't a regression the
+pass-funding PR introduced from scratch; it just never had a test that would have caught it before
+now.
 
 ### Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08
 

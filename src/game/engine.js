@@ -4745,11 +4745,11 @@ export const doubleDataLakeCapacity = tierIndex => state => {
 // banked units instead and is unrelated to Memory/capacity entirely.
 
 // Predicate, not a reducer: whether Boosters / ComputePage should be active at all. True once
-// Buffer / pool Memory Capacity reaches INTRO_COMPUTE_CORE_UNLOCK_CAPACITY (4,194,304 bits,
-// "512 KiB" binary). Capacity reaches this threshold through its doubling ladder, so this unlocks
-// once the Data Stream has grown sufficiently. Same capacity-magnitude reveal convention as
-// isIntroConversionUnlocked / isStorageUnlocked; historically one Sacrifice stage later than
-// Storage.
+// Buffer / pool Memory Capacity reaches INTRO_COMPUTE_CORE_UNLOCK_CAPACITY (400,000 bits, "50 KB"
+// SI — half of INTRO_CAPACITY_CAP_BITS/pool 1's own end bound). Capacity reaches this threshold
+// through its doubling ladder, so this unlocks once the Data Stream has grown sufficiently. Same
+// capacity-magnitude reveal convention as isIntroConversionUnlocked / isStorageUnlocked;
+// historically one Sacrifice stage later than Storage.
 export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?? 0) >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY
 
 // Shared shape for the 9-boundary Core → Node → Cluster → Network → Grid → Fabric → Cloud →
@@ -5614,11 +5614,22 @@ export const captureFoundryUpgradeCaps = intro => {
     const n = Math.max(0, Math.floor(clampNonNegative(count)))
     if (n > 0) diskCaps[sizeKey] = n
   }
+  // Passes already paid toward the CURRENTLY in-progress (not yet complete) disk — without this,
+  // the replay below would stop the instant it matched the pre-reset disksBuiltTotal count, losing
+  // any partial funding progress toward the next disk the player had already banked (Devin Review
+  // finding on PR #597).
+  const diskProvisionPasses = intro?.diskProvisionPasses ?? {}
+  const diskProvisionPassCaps = {}
+  for (const [sizeKey, passes] of Object.entries(diskProvisionPasses)) {
+    const n = Math.max(0, Math.floor(clampNonNegative(passes)))
+    if (n > 0) diskProvisionPassCaps[sizeKey] = n
+  }
   return {
     byteCreated: intro?.byteCreated === true,
     productionMilestoneTier: Math.max(0, Math.floor(clampNonNegative(intro?.productionMilestoneTier ?? 0))),
     productionMilestoneTierClaims: Math.max(0, Math.floor(clampNonNegative(intro?.productionMilestoneTierClaims ?? 0))),
     disksBuiltTotal: diskCaps,
+    diskProvisionPasses: diskProvisionPassCaps,
     capacity: Math.max(INTRO_STARTING_CAPACITY, clampNonNegative(intro?.capacity ?? INTRO_STARTING_CAPACITY)),
   }
 }
@@ -5645,10 +5656,15 @@ export const mergeFoundryUpgradeCaps = (a, b) => {
   for (const [sizeKey, count] of Object.entries(right.disksBuiltTotal ?? {})) {
     diskCaps[sizeKey] = Math.max(diskCaps[sizeKey] ?? 0, count)
   }
+  const diskProvisionPassCaps = { ...left.diskProvisionPasses }
+  for (const [sizeKey, passes] of Object.entries(right.diskProvisionPasses ?? {})) {
+    diskProvisionPassCaps[sizeKey] = Math.max(diskProvisionPassCaps[sizeKey] ?? 0, passes)
+  }
   return {
     byteCreated: left.byteCreated || right.byteCreated,
     ...invest,
     disksBuiltTotal: diskCaps,
+    diskProvisionPasses: diskProvisionPassCaps,
     capacity: Math.max(left.capacity ?? INTRO_STARTING_CAPACITY, right.capacity ?? INTRO_STARTING_CAPACITY),
   }
 }
@@ -5667,7 +5683,14 @@ const isDiskBuildBelowCap = (state, caps) => {
   const size = getDiskSize(state)
   const built = state.intro?.disksBuiltTotal?.[size] ?? 0
   const cap = caps.disksBuiltTotal?.[String(size)] ?? caps.disksBuiltTotal?.[size] ?? 0
-  return built < cap
+  if (built < cap) return true
+  if (built > cap) return false
+  // Matched the pre-reset completed-disk count exactly — also replay any passes already paid
+  // toward the NEXT (not yet complete) disk of this same size before the reset, so the convenience
+  // auto-clicker doesn't stop short of exactly where the player left off.
+  const passesCollected = getDiskProvisionPassesCollected(state, size)
+  const passesCap = caps.diskProvisionPasses?.[String(size)] ?? caps.diskProvisionPasses?.[size] ?? 0
+  return passesCollected < passesCap
 }
 
 // Safety bound: one tick should not infinite-loop if a reducer keeps succeeding unexpectedly.
