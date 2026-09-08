@@ -6448,10 +6448,11 @@ string.
 
 **Verification.** `yarn test`: 1727/1727 green. Several `App.test.jsx` tests that asserted on the
 old combined "`<balance>` / `<capacity>`" string (`toHaveTextContent('4 bits / 1 MiB')`, etc.) were
-rewritten to assert on the balance (`section.querySelector('p')`, since `BalanceText` is the tile's
-only `<p>`) and the Capacity figure separately; a test pairing the pool's heading with its Bandwidth
-figure as DOM siblings was rewritten to pair Bandwidth with Capacity as `FooterRow` siblings instead,
-matching the new layout.
+rewritten to assert on the balance (`section.querySelector('p')`, which returns `BalanceText` — the
+first `<p>` in document order inside the tile; `DataLakePanel`'s own `StatusText` can add a second
+`<p>` further down once a pool is expanded, but never before `BalanceText`) and the Capacity figure
+separately; a test pairing the pool's heading with its Bandwidth figure as DOM siblings was rewritten
+to pair Bandwidth with Capacity as `FooterRow` siblings instead, matching the new layout.
 
 ### The balance's decimal digit count wasn't actually stable — Intl.NumberFormat's default trimming undid the fixed 3-decimal floor
 
@@ -6509,10 +6510,16 @@ new, user-visible feature (the top-right "💾 N" figure on the Data Stream and 
 — shipped with no test that would catch a regression (an off-by-one in the sum, a wrong `poolSizes`
 filter scoping the count to the wrong pool, or the figure silently disappearing).
 
-**Fix.** Added `App.test.jsx` coverage seeding `intro.disks` across two sizes belonging to the same
-pool, asserting both the Data Stream's own whole-Foundry total and that pool's own scoped total
-render the expected `"💾 N"` text via their respective `aria-label`s, plus a test confirming the
-figure is omitted entirely before Storage is revealed (matching the same reveal-gating convention
-`DiskArrayRow` already follows elsewhere on the page). Landed in the same PR as the stable-decimal
-balance fix above rather than as a separate follow-up, since both were still pre-merge findings on
-the same not-yet-reviewed-clean branch.
+**Fix.** Added `App.test.jsx` coverage seeding `intro.disks` across sizes spanning TWO pools (pool
+1's three sizes plus pool 2's smallest), asserting the Data Stream's own whole-Foundry total, pool
+1's own scoped total, AND pool 2's own scoped total each render the expected `"💾 N"` text via their
+respective `aria-label`s, plus a test confirming the figure is omitted entirely before Storage is
+revealed (matching the same reveal-gating convention `DiskArrayRow` already follows elsewhere on the
+page). A follow-up review pass on this same fix caught that an EARLIER version of this test seeded
+only sizes belonging to a single pool — which couldn't actually distinguish a correctly pool-scoped
+count from a regression that summed every size on the page, since with only one pool visible both
+would produce the identical total; the two-pool fixture (requiring `disksBuiltTotal` seeded to
+unlock pool 2 — `isStoragePoolUnlocked`'s own disk-build gate, unrelated to the `disks` counts the
+figure itself reads) closes that gap. Landed in the same PR as the stable-decimal balance fix above
+rather than as a separate follow-up, since both were still pre-merge findings on the same
+not-yet-reviewed-clean branch.

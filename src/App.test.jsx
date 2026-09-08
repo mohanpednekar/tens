@@ -2835,16 +2835,27 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
 
 test('the top-right disk-status figure sums full disks per section — the whole Foundry for Data Stream, just that pool\'s own sizes for a pool card', () => {
   seedIntroState({
-    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    disks: { 8_000: 3, 80_000: 2 }, // both 1 KB and 10 KB belong to pool 1
+    bits: 0,
+    capacity: 1024 * 1024 * BITS_PER_BYTE, // big enough for pool 2's own card to render once unlocked below
+    byteCreated: true,
+    // 8,000/80,000/800,000 bits (1/10/100 KB) are pool 1's own three sizes; 8,000,000 bits (1 MB) is
+    // pool 2's smallest — a distinct pool included specifically so this test can tell a correctly
+    // pool-scoped count apart from one that wrongly summed every size on the page.
+    disks: { 8_000: 3, 80_000: 2, 8_000_000: 4 },
+    // Unlocks pool 2's own card (isStoragePoolUnlocked requires all of pool 1's three sizes fully
+    // built) — unrelated to the `disks` (currently-full) counts above, which drive the figure itself.
+    disksBuiltTotal: { 8_000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
   })
   render(<App />)
 
   const dataStreamSection = screen.getByRole('progressbar', { name: /data stream bit balance/i }).closest('section')
-  expect(within(dataStreamSection).getByLabelText('5 full disks')).toHaveTextContent('💾 5')
+  expect(within(dataStreamSection).getByLabelText('9 full disks')).toHaveTextContent('💾 9')
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   expect(within(pool1).getByLabelText('pool 1 5 full disks')).toHaveTextContent('💾 5')
+
+  const pool2 = screen.getByRole('region', { name: 'pool 2' })
+  expect(within(pool2).getByLabelText('pool 2 4 full disks')).toHaveTextContent('💾 4')
 })
 
 test('the disk-status figure is omitted before Storage is revealed', () => {
