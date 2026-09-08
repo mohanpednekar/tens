@@ -46,13 +46,10 @@ interactive, taps) as one piece rather than a separate header sitting above a bo
 Its first line is a `TitleRow` — the same title-top-left/current-disks-status-top-right layout
 every section on this page uses (see CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`
 and, once Storage is revealed, a `DiskStatusText` showing the Foundry's own total full-disk count
-(`getFullDisksCount`, e.g. "💾 12" — every size shown anywhere on the page, summed). Its second line
-is the fill-based `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier"
-in CLAUDE.md) — a compact bar that grows/shrinks from the MIDDLE (200% fills the full track width),
-replacing an earlier corner needle-speedometer that took too much vertical space. An earlier
-iteration rendered the header row as a separate element ABOVE the `FillableStatCard` instead of
-inside it — merged together per player feedback that the two read as disconnected pieces. Its third
-line applies `components/Button`'s own
+(`getFullDisksCount`, e.g. "💾 12" — every size shown anywhere on the page, summed). An earlier
+iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
+inside it — merged together per player feedback that the two read as disconnected pieces. Its
+second line applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
 toward Capacity the same visual way every button on this page already does, and shows the balance
 ALONE in a bigger, centered `BalanceText` (`formatMemoryBalanceValue`, see "Numbers are formatted"
@@ -60,11 +57,15 @@ below) — scaled into the same binary unit `capacity` picks (raw bits before th
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). A fourth line, a `FooterRow` (a 2-column grid), splits
-the production rate — `` `${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "4
-bits/s" below 1 Byte/sec, "1 B/s" at/above it, "2 KiB/s" once the rate itself crosses the next
+(`aria-label="data stream bit balance"`). Its third line, below the balance, is the fill-based
+`MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
+compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
+percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
+took too much vertical space. A fourth line, a `FooterRow` (a 2-column grid), splits
+the production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
+bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
-on the left half, and the Capacity figure (`formatMemoryCapacityValue`, the same unit `BalanceText`
+on the left half, and the Capacity figure (`🪣 ` + `formatMemoryCapacityValue`, the same unit `BalanceText`
 picked) on the right half, each centered within its own half; there's no segmented block-bar rate
 meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
 itself started carrying the fill-multiplier reading). There is no separate Cache tile — the same
@@ -113,7 +114,10 @@ docs/ECONOMY_REFERENCE.md's "Byte
 Foundry") — paired with a hidden `role="progressbar"`
 (`aria-label="byte foundry speed progress"`, max set to the Speed cost in bits, not
 `capacity`), matching `MainPage`'s own Buy/Upgrade button convention below. Beside it, "Capacity ×2"
-(top line `🧠 Capacity ×2`; cost line `formatBitsInNearestUnit(capacity)`; `aria-label="double Memory
+(top line `🪣 Capacity ×2` — the bucket icon reused from the Capacity footer figure, replacing an
+earlier 🧠 brain icon that was already doing double duty for the unrelated "Smart" autobuyer concept
+elsewhere in the app, see docs/DESIGN_HISTORY.md; cost line `formatBitsInNearestUnit(capacity)`;
+`aria-label="double Memory
 Capacity"`; `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
 isMemoryCapacityUpgradeAvailable(state)`) requires a full Buffer, drains it, and doubles Capacity up
 to `INTRO_CAPACITY_CAP_BITS` (the active highest-unlocked-pool's end bound, though the raw Capacity multiplier tracks past this limit silently) — it carries no
@@ -136,18 +140,20 @@ many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached
 docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/disks-status,
-`MultiplierBar`, balance, and footer figures all render INSIDE the SAME tappable `FillableStatCard`
+balance, bar, and footer figures all render INSIDE the SAME tappable `FillableStatCard`
 `<button>` (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
 `disabled={poolBufferFull || poolMultiplierCapped}`) — a `TitleRow` is the button's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
 or tier name in the visible text) on the left, and that pool's own current full-disk count
-(`getFullDisksCount`, e.g. "💾 3") on the right. Its second line is the pool's own `MultiplierBar`
-(switching to `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to
-receive overflow — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md). Its third line is the
-Memory buffer balance ALONE (`formatDiskSize(bufferBits)`) in a bigger, centered `BalanceText`, same
-as Data Stream's own tile above. Its fourth line is a `FooterRow` splitting that pool's own
-Bandwidth figure (`` `${formatDiskSize(poolBandwidth)}/s` ``, left half) and its Capacity
-(`formatDiskSize(bufferCapacity)`, right half). Only ONE pool is expanded at a time by default — the
+(`getFullDisksCount`, e.g. "💾 3") on the right. Its second line is the Memory buffer balance ALONE
+(`formatDiskSize(bufferBits)`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
+above. Its third line, below the balance, is the pool's own `MultiplierBar` (switching to
+`mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow —
+see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
+bar itself. Its fourth line is a `FooterRow` splitting that pool's own
+Bandwidth figure (`` `⚡ ${formatDiskSize(poolBandwidth)}/s` ``, left half) and its Capacity
+(`🪣 ` + `formatDiskSize(bufferCapacity)`, right half) — the same ⚡/🪣 icons the Data Stream card's
+own `FooterRow` uses, for the same rate/capacity concepts. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,

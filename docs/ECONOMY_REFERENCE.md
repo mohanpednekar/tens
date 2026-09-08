@@ -329,7 +329,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      that file) — a bar that grows and shrinks from the MIDDLE: `FILL_MULTIPLIER_TAP_CAP_PERCENT`
      (200%) fills the full track width, 0% is a zero-width point at dead center — rendered INSIDE
      the same tappable tile (`FillableStatCard`) for both the Data Stream and every pool, as its own
-     full-width row between the tile's `TitleRow` and its balance. This replaced an earlier
+     full-width row BELOW the tile's balance, with its own rounded percent readout on a row below
+     the bar itself (`BarPercentLabel`). This replaced an earlier
      corner needle-speedometer (a half-circle dial sweeping 0%→100%→200% with a percent readout
      beneath it, itself replacing a still-earlier full-width linear two-tone bar) — the dial took too
      much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
@@ -345,10 +346,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
      target (`FillableStatCard` rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own
      `TitleRow` (title left, current full-disk count right — `getFullDisksCount`) renders as the
-     FIRST line inside that same button, the `MultiplierBar` as the second line, the buffer balance
-     alone (bigger, centered) as the third, and a `FooterRow` (Bandwidth left half, Capacity right
-     half) as the fourth — the identical four-line-in-one-button structure the Data Stream's own tile
-     uses. Expand/collapse lives on a separate, slim `ExpandToggleButton` (a plain
+     FIRST line inside that same button, the buffer balance alone (bigger, centered) as the second,
+     the `MultiplierBar` (with its own percent readout below it) as the third, and a `FooterRow`
+     (Bandwidth left half, Capacity right half) as the fourth — the identical four-line-in-one-button
+     structure the Data Stream's own tile uses. Expand/collapse lives on a separate, slim
+     `ExpandToggleButton` (a plain
      ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a
      `<button>` can't nest inside another `<button>` (the same constraint `ComputePage`'s own
      `TierSelectButton` already works around) — an earlier iteration had the header in its own

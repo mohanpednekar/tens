@@ -2427,7 +2427,7 @@ test('combining 8 bits into a Byte resets the balance and starts passive product
   // Consumes the full cost (8), leaving the balance at 0; Capacity remains at its starting value.
   expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_BYTE_COMBINE_COST))
-  expect(screen.getByText(/^1 bit\/s$/i)).toBeInTheDocument()
+  expect(screen.getByText(/1 bit\/s$/i)).toBeInTheDocument()
 })
 
 test('the Speed ×2 offer stays disabled while the bit balance is below its cost', () => {
@@ -2465,7 +2465,7 @@ test('Invest for Double Production spends its own cost and doubles production wi
   // same "2 bits/s" text at this tiny a production rate, since both the binary and SI sub-Byte
   // fallback formatters use the identical "N bit(s)" wording.
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(within(dataStream).getByText(/^2 bits\/s$/i)).toBeInTheDocument()
+  expect(within(dataStream).getByText(/2 bits\/s$/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
@@ -2584,12 +2584,12 @@ test('the Data Stream header shows a plain bits/s rate below 1 B/s, and switches
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.25, productionMultiplier: 1 })
   const { unmount } = render(<App />)
 
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/^4 bits\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/4 bits\/s$/i)).toBeInTheDocument()
   unmount()
 
   seedIntroState({ bits: 0, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.125, productionMultiplier: 1 })
   render(<App />)
-  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/^1 B\/s$/i)).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Data Stream' })).getByText(/1 B\/s$/i)).toBeInTheDocument()
 })
 
 test('Invest for Double Production shows its cost on its own line below the label, with no stray comma', () => {

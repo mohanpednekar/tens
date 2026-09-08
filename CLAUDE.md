@@ -986,9 +986,11 @@ live indefinitely, every cycle.
 `engine.js`) — the Data Stream's displayed Speed and each pool's displayed Bandwidth never change; a
 separate fill-dependent multiplier (150% empty → 100% at 50% full → 50% at full buffer) scales only the
 real per-tick amount delivered into the buffer, boosted temporarily by tapping (+5%, decaying 1%/sec,
-hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierGauge` needle dial; for a pool
-specifically, once that pool's buffer is full AND its Data Lake is ready to receive overflow
-(`isDataLakePoolReady`), the same gauge switches `mode="lake"` to show that pool's Data Lake overflow
+hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierBar` — a compact bar that
+grows/shrinks from the middle (200% fills the full track width, 0% is a zero-width point at
+center), rendered below that section's own balance with its own percent readout below the bar; for
+a pool specifically, once that pool's buffer is full AND its Data Lake is ready to receive overflow
+(`isDataLakePoolReady`), the same bar switches `mode="lake"` to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
 itself). Full formula/UI detail,

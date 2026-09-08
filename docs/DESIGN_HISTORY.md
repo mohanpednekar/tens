@@ -6629,6 +6629,77 @@ drifted to a stale "1729" through the same conflict-resolution commit). `graphif
 and its siblings parse as valid JSON again; `graphify update .` runs cleanly. No source, test, or
 documentation content otherwise changed.
 
+### The multiplier bar moved below the balance, with its percent readout below the bar itself
+
+Further player feedback on the bar redesign above: "The speed bar should be below the balance and
+percentage should be shown below it." The bar had originally rendered ABOVE the balance (`TitleRow`
+→ `MultiplierBar` → `BalanceText` → `FooterRow`), with its percent readout to the bar's own right
+(`BarRow` as a horizontal flex row: `BarTrack` + `BarPercentLabel` side by side).
+
+**Fix.** Reordered each tile's rows to `TitleRow` → `BalanceText` → `MultiplierBar` → `FooterRow`
+(both the Data Stream card and every pool card in `ByteFoundryPage/index.jsx`) — the balance now
+reads immediately below the title, with the bar as a visually secondary element beneath it. Within
+`MultiplierBar` itself, `BarRow` switched from a horizontal flex row to a vertical one
+(`flex-direction: column`), so `BarPercentLabel` now sits centered on its own line below `BarTrack`
+instead of to its right — `BarTrack` itself now spans the row's full width (previously `flex: 1`
+shared with the label). No change to the bar's own fill math, center-grow behavior, or
+`mode="lake"` handoff — purely a layout/ordering change.
+
+**Verification.** `yarn test`: 1738/1738 green, unchanged count — no test asserted on the relative
+DOM order between `BalanceText` and `MultiplierBar`, or on `BarPercentLabel`'s position relative to
+`BarTrack` within `BarRow`, so nothing needed rewriting.
+
+### Icons added to the Byte Foundry footer figures; 🧠 replaced on "Capacity ×2"
+
+Further player feedback on the bar redesign: "Use icons in front of speed and capacity. Let's use
+relevant icons. Current icons are not intuitive." The `FooterRow` Speed/Bandwidth and Capacity
+figures (both the Data Stream card and every pool card) had no icon at all, and the pre-existing
+"Capacity ×2" milestone button used 🧠 (brain) — not obviously related to storage capacity, and
+already reused elsewhere in `pages/MainPage/index.jsx` for the unrelated "Smart" autobuyer concept,
+so it carried no consistent meaning across the app.
+
+**Fix.** Reused the already-intuitive ⚡ (already used elsewhere for rate/speed, e.g. "Speed ×2" and
+the Compute nav button) for both footer rate figures — the Data Stream production rate and each
+pool's own Bandwidth — and introduced 🪣 (bucket, evoking storage/holding capacity) for every
+Capacity figure: both `FooterRow` Capacity readouts and the "Capacity ×2" milestone button itself
+(replacing 🧠), so the same icon now consistently marks "capacity" everywhere it appears on this
+page. The Data Stream rate icon is guarded against `dataStreamRateText` being falsy (before
+`byteCreated`, there's no rate yet) so no dangling icon renders with empty text.
+
+**Verification.** `yarn test`: 1738/1738 green, unchanged count — 4 pre-existing fully-anchored
+regex assertions in `App.test.jsx` against the Data Stream rate text (`/^1 bit\/s$/i` and similar)
+needed their leading `^` anchor dropped to tolerate the new `⚡ ` prefix; every other assertion
+touching these figures already used substring (`toHaveTextContent`) or unanchored-at-start matching
+and needed no change.
+
+### Read cache blocks (`DiskArrayRow`) render a proportional fill overlay, not just full/empty
+
+Player feedback: "Cache blocks fill state is not visually clear. Make it more intuitive." Each
+`CacheBlock` in the read-cache strip only ever rendered two visually distinct states — `$full`
+(solid `surfaceRaised` background) or empty (`transparent`) — regardless of how much of that
+block's own bits were actually banked. A block filling up from Memory (the common steady-state
+case, not just the rarer flush-to-disk case) looked completely empty right up until the instant it
+crossed the full threshold, giving no sense of progress. The existing `CacheFlushFill` overlay
+already solved this for the ONE direction it was built for (draining a block during a flush), but
+was gated behind `readFlushing` so it never rendered while a block was simply filling up.
+
+**Fix.** Generalized `CacheFlushFill` into `CacheFillIndicator`, dropping the `readFlushing` gate so
+it renders whenever `partialFill > 0`, in either direction — accent-colored while filling up
+(`$flushing={false}`), the existing info-colored while draining down during a flush
+(`$flushing={true}`). Also gave a full, non-flushing `CacheBlock` an accent-colored border
+(previously `surfaceSunken`, visually identical to an empty block's border) — the same convention a
+full `DiskSquare` already used, so "this slot is full" now reads consistently across both the disk
+and cache rows on the same screen. The non-flushing, partially-filled `title` also now reports a
+percentage (e.g. "Filling from Memory (40%)") rather than a flat "Filling from Memory" regardless of
+how close to full the block actually was.
+
+**Verification.** `yarn test`: 1738/1738 green, unchanged count — no existing test asserted on
+`CacheBlock`'s border/background styling or on the presence/absence of a fill overlay, only on
+`aria-label`/role/tag (never a `<button>`), all of which are unchanged. Visually confirmed via a
+seeded save (a read-cache block sitting mid-fill) in a real browser: the previously-indistinguishable
+partial block now shows a clearly proportional accent bar against the three fully-filled blocks
+ahead of it and the four still-empty ones behind it.
+
 ### Provision Disk: ordinal-scaled pass counts, and passes auto-continue after a manual start
 
 Player feedback: "Disk Provisioning passes should not need manual action between two passes. First
