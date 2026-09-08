@@ -1148,13 +1148,21 @@ advancing only once the CORRESPONDING Storage array size is fully built. **Buyin
 (`buyBooster`) spends only banked lake units — outside the forced priority order entirely, always
 available the instant affordable — at a `purchased + 1` cost (capped once the lake is
 capacity-maxed) and grants 1 compute-ladder entity instantly; `toggleDataLakeAutoBuy` auto-buys.
-**Stranded disks are never touched.** A disk whose corresponding tier has already moved past the
-level it requires simply sits full and un-pullable for the rest of the cycle — nothing sweeps it
-into Bits (an earlier "idle disk liquidation" mechanic that did convert such disks to Bits was
-removed per the maintainer's explicit instruction), and `tickDiskWriteCache` refuses to fold it into
-another array either (never starts a new merge from a stranded source, and permanently pauses one
-already mid-collection the instant its source becomes stranded) — it waits for the next real
-Prestige to reset purchase levels and reopen its pull window. See `docs/DESIGN_HISTORY.md`.
+**Stranded disks are never destroyed, but they DO still feed the write cache — regardless of
+whether the target is stranded too.** A disk whose corresponding tier has already moved past the
+level it requires simply sits full and un-pullable by that tier for the rest of the cycle — nothing
+sweeps it into Bits (an earlier "idle disk liquidation" mechanic that did convert such disks to Bits
+was removed per the maintainer's explicit instruction). Unlike an earlier version of this rule, a
+stranded disk is NOT otherwise untouchable: `tickDiskWriteCache`/`canStartDiskWriteCacheMerge`/
+`isDiskWriteCacheCollectPaused` never gate on stranded status at all any more, source or target —
+folding a stranded disk into the next size up is always its one remaining productive use, since
+`disks`/`disksBuiltTotal`/`diskWriteCache` are all Prestige-permanent, so the progress is never
+wasted even if that next size is also currently stranded (it may still be a necessary stepping
+stone toward a further, still-useful tier — e.g. a stranded 100 KB feeding 1 MB for the next Factory
+tier). The only thing that still pauses a merge is an ACTIVE tier claim on the source (the one real
+contention — Factory gets first crack at a disk it could pull this exact tick); see
+`docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts. Either way, a disk
+waits for the next real Prestige to reset purchase levels and reopen its own pull window.
 Full overflow-segment math, the disk-breakdown mixed-radix proof, and every gating predicate are in
 `docs/ECONOMY_REFERENCE.md`.
 
@@ -1274,7 +1282,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1727 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1729 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
