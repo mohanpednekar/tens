@@ -6405,121 +6405,167 @@ confirms `tickDiskAutoFill` can immediately begin refilling that size's cache ag
 (reverting the fix reproduces the bug — the flush survives the pull and refill stays blocked).
 `yarn test`: 1717/1717 green (+1). `yarn build` succeeds.
 
-### The corner needle-speedometer was replaced with a center-grow bar, and each tile's header/footer reorganized around it
+### The "stranded disks never touch write-cache either" rule (from the two Devin Review findings above) itself turned out to be the bug: it permanently starved every disk size past the first one
 
-Player feedback: "Speedometer is taking too much space. Let's use a bar that grows and shrinks from
-the middle. The 200% shall be full width. Tap bonus will be shown as the middle part of the bar.
-Speed/Bandwidth at bottom centre of left half. Capacity at bottom centre of right half. The current
-balance is shown in a bigger font and centred. The top left shows title and top right shows current
-disks status."
+The player reported, after the pull-based storage rewrite (issue #571) had been live for a while,
+that 10 KB disks (and by extension every size above a pool's smallest) simply never got filled by
+write-cache any more, even with a full stockpile of 10 source disks sitting ready and an empty
+target container waiting — "10KB disks are not getting filled by 1KB disks despite being fully
+affordable." Reproduced directly against the real engine functions (`tickDiskWriteCache` in
+isolation, the repo's usual empirical-verification method): with tier01 sitting at purchase level 2
+(one level past the 1 KB size's own required level 1), `canStartDiskWriteCacheMerge` refused to even
+start a merge, exactly matching an existing regression test's own fixture
+(`'never starts a new merge from an already-stranded source'`) — the test had, in effect, been
+asserting the bug as correct behavior all along.
 
-The half-circle needle dial (`MultiplierGauge`, itself already the second design for this reading —
-see "Pool gauge's separate bottom-half Data Lake arc replaced with one dial that switches meaning
-once the buffer is full" above) was tall relative to how little information it actually conveyed: a
-single percent reading, on a tile that also needed room for a title, a rate figure, and a balance.
+**Root cause.** The pull-based rewrite (issue #571) made Factory tier redemption fully automatic and
+instantaneous: the moment a size's disk is full and its tier sits at the exact matching level,
+`tickDiskPull` consumes it and rolls the tier straight to the next level, same tick. For a pool's
+smallest size (whose required level is always 1, the ladder's very first step), there is no "too
+early" state — a disk of that size is either exactly redeemable (tier at level 1) or already
+stranded (tier at level 2+); there is no level a tier could ever sit at that leaves it merely
+"not currently redeemable but not stranded either." Combined with the two Devin Review findings
+above — which taught `canStartDiskWriteCacheMerge`/`tickDiskWriteCache`'s ongoing collect loop to
+refuse a stranded SOURCE outright, extending the "no disk is ever liquidated to Bits" instruction
+(see "Idle disk liquidation removed entirely" above) to also mean "never let a stranded disk feed
+anything, including the write cache" — this meant a pool's smallest size became stranded within a
+tick or two of ever being redeemed, after which it could never again start or continue feeding the
+next size up via write-cache for the rest of the cycle. Every size past the smallest was left with
+no real path to ever refill once its own feed source got redeemed even once — exactly the reported
+symptom, and not something either Devin Review pass anticipated, since both were reasoning about
+liquidation-era invariants that no longer matched how quickly the new pull-based redemption path
+actually strands a source.
 
-**Fix.** `MultiplierGauge` was replaced with `MultiplierBar` (`ByteFoundryPage/index.jsx`) — a thin
-horizontal bar that grows and shrinks from the track's own CENTER rather than from either edge:
-`FILL_MULTIPLIER_TAP_CAP_PERCENT` (200%) fills the full track width, 0% is a zero-width point at
-dead center. In its default `mode="multiplier"`, an outer layer (accent color) is sized to the TOTAL
-(fill + tap bonus) reading, and a narrower inner layer (warn color) — sized to just the tap-bonus
-portion — is nested in the middle of it, sharing that same center point: a live tap bonus reads as a
-highlighted band right in the bar's own middle, pushing the outer edges outward as it grows and
-pulling them back toward center as it decays, matching "tap bonus will be shown as the middle part
-of the bar" literally. `mode="lake"` keeps a single info-colored layer, same as before. The bar
-keeps the dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/min/max contract, so no
-test asserting on the readout's VALUE needed to change — only ones asserting on adjacent DOM
-structure (see Verification).
+**Why this reading of "simply ignore it" was wrong.** The maintainer's original instruction (see
+"Idle disk liquidation removed entirely" above) was specifically about not DESTROYING a disk the
+player built — converting it to Bits just because an unrelated tier's autobuyer outran Storage's own
+pace. Folding a stranded disk into building the NEXT size up is not destruction: the disk's own
+material value survives, just reshaped into a more useful container — exactly the same emergent use
+an earlier "tenth finding" (see above) had already identified and explicitly protected FOR, back
+when idle disk liquidation still existed alongside write-cache. The later Devin Review passes
+over-corrected: they were right that write-cache silently absorbing a source that's just as
+stranded as the target it would produce is pointless (the "double-stranded" regression test they
+added, `'an already-stranded source with an ALSO-stranded target'`, is still correct and unchanged
+by this fix), but they generalized that into blocking on the SOURCE's stranded status at all, rather
+than the TARGET's — the one check that actually determines whether the merge is worth doing.
 
-Every section's tile (`FillableStatCard`, shared by the Data Stream card and each pool's own card)
-was reorganized around the new bar's own compactness: a `TitleRow` (title top-left, that section's
-own current full-disk count top-right — `getFullDisksCount`, new, replacing the rate/Bandwidth
-figure that used to sit there) replaces the old 3-column `SectionHeaderRow` (title/gauge/rate) now
-that there's no middle gauge column to keep centered; the `MultiplierBar` renders as its own
-full-width row below that; the balance renders ALONE (no more "`<balance>` / `<capacity>`" combined
-string) in a bigger `BalanceText` (bumped from `type.scale.lg` to `xl`), centered; and a new
-`FooterRow` (a 2-column grid) splits the old rate/Bandwidth figure into its own left half and the
-Capacity figure (previously the second half of the combined balance string) into its own right half,
-each centered within its half. `formatMemoryBalance` (which built the combined "`<bits>` /
-`<capacity>`" string) was split into `formatMemoryBalanceValue` and `formatMemoryCapacityValue`,
-sharing the same shared-unit-with-self-sizing-fallback logic as before — the formatting RULE didn't
-change, only that the two figures now render in different DOM locations instead of one joined
-string.
+**Fix.** Moved the stranded check from the source to the target throughout:
+`canStartDiskWriteCacheMerge` now refuses a new merge only when the TARGET
+(`isDiskStrandedByAdvancedTier(state, targetSize)`) is already stranded — a stranded source is no
+longer a blocker at all, since it has no other use left and folding it upward is exactly the
+productive path available to it. `isDiskWriteCacheCollectPaused` and the ongoing collect loop inside
+`tickDiskWriteCache` now pause only for (a) an active tier claim on the source
+(`isDiskRedeemable(source)` — Factory still gets first crack at a disk it could pull this exact
+tick, a temporary pause) or (b) the target having since become stranded mid-collection (a permanent
+freeze — nothing left to gain, mirrors the pre-existing double-stranded case). The double-stranded
+scenario the second Devin Review finding protected against is still refused, now via the target
+check alone (a stranded target is definitionally also fed by a source that's at least as far along,
+so nothing regressed there).
 
-**Verification.** `yarn test`: 1727/1727 green. Several `App.test.jsx` tests that asserted on the
-old combined "`<balance>` / `<capacity>`" string (`toHaveTextContent('4 bits / 1 MiB')`, etc.) were
-rewritten to assert on the balance (`section.querySelector('p')`, which returns `BalanceText` — the
-first `<p>` in document order inside the tile; `DataLakePanel`'s own `StatusText` can add a second
-`<p>` further down once a pool is expanded, but never before `BalanceText`) and the Capacity figure
-separately; a test pairing the pool's heading with its Bandwidth figure as DOM siblings was rewritten
-to pair Bandwidth with Capacity as `FooterRow` siblings instead, matching the new layout.
+**Verification.** All four `tickDiskWriteCache` regression tests built around the old source-side
+rule were rewritten against real engine calls to assert the new behavior instead of the bug: a
+stranded source now DOES start and continue a merge once the target itself isn't stranded (the exact
+scenario from the player's report — tier01 past level 1, a full 1 KB stockpile, an empty 10 KB
+container waiting); collection that was frozen mid-merge because the source became stranded now
+resumes and continues instead of freezing forever; the double-stranded case (both source and target
+already stranded) still refuses to merge, unchanged. `yarn test`: 1728/1728 green (+1, a new
+target-stranded-mid-merge regression alongside the four rewritten tests). `yarn build` succeeds.
 
-### The balance's decimal digit count wasn't actually stable — Intl.NumberFormat's default trimming undid the fixed 3-decimal floor
+### A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the "stranded" gate from write-cache entirely
 
-Player feedback, on the just-shipped bar redesign above: "The balance should use stable number of
-digits per range to ensure readability when there are fast changes. For example, if 3.578 is a
-number shown, then 5.6 should be shown as 5.600 while keeping the trailing zeros. Decide the ideal
-number of significant digits per range and use it as guiding principle."
+A Devin Review pass on PR #603 (the fix immediately above) caught that moving the stranded check
+from the write cache's SOURCE to its TARGET was itself still too narrow, one hop removed from the
+same mistake: "when an intermediate target is stranded, `canStartDiskWriteCacheMerge` refuses to
+create it. That disk can still feed the next usable size. Tier01 above level 3 therefore blocks
+replenishing the 1 MB array." Concretely — 100 KB is tier01's own LAST disk-ladder step
+(`getDataLakeSubSize` position 3 of 3); once tier01 advances past its own level 3, 100 KB is
+stranded relative to tier01 — but 100 KB is also the fixed SOURCE the write cache needs to ever
+build 1 MB (tier02's own first step). The immediately-preceding fix's target-stranded check saw 100
+KB (as a TARGET, fed from 10 KB) already stranded under tier01 and refused to keep building it at
+all, even though a further, perfectly redeemable 1 MB under tier02 depended on that exact 100 KB
+disk existing. Blocking one hop up from the reported bug just relocated the same starvation to the
+next tier-group boundary instead of fixing it.
 
-`formatMemoryAmount` already floored every unit-scaled amount to a fixed `MEMORY_AMOUNT_DECIMAL_PLACES`
-(3) decimal places (`floorToDecimals`) — but the final render step, `formatAmount(scaled)`, calls
-through to a `plainNumberFormatter = new Intl.NumberFormat('en-US')` with no `minimumFractionDigits`
-set, so `Intl` trims a trailing zero by default: `5.6` renders as `"5.6"`, not `"5.600"`, even though
-the underlying value was floored to the identical precision as `3.578`. For a BALANCE specifically —
-a reading that changes nearly every tick — that trim makes the displayed width jitter from one tick
-to the next for no reason tied to the actual magnitude of change, exactly the "fast changes"
-readability problem the feedback names.
+**Root cause, reframed.** Every one of the last three fixes (source-stranded, then target-stranded,
+now this one) shared the same false premise: that a disk which can't be redeemed by ITS OWN
+corresponding tier this cycle has "nothing to gain" from being used elsewhere. That premise is
+simply wrong for write-cache specifically, because `disks`/`disksBuiltTotal`/`diskWriteCache` are
+all Prestige-permanent (see "Storage funding rebuilt push→pull" above and "A further Devin Review
+finding..." for how that permanence was itself hard-won) — a container built or filled this cycle
+persists into every future cycle regardless of whether the tier it corresponds to can use it RIGHT
+NOW. There is also no competing use to protect against: the write-cache ladder is a strict single
+chain (source N feeds exactly one target N+1, never a choice among several), so there is never a
+scenario where filling a stranded-relative-to-its-own-tier disk instead of some OTHER use is a worse
+choice — the alternative is always just leaving the source's already-idle full disks sitting
+completely unused. The only place a genuine choice exists is between write-cache and Factory
+redemption wanting the exact same physical disk on the exact same tick — `isDiskRedeemable(source)`
+already covers that, and always did.
 
-**Decision: 3 decimal places, always, is this app's guiding precision for a unit-scaled amount —
-apply it project-wide already (`MEMORY_AMOUNT_DECIMAL_PLACES`), don't reinvent a magnitude-dependent
-scheme.** A magnitude-tiered alternative was considered (fewer decimals as the integer part grows,
-keeping a constant total significant-digit count, e.g. 2 decimals once the integer part reaches 2
-digits) — rejected because the app's existing, already-tested convention already fixes 3 decimals
-regardless of the scaled value's own integer-digit count (`"48.828 KiB"`, `"97.656 KiB"`,
-`"30.031 KiB"` are all pre-existing tested outputs with 2-digit integer parts and 3 decimals each);
-switching to a variable scheme would have been a much larger, unrequested behavior change breaking
-that established precision everywhere it's used (Capacity, Bandwidth, Disk/Cache sizes), not just
-fixing the specific trimming bug the feedback described. "Per range" in the feedback reads as "per
-unit" here — within whatever unit a value lands in, the digit count should be stable — which the
-existing flat 3-decimal floor already delivers once the trim itself is fixed.
+**Fix.** Removed every `isDiskStrandedByAdvancedTier` check from `canStartDiskWriteCacheMerge` and
+`isDiskWriteCacheCollectPaused` (and the inline pause check inside `tickDiskWriteCache`'s collect
+loop, which delegates to the latter). Collection now pauses ONLY while the source has an active tier
+claim (`isDiskRedeemable(source)`) — a temporary condition that clears the moment the tier moves off
+that exact level, whether into "too early" (for a size ahead of the tier) or "stranded" (for one
+behind it) territory; neither stops the merge any more. `isDiskStrandedByAdvancedTier` itself is
+unchanged and still exported — `DiskArrayRow` still uses it to render a size's own disks as
+genuinely stranded (a fact about that size's OWN tier-redemption fate, independent of whether
+write-cache is quietly still making use of it) — it simply has no remaining callers inside
+`engine.js` itself.
 
-**Fix, scoped to balances only.** Rather than changing `formatMemoryAmount` itself (used everywhere
-on `ByteFoundryPage` for mostly-round, slow-changing, or exact-by-design figures — "1 KB", "100 KB"
-Disk sizes, Capacity, Bandwidth — where a forced ".000" would be visual noise, not a fix), added a
-parallel `formatMemoryAmountStable`/`formatDiskSizeStable` pair (`engine.js`) that floors to the
-identical `MEMORY_AMOUNT_DECIMAL_PLACES` precision but formats the nonzero-and-≥1 case through a
-dedicated `Intl.NumberFormat` with `minimumFractionDigits`/`maximumFractionDigits` both pinned to
-that same constant, so a trailing zero is never trimmed. A true zero is still exempted (renders bare
-"0 <unit>", not "0.000 <unit>"), matching `formatMemoryAmount`'s own zero handling exactly. Only the
-two BALANCE call sites in `ByteFoundryPage/index.jsx` were switched to the stable variant:
-`formatMemoryBalanceValue` (Data Stream) and the pool card's own buffer-balance `BalanceText`
-(now `formatDiskSizeStable`) — every other figure on the same tiles (Capacity, Bandwidth, disk
-sizes/costs elsewhere on the page) keeps using the ordinary trimmed formatters.
+**Verification.** Rewrote the two tests the immediately-preceding fix had added around target-
+stranded blocking to assert the opposite (a merge starts, and continues mid-collection, even with
+both source and target stranded, within tier01's own 3-step group), and added a new dedicated
+regression crossing an actual tier-GROUP boundary: 100 KB (tier01's own last step, stranded under
+tier01) still starts and feeds a merge into 1 MB (tier02's own first step, stranded under tier02 too)
+— genuinely failing under the immediately-preceding fix's target-stranded gate (confirmed by
+reverting to it and re-running). Also rewrote a `prestigeGame` regression test whose premise (a merge
+"frozen because its source became stranded") no longer holds — repurposed it to test the one pause
+reason that remains: an active tier claim on the source, which a real Prestige's purchase-level reset
+genuinely does clear. `yarn test`: 1729/1729 green (+1 net: two tests rewritten, one new
+cross-tier-boundary regression, one existing `prestigeGame` test repurposed). `yarn build` succeeds.
+(A first version of the cross-tier-boundary test left the target exactly redeemable rather than
+stranded, so it couldn't actually distinguish old from new behavior despite its own claim to the
+contrary — caught by an adversarial review pass on this same PR and corrected; see the entry below.)
 
-**Verification.** New `engine.test.js` coverage for both new exports (trailing-zero preservation,
-identical flooring precision to the untrimmed variant, the shared below-1-fallback/true-zero
-exemptions). New `App.test.jsx` component tests seed a balance that floors to a round decimal (5.6
-MiB / 5.6 KB) and assert the rendered `BalanceText` shows `"5.600 MiB"`/`"5.600 KB"` rather than the
-trimmed `"5.6"`. `yarn test`: 1736/1736 green (+9).
+### An adversarial review pass on PR #603 caught the new cross-tier-boundary test asserting a false "would have failed under the prior fix" claim
 
-### An adversarial review of the bar-redesign PR found the new disk-status figure had zero test coverage
+The `code-reviewer` subagent, re-reviewing the write-cache fix above at commit `4cb24a7`, verified
+its central engine change was sound but caught that the "propagates a full chain across a
+tier-group boundary" test didn't actually prove what it claimed. That test set tier02 to purchase
+level 1 — exactly `megabyteSize`'s (1 MB) own required level, so `isDiskStrandedByAdvancedTier`
+was `false` for the target either way. Since the immediately-preceding fix's gate only ever
+blocked on the TARGET's stranded status, a non-stranded target was never blocked under the OLD code
+either — the test passed under both the buggy and fixed versions and could not have caught a
+regression back to the old behavior, contrary to its own docstring and the corresponding
+`docs/DESIGN_HISTORY.md` claim (both asserted "this would have failed under the immediately-
+preceding fix's target-stranded gate"). The reviewer confirmed this empirically: reverting
+`canStartDiskWriteCacheMerge`/`isDiskWriteCacheCollectPaused` to the prior target-stranded
+implementation in an isolated `git worktree` pinned to `4cb24a7` and re-running the test showed it
+still passed. It also confirmed the actual regression `4cb24a7` fixes — a target stranded relative
+to its OWN tier still getting blocked — IS correctly caught by the neighboring
+"ALSO starts a new merge when the TARGET is stranded too" test, which the reviewer confirmed
+genuinely fails when the same revert is applied.
 
-The `code-reviewer` subagent's pass on the speedometer→bar PR (above) found no functional defects in
-the bar math or layout refactor, but flagged that `getFullDisksCount`/`DiskStatusText` — a genuinely
-new, user-visible feature (the top-right "💾 N" figure on the Data Stream and each pool's own tile)
-— shipped with no test that would catch a regression (an off-by-one in the sum, a wrong `poolSizes`
-filter scoping the count to the wrong pool, or the figure silently disappearing).
+**Fix.** Changed the cross-tier-boundary test's fixture so tier02 sits at purchase level 2 instead
+of 1, making `megabyteSize` (1 MB) genuinely stranded under tier02's own tier — not merely
+redeemable — while `level3Size` (100 KB) stays stranded under tier01. Re-verified this corrected
+version actually fails when the same revert is applied (confirming it now catches the regression it
+claims to), then restored the fix. Corrected the matching claim in this file's entry above.
 
-**Fix.** Added `App.test.jsx` coverage seeding `intro.disks` across sizes spanning TWO pools (pool
-1's three sizes plus pool 2's smallest), asserting the Data Stream's own whole-Foundry total, pool
-1's own scoped total, AND pool 2's own scoped total each render the expected `"💾 N"` text via their
-respective `aria-label`s, plus a test confirming the figure is omitted entirely before Storage is
-revealed (matching the same reveal-gating convention `DiskArrayRow` already follows elsewhere on the
-page). A follow-up review pass on this same fix caught that an EARLIER version of this test seeded
-only sizes belonging to a single pool — which couldn't actually distinguish a correctly pool-scoped
-count from a regression that summed every size on the page, since with only one pool visible both
-would produce the identical total; the two-pool fixture (requiring `disksBuiltTotal` seeded to
-unlock pool 2 — `isStoragePoolUnlocked`'s own disk-build gate, unrelated to the `disks` counts the
-figure itself reads) closes that gap. Landed in the same PR as the stable-decimal balance fix above
-rather than as a separate follow-up, since both were still pre-merge findings on the same
-not-yet-reviewed-clean branch.
+**Process note.** This is a rare case of an interactive session's own adversarial `code-reviewer`
+subagent catching a defect the session itself introduced in its OWN prior test/doc edits (as
+opposed to catching a defect in the underlying engine change) — exactly the kind of thing running
+the reviewer after every final commit, not just once at the end, is meant to surface. It also
+surfaced a real environmental hazard worth noting for future sessions: the reviewer's own
+verification steps (reverting file contents locally to compare old vs. new behavior) executed
+against the SAME shared working tree this interactive session was concurrently editing in, and at
+one point ran `git checkout --` to restore a clean baseline — which briefly discarded this session's
+own not-yet-committed edits to three files (mid-way through addressing an unrelated, earlier round
+of Devin Review findings) before the session could commit them. No permanent harm resulted (the
+session simply noticed via `git status`/content greps that its edits had vanished and redid them
+before committing), but a background review agent doing file-level git operations in a working tree
+another agent is actively editing is a real hazard — a future instance of this pattern should
+prefer an isolated worktree from the start (as this reviewer eventually did for its authoritative
+verification) rather than reverting in place, and an interactive session dispatching such a
+review should commit its own in-progress edits before launching it, or expect to verify and redo
+them afterward.
