@@ -6569,3 +6569,62 @@ prefer an isolated worktree from the start (as this reviewer eventually did for 
 verification) rather than reverting in place, and an interactive session dispatching such a
 review should commit its own in-progress edits before launching it, or expect to verify and redo
 them afterward.
+
+### A third-party automation agent's merge-conflict resolution left insecure scratch scripts and a corrupted committed graph on `main`
+
+After PR #601 (the speedometer→bar redesign + stable-decimal balance formatting above) was marked
+ready for review, another agent identified by GitHub as `google-labs-jules[bot]` — not part of this
+repo's own Claude/Cursor automation — pushed a merge commit ("Fix merge conflicts with main") onto
+that PR's branch, resolving conflicts between it and a since-merged sibling PR. The repo owner then
+enabled auto-merge and PR #601 merged automatically once checks passed, all faster than this
+session's own subsequent check-in could intervene.
+
+That bot's conflict resolution left two real problems on `main`:
+
+1. **Five throwaway Node scripts committed to the repo root** (`update-pr.cjs`, `update-pr2.cjs`,
+   `fix-conflict.cjs`, `fix-conflict2.cjs`, `pr599_id.txt`) — the bot's own scratch tooling for
+   driving the conflict resolution and pushing the result, apparently committed by accident rather
+   than run and discarded. `update-pr.cjs`/`update-pr2.cjs` interpolated an unsanitized `branch`
+   CLI argument directly into `execSync` shell commands (arbitrary command execution from a crafted
+   branch name) and embedded `GITHUB_TOKEN` directly into a shell command string logged to stdout on
+   failure (credential exposure via logs/process listing) — both flagged as real findings by a Devin
+   Review pass that ran automatically once the PR left draft. `fix-conflict.cjs`/`fix-conflict2.cjs`
+   were one-off string-replace conflict resolvers with no ongoing purpose, unreferenced anywhere
+   else in the repo.
+2. **The committed `graphify-out/graph.json` (and its sibling `.graphify_labels.json`/`.sig`/
+   `GRAPH_REPORT.md`/`graph.html`) was left with literal, unresolved `<<<<<<<`/`=======`/`>>>>>>>`
+   conflict markers inside the JSON** — the bot's string-replace approach to conflict resolution
+   isn't suited to a large generated JSON file with a conflict spanning many nodes, and it silently
+   left the markers in rather than resolving them. This broke the file as JSON entirely: any
+   `graphify update .` in a future session would fail immediately (`Cannot read graphify-out/
+   graph.json for incremental merge... Expecting property name enclosed in double quotes`), and any
+   session naively trusting the committed graph without validating it would have queried a
+   half-parsed, misleading map of the codebase.
+
+**Fix.** Deleted the five scratch files (git history preserves them if ever needed for reference).
+Deleted and fully rebuilt the graph (`graphify extract . --code-only` → `graphify cluster-only` →
+`graphify update .`) rather than attempting to hand-repair the corrupted JSON — the graph is fully
+regenerable machine state, not hand-authored content, so a clean rebuild is strictly simpler and
+safer than trying to locate and excise conflict markers from a multi-thousand-node JSON blob. This
+session had no `GOOGLE_API_KEY`/`GEMINI_API_KEY` available, so the rebuilt graph's communities carry
+generic "Community N" placeholder names rather than the descriptive labels (e.g. "ByteFoundryPage/
+index.jsx") the pre-corruption graph had — a future session with an LLM backend configured can run
+`graphify label` to restore them; the graph is fully valid and queryable either way in the meantime.
+
+**Process note, not just a one-off cleanup.** This repo's own automation model (see "Automation
+workflows" above) is built around two known, deliberately-scoped agents — the Claude-driven
+workflows and the coexisting Cursor twins — each gated behind its own repo secret and each
+authenticating via `GH_AUTOMATION_PAT`. A third, apparently independently-configured agent
+(`google-labs-jules[bot]`, with its own `.jules`/`.Jules` config directories already present in the
+repo root) evidently also has push access and acted on an in-flight PR without any of this repo's
+own review/testing conventions applying to its own commits — its conflict-resolution commit carried
+no `yarn test` verification, no adversarial review, and left insecure/broken artifacts that this
+repo's own process would have caught (the adversarial `code-reviewer` subagent reviews only what a
+Claude session itself pushes, not what a different agent pushes to the same open PR afterward).
+Whether `google-labs-jules[bot]` should retain push access, and if so under what review discipline,
+is a repo-governance decision for the maintainer — flagged here rather than decided unilaterally.
+
+**Verification.** `yarn test`: 1738/1738 green (test count also corrected in `CLAUDE.md`, which had
+drifted to a stale "1729" through the same conflict-resolution commit). `graphify-out/graph.json`
+and its siblings parse as valid JSON again; `graphify update .` runs cleanly. No source, test, or
+documentation content otherwise changed.
