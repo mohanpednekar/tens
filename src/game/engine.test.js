@@ -91,6 +91,7 @@ import {
   getComputeBoostTierMultiplier,
   getCostEpochExponent,
   getDiskCost,
+  getDiskProvisionPassesCollected,
   getDiskLadderSizeBits,
   getNextDiskLadderSize,
   getDiskRedeemTierName,
@@ -2125,8 +2126,16 @@ describe('isProvisionDiskAvailable', () => {
     expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
-  it('is false below the build cost', () => {
-    const state = withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE) - 1)
+  // The build cost is paid in DISK_BUILD_COST_MULTIPLIER passes of the disk's own face-value size
+  // each (see provisionDisk) — only a single pass's worth needs to be affordable to start, not the
+  // whole lump sum.
+  it('is true with only a single pass\'s worth in the buffer, even though the full build cost isn\'t affordable yet', () => {
+    const state = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE)
+    expect(isProvisionDiskAvailable(state)).toBe(true)
+  })
+
+  it('is false below a single pass\'s cost (the disk\'s own face-value size)', () => {
+    const state = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE - 1)
     expect(isProvisionDiskAvailable(state)).toBe(false)
   })
 
@@ -2797,7 +2806,7 @@ describe('provisionDisk', () => {
   // productionMultiplier ÷ tickSpeedSeconds = 1×1÷1), so at 1x Memory bandwidth a base build's
   // totalSeconds is numerically equal to the disk's own size in bits.
 
-  it('spends the build cost from its own pool buffer immediately and starts a timed build — does not construct the disk yet', () => {
+  it('spends the whole build cost from its own pool buffer in one call (all 10 passes at once) and starts a timed build — does not construct the disk yet', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), bandwidthExhausted)
 
     const after = provisionDisk(state)
@@ -2806,6 +2815,50 @@ describe('provisionDisk', () => {
     expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.intro.disks[FIRST_DISK_SIZE]).toBeUndefined()
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
+    // Fully funded in one call — no leftover pass counter for this size.
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+  })
+
+  it('collects a single pass (one disk face-value size) and stays mid-funding when only one pass is affordable', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), bandwidthExhausted)
+
+    const after = provisionDisk(state)
+    expect(after.intro.poolBuffers[1]).toBe(0)
+    expect(after.intro.diskBuild).toBeNull()
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(1)
+  })
+
+  it('collects as many WHOLE passes as the buffer currently affords in one call, leaving the remainder banked', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE * 3 + 10), bandwidthExhausted)
+
+    const after = provisionDisk(state)
+    expect(after.intro.poolBuffers[1]).toBe(10) // leftover, not enough for a 4th whole pass
+    expect(after.intro.diskBuild).toBeNull()
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(3)
+  })
+
+  it('completes funding and starts the timed build once the final pass lands, clearing the per-size pass counter', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      ...bandwidthExhausted,
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: DISK_BUILD_COST_MULTIPLIER - 1 },
+    })
+
+    const after = provisionDisk(state)
+    expect(after.intro.poolBuffers[1]).toBe(0)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+  })
+
+  it('a disk can be fully funded across several separate calls as the pool buffer refills between them — no need to hold the whole cost at once', () => {
+    let state = withIntro(createInitialGameState(), bandwidthExhausted)
+    for (let pass = 1; pass <= DISK_BUILD_COST_MULTIPLIER; pass += 1) {
+      state = withPoolBuffer(state, FIRST_DISK_SIZE) // buffer refills to exactly one pass each round
+      expect(state.intro.diskBuild).toBeNull()
+      state = provisionDisk(state)
+    }
+    expect(state.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
+    expect(state.intro.poolBuffers[1]).toBe(0)
+    expect(getDiskProvisionPassesCollected(state, FIRST_DISK_SIZE)).toBe(0)
   })
 
   it('the FIRST disk ever built at the smallest size takes exactly the time to fill it at 1x Memory bandwidth', () => {
@@ -2854,8 +2907,8 @@ describe('provisionDisk', () => {
     expect(after.intro.diskBuild.totalSeconds).toBe(FIRST_DISK_SIZE * 6)
   })
 
-  it('is a no-op below the build cost', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE) - 1), bandwidthExhausted)
+  it('is a no-op below a single pass\'s cost (the disk\'s own face-value size)', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE - 1), bandwidthExhausted)
     expect(provisionDisk(state)).toBe(state)
   })
 

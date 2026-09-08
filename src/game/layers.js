@@ -228,10 +228,11 @@ export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
 export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 200
 
 // --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
-// tickDiskPull/getDiskSize in engine.js and intro.disks/disksBuiltTotal/diskCache/diskBuild in
-// createInitialGameState. Disks are a genuine storage MEDIUM, not a one-shot pre-paid item:
-// building one only constructs a permanent, EMPTY container (after a real build TIME — see
-// below); Data Stream (intro.bits) then keeps each array's Cache full (whole-block transfers —
+// tickDiskPull/getDiskSize in engine.js and intro.disks/disksBuiltTotal/diskCache/diskBuild/
+// diskProvisionPasses in createInitialGameState. Disks are a genuine storage MEDIUM, not a one-shot
+// pre-paid item: building one only constructs a permanent, EMPTY container (after its own build
+// cost is paid in installments, then a real build TIME — see below); Data Stream (intro.bits) then
+// keeps each array's Cache full (whole-block transfers —
 // see the cache comment / tickDiskAutoFill) and flushes a full read cache into an empty disk over
 // one cache-block production duration when no tier claim blocks that size — leftover Data Stream
 // stays as its own balance. Pulling a FULL disk grants 1 free tier01 unit once tier01's own
@@ -263,6 +264,11 @@ export const INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STE
 // own BITS_PER_BYTE factor in engine.js — a past version of this ladder priced Disks in
 // "kilobits" instead of real Kilobytes; see docs/DESIGN_HISTORY.md for that bug and its fix), so no
 // further unit conversion is needed here the way an older version of this constant once required.
+// Also doubles as the number of funding PASSES provisionDisk splits that cost into — see
+// getDiskProvisionPassesCollected/provisionDisk in engine.js: each pass costs exactly one disk's
+// own face-value size (capacity), so DISK_BUILD_COST_MULTIPLIER passes always sum to the full cost
+// above. Paying in passes rather than the full lump sum means a pool's buffer only ever needs to
+// hold one pass at a time, not the whole build cost at once.
 export const DISK_BUILD_COST_MULTIPLIER = 10
 // Smallest buildable Disk size, in bits — 1 KB Byte-accurate (same face value tier01's own level-1
 // unit cost × BITS_PER_BYTE). See getDiskLadderSizeBits / getDiskSize in engine.js.

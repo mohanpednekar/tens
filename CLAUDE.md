@@ -1081,7 +1081,9 @@ real per-tick amount delivered into the buffer, boosted temporarily by tapping (
 hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierGauge` needle dial; for a pool
 specifically, once that pool's buffer is full AND its Data Lake is ready to receive overflow
 (`isDataLakePoolReady`), the same gauge switches `mode="lake"` to show that pool's Data Lake overflow
-RATE instead (a separate `FillableStatCard` bar tracks the lake's fill LEVEL). Full formula/UI detail,
+RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
+expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
+itself). Full formula/UI detail,
 including the tap-bonus headroom clamping and the lake-mode handoff, is in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or
@@ -1098,14 +1100,17 @@ decade-power shape independently. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at h
 end bound. Full formulas, the `getCoreEarnTimeSeconds` raw-`intro.capacity` pacing caveat, and every
 constant name are in `docs/ECONOMY_REFERENCE.md`.
 
-**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/`diskBuildQueued`,
-`getDiskSize`/`getDiskCost`/`provisionDisk`/`tickDiskAutoFill`/`isDiskPullEligible`/`tickDiskPull`/
-`tickDiskLevelOneCachePull` in `engine.js`) are a real storage medium, not tier01-only: a size's
-ladder (1 KB → 10 KB → 100 KB, …, `DISK_LADDER_SIZE_MULTIPLIER`) advances every
-`DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the highest size any unlocked pool can
-fund. `provisionDisk` spends the cost and takes real build time (scaled by production rate,
-snapshotted at start); a pin-icon **queue toggle** (`diskBuildQueued`) can auto-start the next
-build. The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
+**Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/
+`diskProvisionPasses`/`diskBuildQueued`,
+`getDiskSize`/`getDiskCost`/`getDiskProvisionPassesCollected`/`provisionDisk`/`tickDiskAutoFill`/
+`isDiskPullEligible`/`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js`) are a real storage
+medium, not tier01-only: a size's ladder (1 KB → 10 KB → 100 KB, …, `DISK_LADDER_SIZE_MULTIPLIER`)
+advances every `DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the highest size any
+unlocked pool can fund. `provisionDisk` collects the cost in `DISK_BUILD_COST_MULTIPLIER` (10)
+passes of the disk's own face-value size each — so a pool's buffer only ever needs to hold one pass
+at a time, not the whole cost — then takes real build time once fully funded (scaled by production
+rate, snapshotted at start); a pin-icon **queue toggle** (`diskBuildQueued`) can auto-fire each pass
+as it becomes affordable. The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
 `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed

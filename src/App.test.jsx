@@ -2839,10 +2839,6 @@ test('the pool gauge switches from the fill-based multiplier to the Data Lake ov
   // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
   // sits at, so the needle does not jump across this transition.
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
-
-  // The Data Lake's own separate fill bar (fed by the buffer's own overflow) starts empty.
-  const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
-  expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
 })
 
 test('the pool gauge stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
@@ -2865,10 +2861,6 @@ test('the pool gauge stays in fill-based-multiplier mode (never switches to the 
   expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
   const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
   expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
-
-  // The Data Lake's own fill bar reads 0 rather than any residual/live-looking value.
-  const lakeFillBar = screen.getByRole('progressbar', { name: /pool 1 data lake current disk fill/i })
-  expect(lakeFillBar).toHaveAttribute('aria-valuenow', '0')
 })
 
 test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplier, leaving the Data Stream\'s untouched', async () => {

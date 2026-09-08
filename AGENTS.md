@@ -160,8 +160,9 @@ switches from the fill-based multiplier reading to that pool's own Data Lake ove
 (progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as that disk
 fills, back to 50% once it completes, drawn in `theme.color.info` on the SAME 0–200% scale so the
 needle doesn't jump at the transition — both readings hit 50 at that exact boundary by design; see
-"Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) gets its own
-separate fill bar below the Memory buffer tile instead. In its default multiplier mode the fill-based
+"Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) is shown by
+`DataLakePanel`'s own fill tile once that pool's card is expanded, not a second always-visible bar on
+the pool card itself. In its default multiplier mode the fill-based
 arc reads in the accent color, any live tap bonus extending it in `theme.color.warn` (gold/caution —
 the closest existing token to orange). The needle itself is a separate, neutral `theme.color.text`
 pointer swept to the current TOTAL (fill + tap bonus) reading, not tied to that accent/warn split.
@@ -206,7 +207,10 @@ buffer's own ceiling matches that pool's Capacity exactly (not a smaller fractio
 operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
 targets the next disk size and renders INSIDE the pool card matching that size (not standalone in
 the Data Stream section), with a fallback copy below the Data Stream card for the rare case where
-the disk ladder has outrun the last currently-visible pool card. Only the largest unlocked pool is expanded; earlier pools remain as
+the disk ladder has outrun the last currently-visible pool card. Its cost is paid in
+`DISK_BUILD_COST_MULTIPLIER` (10) passes of the disk's own face-value size each
+(`intro.diskProvisionPasses`) rather than as one lump sum, so a pool's buffer only ever needs to hold
+one pass at a time; only once all 10 land does the real timed build start. Only the largest unlocked pool is expanded; earlier pools remain as
 compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a
 fresh disk takes exactly the time to fill it at 1x Memory bandwidth (current production rate), ×N
 for the array's Nth disk; only the pool's smallest size gets an always-full **read cache** (Data

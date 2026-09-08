@@ -135,15 +135,17 @@ or tier name in the visible text, centered since the symbol alone already unique
 pool), the pool's own `MultiplierGauge` (switching to `mode="lake"` once that pool's own buffer is
 full AND its Data Lake is ready to receive overflow — see "Fill-based Speed/Bandwidth multiplier"
 in CLAUDE.md), and its own Bandwidth figure on the right (`formatDiskSize(poolBandwidth)}/sec`).
-Two more tiles render right below the summary button, ALWAYS visible regardless of expand state (not
+One more tile renders right below the summary button, ALWAYS visible regardless of expand state (not
 gated behind the disclosure): a tappable `FillableStatCard` for that pool's own Memory buffer
 (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
 `disabled={poolBufferFull || poolMultiplierCapped}`, showing `{bufferBits} / {bufferCapacity}` in
 Disk/SI units via `formatDiskSize` — a SEPARATE `<button>` from `PoolSummaryButton`, since a
-`<button>` can't nest inside another `<button>`), and a second, non-interactive `FillableStatCard`
-(`as="section"`, `aria-label="pool {n} data lake"`) showing that pool's Data Lake fill level as
-"`<symbol>` Lake · NN%". Only once expanded does the card also render that pool's own
-`components/DiskArrayRow`s and its own `components/DataLakePanel` (`bare` mode) — see both below.
+`<button>` can't nest inside another `<button>`). An earlier iteration also rendered a second,
+always-visible, non-interactive tile here showing that pool's Data Lake fill level as "`<symbol>`
+Lake · NN%" — removed as redundant with the equivalent live fill level `components/DataLakePanel`'s
+own `LakePoolTile` already shows once the card is expanded (see below); the standalone copy only
+duplicated it a second time above the fold. Only once expanded does the card also render that pool's
+own `components/DiskArrayRow`s and its own `components/DataLakePanel` (`bare` mode) — see both below.
 
 Storage is continuous on this same page: **Provision Disk** — the common disk-build operation —
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
@@ -174,8 +176,14 @@ Below Build, every size from `getDiskSizesToShow(state)` renders a full interact
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
 not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
 
-Provisioning a disk is no longer instant — `provisionDisk` (`actions.provisionDisk`) spends the cost
-immediately but only starts a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
+Provisioning a disk is no longer instant, and its cost is no longer paid in one lump sum either —
+`provisionDisk` (`actions.provisionDisk`) collects the cost in `DISK_BUILD_COST_MULTIPLIER` (10)
+separate PASSES of exactly the disk's own face-value size each (`intro.diskProvisionPasses[size]`,
+`getDiskProvisionPassesCollected`), so the pool buffer only ever needs to hold one pass at a time —
+a click collects as many WHOLE passes as the buffer currently affords (all 10 in one click if the
+buffer already holds the full cost, fewer otherwise, banking the remainder for a later click or the
+queue's auto-fire). Only once the 10th pass lands does it start a countdown, `intro.diskBuild =
+{ size, remainingSeconds, totalSeconds }`
 (`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
 Memory bandwidth (the current Byte Foundry production rate, snapshotted at provisioning start), times
 the disk's own 1-indexed position in the array at the moment the build started, see
@@ -185,19 +193,27 @@ array's first disk 80,000 seconds, all shrinking together as the rate grows), ti
 (wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
 `diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." The Provision button renders three distinct states off
+disallowed, "the array provisioning." The Provision button's idle state has two label variants
+depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)`: still visible
+text `"🏦 Provision {size} Disk ({cost})"` before any pass has landed, or `"🏦 Provision {size} Disk —
+{passesCollected}/{DISK_BUILD_COST_MULTIPLIER}"` once funding is under way (`diskFundingInProgress =
+diskPassesCollected > 0 && !diskBuildInProgress`) — the button itself stays enabled/disabled and
+clickable exactly the same way in both (funding-in-progress is not a separate `disabled` state; only
+the visible label changes). Overall the button renders three distinct states off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
-isDiskLadderExhaustedForActivePools(state)`: **idle** — `aria-label="provision disk"`,
+isDiskLadderExhaustedForActivePools(state)`: **idle** (covers both the not-yet-started and
+funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
-the build cost, no build already in progress, the ladder not yet exhausted for every currently-active
+a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active
 pool, OR while a redeemable Disk Fill/an affordable Speed claim — both higher priority, see
 "Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
-`variant={canStartDiskBuild ? 'info' : 'neutral'}`, visible text `"🏦 Provision {size} Disk ({cost})"`,
+`variant={canStartDiskBuild ? 'info' : 'neutral'}`,
 `title` either naming which higher-priority action to take first (`"Take Speed (or redeem a full
 Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
 corresponding tier is currently at its required level (`diskRedeemTierName`, from
 `getDiskRedeemTierName(state, diskSize)`) — `"Costs
-{cost} and takes time to provision — creates an empty {size} container; its cache auto-fills it,
+{cost}, paid in {DISK_BUILD_COST_MULTIPLIER} passes of {size} each ({passesCollected}/
+{DISK_BUILD_COST_MULTIPLIER} collected) — creates an empty {size} container; its cache auto-fills it,
 redeemable right away for a free {tierName} once full"` or the same sentence ending `"…but it won't
 be redeemable until its own fixed corresponding tier reaches its matching level"`; **mid-build** — `aria-label="disk array
 rebuilding"`, always `disabled`, visible text `"🏦 Provisioning {size} Disk — {ceil(remainingSeconds)}s"`,
@@ -210,8 +226,11 @@ completing all three arrays in an earlier pool unlocks the next pool (see
 (`diskBuildProgress`) reads differently in each state: mid-provision, `100 - (remainingSeconds /
 totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
 fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
-idle, `(bits / diskCost) * 100` (progress toward affording the next build), paired with a hidden
-`role="progressbar"` (`aria-label="byte foundry disk provision progress"`,
+idle, `((passesCollected * diskSize + min(diskPoolBufferBits, diskSize)) / diskCost) * 100` (already-
+collected passes count as permanent progress, plus however much of the CURRENT buffer counts toward
+the next pass, so the bar climbs smoothly between clicks rather than jumping only once a whole pass
+fires), paired with a hidden
+`role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
 formatted" below) — the cost is a Disk-denominated amount (`getDiskCost` = `DISK_BUILD_COST_MULTIPLIER`
@@ -223,10 +242,11 @@ split — every shown size's full interactive DiskArrayRow already lives on this
 
 A small pin-icon `QueueToggleButton` sits beside the Provision Disk button (`ProvisionDiskRow` wraps
 the pair) arming/disarming `intro.diskBuildQueued` (`actions.queueDiskBuild`/`clearDiskBuildQueue`):
-since Provision Disk has no automation of its own (nothing in `tickGame` ever auto-starts a build —
-only `tickProvisionDisk` counts an already-started one down), a player would otherwise have to click
-it at the exact instant it's affordable, potentially 10 separate times per size before the ladder
-even advances. `aria-pressed={diskBuildQueued}`, showing `📌` (`variant="ghost"`) unarmed → `✕`
+since Provision Disk has no automation of its own (nothing in `tickGame` ever auto-starts a build or
+auto-fires a pass — only `tickProvisionDisk` counts an already-started build down), a player would
+otherwise have to click it at the exact instant a pass is affordable — up to `DISK_BUILD_COST_MULTIPLIER`
+(10) times just to fund ONE disk, and potentially 100 separate times per size before the ladder even
+advances (10 disks per array). `aria-pressed={diskBuildQueued}`, showing `📌` (`variant="ghost"`) unarmed → `✕`
 (`variant="prestige"`, the gold/caution token) once armed; `disabled` only while ARMING would no-op
 (`diskBuildInProgress` or `diskLadderExhausted`) — canceling an already-armed queue is never blocked.
 See docs/ECONOMY_REFERENCE.md's "Disks" section for the full queue mechanic.

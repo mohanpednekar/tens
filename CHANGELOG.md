@@ -254,6 +254,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Provision Disk's build cost is now paid in 10 installments ("passes") instead of one lump sum**
+  — each pass costs exactly the disk's own face-value size (a 10 KB disk still costs 100 KB total,
+  paid as 10 passes of 10 KB each), so a pool's local buffer only ever needs to hold one pass at a
+  time rather than the disk's full build cost. A click collects as many whole passes as the buffer
+  currently affords (all 10 at once if it already holds the full cost, fewer otherwise, banking the
+  remainder for a later click or the "queue next build" toggle's auto-fire); the button's label and
+  progress bar reflect passes collected so far while funding is in progress. Total cost is
+  unchanged.
+- **Removed the standalone Data Lake fill bar from each Storage pool card** — the always-visible
+  "`<symbol>` Lake · NN%" tile between the pool's Memory buffer and Provision Disk is gone; the same
+  fill level is already shown by the Data Lake panel's own tile once that pool's card is expanded,
+  so the duplicate copy above the fold added nothing.
 - **Byte Foundry storage funding is now fully automatic (pull-based)** — Storage no longer pushes
   redemption into the Byte Factory tier ladder via a click or an autobuyer gate; instead, every
   tick, Byte Foundry pulls a full, clean-slate (zero purchase-level-progress) matching disk into
