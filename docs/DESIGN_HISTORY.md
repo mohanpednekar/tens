@@ -6404,3 +6404,168 @@ diskReadCacheFlush alongside a spendable cache, confirms the flush entry is gone
 confirms `tickDiskAutoFill` can immediately begin refilling that size's cache again afterward
 (reverting the fix reproduces the bug — the flush survives the pull and refill stays blocked).
 `yarn test`: 1717/1717 green (+1). `yarn build` succeeds.
+
+### The "stranded disks never touch write-cache either" rule (from the two Devin Review findings above) itself turned out to be the bug: it permanently starved every disk size past the first one
+
+The player reported, after the pull-based storage rewrite (issue #571) had been live for a while,
+that 10 KB disks (and by extension every size above a pool's smallest) simply never got filled by
+write-cache any more, even with a full stockpile of 10 source disks sitting ready and an empty
+target container waiting — "10KB disks are not getting filled by 1KB disks despite being fully
+affordable." Reproduced directly against the real engine functions (`tickDiskWriteCache` in
+isolation, the repo's usual empirical-verification method): with tier01 sitting at purchase level 2
+(one level past the 1 KB size's own required level 1), `canStartDiskWriteCacheMerge` refused to even
+start a merge, exactly matching an existing regression test's own fixture
+(`'never starts a new merge from an already-stranded source'`) — the test had, in effect, been
+asserting the bug as correct behavior all along.
+
+**Root cause.** The pull-based rewrite (issue #571) made Factory tier redemption fully automatic and
+instantaneous: the moment a size's disk is full and its tier sits at the exact matching level,
+`tickDiskPull` consumes it and rolls the tier straight to the next level, same tick. For a pool's
+smallest size (whose required level is always 1, the ladder's very first step), there is no "too
+early" state — a disk of that size is either exactly redeemable (tier at level 1) or already
+stranded (tier at level 2+); there is no level a tier could ever sit at that leaves it merely
+"not currently redeemable but not stranded either." Combined with the two Devin Review findings
+above — which taught `canStartDiskWriteCacheMerge`/`tickDiskWriteCache`'s ongoing collect loop to
+refuse a stranded SOURCE outright, extending the "no disk is ever liquidated to Bits" instruction
+(see "Idle disk liquidation removed entirely" above) to also mean "never let a stranded disk feed
+anything, including the write cache" — this meant a pool's smallest size became stranded within a
+tick or two of ever being redeemed, after which it could never again start or continue feeding the
+next size up via write-cache for the rest of the cycle. Every size past the smallest was left with
+no real path to ever refill once its own feed source got redeemed even once — exactly the reported
+symptom, and not something either Devin Review pass anticipated, since both were reasoning about
+liquidation-era invariants that no longer matched how quickly the new pull-based redemption path
+actually strands a source.
+
+**Why this reading of "simply ignore it" was wrong.** The maintainer's original instruction (see
+"Idle disk liquidation removed entirely" above) was specifically about not DESTROYING a disk the
+player built — converting it to Bits just because an unrelated tier's autobuyer outran Storage's own
+pace. Folding a stranded disk into building the NEXT size up is not destruction: the disk's own
+material value survives, just reshaped into a more useful container — exactly the same emergent use
+an earlier "tenth finding" (see above) had already identified and explicitly protected FOR, back
+when idle disk liquidation still existed alongside write-cache. The later Devin Review passes
+over-corrected: they were right that write-cache silently absorbing a source that's just as
+stranded as the target it would produce is pointless (the "double-stranded" regression test they
+added, `'an already-stranded source with an ALSO-stranded target'`, is still correct and unchanged
+by this fix), but they generalized that into blocking on the SOURCE's stranded status at all, rather
+than the TARGET's — the one check that actually determines whether the merge is worth doing.
+
+**Fix.** Moved the stranded check from the source to the target throughout:
+`canStartDiskWriteCacheMerge` now refuses a new merge only when the TARGET
+(`isDiskStrandedByAdvancedTier(state, targetSize)`) is already stranded — a stranded source is no
+longer a blocker at all, since it has no other use left and folding it upward is exactly the
+productive path available to it. `isDiskWriteCacheCollectPaused` and the ongoing collect loop inside
+`tickDiskWriteCache` now pause only for (a) an active tier claim on the source
+(`isDiskRedeemable(source)` — Factory still gets first crack at a disk it could pull this exact
+tick, a temporary pause) or (b) the target having since become stranded mid-collection (a permanent
+freeze — nothing left to gain, mirrors the pre-existing double-stranded case). The double-stranded
+scenario the second Devin Review finding protected against is still refused, now via the target
+check alone (a stranded target is definitionally also fed by a source that's at least as far along,
+so nothing regressed there).
+
+**Verification.** All four `tickDiskWriteCache` regression tests built around the old source-side
+rule were rewritten against real engine calls to assert the new behavior instead of the bug: a
+stranded source now DOES start and continue a merge once the target itself isn't stranded (the exact
+scenario from the player's report — tier01 past level 1, a full 1 KB stockpile, an empty 10 KB
+container waiting); collection that was frozen mid-merge because the source became stranded now
+resumes and continues instead of freezing forever; the double-stranded case (both source and target
+already stranded) still refuses to merge, unchanged. `yarn test`: 1728/1728 green (+1, a new
+target-stranded-mid-merge regression alongside the four rewritten tests). `yarn build` succeeds.
+
+### A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the "stranded" gate from write-cache entirely
+
+A Devin Review pass on PR #603 (the fix immediately above) caught that moving the stranded check
+from the write cache's SOURCE to its TARGET was itself still too narrow, one hop removed from the
+same mistake: "when an intermediate target is stranded, `canStartDiskWriteCacheMerge` refuses to
+create it. That disk can still feed the next usable size. Tier01 above level 3 therefore blocks
+replenishing the 1 MB array." Concretely — 100 KB is tier01's own LAST disk-ladder step
+(`getDataLakeSubSize` position 3 of 3); once tier01 advances past its own level 3, 100 KB is
+stranded relative to tier01 — but 100 KB is also the fixed SOURCE the write cache needs to ever
+build 1 MB (tier02's own first step). The immediately-preceding fix's target-stranded check saw 100
+KB (as a TARGET, fed from 10 KB) already stranded under tier01 and refused to keep building it at
+all, even though a further, perfectly redeemable 1 MB under tier02 depended on that exact 100 KB
+disk existing. Blocking one hop up from the reported bug just relocated the same starvation to the
+next tier-group boundary instead of fixing it.
+
+**Root cause, reframed.** Every one of the last three fixes (source-stranded, then target-stranded,
+now this one) shared the same false premise: that a disk which can't be redeemed by ITS OWN
+corresponding tier this cycle has "nothing to gain" from being used elsewhere. That premise is
+simply wrong for write-cache specifically, because `disks`/`disksBuiltTotal`/`diskWriteCache` are
+all Prestige-permanent (see "Storage funding rebuilt push→pull" above and "A further Devin Review
+finding..." for how that permanence was itself hard-won) — a container built or filled this cycle
+persists into every future cycle regardless of whether the tier it corresponds to can use it RIGHT
+NOW. There is also no competing use to protect against: the write-cache ladder is a strict single
+chain (source N feeds exactly one target N+1, never a choice among several), so there is never a
+scenario where filling a stranded-relative-to-its-own-tier disk instead of some OTHER use is a worse
+choice — the alternative is always just leaving the source's already-idle full disks sitting
+completely unused. The only place a genuine choice exists is between write-cache and Factory
+redemption wanting the exact same physical disk on the exact same tick — `isDiskRedeemable(source)`
+already covers that, and always did.
+
+**Fix.** Removed every `isDiskStrandedByAdvancedTier` check from `canStartDiskWriteCacheMerge` and
+`isDiskWriteCacheCollectPaused` (and the inline pause check inside `tickDiskWriteCache`'s collect
+loop, which delegates to the latter). Collection now pauses ONLY while the source has an active tier
+claim (`isDiskRedeemable(source)`) — a temporary condition that clears the moment the tier moves off
+that exact level, whether into "too early" (for a size ahead of the tier) or "stranded" (for one
+behind it) territory; neither stops the merge any more. `isDiskStrandedByAdvancedTier` itself is
+unchanged and still exported — `DiskArrayRow` still uses it to render a size's own disks as
+genuinely stranded (a fact about that size's OWN tier-redemption fate, independent of whether
+write-cache is quietly still making use of it) — it simply has no remaining callers inside
+`engine.js` itself.
+
+**Verification.** Rewrote the two tests the immediately-preceding fix had added around target-
+stranded blocking to assert the opposite (a merge starts, and continues mid-collection, even with
+both source and target stranded, within tier01's own 3-step group), and added a new dedicated
+regression crossing an actual tier-GROUP boundary: 100 KB (tier01's own last step, stranded under
+tier01) still starts and feeds a merge into 1 MB (tier02's own first step, stranded under tier02 too)
+— genuinely failing under the immediately-preceding fix's target-stranded gate (confirmed by
+reverting to it and re-running). Also rewrote a `prestigeGame` regression test whose premise (a merge
+"frozen because its source became stranded") no longer holds — repurposed it to test the one pause
+reason that remains: an active tier claim on the source, which a real Prestige's purchase-level reset
+genuinely does clear. `yarn test`: 1729/1729 green (+1 net: two tests rewritten, one new
+cross-tier-boundary regression, one existing `prestigeGame` test repurposed). `yarn build` succeeds.
+(A first version of the cross-tier-boundary test left the target exactly redeemable rather than
+stranded, so it couldn't actually distinguish old from new behavior despite its own claim to the
+contrary — caught by an adversarial review pass on this same PR and corrected; see the entry below.)
+
+### An adversarial review pass on PR #603 caught the new cross-tier-boundary test asserting a false "would have failed under the prior fix" claim
+
+The `code-reviewer` subagent, re-reviewing the write-cache fix above at commit `4cb24a7`, verified
+its central engine change was sound but caught that the "propagates a full chain across a
+tier-group boundary" test didn't actually prove what it claimed. That test set tier02 to purchase
+level 1 — exactly `megabyteSize`'s (1 MB) own required level, so `isDiskStrandedByAdvancedTier`
+was `false` for the target either way. Since the immediately-preceding fix's gate only ever
+blocked on the TARGET's stranded status, a non-stranded target was never blocked under the OLD code
+either — the test passed under both the buggy and fixed versions and could not have caught a
+regression back to the old behavior, contrary to its own docstring and the corresponding
+`docs/DESIGN_HISTORY.md` claim (both asserted "this would have failed under the immediately-
+preceding fix's target-stranded gate"). The reviewer confirmed this empirically: reverting
+`canStartDiskWriteCacheMerge`/`isDiskWriteCacheCollectPaused` to the prior target-stranded
+implementation in an isolated `git worktree` pinned to `4cb24a7` and re-running the test showed it
+still passed. It also confirmed the actual regression `4cb24a7` fixes — a target stranded relative
+to its OWN tier still getting blocked — IS correctly caught by the neighboring
+"ALSO starts a new merge when the TARGET is stranded too" test, which the reviewer confirmed
+genuinely fails when the same revert is applied.
+
+**Fix.** Changed the cross-tier-boundary test's fixture so tier02 sits at purchase level 2 instead
+of 1, making `megabyteSize` (1 MB) genuinely stranded under tier02's own tier — not merely
+redeemable — while `level3Size` (100 KB) stays stranded under tier01. Re-verified this corrected
+version actually fails when the same revert is applied (confirming it now catches the regression it
+claims to), then restored the fix. Corrected the matching claim in this file's entry above.
+
+**Process note.** This is a rare case of an interactive session's own adversarial `code-reviewer`
+subagent catching a defect the session itself introduced in its OWN prior test/doc edits (as
+opposed to catching a defect in the underlying engine change) — exactly the kind of thing running
+the reviewer after every final commit, not just once at the end, is meant to surface. It also
+surfaced a real environmental hazard worth noting for future sessions: the reviewer's own
+verification steps (reverting file contents locally to compare old vs. new behavior) executed
+against the SAME shared working tree this interactive session was concurrently editing in, and at
+one point ran `git checkout --` to restore a clean baseline — which briefly discarded this session's
+own not-yet-committed edits to three files (mid-way through addressing an unrelated, earlier round
+of Devin Review findings) before the session could commit them. No permanent harm resulted (the
+session simply noticed via `git status`/content greps that its edits had vanished and redid them
+before committing), but a background review agent doing file-level git operations in a working tree
+another agent is actively editing is a real hazard — a future instance of this pattern should
+prefer an isolated worktree from the start (as this reviewer eventually did for its authoritative
+verification) rather than reverting in place, and an interactive session dispatching such a
+review should commit its own in-progress edits before launching it, or expect to verify and redo
+them afterward.
