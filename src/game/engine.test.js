@@ -1097,11 +1097,11 @@ describe('pickIntroCapacityMilestone', () => {
 
   it('no longer clamps the raw intro.capacity value to the pool ceiling — only the pool\'s own decade-power derived Capacity (getStoragePoolCapacity) stays clamped there', () => {
     const state = withIntro(createInitialGameState(), {
-      bits: 8 * 2 ** 19, capacity: 8 * 2 ** 19, ...noOtherUpgradesLeft,
+      bits: 8 * 2 ** 16, capacity: 8 * 2 ** 16, ...noOtherUpgradesLeft,
     })
-    expect(getStoragePoolCapacity(state, 1)).toBe(800_000) // 100,000 Bytes (decade power) — below the 1 MB ceiling
+    expect(getStoragePoolCapacity(state, 1)).toBe(80_000) // 10,000 Bytes (decade power) — below the 100 KB ceiling
     const after = pickIntroCapacityMilestone(state)
-    expect(after.intro.capacity).toBe(8 * 2 ** 20) // raw doubles plainly, unclamped...
+    expect(after.intro.capacity).toBe(8 * 2 ** 17) // raw doubles plainly, unclamped...
     expect(after.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS) // ...now past the pool's own ceiling
     expect(getStoragePoolCapacity(after, 1)).toBe(INTRO_CAPACITY_CAP_BITS) // the pool's own derived value still clamps there
     expect(isMemoryCapacityAtCap(after)).toBe(true)
@@ -1141,7 +1141,7 @@ describe('storage pools', () => {
     expect(getStoragePoolCapacity(state, 1)).toBe(80_000) // 10,000 Bytes (10^4, decade power) in bits instead
   })
 
-  it('pool 1 Capacity climbs 1 KB → 10 KB → 100 KB → 1000 KB (=1 MB, the pool\'s own ceiling), jumping only at each decade threshold and holding flat in between', () => {
+  it('pool 1 Capacity climbs 1 KB → 10 KB → 100 KB (the pool\'s own ceiling), jumping only at each decade threshold and holding flat in between', () => {
     const capacityAtDoublings = steps => withIntro(createInitialGameState(), {
       byteCreated: true,
       capacity: BITS_PER_BYTE * (2 ** steps),
@@ -1155,11 +1155,10 @@ describe('storage pools', () => {
     // intermediate SI-clean-style steps (2 KB/4 KB/etc.) in between.
     expect(getStoragePoolCapacity(capacityAtDoublings(14), 1)).toBe(80_000)
     expect(getStoragePoolCapacity(capacityAtDoublings(16), 1)).toBe(80_000)
-    // 17 doublings crosses into 100 KB.
-    expect(getStoragePoolCapacity(capacityAtDoublings(17), 1)).toBe(800_000)
-    expect(getStoragePoolCapacity(capacityAtDoublings(19), 1)).toBe(800_000)
-    // 20 doublings crosses into 1000 KB — pool 1's own ceiling (1 MB), where it then clamps
-    // regardless of how much further intro.capacity keeps doubling past this point.
+    // 17 doublings crosses into 100 KB — pool 1's own ceiling (INTRO_CAPACITY_CAP_BITS), where it
+    // then clamps regardless of how much further intro.capacity keeps doubling past this point.
+    expect(getStoragePoolCapacity(capacityAtDoublings(17), 1)).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(getStoragePoolCapacity(capacityAtDoublings(19), 1)).toBe(INTRO_CAPACITY_CAP_BITS)
     expect(getStoragePoolCapacity(capacityAtDoublings(20), 1)).toBe(INTRO_CAPACITY_CAP_BITS)
     expect(getStoragePoolCapacity(capacityAtDoublings(30), 1)).toBe(INTRO_CAPACITY_CAP_BITS)
   })
@@ -1186,10 +1185,12 @@ describe('storage pools', () => {
       ),
     })
     expect(getUnlockedStoragePoolCount(state)).toBe(8)
-    // 1e27 Bytes exactly — pool 8's own SI ceiling; a naive iterative getNextSiDoubledValue walk
-    // drifts to ~1.024e27 Bytes (8.192e27 bits) instead at this magnitude (verified independently
-    // before this fix)
-    expect(getStoragePoolCapacity(state, 8)).toBe(1e27 * BITS_PER_BYTE)
+    // 1e26 Bytes exactly — pool 8's own SI ceiling (10x smaller than an earlier 1e27-Byte bound,
+    // see DISK_BUILD_COST_MULTIPLIER/Provision Disk's own funding-pass split in engine.js); a naive
+    // iterative getNextSiDoubledValue walk would drift to the wrong decade multiplier well before
+    // reaching this raw magnitude regardless of exactly which decade the ceiling itself lands on
+    // (verified independently before this fix)
+    expect(getStoragePoolCapacity(state, 8)).toBe(1e26 * BITS_PER_BYTE)
   })
 
   it('snaps a pool\'s Bandwidth cap down to the nearest SI-clean value below sqrt(Capacity)', () => {
@@ -1256,11 +1257,11 @@ describe('storage pools', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 0,
-      // 21 doublings from the 1-Byte start — its decade-power pool equivalent
-      // (getDecadePowerEquivalentBits) is exactly 1,000,000 Bytes (8,000,000 bits), landing right
-      // at pool 1's own ceiling (INTRO_CAPACITY_CAP_BITS, 1 MB) / pool 2's own floor, so pool 2
+      // 17 doublings from the 1-Byte start — its decade-power pool equivalent
+      // (getDecadePowerEquivalentBits) is exactly 100,000 Bytes (800,000 bits), landing right
+      // at pool 1's own ceiling (INTRO_CAPACITY_CAP_BITS, 100 KB) / pool 2's own floor, so pool 2
       // shows that derived value unclamped while pool 1 stays clamped at its own ceiling.
-      capacity: 1024 * 1024 * 16,
+      capacity: 1024 * 1024,
       disksBuiltTotal: Object.fromEntries(
         [...Array(3)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
       ),
@@ -1274,15 +1275,15 @@ describe('storage pools', () => {
   it('caps a pool\'s own Bandwidth at the square root of its own Capacity (in Bytes) once the production rate outgrows it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (8,000,000 bits =
-      // 1,000,000 Bytes, a clean SI 1 MB — see POOL_CAPACITY_SI_STEP in layers.js);
-      // sqrt(1,000,000 Bytes) = 1,000 Bytes/sec = 8,000 bits/sec (1 KB/sec) — matching the
-      // clean SI Bandwidth cap the pool's own 1 MB Capacity should produce.
+      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits =
+      // 100,000 Bytes, a clean SI 100 KB — see POOL_CAPACITY_SI_STEP in layers.js);
+      // sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored down to 250 Bytes/sec =
+      // 2,000 bits/sec — the clean SI Bandwidth cap the pool's own 100 KB Capacity should produce.
       capacity: INTRO_CAPACITY_CAP_BITS,
       productionMultiplier: 999_999, // far above the cap
     })
-    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(8_000)
-    expect(getStoragePoolBandwidth(state, 1)).toBe(8_000)
+    expect(getIntroProductionRate(state.intro)).toBeGreaterThan(2_000)
+    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
   })
 
   it('Bandwidth follows the SI-clean equivalent of the raw production rate while it stays under sqrt(Capacity)', () => {
@@ -1387,9 +1388,9 @@ describe('pool buffers', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
-      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (8,000,000 bits, a
-      // clean SI 1 MB) regardless of the shared Capacity's own magnitude; pool 1 Bandwidth cap
-      // = sqrt(1,000,000 Bytes) = 1,000 Bytes/sec = 8,000 bits/sec.
+      // Pool 1's own Capacity is hard-bounded at INTRO_CAPACITY_CAP_BITS (800,000 bits, a
+      // clean SI 100 KB) regardless of the shared Capacity's own magnitude; pool 1 Bandwidth cap
+      // = sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored to 250 Bytes/sec = 2,000 bits/sec.
       capacity: 32_000_000,
       productionMultiplier: 999_999, // total "Data Stream rate" far exceeds any single pool's cap
       disksBuiltTotal: {
@@ -1397,19 +1398,19 @@ describe('pool buffers', () => {
         [FIRST_DISK_SIZE * 10]: DISK_ARRAY_LADDER_CAP,
         [kb100]: DISK_ARRAY_LADDER_CAP,
       }, // unlocks pool 2
-      // Pool 1's buffer starts at exactly 50% of its own Capacity (8,000,000 / 2) so its
+      // Pool 1's buffer starts at exactly 50% of its own Capacity (800,000 / 2) so its
       // fill-based multiplier (see FILL_MULTIPLIER_* in layers.js) is neutral (100%) — this test
       // is about the leftover-speed reservation order, not the multiplier, which gets its own
       // dedicated coverage elsewhere.
-      poolBuffers: { 1: 4_000_000 },
+      poolBuffers: { 1: 400_000 },
     })
     const after = tickPoolBufferFill(1)(state)
-    // Pool 1 reserves exactly its own 8,000 bits/sec cap off the top of the shared rate; pool 2
+    // Pool 1 reserves exactly its own 2,000 bits/sec cap off the top of the shared rate; pool 2
     // gets whatever's left of the (effectively unlimited, here) remaining rate, still bounded by
     // its own Bandwidth cap and buffer room.
-    const pool1Transfer = after.intro.poolBuffers[1] - 4_000_000
+    const pool1Transfer = after.intro.poolBuffers[1] - 400_000
     const pool2Transfer = after.intro.poolBuffers[2]
-    expect(pool1Transfer).toBe(8_000)
+    expect(pool1Transfer).toBe(2_000)
     expect(pool2Transfer).toBeGreaterThan(0)
     expect(after.intro.bits).toBe(1_000_000 - pool1Transfer - pool2Transfer)
   })
@@ -4142,7 +4143,7 @@ describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues
 
   it('uses the raw (unclamped) intro.capacity value, not a pool\'s own smaller SI-clean derived Capacity — a deliberate, documented pacing consequence of intro.capacity no longer clamping to a pool ceiling (see docs/DESIGN_HISTORY.md)', () => {
     const state = withIntro(createInitialGameState(), {
-      // 20 doublings from 1 Byte: intro.capacity now grows past pool 1's own 1 MB SI ceiling
+      // 20 doublings from 1 Byte: intro.capacity now grows past pool 1's own 100 KB SI ceiling
       // (INTRO_CAPACITY_CAP_BITS) instead of clamping there, unlike getStoragePoolCapacity's own
       // (smaller, SI-clean) derived value for the same pool.
       capacity: 8 * 2 ** 20,
@@ -9632,12 +9633,12 @@ describe('Data Lakes', () => {
   })
 
   describe('overflow fill (see tickPoolBufferFill\'s own overflow branch / fillDataLakeDisks in engine.js)', () => {
-    // Pool 1's own Capacity clamps to INTRO_CAPACITY_CAP_BITS (8,000,000 bits) regardless of this
-    // seeded value, giving Bandwidth sqrt(1,000,000 Bytes) = 1,000 Bytes/sec = 8,000 bits/sec, and
-    // a buffer capacity of 8,000,000 bits — see the existing tickPoolBufferFill tests above for the
-    // same derivation. `poolBuffers: { 1: 8_000_000 }` seeds that buffer already completely full,
-    // so every bit of pool 1's own reserved rate this tick is overflow, none of it topping up the
-    // (already-full) buffer itself.
+    // Pool 1's own Capacity clamps to INTRO_CAPACITY_CAP_BITS (800,000 bits) regardless of this
+    // seeded value, giving Bandwidth sqrt(100,000 Bytes) ≈ 316.23 Bytes/sec, SI-clean-floored to
+    // 250 Bytes/sec = 2,000 bits/sec, and a buffer capacity of 800,000 bits — see the existing
+    // tickPoolBufferFill tests above for the same derivation. `poolBuffers: { 1: 800_000 }` seeds
+    // that buffer already completely full, so every bit of pool 1's own reserved rate this tick is
+    // overflow, none of it topping up the (already-full) buffer itself.
     // A lake only feeds from overflow once its own pool has built at least one real disk
     // (isDataLakePoolReady) — seeded here via disksBuiltTotal so every test below exercises the
     // overflow MATH itself rather than that separate unlock gate (covered by its own describe block).
@@ -9646,15 +9647,15 @@ describe('Data Lakes', () => {
       bits: 1_000_000,
       capacity: 32_000_000,
       productionMultiplier: 999_999,
-      poolBuffers: { 1: 8_000_000 },
+      poolBuffers: { 1: 800_000 },
       disksBuiltTotal: { [kb1]: 1 },
       ...overrides,
     })
 
     it('routes leftover reserved production to the lake in the SAME tick the buffer transitions from not-full to full, rather than only starting once a LATER tick recognizes it as already full (regression — a large elapsedSeconds tick, e.g. offline-progress catch-up, that both tops off a nearly-full buffer AND has production left over used to just silently keep that leftover as ordinary Bits, neither topping up the buffer nor reaching the lake, until the next tick)', () => {
-      const almostFullState = fullBufferState({ poolBuffers: { 1: 8_000_000 - 4_000 } }) // 4,000 bits of room left
-      const after = tickPoolBufferFill(2)(almostFullState) // 2s elapsed — enough to fill the remaining room AND leave some over
-      expect(after.intro.poolBuffers[1]).toBe(8_000_000) // buffer topped out exactly, never overshoots its own capacity
+      const almostFullState = fullBufferState({ poolBuffers: { 1: 800_000 - 400 } }) // 400 bits of room left
+      const after = tickPoolBufferFill(2)(almostFullState) // 2s elapsed (2,000 bits/sec x 2s = 4,000 bits reserved) — enough to fill the remaining room AND leave some over
+      expect(after.intro.poolBuffers[1]).toBe(800_000) // buffer topped out exactly, never overshoots its own capacity
       // Some of THIS SAME tick's reserved production already reached the lake — before the fix,
       // both of these would read as 0/false here, only becoming nonzero on the FOLLOWING tick.
       expect(getDataLakeFillBits(after, 1) > 0 || getDataLakeDepositedUnits(1)(after) > 0).toBe(true)
@@ -9673,14 +9674,14 @@ describe('Data Lakes', () => {
     it('feeds the matching Data Lake once the pool\'s own buffer has no more room, STARTING at DATA_LAKE_OVERFLOW_MAX_PERCENT of the pool\'s reserved rate while the lake is empty and tapering continuously from there', () => {
       const state = fullBufferState()
       expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // the instantaneous rate at 0 fill
-      const after = tickPoolBufferFill(1)(state) // 1s elapsed, 8,000 bits/sec reserved for pool 1
-      expect(after.intro.poolBuffers[1]).toBe(8_000_000) // untouched — buffer was already full
+      const after = tickPoolBufferFill(1)(state) // 1s elapsed, 2,000 bits/sec reserved for pool 1
+      expect(after.intro.poolBuffers[1]).toBe(800_000) // untouched — buffer was already full
       // The rate isn't flat across the whole second — it's the exact closed-form solution to
       // dx/dt = fillRate * rateFraction(x/L), which continuously DECREASES as fillBits rises, so
-      // the total delivered is LESS than a naive flat-MAX_PERCENT estimate (8000*50%=4000) would
-      // suggest: x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L = 8000*0.5/8000 =
-      // 0.5/sec, so fillBits(1) = 8000*(1-exp(-0.5)) ≈ 3147.75 (see docs/DESIGN_HISTORY.md).
-      const expectedOverflow = 8000 * (1 - Math.exp(-0.5))
+      // the total delivered is LESS than a naive flat-MAX_PERCENT estimate (2000*50%=1000) would
+      // suggest: x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L = 2000*0.5/8000 =
+      // 0.125/sec, so fillBits(1) = 8000*(1-exp(-0.125)) ≈ 940.02 (see docs/DESIGN_HISTORY.md).
+      const expectedOverflow = 8000 * (1 - Math.exp(-0.125))
       expect(getDataLakeFillBits(after, 1)).toBeCloseTo(expectedOverflow, 6)
       expect(after.intro.bits).toBeCloseTo(1_000_000 - expectedOverflow, 6)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(0) // not a whole unit yet
@@ -9688,16 +9689,16 @@ describe('Data Lakes', () => {
 
     it('completes the lake\'s first (×1) disk once enough overflow accumulates, latching boostersUnlocked permanently', () => {
       const state = fullBufferState()
-      // The exact closed-form time to fill one disk from empty: ~4.605s in the exponential-taper
-      // regime to reach 90% fill (where the completion floor takes over — see the "floors the
-      // overflow rate" regression above), then 2s more at the floored rate (the remaining 800 bits
-      // / (8000 x 5%)) to finish the last 10% — not a flat "unitBits1 / (fillRate x MAX_PERCENT)"
-      // estimate, since the rate isn't constant across the fill. Overshoot slightly (elapsed well
-      // past that ~6.6s total) so float precision in the boundary comparison can't leave a tiny
-      // residual — a level-0 lake's capacity is exactly 1 unit, so completing this ONE disk maxes
-      // the whole lake regardless of how much leftover time this tick still has, and
-      // fillDataLakeDisks resets fillBits to exactly 0 once maxed either way.
-      const after = tickPoolBufferFill(8)(state)
+      // The exact closed-form time to fill one disk from empty: ln(10)/0.125 ≈ 18.42s in the
+      // exponential-taper regime to reach 90% fill (where the completion floor takes over — see
+      // the "floors the overflow rate" regression above), then 8s more at the floored rate (the
+      // remaining 800 bits / (2000 x 5%) = 800/100) to finish the last 10% — not a flat
+      // "unitBits1 / (fillRate x MAX_PERCENT)" estimate, since the rate isn't constant across the
+      // fill. Overshoot well past that ~26.42s total so float precision in the boundary comparison
+      // can't leave a tiny residual — a level-0 lake's capacity is exactly 1 unit, so completing
+      // this ONE disk maxes the whole lake regardless of how much leftover time this tick still
+      // has, and fillDataLakeDisks resets fillBits to exactly 0 once maxed either way.
+      const after = tickPoolBufferFill(35)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
       expect(getDataLakeFillBits(after, 1)).toBe(0)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
@@ -9763,23 +9764,25 @@ describe('Data Lakes', () => {
         },
       })
       expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT)
-      // A single ordinary tick at the floored rate (8,000 bits/sec x 1s x 5%) delivers 400 bits —
-      // vastly more than the 0.08-bit gap — so the disk actually completes, unlike the unfloored
-      // formula, which would deliver only ~0.04 bits this same tick and asymptotically approach
-      // (never reach) the remaining gap.
+      // A single ordinary tick at the floored rate (2,000 bits/sec x 1s x 5% = 100 bits/sec)
+      // delivers 100 bits — vastly more than the 0.08-bit gap — so the disk actually completes,
+      // unlike the unfloored formula, which would deliver only a tiny fraction of that this same
+      // tick and asymptotically approach (never reach) the remaining gap.
       const after = tickPoolBufferFill(1)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
-      // The remaining ~0.9998s of this tick (after the ~0.0002s needed to close the 0.08-bit gap)
-      // goes toward the NEXT disk (capacityLevel 1 still has 9 more ×1 slots open), starting at
-      // its own fresh MAX_PERCENT rate (50%, since it just opened empty) and continuously
-      // DECREASING as that disk's own fill rises — the exact closed-form solution to
-      // dx/dt = fillRate * rateFraction(x/L), not a single rate sampled once and held flat for the
-      // whole ~0.9998s (which would overestimate the fill, since the true rate keeps dropping the
-      // whole time). x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L = 8000*0.5/8000
-      // = 0.5/sec, so fillBits(t) = 8000*(1 - exp(-0.5*t)); at t≈0.9998s that's ≈3147.27 bits —
+      // The remaining ~0.9992s of this tick (after the ~0.0008s needed to close the 0.08-bit gap at
+      // the floored 100 bits/sec) goes toward the NEXT disk (capacityLevel 1 still has 9 more ×1
+      // slots open), starting at its own fresh MAX_PERCENT rate (50%, since it just opened empty)
+      // and continuously DECREASING as that disk's own fill rises — the exact closed-form solution
+      // to dx/dt = fillRate * rateFraction(x/L), not a single rate sampled once and held flat for
+      // the whole ~0.9992s (which would overestimate the fill, since the true rate keeps dropping
+      // the whole time). x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L =
+      // 2000*0.5/8000 = 0.125/sec, so fillBits(t) = 8000*(1 - exp(-0.125*t)); at t≈0.9992s that's
       // still well short of the 90%-fill threshold where the completion floor would take over, so
       // the whole remaining interval stays in this exponential regime (see docs/DESIGN_HISTORY.md).
-      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(3147.27, 1)
+      const expectedRemainingTime = 1 - 0.08 / 100
+      const expectedFillBits = 8000 * (1 - Math.exp(-0.125 * expectedRemainingTime))
+      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(expectedFillBits, 1)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
     })
 

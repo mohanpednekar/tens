@@ -203,7 +203,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      `getMemoryUnit`/`formatBitsInNearestUnit`), and it always lands on a clean binary figure.
    - Each Storage pool derives its OWN Capacity (`getStoragePoolCapacity`) from that same doubling
      count N via a DECADE-POWER-OF-10 ladder — deliberately coarser than Bandwidth's own finer
-     SI-clean sequence below — 1 KB, 10 KB, 100 KB, 1000 KB (= 1 MB, pool 1's own ceiling), and so on
+     SI-clean sequence below — 1 KB, 10 KB, 100 KB (pool 1's own ceiling), and so on
      for higher pools: `getDecadePowerEquivalentBits(rawBits)` finds
      `N = round(log2(rawBits / BITS_PER_BYTE))` (the SAME ROUNDED log2 `getSiCleanEquivalentBits`
      below computes — not a discrete doubling-comparison search, so floating-point drift from
@@ -221,12 +221,16 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      this decade-power ladder needs to guard against with rounding instead of flooring. The
      result is clamped to that pool's own start/end window (`getStoragePoolMemoryBounds`) — pool 1:
      `INTRO_STARTING_CAPACITY` … `INTRO_CAPACITY_CAP_BITS`; each pool's end bound is
-     `BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`, itself always a power of 10 (pool 1
-     → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …), so clamping never fights the decade-power ladder. Each
-     decade step exactly matches the disk-build COST one step behind it (e.g. crossing into "10 KB"
-     Capacity funds a 1 KB disk's own 80,000-bit `getDiskCost` — `DISK_BUILD_COST_MULTIPLIER` ×
-     size) — deliberate, not coincidental, so a pool's buffer is always exactly far enough ahead to
-     afford its own next disk the moment `intro.capacity` crosses that threshold. This is the value
+     `(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)) / DISK_BUILD_COST_MULTIPLIER`,
+     itself always a power of 10 times 100 (pool 1 → 100 KB, pool 2 → 100 MB, pool 3 → 100 GB, …;
+     10x smaller than a plain `POOL_CAPACITY_SI_STEP ** (poolIndex + 1)` bound would give, now that
+     Provision Disk's cost is paid in `DISK_BUILD_COST_MULTIPLIER` passes rather than one lump sum —
+     see the "Disks" section below), so clamping never fights the decade-power ladder. Each decade
+     step exactly matches the FACE VALUE of the disk-build one step behind it (e.g. crossing into
+     "10 KB" Capacity funds a single Provision Disk funding PASS toward a 1 KB disk, not that disk's
+     own 80,000-bit full `getDiskCost`) — deliberate, not coincidental, so a pool's buffer is always
+     exactly far enough ahead to fund its own next disk's pass the moment `intro.capacity` crosses
+     that threshold. This is the value
      Storage pool cards (`PoolCard` in `ByteFoundryPage`) render, in **SI units** (`formatDiskSize`)
      — e.g. 14 doublings from the 1-Byte start renders "16 KiB" on the Data Stream card but a plain
      "10 KB" on the pool card (10^4 Bytes, the decade step that doubling count falls into), not a
@@ -2644,7 +2648,7 @@ purchases were manual or automatic.
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose own fixed corresponding tier is currently at that size's required level, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `provisionDisk` | `state → state` | Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, then collects as many WHOLE `size`-bit passes as that size's own POOL buffer (`intro.poolBuffers`, not the shared Data Stream Buffer directly) currently affords (capped at however many of the `DISK_BUILD_COST_MULTIPLIER` total remain), banking a partial installment in `intro.diskProvisionPasses[size]` when the buffer can't cover the rest. Once the final pass lands, clears that counter and sets the intentionally historical `intro.diskBuild` persisted key. Duration uses `getProvisionDiskBaseSeconds` at that pool's own Bandwidth |
 | `tickProvisionDisk` | `elapsedSeconds → state → state` | Counts down the persisted `intro.diskBuild` timer and, on completion, increments that size's cumulative built count and clears the timer; unconditional in `tickGame` |
-| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` so the next Provision Disk fires itself once affordable, mirroring `queueIntroCapacityUpgrade`'s shape but actually reachable from the UI. Same-reference no-op while already queued, mid-build, or the ladder is exhausted for active pools |
+| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` so the next Provision Disk pass fires itself once affordable, mirroring `queueIntroCapacityUpgrade`'s shape — like that one, no UI control currently arms it (the pin-icon toggle that used to was removed from `ByteFoundryPage`). Same-reference no-op while already queued, mid-build, or the ladder is exhausted for active pools |
 | `clearDiskBuildQueue` | `state → state` | Clears `intro.diskBuildQueued`. Same-reference no-op when already false |
 | `tickQueuedDiskBuild` | `state → state` | If `diskBuildQueued` is set, calls `provisionDisk` (deferring to its own `isProvisionDiskTurnAvailable` guard rather than duplicating it) — fires and clears the queue once affordable, otherwise a same-reference no-op leaving it armed. Called from `tickGame`'s `tickStorage`, ranked the same as an ordinary manual click |
 | `getPoolBufferCapacity` | `(state, poolIndex) → number` | Byte Foundry Storage: a pool's own local buffer ceiling — equals `getStoragePoolCapacity(state, poolIndex)` exactly (see the "Pool buffers" entry below for why the fraction is 1, not smaller) |
@@ -2806,8 +2810,8 @@ purchases were manual or automatic.
 - `INTRO_STARTING_CAPACITY = 8` — starting Buffer / pool Memory Capacity start bound (1 Byte)
 - `INTRO_CAPACITY_DOUBLING_STEP = 2` — Capacity ×2 doubling multiplier per purchase; `upgradePoolCapacity` multiplies `intro.capacity` by this directly, unclamped (no longer capped to a pool's own end bound — see "Pool Memory Capacity" above). Deliberately plain binary doubling, since `intro.capacity` also drives the Data Stream tile's own binary display; each Storage pool derives its OWN decade-power Capacity from this same doubling count separately (`getStoragePoolCapacity`/`getDecadePowerEquivalentBits`, see `POOL_CAPACITY_SI_STEP` below and `docs/DESIGN_HISTORY.md` for the two earlier, reverted attempts at sharing one raw value between both displays)
 - `getNextSiDoubledValue(bits)` — the next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes (doubles normally except once per decade of ten doublings, where a value's mantissa — after stripping factors of 1000 — lands on exactly 64, and it goes to 125 instead of 128). Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolBandwidth` actually calls at runtime — iterating it N times drifts at very large N (its own mantissa-stripping check loses reliability well past `Number.MAX_SAFE_INTEGER`, reachable within a single Era at pool 8+), so it instead uses a private closed-form helper (`getSiCleanEquivalentBits`: `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`) that's exact for any reachable N; `getStoragePoolCapacity` doesn't use this sequence at all any more — see its own `getDecadePowerEquivalentBits` in "Pool Memory Capacity" above and `docs/DESIGN_HISTORY.md`
-- `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)`), so pool boundaries land on clean SI values (pool 1 → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation
-- `INTRO_CAPACITY_CAP_BITS = 8,000,000` (exactly 1 MB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
+- `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)) / DISK_BUILD_COST_MULTIPLIER`), so pool boundaries land on clean SI values (pool 1 → 100 KB, pool 2 → 100 MB, pool 3 → 100 GB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation. Divided by `DISK_BUILD_COST_MULTIPLIER` (10x smaller than a plain power of `POOL_CAPACITY_SI_STEP` would give) since a pool's buffer only ever needs to hold one Provision Disk funding pass (the disk's own face value), not the disk's whole build cost — see "Disks" below
+- `INTRO_CAPACITY_CAP_BITS = 800,000` (exactly 100 KB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
 - `INTRO_BANDWIDTH_COST_MULTIPLIER = 4` — Speed ×2 (Invest) cost ladder steps by this per tier
 - `MEMORY_BINARY_UNIT_STEP = 1024` — Data Stream CARD's own balance/Buffer binary display-unit ladder step (`getMemoryUnit`) — `1 KiB = 1024 Bytes`; Disks/Data Lake/caches (and, since `POOL_CAPACITY_SI_STEP`, each pool's own Capacity end bound VALUE) stay on the SI (1000-based) scale — this step now governs display rounding on the Data Stream card only, not where a pool's Capacity ceiling itself lands
 - `INTRO_STARTING_TICK_SPEED_SECONDS = 1` — the Byte generator's starting delivery period, in seconds — matches `TIER_DEFINITIONS`' own per-tier `baseTickSpeedSeconds` convention (a fixed period, not a continuous rate)

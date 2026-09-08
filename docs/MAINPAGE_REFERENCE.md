@@ -240,16 +240,14 @@ container — Memory / read cache / write cache fill it afterward (see DiskArray
 sections above). There is no separate StorageSummary chip row and no Foundry Memory vs Storage tab
 split — every shown size's full interactive DiskArrayRow already lives on this page.
 
-A small pin-icon `QueueToggleButton` sits beside the Provision Disk button (`ProvisionDiskRow` wraps
-the pair) arming/disarming `intro.diskBuildQueued` (`actions.queueDiskBuild`/`clearDiskBuildQueue`):
-since Provision Disk has no automation of its own (nothing in `tickGame` ever auto-starts a build or
-auto-fires a pass — only `tickProvisionDisk` counts an already-started build down), a player would
-otherwise have to click it at the exact instant a pass is affordable — up to `DISK_BUILD_COST_MULTIPLIER`
-(10) times just to fund ONE disk, and potentially 100 separate times per size before the ladder even
-advances (10 disks per array). `aria-pressed={diskBuildQueued}`, showing `📌` (`variant="ghost"`) unarmed → `✕`
-(`variant="prestige"`, the gold/caution token) once armed; `disabled` only while ARMING would no-op
-(`diskBuildInProgress` or `diskLadderExhausted`) — canceling an already-armed queue is never blocked.
-See docs/ECONOMY_REFERENCE.md's "Disks" section for the full queue mechanic.
+The pin-icon `QueueToggleButton` that used to sit beside the Provision Disk button
+(`ProvisionDiskRow` wrapping the pair) has been removed from the page — `provisionDiskButton` now
+renders the plain `Button` directly, with no wrapper. `intro.diskBuildQueued`/`actions.queueDiskBuild`/
+`actions.clearDiskBuildQueue`/`tickQueuedDiskBuild` remain fully implemented and tested in
+`engine.js` (arming still means the next pass fires itself the instant it's affordable, without a
+click at that exact instant), but no UI control currently arms them — the same "implemented, no UI
+control" posture Capacity's own `queueIntroCapacityUpgrade` already had. See
+docs/ECONOMY_REFERENCE.md's "Disks" section for the full queue mechanic.
 
 Below its own disk-array rows, each pool card renders `components/DataLakePanel` with both `bare`
 and `tierIndex={poolIndex}` set (`<DataLakePanel actions={actions} state={state} bare

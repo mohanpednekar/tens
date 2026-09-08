@@ -90,6 +90,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   showing that pool's own Data Lake overflow rate/fill (see "Data Lakes" above).
 
 ### Removed
+- **"Queue next build" pin-icon toggle beside Provision Disk** — the small pin/✕ button that armed
+  auto-firing the next Provision Disk pass is gone from `ByteFoundryPage`. The underlying engine
+  action (`queueDiskBuild`/`clearDiskBuildQueue`/`tickQueuedDiskBuild`, `intro.diskBuildQueued`)
+  remains fully implemented and tested, but no UI control currently arms it — the same posture
+  Capacity's own `queueIntroCapacityUpgrade` already had.
 - **Claim Core** — the manual "Claim Core" button on Foundry and its auto-claim counterpart (both
   minted a Compute Core by flushing the player's entire Memory capacity) are gone, superseded by
   buying Boosters from the Data Lake for Cores. The Sacrifice confirm dialog's "every future Core
@@ -259,9 +264,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   paid as 10 passes of 10 KB each), so a pool's local buffer only ever needs to hold one pass at a
   time rather than the disk's full build cost. A click collects as many whole passes as the buffer
   currently affords (all 10 at once if it already holds the full cost, fewer otherwise, banking the
-  remainder for a later click or the "queue next build" toggle's auto-fire); the button's label and
-  progress bar reflect passes collected so far while funding is in progress. Total cost is
-  unchanged.
+  remainder for a later click); the button's label and progress bar reflect passes collected so far
+  while funding is in progress. Total cost is unchanged.
+- **Storage pools now top out at 100x their own base unit instead of 1000x** — e.g. the MB Pool's
+  Memory Capacity now maxes at 100 MB instead of 1 GB (pool 1/KB Pool: 100 KB instead of 1 MB; pool
+  3/GB Pool: 100 GB instead of 1 TB; and so on). Enabled directly by the Provision Disk pass change
+  above: a pool's buffer ceiling only ever needs to fund one pass of its own largest disk (that
+  disk's own face value) now, not the disk's whole 10x build cost, so the ceiling itself shrinks by
+  the same 10x. Data Lake capacity is unaffected — a lake still climbs to 1,000 units at its own max
+  level.
 - **Removed the standalone Data Lake fill bar from each Storage pool card** — the always-visible
   "`<symbol>` Lake · NN%" tile between the pool's Memory buffer and Provision Disk is gone; the same
   fill level is already shown by the Data Lake panel's own tile once that pool's card is expanded,

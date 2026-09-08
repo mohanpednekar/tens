@@ -744,8 +744,9 @@ Strict three-layer separation:
    Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
    **converted to Bytes** (`getStoragePoolBandwidth` —
    `Math.min(rate, Math.sqrt(capacity / BITS_PER_BYTE) * BITS_PER_BYTE)`, both sides still in
-   bits/sec for internal consistency — a 1 MB-capacity pool caps at 1 KB/s, a 1 GB-capacity pool at
-   ~32 KB/s, a 1 TB-capacity pool at 1 MB/s), so a pool with a small Capacity window can lag behind
+   bits/sec for internal consistency — a 100 KB-capacity pool caps at ~250 B/s, a 100 MB-capacity
+   pool at 8 KB/s, a 100 GB-capacity pool at 250 KB/s, both SI-clean-snapped from the raw sqrt), so
+   a pool with a small Capacity window can lag behind
    the raw rate once production outgrows it. **Storage pools display in SI units for all purposes**
    (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike Memory
    Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below); while
@@ -759,10 +760,12 @@ Strict three-layer separation:
    the next pool. Runs AFTER tier01's own bootstrap conversion (`tickIntroAutoInvest`) and Queued
    Capacity each tick, so pool funding never competes with unlocking the main game or a Capacity
    doubling in flight. `getPoolBufferCapacity` equals the pool's own Capacity exactly (not some
-   smaller fraction) — within one pool the disk ladder's own three step costs already span roughly
-   an 80–95% spread of that pool's Capacity ceiling by the time the ladder reaches its largest
-   size, so any meaningfully smaller buffer ceiling would leave that size permanently unaffordable;
-   see `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
+   smaller fraction) — a pool's own largest disk's FACE VALUE lands exactly at that ceiling, so the
+   buffer, once full, can always fund one Provision Disk funding pass of even that largest disk
+   (`DISK_BUILD_COST_MULTIPLIER`/`provisionDisk` in `engine.js` — the full build cost is paid across
+   `DISK_BUILD_COST_MULTIPLIER` such passes, not this buffer alone in one lump sum); any meaningfully
+   smaller buffer ceiling would leave that size unable to fund even a single pass — see
+   `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary shows this buffer as a full-width
    `FillableStatCard` block — the same reused component/visual style as the Data Stream card's own
    tile (fill-gradient background, `BalanceText`, a hidden `role="progressbar"` for
    a11y) rather than a bespoke bar — showing just the buffer/capacity fraction (equal to the pool's
@@ -815,9 +818,11 @@ Strict three-layer separation:
    and independent of capacity); each
    `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
    the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. A small pin-icon `QueueToggleButton` sits beside Provision Disk
-   (`ProvisionDiskRow` wraps the pair) arming/disarming `intro.diskBuildQueued` — see "Economy
-   model" below's Disks section for the full mechanic. Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
+   slots in one unbroken row. The "queue next build" pin-icon toggle that used to sit beside
+   Provision Disk was removed from the UI; `intro.diskBuildQueued`/`queueDiskBuild`/
+   `clearDiskBuildQueue`/`tickQueuedDiskBuild` remain in `engine.js` and fully tested (same
+   "implemented but not wired into any control" posture as Capacity's own `queueIntroCapacityUpgrade`
+   — see "Economy model" below's Disks section for the full mechanic). Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
    action — here or on either dedicated screen — stays gated by the forced priority order (see
    "Economy model" below).
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
@@ -1109,8 +1114,10 @@ advances every `DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the 
 unlocked pool can fund. `provisionDisk` collects the cost in `DISK_BUILD_COST_MULTIPLIER` (10)
 passes of the disk's own face-value size each — so a pool's buffer only ever needs to hold one pass
 at a time, not the whole cost — then takes real build time once fully funded (scaled by production
-rate, snapshotted at start); a pin-icon **queue toggle** (`diskBuildQueued`) can auto-fire each pass
-as it becomes affordable. The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
+rate, snapshotted at start); a **queue toggle** (`diskBuildQueued`/`queueDiskBuild`/
+`tickQueuedDiskBuild`) can auto-fire each pass as it becomes affordable, though no UI control
+currently arms it (removed — see "Architecture" above; the engine action stays implemented and
+tested). The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
 `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed
@@ -1265,7 +1272,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1717 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1721 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

@@ -2282,13 +2282,14 @@ const getSiCleanEquivalentBits = rawBits => {
 }
 
 // Pool Capacity's own ladder (distinct from Bandwidth's finer SI-clean sequence above): plain
-// powers of 10 — 1 KB, 10 KB, 100 KB, 1000 KB (= 1 MB, pool 1's own ceiling) — jumping the instant
-// intro.capacity's own binary doublings cross each threshold, rather than climbing through every
-// intermediate SI-clean value (…,64,125,250,500,1000,…) the way it used to. Each step exactly
-// matches the disk-build COST one step behind it (e.g. reaching "10 KB" capacity funds a 1 KB
-// disk's own 80,000-bit build cost — DISK_BUILD_COST_MULTIPLIER × size), so a pool's buffer is
-// always exactly far enough ahead to afford its own next disk once intro.capacity crosses that
-// threshold — see docs/DESIGN_HISTORY.md.
+// powers of 10 — 1 KB, 10 KB, 100 KB (pool 1's own ceiling) — jumping the instant intro.capacity's
+// own binary doublings cross each threshold, rather than climbing through every intermediate
+// SI-clean value (…,64,125,250,500,1000,…) the way it used to. Each step exactly matches the
+// FACE VALUE of the disk-build one step behind it (e.g. reaching "10 KB" capacity funds a single
+// Provision Disk funding PASS toward a 1 KB disk — see provisionDisk/DISK_BUILD_COST_MULTIPLIER —
+// not that disk's own 80,000-bit full build COST), so a pool's buffer is always exactly far enough
+// ahead to fund its own next disk's pass once intro.capacity crosses that threshold — see
+// docs/DESIGN_HISTORY.md.
 //
 // Finds the decade exponent via `steps` (the SAME round(log2(...)) doubling count above, reused
 // rather than taking log10 of the raw, potentially astronomically large byte value directly) times
@@ -2339,7 +2340,7 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
   // Capacity is the decade-power equivalent (getDecadePowerEquivalentBits) of the shared Memory
   // doubling count, clamped to this pool's own window. It does not scale down when higher pools
-  // unlock, so pool 1 stays capped at 1 MB (SI) once maxed — see POOL_CAPACITY_SI_STEP in
+  // unlock, so pool 1 stays capped at 100 KB (SI) once maxed — see POOL_CAPACITY_SI_STEP in
   // layers.js.
   const rawCapacity = getDecadePowerEquivalentBits(state.intro?.capacity ?? 0)
   const floorBits = poolIndex === 1

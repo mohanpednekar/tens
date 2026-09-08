@@ -2732,8 +2732,8 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
 })
 
 test('Data Stream renders bits/Buffer scaled into the same appropriate binary unit at real pool capacity', () => {
-  // Pool 1's real Capacity end bound (INTRO_CAPACITY_CAP_BITS) is now a clean SI 1 MB
-  // (8,000,000 bits), not a clean binary 1 MiB — see POOL_CAPACITY_SI_STEP in layers.js. The
+  // Pool 1's real Capacity end bound (INTRO_CAPACITY_CAP_BITS) is now a clean SI 100 KB
+  // (800,000 bits), not a clean binary KiB power — see POOL_CAPACITY_SI_STEP in layers.js. The
   // Data Stream card's own balance/Buffer display stays binary regardless, so this real value
   // renders as a plain (non-round) KiB figure rather than a whole MiB — this test pins that
   // actual rendering rather than a synthetic round number, so a future change to either the SI
@@ -2742,14 +2742,14 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section')).toHaveTextContent('488.281 KiB / 976.562 KiB')
+  expect(balanceBar.closest('section')).toHaveTextContent('48.828 KiB / 97.656 KiB')
 })
 
 test('Data Stream balance floors the binary-unit conversion instead of rounding, so it never reads complete early', () => {
   // A 1-bit deficit (as the original binary-1-MiB-capacity version of this test used) is now
   // below this display's own decimal resolution at the real pool-1 Capacity's new KiB-range
-  // magnitude (976.562 KiB, not a round MiB — see the comment on the previous test): both the
-  // full capacity and a balance just 1 bit short floor to the identical "976.562 KiB" text at 3
+  // magnitude (97.656 KiB, not a round MiB — see the comment on the previous test): both the
+  // full capacity and a balance just 1 bit short floor to the identical "97.656 KiB" text at 3
   // decimal places, since the capacity itself is no longer an exact multiple of the KiB divisor
   // the way the old round-MiB cap was. A meaningfully larger (but still small) deficit still
   // demonstrably floors below the full reading, which is what this test actually verifies.
@@ -2759,10 +2759,10 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = balanceBar.closest('section').textContent
-  expect(balanceText).toContain('/ 976.562 KiB')
+  expect(balanceText).toContain('/ 97.656 KiB')
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: must not round the nearly-full balance up to match the full capacity reading.
-  expect(balanceText).not.toMatch(/(?:^|[^\d.])976\.562 KiB \/ 976\.562 KiB/)
+  expect(balanceText).not.toMatch(/(?:^|[^\d.])97\.656 KiB \/ 97\.656 KiB/)
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -2968,33 +2968,6 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: /foundry view/i })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
-  })
-
-  test('the queue-next-build toggle beside Provision Disk arms/disarms diskBuildQueued on click', async () => {
-    const user = userEvent.setup()
-    // mainGameUnlocked seeded true (and Foundry opened explicitly) rather than relying on the
-    // mandatory-gate render, matching the "tapping a pool's own Memory buffer" test above — this
-    // test's own `await user.click` calls leave enough real time for a live tick to fire, which
-    // would otherwise latch mainGameUnlocked mid-test and navigate away from Foundry. poolBuffers
-    // is deliberately left unseeded (defaults to 0, well under the 1 KB disk's own cost) so
-    // tickQueuedDiskBuild can never actually auto-fire the build mid-test regardless of how many
-    // real ticks elapse — this test only exercises the toggle's own arm/disarm click behavior, not
-    // Provision Disk's affordability.
-    seedMainGameState({ intro: { mainGameUnlocked: true, bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } })
-    render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
-
-    const queueButton = screen.getByRole('button', { name: /queue next disk build/i })
-    expect(queueButton).toHaveAttribute('aria-pressed', 'false')
-    expect(queueButton).not.toBeDisabled()
-
-    await user.click(queueButton)
-    const armedButton = screen.getByRole('button', { name: /cancel queued disk build/i })
-    expect(armedButton).toHaveAttribute('aria-pressed', 'true')
-    expect(armedButton).toBe(queueButton)
-
-    await user.click(armedButton)
-    expect(screen.getByRole('button', { name: /queue next disk build/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
   test('Provision Disk is disabled below its cost, starting at 1 KB', () => {

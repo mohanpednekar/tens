@@ -1,5 +1,58 @@
 # Design history & rationale
 
+### Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08
+
+Three related interactive-session changes to Byte Foundry Storage, landed together because the
+first directly enables the second:
+
+1. **Provision Disk now pays its build cost in `DISK_BUILD_COST_MULTIPLIER` (10) separate passes**
+   of the disk's own face-value size each, instead of the whole 10x cost in one lump sum
+   (`intro.diskProvisionPasses`, `getDiskProvisionPassesCollected`, both in `engine.js`). A call to
+   `provisionDisk` collects as many WHOLE passes as the pool's own local buffer currently affords in
+   that one call — a buffer already holding the full cost still completes all 10 passes and starts
+   the timed build in a single call, exactly as before, so every existing single-payment test case
+   kept passing unchanged; a smaller buffer banks a partial installment and leaves the rest for a
+   later call. Total cost is unchanged; only how it's paid changed.
+2. **Pool Memory Capacity end bounds (`getStoragePoolMemoryBounds`/`INTRO_CAPACITY_CAP_BITS` in
+   `layers.js`) shrunk 10x** — pool 1 (KB Pool) from 1 MB to 100 KB, pool 2 (MB Pool) from 1 GB to
+   100 MB, and so on (`(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)) /
+   DISK_BUILD_COST_MULTIPLIER`). This was only safe to do BECAUSE of (1): the old ceiling was sized
+   to exactly fund a pool's largest disk's own FULL 10x build cost in one sitting (a pool's buffer
+   had nowhere else to draw a lump-sum payment from); once that payment split into passes, the
+   buffer only ever needs to hold ONE pass — the disk's own face value — so the ceiling could drop
+   to match that smaller requirement instead. The pool's own decade-power Capacity ladder
+   (`getDecadePowerEquivalentBits`, unchanged) still climbs 1 KB → 10 KB → 100 KB — it simply now
+   gets clamped one decade step earlier by `getStoragePoolCapacity`'s existing `Math.min(...,
+   ceilingBits)`, with no change needed to the ladder itself. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`
+   (defined as half of `INTRO_CAPACITY_CAP_BITS`) scaled down 10x along with it, unchanged in
+   formula. Data Lake capacity (`DATA_LAKE_CAPACITY_BY_LEVEL`, maxing at 1,000 units per lake) is a
+   fully independent mechanic and was deliberately left untouched.
+3. **The "queue next build" pin-icon toggle was removed from `ByteFoundryPage`** (the
+   `QueueToggleButton`/`ProvisionDiskRow` wrapper). `intro.diskBuildQueued`/`queueDiskBuild`/
+   `clearDiskBuildQueue`/`tickQueuedDiskBuild` remain fully implemented and tested in `engine.js` —
+   removing the button just means no UI control currently arms them, the same posture Capacity's own
+   `queueIntroCapacityUpgrade` already had (see the "`diskBuildQueued` IS wired to an actual UI
+   control" entry earlier in this file for when the toggle was originally added).
+
+Also removed the standalone Data Lake fill-percentage tile that used to render, always visible,
+between a pool's Memory-buffer tile and its Provision Disk button on `ByteFoundryPage` — the
+identical fill level was already shown by `components/DataLakePanel`'s own `LakePoolTile` once that
+pool's card is expanded; the always-visible copy was pure duplication.
+
+**Test fallout from the Capacity shrink.** Every hardcoded absolute bit-count/Byte/KiB literal
+tuned to the OLD 1 MB/1 GB/1 TB pool boundaries needed updating to the new 100 KB/100 MB/100 GB
+ones across `layers.test.js` and `engine.test.js` — the pool-1-Capacity-climb test, the
+pickIntroCapacityMilestone unclamped-raw-capacity test, the pool-8 SI-clean-at-large-magnitude
+test, the lower-pool-bandwidth-fixed test, the sqrt-Capacity Bandwidth-cap test, and the entire
+Data Lake overflow-fill describe block (whose exponential-taper closed-form expectations all
+depend on pool 1's Bandwidth, which itself dropped from 8,000 to 2,000 bits/sec once pool 1's
+Capacity ceiling — and therefore its `sqrt(Capacity)` Bandwidth cap — shrunk). `App.test.jsx`'s two
+Data Stream binary-unit-display tests needed their expected KiB text updated too (the binary
+display of the same, now 10x smaller, `INTRO_CAPACITY_CAP_BITS` value naturally renders as
+different KiB figures). `yarn test`: 1721/1721 green. `yarn build` succeeds. Verified visually via a
+`yarn dev` + Playwright check that the KB Pool's Memory buffer now caps at "1 KB" (matching the new
+100x-smaller-than-Data-Lake-capacity ceiling) and that the pin-icon toggle no longer renders.
+
 ### Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04
 
 Player feedback on the just-shipped Reclaim/Forfeit mechanics (previous entries) pointed out that

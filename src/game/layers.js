@@ -134,22 +134,31 @@ export const MEMORY_BINARY_UNIT_STEP = 1024
 // constant rather than needing the full per-step mantissa sequence — see
 // docs/DESIGN_HISTORY.md for the derivation and the reasoning for exactly this switchover point.
 export const POOL_CAPACITY_SI_STEP = 1000
-// Pool 1 (Kilobyte pool) Memory Capacity end bound, in bits — exactly 1 MB (SI, 1,000,000 Bytes),
-// which happens to exactly equal the pool's largest Disk build cost (100 KB ×
-// DISK_BUILD_COST_MULTIPLIER = 8,000,000 bits) — the buffer must reach completely full to fund
-// that last disk, not merely "at least" it with margin, as the old binary 1 MiB (8,388,608-bit)
-// bound gave. See getStoragePoolMemoryBounds / docs/DESIGN_HISTORY.md. Alias of pool 1's
-// endBits so existing call sites stay stable.
-export const INTRO_CAPACITY_CAP_BITS = BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 2
+// Pool 1 (Kilobyte pool) Memory Capacity end bound, in bits — exactly 100 KB (SI, 100,000 Bytes),
+// which happens to exactly equal the pool's largest Disk's own FACE VALUE (100 KB) — the buffer,
+// once completely full, funds exactly one Provision Disk funding PASS of that last disk (see
+// DISK_BUILD_COST_MULTIPLIER/provisionDisk in engine.js), not its whole build cost. Reduced 10x
+// from an earlier 1 MB bound (which matched the last disk's full 10x build cost, back when
+// Provision Disk was paid in one lump sum) once that payment split into
+// DISK_BUILD_COST_MULTIPLIER (10) passes of the disk's own face value each — a pool's buffer only
+// ever needs to hold one pass at a time now, so its ceiling only needs to reach that one pass, not
+// the full cost. See getStoragePoolMemoryBounds / docs/DESIGN_HISTORY.md. Alias of pool 1's
+// endBits so existing call sites stay stable. The divisor below is a literal 10 (not a reference to
+// DISK_BUILD_COST_MULTIPLIER, which is declared later in this file) — both are the same value by
+// design, see the "Byte Foundry Storage (Disks)" section further down.
+export const INTRO_CAPACITY_CAP_BITS = (BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 2) / 10
 // Per-pool Memory Capacity window (#506, corrected to SI — see POOL_CAPACITY_SI_STEP above).
-// startBits is always the common 1-Byte floor; endBits is exactly 1000^(poolIndex+1) Bytes (pool 1
-// → 1 MB, pool 2 → 1 GB, pool 3 → 1 TB, …). Pools do not use Sacrifice doubling — Capacity is
+// startBits is always the common 1-Byte floor; endBits is exactly 100 × 1000^poolIndex Bytes (pool
+// 1 → 100 KB, pool 2 → 100 MB, pool 3 → 100 GB, …) — 10x smaller than an earlier
+// 1000^(poolIndex+1)-Byte bound now that a pool's buffer only ever needs to hold ONE Provision Disk
+// funding pass (the disk's own face value) at a time, not its whole DISK_BUILD_COST_MULTIPLIER-times
+// cost (see INTRO_CAPACITY_CAP_BITS above). Pools do not use Sacrifice doubling — Capacity is
 // delimited by these bounds directly. poolIndex is 1-based.
 export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
   const index = Math.max(1, Math.floor(Number(poolIndex) || 1))
   return {
     startBits: INTRO_STARTING_CAPACITY,
-    endBits: BITS_PER_BYTE * (POOL_CAPACITY_SI_STEP ** (index + 1)),
+    endBits: (BITS_PER_BYTE * (POOL_CAPACITY_SI_STEP ** (index + 1))) / DISK_BUILD_COST_MULTIPLIER,
   }
 }
 // "Speed ×2" (was Bandwidth / Invest) cost ladder steps ×4 per tier — see
@@ -334,8 +343,8 @@ export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
 // Storage's own reveal (INTRO_DISK_UNLOCK_CAPACITY, now 8,192 bits), matching the same
 // "capacity-magnitude reveal" convention every other Byte Foundry section uses. Was a flat
 // 8,000,000 bits (~1 MB) under the old ×10-forever capacity ladder; retuned to half of pool 1's
-// Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, now a clean SI 1 MB — see
-// POOL_CAPACITY_SI_STEP) — i.e. 4,000,000 bits (500 KB); one Capacity doubling-step short of that
+// Memory Capacity end bound (INTRO_CAPACITY_CAP_BITS, now a clean SI 100 KB — see
+// POOL_CAPACITY_SI_STEP) — i.e. 400,000 bits (50 KB); one Capacity doubling-step short of that
 // hard cap. This unlocks when the Capacity doubling ladder reaches the threshold, not by snapping
 // on Combine. Preserves the original's "last/highest of the two
 // capacity-gated reveals" relative ordering of the threshold constants themselves (conversion <
