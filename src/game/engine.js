@@ -438,8 +438,12 @@ export const createInitialGameState = () => ({
     // segmentsCollected, segmentRemainingSeconds, segmentTotalSeconds, flushRemainingSeconds,
     // flushTotalSeconds } }. Empty at rest; collect (10 segments from source) then flush (solid
     // drain) into one target disk. Rides through a real Prestige untouched (see prestigeGame) —
-    // a merge frozen because its source became stranded can otherwise never resolve any other
-    // way, so resetting it on Prestige would silently lose the already-consumed source disks.
+    // a merge paused because its source has an active tier claim can otherwise sit paused for a
+    // while, so resetting it on Prestige would silently lose the already-consumed source disks.
+    // Stranded status never pauses a merge (source's or target's — see canStartDiskWriteCacheMerge),
+    // so it's no longer the reason a merge might need this permanence, but the field stays
+    // Prestige-permanent regardless: real progress toward a real, permanent disk should never be
+    // discarded just because Prestige happened to fire mid-collection.
     diskWriteCache: {},
     // PERMANENT — null when no array is currently mid-build, otherwise
     // { size, remainingSeconds, totalSeconds } for the one disk array build in progress (see
