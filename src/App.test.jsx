@@ -274,7 +274,7 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   expect(screen.getByRole('heading', { level: 2, name: /^compute$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^prestige$/i })).toBeInTheDocument()
   expect(screen.getByLabelText(/byte foundry section/i)).toHaveTextContent(/forced priority/i)
-  expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/bits balance/i)
+  expect(screen.getByLabelText(/storage section/i)).toHaveTextContent(/clean-slate disk/i)
   expect(screen.getByLabelText(/boosters section/i)).toHaveTextContent(/stack/i)
   expect(screen.getByLabelText(/compute flops section/i)).toHaveTextContent(/kflops/i)
   expect(screen.queryByLabelText(/^kilobytes layer$/i)).not.toBeInTheDocument()
@@ -463,6 +463,11 @@ test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async ()
       disks: { 8000: 1 },
       computeCores: 3,
     },
+    // tier01 well past the 8000-bit disk's own required level (1) — stranded, so it's never
+    // pull-eligible and stays untouched by ordinary automatic gameplay regardless of real ticks
+    // firing during this test's async userEvent interactions, isolating the assertion to Reset
+    // Byte Foundry's own cancellation rather than an unrelated automatic pull.
+    purchaseLevels: { tier01: 5 },
   })
   render(<App />)
 
@@ -2934,11 +2939,11 @@ test('Data Stream tile no longer shows a separate "bits this cycle" transfer-blo
 // getDiskCost) but only constructs an EMPTY container once a real build TIME finishes (see
 // tickProvisionDisk); Memory then keeps each array's Cache full (whole-block transfers) and
 // auto-fills empty disks from a full read cache on a later tick (see tickDiskAutoFill), smallest
-// size first. A FULL disk's redeemability is
-// separately gated on SOME tier's CURRENT per-unit level cost catching up to that disk's size, and
-// auto-redeeming it is further gated on that matching tier's own unit-buying autobuyer being
-// unlocked and enabled (see tickDiskAutoRedeem) — there is no more "smallest size always
-// auto-redeems" carve-out. Every test here uses fake timers (never advanced, unless a test is
+// size first. A FULL disk's pull-eligibility is gated on SOME tier's CURRENT per-unit level cost
+// catching up to that disk's size AND that level having zero progress already (see
+// isDiskPullEligible/tickDiskPull) — Byte Foundry pulls it into that tier automatically, every
+// tick, with no autobuyer needed and nothing for the player to click. Every test here uses fake
+// timers (never advanced, unless a test is
 // specifically exercising a tick boundary) rather than real userEvent delays — with byteCreated
 // true and Memory's own passive production live, a real tick landing between a click and its
 // assertions would non-deterministically shift Memory's balance and could trip the Byte Foundry's
@@ -3191,8 +3196,10 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('button', { name: /provision disk/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 kb disks$/i })).toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^10 kb disks$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
-    // Redeem affordance is the green pulsing disk itself — no under-strip ActionHint copy.
+    expect(screen.getByLabelText(/1 kb disk pulling into Kilobytes/i)).toBeInTheDocument()
+    // Pull affordance is the green pulsing disk itself — no under-strip ActionHint copy, and
+    // nothing here is ever clickable — Byte Foundry pulls it automatically (see engine.js's
+    // tickDiskPull).
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
   })
 
@@ -3216,7 +3223,7 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
   })
 
-  test('cache blocks stay disabled while a full redeemable disk of the same size exists — disks take priority', () => {
+  test('cache blocks are a pure fill-status display — never clickable, whether or not a full matching disk exists at the same size', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: 1 },
@@ -3225,44 +3232,11 @@ describe('Byte Foundry Storage', () => {
     })
     render(<App />)
 
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk for Kilobytes/i })).toBeEnabled()
+    expect(screen.getByLabelText(/1 kb disk pulling into Kilobytes/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /transfer 1 kb cache block/i })).not.toBeInTheDocument()
-    screen.getAllByRole('button', { name: /^1 kb cache block \d+$/i }).forEach(block => {
-      expect(block).toBeDisabled()
+    screen.getAllByLabelText(/^1 kb cache block \d+$/i).forEach(block => {
+      expect(block.tagName).not.toBe('BUTTON')
     })
-  })
-
-  test('cache blocks become manually releasable once the matching full disk is gone', () => {
-    seedIntroState({
-      bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-      disksBuiltTotal: { [currentBankSize]: 1 },
-      diskCache: { [currentBankSize]: currentBankSize },
-    })
-    render(<App />)
-
-    expect(screen.getByRole('button', { name: /transfer 1 kb cache block 1 to Factory Bits/i })).toBeEnabled()
-  })
-
-  test('a full disk with the matching tier\'s autobuyer unlocked shows an auto-redeem affordance on Foundry', () => {
-    vi.useFakeTimers()
-
-    seedIntroState(
-      {
-        bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-        disksBuiltTotal: { [currentBankSize]: 1 },
-        disks: { [currentBankSize]: 1 },
-      },
-      { autobuyers: { [tier01.id]: 1 } }
-    )
-    const { unmount } = render(<App />)
-
-    const autoButton = screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })
-    expect(autoButton).toBeDisabled()
-    // Auto vs manual is color + aria on the disk itself — no under-strip ActionHint.
-    expect(screen.queryByText(/Auto-redeem →/i)).not.toBeInTheDocument()
-
-    unmount()
-    vi.useRealTimers()
   })
 
   test('starting a build spends the cost from its own pool buffer immediately, then constructs an EMPTY disk once the timed build completes', () => {
@@ -3301,10 +3275,10 @@ describe('Byte Foundry Storage', () => {
     // The disk exists (built) but starts empty — no full disk yet.
     expect(saved.intro.disks?.[currentBankSize] ?? 0).toBe(0)
 
-    // The detail (empty/full squares, redeeming) lives on StoragePage.
+    // The detail (empty/full squares, pull status) lives on StoragePage.
     openStorage()
-    expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
+    expect(screen.queryByLabelText(/pulling into/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
 
     unmount()
     vi.useRealTimers()
@@ -3355,15 +3329,15 @@ describe('Byte Foundry Storage', () => {
     )
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /empty 1 kb disk/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(600) })
 
     // Read cache topped up and flushed into the empty disk once fully staged. At tier level 2 the
-    // filled disk is not yet redeemable — assert the fill itself, not a redeem affordance. The cache
-    // itself is empty again immediately after flushing into the disk — it only refills on the pool's
-    // own bandwidth budget from here.
-    expect(screen.getByRole('button', { name: /^redeem 1 kb disk$/i })).toBeDisabled()
+    // filled disk is stranded (past its own required level) — assert the fill itself, not a pull
+    // affordance. The cache itself is empty again immediately after flushing into the disk — it
+    // only refills on the pool's own bandwidth budget from here.
+    expect(screen.getByLabelText(/^full 1 kb disk$/i)).toBeInTheDocument()
     let saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.poolBuffers['1']).toBe(currentBankSize)
     expect(saved.intro.diskCache?.[currentBankSize] ?? 0).toBe(0)
@@ -3385,63 +3359,42 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('a full disk stays held (no autobuyer unlocked for the matching tier) until manually redeemed', () => {
+  test('a full disk pulls automatically on the very next tick — no autobuyer, no click needed', () => {
     vi.useFakeTimers()
 
     seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [currentBankSize]: 1 } })
     const { unmount } = render(<App />)
     openStorage()
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    expect(screen.getByLabelText(/1 kb disk pulling into Kilobytes/i)).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // No autobuyer at all for the matching tier (tier01) — auto-redeem is a no-op, so the disk
-    // stays full and waits for a manual click.
-    expect(screen.getByRole('button', { name: /redeem 1 kb disk/i })).toBeEnabled()
+    // Pulled automatically — Byte Foundry never waits on a click or an autobuyer (see
+    // tickDiskPull/isDiskPullEligible in engine.js).
+    expect(screen.queryByLabelText(/1 kb disk pulling into Kilobytes/i)).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    expect(saved.owned.tier01).toBe(0)
-    expect(saved.intro.disks[currentBankSize]).toBe(1)
+    expect(saved.owned.tier01).toBe(8)
+    expect(saved.intro.disks?.[currentBankSize] ?? 0).toBe(0)
 
     unmount()
     vi.useRealTimers()
   })
 
-  test('a full disk auto-redeems on the very next tick once the matching tier\'s own autobuyer is unlocked and enabled', () => {
+  test('a held disk becomes pull-eligible once some tier\'s level cost reaches it, pulling automatically on the next tick and granting a free unit', () => {
+    // Disk held at a size ahead of tier01's current level (still 1) — not yet matching, stays held
+    // as "not yet built"-adjacent (too early). Capacity is seeded above INTRO_DISK_UNLOCK_CAPACITY
+    // (well above futureBankSize too) so the Storage nav button renders at all. Pulling is
+    // unaffected by the forced priority order (Disk Fill ranks highest, so it's never itself
+    // blocked) — no neutralization needed.
     vi.useFakeTimers()
 
-    seedIntroState(
-      { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [currentBankSize]: 1 } },
-      { autobuyers: { [tier01.id]: 1 } }
-    )
-    const { unmount } = render(<App />)
-    openStorage()
-    expect(screen.getByRole('button', { name: /auto-redeem 1 kb disk for Kilobytes/i })).toBeDisabled()
-
-    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
-
-    expect(screen.queryByRole('button', { name: /auto-redeem 1 kb disk/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /redeem 1 kb disk/i })).not.toBeInTheDocument()
-    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    // Completes tier01's whole level 1 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
-    expect(saved.owned.tier01).toBe(8)
-    expect(saved.intro.diskAutoRedeemedSizes[String(currentBankSize)]).toBe(true)
-
-    unmount()
-    vi.useRealTimers()
-  })
-
-  test('a held disk becomes clickable once some tier\'s level cost reaches it, and redeeming grants a free unit', () => {
-    // Disk held at a size ahead of tier01's current level (still 1) — not yet redeemable. Capacity
-    // is seeded above INTRO_DISK_UNLOCK_CAPACITY (well above futureBankSize too) so the Storage
-    // nav button renders at all. Redeeming is unaffected by the forced priority order (Disk Fill
-    // ranks highest, so it's never itself blocked) — no neutralization needed.
     seedIntroState(
       { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [futureBankSize]: 1 } },
     )
     const { unmount } = render(<App />)
     openStorage()
 
-    expect(screen.getByRole('button', { name: /redeem 10 kb disk/i })).toBeDisabled()
+    expect(screen.getByLabelText(/^full 10 kb disk$/i)).toBeInTheDocument()
     unmount()
 
     // tier01 now at level 2 — exactly the required level for the held disk's own fixed size (10 KB,
@@ -3450,22 +3403,24 @@ describe('Byte Foundry Storage', () => {
       { bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true, disks: { [futureBankSize]: 1 } },
       { purchaseLevels: { [tier01.id]: 2 } }
     )
-    render(<App />)
+    const { unmount: unmountSecond } = render(<App />)
     openStorage()
 
-    const redeemButton = screen.getByRole('button', { name: /redeem 10 kb disk/i })
-    expect(redeemButton).toBeEnabled()
+    expect(screen.getByLabelText(/10 kb disk pulling into Kilobytes/i)).toBeInTheDocument()
 
-    fireEvent.click(redeemButton)
+    act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Still on the mandatory Byte Foundry gate (mainGameUnlocked stays false — redeeming doesn't
+    // Still on the mandatory Byte Foundry gate (mainGameUnlocked stays false — pulling doesn't
     // touch it, unlike convertIntroBitsToKilobytes/tickIntroAutoInvest) — assert against saved
     // state directly.
-    expect(screen.queryByRole('button', { name: /redeem 10 kb disk/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/pulling into/i)).not.toBeInTheDocument()
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
-    // Completes tier01's whole level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
+    // Completes tier01's whole level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one pull, not 1 unit.
     expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks[futureBankSize]).toBeUndefined()
+
+    unmountSecond()
+    vi.useRealTimers()
   })
 
   test('Data Lake renders bare (no separate "Data Lakes" card) inside its own pool\'s card, below the disk arrays', () => {
@@ -3582,25 +3537,25 @@ describe('Byte Foundry Storage', () => {
     expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
   })
 
-  test('a full disk above 1 KB auto-redeems once the matching tier\'s own autobuyer is unlocked and enabled — there is no separate storage-specific pause toggle any more', () => {
+  test('a full disk above 1 KB pulls automatically — there is no autobuyer gate or storage-specific pause toggle', () => {
     vi.useFakeTimers()
 
     seedIntroState(
       { bits: 0, capacity: futureBankSize, byteCreated: true, tickSpeedSeconds: INTRO_MIN_TICK_SPEED_SECONDS, disks: { [futureBankSize]: 1 } },
-      { purchaseLevels: { [tier01.id]: 2 }, autobuyers: { [tier01.id]: 1 } }
+      { purchaseLevels: { [tier01.id]: 2 } }
     )
     const { unmount } = render(<App />)
 
-    // setStorageAutoRedeemEnabled/storageAutoRedeemEnabled no longer exist — auto-redeem is gated
-    // per-tier by that tier's own unit-buying autobuyer instead (see engine.js's
-    // tickDiskAutoRedeem), so there is no separate storage-specific pause toggle to find here.
+    // setStorageAutoRedeemEnabled/storageAutoRedeemEnabled never existed here either — pulling is
+    // fully automatic and unconditional (see engine.js's tickDiskPull), so there is no
+    // storage-specific pause toggle to find, and no autobuyer to gate it on.
     expect(screen.queryByRole('button', { name: /pause storage auto-redeem/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /resume storage auto-redeem/i })).not.toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-    // Auto-redeemed without a manual click on the disk button itself. Completes tier01's whole
-    // level 2 (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one redeem, not 1 unit.
+    // Pulled without a manual click on the disk itself. Completes tier01's whole level 2
+    // (DEFAULT_PURCHASE_BLOCK_SIZE, 8) in one pull, not 1 unit.
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.owned.tier01).toBe(8)
     expect(saved.intro.disks?.[futureBankSize] ?? 0).toBe(0)

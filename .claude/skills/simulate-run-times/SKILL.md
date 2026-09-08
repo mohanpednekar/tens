@@ -43,17 +43,21 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   disk-build-unlocked pool with no card on screen yet isn't tappable by a real player, so the bot
   must not tap it either) — the fill-based Speed/Bandwidth multiplier — `FILL_MULTIPLIER_*` in
   `layers.js` — is independent per Data Stream/pool, so an attentive player keeps every VISIBLE one
-  of them boosted, not just the Data Stream tile; Combine into a Byte when affordable. While
-  `mainGameUnlocked` is false, pause every unlocked tier autobuyer (so `tickDiskAutoRedeem` cannot
-  advance tier01's cost), skip Disk Fill/Build, and convert Memory → Kilobytes until the gate
-  opens — redeeming permanent full Disks before that convert advances purchase levels without
-  flipping `mainGameUnlocked` and can softlock the gate once conversion cost exceeds capacity.
-  After unlock: restore autobuyers, Disk Fill → Invest → Disk Build → **queue Capacity** when
+  of them boosted, not just the Data Stream tile; Combine into a Byte when affordable. Byte Foundry
+  funds Byte Factory pull-based and fully automatically now (`tickDiskPull`/
+  `tickDiskLevelOneCachePull`, unconditional inside `tickGame` every tick, no autobuyer gate — issue
+  #571): a full permanent Disk carried across Prestige, sitting at tier01's fresh level-1 cost with
+  zero purchase-level progress, gets pulled the very next tick regardless of bot strategy, so there
+  is nothing left to pause or redeem manually here. While `mainGameUnlocked` is false, convert
+  Memory → Kilobytes until the gate opens; the convert-before-pull ordering that used to matter for
+  avoiding a Foundry-gate softlock is now an engine-level fact (`tickDiskPull` runs at the very end
+  of `tickGame`'s own pipeline, after `tickIntroAutoInvest`), not something bot strategy can
+  influence either way. After unlock: Disk Fill → Invest → Disk Build → **queue Capacity** when
   Invest can't take the next spend (or while climbing to conversion unlock) →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
-  → convert → redeem again if convert unlocked a waiting disk → **Data Lake Booster buys**
-  (`startBoosterTransfer`; deposits via `tickDiskAutoDeposit` in `tickGame`; skipped while Disk
-  Fill is available) → Boosts. Does **not** enable permanent auto-merge.
+  → convert → **Data Lake Booster buys** (`buyBooster`, funded only from that lake's own banked
+  units — outside the forced priority order entirely, always available the instant affordable) →
+  Boosts. Does **not** enable permanent auto-merge.
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
   arrays → more Data Lake deposits → more Booster purchases (and typically faster prestige). Early

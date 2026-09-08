@@ -36,42 +36,46 @@ styled button (`.jsx`, not `.js` — see `ButtonContent` below, which needs JSX)
 
 ## `DiskArrayRow/index.jsx`
 
-styled (`.jsx` — needs JSX) one Disk array's full interactive detail for a single size. Only when
+styled (`.jsx` — needs JSX) one Disk array's full STATUS detail for a single size — purely a
+display, nothing here is ever clickable. Byte Foundry funds Byte Factory pull-based and fully
+automatically, every tick (`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js` — see
+CLAUDE.md's "Economy model"); the manual Redeem button and the cache-release-to-Bits control this
+component used to expose were both retired along with that mechanic. Only when
 `isDiskReadCacheEligible(size)` is true (the pool's own smallest size, the one whose Data Lake
 sub-slot is ×1 — every larger size fills exclusively via write-cache ripple and renders no read
 cache strip at all) does it show a `DISK_CACHE_BLOCK_COUNT`-block **read cache** strip of squares
-(`aria-label="… read cache"`), each labeled inside with its bit-scale
-block size (`formatCacheSize` — e.g. `1 Kb`; clickable via `actions.releaseDiskCacheBlock` once
-full and `isDiskCacheBlockManualReleaseAvailable` — manual transfer to Factory Bits when no matching
-disk exists; Smart autobuyers may auto-release via `isDiskCacheBlockAutoReleaseEligible` when no
-matching disk is available). Then an optional **write cache** progress row when
+(`aria-label="… read cache"`), each labeled inside with its bit-scale block size (`formatCacheSize`
+— e.g. `1 Kb`) and showing only its fill fraction (full/partial/empty, plus a flush-in-progress
+fill when draining into a disk). Then an optional **write cache** progress row when
 `intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
 below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
 does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip that **always** keeps all ten
 circles on one unbroken row at every viewport (circles flex-shrink together — never wraps to a
 second row), each labeled inside at `0.65rem` with the array's Byte-scale
 face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
-row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. Full disks
-distinguish **auto-redeem** (`isDiskAutoRedeemEligible` — info/blue fill, aria `"auto-redeem …"`)
-from **manual redeem** (`isDiskManualRedeemAvailable` — good/green pulsing fill, aria
-`"redeem … for <tier>"`) via `actions.redeemDisk` once full and `isDiskRedeemable`; instructional
-copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit control of any
-kind here — Storage Disks no longer feed a Data Lake at all (that mechanic now feeds lakes directly
-from pool overflow, see CLAUDE.md's "Data Lakes"); a fully-built, non-redeemable array's disk
-instead just sits full and idle until its tier's level matches again (see CLAUDE.md's "Data
+row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. A full disk
+about to be auto-pulled this tick (`isDiskPullEligible` — full, matching its tier's current level,
+and that level at zero progress) renders `$pullEligible` (good/green, pulsing, `aria-label="…disk
+pulling into <tier>"`); any other full disk (blocked by partial tier progress, "too early," or
+stranded past its tier's current level — see `isDiskStrandedByAdvancedTier`) renders as a plain
+full circle, `aria-label="full … disk"`, with the distinguishing detail only in `title`.
+Instructional copy lives in `title`/`aria` only (no under-strip ActionHint). There is no deposit
+control of any kind here — Storage Disks no longer feed a Data Lake at all (that mechanic now feeds
+lakes directly from pool overflow, see CLAUDE.md's "Data Lakes"); a fully-built, stranded array's
+disk instead just sits full and idle until its tier's level matches again (see CLAUDE.md's "Data
 Lakes"), not through this component. While `intro.diskBuild?.size`
 matches this size, a plain centered `"Rebuilding <size> x <N> array - Ready in Ns"` status line
-replaces the cache strip (disk circles stay, disabled; `<size>` via `formatDiskSize` e.g. `1 KB`,
-`<N>` is the 1-indexed disk under construction). Neither size label uses `text-transform: uppercase`
-— deliberately, so lowercase `b` (bits, Cache) never visually collapses into uppercase `B` (Bytes,
-Disks); see CLAUDE.md's "Economy model" for the `Kb`/`KB` distinction this exists to preserve.
+replaces the cache strip (disk circles stay, showing "not yet built"/"rebuilding" status; `<size>`
+via `formatDiskSize` e.g. `1 KB`, `<N>` is the 1-indexed disk under construction). Neither size
+label uses `text-transform: uppercase` — deliberately, so lowercase `b` (bits, Cache) never
+visually collapses into uppercase `B` (Bytes, Disks); see CLAUDE.md's "Economy model" for the
+`Kb`/`KB` distinction this exists to preserve.
 Takes `{ actions, size, state }` (a slice of the `game` object each caller already has) rather than
-the whole `game` prop, since it renders per-size and both call sites map over multiple sizes.
+the whole `game` prop, since it renders per-size and both call sites map over multiple sizes —
+`actions` is unused now that the component is non-interactive, kept in the prop signature only so
+both call sites don't need a special-cased destructure.
 Extracted so both `ByteFoundryPage` (every size from `getDiskSizesToShow`, ascending continuous
-sections) and the thin `StoragePage` wrapper render this detail identically. Every action here is unaffected
-by the Byte Foundry's forced priority order (Disk Fill ranks highest — see `isDiskFillAvailable` in
-`engine.js`), so nothing is ever disabled by anything elsewhere in that chain — only by this
-specific size's own array being mid-build.
+sections) and the thin `StoragePage` wrapper render this detail identically.
 
 ## `ByteFoundryPage` pool layout
 
@@ -111,8 +115,8 @@ otherwise show live-looking fill data the engine can never actually advance; the
 (`LakeSquare`, capped at `max-width: 2.5rem` so a lone square at a fresh capacity level doesn't
 stretch to fill the whole row) per sub-size present at the lake's current capacity level (×1/×10/×100,
 smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row
-per size" shape `DiskArrayRow` uses for Storage but non-interactive (no cache/redeem — a lake disk
-just fills and completes) — the one currently-open slot shows a live left-to-right fill toward its
+per size" shape `DiskArrayRow` uses for Storage — a lake disk just fills and completes, with no
+pull-eligibility distinction to render — the one currently-open slot shows a live left-to-right fill toward its
 own full size, but only once `isDataLakePoolReady` (same gate as `LakePoolTile` above, and for the
 same reason — otherwise a legacy save's residual `fillBits` would render this square as actively
 filling); before that it renders as an ordinary empty slot; then an actions row with ONE repurposed button: once the Storage array corresponding

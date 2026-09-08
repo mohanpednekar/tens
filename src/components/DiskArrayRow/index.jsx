@@ -7,12 +7,10 @@ import {
   getDiskWriteCacheFlushFill,
   getDiskWriteCacheMerge,
   getDiskWriteCacheSegmentFill,
-  isDiskAutoRedeemEligible,
-  isDiskCacheBlockAutoReleaseEligible,
-  isDiskCacheBlockManualReleaseAvailable,
-  isDiskManualRedeemAvailable,
+  isDiskPullEligible,
   isDiskReadCacheEligible,
   isDiskReadCacheFlushPaused,
+  isDiskStrandedByAdvancedTier,
   isDiskWriteCacheCollectPaused,
 } from 'game/engine'
 import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
@@ -67,7 +65,7 @@ const SquaresRow = styled.div`
   width: 100%;
 `
 
-const manualPulse = keyframes`
+const pullPulse = keyframes`
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.25); }
 `
@@ -77,11 +75,13 @@ const manualPulse = keyframes`
 // circles always stretches to fill the full row rather than staying small and centered with
 // leftover space around it. Fully round (border-radius: 50%) — deliberately distinct from
 // CacheBlock's square, chip-like shape below, so the two rows read apart at a glance (a physical
-// disk is round; a cache/memory block is square). $full takes priority over $empty over the plain
-// not-yet-built placeholder. Among full disks: $autoRedeem (info/blue — matching tier autobuyer
-// will take it) vs $manualRedeem (good/green + pulse — player must tap) vs merely redeemable-
-// looking but not yet full.
-const DiskSquare = styled.button`
+// disk is round; a cache/memory block is square). Purely a status display — Byte Foundry pulls a
+// full, matching, clean-slate disk automatically (see isDiskPullEligible/tickDiskPull in
+// engine.js), nothing here is ever clickable. $full takes priority over $empty over the plain
+// not-yet-built placeholder. Among full disks: $pullEligible (good/green + pulse — about to be
+// auto-pulled this tick) vs merely full-and-waiting (blocked by partial tier progress, "too
+// early," or stranded past its tier's current level).
+const DiskSquare = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
@@ -98,45 +98,22 @@ const DiskSquare = styled.button`
         : props.theme.color.surfaceSunken};
   background: ${props =>
     props.$full
-      ? (props.$manualRedeem
+      ? (props.$pullEligible
         ? props.theme.color.good
-        : props.$autoRedeem
-          ? props.theme.color.info
-          : props.theme.color.surfaceRaised)
+        : props.theme.color.surfaceRaised)
       : props.$empty
         ? props.theme.color.surfaceSunken
         : 'transparent'};
-  cursor: ${props => (props.$full && props.$manualRedeem ? 'pointer' : 'default')};
-  transition: filter 0.15s ease, transform 0.05s ease;
-  animation: ${props => (props.$manualRedeem ? manualPulse : 'none')} 1.4s ease-in-out infinite;
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.2);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.9);
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-    animation: none;
-  }
+  animation: ${props => (props.$pullEligible ? pullPulse : 'none')} 1.4s ease-in-out infinite;
 `
 
 // The array's own always-full cache row — DISK_CACHE_BLOCK_COUNT blocks, each worth
 // size / DISK_CACHE_BLOCK_COUNT bits (shown in the bit-scale Kb/Mb/… unit via formatCacheSize, not
 // formatDiskSize's Byte-scale one — see CLAUDE.md's "Economy model"). Steady state is full; Memory
-// refills whole blocks when a block was just released or the size was just unlocked (see
-// tickDiskAutoFill). A full block ($full) can be manually released ($manualRelease — accent border,
-// clickable) or auto-released ($autoRelease — info styling) when Smart is on, but ONLY while no
-// full redeemable disk of that size exists — disks always take priority. When flushing to disk,
-// blocks drain left-to-right over one cache-block production duration.
+// refills whole blocks when the size was just unlocked/built, a read-cache flush just drained one,
+// or (this size's own tier sitting at level 1) tickDiskLevelOneCachePull just spent some of it —
+// a pure status display, never clickable (see "Economy model"'s Disks section — the cache-release-
+// to-Bits mechanic this row used to expose was retired in favor of the automatic level-1 pull).
 const CacheBlocksRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -144,7 +121,7 @@ const CacheBlocksRow = styled.div`
   width: 100%;
 `
 
-const CacheBlock = styled.button`
+const CacheBlock = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
   aspect-ratio: 1;
@@ -154,38 +131,13 @@ const CacheBlock = styled.button`
   padding: 0;
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
-    props.$flushing
-      ? props.theme.color.info
-      : props.$manualRelease || props.$autoRelease
-        ? props.theme.color.accent
-        : props.theme.color.surfaceSunken};
+    props.$flushing ? props.theme.color.info : props.theme.color.surfaceSunken};
   background: ${props =>
     props.$full
-      ? (props.$autoRelease || props.$flushing
-        ? props.theme.color.info
-        : props.theme.color.surfaceRaised)
+      ? (props.$flushing ? props.theme.color.info : props.theme.color.surfaceRaised)
       : 'transparent'};
-  cursor: ${props => (props.$manualRelease ? 'pointer' : 'default')};
-  transition: filter 0.15s ease, transform 0.05s ease, background 0.15s ease;
   overflow: hidden;
   position: relative;
-
-  &:hover:not(:disabled) {
-    filter: brightness(1.2);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.9);
-  }
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
 `
 
 const CacheFlushFill = styled.div`
@@ -232,14 +184,13 @@ const WriteCacheFlushFill = styled.div`
   transform: scaleX(${props => props.$fill});
 `
 
-// One Disk array's full interactive detail (cache release, redeem) for a single `size` — used by
-// ByteFoundryPage (every size from getDiskSizesToShow, ascending continuous sections) and the
-// thin StoragePage wrapper. See CLAUDE.md's "Byte Foundry"/"Economy model" sections. Redeeming/
-// releasing are both unaffected by the Byte Foundry's forced priority order (Disk Fill ranks
-// highest — see isDiskFillAvailable in engine.js), so nothing here is ever disabled by anything
-// elsewhere in that chain — only by this specific size's own array being mid-build (see
-// intro.diskBuild).
-const DiskArrayRow = ({ actions, size, state }) => {
+// One Disk array's full status detail for a single `size` — used by ByteFoundryPage (every size
+// from getDiskSizesToShow, ascending continuous sections) and the thin StoragePage wrapper. See
+// CLAUDE.md's "Byte Foundry"/"Economy model" sections. Purely a display: Byte Foundry funds tier
+// levels automatically via tickDiskPull/tickDiskLevelOneCachePull (see engine.js) — there is
+// nothing here for a player to click. Only this specific size's own array being mid-build (see
+// intro.diskBuild) changes what's rendered, swapping the cache strip for a rebuild status line.
+const DiskArrayRow = ({ actions: _actions, size, state }) => {
   const { intro } = state
   const full = intro.disks?.[size] ?? 0
   const disksBuiltTotal = intro.disksBuiltTotal ?? {}
@@ -250,8 +201,8 @@ const DiskArrayRow = ({ actions, size, state }) => {
   const emptyCount = Math.max(0, builtTotal - full)
   const redeemTierName = getDiskRedeemTierName(state, size)
   const redeemable = redeemTierName !== null
-  const autoRedeem = isDiskAutoRedeemEligible(state, size)
-  const manualRedeem = isDiskManualRedeemAvailable(state, size)
+  const pullEligible = isDiskPullEligible(state, size)
+  const stranded = isDiskStrandedByAdvancedTier(state, size)
   const rebuilding = intro.diskBuild?.size === size
   const cached = intro.diskCache?.[size] ?? 0
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
@@ -304,45 +255,30 @@ const DiskArrayRow = ({ actions, size, state }) => {
             const blockFilledBits = Math.min(blockBits, Math.max(0, displayCached - index * blockBits))
             const isFull = blockFilledBits >= blockBits
             const partialFill = !isFull && blockFilledBits > 0 ? blockFilledBits / blockBits : 0
-            const autoRelease = isFull && !readFlushing && isDiskCacheBlockAutoReleaseEligible(state, size)
-            const manualRelease = isFull && !readFlushing && isDiskCacheBlockManualReleaseAvailable(state, size)
             return (
               <CacheBlock
                 key={index}
                 aria-label={
                   readFlushing
                     ? `${sizeLabel} cache block ${index + 1} flushing to disk`
-                    : autoRelease
-                      ? `auto-release ${sizeLabel} cache block ${index + 1} to Factory Bits`
-                      : manualRelease
-                        ? `transfer ${sizeLabel} cache block ${index + 1} to Factory Bits`
-                        : `${sizeLabel} cache block ${index + 1}`
+                    : `${sizeLabel} cache block ${index + 1}`
                 }
-                disabled={!manualRelease}
-                onClick={manualRelease ? () => actions.releaseDiskCacheBlock(size) : undefined}
                 title={
                   readFlushing
                     ? (readFlushPaused
                       ? 'Flush paused — matching tier claims this size first'
                       : `Flushing read cache to disk (${Math.ceil(readFlush.remainingSeconds)}s)`)
                     : isFull
-                      ? (autoRelease
-                        ? `Auto-releases this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — ${redeemTierName} Smart autobuyer is on and no matching disk is available`
-                        : manualRelease
-                          ? `Transfer this block's ${blockLabel} to Factory as Bits (toward ${redeemTierName}) — no matching disk available`
-                          : `Use the matching ${sizeLabel} disk first — cache is blocked while a full redeemable disk exists`)
+                      ? `${blockLabel} banked toward ${redeemTierName ?? 'the matching tier'}`
                       : 'Filling from Memory'
                 }
-                type="button"
                 $full={isFull}
-                $manualRelease={manualRelease}
-                $autoRelease={autoRelease}
                 $flushing={readFlushing && (isFull || partialFill > 0)}
               >
                 {readFlushing && partialFill > 0 ? (
                   <CacheFlushFill $fill={partialFill} />
                 ) : null}
-                <CellLabel $emphasis={isFull || manualRelease || autoRelease || readFlushing}>{blockLabel}</CellLabel>
+                <CellLabel $emphasis={isFull || readFlushing}>{blockLabel}</CellLabel>
               </CacheBlock>
             )
           })}
@@ -396,45 +332,36 @@ const DiskArrayRow = ({ actions, size, state }) => {
         {Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
           const isFull = index < full
           const isEmpty = !isFull && index < full + emptyCount
-          // Auto-eligible disks wait for tickDiskAutoRedeem — not clickable, so a tap cannot
-          // bypass the once-per-cycle auto mark or confuse "will auto" with a manual redeem.
-          const clickable = isFull && manualRedeem && !rebuilding
           return (
             <DiskSquare
               key={index}
               aria-label={
                 isFull
-                  ? (autoRedeem
-                    ? `auto-redeem ${sizeLabel} disk for ${redeemTierName}`
-                    : manualRedeem
-                      ? `redeem ${sizeLabel} disk for ${redeemTierName}`
-                      : `redeem ${sizeLabel} disk`)
+                  ? (pullEligible
+                    ? `${sizeLabel} disk pulling into ${redeemTierName}`
+                    : `full ${sizeLabel} disk`)
                   : isEmpty
                     ? `empty ${sizeLabel} disk`
                     : `not yet built ${sizeLabel} disk`
               }
-              disabled={!clickable}
-              onClick={clickable ? () => actions.redeemDisk(size) : undefined}
               title={
                 rebuilding
                   ? 'This array is offline while it rebuilds'
                   : isFull
-                    ? (autoRedeem
-                      ? `Auto-redeems for 1 free ${redeemTierName} — ${redeemTierName} autobuyer is on`
-                      : manualRedeem
-                        ? `Tap to redeem 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
+                    ? (pullEligible
+                      ? `Pulling into 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
+                      : stranded
+                        ? `${redeemTierName ?? 'Its matching tier'} has already moved past this size — held until the next Prestige`
                         : redeemable
-                          ? `Redeems 1 ${sizeLabel} disk for 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
-                          : `Redeemable once ${sizeLabel}'s own fixed corresponding tier reaches its matching level`)
+                          ? 'Waiting its turn — the matching tier already has progress toward this level'
+                          : `Pulls automatically once ${sizeLabel}'s own fixed corresponding tier reaches its matching level`)
                     : isEmpty
                       ? (hasReadCache ? 'Built, waiting to fill from read cache' : 'Built, waiting to fill from the size below')
                       : 'Not yet built'
               }
-              type="button"
               $full={isFull}
               $empty={isEmpty}
-              $autoRedeem={isFull && autoRedeem}
-              $manualRedeem={isFull && manualRedeem}
+              $pullEligible={isFull && pullEligible}
             >
               <CellLabel $emphasis={isFull || isEmpty}>{sizeLabel}</CellLabel>
             </DiskSquare>

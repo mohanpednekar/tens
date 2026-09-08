@@ -429,7 +429,7 @@ describe('schema merge on load', () => {
         poolBuffers: {},
         diskReadCacheFlush: {},
         diskWriteCache: {},
-        diskAutoRedeemedSizes: {}, computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
+        computeCores: 0, computeCoresEverEarned: 0, computeNodes: 0,
         computeClusters: 0, computeNetworks: 0, computeGrids: 0, computeFabrics: 0, computeClouds: 0,
         computeDatacenters: 0, computeSupercomputers: 0, computeMegacomputers: 0,
         computeMergePageUnlocked: false,
