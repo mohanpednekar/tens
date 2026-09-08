@@ -195,6 +195,7 @@ import {
   isProductionFrozen,
   isUnboundedPrestigeUnlocked,
   isTierUnlocked,
+  captureFoundryUpgradeCaps,
   mergeComputeClustersIntoNetwork,
   mergeFoundryUpgradeCaps,
   mergeComputeCloudsIntoDatacenter,
@@ -1729,6 +1730,43 @@ describe('resetByteFoundry', () => {
     expect(merged.productionMilestoneTier).toBe(5)
     expect(merged.productionMilestoneTierClaims).toBe(2)
     expect(merged.capacity).toBe(INTRO_DISK_UNLOCK_CAPACITY)
+  })
+
+  it('mergeFoundryUpgradeCaps never combines an earlier reset\'s higher pass count with a later reset\'s higher disk count for the same size (Devin Review finding)', () => {
+    const size = String(getDiskLadderSizeBits(1))
+    // Earlier reset: only 2 disks complete, but 9 of 10 passes already banked toward the 3rd.
+    const earlier = {
+      productionMilestoneTier: 0, productionMilestoneTierClaims: 0, byteCreated: false,
+      disksBuiltTotal: { [size]: 2 }, diskProvisionPasses: { [size]: 9 }, capacity: INTRO_STARTING_CAPACITY,
+    }
+    // Later reset: 5 disks complete now, with nothing currently in progress.
+    const later = {
+      productionMilestoneTier: 0, productionMilestoneTierClaims: 0, byteCreated: false,
+      disksBuiltTotal: { [size]: 5 }, diskProvisionPasses: {}, capacity: INTRO_STARTING_CAPACITY,
+    }
+    const merged = mergeFoundryUpgradeCaps(earlier, later)
+    // Independently maximizing each axis would wrongly produce { disksBuiltTotal: 5, diskProvisionPasses: 9 }
+    // — a combination the player never actually had (9 passes were only ever banked toward the 3rd
+    // disk, back when only 2 were complete) — granting 9 unpaid passes toward whatever disk the
+    // replay reaches once it catches up to 5. The later (more-advanced) snapshot's whole position
+    // must win instead.
+    expect(merged.disksBuiltTotal[size]).toBe(5)
+    expect(merged.diskProvisionPasses[size]).toBeUndefined()
+  })
+
+  it('captureFoundryUpgradeCaps credits a fully-funded, mid-timed-build disk as one more completed disk (Devin Review finding)', () => {
+    const size = getDiskLadderSizeBits(1)
+    // provisionDisk clears diskProvisionPasses[size] the instant the final pass lands and the timer
+    // starts (see provisionDisk), so at this exact moment the disk's whole cost has been paid but
+    // disksBuiltTotal[size] hasn't incremented yet either — without the fix, this disk's already-
+    // paid-for cost would vanish from the cap entirely rather than just losing partial progress.
+    const caps = captureFoundryUpgradeCaps({
+      disksBuiltTotal: { [size]: 2 },
+      diskProvisionPasses: {},
+      diskBuild: { size, remainingSeconds: 5, totalSeconds: 10 },
+    })
+    expect(caps.disksBuiltTotal[String(size)]).toBe(3)
+    expect(caps.diskProvisionPasses[String(size)]).toBeUndefined()
   })
 
   it('keeps the Foundry gate closed when mainGameUnlocked was still false', () => {

@@ -5614,10 +5614,20 @@ export const captureFoundryUpgradeCaps = intro => {
     const n = Math.max(0, Math.floor(clampNonNegative(count)))
     if (n > 0) diskCaps[sizeKey] = n
   }
-  // Passes already paid toward the CURRENTLY in-progress (not yet complete) disk — without this,
-  // the replay below would stop the instant it matched the pre-reset disksBuiltTotal count, losing
-  // any partial funding progress toward the next disk the player had already banked (Devin Review
-  // finding on PR #597).
+  // A disk that's already fully funded and mid-timed-build at snapshot time has already had every
+  // pass paid — provisionDisk clears diskProvisionPasses[size] the instant the final pass lands and
+  // the timer starts — but disksBuiltTotal hasn't incremented yet either (only tickProvisionDisk,
+  // once the timer finishes, does that). Without this, that whole already-paid disk would vanish
+  // from the cap entirely, not just lose partial progress (Devin Review finding on PR #597).
+  const buildInFlightSize = intro?.diskBuild?.size
+  if (buildInFlightSize != null) {
+    const sizeKey = String(buildInFlightSize)
+    diskCaps[sizeKey] = (diskCaps[sizeKey] ?? 0) + 1
+  }
+  // Passes already paid toward the CURRENTLY in-progress (not yet complete, not yet fully funded)
+  // disk — without this, the replay below would stop the instant it matched the pre-reset
+  // disksBuiltTotal count, losing any partial funding progress toward the next disk the player had
+  // already banked (Devin Review finding on PR #597).
   const diskProvisionPasses = intro?.diskProvisionPasses ?? {}
   const diskProvisionPassCaps = {}
   for (const [sizeKey, passes] of Object.entries(diskProvisionPasses)) {
@@ -5635,7 +5645,8 @@ export const captureFoundryUpgradeCaps = intro => {
 }
 
 // Merge two cap snapshots, taking the max progress on each axis (Invest lexicographic; per-size
-// disk build counts; Capacity itself). null/undefined sides are treated as empty.
+// disk build+pass count also lexicographic, see below; Capacity itself). null/undefined sides are
+// treated as empty.
 export const mergeFoundryUpgradeCaps = (a, b) => {
   const left = a ?? captureFoundryUpgradeCaps(null)
   const right = b ?? captureFoundryUpgradeCaps(null)
@@ -5652,13 +5663,31 @@ export const mergeFoundryUpgradeCaps = (a, b) => {
       productionMilestoneTier: right.productionMilestoneTier,
       productionMilestoneTierClaims: right.productionMilestoneTierClaims,
     }
-  const diskCaps = { ...left.disksBuiltTotal }
-  for (const [sizeKey, count] of Object.entries(right.disksBuiltTotal ?? {})) {
-    diskCaps[sizeKey] = Math.max(diskCaps[sizeKey] ?? 0, count)
-  }
-  const diskProvisionPassCaps = { ...left.diskProvisionPasses }
-  for (const [sizeKey, passes] of Object.entries(right.diskProvisionPasses ?? {})) {
-    diskProvisionPassCaps[sizeKey] = Math.max(diskProvisionPassCaps[sizeKey] ?? 0, passes)
+  // disksBuiltTotal[size] and diskProvisionPasses[size] are ONE combined progress position per
+  // size, not two independent axes — maximizing them separately (as an earlier version of this fix
+  // did) could combine a LATER reset's higher disk count with an EARLIER reset's higher pass count
+  // toward a disk that no longer exists at that count, granting unpaid passes toward whatever disk
+  // the replay reaches next (Devin Review finding on PR #597). Same principle as the Invest
+  // tier+claims lexicographic merge above: take one side's whole (built, passes) pair per size,
+  // preferring more completed disks, then more passes as the tie-breaker.
+  const diskCaps = {}
+  const diskProvisionPassCaps = {}
+  const sizeKeys = new Set([
+    ...Object.keys(left.disksBuiltTotal ?? {}),
+    ...Object.keys(right.disksBuiltTotal ?? {}),
+    ...Object.keys(left.diskProvisionPasses ?? {}),
+    ...Object.keys(right.diskProvisionPasses ?? {}),
+  ])
+  for (const sizeKey of sizeKeys) {
+    const leftBuilt = left.disksBuiltTotal?.[sizeKey] ?? 0
+    const rightBuilt = right.disksBuiltTotal?.[sizeKey] ?? 0
+    const leftPasses = left.diskProvisionPasses?.[sizeKey] ?? 0
+    const rightPasses = right.diskProvisionPasses?.[sizeKey] ?? 0
+    const leftAheadForSize = leftBuilt > rightBuilt || (leftBuilt === rightBuilt && leftPasses >= rightPasses)
+    const built = leftAheadForSize ? leftBuilt : rightBuilt
+    const passes = leftAheadForSize ? leftPasses : rightPasses
+    if (built > 0) diskCaps[sizeKey] = built
+    if (passes > 0) diskProvisionPassCaps[sizeKey] = passes
   }
   return {
     byteCreated: left.byteCreated || right.byteCreated,

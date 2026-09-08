@@ -111,6 +111,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **Reset Byte Foundry's convenience replay could grant unpaid disk passes across repeated resets**
+  — `mergeFoundryUpgradeCaps` maximized a size's completed-disk count and its partial pass count as
+  two INDEPENDENT axes, so an earlier reset's higher pass count (toward a disk that no longer
+  exists at that count) could combine with a later reset's higher completed-disk count, granting
+  passes the player never actually paid toward whatever disk the replay reaches next. Fixed by
+  treating (completed count, pass count) as one combined position per disk size — same principle as
+  the existing Invest tier+claims lexicographic merge — taking one side's whole pair, not each
+  field's max independently.
+- **Reset Byte Foundry's convenience replay could forget an already fully-funded, mid-timed-build
+  disk entirely** — `provisionDisk` clears a size's pass counter the instant its final pass lands
+  and the timed build starts, but `disksBuiltTotal` only increments once that timer finishes; a
+  Reset landing in between captured neither, silently discarding the whole already-paid-for disk
+  rather than just partial progress. `captureFoundryUpgradeCaps` now credits an in-flight build as
+  one additional completed disk for its size. Both caught by further rounds of Devin's automated
+  review on PR #597.
 - **Reset Byte Foundry's convenience auto-replay stopped short of partial Provision Disk progress**
   — `captureFoundryUpgradeCaps` recorded each disk size's completed-disk count for
   `tickFoundryResetConvenience` to auto-replay after a reset, but not any passes already paid

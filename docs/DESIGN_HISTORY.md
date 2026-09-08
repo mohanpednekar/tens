@@ -1,5 +1,38 @@
 # Design history & rationale
 
+### Two more gaps in Reset Byte Foundry's convenience-replay caps — 2026-09-08
+
+A further round of Devin's automated review on PR #597 caught two more real bugs in the very fix
+just landed for the partial-pass replay gap (previous entry below), both in the same
+`captureFoundryUpgradeCaps`/`mergeFoundryUpgradeCaps` machinery:
+
+1. **`mergeFoundryUpgradeCaps` maximized completed-disk count and pass count independently.** A
+   size's `(disksBuiltTotal, diskProvisionPasses)` pair is ONE position, not two orthogonal values —
+   exactly like `productionMilestoneTier`/`productionMilestoneTierClaims` already treats Invest
+   progress as one lexicographic position rather than maximizing tier and claims separately. Taking
+   the max of each independently could combine an EARLIER reset's higher pass count (banked toward
+   a disk that, at that count, no longer exists once more disks complete) with a LATER reset's
+   higher completed-disk count — e.g. reset #1 at 2 disks + 9/10 passes, reset #2 at 5 disks + 0
+   passes; independent maximization wrongly produces "5 disks + 9 passes," a combination the player
+   never actually had, granting 9 unpaid passes toward whatever disk the replay reaches once caught
+   up to 5. Fixed by unioning every size key from both snapshots and, per size, taking one side's
+   WHOLE `(built, passes)` pair — the side with more completed disks, tie-broken by more passes —
+   never mixing fields across sides.
+2. **`captureFoundryUpgradeCaps` lost an already fully-funded, mid-timed-build disk entirely.**
+   `provisionDisk` clears `diskProvisionPasses[size]` the instant the 10th pass lands and starts the
+   timed build (`intro.diskBuild`), but `disksBuiltTotal[size]` only increments once that timer
+   actually finishes (`tickProvisionDisk`). A Reset landing in that window — all 10 passes paid,
+   build in flight, not yet complete — captured neither the (now-cleared) pass count nor the
+   (not-yet-incremented) disk count, so the whole disk's already-paid cost vanished from the cap,
+   not just its partial progress. Fixed by crediting `intro.diskBuild.size` (if any) as one
+   additional completed disk in the snapshot.
+
+Both caught by inspection, not by test failure — the existing/prior test suite exercised neither the
+repeated-reset merge collision nor the mid-build-reset timing window. New tests added for both:
+`mergeFoundryUpgradeCaps` given the exact 2-disks-9-passes / 5-disks-0-passes scenario above, and
+`captureFoundryUpgradeCaps` given a seeded `intro.diskBuild` with no matching `disksBuiltTotal` entry
+yet. `yarn test`: 1727/1727 green.
+
 ### Reset Byte Foundry's convenience replay didn't cover partial Provision Disk passes — 2026-09-08
 
 A second Devin Review finding on PR #597: `resetByteFoundry`'s convenience auto-replay
