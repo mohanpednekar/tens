@@ -3564,22 +3564,37 @@ export const getDiskWriteCacheFlushFill = merge => {
   return 1 - merge.flushRemainingSeconds / merge.flushTotalSeconds
 }
 
+// Collect pauses only while the SOURCE has an active tier claim (isDiskRedeemable — the Factory
+// gets first crack at a disk it could pull THIS tick) or once the TARGET has itself become
+// stranded (isDiskStrandedByAdvancedTier — the merge would only ever produce another disk nothing
+// can redeem, so there's nothing left to protect; permanent for the rest of the cycle, same as any
+// other stranded size). A source that's merely stranded is NOT a pause reason any more — see
+// canStartDiskWriteCacheMerge below for why.
 export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
   const merge = getDiskWriteCacheMerge(state, targetSize)
   if (!merge || merge.segmentsCollected >= DISK_ARRAY_LADDER_CAP) return false
-  return isDiskRedeemable(state, merge.sourceSize) || isDiskStrandedByAdvancedTier(state, merge.sourceSize)
+  if (isDiskStrandedByAdvancedTier(state, targetSize)) return true
+  return isDiskRedeemable(state, merge.sourceSize)
 }
 
-// A stranded source (its own corresponding tier has already moved past the level it requires — see
-// isDiskStrandedByAdvancedTier below) never starts a new write-cache merge: it just stays exactly
-// as built, "simply ignored," the same as every other stranded disk (see docs/DESIGN_HISTORY.md) —
-// not silently folded into another array that may be just as unredeemable.
+// A stranded SOURCE (its own corresponding tier has already moved past the level it requires — see
+// isDiskStrandedByAdvancedTier below) is exactly the kind of disk write-cache exists to make use
+// of: it can never be redeemed by its own tier again this cycle, so folding it into the next size
+// up is the only productive thing left to do with it — the "simply ignored"/"never destroyed" rule
+// (docs/DESIGN_HISTORY.md) is about never converting a disk to Bits or otherwise discarding it, not
+// about refusing to let it feed a real, still-useful disk array. A merge is refused only when the
+// TARGET has itself already become stranded — filling it would just produce yet another disk
+// nothing can ever redeem, so there is genuinely nothing to gain (this also still blocks the
+// original "both source and target already stranded" case). Refusing to start based on the
+// source's own stranded status was tried first and reverted — see docs/DESIGN_HISTORY.md — it
+// permanently starved every size past the first one from ever refilling via write-cache, since a
+// fast-moving tier strands its own level-1 size almost immediately after redeeming it.
 const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
   if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
   if ((state.intro.disks?.[sourceSize] ?? 0) < DISK_ARRAY_LADDER_CAP) return false
   if ((state.intro.disksBuiltTotal?.[targetSize] ?? 0) <= 0) return false
-  if (isDiskStrandedByAdvancedTier(state, sourceSize)) return false
+  if (isDiskStrandedByAdvancedTier(state, targetSize)) return false
   return (state.intro.disksBuiltTotal[targetSize] ?? 0) > (state.intro.disks?.[targetSize] ?? 0)
 }
 
@@ -3657,18 +3672,12 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 
     if (merge.segmentsCollected < DISK_ARRAY_LADDER_CAP) {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
-      // Pause (never resume this cycle) the instant the source becomes stranded mid-collection —
-      // its own tier can only have raced past it since the merge started, never back down, so
-      // there is nothing left to wait for until purchase levels reset low enough to un-strand the
-      // source again (a real Prestige, typically — see prestigeGame, which carries diskWriteCache
-      // itself through unchanged; only purchaseLevels resets). Whatever's already been collected
-      // stays banked in the cache exactly as is; this only stops taking MORE from a disk that's now
-      // off-limits (see canStartDiskWriteCacheMerge above for the "never even start" half of the
-      // same rule).
-      if (
-        isDiskRedeemable(mergeSnapshot, merge.sourceSize) ||
-        isDiskStrandedByAdvancedTier(mergeSnapshot, merge.sourceSize)
-      ) {
+      // Shares isDiskWriteCacheCollectPaused's own rule (see its doc comment above): pause while
+      // the source has an active tier claim (temporary — Factory gets first crack), or permanently
+      // once the TARGET itself becomes stranded mid-collection (nothing left to wait for until a
+      // real Prestige resets purchase levels — prestigeGame carries diskWriteCache through
+      // unchanged). A source becoming stranded, on its own, is no longer a pause reason.
+      if (isDiskWriteCacheCollectPaused(mergeSnapshot, targetSize)) {
         continue
       }
 
@@ -3990,11 +3999,12 @@ export const isDiskRedeemable = (state, capacityBits) =>
 // tier is exactly at the required level (isDiskRedeemable already covers that) and when the tier
 // hasn't reached the required level YET ("too early" — a disk built ahead of the tier's own
 // progress, which still has real future redemption use and must stay eligible for everything a
-// normal disk is). Used by tickDiskWriteCache below to keep a genuinely stranded disk completely
-// untouched ("simply ignore it" — see docs/DESIGN_HISTORY.md) rather than letting write-cache
-// silently consume it into another array that may be just as unredeemable. Also exported so the
-// UI (DiskArrayRow) can render this size's disks as genuinely stranded rather than merely "too
-// early."
+// normal disk is). Used by tickDiskWriteCache/canStartDiskWriteCacheMerge below on the write
+// cache's TARGET size, to refuse folding a stranded source into a target that's ALSO already
+// stranded (nothing to gain — see docs/DESIGN_HISTORY.md); a stranded SOURCE is no longer treated
+// specially there — feeding it upward is exactly the productive use a disk that can never be
+// redeemed by its own tier again still has. Also exported so the UI (DiskArrayRow) can render this
+// size's disks as genuinely stranded rather than merely "too early."
 export const isDiskStrandedByAdvancedTier = (state, capacityBits) => {
   const tierIndex = getDataLakeTierIndex(capacityBits)
   const requiredLevel = getDiskRequiredTierLevel(capacityBits)

@@ -1148,13 +1148,17 @@ advancing only once the CORRESPONDING Storage array size is fully built. **Buyin
 (`buyBooster`) spends only banked lake units — outside the forced priority order entirely, always
 available the instant affordable — at a `purchased + 1` cost (capped once the lake is
 capacity-maxed) and grants 1 compute-ladder entity instantly; `toggleDataLakeAutoBuy` auto-buys.
-**Stranded disks are never touched.** A disk whose corresponding tier has already moved past the
-level it requires simply sits full and un-pullable for the rest of the cycle — nothing sweeps it
-into Bits (an earlier "idle disk liquidation" mechanic that did convert such disks to Bits was
-removed per the maintainer's explicit instruction), and `tickDiskWriteCache` refuses to fold it into
-another array either (never starts a new merge from a stranded source, and permanently pauses one
-already mid-collection the instant its source becomes stranded) — it waits for the next real
-Prestige to reset purchase levels and reopen its pull window. See `docs/DESIGN_HISTORY.md`.
+**Stranded disks are never destroyed, but they DO still feed the write cache.** A disk whose
+corresponding tier has already moved past the level it requires simply sits full and un-pullable by
+that tier for the rest of the cycle — nothing sweeps it into Bits (an earlier "idle disk
+liquidation" mechanic that did convert such disks to Bits was removed per the maintainer's explicit
+instruction). Unlike an earlier version of this rule, a stranded disk is NOT otherwise untouchable:
+`tickDiskWriteCache` can still fold it into the next size up (its only remaining productive use,
+since its own tier can never redeem it again this cycle) as long as that TARGET size isn't itself
+already stranded too (`canStartDiskWriteCacheMerge`/`isDiskWriteCacheCollectPaused` check the
+target's stranded status, not the source's) — see `docs/DESIGN_HISTORY.md` for the regression this
+reversal fixes. Either way, a disk waits for the next real Prestige to reset purchase levels and
+reopen its own pull window.
 Full overflow-segment math, the disk-breakdown mixed-radix proof, and every gating predicate are in
 `docs/ECONOMY_REFERENCE.md`.
 

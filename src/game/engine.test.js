@@ -188,6 +188,7 @@ import {
   isDiskFillAvailable,
   isDiskPullEligible,
   isDiskRedeemable,
+  isDiskStrandedByAdvancedTier,
   isGlobalTickspeedMultiplierUnlocked,
   isLastTierTickspeedXpUnlocked,
   isMemoryCapacityAtCap,
@@ -3592,7 +3593,7 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
-  it('pauses collect while the source size has an active tier claim, and stays paused permanently (never resumes) once the tier instead moves past it into stranded territory', () => {
+  it('pauses collect while the source size has an active tier claim, and resumes once the tier instead moves past it into stranded territory — a stranded source still has real value once the target is not itself stranded', () => {
     const flushTotalSeconds = 10
     const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
     const state = withIntro(createInitialGameState(), {
@@ -3614,17 +3615,16 @@ describe('tickDiskWriteCache', () => {
     expect(getDiskWriteCacheMerge(paused, level2Size).segmentsCollected).toBe(0)
     expect(paused.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP)
 
-    // FIRST_DISK_SIZE's own required level is 1 (the ladder's very first step), so there is no
-    // level tier01 could ever move to that leaves it merely "no longer redeemable" without ALSO
-    // being stranded (level 2+ is always past it) — under the "simply ignore it" rule, collection
-    // never gets a chance to resume; it stays frozen at 0 forever this cycle instead of the old
-    // behavior (unblocking and eventually flushing into level2Size).
-    const stillPaused = tickDiskWriteCache(flushTotalSeconds * 2)(
-      withPurchaseLevel(paused, tensTier.id, 2)
-    )
-    expect(isDiskWriteCacheCollectPaused(stillPaused, level2Size)).toBe(true)
-    expect(getDiskWriteCacheMerge(stillPaused, level2Size).segmentsCollected).toBe(0)
-    expect(stillPaused.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP)
+    // FIRST_DISK_SIZE's own required level is 1, so tier01 moving to level 2 strands it — but
+    // level2Size (the write cache's own TARGET here) has its own required level of 2, so the
+    // target is now exactly redeemable, not stranded. A source that's merely stranded is no longer
+    // a pause reason (see docs/DESIGN_HISTORY.md): collection resumes.
+    const resumed = withPurchaseLevel(paused, tensTier.id, 2)
+    expect(isDiskWriteCacheCollectPaused(resumed, level2Size)).toBe(false)
+    const after = tickDiskWriteCache(segmentTotalSeconds)(resumed)
+    const merge = getDiskWriteCacheMerge(after, level2Size)
+    expect(merge.segmentsCollected).toBe(1)
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
   it('clears write cache on flush without overfilling when read cache already filled the target slot', () => {
@@ -3648,19 +3648,21 @@ describe('tickDiskWriteCache', () => {
     expect(afterFlush.intro.disks[level2Size]).toBe(1)
   })
 
-  it('never starts a new merge from an already-stranded source — "simply ignore it," not folded into another array (see docs/DESIGN_HISTORY.md)', () => {
+  it('DOES start a new merge from an already-stranded source when the target is not itself stranded — a disk its own tier can never redeem again this cycle still has real value feeding the array above it (see docs/DESIGN_HISTORY.md)', () => {
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 0 },
     })
     expect(isDiskRedeemable(state, FIRST_DISK_SIZE)).toBe(false) // tier01 already past level 1
+    expect(isDiskStrandedByAdvancedTier(state, level2Size)).toBe(false) // target not stranded
     const after = tickDiskWriteCache(0)(state)
-    expect(getDiskWriteCacheMerge(after, level2Size)).toBeNull()
-    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(after).toBe(state) // same-reference no-op
+    const merge = getDiskWriteCacheMerge(after, level2Size)
+    expect(merge).toBeTruthy()
+    expect(merge.sourceSize).toBe(FIRST_DISK_SIZE)
+    expect(merge.segmentsCollected).toBe(0)
   })
 
-  it('an already-stranded source with an ALSO-stranded target still never merges — the rule applies regardless of the target (regression for the exact scenario a Devin Review pass on this PR flagged)', () => {
+  it('still refuses to start a new merge once the TARGET is already stranded, source stranded or not — filling a disk nothing can ever redeem again this cycle has nothing to gain (regression for the exact scenario a Devin Review pass flagged)', () => {
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), {
       disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
       disks: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 0 },
@@ -3672,11 +3674,12 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
-  it('pauses collection permanently once the source becomes stranded mid-merge — never resumes, but progress already collected before that point stays banked', () => {
+  it('resumes collection once the source becomes stranded mid-merge, as long as the target itself is not stranded — progress already collected stays banked and collection continues using the stranded source', () => {
     const flushTotalSeconds = 10
     const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
     // 1 segment already collected while tier01 was still at the required level 1; tier01 has since
-    // advanced to level 2, stranding the rest of this merge's own source size mid-flight.
+    // advanced to level 2, stranding the rest of this merge's own source size — but level2Size (the
+    // target) has its own required level of 2, so it's now exactly redeemable, not stranded.
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP - 1 },
@@ -3691,6 +3694,33 @@ describe('tickDiskWriteCache', () => {
         },
       },
     })
+    expect(isDiskWriteCacheCollectPaused(state, level2Size)).toBe(false)
+    const after = tickDiskWriteCache(segmentTotalSeconds)(state)
+    const merge = getDiskWriteCacheMerge(after, level2Size)
+    expect(merge.segmentsCollected).toBe(2) // continued past what was already collected
+    expect(after.intro.disks[FIRST_DISK_SIZE]).toBe(DISK_ARRAY_LADDER_CAP - 2)
+  })
+
+  it('permanently pauses collection once the TARGET becomes stranded mid-merge — progress already collected stays banked, but no further segments are taken since filling the target would have nothing to gain', () => {
+    const flushTotalSeconds = 10
+    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    // 1 segment already collected while tier01 sat exactly at level2Size's own required level (2);
+    // tier01 has since advanced to level 3, stranding level2Size itself (the merge's TARGET).
+    const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
+      disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP - 1 },
+      diskWriteCache: {
+        [level2Size]: {
+          sourceSize: FIRST_DISK_SIZE,
+          segmentsCollected: 1,
+          segmentRemainingSeconds: segmentTotalSeconds,
+          segmentTotalSeconds,
+          flushRemainingSeconds: flushTotalSeconds,
+          flushTotalSeconds,
+        },
+      },
+    })
+    expect(isDiskStrandedByAdvancedTier(state, level2Size)).toBe(true)
     expect(isDiskWriteCacheCollectPaused(state, level2Size)).toBe(true)
     // Plenty of elapsed time — would normally finish several more segments if collection weren't paused.
     const after = tickDiskWriteCache(100)(state)

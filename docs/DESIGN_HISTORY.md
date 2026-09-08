@@ -6404,3 +6404,69 @@ diskReadCacheFlush alongside a spendable cache, confirms the flush entry is gone
 confirms `tickDiskAutoFill` can immediately begin refilling that size's cache again afterward
 (reverting the fix reproduces the bug — the flush survives the pull and refill stays blocked).
 `yarn test`: 1717/1717 green (+1). `yarn build` succeeds.
+
+### The "stranded disks never touch write-cache either" rule (from the two Devin Review findings above) itself turned out to be the bug: it permanently starved every disk size past the first one
+
+The player reported, after the pull-based storage rewrite (issue #571) had been live for a while,
+that 10 KB disks (and by extension every size above a pool's smallest) simply never got filled by
+write-cache any more, even with a full stockpile of 10 source disks sitting ready and an empty
+target container waiting — "10KB disks are not getting filled by 1KB disks despite being fully
+affordable." Reproduced directly against the real engine functions (`tickDiskWriteCache` in
+isolation, the repo's usual empirical-verification method): with tier01 sitting at purchase level 2
+(one level past the 1 KB size's own required level 1), `canStartDiskWriteCacheMerge` refused to even
+start a merge, exactly matching an existing regression test's own fixture
+(`'never starts a new merge from an already-stranded source'`) — the test had, in effect, been
+asserting the bug as correct behavior all along.
+
+**Root cause.** The pull-based rewrite (issue #571) made Factory tier redemption fully automatic and
+instantaneous: the moment a size's disk is full and its tier sits at the exact matching level,
+`tickDiskPull` consumes it and rolls the tier straight to the next level, same tick. For a pool's
+smallest size (whose required level is always 1, the ladder's very first step), there is no "too
+early" state — a disk of that size is either exactly redeemable (tier at level 1) or already
+stranded (tier at level 2+); there is no level a tier could ever sit at that leaves it merely
+"not currently redeemable but not stranded either." Combined with the two Devin Review findings
+above — which taught `canStartDiskWriteCacheMerge`/`tickDiskWriteCache`'s ongoing collect loop to
+refuse a stranded SOURCE outright, extending the "no disk is ever liquidated to Bits" instruction
+(see "Idle disk liquidation removed entirely" above) to also mean "never let a stranded disk feed
+anything, including the write cache" — this meant a pool's smallest size became stranded within a
+tick or two of ever being redeemed, after which it could never again start or continue feeding the
+next size up via write-cache for the rest of the cycle. Every size past the smallest was left with
+no real path to ever refill once its own feed source got redeemed even once — exactly the reported
+symptom, and not something either Devin Review pass anticipated, since both were reasoning about
+liquidation-era invariants that no longer matched how quickly the new pull-based redemption path
+actually strands a source.
+
+**Why this reading of "simply ignore it" was wrong.** The maintainer's original instruction (see
+"Idle disk liquidation removed entirely" above) was specifically about not DESTROYING a disk the
+player built — converting it to Bits just because an unrelated tier's autobuyer outran Storage's own
+pace. Folding a stranded disk into building the NEXT size up is not destruction: the disk's own
+material value survives, just reshaped into a more useful container — exactly the same emergent use
+an earlier "tenth finding" (see above) had already identified and explicitly protected FOR, back
+when idle disk liquidation still existed alongside write-cache. The later Devin Review passes
+over-corrected: they were right that write-cache silently absorbing a source that's just as
+stranded as the target it would produce is pointless (the "double-stranded" regression test they
+added, `'an already-stranded source with an ALSO-stranded target'`, is still correct and unchanged
+by this fix), but they generalized that into blocking on the SOURCE's stranded status at all, rather
+than the TARGET's — the one check that actually determines whether the merge is worth doing.
+
+**Fix.** Moved the stranded check from the source to the target throughout:
+`canStartDiskWriteCacheMerge` now refuses a new merge only when the TARGET
+(`isDiskStrandedByAdvancedTier(state, targetSize)`) is already stranded — a stranded source is no
+longer a blocker at all, since it has no other use left and folding it upward is exactly the
+productive path available to it. `isDiskWriteCacheCollectPaused` and the ongoing collect loop inside
+`tickDiskWriteCache` now pause only for (a) an active tier claim on the source
+(`isDiskRedeemable(source)` — Factory still gets first crack at a disk it could pull this exact
+tick, a temporary pause) or (b) the target having since become stranded mid-collection (a permanent
+freeze — nothing left to gain, mirrors the pre-existing double-stranded case). The double-stranded
+scenario the second Devin Review finding protected against is still refused, now via the target
+check alone (a stranded target is definitionally also fed by a source that's at least as far along,
+so nothing regressed there).
+
+**Verification.** All four `tickDiskWriteCache` regression tests built around the old source-side
+rule were rewritten against real engine calls to assert the new behavior instead of the bug: a
+stranded source now DOES start and continue a merge once the target itself isn't stranded (the exact
+scenario from the player's report — tier01 past level 1, a full 1 KB stockpile, an empty 10 KB
+container waiting); collection that was frozen mid-merge because the source became stranded now
+resumes and continues instead of freezing forever; the double-stranded case (both source and target
+already stranded) still refuses to merge, unchanged. `yarn test`: 1728/1728 green (+1, a new
+target-stranded-mid-merge regression alongside the four rewritten tests). `yarn build` succeeds.

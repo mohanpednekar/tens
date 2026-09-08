@@ -592,21 +592,27 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    into one disk. Leftover Memory stays as its ordinary balance.
 
    **The write cache (upward ladder merge).** When 10 full disks exist at size N and size N+1
-   (`getNextDiskLadderSize`) has an empty container — AND size N is not already stranded (see below)
-   — `tickDiskWriteCache(elapsedSeconds)` starts collecting into `intro.diskWriteCache[N+1]` — empty
-   at rest. Collect runs 10 timed segments — a
+   (`getNextDiskLadderSize`) has an empty container — AND size N+1 (the TARGET) is not already
+   stranded (see below) — `tickDiskWriteCache(elapsedSeconds)` starts collecting into
+   `intro.diskWriteCache[N+1]` — empty at rest. A stranded SOURCE (size N) does NOT block starting
+   or continuing a merge: it can never be redeemed by its own tier again this cycle, so folding it
+   into the array above is exactly the productive use write-cache exists for (see
+   `docs/DESIGN_HISTORY.md` for the regression this fixed — an earlier version refused a stranded
+   source outright, which permanently starved every size past the first one). Collect runs 10 timed
+   segments — a
    CACHE filling FROM Disks — each segment's own duration = that source disk's own size ÷
    (`getIntroProductionRate` × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 2)
    (`getDiskWriteCacheSegmentSeconds`); each completed segment empties one
    full source disk at N into the write cache. Collect **pauses** while `isDiskRedeemable` is true
-   at the source size (tier match), and permanently (never resumes this cycle) the instant the
-   source instead becomes STRANDED (its own tier has moved past the level it requires — the same
-   internal `isDiskStrandedByAdvancedTier` check `canStartDiskWriteCacheMerge` uses to refuse a new
-   merge in the first place): a stranded disk is "simply ignored" everywhere, not silently folded
-   into another array that may be just as unredeemable (see "Stranded disks are never destroyed"
-   above and `docs/DESIGN_HISTORY.md`) — whatever segments were already collected before that point
-   stay banked as-is, just frozen; `isDiskWriteCacheCollectPaused` (the UI-facing read of this same
-   pause state) reflects both reasons identically. **Flush never pauses**. Once 10 segments are collected, flush
+   at the source size (an active tier claim — the Factory gets first crack at a disk it could pull
+   THIS tick), and permanently (never resumes this cycle) the instant the TARGET (size N+1) instead
+   becomes STRANDED (its own tier has moved past the level it requires — the same internal
+   `isDiskStrandedByAdvancedTier` check `canStartDiskWriteCacheMerge` uses to refuse a new merge in
+   the first place): filling a disk nothing can ever redeem again this cycle has nothing left to
+   gain, so this is the one case collection still freezes for good (see "Stranded disks are never
+   destroyed" above and `docs/DESIGN_HISTORY.md`) — whatever segments were already collected before
+   that point stay banked as-is, just frozen; `isDiskWriteCacheCollectPaused` (the UI-facing read of
+   this same pause state) reflects both reasons identically. **Flush never pauses**. Once 10 segments are collected, flush
    runs — a DISK filling FROM a cache, same rate class the read-cache flush above uses — for the
    target's own size ÷ (`getIntroProductionRate` × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)
    (`getDiskWriteCacheFlushSeconds` — deliberately independent of `getProvisionDiskSeconds`'s own
@@ -713,8 +719,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    a disk already FULL when Prestige fires stays full, its contents intact even though Memory
    itself resets to 0, letting banked-up Disks give a fresh cycle a head start; an in-flight
    write-cache merge or read-cache flush survives too, including one frozen mid-collection because
-   its source became stranded (a real Prestige resetting purchase levels is, in fact, exactly what
-   un-strands it again — see "Stranded disks are never touched" above and `docs/DESIGN_HISTORY.md`
+   its TARGET became stranded (a real Prestige resetting purchase levels is, in fact, exactly what
+   un-strands it again — see "Stranded disks are never destroyed" above and `docs/DESIGN_HISTORY.md`
    for the Devin Review finding that caught these two fields still resetting unconditionally). There
    is no `diskAutoRedeemedSizes` any more (the old auto-redeem throttle was removed along with the
    manual/autobuyer-gated funding model it belonged to — see `docs/DESIGN_HISTORY.md`), so no
@@ -930,11 +936,14 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
    **Stranded disks are never destroyed.** A disk whose own fixed corresponding tier has moved past
    the level it requires (see "Disks always take priority" above) simply stays full and
-   unredeemable for the rest of the cycle — its slot doesn't recycle back to empty, and nothing
-   sweeps it away. It sits exactly as built until the next real Prestige resets purchase levels and
-   reopens that size's redemption window. An earlier version ("idle disk liquidation") swept such
-   stranded, fully-built disks straight into `intro.bits` instead once the Foundry had nothing
-   higher-priority to do; this was removed per the maintainer's explicit instruction — destroying a
+   unredeemable BY THAT TIER for the rest of the cycle — its slot doesn't recycle back to empty, and
+   nothing converts it to Bits. It sits exactly as built until the next real Prestige resets purchase
+   levels and reopens that size's redemption window — UNLESS the write cache picks it up first: a
+   stranded disk still has one real, non-destructive use left (folding into the next disk size up via
+   `tickDiskWriteCache`, above), which it remains eligible for as long as that target size isn't
+   itself already stranded too. An earlier version ("idle disk liquidation") swept such stranded,
+   fully-built disks straight into `intro.bits` instead once the Foundry had nothing higher-priority
+   to do; this was removed per the maintainer's explicit instruction — destroying a
    disk the player actually built, just because an unrelated tier's own (much faster) autobuyer
    happened to outrun Storage's pace, was surprising and unwanted, especially since a long offline
    catch-up made it easy to trigger. See `docs/DESIGN_HISTORY.md`.
