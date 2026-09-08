@@ -494,16 +494,14 @@ src/
                                shared by both ByteFoundryPage and StoragePage — see
                                `docs/DESIGN_HISTORY.md` for why it's a standalone component. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
-    DataLakePanel/index.jsx ← one Data Lake's own self-contained block (title row, one row of disk
-                               squares per sub-size showing its own fill progress, then a Buy/
-                               auto-buy/Upgrade-Capacity action row) — the size unit is part of the
-                               visible name, e.g. "KB Lake"), taking `{ actions, state, bare,
-                               tierIndex }` — `tierIndex` scopes rendering to that one lake, embedded
-                               (`bare`, dropping its own StatCard chrome) inside each `ByteFoundryPage`
-                               pool card below that pool's own disk-array rows, always shown regardless
-                               of activity; omitting `tierIndex` falls back to the original
-                               every-visible-lake list (retained for reuse, unused by any current
-                               caller). Full contract: `docs/COMPONENTS_REFERENCE.md`. See "Economy
+    DataLakePanel/index.jsx ← one Data Lake's own self-contained block (title row, disk-square fill
+                               display, Buy/auto-buy/Upgrade-Capacity action row), taking `{ actions,
+                               state, bare, tierIndex }` — embedded per-pool (`bare`,
+                               `tierIndex={poolIndex}`) inside each `ByteFoundryPage` pool card below
+                               that pool's own disk-array rows. Full contract:
+                               `docs/COMPONENTS_REFERENCE.md` (also covers the omitted-`tierIndex`
+                               every-lake fallback mode, confirmed still unused by any current caller).
+                               See "Economy
                                model" below for the Data Lake mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
@@ -690,202 +688,105 @@ Strict three-layer separation:
    as `autobuyerBatchSize` and into `actions.buyTierQuantity` (this replaced a
    removed player-facing ×1/×10 "Bulk" toggle — no persisted preference to manage). On mount, a
    one-time `computeInitialGame` helper calls `discardIncompatibleActiveSaveIfNeeded()` (clears the
-   active slot when its on-disk payload fails `getSaveIncompatibilityReason`), then loads any saved
-   state, reads `loadLastSaveTimestamp()`, and —
-   if elapsed real time registers at least one simulated second — folds in offline progress via
-   `applyOfflineProgress` before the first render, always applied to `state` at whichever speed
-   applies (100% at or below `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` — 10 minutes — 50% beyond
-   it). Only past that same threshold does it also record a `{ elapsedRealSeconds, effectiveSeconds }`
-   summary as `offlineProgress` for the "Welcome back!" notice to render — a short absence updates the
-   game silently, with `offlineProgress` staying `null`; `dismissOfflineProgress` (and `resetGame`)
-   clear it back to `null` too. This mount-time check only ever covers time the app was fully torn down
-   (a real page load/PWA cold start) — it runs once, before the tick timer starts, and never again for
-   the life of that mount. Since a backgrounded/suspended tab or PWA (the far more common case on
-   mobile — the OS routinely throttles or fully pauses a background page's `setInterval` without ever
-   tearing the page down) never remounts, `offlineProgress` is **not** a one-shot value: the live tick
-   loop itself also tracks the real wall-clock time of its own most recent firing and, on any firing
-   (from `setInterval` or from a `visibilitychange` listener that fires the same check immediately on
-   resume) whose gap since the previous one exceeds `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s — far
-   past ordinary `setInterval` jitter), replays that gap through the identical `applyOfflineProgress`
-   path instead of an ordinary tick, producing a fresh `offlineProgress` object mid-session (subject to
-   the same full-speed-threshold notice suppression as the mount-time check). See
-   `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section for the full detection/threshold detail.
+   active slot when its on-disk payload fails `getSaveIncompatibilityReason`), loads any saved state,
+   and folds in offline progress (`applyOfflineProgress`) before the first render whenever elapsed
+   real time (`loadLastSaveTimestamp()` vs. now) warrants it, surfacing an `offlineProgress` summary
+   (dismissed via `dismissOfflineProgress`/`resetGame`) for the "Welcome back!" notice only past
+   `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS` (10 minutes). Since this mount-time check only ever
+   covers time the app was fully torn down, and a backgrounded/suspended tab or PWA never remounts,
+   the live tick loop separately tracks its own most recent firing's wall-clock time and replays any
+   gap past `BACKGROUND_TICK_GAP_THRESHOLD_SECONDS` (2s) through the same `applyOfflineProgress` path
+   — so `offlineProgress` is **not** a mount-time-only, one-shot value. Full detection/threshold
+   detail: `docs/ECONOMY_REFERENCE.md`'s "Offline progress" section.
 3. **`MainPage/index.jsx`** — a pure renderer driven entirely by `TIER_DEFINITIONS` and the hook's
    `state` (received as a `game` prop from `App.jsx`, not its own `useIncrementalGame()` call). Renders
    each unlocked tier as a single compact grid row rather than separate cards. Kept purely game — live
    controls, numbers, and status text only; top-level destinations live in `App.jsx`'s shared `AppNav`
    (Byte Factory is this page), so MainPage itself carries no page-to-page open-* links. See
    docs/MAINPAGE_REFERENCE.md for the full field-by-field layout.
-4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), also a pure renderer
-   taking `{ game, focusNonce }` as props. It's how a save's very first Prestige cycle earns its first
-   Kilobytes, replacing the old, since-removed self-producing Bytes tier as the game's actual
-   bootstrap — a mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during
-   the gate; Guide and More stay). `intro.mainGameUnlocked` flips permanently true the instant
-   Storage's own capacity threshold is crossed (`isStorageUnlocked` — see `latchMainGameUnlocked` in
-   `engine.js`, "Economy model" below) — the SAME "1 KiB" threshold that reveals pool 1's card and
-   switches the tap itself into fill-multiplier-bonus mode, so both happen simultaneously. Once
-   latched, it NEVER resets again — not on a real Prestige, not on an Era ascension — so this gate is
-   effectively a one-time-ever onboarding step: every cycle after the first starts with Factory
-   already reachable, no Byte Foundry replay. Once unlocked, ByteFoundryPage stops being a gate and
-   becomes a permanent screen the player can voluntarily reopen at any time via AppNav's Foundry item
-   — but it stays just as interactive either way, nothing here ever goes read-only. Once
-   `intro.mainGameUnlocked`, the standalone Tap button is removed entirely — the Data Stream tile
-   becomes the tap target instead (an `as="button"` swap on the same styled `FillableStatCard`,
-   calling the identical `actions.tapIntroBit`), rather than two separate controls doing the same
-   thing. What that tap actually does depends on whether Storage pools are revealed yet — see
-   "Fill-based Speed/Bandwidth multiplier" under "Economy model" below (in practice, by the time
-   `mainGameUnlocked` has ever flipped, Storage is already revealed too, so the tap is already in
-   fill-multiplier-bonus mode from that point on). Compute lives on
-   its own dedicated screen (see 4b below) once revealed, reached via AppNav; Storage's every-size
-   detail (see 4a) is continuous sections on this same Foundry screen (and the reusable
-   `StoragePage` wrapper), not a separate AppNav item or second-level tab. Data Stream owns the
-   shared Combine/Speed/Capacity actions and the common Provision Disk control. Storage pools 1–10
-   are derived views over the one Data Stream: each unlocked pool's own Bandwidth is the Data
-   Stream's shared production rate, hard-capped at the square root of that pool's OWN Capacity
-   **converted to Bytes** (`getStoragePoolBandwidth` —
-   `Math.min(rate, Math.sqrt(capacity / BITS_PER_BYTE) * BITS_PER_BYTE)`, both sides still in
-   bits/sec for internal consistency — a 100 KB-capacity pool caps at ~250 B/s, a 100 MB-capacity
-   pool at 8 KB/s, a 100 GB-capacity pool at 250 KB/s, both SI-clean-snapped from the raw sqrt), so
-   a pool with a small Capacity window can lag behind
-   the raw rate once production outgrows it. **Storage pools display in SI units for all purposes**
-   (`formatDiskSize` — Bandwidth, Capacity, and the Memory buffer meter below), unlike Memory
-   Capacity/the Data Stream Buffer itself, which stays binary (see "Economy model" below); while
-   each pool's displayed Capacity is the shared Memory ceiling clamped to its own binary bounds. Each pool also
-   owns a small local **buffer** (`intro.poolBuffers[poolIndex]`, `getPoolBufferBits`/
-   `getPoolBufferCapacity`) that every bit-costing Storage action for that pool — Provision Disk's
-   build cost, the read-cache fill-from-Memory pass — spends from exclusively; the shared Data
-   Stream Buffer no longer funds these directly. `tickPoolBufferFill` tops the buffer up from
-   `intro.bits`, ascending pool-by-pool (pool 1 first), each pool reserving fill-rate up to its own
-   Bandwidth cap off the top of the Data Stream's rate — whatever's left ("leftover speed") goes to
-   the next pool. Runs AFTER tier01's own bootstrap conversion (`tickIntroAutoInvest`) and Queued
-   Capacity each tick, so pool funding never competes with unlocking the main game or a Capacity
-   doubling in flight. `getPoolBufferCapacity` equals the pool's own Capacity exactly (not some
-   smaller fraction) — a pool's own largest disk's FACE VALUE lands exactly at that ceiling, so the
-   buffer, once full, can always fund one Provision Disk funding pass of even that largest disk
-   (`DISK_BUILD_COST_MULTIPLIER`/`provisionDisk` in `engine.js` — the full build cost is paid across
-   `DISK_BUILD_COST_MULTIPLIER` such passes, not this buffer alone in one lump sum); any meaningfully
-   smaller buffer ceiling would leave that size unable to fund even a single pass — see
-   `docs/DESIGN_HISTORY.md`. `ByteFoundryPage`'s pool summary is ONE full-width `FillableStatCard`
-   button (`actions.tapPoolBuffer(poolIndex)`, `$tappable`) — the same reused component/visual style
-   as the Data Stream card's own tile (fill-gradient background, `BalanceText`, a hidden
-   `role="progressbar"` for a11y) rather than a bespoke bar — containing BOTH the pool's header
-   (title/gauge/Bandwidth, see below) and the buffer balance line (the buffer/capacity fraction,
-   equal to the pool's own Capacity — see above) inside the same button, so tapping anywhere in it
-   boosts that one pool's own fill-based multiplier bonus (see "Fill-based Speed/Bandwidth
-   multiplier" below). Each `PoolCard`'s own title reads "`<symbol>` Pool" (e.g. "KB Pool") — no
-   index number or tier name — laid out in a shared `SectionHeaderRow` (a 3-column grid: title
-   top-left, the `MultiplierGauge` top-middle, the pool's own Bandwidth figure top-right — see
-   "Fill-based Speed/Bandwidth multiplier" below for the gauge itself) as the button's own first
-   line, so a pool's throughput reads at a glance without expanding to the buffer detail — centered,
-   since the symbol alone already uniquely identifies the pool. Expand/collapse lives on a separate,
-   slim `ExpandToggleButton` strip (a plain ▲/▼ chevron) rendered as a sibling right below the tap
-   button, not nested inside it, since a `<button>` can't nest inside another `<button>` — its
-   `aria-label="expand/collapse pool `<n>`"` (plus `aria-label="pool `<n>`"` on the card itself)
-   still carries the numeric index for a11y/tests, independent of the visible chevron glyph. One `PoolCard` renders for each
-   VISIBLE pool in ascending order (`getVisibleStoragePoolCount` — the smaller of
-   `getUnlockedStoragePoolCount`'s own disk-build-based count and how many pools' own capacity
-   threshold `getPoolCapacityUnlockThresholdBits` the Data Stream's raw Capacity (`intro.capacity`)
-   has reached: 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on by powers of 1024 —
-   both conditions required). This capacity gate is deliberately kept separate from
-   `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` themselves, which stay disk-build-only and
-   keep driving the disk ladder's own progression (`getMaxActiveDiskLadderStep`), read-cache
-   eligibility, and which pools' own overflow `tickPoolBufferFill`
-   processes each tick — folding the capacity
-   rule into that shared primitive directly was tried first and reverted for exactly this reason (a
-   much wider blast radius than intended) — see `docs/DESIGN_HISTORY.md`. Only the largest unlocked pool is expanded initially, while
-   earlier pools remain visible as compact disclosure summaries that reveal their three disk-array
-   rows when opened. `components/DataLakePanel` is embedded per pool (`bare` mode, a `tierIndex` prop
-   scoping it to that one lake, always shown regardless of activity) directly below that pool's own
-   disk-array rows, inside the same expanded disclosure — not a single shared panel listing every
-   lake after all the pool cards, as an earlier iteration had it (see `docs/DESIGN_HISTORY.md`).
-   Starting the next Disk's
-   build (its own core-loop action, alongside Speed) and every shown size's full status detail —
-   read cache blocks (only on the pool's smallest size — see "Economy model" below) and disk
-   squares — stay here, rendered via the shared `components/DiskArrayRow` (see "Repo layout"
-   above), ascending smallest→largest with Cache of a row immediately above that row's Disks.
-   Neither is interactive any more: Disk Fill (funding a matching tier level from a full disk, or
-   from the pool's own cache at that tier's level 1) is fully automatic every tick — see
-   "Economy model" below — so `DiskArrayRow` is a pure status display, not a click target. The
-   Provision Disk button is a single shared control (one disk ladder spans every pool,
-   not a per-pool one — see "Economy model" below) but renders INSIDE whichever ONE `PoolCard` the
-   disk ladder's current offer (`getDiskSize`) currently belongs to (`getPoolIndexForDiskSize`),
-   just below that pool's own buffer block and outside its `isExpanded` disclosure, so it stays
-   visible/usable without expanding that pool — previously a single control living in the shared
-   Data Stream section above all pool cards; moved per player feedback. Building ahead of every
-   tier's current cost is a deliberate strategy, so it always stays visible/usable once Storage is
-   revealed regardless of eligibility — including a fallback render right after the Data Stream card
-   (`ByteFoundryPage`'s own `provisionDiskButton` variable, reused in both spots) for the rare case
-   the disk ladder has advanced to a pool whose own card isn't visible yet (its capacity-unlock
-   threshold — see above — not yet reached, even though the ladder itself is purely disk-build-driven
-   and independent of capacity); each
-   `DiskArrayRow` renders for every size from `getDiskSizesToShow` (every size ever reached plus
-   the ladder's current offer). Each disk array always shows all `DISK_ARRAY_LADDER_CAP` (10) disk
-   slots in one unbroken row. The "queue next build" pin-icon toggle that used to sit beside
-   Provision Disk was removed from the UI; `intro.diskBuildQueued`/`queueDiskBuild`/
-   `clearDiskBuildQueue`/`tickQueuedDiskBuild` remain in `engine.js` and fully tested (same
-   "implemented but not wired into any control" posture as Capacity's own `queueIntroCapacityUpgrade`
-   — see "Economy model" below's Disks section for the full mechanic). Speed ×2 and Capacity ×2 sit in the shared Data Stream section. Every
-   action — here or on either dedicated screen — stays gated by the forced priority order (see
-   "Economy model" below).
+4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model" below), a pure renderer
+   taking `{ game, focusNonce }`. How a save's very first Prestige cycle earns its first Kilobytes —
+   see `docs/DESIGN_HISTORY.md`'s "Why Bytes was pulled out of the tier ladder in favor of the Byte
+   Foundry intro" for why this replaced the old self-producing Bytes tier as the bootstrap. A
+   mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during the gate;
+   Guide and More stay), permanently latched true the instant Storage's own capacity threshold is
+   crossed (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold
+   that reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. The latch never
+   resets (not on a real Prestige, not on an Era ascension), so the gate is effectively one-time-ever;
+   once latched, `ByteFoundryPage` becomes a permanent, voluntarily-revisitable screen via AppNav's
+   Foundry item, staying just as interactive either way. Once `intro.mainGameUnlocked`, the standalone
+   Tap button is removed and the Data Stream tile itself becomes the tap target (`as="button"` on the
+   same `FillableStatCard`, calling the same `actions.tapIntroBit`) — see "Fill-based Speed/Bandwidth
+   multiplier" under "Economy model" below for what a tap does pre/post Storage reveal. Compute lives
+   on its own dedicated screen (4b) once revealed, reached via AppNav; Storage's every-size detail
+   (4a) is continuous sections on this same Foundry screen (and the reusable `StoragePage` wrapper),
+   not a separate AppNav item or tab. Data Stream owns the shared Combine/Speed/Capacity actions and
+   the common Provision Disk control; Storage pools 1–10 are derived views over the one Data Stream,
+   each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at the square root of that
+   pool's own Capacity converted to Bytes) and its own local buffer (`intro.poolBuffers[poolIndex]`,
+   `getPoolBufferBits`/`getPoolBufferCapacity`) that every bit-costing Storage action for that pool —
+   Provision Disk's build cost, the read-cache fill-from-Memory pass — spends from exclusively
+   (`tickPoolBufferFill` tops it up from `intro.bits`, pool 1 first, after tier01's own bootstrap
+   conversion and Queued Capacity each tick; `getPoolBufferCapacity` equals the pool's own Capacity
+   exactly, so a full buffer can always fund one `DISK_BUILD_COST_MULTIPLIER`-pass `provisionDisk`
+   pass of even that pool's largest disk). One `PoolCard` renders per VISIBLE pool
+   (`getVisibleStoragePoolCount` — the smaller of the disk-build-based unlock count
+   (`isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only and keep
+   driving the disk ladder/read-cache/`tickPoolBufferFill` eligibility) and the capacity-threshold
+   reveal count (`getPoolCapacityUnlockThresholdBits`) — deliberately two separate gates; see
+   `docs/DESIGN_HISTORY.md`'s "Pool cards gated on a capacity threshold too" entry for why folding the
+   capacity check into that shared unlock primitive directly was tried first and reverted), only the
+   largest expanded by default. `components/DataLakePanel` (`bare`, `tierIndex={poolIndex}`) is
+   embedded per pool below that pool's own `components/DiskArrayRow`s (cache above disks) inside the
+   same expanded disclosure — see `docs/DESIGN_HISTORY.md`'s "Pool titles simplified to `<symbol>`
+   Pool; each pool's Data Lake moved inside its own card" entry for why, superseding an earlier single
+   shared panel after all the pool cards. Disk Fill
+   is fully automatic every tick (`DiskArrayRow` is a pure status display, not a click target — see
+   "Economy model" below). Provision Disk is a single shared control (one disk ladder spans every
+   pool) rendered inside whichever ONE `PoolCard` the ladder's current offer (`getDiskSize`) belongs
+   to (`getPoolIndexForDiskSize`), plus a fallback copy (`provisionDiskButton`) right after the Data
+   Stream card for the rare case that pool's own card isn't visible yet — see `docs/DESIGN_HISTORY.md`'s
+   "Provision Disk moved back inside its pool card" entry for why it moved there from the shared Data
+   Stream section. Each disk array shows every size from `getDiskSizesToShow`, all
+   `DISK_ARRAY_LADDER_CAP` (10) slots in one unbroken row. The "queue next build" pin-icon toggle was
+   removed from the UI; `intro.diskBuildQueued`/`queueDiskBuild`/`clearDiskBuildQueue`/
+   `tickQueuedDiskBuild` remain in `engine.js`, implemented and tested but unwired, same posture as
+   Capacity's own `queueIntroCapacityUpgrade`. Every action here or on either dedicated screen stays
+   gated by the forced priority order (see "Economy model" below). Full field-by-field UI layout:
+   `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
+   capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
+   Component contracts (`DiskArrayRow`, `DataLakePanel`): `docs/COMPONENTS_REFERENCE.md`.
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
    `getDiskSizesToShow`) — NOT the Provision Disk button, which stays on ByteFoundryPage itself. Takes
    `{ game }`. Primary UI path is Foundry's continuous sections; this file remains for reuse/tests.
    A pure renderer, same "engine re-validates, UI just mirrors it" posture as every other page here.
 4b. **`ComputePage/index.jsx`** — Foundry **Boosters** screen (page id `'boosters'`), taking `{ game }`.
-   Reached via AppNav once `isComputeCoreConversionUnlocked`. Same posture as StoragePage above. Also where
-   the nine-boundary merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud →
-   Datacenter → Supercomputer → Megacomputer — see "Economy model" below and issues #280/#316/#321)
-   lives, behind its own later, one-time `intro.computeMergePageUnlocked` reveal nested inside this
-   same page — not a separate page/nav link. "Compute" names the page/feature only — individual
-   entities drop the word (`Core`/`Node`/…, never "Compute Core"/"Compute Node"/…) in every
-   player-visible label.
-   Deliberately terse: every control is icon-only (no or single-word visible labels), the full
-   sentence living in `title`/`aria-label` instead — and the prose explanation of each mechanic
-   lives in the Guide (`InfoPage`), not here. Render order top to bottom: an active Compute
-   Boost's status (effect, countdown, current stack count) renders at the TOP of the page, right
-   after the header, so it stays visible regardless of what else is on screen; right below that is
-   the Boost EFFECTS section itself (issue #326 — "the effects section is at the top of the
-   Compute page, not at the bottom"): an `ArmedStatusText` line naming the currently armed tier and
-   how many tokens it holds, then the 3 small icon preset buttons (Burst/Standard/Sustain, base 1
-   minute/10 minutes/1 hour at tier 1/Core; higher tiers scale power ×4 per step with no duration
-   enhancement — see "Economy model" below), disabled
-   until a tier is armed. While a boost is active, activating any NEW boost is blocked from its
-   own preset button without an explicit forfeit confirmation (any type/tier) — a Stack +
-   Reclaim-or-Forfeit row appears below the presets instead: Stack extends the active boost's own
-   funding tier; alongside it, exactly ONE of Reclaim (instant, no confirmation, while
-   `computeBoostStacks > 1`) or Forfeit (`window.confirm`-gated, no refund, once down to the last
-   remaining stack) ever renders — mutually exclusive by design, not two always-visible controls
-   with different disabled states. `canReclaimComputeBoost`/`canForfeitComputeBoost` enforce this
-   at the engine level too (not just UI rendering), and the same last-remaining-stack restriction
-   also gates the preset buttons' own forfeit-and-replace path (switching to a different boost
-   entirely while one is active). Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`;
-   rationale: `docs/DESIGN_HISTORY.md`. THEN, below the whole Boost effects section, each of the nine
-   merge-boundary tiers (Core through Supercomputer) renders TWO rows (issues #321/#326): row 1 is
-   the tier's name/symbol plus its `COMPUTE_ENTITY_CAP` (10) normal-slot squares — ALSO, per issue
-   #326, its own clickable `TierSelectButton` (wrapping just the symbol/label/slots, kept separate
-   from Cores' own sibling auto-claim button to avoid nesting a `<button>` inside a `<button>`)
-   that arms the 3 Boost preset buttons ABOVE it at that tier's own scaled power (duration stays
-   at the base preset — issue #363) ("click any tier row" — the effects section renders first
-   specifically so it's visible without scrolling once a tier below it is clicked), highlighted
-   while selected; row 2 is, before that boundary's auto-merge is unlocked, an instant Merge button
-   (disabled below `COMPUTE_MERGE_RATIO` held) plus an Unlock Auto-merge button (disabled below
-   `COMPUTE_ENTITY_CAP` of the produced tier held) — or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP`
-   (8) reserve-slot squares themselves, clickable as the manual-start trigger with no separate
-   button ("slots are the button"), showing a countdown while a merge is in flight. Megacomputer
-   (the bottom of the chain) has no row 2, but its row 1 is still Boost-selectable — the only place
-   a Megacomputer has any use at all. Cores are obtained by buying Boosters from the matching Data
-   Lake — but on Foundry's `DataLakePanel` now, not here (see "Economy model" below; buying is
-   instant, spending only that lake's own banked units, no live transfer) — not minted from Memory —
-   the earlier "Claim Core"/auto-claim mechanic was removed once Data Lakes superseded it.
+   Reached via AppNav once `isComputeCoreConversionUnlocked`. Also where the nine-boundary merge chain
+   (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
+   Megacomputer — see "Economy model" below and issues #280/#316/#321) lives, behind its own later,
+   one-time `intro.computeMergePageUnlocked` reveal nested inside this same page. "Compute" names the
+   page/feature only — individual entities drop the word (`Core`/`Node`/…) in every player-visible
+   label. Deliberately terse — icon-only controls, full sentence in `title`/`aria-label`; mechanic
+   prose lives in the Guide (`InfoPage`), not here. Render order top to bottom (issue #326): an active
+   Compute Boost's status renders at the top of the page, then the Boost EFFECTS section itself
+   (`ArmedStatusText`, the 3 Burst/Standard/Sustain preset buttons, and — while a boost is active — a
+   Stack + Reclaim-or-Forfeit row, mutually exclusive by `computeBoostStacks`; `canReclaimComputeBoost`/
+   `canForfeitComputeBoost` enforce this at the engine level too), THEN each of the nine
+   merge-boundary tiers' two rows (issues #321/#326/#363: row 1 is the `COMPUTE_ENTITY_CAP` (10)
+   normal-slot squares plus a `TierSelectButton` that arms the Boost presets above at that tier's own
+   scaled power; row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   Auto-merge buttons, or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares
+   themselves as the manual-start trigger — Megacomputer has no row 2). Cores are obtained by buying
+   Boosters from the matching Data Lake on Foundry's `DataLakePanel` (see "Economy model" below), not
+   minted from Memory. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; rationale for
+   the render order and the Stack/Reclaim/Forfeit mutual exclusivity: `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
-   `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), each bought
-   with PP on the same 10³ base ladder as Factory tiers (1,000 – 10³⁰ PP). Per-unit price scales on
-   every purchase via `getCostEpochExponent` (not Factory's 8-buy blocks). First tier's first buy
-   costs 1,000 PP so the screen is visible but unusable until then. Each owned unit adds 0.01%/s
-   matching Factory tier's cumulative boost; hero displays weighted total **E = k + 10M + 100G + … +
-   10⁹Q**. Owned counts permanent across Prestige; per-cycle boost resets on Prestige. Pure renderer — see `docs/ECONOMY_REFERENCE.md`
-   "PP Compute (Flops)".
+   `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), PP-funded
+   on the same 10³ base ladder as Factory tiers, priced per-unit via `getCostEpochExponent` (not
+   Factory's 8-buy blocks). Owned counts permanent across Prestige; per-cycle boost resets on
+   Prestige. Pure renderer — full tier/cost/production/persistence spec:
+   `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
    `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Clock Speed, Speed Up,
