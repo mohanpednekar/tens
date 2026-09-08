@@ -342,9 +342,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   total to build (was 10 KB), its last disk still costs 100 KB, unchanged. A click collects as many
   whole passes as the buffer currently affords (every required pass at once if it already holds the
   full cost, fewer otherwise, banking the remainder); the button's label and progress bar reflect
-  passes collected so far while funding is in progress. Once a click leaves a build only partially
-  funded, the remaining passes now fire themselves automatically as the buffer refills — no more
-  manual re-clicking between passes; only starting a brand-new disk's build still needs one click.
+  passes collected so far while funding is in progress, now including a "0/N" count on the button's
+  own idle label before the first pass ever lands (for any disk needing more than one), so it's
+  clear upfront that a multi-pass disk isn't a single-click purchase. Once a click leaves a build
+  only partially funded, the remaining passes now fire themselves automatically as the buffer
+  refills — no more manual re-clicking between passes; only starting a brand-new disk's build still
+  needs one click.
+- **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
+  2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
+  cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the
+  subsequent flush-into-target-disk phase is unchanged at 2x — so collecting no longer happens to
+  take the same total time as flushing, and completes noticeably sooner.
 - **Storage pools now top out at 100x their own base unit instead of 1000x** — e.g. the MB Pool's
   Memory Capacity now maxes at 100 MB instead of 1 GB (pool 1/KB Pool: 100 KB instead of 1 MB; pool
   3/GB Pool: 100 GB instead of 1 TB; and so on). Enabled directly by the Provision Disk pass change

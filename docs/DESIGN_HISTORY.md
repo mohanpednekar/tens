@@ -6768,3 +6768,46 @@ by coincidence. The one test whose real invariant was structurally unrelated to 
 (the decade-power Capacity ladder's fixed relationship to the flat `DISK_BUILD_COST_MULTIPLIER`
 constant) kept that literal constant rather than switching to `getDiskCost`, since the ordinal-scaled
 function no longer represents what that test needed to check.
+
+### Provision Disk's idle label now shows "0/N" up front; write-cache collect sped up to 5x
+
+Two more rounds of player feedback on the Provision Disk work above. First: "Current UI doesn't make
+it clear that there are multiple passes involved." The button's `title` tooltip already spelled out
+the pass count even before the first pass landed, but the VISIBLE label — the only thing most players
+ever see without hovering — read a flat `"Provision {size} Disk ({cost})"` right up until a click
+banked the first pass, at which point it switched to showing `"{collected}/{required}"`. For any disk
+needing more than one pass (every disk past an array's first), there was nothing in the visible label
+itself hinting this wasn't a single-click purchase.
+
+**Fix.** The idle (not-yet-started) label now reads `"Provision {size} Disk — 0/{required}
+({cost})"` whenever `getDiskProvisionPassesRequired > 1`, so the pass count is visible from the very
+first render, not just after the first pass lands. A disk needing just 1 pass (an array's first)
+keeps the simpler, unchanged `"Provision {size} Disk ({cost})"` form, since there's nothing to
+clarify — showing "0/1" there would be pure noise.
+
+Second: "Disk to cache should be 5x instead of 2x" — `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`
+(the write cache's own collect-from-Disks phase, folding a full source disk's contents into the
+cache) was 2, the same rate as the unrelated `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (the
+opposite direction — a disk filling FROM the cache, during flush). The two happening to share a
+value meant the write cache's 10-segment collect phase coincidentally summed to the same total
+duration as its own flush phase — a coincidence the code's own comments already flagged as
+"coincidental, not structural."
+
+**Fix.** Changed `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` from 2 to 5 in `layers.js`. This only
+affects `getDiskWriteCacheSegmentSeconds` (the collect phase); the flush phase's own
+`DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` is untouched at 2, so collect and flush are now
+deliberately different rates — collect (folding an already-built disk into the cache, a bulk
+transfer) is now meaningfully faster than flush (the bandwidth-limited disk-from-cache fill that
+follows it), rather than coincidentally equal. Updated the one test and the `docs/ECONOMY_REFERENCE.md`
+passages that had asserted/described the now-obsolete "happens to take the same total time"
+coincidence.
+
+**Verification.** `yarn test`: 1743/1743 green (+2 new tests: the multi-pass idle label showing
+"0/N", and the single-pass idle label NOT showing "0/1"). Visually confirmed the new idle label in a
+real browser via a seeded save at a disk needing 10 passes: `"🏦 Provision 1 KB Disk — 0/10 (10
+KB)"`. Did not re-run `simulate-run-times` for the collect-rate change: write-cache collect/flush
+run automatically regardless of the bot's own strategy (the simulator's ideal-player script doesn't
+gate any of its own actions on write-cache timing), so a faster collect phase only speeds up a
+background, secondary path — restocking higher disk sizes for Data Lakes/Compute — not anything on
+the critical path to Foundry unlock or 1 Googol Prestige the sim actually measures. The disk-passes
+ordinal change above was the change with a real, measured pacing effect and was re-run/published.

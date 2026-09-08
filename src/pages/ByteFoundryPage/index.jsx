@@ -547,7 +547,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
             : diskFundingInProgress
               ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${diskPassesRequired}`
-              : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+              : diskPassesRequired > 1
+                ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — 0/${diskPassesRequired} (${formatDiskSize(diskCost)})`
+                : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
       </ButtonContent>
       <VisuallyHidden
         role="progressbar"

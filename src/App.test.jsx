@@ -3083,6 +3083,30 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).not.toHaveTextContent('80,000')
   })
 
+  test('Provision Disk shows the pass count up front (0/N) for a multi-pass disk, even before the first pass is collected', () => {
+    // 9 already built — this build is the array's 10th (last) disk, needing 10 passes
+    // (getDiskProvisionPassesRequired) — before this fix the idle label only showed the total cost,
+    // giving no hint that funding it takes multiple passes until after the first click landed one.
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent('0/10')
+  })
+
+  test('Provision Disk omits the pass count for a single-pass disk — nothing to clarify', () => {
+    // A fresh array's very first disk needs just 1 pass, so its idle label stays the simple
+    // "Provision <size> Disk (<cost>)" form rather than a redundant "0/1".
+    seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).not.toHaveTextContent('0/1')
+  })
+
   test('Provision Disk advances to the next pool after the current pool is fully built', () => {
     // Completing all three pool-1 arrays derives pool 2 and advances the common operation to 1 MB.
     const size10kb = currentBankSize * 10

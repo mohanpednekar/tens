@@ -332,10 +332,11 @@ export const DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2
 // even a large surplus balance still only drains into the cache at this multiple of the CURRENT
 // production rate, not instantly.
 export const CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10
-// A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — slower
-// than filling from Memory directly, since it's moving already-built Disk contents rather than the
-// live generator output.
-export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 2
+// A CACHE filling FROM Disks (write-cache collecting from the source size's full disks) — faster
+// than a disk filling FROM a cache (DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER above): moving an
+// already-built Disk's contents into the write cache is a bulk transfer, not bandwidth-limited the
+// way live production or a disk build is.
+export const CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 5
 
 // --- Byte Foundry Compute Cores/Nodes --- see isComputeCoreConversionUnlocked in engine.js and
 // intro.computeCores/computeNodes in createInitialGameState. Earlier versions of this mechanic

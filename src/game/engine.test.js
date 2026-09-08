@@ -3663,7 +3663,7 @@ describe('tickDiskWriteCache', () => {
     expect(merge.flushTotalSeconds).toBeGreaterThan(0)
   })
 
-  it('times a freshly-started merge off the current production rate — flush is a DISK filling FROM cache (2x), each collect segment is a CACHE filling FROM Disks (2x)', () => {
+  it('times a freshly-started merge off the current production rate — flush is a DISK filling FROM cache (2x), each collect segment is a CACHE filling FROM Disks (5x)', () => {
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: {
@@ -3676,10 +3676,11 @@ describe('tickDiskWriteCache', () => {
     // Default production rate is 1 bit/sec.
     expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
     expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER)
-    // 10 source-disk segments sum to exactly one target's own size, so — with both multipliers
-    // currently equal — the two phases happen to take the same total time (see the doc comment on
-    // getDiskWriteCacheSegmentSeconds in engine.js for why this is coincidental, not structural).
-    expect(merge.segmentTotalSeconds * DISK_ARRAY_LADDER_CAP).toBe(merge.flushTotalSeconds)
+    // 10 source-disk segments sum to exactly one target's own size, but the two multipliers are
+    // deliberately different rates (5x collect vs. 2x flush — see the doc comment on
+    // getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster overall
+    // than the flush phase, not equal to it.
+    expect(merge.segmentTotalSeconds * DISK_ARRAY_LADDER_CAP).toBeLessThan(merge.flushTotalSeconds)
   })
 
   it('scales a freshly-started merge\'s timings with Byte Foundry production rate', () => {

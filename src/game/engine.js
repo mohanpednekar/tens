@@ -3691,12 +3691,13 @@ const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
 }
 
 // Each of the 10 collect segments is a CACHE filling FROM Disks — one full source disk's worth of
-// bits, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER times the current production rate. 10 segments
-// of one source disk each sum to exactly one target disk's own size (source × DISK_LADDER_SIZE_MULTIPLIER
-// = target), so with DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER and CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER
-// currently equal, the full collect phase happens to take the same total time as the flush phase
-// below — coincidental, not structural: the two phases pace conceptually distinct fills (cache-from-
-// disk vs. disk-from-cache) and would diverge if either multiplier changed independently.
+// bits, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5) times the current production rate. 10
+// segments of one source disk each sum to exactly one target disk's own size (source ×
+// DISK_LADDER_SIZE_MULTIPLIER = target), but the collect phase's own total time is independent of
+// the flush phase below's — DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER (2, disk-from-cache) and
+// CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5, cache-from-disk) pace conceptually distinct fills
+// and are deliberately set to different rates: collecting an already-built disk's contents into the
+// write cache is a faster bulk transfer than the bandwidth-limited disk-from-cache flush that follows.
 const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
   const poolIndex = getPoolIndexForDiskSize(sourceSize)
   const rate = getStoragePoolBandwidth(state, poolIndex)
