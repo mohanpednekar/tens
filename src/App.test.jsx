@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -2844,6 +2844,68 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
 })
 
+test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
+  vi.useFakeTimers()
+  // Below INTRO_CONVERSION_UNLOCK_CAPACITY (8000 bits) so tickIntroAutoInvest can never afford even
+  // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
+  // drained back down the instant it tops up, which a bigger, conversion-eligible capacity would be.
+  // 4000 bits is exactly 500 B (below MEMORY_BINARY_UNIT_STEP's own 1 KiB rung), a round balance so
+  // the stable/trimmed forms visibly differ ("500.000 B" vs "500 B").
+  const capacity = 4000
+  seedIntroState({ bits: capacity, capacity, byteCreated: true })
+  const { unmount } = render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  const balanceText = () => balanceBar.closest('section').querySelector('p')
+  // Immediately full, but not YET trimmed — the delay hasn't elapsed.
+  expect(balanceText()).toHaveTextContent('500.000 B')
+
+  act(() => { vi.advanceTimersByTime(1000) })
+  expect(balanceText()).toHaveTextContent('500 B')
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('a pool\'s own Memory buffer balance also drops its padded trailing zeros once its buffer has been full for more than 1 second', async () => {
+  vi.useFakeTimers()
+  const firstDiskSize = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE // 8000 — pool 1's own smallest (read-cache-eligible) size
+  const poolBufferCapacity = getPoolBufferCapacity({ intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } }, 1)
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolBufferCapacity },
+    // Pre-filled to full so pool 1's own eager read-cache pre-fill (tickDiskAutoFill) has nothing
+    // left to draw from the buffer — otherwise it would siphon this buffer back down every tick
+    // (no disk of this size exists yet to flush the cache into, so it would take far longer than
+    // 1 second to fill on its own), making poolBufferFull flicker instead of staying continuously
+    // true.
+    diskCache: { [firstDiskSize]: firstDiskSize },
+    // Already latched, and explicitly navigated to Foundry below, so ByteFoundryPage doesn't get
+    // yanked out from under this test the instant intro.capacity's own storage-unlock threshold
+    // (which this test's capacity already sits at) would otherwise latch this mid-test and switch
+    // the app over to MainPage (see latchMainGameUnlocked/App.jsx's showingFoundry).
+    mainGameUnlocked: true,
+  }, {
+    // tier01 past level 1 so the now-full cache above isn't immediately drained right back out by
+    // tickDiskLevelOneCachePull's own level-1 fallback (which would otherwise spend the whole cache
+    // to grant a free purchase block, emptying it and restarting the same siphon-from-buffer cycle
+    // this seed is trying to avoid).
+    purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
+  })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  const balanceText = () => pool1.querySelector('p')
+  expect(balanceText()).toHaveTextContent(formatDiskSizeStable(poolBufferCapacity))
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+  expect(balanceText()).toHaveTextContent(formatDiskSize(poolBufferCapacity))
+
+  unmount()
+  vi.useRealTimers()
+})
+
 test('the top-right disk-status figure sums full disks per section — the whole Foundry for Data Stream, just that pool\'s own sizes for a pool card', () => {
   seedIntroState({
     bits: 0,
@@ -3353,9 +3415,7 @@ describe('Byte Foundry Storage', () => {
     })
   })
 
-  test('starting a build spends the cost from its own pool buffer immediately, then constructs an EMPTY disk once the timed build completes', () => {
-    vi.useFakeTimers()
-
+  test('starting a build spends the cost from its own pool buffer and constructs an EMPTY disk, both in the same click', () => {
     // Raw Data Stream capacity must derive (via the decade-power pool Capacity ladder) at least
     // currentBankCost — 2**14 doublings is the smallest step whose derived pool 1 Capacity (80,000
     // bits) exactly covers it; seeding `capacity: currentBankCost` directly would derive a pool
@@ -3374,19 +3434,12 @@ describe('Byte Foundry Storage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
 
-    // The cost is spent immediately, but the disk itself doesn't exist until the timed build
-    // finishes — the button itself reflects the in-progress rebuild.
-    let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    // The cost is spent, and the disk itself constructed, immediately — funding the passes already
+    // took as long as the build itself once did, so there is no further separate timed wait once the
+    // final pass lands (see docs/DESIGN_HISTORY.md's "Provision Disk's post-funding build timer
+    // duplicated the wait already spent funding it" entry).
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.poolBuffers['1']).toBe(0)
-    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: currentBankSize, totalSeconds: currentBankSize })
-    expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
-    expect(screen.getByRole('button', { name: /disk array rebuilding/i })).toBeDisabled()
-
-    // The smallest size's very first build takes exactly the time to fill it at 1x Memory
-    // bandwidth — the default 1 bit/sec production rate, so currentBankSize (8000) seconds.
-    act(() => { vi.advanceTimersByTime(currentBankSize * 1000) })
-
-    saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.diskBuild).toBeNull()
     expect(saved.intro.disksBuiltTotal[currentBankSize]).toBe(1)
     // The disk exists (built) but starts empty — no full disk yet.
@@ -3398,7 +3451,6 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
 
     unmount()
-    vi.useRealTimers()
   })
 
   test('Memory keeps read cache full then pours into an empty disk on a later tick when tier does not block', () => {

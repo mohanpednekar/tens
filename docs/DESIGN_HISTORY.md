@@ -7299,3 +7299,199 @@ incorrectly fired early). `yarn test`/`yarn build` green; no economy/formula cha
 `simulate-run-times` wasn't re-run — an optimal bot already clicks the instant a pass becomes
 affordable regardless of whether the button would have refused an earlier click, so this fixes real
 human input friction without moving any ideal-play timing.
+
+### Provision Disk's post-funding build timer duplicated the wait already spent funding it
+
+Player feedback: "Provisioning Disk once funded shall take the same time as filling it. We are
+already consuming time in the provisioning pass fundings. So no need to duplicate that time again."
+This landed directly on top of the pass-funding-installments feature above (from another session, in
+between): `provisionDisk` had already been changed to collect its cost in
+`getDiskProvisionPassesRequired`-many passes, each one only banking once the pool's own buffer
+actually accumulates a full face-value's worth of bits at that pool's current production rate — real
+time, not an instant click. But once the LAST pass landed, `provisionDisk` still set a SEPARATE
+`intro.diskBuild = { size, remainingSeconds, totalSeconds }` countdown
+(`totalSeconds = getProvisionDiskBaseSeconds(state, size) * ordinal`, i.e. `size / rate` per pass,
+times the disk's own 1-indexed position, using the pool's RAW, un-multiplied
+`getStoragePoolBandwidth`) before the container actually existed — a leftover from when the whole
+cost was paid in one instant lump sum and a timed build was the ONLY time cost a disk imposed. Once
+funding itself started taking real time, that assumption silently became false: each pass already
+takes as long as `tickPoolBufferFill` needs to bank one face-value's worth into the buffer — `size /
+(rate × multiplier)`, the SAME fill-based multiplier (`getPoolEffectMultiplier`, 50%-200%, boosted
+further by tapping) every other pool-buffer transfer scales by — so an additional, separately-timed
+countdown on top, using the raw rate alone, was always net-additional wait on top of whatever the
+passes themselves already took, not a double-counted RESTATEMENT of the identical number. At the
+multiplier's own 100% baseline the two durations coincide exactly (a disk needing 1 pass took twice
+as long overall as it should have); away from baseline they diverge further, but the countdown was
+still pure duplication either way, since nothing about "the passes already took real time" ever
+stopped applying.
+
+**Fix.** `provisionDisk`'s completion branch no longer sets `intro.diskBuild` at all — the instant
+the final pass lands, it increments `disksBuiltTotal[size]` in that SAME call, exactly like
+`tickProvisionDisk`'s own completion branch already did at the end of a countdown. `diskBuild`,
+`tickProvisionDisk`, and every "IO blocked mid-build" guard (`isDiskPullEligible`,
+`tickDiskAutoFill`'s `buildingSize` skip, `tickDiskWriteCache`'s merge guard, `isProvisionDiskAvailable`'s
+own `diskBuild` check) all remain exactly as they were — a save from before this change can still be
+mid-countdown on load, and needs somewhere to finish that out — but `provisionDisk` itself never
+creates a new one, so in practice `tickProvisionDisk` becomes a permanent no-op for every build
+started from here on. `getProvisionDiskBaseSeconds`/`getProvisionDiskSeconds` (the now-unused
+ordinal-scaled duration formula) were deleted outright rather than left as dead code, since nothing
+else ever called them.
+
+**Why not just zero out `totalSeconds` instead of removing the countdown entirely?** Considered and
+rejected: it would still leave the array read as "mid-build" (IO-blocked, a "rebuilding" UI state)
+for one full tick after every completion, a purely cosmetic flicker with no benefit over completing
+synchronously in the same call.
+
+**Verification.** Of the 17 tests this broke, most were seeded expectations that `provisionDisk`'s
+result carried a `diskBuild` object — rewritten to assert `disksBuiltTotal[size]` incremented and
+`diskBuild` stayed `null` instead. Four tests (`engine.test.js`) existed purely to check the removed
+ordinal-scaled duration FORMULA (e.g. "a 10 KB disk's first build takes 10x as long as the smallest
+size's") — deleted outright, since there's no longer a duration value for them to assert against;
+the ordinal-scaling behavior they cared about (a later disk needing more passes) stays covered by
+`getDiskProvisionPassesRequired`'s own tests. One `App.test.jsx` end-to-end test
+(seeding a fresh pool buffer, clicking Provision Disk, advancing fake timers by the old countdown
+duration, then asserting the disk existed) collapsed to asserting the disk exists immediately after
+the click, with the `vi.useFakeTimers()`/`vi.advanceTimersByTime` dance removed entirely since there
+is no more countdown to advance past. `yarn test`: 1753/1753 green (net -4 from the 1757 baseline —
++13 rewritten in place, 4 formula-only tests deleted). `yarn build` succeeds. No economy CONSTANT
+changed (no `TIER_DEFINITIONS`/cost formula touched), only when a already-funded disk's construction
+resolves, so `simulate-run-times` wasn't re-run — the model already assumed a bot spends exactly the
+funding time and no more, which is now actually true rather than an approximation.
+
+### Read cache pre-fills on pool unlock, reinstated
+
+Player feedback: "cache should be available for use as soon as pool is unlocked. No need to wait for
+a disk to be provisioned." This asked to reverse a deliberate, twice-confirmed prior decision (see
+"Pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock" and "The read-
+cache pre-fill design was never reconciled with the later decade-of-10 Capacity ladder, starving a
+freshly-unlocked pool's buffer" above): a pool's smallest size's read cache used to pre-fill from
+that pool's own buffer the instant the pool unlocked, but that design was reverted after a real
+player-reported bug — the cache greedily drained the buffer toward an inert reserve with no disk yet
+built to ever flush it into, stalling the buffer's own visible balance (and any Data Lake overflow
+riding on it) indefinitely. The fix at the time made cache eligibility require
+`disksBuiltTotal[unitBits] > 0` outright, with no capacity/affordability branch.
+
+**Why reinstating this is actually SOLVED today, not just a safer trade-off.** A first pass at this
+justification framed it as accepting a bounded cost — the cache competing with the buffer for
+Provision Disk's own funding, capped at "however long the cache itself takes to fill." Explicit
+follow-up feedback rejected that framing: "Just don't flush the cache unless there is an empty disk
+already provisioned. Keep the cache filled till then. It will fund the first level if asked or fund
+an empty disk if exists. Better to 'solve' the problem rather than avoiding it." — i.e. don't accept
+a residual risk, confirm the mechanism has none. And it doesn't: every bit the eager pre-fill diverts
+into the cache is never actually wasted or competing for anything, because the cache only has two
+possible fates, and BOTH are already fully implemented and pre-existing — `tickDiskAutoFill`'s own
+Pass 2/3 already refuse to flush a cache into a disk (`hasEmptyContainer = builtTotal[size] >
+disks[size]`) until one exists, so a pre-filled cache with nothing to receive it just sits full and
+waits, exactly as intended; and, while a tier still sits at its own level 1 (checked every tick,
+first-come-first-served with a fresh disk pull),
+`tickDiskLevelOneCachePull` spends that SAME cache directly to fund the tier's whole level-1 purchase
+block the moment it's affordable — no waiting on a disk at all. The original stall (see the two
+prior entries above) was a genuinely different, now-superseded situation: a FLAT, lump-sum disk cost
+model where the pool's buffer needed to hold an entire `DISK_BUILD_COST_MULTIPLIER`× build cost at
+once, a threshold the buffer's own capacity at the time couldn't even reach while the cache kept
+re-diverting whatever accumulated — an effectively PERMANENT stall with the diverted bits genuinely
+going nowhere useful. Since then, Provision Disk's cost was split into installments (see "Provision
+Disk funding split into passes" above) and a size's own read cache is deliberately sized to exactly
+fund one tier level (`DISK_CACHE_BLOCK_COUNT` blocks totaling one disk's face value, which — by the
+disk-ladder's own construction — always equals `unitCost × DEFAULT_PURCHASE_BLOCK_SIZE` for that
+size's fixed corresponding tier level), so there's no longer any value the cache could accumulate
+that isn't immediately spendable on one of its two uses.
+
+**Fix.** `tickDiskAutoFill`'s `readCacheEligibleSizes` no longer filters on `disksBuiltTotal[unitBits]
+> 0` — every currently unlocked pool's own smallest (read-cache-eligible) size is eligible,
+regardless of whether a disk of that size exists yet. The self-heal loop that used to refund a stale
+cache entry for a "no-longer-eligible" (not-yet-built) size was narrowed back to its original,
+narrower purpose — refunding a cache entry for a size that was NEVER read-cache-eligible at all (not
+the pool's own smallest denomination) — since a not-yet-built size's cache is legitimate state again,
+not stale. Passes 2/3 (flushing a full cache into an actual disk) were never touched — they already
+gated on `hasEmptyContainer = builtTotal[size] > disks[size]`, so a pre-filled cache with no disk yet
+simply sits full and waits, exactly as the original "cache-instant-fill" design intended.
+
+**Verification.** One test asserting the OLD "does NOT pre-fill before a disk exists" regression was
+rewritten into its own opposite — confirming pre-fill DOES happen — with a new, narrower test taking
+over its one still-valid sub-case (a same-reference no-op when the pool buffer itself is empty,
+independent of whether a disk exists). A second test asserting a full-but-unbuilt cache gets refunded
+(added for a Devin Review finding on PR #562, back when that state was genuinely stale) now asserts
+the opposite: that state is legitimate and must NOT be touched. A third, new END-TO-END test proves
+the "solved, not avoided" claim directly rather than by argument alone: seeds a pool 1 that's just
+unlocked, tier01 fresh at level 1, and a pool buffer holding exactly one disk's worth of bits, then
+runs one real `tickGame` call with ample elapsed time — the SAME call both eager-pre-fills the cache
+to capacity (`tickDiskAutoFill`) and spends that same, now-full cache to fund tier01's ENTIRE level-1
+purchase block (`tickDiskLevelOneCachePull`), landing on `diskCache` back at exactly 0 — proving the
+cache genuinely never sits "wasted," it always resolves to one of its two uses, in the same tick the
+mechanic advertises. `yarn test`: 1758/1758 green (+1 for this new test).
+`yarn build` succeeds. No economy constant/formula changed — only which point in Byte Foundry
+progression the read cache starts drawing from Memory — so `simulate-run-times` wasn't re-run.
+
+**Adversarial review follow-up.** A subsequent review of this same change (against commit
+`4cf0476`) surfaced one more latent self-heal gap: a diskCache/diskReadCacheFlush entry can be
+structurally read-cache-eligible (`isDiskReadCacheEligible` — the pool's own smallest denomination)
+while that entry's POOL isn't currently unlocked — a case the self-heal loop's original
+eligibility check didn't cover, since it only ever tested structural eligibility, not current
+unlock membership. Not reachable via ordinary play today (nothing populates `diskCache` for a
+not-yet-unlocked pool, and `getUnlockedStoragePoolCount` never decreases without
+`buildEraIntroReset` also wiping `diskCache` to `{}` outright), but cheap to close defensively
+rather than leave as a trap for a future change to either invariant. Fixed with a new
+`isCacheStillEligible(size)` helper in `tickDiskAutoFill` combining both checks, used by both
+self-heal loops (`diskCache` and `diskReadCacheFlush`). Verified by a new regression test seeding a
+full cache at pool 2's own smallest size while only pool 1 is unlocked, asserting it gets refunded
+to pool 2's own buffer. `yarn test`: 1759/1759 green (+1 for this new test).
+
+### Data Stream/pool balances skip their padded trailing zeros once full for more than a second
+
+Player feedback: "Skip the trailing zeros once full for more than 1 second." The Data Stream and
+pool buffer balances (`BalanceText`) render via `formatMemoryAmountStable`/`formatDiskSizeStable` —
+a fixed-3-decimal-place formatter deliberately chosen (see "The Data Stream/pool balance now shows a
+stable, non-trimmed decimal digit count" entry) specifically to stop a fast-changing figure's own
+DISPLAYED WIDTH from jittering tick to tick purely because a digit happens to land on zero. That
+stability has no purpose once the balance is sitting completely full — it isn't changing tick to
+tick any more, so the padding is pure "8.000 KB" trailing-zero noise with nothing left to jitter
+against.
+
+**Fix.** A new `useTrimBalanceAfterFull(isFull)` hook (`ByteFoundryPage`) starts a plain
+`setTimeout` the instant `isFull` goes true, flips a `trimmed` boolean once `FULL_BALANCE_TRIM_DELAY_MS`
+(1000ms, real wall-clock time via `setTimeout` — deliberately NOT tied to the game's own tick rate,
+which can run much faster or slower depending on Tickspeed) elapses, and resets immediately the
+moment `isFull` goes false again (effect cleanup cancels the pending timer) — so a balance that only
+brushes full for a single tick before draining right back down never flickers into the trimmed form
+for an instant. `formatMemoryBalanceValue` (the Data Stream's own balance formatter) grew a `stable`
+parameter (default `true`, preserving every other call site) selecting `formatMemoryAmountStable` vs.
+plain `formatMemoryAmount`. The Data Stream calls the hook directly (a single, unconditional call in
+`ByteFoundryPage`'s own top-level body). Pool buffers needed a different shape: `poolBufferFull` is
+computed once per pool inside a `.map()` loop over `visiblePoolCount`, and a hook can never be called
+a variable number of times within one render — so pool balances render through a new tiny
+`PoolBalanceText` subcomponent instead, giving each pool its OWN `useTrimBalanceAfterFull` instance
+(one per mounted `PoolBalanceText`, entirely independent of how many pools happen to be visible).
+
+**A red herring while writing the App-level test.** The obvious test — seed a pool buffer already at
+its own exact capacity, advance fake/real timers by 1 second, assert the balance trimmed — failed
+every way it was written (sync `act`, async `act`, `vi.advanceTimersByTimeAsync`, even genuinely
+real timers), always still showing the padded form. Root cause, found by checking whether
+`screen.getByRole('region', { name: 'pool 1' })` still resolved to the SAME node after the wait: it
+didn't — it threw "unable to find element" entirely. The seeded capacity happened to sit exactly AT
+`INTRO_DISK_UNLOCK_CAPACITY`, `isStorageUnlocked`'s own threshold — the SAME one `latchMainGameUnlocked`
+checks every tick to permanently flip `intro.mainGameUnlocked`. The instant real ticks got to run
+(which the very act of waiting a second let happen), the latch fired, and `App.jsx`'s
+`showingFoundry` check switched the whole page from `ByteFoundryPage` to `MainPage` out from under
+the test — nothing wrong with the hook at all, the pool card (and the `PoolBalanceText` mounted
+inside it) had simply been unmounted. Two more real drains had to be neutralized once the page stuck
+around: pool 1's own newly-eager read-cache pre-fill (see the entry directly above) would otherwise
+have kept siphoning the buffer back down every tick with no disk yet built to fill it (fixed by
+seeding `diskCache` already full for that size), and `tickDiskLevelOneCachePull`'s level-1 fallback
+would have immediately spent that same full cache to grant tier01 its first purchase block, emptying
+it and restarting the exact same siphon (fixed by seeding tier01 past level 1). Fix: seed
+`mainGameUnlocked: true` up front and explicitly click the "open byte foundry" nav button right after
+render, so the test's own page selection stays pinned to Foundry regardless of what the latch does
+mid-test — matching how a player revisiting a permanently-unlocked save would actually navigate
+there, rather than relying on the mandatory-gate's forced Foundry display like every other pool-card
+test in this file does (none of which advance real/fake time far enough to ever trip the latch).
+
+**Verification.** Two new `App.test.jsx` tests (Data Stream and pool buffer), plus a standalone
+`renderHook`-based scratch check of `useTrimBalanceAfterFull` in isolation used while diagnosing the
+above (confirmed the hook itself was correct well before the page-navigation cause was found — not
+committed, since the two App-level tests already cover the same behavior end to end). Verified
+additionally in a real browser (`yarn dev` + a disposable Playwright script): a Data Stream balance
+seeded at a small, sub-conversion-threshold capacity (so `tickIntroAutoInvest` can never drain it)
+read "500.000 B" immediately and "500 B" 1.5 real seconds later. `yarn test`: 1756/1756 green (+2).
+`yarn build` succeeds. Pure display formatting — no economy constant/formula changed, so
+`simulate-run-times` wasn't re-run.

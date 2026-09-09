@@ -287,17 +287,50 @@ const FillableStatCard = styled.div`
 // instead (e.g. "30.031 KiB" alongside "1 MiB"), which still reads as a real magnitude rather than
 // falling all the way back to a raw bit count. Only a genuinely sub-Byte balance (no named unit
 // finer than a Byte exists) still falls back to raw bits, via formatMemoryAmount's own bottom-rung
-// handling — see docs/DESIGN_HISTORY.md.
-const formatMemoryBalanceValue = (bits, capacityBits, byteCreated) => {
+// handling — see docs/DESIGN_HISTORY.md. `stable` picks the fixed-3-decimal formatter (the ticking
+// default) or the ordinary trimmed one — see useTrimBalanceAfterFull below for why a caller would
+// ever want the trimmed form here.
+const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true) => {
   const capacityUnit = getMemoryUnit(capacityBits, byteCreated)
   const balanceUnit = capacityUnit && bits > 0 && bits < capacityUnit.divisor
     ? getMemoryUnit(bits, byteCreated)
     : capacityUnit
-  return formatMemoryAmountStable(bits, balanceUnit)
+  return stable ? formatMemoryAmountStable(bits, balanceUnit) : formatMemoryAmount(bits, balanceUnit)
 }
 
 const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
   formatMemoryAmount(capacityBits, getMemoryUnit(capacityBits, byteCreated))
+
+// A balance's fixed decimal padding (formatMemoryAmountStable/formatDiskSizeStable — see either's
+// own doc comment) exists only to stop its displayed WIDTH from jittering tick to tick while the
+// value is actually changing. Once a buffer sits completely full — no longer changing — that
+// padding is pure trailing-zero noise ("8.000 KB" forever) with no jitter left to guard against, so
+// this switches a balance over to the ordinary trimmed formatter once it's been continuously full
+// for FULL_BALANCE_TRIM_DELAY_MS, real wall-clock time (not tied to the game's own tick rate) —
+// long enough that a balance which briefly touches full and immediately drains again (e.g. a
+// single production tick landing exactly at capacity) never flickers into the trimmed form for an
+// instant. Resets the instant `isFull` goes false again, whatever the reason.
+const FULL_BALANCE_TRIM_DELAY_MS = 1000
+const useTrimBalanceAfterFull = isFull => {
+  const [trimmed, setTrimmed] = useState(false)
+  useEffect(() => {
+    if (!isFull) {
+      setTrimmed(false)
+      return undefined
+    }
+    const timer = setTimeout(() => setTrimmed(true), FULL_BALANCE_TRIM_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [isFull])
+  return trimmed
+}
+
+// A pool's own Memory balance, as its own tiny component (rather than inline in the pool-card
+// loop below) purely so useTrimBalanceAfterFull gets its own hook instance per pool — a hook
+// can't be called a variable number of times inside a single component's own render.
+const PoolBalanceText = ({ bits, isFull }) => {
+  const trimmed = useTrimBalanceAfterFull(isFull)
+  return <BalanceText>{trimmed ? formatDiskSize(bits) : formatDiskSizeStable(bits)}</BalanceText>
+}
 
 // Top-right "current disks status" figure (see TitleRow above) — a rough at-a-glance count of full
 // disks across every size this section covers (the whole Foundry for the Data Stream card, just
@@ -431,6 +464,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const { intro } = state
 
   const isFull = intro.bits >= intro.capacity
+  const dataStreamBalanceTrimmed = useTrimBalanceAfterFull(isFull)
   const canCombine = !intro.byteCreated && intro.bits >= INTRO_BYTE_COMBINE_COST
   const storageRevealed = isStorageUnlocked(state)
   const visiblePoolCount = getVisibleStoragePoolCount(state)
@@ -615,7 +649,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               </DiskStatusText>
             )}
           </TitleRow>
-          <BalanceText>{formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated)}</BalanceText>
+          <BalanceText>{formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}</BalanceText>
           {intro.byteCreated && (
             <MultiplierBar
               basePercent={dataStreamBaseMultiplierPercent}
@@ -801,7 +835,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   💾 {poolDisksCount}
                 </DiskStatusText>
               </TitleRow>
-              <BalanceText>{formatDiskSizeStable(poolBufferBits)}</BalanceText>
+              <PoolBalanceText bits={poolBufferBits} isFull={poolBufferFull} />
               <MultiplierBar
                 basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
                 totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
