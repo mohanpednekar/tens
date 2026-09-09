@@ -2827,9 +2827,11 @@ export const isProvisionDiskAvailable = state => {
 // "Compute" — true once Compute Core conversion is unlocked and at least one brand-new boost
 // preset is mechanically activatable from some compute-ladder tier (see canActivateComputeBoost,
 // defined further down this file). Stacking an already-active boost is intentionally NOT counted
-// here, because the lower-priority Capacity actions gated on this predicate (Memory ×2 and Data
-// Lake capacity doubling) should not be held hostage to spending every possible stack before the
-// player can make progress.
+// here. Currently unused by any production caller — Data Lake capacity doubling no longer composes
+// against it (removed; array completion is its only gate now, see DESIGN_HISTORY.md), and Memory
+// ×2 never did — kept as a named export/tested unit for API stability and potential future reuse,
+// same posture as this file's other implemented-but-currently-unwired predicates (e.g.
+// queueDiskBuild).
 export const isComputeUpgradeAvailable = state =>
   isComputeCoreConversionUnlocked(state) &&
   COMPUTE_BOOST_TIER_FIELDS.some((field, index) =>

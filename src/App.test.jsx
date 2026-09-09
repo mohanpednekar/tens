@@ -3565,10 +3565,10 @@ describe('Byte Foundry Storage', () => {
     // The pool's own ×1 array (KB) is fully built — the "upgrade available" condition — regardless
     // of how full the lake currently is; draining whatever it holds (here, nothing) funds the
     // advance, not Bits. bits (8000) is included only to prove it never touches it. Provision
-    // Disk's own cost (80,000) stays out of reach either way, so it never outranks this action;
-    // Invest's current-tier claims are already used up (productionMilestoneTierClaims: 2) — the
-    // same higher-priority-action neutralization the Sacrifice tests above use, since Data Lake
-    // capacity sits at the same forced-priority rank.
+    // Disk's own cost (80,000) and Invest's current-tier claims (productionMilestoneTierClaims: 2)
+    // are set up the same way the Sacrifice tests above neutralize higher-priority actions, but
+    // that no longer matters for Upgrade itself: it's no longer part of the forced priority chain
+    // at all, so it would render/enable identically even without this seeding.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
