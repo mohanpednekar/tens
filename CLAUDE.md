@@ -1028,8 +1028,12 @@ unlocked pool can fund. `provisionDisk` collects the cost in `getDiskProvisionPa
 `getDiskProvisionPassesRequired` passes of the disk's own face-value size each — N for the array's
 Nth disk (1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER` (10) for its last) rather than a
 flat count for every disk regardless of ordinal — so a pool's buffer only ever needs to hold one pass
-at a time, not the whole cost — then takes real build time once fully funded (scaled by production
-rate, snapshotted at start). A manual click that doesn't finish the build in one call auto-arms the
+at a time, not the whole cost — and completes the instant the final pass lands, with no further
+separate build-time delay: gathering the passes at the pool's own production rate already takes
+exactly that much real time, so an additional post-funding countdown would only duplicate it (see
+`docs/DESIGN_HISTORY.md`). `diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard
+remain solely to finish out a countdown a save from before this change may still be carrying — a
+build `provisionDisk` itself starts never creates one. A manual click that doesn't finish the build in one call auto-arms the
 **queue** (`diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild`, unconditionally wired into
 `tickGame`) so every remaining pass for that disk fires itself as the buffer refills — no further
 clicks needed; only starting a NEW disk's build still needs one click. `queueDiskBuild` itself now
@@ -1200,7 +1204,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1757 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1756 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

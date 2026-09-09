@@ -312,6 +312,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Provision Disk no longer imposes a separate build-time countdown after funding completes** —
+  gathering a disk's funding passes at the pool's own production rate already takes exactly the
+  intended build time, so an additional post-funding wait was pure duplication (an array's very
+  first disk, needing only 1 pass, previously took twice as long overall as it should have). A disk
+  now exists the instant its final pass lands. A save with an already-in-progress countdown from
+  before this change still finishes it out normally.
+- **A pool's smallest size's read cache pre-fills the instant its pool unlocks again** — ready to
+  flush before the player's first disk of that size even exists, rather than waiting for one to be
+  built first.
+- **The Data Stream and pool buffer balances drop their padded decimal zeros once full for more
+  than a second** — the fixed-3-decimal display exists to stop a fast-changing balance from
+  jittering width tick to tick, which no longer matters once it sits completely full; reverts
+  instantly the moment it drains back below full.
 - **Byte Foundry's corner needle-speedometer replaced with a center-grow multiplier bar** — the
   fill-based Speed/Bandwidth multiplier now shows as a compact bar that grows and shrinks from the
   middle (200% fills the full width) instead of a tall dial, with a live tap bonus rendered as a

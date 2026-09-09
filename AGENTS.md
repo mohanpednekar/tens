@@ -266,10 +266,9 @@ Storage's own capacity threshold instead. Storage pool cards also require
 on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
 own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
 so the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already
-showing a clean "1 KB" Capacity. A pool's own smallest size's read cache only ever starts filling
-from Memory once a disk of that size has actually been built — never merely on the pool itself
-unlocking (an earlier eager pre-fill-on-unlock design drained the buffer toward a cache with nothing
-to flush into; see docs/DESIGN_HISTORY.md). The generator, Disks, Data Lakes, and Compute
+showing a clean "1 KB" Capacity. A pool's own smallest size's read cache starts filling from Memory
+the instant its pool unlocks — pre-filled ready to flush before any disk of that size has ever been
+built (reinstated; see docs/DESIGN_HISTORY.md). The generator, Disks, Data Lakes, and Compute
 Cores/Nodes are permanent across every real Prestige; so is `intro.mainGameUnlocked` itself, a
 one-time-ever latch (`latchMainGameUnlocked`) — once Storage-unlock capacity is ever reached, no
 real Prestige or Era ascension resets it again, so Factory stays permanently reachable from then on.
