@@ -3594,14 +3594,13 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Buy stays reachable when Upgrade is available but not its turn — Upgrade no longer hides an immediately-clickable Buy (adversarial-review finding)', () => {
-    // Upgrade is available (the KB pool's ×1 array is fully built) but blocked from actually
-    // firing by the forced priority order — Bandwidth (Speed ×2) is left available here (unlike
-    // the "capacity can be increased" test above, which neutralizes it via
-    // productionMilestoneTierClaims) specifically to put Upgrade in this available-but-not-its-turn
-    // state. Buy is genuinely affordable (1 unit banked, first Booster costs 1) and isn't part of
-    // the forced priority order at all, so it must still be clickable rather than hidden behind a
-    // dead disabled Upgrade button.
+  test('Upgrade claims the action slot over Buy whenever its own array is complete — no longer gated by the forced priority order', () => {
+    // Upgrade is available (the KB pool's ×1 array is fully built) and, since
+    // isDataLakeCapacityDoublingTurnAvailable is no longer part of the forced priority order (Speed
+    // ×2/Bandwidth is left available here, unlike the "capacity can be increased" test above, which
+    // neutralizes it — Upgrade is unaffected either way), it's immediately clickable regardless.
+    // Buy would also be genuinely affordable here (1 unit banked, first Booster costs 1), but
+    // Upgrade still takes the one shared slot — see DataLakePanel's own ternary.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3612,9 +3611,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
-    expect(buyButton).toBeEnabled()
-    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
+    const upgradeButton = screen.getByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })
+    expect(upgradeButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /buy 1 cores from the kb data lake/i })).not.toBeInTheDocument()
   })
 
   test('Data Lake capacity-increase button disappears once the lake hits its hard cap', () => {

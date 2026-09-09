@@ -4852,20 +4852,21 @@ export const isDataLakeCapacityDoublingAvailable = (state, tierIndex) => {
   return (state.intro?.disksBuiltTotal?.[arraySize] ?? 0) >= DISK_ARRAY_LADDER_CAP
 }
 
-// Gated by the same forced priority order every other Byte Foundry milestone action follows —
-// available only once nothing ranked above it (Disk Fill, Speed, Provision Disk, Compute) currently
-// is. Lake doubling sits alone at that bottom rank. NOT mutually exclusive with Booster-buying any
-// more, now that isDataLakeCapacityDoublingAvailable tracks real Storage array completion instead
-// of the lake's own escalating Booster cost — a lake can, in principle, simultaneously be able to
-// afford its next Booster AND have its next array already complete. DataLakePanel still reuses one
-// button slot for both, preferring Upgrade when both are true (advancing capacity unblocks every
-// future Booster too, so it's the more valuable of the two once available) — see DataLakePanel.
+// No longer part of the forced priority order — availability is exactly
+// isDataLakeCapacityDoublingAvailable's own array-completion check, nothing else. This used to also
+// require Disk Fill/Speed/Provision Disk/Compute to all be currently unavailable, the same forced
+// order every other Byte Foundry milestone action follows; removed per the maintainer's explicit
+// request (see docs/DESIGN_HISTORY.md) so a lake's capacity upgrade is available strictly whenever
+// its own corresponding Storage array is fully built — the same "always available the instant
+// affordable" posture `isBoosterPurchaseAvailable` already has, and for the same reason: since
+// isDataLakeCapacityDoublingAvailable tracks real Storage array completion rather than the lake's
+// own escalating Booster cost, Upgrade and Buy were never actually mutually exclusive by
+// construction, so there was no real contention with any OTHER Foundry action left to arbitrate.
+// Kept as its own named export (rather than inlining isDataLakeCapacityDoublingAvailable at every
+// call site) purely for API stability — every existing caller (DataLakePanel, doubleDataLakeCapacity,
+// tests) keeps calling this "turn" name unchanged.
 export const isDataLakeCapacityDoublingTurnAvailable = (state, tierIndex) =>
-  isDataLakeCapacityDoublingAvailable(state, tierIndex) &&
-  !isDiskFillAvailable(state) &&
-  !isBandwidthAvailable(state) &&
-  !isProvisionDiskAvailable(state) &&
-  !isComputeUpgradeAvailable(state)
+  isDataLakeCapacityDoublingAvailable(state, tierIndex)
 
 export const doubleDataLakeCapacity = tierIndex => state => {
   if (!isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)) return state

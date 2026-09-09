@@ -312,6 +312,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Data Lake capacity Upgrade is no longer blocked by the forced priority order** — it's now
+  available and immediately clickable the instant its own corresponding Storage disk array is
+  fully built, regardless of whether Disk Fill, Speed, Provision Disk, or a Compute Boost is also
+  currently available, matching Buying Boosters' own "always available the instant affordable"
+  behavior. Previously the button could sit visibly present but disabled — its own array long
+  complete — solely because an unrelated action elsewhere on the page happened to outrank it.
 - **Byte Foundry's corner needle-speedometer replaced with a center-grow multiplier bar** — the
   fill-based Speed/Bandwidth multiplier now shows as a compact bar that grows and shrinks from the
   middle (200% fills the full width) instead of a tall dial, with a live tap bonus rendered as a
