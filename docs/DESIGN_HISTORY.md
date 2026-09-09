@@ -7268,19 +7268,31 @@ built to ever flush it into, stalling the buffer's own visible balance (and any 
 riding on it) indefinitely. The fix at the time made cache eligibility require
 `disksBuiltTotal[unitBits] > 0` outright, with no capacity/affordability branch.
 
-**Why reinstating this is safer today than when it was reverted.** The original stall was diagnosed
-against a FLAT, lump-sum disk cost model: a size's `getDiskCost` required the pool's buffer to hold
-the ENTIRE build cost (`DISK_BUILD_COST_MULTIPLIER`× the size) at once, and the pool's own buffer
-capacity at the time couldn't reach that threshold while the cache kept silently re-diverting
-whatever accumulated — an effectively PERMANENT stall, not a temporary delay. Since then, Provision
-Disk's cost was split into installments (see "Provision Disk funding split into passes" above): a
-pool's buffer only ever needs to hold ONE pass (the disk's own face value) at a time, and the pool's
-own buffer capacity was resized specifically to always cover that. Under eager pre-fill today, the
-cache (one disk's worth of bits, `DISK_CACHE_BLOCK_COUNT` blocks) competes with the buffer for the
-SAME pool buffer, but only until the cache itself fills to capacity — a bounded, one-time delay
-before the player's first Provision Disk pass can bank, not an unbounded stall with nothing ever
-completing. Confirmed by request rather than re-litigated from scratch, since the maintainer chose to
-accept this trade-off explicitly aware of the prior incident.
+**Why reinstating this is actually SOLVED today, not just a safer trade-off.** A first pass at this
+justification framed it as accepting a bounded cost — the cache competing with the buffer for
+Provision Disk's own funding, capped at "however long the cache itself takes to fill." Explicit
+follow-up feedback rejected that framing: "Just don't flush the cache unless there is an empty disk
+already provisioned. Keep the cache filled till then. It will fund the first level if asked or fund
+an empty disk if exists. Better to 'solve' the problem rather than avoiding it." — i.e. don't accept
+a residual risk, confirm the mechanism has none. And it doesn't: every bit the eager pre-fill diverts
+into the cache is never actually wasted or competing for anything, because the cache only has two
+possible fates, and BOTH are already fully implemented and pre-existing — `tickDiskAutoFill`'s own
+Pass 2/3 already refuse to flush a cache into a disk (`hasEmptyContainer = builtTotal[size] >
+disks[size]`) until one exists, so a pre-filled cache with nothing to receive it just sits full and
+waits, exactly as intended; and, while a tier still sits at its own level 1 (checked every tick,
+first-come-first-served with a fresh disk pull),
+`tickDiskLevelOneCachePull` spends that SAME cache directly to fund the tier's whole level-1 purchase
+block the moment it's affordable — no waiting on a disk at all. The original stall (see the two
+prior entries above) was a genuinely different, now-superseded situation: a FLAT, lump-sum disk cost
+model where the pool's buffer needed to hold an entire `DISK_BUILD_COST_MULTIPLIER`× build cost at
+once, a threshold the buffer's own capacity at the time couldn't even reach while the cache kept
+re-diverting whatever accumulated — an effectively PERMANENT stall with the diverted bits genuinely
+going nowhere useful. Since then, Provision Disk's cost was split into installments (see "Provision
+Disk funding split into passes" above) and a size's own read cache is deliberately sized to exactly
+fund one tier level (`DISK_CACHE_BLOCK_COUNT` blocks totaling one disk's face value, which — by the
+disk-ladder's own construction — always equals `unitCost × DEFAULT_PURCHASE_BLOCK_SIZE` for that
+size's fixed corresponding tier level), so there's no longer any value the cache could accumulate
+that isn't immediately spendable on one of its two uses.
 
 **Fix.** `tickDiskAutoFill`'s `readCacheEligibleSizes` no longer filters on `disksBuiltTotal[unitBits]
 > 0` — every currently unlocked pool's own smallest (read-cache-eligible) size is eligible,
@@ -7297,7 +7309,14 @@ rewritten into its own opposite — confirming pre-fill DOES happen — with a n
 over its one still-valid sub-case (a same-reference no-op when the pool buffer itself is empty,
 independent of whether a disk exists). A second test asserting a full-but-unbuilt cache gets refunded
 (added for a Devin Review finding on PR #562, back when that state was genuinely stale) now asserts
-the opposite: that state is legitimate and must NOT be touched. `yarn test`: 1754/1754 green (+1).
+the opposite: that state is legitimate and must NOT be touched. A third, new END-TO-END test proves
+the "solved, not avoided" claim directly rather than by argument alone: seeds a pool 1 that's just
+unlocked, tier01 fresh at level 1, and a pool buffer holding exactly one disk's worth of bits, then
+runs one real `tickGame` call with ample elapsed time — the SAME call both eager-pre-fills the cache
+to capacity (`tickDiskAutoFill`) and spends that same, now-full cache to fund tier01's ENTIRE level-1
+purchase block (`tickDiskLevelOneCachePull`), landing on `diskCache` back at exactly 0 — proving the
+cache genuinely never sits "wasted," it always resolves to one of its two uses, in the same tick the
+mechanic advertises. `yarn test`: 1758/1758 green (+1 for this new test).
 `yarn build` succeeds. No economy constant/formula changed — only which point in Byte Foundry
 progression the read cache starts drawing from Memory — so `simulate-run-times` wasn't re-run.
 

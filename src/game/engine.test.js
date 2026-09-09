@@ -3534,6 +3534,28 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.poolBuffers[1]).toBe(0)
   })
 
+  it("a freshly pre-filled cache goes on to fund the tier's own first level automatically, end to end, in one real tickGame call — the cache is never wasted, it always either funds level 1 or waits for a disk to flush into", () => {
+    const unitCost = getTierCost(tensTier, 1)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      capacity: INTRO_DISK_UNLOCK_CAPACITY, // pool 1 unlocked; tier01 starts fresh at level 1
+    })
+    expect(state.intro.disksBuiltTotal?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(state.purchaseLevels[tensTier.id]).toBe(1)
+
+    // Ample elapsed time both fills pool 1's own read cache to capacity (tickDiskAutoFill's own
+    // Pass 1, from the pool buffer above) and lets tickDiskLevelOneCachePull spend that same cache
+    // to fund tier01's whole level-1 block, all within this one call — exactly what "the cache
+    // pre-fills the instant the pool unlocks, then funds the first level if asked" means in
+    // practice, not just in theory (see docs/DESIGN_HISTORY.md).
+    const after = tickGame(1e6)(state)
+    expect(after.owned[tensTier.id]).toBe(DEFAULT_PURCHASE_BLOCK_SIZE)
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    // The whole face-value cache (exactly enough for one tier level, by construction) was spent
+    // funding it — none left over, none ever flowed anywhere else.
+    expect(after.intro.diskCache?.[FIRST_DISK_SIZE] ?? 0).toBe(0)
+    expect(FIRST_DISK_SIZE).toBe(unitCost * DEFAULT_PURCHASE_BLOCK_SIZE)
+  })
+
   it('is a same-reference no-op when the pool buffer is empty, even before any disk of that size has been built', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), 0), {
       capacity: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) * 2, // comfortably affordable once funded — nothing built yet
