@@ -3595,12 +3595,12 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
       // refills, with no further clicks needed — "no manual action between passes." Only STARTING a
       // new disk's build still needs one click; this stays armed only for the disk already begun.
       diskBuildQueued: true,
-      // A direct provisionDisk call (a genuine manual click, or tickFoundryResetConvenience's own
-      // capped call — which clears diskBuildQueued right back off itself afterward, so this value
-      // never actually persists for that caller) is never itself the narrower "load-time wake-up"
-      // case normalizePoolMemoryCapacity's own arm marks — see diskBuildQueuedByReplay's own comment
-      // in createInitialGameState. A manual click here should always auto-continue unrestricted,
-      // even if it happens to land on the same size/count an old foundryResetCaps entry covers.
+      // provisionDisk's own default is always "not replay-owned" — a genuine manual click needs
+      // exactly this (see diskBuildQueuedByReplay's own comment in createInitialGameState: a
+      // manual click always auto-continues unrestricted, even at the same size/count an old
+      // foundryResetCaps entry covers). tickFoundryResetConvenience and tickQueuedDiskBuild — the
+      // two OTHER callers that pass a finite maxPasses — each explicitly re-mark this true on their
+      // own result right after calling this function, since a capped call needs the opposite.
       diskBuildQueuedByReplay: false,
     },
   }
@@ -3651,6 +3651,11 @@ export const tickQueuedDiskBuild = state => {
   const maxPasses = getDiskReplayPassAllowance(state, size)
   if (maxPasses <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false, diskBuildQueuedByReplay: false } }
   const built = provisionDisk(state, maxPasses)
+  // Same-reference no-op (e.g. the allowance-limited buffer still can't afford even one pass) —
+  // return it as-is rather than constructing an equal-but-new object, so the tick pipeline's own
+  // reference-equality no-op checks upstream still see nothing changed (Devin Review finding on
+  // PR #614).
+  if (built === state) return state
   // provisionDisk itself always marks a partial-funding result as NOT replay-owned (correct for its
   // other caller, a genuine manual click) — but THIS call was itself replay-restricted, so a build
   // it leaves only partially funded must stay marked replay-owned, or the very next tick would treat

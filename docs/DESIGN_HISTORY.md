@@ -1,5 +1,49 @@
 # Design history & rationale
 
+### Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09
+
+Devin Review found 4 issues on PR #614 (the `buyBooster` revert + `diskBuildQueuedByReplay`
+provenance fix above). Two were real bugs, fixed; one was a stale comment, fixed; one was a
+legitimate finding with no safe fix, left as a documented, accepted limitation.
+
+1. **`tickQueuedDiskBuild`'s replay-owned branch built a new-but-equal object even when nothing
+   changed.** When its own capped `provisionDisk` call was a genuine same-reference no-op (e.g. the
+   allowance-limited buffer still couldn't afford even one pass), the function still unconditionally
+   ran `built.intro?.diskBuildQueued ? {...built, ...} : built` — since `diskBuildQueued` was still
+   `true` (unchanged), this constructed a fresh object with identical content, breaking every
+   upstream reference-equality no-op check (`tickGame`'s own "same reference = nothing happened"
+   pattern) and causing needless downstream work on every blocked tick. Fixed with an early
+   `if (built === state) return state` before the re-marking ternary — mirrors the same pattern
+   `tickFoundryResetConvenience`'s own wrapper already had (its ternary only ever runs inside an
+   `if (built !== next)` block, so it never had this gap).
+2. **A doc comment on `provisionDisk`'s own partial-funding branch was stale**, still describing
+   `tickFoundryResetConvenience` as "clearing `diskBuildQueued` right back off itself afterward" —
+   accurate for the round-2 fix, but round 6 replaced that behavior with re-marking
+   `diskBuildQueuedByReplay: true` and leaving the queue armed. Corrected.
+3. **A save with `diskBuildQueued: true` from before this PR shipped has no `diskBuildQueuedByReplay`
+   field, and `mergeState` fills it in as `false`** — so a save that was genuinely mid-replay under
+   the OLD code (no provenance tracking at all) would, on its next load under this PR, be treated as
+   an unrestricted manual continuation instead of a capped replay one. Devin's own suggested fix —
+   "conservatively infer replay ownership when the queued partial disk is constrained by an active
+   replay allowance" — was evaluated and deliberately NOT implemented: the exact same state shape
+   (`diskBuildQueued: true`, sitting at a `foundryResetCaps`-covered size/count) is also EXACTLY what
+   a genuine, still-in-flight MANUAL continuation looks like, both before and after this PR, since
+   `provisionDisk` has never recorded a click's own provenance beyond this new flag. Inferring
+   "replay-owned" from that shape would misclassify a live legacy manual continuation the same way,
+   reintroducing the exact throttling bug this whole chain of fixes (rounds 2 through 7) exists to
+   close — for a real, if narrow, population. Weighed against that: a legacy replay queue that gets
+   treated as unrestricted merely converges early to behavior the game already permits by design (a
+   manual click has always been allowed to exceed a Reset Byte Foundry cap; the cap only ever
+   throttled UNATTENDED continuation) — a self-correcting, low-severity gap, not a new capability or
+   an exploit. Given the two failure directions are asymmetric in severity and there is no state-only
+   way to tell them apart, leaving this uninferred is the safer default. A future fix would need real
+   provenance (a version-stamped save schema, or storage.js distinguishing an absent field from an
+   explicit `false`) rather than a heuristic over existing fields.
+
+New regression test: `tickQueuedDiskBuild` given a replay-owned queue with a live allowance but an
+empty buffer, confirming a true same-reference no-op (not a merely-equal new object). `yarn test`:
+1757/1757 green.
+
 ### Critical: reverted a broken `buyBooster` bulk-purchase optimization that had merged onto `main` — 2026-09-09
 
 After PR #608 merged, a separate, unrelated automated change (`bolt/optimize-tickDataLakeAutoBuy`,

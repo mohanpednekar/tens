@@ -1573,6 +1573,31 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(tickQueuedDiskBuild(state)).toBe(state)
   })
 
+  it('tickQueuedDiskBuild stays a same-reference no-op for a replay-owned queue too, not a merely-equal new object (Devin Review finding)', () => {
+    // Replay-owned (diskBuildQueuedByReplay: true) with a live allowance, but an empty buffer means
+    // provisionDisk itself is a same-reference no-op — the wrapper that re-marks diskBuildQueuedByReplay
+    // on a genuine change must not construct a new-but-equal object here, or callers that rely on
+    // reference equality to detect "nothing happened" (e.g. tickGame's own no-op checks) would see a
+    // false positive for changed state on every blocked tick.
+    const size = FIRST_DISK_SIZE
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      diskBuildQueuedByReplay: true,
+      disksBuiltTotal: { [size]: 2 },
+      diskProvisionPasses: { [size]: 1 },
+      poolBuffers: { 1: 0 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 2 },
+      },
+    })
+    expect(tickQueuedDiskBuild(state)).toBe(state)
+  })
+
   it('tickQueuedDiskBuild fires the build and clears the queue once the pool buffer can afford it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
