@@ -980,6 +980,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Pinned the `vite-plugin-pwa` build toolchain's `glob > minimatch > brace-expansion` dependency to `^5.0.8` via a `resolutions` override, fixing a high-severity ReDoS/OOM advisory (`yarn audit`) in the version it previously resolved to. Build-time only — no runtime/user-facing impact.
 - Pinned the `vite-plugin-pwa` build toolchain's `workbox-build > ajv > fast-uri` dependency to `^3.1.5` via a `resolutions` override, fixing a high-severity host-confusion advisory (`yarn audit`) in the `3.1.4` version it previously resolved to. Build-time only — no runtime/user-facing impact.
 
+### Changed
+- **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
+- **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
+
+### Fixed
+- **Scale Up and Overclock no longer erase Era ascension progress.** Both soft-resets were silently
+  wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
+  unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
+  fields through unchanged, same as every other permanent field they already preserve.
+
 ## [0.5.0] - 2026-07-14
 
 ### Added

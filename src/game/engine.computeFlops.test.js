@@ -1,5 +1,5 @@
 import {
-  buyAutoSpeedUp,
+  buyAutoScaleUp,
   buyComputeFlopsTier,
   createInitialGameState,
   getComputeFlopsTotal,
@@ -8,11 +8,11 @@ import {
   isComputeFlopsPageRevealed,
   latchComputeFlopsPageUnlocked,
   prestigeGame,
-  speedUpGame,
+  scaleUpGame,
   tickComputeFlops,
   tickGame,
 } from './engine'
-import { AUTO_SPEED_UP_COST, BYTES_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
+import { AUTO_SCALE_UP_COST, BYTES_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
 
 const elapsed = TICK_RATE_MS / 1000
 
@@ -134,7 +134,7 @@ describe('Compute Flops screen', () => {
     expect(getComputeFlopsTotal(after)).toBe(0)
   })
 
-  it('speedUpGame preserves owned Flops units and resets cumulativeBoost', () => {
+  it('scaleUpGame preserves owned Flops units and resets cumulativeBoost', () => {
     let state = buyComputeFlopsTier('flop01')({
       ...createInitialGameState(),
       prestige: { xp: 0, points: COMPUTE_FLOPS_FIRST_TIER_COST_PP, count: 1, highestMilestone: 1 },
@@ -144,26 +144,26 @@ describe('Compute Flops screen', () => {
       ...state,
       purchaseLevels: {
         ...state.purchaseLevels,
-        tier10: 10,
+        tier01: 3,
       },
-      speedUpCount: 0,
+      scaleUpCount: 0,
     }
-    const after = speedUpGame(state)
+    const after = scaleUpGame(state)
     expect(after).not.toBe(state)
     expect(after.computeFlops.owned.flop01).toBe(1)
     expect(after.computeFlops.cumulativeBoost.tier01).toBe(0)
   })
 
-  it('buyAutoSpeedUp latches pageUnlocked so reveal survives spending below reveal PP', () => {
+  it('buyAutoScaleUp latches pageUnlocked so reveal survives spending below reveal PP', () => {
     let state = {
       ...createInitialGameState(),
       prestige: { xp: 0, points: COMPUTE_FLOPS_REVEAL_PP, count: 1, highestMilestone: 1 },
     }
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
     expect(state.computeFlops.pageUnlocked).toBe(false)
-    state = buyAutoSpeedUp(state)
+    state = buyAutoScaleUp(state)
     expect(state.computeFlops.pageUnlocked).toBe(true)
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
-    expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - AUTO_SPEED_UP_COST)
+    expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - AUTO_SCALE_UP_COST)
   })
 })

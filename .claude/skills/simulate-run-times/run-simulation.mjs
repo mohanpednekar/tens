@@ -29,11 +29,10 @@
 //     - Buy the Money-funded global tickspeed multiplier and each tier's own tickspeed multiplier
 //       whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the min
 //       consumption gate allows.
-//     - Soft resets: Overclock first when eligible, then Speed Up (empirically faster to Googol
-//       than Speed-Up-first or either alone — Overclock permanently boosts global tickspeed's
-//       per-level step; Speed Up still rebuilds its 2^n multiplier afterward).
+//     - Soft resets: Scale Up first when eligible, then Overclock (empirically faster to Googol
+//       than Overclock-first since the Scale Up redesign — see actSoftResets below).
 //     - Unlock the passive PP speed bonus the instant PRESTIGE_SPEED_BONUS_UNLOCK_COST is banked.
-//       Other PP automations (Smart / Auto-Speed-Up / Auto-Prestige / tickspeed autobuyer) are NOT
+//       Other PP automations (Smart / Auto-Scale-Up / Auto-Prestige / tickspeed autobuyer) are NOT
 //       bought — those are separate levers; this bot isolates Foundry + ladder + free/Money/XP
 //       tickspeed + prestige-count autobuyer milestones.
 //   Cycle end: loop exits the instant isProductionFrozen (Money ≥ PRESTIGE_THRESHOLD). Career mode
@@ -65,9 +64,7 @@ import {
   createInitialGameState,
   formatCurrency,
   getLastTierXpTickspeedMinConsumption,
-  getOverclockRequirement,
   getPurchaseBlockSize,
-  getSpeedUpRequirement,
   getTierAffordableQuantity,
   getTierBulkQuantity,
   getTierSpendableAmount,
@@ -81,7 +78,7 @@ import {
   pickIntroProductionMilestone,
   prestigeGame,
   queueIntroCapacityUpgrade,
-  speedUpGame,
+  scaleUpGame,
   stackComputeBoost,
   provisionDisk,
   tapIntroBit,
@@ -104,7 +101,6 @@ import {
 // Matches useIncrementalGame.js — "buy as many as fit the current cost-block".
 const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 const MAX_TICKS = 5_000_000
-const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
 
 // Memory display uses BITS_PER_BYTE × 1000^n (B/KB/MB/…) — same as formatBitsInNearestUnit.
 // Default capacity-cap sweep: freeze Sacrifice at these bit values (plus unlimited growth). Pool 1's
@@ -317,15 +313,17 @@ function actTickspeed(state) {
 }
 
 function actSoftResets(state) {
-  let s = state
-  // Overclock-first empirically reaches Googol faster than Speed-Up-first (see skill header).
-  if ((s.purchaseLevels?.[lastTier.id] ?? 1) >= getOverclockRequirement(s.overclockCount ?? 0)) {
-    s = overclockGame(s)
-  }
-  if ((s.purchaseLevels?.[lastTier.id] ?? 1) >= getSpeedUpRequirement(s.speedUpCount ?? 0)) {
-    s = speedUpGame(s)
-  }
-  return s
+  // Scale-Up-first (re-validated after the Scale Up redesign — Devin Review on PR #623,
+  // docs/DESIGN_HISTORY.md). Overclock-first was correct under the old last-tier-only Scale Up, but
+  // now that Scale Up permanently unlocks a tier per activation (scaleUpTargetTierIndex/
+  // everUnlockedTierIds), letting Overclock go first repeatedly discards that ladder progress
+  // whenever both conditions are met the same tick. A direct A/B across career prestiges 0-10 with
+  // both fixed orderings found Scale-Up-first faster in 4 of 6 cycles (by up to ~14% per cycle) and
+  // only marginally slower in the other 2 (<2%), for a ~7% faster aggregate — a phase-dependent
+  // strategy (Overclock-first only once scaleUpTargetTierIndex reaches the last tier) was also
+  // tried and performed no better than unconditional Scale-Up-first. Both engine functions already
+  // no-op internally when not eligible, so no separate pre-check is needed here.
+  return overclockGame(scaleUpGame(state))
 }
 
 function actSpeedBonus(state) {
@@ -347,7 +345,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
   let state = startingState
   let ticks = 0
   let foundryTicks = null
-  let speedUpsAtStart = state.speedUpCount ?? 0
+  let scaleUpsAtStart = state.scaleUpCount ?? 0
   let overclocksAtStart = state.overclockCount ?? 0
   const options = { capacityCapBits }
 
@@ -361,7 +359,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
         mainTicks: foundryTicks == null ? (startedUnlocked ? ticks : 0) : ticks - foundryTicks,
         reached: false,
         finalMoney: state.resources[MONEY_ID],
-        speedUps: (state.speedUpCount ?? 0) - speedUpsAtStart,
+        scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
         overclock: (state.overclockCount ?? 0) - overclocksAtStart,
         speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
         autobuyers: countUnlockedAutobuyers(state),
@@ -392,7 +390,7 @@ function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = 
     mainTicks: Math.max(0, ticks - foundry),
     reached: true,
     finalMoney: state.resources[MONEY_ID],
-    speedUps: (state.speedUpCount ?? 0) - speedUpsAtStart,
+    scaleUps: (state.scaleUpCount ?? 0) - scaleUpsAtStart,
     overclock: (state.overclockCount ?? 0) - overclocksAtStart,
     speedBonusUnlocked: Boolean(state.prestigeSpeedBonusUnlocked),
     autobuyers: countUnlockedAutobuyers(state),
@@ -506,7 +504,7 @@ function printCycleRow(labelCols, result) {
   const mainCell = result.reached || result.mainTicks > 0 ? formatDuration(result.mainTicks) : '—'
   const moneyCell = result.reached ? formatCurrency(result.finalMoney) : 'not reached'
   emit(
-    `| ${labelCols.join(' | ')} | ${foundryCell} | ${mainCell} | ${durationCell} | ${result.autobuyers} | ${result.speedUps} | ${result.overclock} | ${moneyCell} |`,
+    `| ${labelCols.join(' | ')} | ${foundryCell} | ${mainCell} | ${durationCell} | ${result.autobuyers} | ${result.scaleUps} | ${result.overclock} | ${moneyCell} |`,
   )
 }
 
@@ -528,7 +526,7 @@ if (runCapacitySweep || onlyCapacity) {
   )
   emit('')
   emit(
-    '| Capacity cap | End capacity | Foundry | Main → Googol | Total | Cores ever | Disks built | Speed Ups | Overclock Δ | Money at Googol |',
+    '| Capacity cap | End capacity | Foundry | Main → Googol | Total | Cores ever | Disks built | Scale Ups | Overclock Δ | Money at Googol |',
   )
   emit('|---|---|---|---|---|---|---|---|---|---|')
 
@@ -541,7 +539,7 @@ if (runCapacitySweep || onlyCapacity) {
       ? formatDuration(result.ticks)
       : `${formatDuration(result.ticks)} (capped)`
     emit(
-      `| ${formatCapacityLabel(cap)} | ${formatCapacityLabel(result.capacity)} | ${formatDuration(result.foundryTicks)} | ${formatDuration(result.mainTicks)} | ${durationCell} | ${result.coresEver} | ${result.disksBuilt} | ${result.speedUps} | ${result.overclock} | ${result.reached ? formatCurrency(result.finalMoney) : 'not reached'} |`,
+      `| ${formatCapacityLabel(cap)} | ${formatCapacityLabel(result.capacity)} | ${formatDuration(result.foundryTicks)} | ${formatDuration(result.mainTicks)} | ${durationCell} | ${result.coresEver} | ${result.disksBuilt} | ${result.scaleUps} | ${result.overclock} | ${result.reached ? formatCurrency(result.finalMoney) : 'not reached'} |`,
     )
     if (result.reached && result.ticks < bestTicks) {
       bestTicks = result.ticks
@@ -559,7 +557,7 @@ if (runCareer) {
   emit('## Career cycles (fresh start → prestige N, permanent Foundry carry)')
   emit('')
   emit(
-    '| After prestiges | Starting PP (banked) | Foundry | Main → Googol | Total cycle | Autobuyers | Speed Ups | Overclock Δ | Money at Googol |',
+    '| After prestiges | Starting PP (banked) | Foundry | Main → Googol | Total cycle | Autobuyers | Scale Ups | Overclock Δ | Money at Googol |',
   )
   emit('|---|---|---|---|---|---|---|---|---|')
 
@@ -604,7 +602,7 @@ if (runPP) {
   emit('## PP sweep (fresh prestige.count = 0 — no tier autobuyers; manual buys unstall)')
   emit('')
   emit(
-    '| PP balance | Speed bonus | Foundry | Main → Googol | Total | Autobuyers | Speed Ups | Overclock Δ | Money at Googol |',
+    '| PP balance | Speed bonus | Foundry | Main → Googol | Total | Autobuyers | Scale Ups | Overclock Δ | Money at Googol |',
   )
   emit('|---|---|---|---|---|---|---|---|---|')
   for (const pp of ppValues) {
@@ -651,8 +649,8 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
-5. **Soft resets:** Overclock first, then Speed Up (\`speedUpCount + 6\` requirement).
-6. **PP:** Unlock prestige speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Speed-Up / Auto-Prestige in this baseline.
+5. **Soft resets:** Scale Up first, then Overclock (level 3 on the current unlock-frontier tier while any tier is still locked, then every 3 levels of the last tier once all are unlocked).
+6. **PP:** Unlock prestige speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
 
 ## Simulation results
 

@@ -3,8 +3,8 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getSpeedUpMultiplier, getSpeedUpRequirement, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SPEED_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getScaleUpMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -120,14 +120,14 @@ const TierLine = styled(StatCard)`
   }
 `
 
-const SpeedUpCard = styled(StatCard)`
+const ScaleUpCard = styled(StatCard)`
   border-color: #0e7490;
 `
 
 // Matches the tier rows' own Buy/tickspeed button font size (see BuyButton/UpgradeButton) rather
 // than the larger default Button size every other standalone card button uses — keeps this
 // button visually consistent with the tier list just above it.
-const SpeedUpButton = styled(Button)`
+const ScaleUpButton = styled(Button)`
   font-size: 0.82em;
 
   @media (max-width: 40rem) {
@@ -143,7 +143,7 @@ const OverclockCard = styled(StatCard)`
   border-color: #c2410c;
 `
 
-// Matches SpeedUpButton's own font-size override, same rationale (stays visually consistent with
+// Matches ScaleUpButton's own font-size override, same rationale (stays visually consistent with
 // the tier list's Buy/tickspeed buttons rather than the larger standalone-card default).
 const OverclockButton = styled(Button)`
   font-size: 0.82em;
@@ -153,24 +153,25 @@ const OverclockButton = styled(Button)`
   }
 `
 
-// Lays SpeedUpCard and OverclockCard side by side, below the tier list — both are compact "one
+// Lays ScaleUpCard and OverclockCard side by side, below the tier list — both are compact "one
 // button" soft-reset cards, so sharing a row reads as a single cluster instead of stacked
 // full-width blocks. GlobalTickspeedCard renders separately, alone at the very top of the Game
 // view (see its own render site above) rather than sharing this row — it's the one control
-// relevant from the very start of a run, before the last tier (and so Speed Up/Overclock) is even
-// reachable. Each card grows to share the row equally (flex: 1) with a low floor width (8rem)
-// on wider viewports. Below 40rem (the same mobile breakpoint every other component in this file
-// uses), the row switches to a single column instead — Speed Up above Overclock, matching their
-// JSX order — rather than staying side by side down to phone width: on a narrow screen, two soft
-// resets sharing a cramped row read as harder to tell apart at a glance than a clear top-to-bottom
-// stack, even though the pair still technically fits side by side down to ~360px (an earlier
-// version optimized for exactly that fit; see docs/DESIGN_HISTORY.md for the reasoning that was
-// superseded here). `flex: 1 1 auto` in the column case lets each card's height come from its own
-// content instead of the row layout's 8rem basis (which would otherwise set every card's *height*
-// once the main axis rotates to vertical); `align-items: stretch`, flexbox's own default, is what
-// makes each stacked card fill the row's full width without an explicit `width: 100%`. Works
-// unchanged if only one of the two is currently revealed (the lone card just fills the row/column)
-// or neither (the empty wrapper renders with zero height).
+// relevant from the very start of a run, before the last tier (and so Overclock) is even
+// reachable; ScaleUpCard itself, unlike OverclockCard, is always shown (relevant from the very
+// first cycle — see its own comment above). Each card grows to share the row equally (flex: 1)
+// with a low floor width (8rem) on wider viewports. Below 40rem (the same mobile breakpoint every
+// other component in this file uses), the row switches to a single column instead — Scale Up
+// above Overclock, matching their JSX order — rather than staying side by side down to phone
+// width: on a narrow screen, two soft resets sharing a cramped row read as harder to tell apart at
+// a glance than a clear top-to-bottom stack, even though the pair still technically fits side by
+// side down to ~360px (an earlier version optimized for exactly that fit; see
+// docs/DESIGN_HISTORY.md for the reasoning that was superseded here). `flex: 1 1 auto` in the
+// column case lets each card's height come from its own content instead of the row layout's 8rem
+// basis (which would otherwise set every card's *height* once the main axis rotates to vertical);
+// `align-items: stretch`, flexbox's own default, is what makes each stacked card fill the row's
+// full width without an explicit `width: 100%`. Works unchanged if OverclockCard isn't currently
+// revealed yet (ScaleUpCard alone just fills the row/column).
 const SpeedCardsRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -223,7 +224,7 @@ const CenteredCard = styled(StatCard)`
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
-// MutedText (still hardcoded, still used by TierList/SpeedUpCard/GlobalTickspeedCard) rather
+// MutedText (still hardcoded, still used by TierList/ScaleUpCard/GlobalTickspeedCard) rather
 // than migrating those shared components here: they're each other
 // sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
 // of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's
@@ -335,8 +336,8 @@ const PpHeaderCard = styled(CenteredCard)`
 `
 
 // The Money balance card's click-to-expand breakdown of every global (not per-tier) production
-// multiplier currently in effect — Prestige's passive speed bonus, Speed Up, and the Global
-// Tickspeed Multiplier (see "The global tickspeed multiplier"/"Speed Up"/"Prestige Points,
+// multiplier currently in effect — Prestige's passive speed bonus, Scale Up, and the Global
+// Tickspeed Multiplier (see "The global tickspeed multiplier"/"Scale Up"/"Prestige Points,
 // autobuyer unlock, and the tickspeed multiplier" in CLAUDE.md). Left-aligned (overriding
 // CenteredCard's own text-align: center) for list readability, same technique FullScreenCard's own
 // ul already uses.
@@ -559,7 +560,7 @@ const TopPrestigeBarSpacer = styled.div`
 `
 
 // Prestige-surface copy only — forked from the app-wide MutedText (still hardcoded elsewhere) so
-// this region's AA audit stays meaningful without migrating TierList/SpeedUpCard in #138's scope.
+// this region's AA audit stays meaningful without migrating TierList/ScaleUpCard in #138's scope.
 const PrestigeMutedText = styled.p`
   color: ${props => props.theme.color.textMuted};
   font-size: ${props => props.theme.type.scale.sm.size};
@@ -851,12 +852,12 @@ const formatCost = (amount, resourceId) =>
       ? formatBytes(amount)
       : `${formatAmount(amount)} ${RESOURCE_SYMBOL(resourceId)}`
 
-// Live "how close am I" fill percent for a progress meter (PP/tickspeed/Speed Up buttons, XP
+// Live "how close am I" fill percent for a progress meter (PP/tickspeed/Scale Up buttons, XP
 // consumption) — how much of `denominator` the current `numerator` already covers, capped at 100.
 const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
 
 // "1.1" / "1.21" / "1" — rounds to 2 decimal places and trims a trailing ".00"/trailing zero, used
-// for multiplier displays (Speed Up's next multiplier, the PP production speed bonus, the tier row's
+// for multiplier displays (Scale Up's next multiplier, the PP production speed bonus, the tier row's
 // "Effective tickspeed" breakdown). Overclock's own boost is folded into the Tickspeed upgrade's
 // per-level rate and displayed as a percentage via formatGlobalTickspeedBonusPercent instead — see
 // "Overclock" below — not through this helper.
@@ -875,9 +876,9 @@ const formatBonusPercent = multiplier => Math.round((multiplier - 1) * 100)
 const formatGlobalTickspeedBonusPercent = multiplier =>
   (Math.round((multiplier - 1) * 100 * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
 
-// A bonus multiplier reads as a percentage below +100% ("+21%"), and as a Speed-Up-style "Nx"
+// A bonus multiplier reads as a percentage below +100% ("+21%"), and as a Scale-Up-style "Nx"
 // multiplier at/above it ("2x", "5.5x") — a percentage gets unwieldy once it doubles the baseline,
-// and "Nx" is already this app's convention for large stacking bonuses (Speed Up's own ×N). Pass
+// and "Nx" is already this app's convention for large stacking bonuses (Scale Up's own ×N). Pass
 // `precise: true` to use the global tickspeed multiplier's fractional-percent formatting for the
 // below-100% case instead of the whole-number one.
 const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
@@ -954,7 +955,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // stable per-tier ref callback, cached in tierRowRefCallbacksRef so its identity doesn't change
   // across re-renders — a fresh callback identity every render would make React re-invoke it with
   // null then the element again on every tick, needlessly churning observe/unobserve) rather than
-  // one observer per row, since rows come and go as tiers unlock/lock across Prestige/Speed Up.
+  // one observer per row, since rows come and go as tiers unlock/lock across Prestige/Scale Up.
   const tierRowObserverRef = useRef(null)
   const tierRowElementsRef = useRef(new Map())
   const tierRowRefCallbacksRef = useRef(new Map())
@@ -1026,46 +1027,50 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const showTopPrestigeBar = isFrozen && !isFirstRun
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
-
-  // Speed Up: a more frequent soft-reset than Prestige, available well before Money reaches
-  // PRESTIGE_THRESHOLD (see speedUpGame in engine.js) — once the last tier reaches that cycle's requirement
-  // (getSpeedUpRequirement(speedUpCount): level 2 for the first activation, level 3 for the
-  // second, level 4 for the third, …), it resets tiers/resources but permanently doubles
-  // production speed, stacking with every prior activation. Gated on the last tier having ever
-  // been unlocked, same progressive-disclosure principle as the Prestige card gate above, so it
-  // doesn't clutter the page before tier10 first exists — but once shown, stays shown (in a
-  // disabled state once not immediately actionable) rather than disappearing again the moment a
-  // successful Speed Up wipes tier10 back below the unlock threshold; see the
-  // speedUpEverRevealed effect below.
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
-  const [speedUpEverRevealed, setSpeedUpEverRevealed] = useState(lastTierUnlocked)
-  useEffect(() => {
-    if (lastTierUnlocked) setSpeedUpEverRevealed(true)
-  }, [lastTierUnlocked])
-  const speedUpCount = state.speedUpCount ?? 0
-  const speedUpMultiplier = getSpeedUpMultiplier(speedUpCount)
-  const nextSpeedUpMultiplier = getSpeedUpMultiplier(speedUpCount + 1)
-  const speedUpRequirement = getSpeedUpRequirement(speedUpCount)
-  // purchaseLevels/getSpeedUpRequirement are internally 1-indexed so that "level 1" means "no
+
+  // Scale Up: a more frequent soft-reset than Prestige, available well before Money reaches
+  // PRESTIGE_THRESHOLD (see scaleUpGame in engine.js) — once the current scale-up target tier (see
+  // getScaleUpTargetTier in engine.js: state.scaleUpTargetTierIndex into TIER_DEFINITIONS, an
+  // independent counter that only advances when Scale Up itself fires — NOT necessarily the
+  // highest tier unlocked so far, which can run ahead of it via ordinary play; clamped to the last
+  // tier once reached) reaches that cycle's requirement (getScaleUpRequirement(state): a flat
+  // level 3 during the unlock phase, or a repeating multiple of 3 on the last tier once every tier
+  // is unlocked), it resets
+  // tiers/resources but permanently doubles production speed (stacking with every prior
+  // activation) AND keeps every tier unlocked so far, plus the one that reaching this level just
+  // permanently unlocked. Always shown (relevant from the very first cycle, well before the last
+  // tier itself exists) — unlike Overclock below, there's no progressive-disclosure gate here.
+  const scaleUpTargetTier = getScaleUpTargetTier(state)
+  const scaleUpTargetTierLevel = state.purchaseLevels?.[scaleUpTargetTier.id] ?? 1
+  const scaleUpCount = state.scaleUpCount ?? 0
+  const scaleUpMultiplier = getScaleUpMultiplier(scaleUpCount)
+  const nextScaleUpMultiplier = getScaleUpMultiplier(scaleUpCount + 1)
+  const scaleUpRequirement = getScaleUpRequirement(state)
+  // purchaseLevels/getScaleUpRequirement are internally 1-indexed so that "level 1" means "no
   // completed block yet" (see CLAUDE.md's "purchase block size and tier levels"). Displayed to the
   // player, that reads as an off-by-one — this subtracts 1 so the visible "Lv." instead counts
   // completed blocks directly: Lv.1 after the first 8 purchases, Lv.2 after 16, etc.
   const lastTierLevelDisplay = lastTierLevel - 1
-  const speedUpRequirementDisplay = speedUpRequirement - 1
-  const speedUpProgressPercent = progressPercent(lastTierLevelDisplay, speedUpRequirementDisplay)
-  const canSpeedUp = !isFrozen && lastTierLevel >= speedUpRequirement
+  const scaleUpTargetTierLevelDisplay = scaleUpTargetTierLevel - 1
+  const scaleUpRequirementDisplay = scaleUpRequirement - 1
+  const scaleUpProgressPercent = progressPercent(scaleUpTargetTierLevelDisplay, scaleUpRequirementDisplay)
+  const canScaleUp = !isFrozen && scaleUpTargetTierLevel >= scaleUpRequirement
 
-  // Overclock: a second, rarer soft-reset than Speed Up, claimable once the last tier's own level
+  // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own level
   // passes the next Overclock level — one more than the last claimed level (see
   // getOverclockRequirement/overclockGame in engine.js); no artificial ladder beyond that. Unlike
-  // Speed Up, claiming it also wipes Speed Up's own stacking bonus back to zero (its speedUpCount
+  // Scale Up, claiming it also wipes Scale Up's own stacking bonus back to zero (its scaleUpCount
   // resets to 0) in exchange for permanently multiplying BOTH the (Money-funded) global Tickspeed
   // upgrade's regular and milestone per-level steps by getOverclockMultiplier(overclockCount)
   // (×1.1 per level) — folded into that existing track's own compounding rate, not a separate
   // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
   // bought. A claim jumps straight to the last tier's current level, so falling behind never
-  // requires claiming every intermediate level one at a time. Gated on the same lastTierUnlocked
-  // flag and progressive-disclosure pattern as Speed Up above.
+  // requires claiming every intermediate level one at a time. Gated on the last tier having ever
+  // been unlocked (unlike Scale Up above, which is always shown), so it doesn't clutter the page
+  // before tier10 first exists — but once shown, stays shown (in a disabled state once not
+  // immediately actionable) rather than disappearing again the moment a successful Overclock claim
+  // wipes tier10 back below the unlock threshold.
   const [overclockEverRevealed, setOverclockEverRevealed] = useState(lastTierUnlocked)
   useEffect(() => {
     if (lastTierUnlocked) setOverclockEverRevealed(true)
@@ -1080,7 +1085,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // current level, per overclockGame's catch-up behavior, not just the minimum requirement.
   const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
   const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))
-  // Unlike speedUpRequirementDisplay above, this is NOT given the -1 "completed blocks" display
+  // Unlike scaleUpRequirementDisplay above, this is NOT given the -1 "completed blocks" display
   // offset — see getOverclockRequirement's own comment in engine.js: it's expressed as a raw level
   // target so the number shown here matches the same raw purchaseLevels number the last tier's own
   // Details disclosure already shows, rather than introducing a second, differently-offset "level"
@@ -1088,19 +1093,19 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const overclockProgressPercent = progressPercent(lastTierLevel, overclockRequirement)
   const canOverclock = !isFrozen && lastTierLevel >= overclockRequirement
 
-  // Automates Speed Up (see buyAutoSpeedUp in engine.js) — gated on !isFirstRun like every other
+  // Automates Scale Up (see buyAutoScaleUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
-  // allTiersFullyAutomated the way Auto-Prestige is: Speed Up is meant to help early/mid-game, well before
+  // allTiersFullyAutomated the way Auto-Prestige is: Scale Up is meant to help early/mid-game, well before
   // that endgame milestone.
-  const isAutoSpeedUpActive = state.autoSpeedUp ?? false
-  const canBuyAutoSpeedUp = !isFrozen && !isAutoSpeedUpActive && !isFirstRun && prestige.points >= AUTO_SPEED_UP_COST
-  // Whether Auto Speed Up currently acts, independent of whether it's been bought (see
-  // setAutoSpeedUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
-  const autoSpeedUpEnabled = state.autoSpeedUpEnabled ?? true
+  const isAutoScaleUpActive = state.autoScaleUp ?? false
+  const canBuyAutoScaleUp = !isFrozen && !isAutoScaleUpActive && !isFirstRun && prestige.points >= AUTO_SCALE_UP_COST
+  // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
+  // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
+  const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
-  // Auto Speed Up's one-time-unlock pattern rather than Auto-Prestige's leveled one, since there's
+  // Auto Scale Up's one-time-unlock pattern rather than Auto-Prestige's leveled one, since there's
   // no cadence to speed up here either.
   const isTickspeedAutobuyerActive = state.autoGlobalTickspeed ?? false
   const canBuyTickspeedAutobuyer = !isFrozen && !isTickspeedAutobuyerActive && !isFirstRun && prestige.points >= TICKSPEED_AUTOBUYER_COST
@@ -1152,9 +1157,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // of the PP Upgrades page — see isGlobalTickspeedMultiplierUnlocked in engine.js: it only becomes
   // purchasable once at least 1 of the second tier is owned, so a player can't spend their Bytes
   // on it before Kilobytes are producing any. The level itself resets to not-yet-bought on both
-  // Up (see prestigeGame/speedUpGame in engine.js), same as tier02's owned count, so re-unlocking
+  // Up (see prestigeGame/scaleUpGame in engine.js), same as tier02's owned count, so re-unlocking
   // always requires owning tier02 again after either reset. overclockCount, by contrast, is NOT
-  // reset by Speed Up — its boost to the per-level step survives across a re-unlock within the
+  // reset by Scale Up — its boost to the per-level step survives across a re-unlock within the
   // same Prestige cycle.
   const globalTickspeedLevel = state.globalTickspeedMultiplier ?? null
   const isGlobalTickspeedActive = globalTickspeedLevel !== null
@@ -1163,10 +1168,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
   const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && (state.resources[BYTES_ID] ?? 0) >= globalTickspeedCost
   const globalTickspeedProgressPercent = progressPercent(state.resources[BYTES_ID] ?? 0, globalTickspeedCost)
-  // Progressive disclosure, same pattern as speedUpEverRevealed above:
+  // Progressive disclosure, same pattern as overclockEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
   // prior run), it stays visible — in a disabled state — rather than disappearing again the
-  // moment a Prestige/Speed Up resets tier02's owned count back to 0.
+  // moment a Prestige/Scale Up resets tier02's owned count back to 0.
   const [globalTickspeedCardEverRevealed, setGlobalTickspeedCardEverRevealed] = useState(globalTickspeedUnlocked)
   useEffect(() => {
     if (globalTickspeedUnlocked) setGlobalTickspeedCardEverRevealed(true)
@@ -1368,13 +1373,11 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                     : `not yet unlocked (${formatAmount(PRESTIGE_SPEED_BONUS_UNLOCK_COST)} PP on the Upgrades page)`}
                 </li>
               )}
-              {speedUpEverRevealed && (
-                <li>
-                  Speed Up: {speedUpCount > 0
-                    ? `×${formatRate(speedUpMultiplier)} production speed from ${speedUpCount} activation${speedUpCount === 1 ? '' : 's'}`
-                    : `not yet activated (reach level ${formatAmount(speedUpRequirementDisplay)} on ${lastTier.name})`}
-                </li>
-              )}
+              <li>
+                Scale Up: {scaleUpCount > 0
+                  ? `×${formatRate(scaleUpMultiplier)} production speed from ${scaleUpCount} activation${scaleUpCount === 1 ? '' : 's'}`
+                  : `not yet activated (reach level ${formatAmount(scaleUpRequirementDisplay)} on ${scaleUpTargetTier.name})`}
+              </li>
               {globalTickspeedCardEverRevealed && (
                 <li>
                   Clock Speed: {isGlobalTickspeedActive
@@ -1515,7 +1518,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // getPurchaseBlockSize), this Money-funded ladder is instead replaced by an XP-funded one (see
           // isLastTierTickspeedXpUnlocked/getLastTierXpTickspeedMultiplier in engine.js and the
           // last-tier-only controls below) — it reverts back to this Money-funded button if owned
-          // later drops below that (e.g. after a Prestige/Speed Up).
+          // later drops below that (e.g. after a Prestige/Scale Up).
           const isLastTier = tier.id === lastTier.id
           const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
@@ -1555,10 +1558,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // CLAUDE.md); neither tickspeed multiplier appears here since both now speed up
           // *delivery frequency* instead of inflating the per-delivery amount. Floored to match
           // tickGame's own floored production credit — prestigeBonus is the only fractional factor
-          // left here (getPurchaseMilestoneMultiplier and getSpeedUpMultiplier are always powers of
+          // left here (getPurchaseMilestoneMultiplier and getScaleUpMultiplier are always powers of
           // 2), so without flooring this preview could show a fraction that never actually lands.
           const milestoneMultiplier = getPurchaseMilestoneMultiplier(tierLevel)
-          const production = Math.floor(owned * prestigeBonus * speedUpMultiplier * milestoneMultiplier)
+          const production = Math.floor(owned * prestigeBonus * scaleUpMultiplier * milestoneMultiplier)
           // Surfaced only in the row's collapsed-by-default TierDetails disclosure below — the
           // base value is otherwise invisible to players now that it diverges per tier again
           // (see "Tier production tickspeed" in CLAUDE.md), and the effective value shows how
@@ -1650,7 +1653,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                       Level {formatAmount(tierLevel)} ({formatAmount(doneInBlock)}/{purchaseBlockSize} purchased) — purchase
                       milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases
                     </li>
-                    {speedUpCount > 0 && <li>Speed Up bonus: ×{formatRate(speedUpMultiplier)}</li>}
+                    {scaleUpCount > 0 && <li>Scale Up bonus: ×{formatRate(scaleUpMultiplier)}</li>}
                     {isLastTierXpUnlocked && (
                       <li>
                         XP Tickspeed — unspent XP: {formatAmount(lastTierXpBalance)}
@@ -1733,41 +1736,39 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       </TierList>
 
       <SpeedCardsRow>
-      {speedUpEverRevealed && (
-        <SpeedUpCard aria-label="speed up panel">
-          <h2>Speed Up</h2>
-          <SpeedUpButton
-            aria-label={`Speed Up (requires ${lastTier.name} level ${speedUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextSpeedUpMultiplier)}`}
-            color={canSpeedUp ? '#22d3ee' : 'darkgrey'}
-            disabled={!canSpeedUp}
-            onClick={actions.speedUp}
-            title={`Resets tiers and speeds up production to ×${formatRate(nextSpeedUpMultiplier)}`}
+        <ScaleUpCard aria-label="scale up panel">
+          <h2>Scale Up</h2>
+          <ScaleUpButton
+            aria-label={`Scale Up (requires ${scaleUpTargetTier.name} level ${scaleUpRequirementDisplay}) — doubles production speed to ×${formatRate(nextScaleUpMultiplier)}`}
+            color={canScaleUp ? '#22d3ee' : 'darkgrey'}
+            disabled={!canScaleUp}
+            onClick={actions.scaleUp}
+            title={`Resets tiers and speeds up production to ×${formatRate(nextScaleUpMultiplier)}`}
             type="button"
-            $progress={speedUpProgressPercent}
+            $progress={scaleUpProgressPercent}
             $progressColor="#22d3ee"
-            $pulse={canSpeedUp}
+            $pulse={canScaleUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×{formatRate(nextSpeedUpMultiplier)}{' · '}Lv.{formatAmount(lastTierLevelDisplay)}/{formatAmount(speedUpRequirementDisplay)}</ButtonLabel>
+            <ButtonLabel>×{formatRate(nextScaleUpMultiplier)}{' · '}Lv.{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Speed Up progress"
-              aria-valuenow={speedUpProgressPercent}
+              aria-label="Scale Up progress"
+              aria-valuenow={scaleUpProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
             />
-          </SpeedUpButton>
-          {!isFirstRun && isAutoSpeedUpActive && (
+          </ScaleUpButton>
+          {!isFirstRun && isAutoScaleUpActive && (
             <MutedText title={
-              autoSpeedUpEnabled
-                ? "Speed Up now triggers automatically the instant it's eligible"
-                : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+              autoScaleUpEnabled
+                ? "Scale Up now triggers automatically the instant it's eligible"
+                : 'Auto Scale Up is currently paused — it will not trigger until resumed'
             }>
-              <PpUpgradeBadge $dimmed={!autoSpeedUpEnabled} aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}>⏩</PpUpgradeBadge>
+              <PpUpgradeBadge $dimmed={!autoScaleUpEnabled} aria-label={autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'}>⏩</PpUpgradeBadge>
             </MutedText>
           )}
-        </SpeedUpCard>
-      )}
+        </ScaleUpCard>
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
@@ -1780,11 +1781,11 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Speed Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Scale Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Speed Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            title={`Resets tiers (and Scale Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
@@ -1987,52 +1988,52 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               )}
             </UpgradeRow>
 
-            <UpgradeRow aria-label="auto speed up upgrade">
-              <TierNameLabel>Auto Speed Up</TierNameLabel>
-              {isAutoSpeedUpActive ? (
+            <UpgradeRow aria-label="auto scale up upgrade">
+              <TierNameLabel>Auto Scale Up</TierNameLabel>
+              {isAutoScaleUpActive ? (
                 <UpgradeRowControls>
                   <PpUpgradeBadge
-                    $color={autoSpeedUpEnabled ? '#4ade80' : '#facc15'}
-                    $dimmed={!autoSpeedUpEnabled}
-                    aria-label={autoSpeedUpEnabled ? 'Auto Speed Up active' : 'Auto Speed Up paused'}
+                    $color={autoScaleUpEnabled ? '#4ade80' : '#facc15'}
+                    $dimmed={!autoScaleUpEnabled}
+                    aria-label={autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'}
                     title={
-                      autoSpeedUpEnabled
-                        ? "Speed Up now triggers automatically the instant it's eligible"
-                        : 'Auto Speed Up is currently paused — it will not trigger until resumed'
+                      autoScaleUpEnabled
+                        ? "Scale Up now triggers automatically the instant it's eligible"
+                        : 'Auto Scale Up is currently paused — it will not trigger until resumed'
                     }
                   >
                     ⏩
                   </PpUpgradeBadge>
                   <PauseToggleButton
-                    aria-pressed={autoSpeedUpEnabled}
-                    aria-label={autoSpeedUpEnabled ? 'Pause Auto Speed Up automation' : 'Resume Auto Speed Up automation'}
-                    onClick={() => actions.setAutoSpeedUpEnabled(!autoSpeedUpEnabled)}
-                    title={autoSpeedUpEnabled ? 'Pause Auto Speed Up automation' : 'Resume Auto Speed Up automation'}
+                    aria-pressed={autoScaleUpEnabled}
+                    aria-label={autoScaleUpEnabled ? 'Pause Auto Scale Up automation' : 'Resume Auto Scale Up automation'}
+                    onClick={() => actions.setAutoScaleUpEnabled(!autoScaleUpEnabled)}
+                    title={autoScaleUpEnabled ? 'Pause Auto Scale Up automation' : 'Resume Auto Scale Up automation'}
                     type="button"
                     variant="ghost"
                   >
-                    {autoSpeedUpEnabled ? '⏸' : '▶'}
+                    {autoScaleUpEnabled ? '⏸' : '▶'}
                   </PauseToggleButton>
                 </UpgradeRowControls>
               ) : (
                 <PpUpgradeButton
-                  aria-label={`Enable Auto Speed Up for ${AUTO_SPEED_UP_COST} Prestige Points`}
-                  color={canBuyAutoSpeedUp ? '#38bdf8' : 'darkgrey'}
-                  disabled={!canBuyAutoSpeedUp}
-                  onClick={actions.buyAutoSpeedUp}
-                  title="Spend Prestige Points so Speed Up happens automatically, forever, the instant it's eligible"
+                  aria-label={`Enable Auto Scale Up for ${AUTO_SCALE_UP_COST} Prestige Points`}
+                  color={canBuyAutoScaleUp ? '#38bdf8' : 'darkgrey'}
+                  disabled={!canBuyAutoScaleUp}
+                  onClick={actions.buyAutoScaleUp}
+                  title="Spend Prestige Points so Scale Up happens automatically, forever, the instant it's eligible"
                   type="button"
-                  $progress={ppProgressPercent(AUTO_SPEED_UP_COST)}
+                  $progress={ppProgressPercent(AUTO_SCALE_UP_COST)}
                   $progressColor="#38bdf8"
                 >
                   <ButtonIcon>⏩ </ButtonIcon>
-                  <ButtonLabel>Unlock for {AUTO_SPEED_UP_COST} PP</ButtonLabel>
+                  <ButtonLabel>Unlock for {AUTO_SCALE_UP_COST} PP</ButtonLabel>
                   <VisuallyHidden
                     role="progressbar"
-                    aria-label="Auto Speed Up Prestige Point progress"
-                    aria-valuenow={Math.min(prestige.points, AUTO_SPEED_UP_COST)}
+                    aria-label="Auto Scale Up Prestige Point progress"
+                    aria-valuenow={Math.min(prestige.points, AUTO_SCALE_UP_COST)}
                     aria-valuemin={0}
-                    aria-valuemax={AUTO_SPEED_UP_COST}
+                    aria-valuemax={AUTO_SCALE_UP_COST}
                   />
                 </PpUpgradeButton>
               )}

@@ -3,7 +3,7 @@ import {
   AUTO_PRESTIGE_BASE_INTERVAL_SECONDS,
   AUTO_PRESTIGE_COST,
   AUTO_PRESTIGE_COST_MULTIPLIER,
-  AUTO_SPEED_UP_COST,
+  AUTO_SCALE_UP_COST,
   BITS_PER_BYTE,
   BYTES_ID,
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
@@ -57,7 +57,8 @@ import {
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   RESOURCE_SYMBOL,
   SMART_AUTOBUYER_COST_MULTIPLIER,
-  SPEED_UP_MULTIPLIER_BASE,
+  SCALE_UP_FINAL_TIER_REQUIREMENT_STEP,
+  SCALE_UP_MULTIPLIER_BASE,
   TICKSPEED_MULTIPLIER_BASE_EXPONENT,
   TICKSPEED_PRODUCTION_STEP,
   TIER_DEFINITIONS,
@@ -266,8 +267,8 @@ describe('constants', () => {
     expect(PRESTIGE_SPEED_BONUS_UNLOCK_COST).toBe(10000)
   })
 
-  it('AUTO_SPEED_UP_COST is 20', () => {
-    expect(AUTO_SPEED_UP_COST).toBe(20)
+  it('AUTO_SCALE_UP_COST is 20', () => {
+    expect(AUTO_SCALE_UP_COST).toBe(20)
   })
 
   it('AUTO_PRESTIGE_COST_MULTIPLIER is 2 (cost doubles per level)', () => {
@@ -278,8 +279,12 @@ describe('constants', () => {
     expect(AUTO_PRESTIGE_BASE_INTERVAL_SECONDS).toBe(1000)
   })
 
-  it('SPEED_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {
-    expect(SPEED_UP_MULTIPLIER_BASE).toBe(2)
+  it('SCALE_UP_MULTIPLIER_BASE is 2 (production doubles per activation)', () => {
+    expect(SCALE_UP_MULTIPLIER_BASE).toBe(2)
+  })
+
+  it('SCALE_UP_FINAL_TIER_REQUIREMENT_STEP is 3 (matches TIER_UNLOCK_PREV_LEVEL_REQUIREMENT\'s "every 3 levels" rule)', () => {
+    expect(SCALE_UP_FINAL_TIER_REQUIREMENT_STEP).toBe(3)
   })
 
   it('OVERCLOCK_MULTIPLIER_STEP is 0.1 (×1.1 per claimed Overclock level, folded into the Tickspeed multiplier\'s own step)', () => {
