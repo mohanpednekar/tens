@@ -757,7 +757,9 @@ Strict three-layer separation:
    control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only matter for the
    narrower "arm the queue before even the first pass is affordable" case. Every action here or on
    either dedicated screen stays
-   gated by the forced priority order (see "Economy model" below). Full field-by-field UI layout:
+   gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
+   capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
+   field-by-field UI layout:
    `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
    capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
    Component contracts (`DiskArrayRow`, `DataLakePanel`): `docs/COMPONENTS_REFERENCE.md`.
