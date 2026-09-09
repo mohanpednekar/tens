@@ -52,10 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Buying a Booster (manual, or auto-buy via a per-lake toggle) costs escalating lake units (the nth
   Booster ever bought costs n) and spends only that lake's own banked units, instantly — no transfer,
   no waiting. A lake's own deposit capacity is a separate, purchasable decade-power ladder (1 → 10 →
-  100 → 1,000 units); advancing it is available once the next Booster's own cost would exceed the
-  lake's current capacity (not "the lake is full"), and drains whatever the lake currently holds.
-  Buying a Booster and upgrading capacity are mutually exclusive by construction, so Foundry's
-  per-lake panel repurposes one button between the two. Once a size's Storage Disk array is fully
+  100 → 1,000 units); advancing it is available once the corresponding Storage disk array for that
+  level is fully built, and drains whatever the lake currently holds. Foundry's per-lake panel
+  repurposes one button between Buy and Upgrade, unconditionally preferring Upgrade whenever it's
+  available (see the "Changed" entry below — Upgrade is no longer forced-priority-gated or ever
+  merely disabled-but-visible). Once a size's Storage Disk array is fully
   built and a full disk on it is no longer redeemable, it liquidates straight into Bits instead of
   sitting idle (previously only a pool's largest size did this, tied to the old deposit mechanic).
 - **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
