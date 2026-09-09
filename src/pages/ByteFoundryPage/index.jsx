@@ -526,24 +526,45 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // after the Data Stream card for the rare case that pool's own card isn't visible yet (its
   // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
   // disk-build-driven, independent of capacity — has already moved past it).
+  // Clicking no longer requires this disk's very FIRST pass to already be banked. Once at least one
+  // pass has ever been collected, provisionDisk itself already auto-arms intro.diskBuildQueued so
+  // every later pass fires on its own as the buffer refills — but getting that auto-continuation
+  // started still required the button's own turn-availability (a full pass banked, nothing
+  // outranking it) before it would even accept the FIRST click. queueDiskBuild (implemented for
+  // exactly this "queue up before the first pass is even affordable" case — see its own doc
+  // comment in engine.js) was never wired to a control. Clicking now calls it whenever the build
+  // isn't already turn-available, so the very first pass gets the same "click once, then it just
+  // happens" treatment every later pass already has — see docs/DESIGN_HISTORY.md.
+  const handleProvisionDiskClick = () => {
+    if (canStartDiskBuild) {
+      actions.provisionDisk()
+    } else {
+      actions.queueDiskBuild()
+    }
+  }
+  const diskBuildQueued = intro.diskBuildQueued
   const provisionDiskButton = (
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-      disabled={!canStartDiskBuild || !!diskBuildInProgress}
-      onClick={actions.provisionDisk}
+      disabled={!!diskBuildInProgress || diskLadderExhausted}
+      onClick={handleProvisionDiskClick}
       title={
         diskBuildInProgress
           ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-            : diskBuildBlockedByPriority
-              ? 'Take Speed (or redeem a full Disk) first'
-              : diskRedeemTierName
+            : canStartDiskBuild
+              ? (diskRedeemTierName
                 ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`
+                : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`)
+              : diskBuildQueued
+                ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
+                : diskBuildBlockedByPriority
+                  ? 'Take Speed (or redeem a full Disk) first — click to queue this build so it fires itself the instant it is your turn'
+                  : `Not enough banked yet for the next pass (${diskPassesCollected}/${diskPassesRequired} collected) — click to queue this build so it fires itself as the buffer fills`
       }
       type="button"
-      variant={canStartDiskBuild ? 'info' : 'neutral'}
+      variant={canStartDiskBuild ? 'info' : diskBuildQueued ? 'smart' : 'neutral'}
       $progress={diskBuildProgress}
     >
       <ButtonContent>
@@ -552,10 +573,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           : diskLadderExhausted
             ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
             : diskFundingInProgress
-              ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${diskPassesRequired}`
+              ? `${diskBuildQueued && !canStartDiskBuild ? '⏳' : '🏦'} Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${diskPassesRequired}`
               : diskPassesRequired > 1
-                ? `🏦 Provision ${formatDiskSize(diskSize)} Disk — 0/${diskPassesRequired} (${formatDiskSize(diskCost)})`
-                : `🏦 Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
+                ? `${diskBuildQueued && !canStartDiskBuild ? '⏳' : '🏦'} Provision ${formatDiskSize(diskSize)} Disk — 0/${diskPassesRequired} (${formatDiskSize(diskCost)})`
+                : `${diskBuildQueued && !canStartDiskBuild ? '⏳' : '🏦'} Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
       </ButtonContent>
       <VisuallyHidden
         role="progressbar"
