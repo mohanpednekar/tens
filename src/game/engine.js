@@ -5966,16 +5966,7 @@ export const tickFoundryResetConvenience = state => {
     // disks, now partially paid toward the next one" boundary (Devin Review finding on PR #608).
     const built = provisionDisk(next, getDiskReplayPassAllowance(next, getDiskSize(next)))
     if (built !== next) {
-      // provisionDisk unconditionally arms diskBuildQueued on a partial-funding call so a genuine
-      // manual click keeps auto-continuing with no further clicks needed — but tickQueuedDiskBuild
-      // (which that flag hands off to) has no knowledge of foundryResetCaps and would keep firing
-      // past the cap on later ticks, letting the replay overshoot into progress the player hasn't
-      // re-earned since the reset (Devin Review finding on PR #608). Clear it right back off after
-      // a replay-driven call: this loop's own per-tick isDiskBuildBelowCap re-check above is
-      // already the correct, capped pacing for a replay still in progress, and it doesn't rely on
-      // diskBuildQueued at all — a genuine manual click past the cap arms its own queue
-      // independently once the player actually makes one.
-      next = built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueued: false } } : built
+      next = built
       changed = true
     }
   }

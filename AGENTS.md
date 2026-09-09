@@ -282,13 +282,6 @@ For run times / pacing questions — and after any change that can significantly
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
 Snapshots land on the stable orphan branch `ideal-run-strategy` as **one file per run** under
 `runs/` (never merge into `main`; do not rename with an agent/session suffix). Details:
-For run-time/pacing questions, and after any change that can significantly affect ideal Foundry or
-prestige timings, use the `simulate-run-times` skill and publish via `publish-strategy.sh` (one file
-per run on the orphan `ideal-run-strategy` branch — never merge into `main`). Details:
-`.claude/skills/simulate-run-times/SKILL.md` / `CLAUDE.md`.
-
-### Adding a new tier
-
 Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` (naming-agnostic `id` next in the
 `tier0N`/`tierNN` sequence, `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`,
 `producesResourceId` set to the previous tier's `id`, `baseTickSpeedSeconds` set to the next integer
