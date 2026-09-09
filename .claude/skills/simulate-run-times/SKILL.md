@@ -77,14 +77,15 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 - **Tickspeed (Money / XP):** buy the global tickspeed multiplier and each tier's own tickspeed
   multiplier whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the
   min-consumption gate allows.
-- **Soft resets:** Overclock first when eligible (`getOverclockRequirement`), then Speed Up
-  (`getSpeedUpRequirement` = `speedUpCount + 6`). Overclock-first is empirically faster to Googol
-  than Speed-Up-first or either alone.
+- **Soft resets:** Overclock first when eligible (`getOverclockRequirement`), then Scale Up
+  (`getScaleUpRequirement`: a flat level 3 on the current unlock-frontier tier while any tier is
+  still locked, then a repeating multiple of 3 on the last tier once every tier is unlocked).
+  Overclock-first is empirically faster to Googol than Scale-Up-first or either alone.
 - **PP lever kept active:** unlock the passive +1%-per-unspent-point production-speed bonus
   (`buyPrestigeSpeedBonus`) the instant `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) is banked —
   note that unlock **spends** those 10000 PP, so a starting balance of exactly 10000 leaves 0
   unspent and grants no ongoing bonus (same run length as 0 PP). Balances above 10000 keep the
-  remainder. Other PP automations (Smart, Auto-Speed-Up, Auto-Prestige, tickspeed autobuyer) are
+  remainder. Other PP automations (Smart, Auto-Scale-Up, Auto-Prestige, tickspeed autobuyer) are
   **not** bought — those are separate levers; say so rather than silently enabling them if the
   user asks about those specifically.
 - Career mode calls `prestigeGame` between cycles so permanent Foundry upgrades and
@@ -137,7 +138,7 @@ Retired name: `cursor/ideal-run-strategy-4551` (single living `IDEAL_STRATEGY.md
 ## When editing the simulation
 
 If the user asks to change the bot strategy, the PP / career / capacity-cap range, or add a new
-dimension (e.g. buying Smart / Auto-Speed-Up too), edit `run-simulation.mjs` directly — it's a
+dimension (e.g. buying Smart / Auto-Scale-Up too), edit `run-simulation.mjs` directly — it's a
 plain, readable script. Keep importing the real `src/game/engine.js`/`layers.js` (via the relative
 paths already in the file) rather than inlining copies of the game logic, so the simulation can
 never silently drift out of sync with the actual game rules. `ext-loader.mjs` and the `register()`
@@ -146,5 +147,8 @@ imports — leave them alone unless that resolution itself breaks.
 
 **Do not** reintroduce the old `BUY_QUANTITY = 10` hardcode or a Foundry-skipping bot: both are
 wrong against the current game (real Buy batches to the cost-block boundary;
-`mainGameUnlocked` starts false and only flips via Foundry conversion). Also keep
-`getSpeedUpRequirement` as `speedUpCount + 6` (not the long-superseded level-2/3/4 sequence).
+`mainGameUnlocked` starts false and only flips via Foundry conversion). Also don't reintroduce
+`getScaleUpRequirement`'s old `scaleUpCount + 6` shape (superseded by the per-tier-unlock-then-
+last-tier-multiples-of-3 mechanic) — `actSoftResets` calls `scaleUpGame`/`overclockGame`
+unconditionally each cycle rather than duplicating the eligibility check here, since both engine
+functions already no-op internally when not eligible.

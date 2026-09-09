@@ -598,7 +598,7 @@ export const DEFAULT_PURCHASE_BLOCK_SIZE = 8
 
 // Every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase
 // block size grows by PURCHASE_BLOCK_SIZE_GROWTH_STEP (see engine.js's getPurchaseBlockSize) — ties
-// growth to the same "flagship" progress marker getSpeedUpRequirement/isLastTierTickspeedXpUnlocked/
+// growth to the same "flagship" progress marker getScaleUpRequirement/isLastTierTickspeedXpUnlocked/
 // prestigeCardEverRevealed already key off, rather than any other tier or a global total.
 export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
@@ -623,7 +623,7 @@ export const PRESTIGE_POINT_SPEED_BONUS = 0.01
 // One-time PP cost to unlock the passive production-speed bonus above (see engine.js's
 // buyPrestigeSpeedBonus) — before this is bought, unspent Prestige Points grant no production
 // bonus at all, regardless of balance. Permanent once bought, like autobuyer automation/Smart/
-// Auto-Prestige. The priciest of the four global PP automation unlocks (see AUTO_SPEED_UP_COST/
+// Auto-Prestige. The priciest of the four global PP automation unlocks (see AUTO_SCALE_UP_COST/
 // TICKSPEED_AUTOBUYER_COST/AUTO_PRESTIGE_COST below), since it's a passive, always-on bonus rather
 // than a one-shot action.
 export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
@@ -683,8 +683,8 @@ export const GLOBAL_TICKSPEED_MILESTONE_STEP = 0.10
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
 // it scales by level rather than by tier index; AUTO_PRESTIGE_COST_MULTIPLIER below doubles it
-// each level. Priced above AUTO_SPEED_UP_COST (see below) since Auto-Prestige only ever fires
-// once per run at most, versus Speed Up's much higher activation frequency.
+// each level. Priced above AUTO_SCALE_UP_COST (see below) since Auto-Prestige only ever fires
+// once per run at most, versus Scale Up's much higher activation frequency.
 export const AUTO_PRESTIGE_COST = 1000
 // Auto-Prestige's cost doubles with each level purchased (see engine.js's getAutoPrestigeCost).
 export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
@@ -692,50 +692,61 @@ export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 // this often (see engine.js's getAutoPrestigeAttemptRate) — only actually firing once Money has
 // reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
 export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
-// Per-activation production-speed multiplier base for Speed Up (see engine.js's
-// getSpeedUpMultiplier/speedUpGame) — production is multiplied by SPEED_UP_MULTIPLIER_BASE raised
-// to state.speedUpCount, so each activation doubles it (1x, 2x, 4x, 8x, …). Unlike the Prestige
+// Per-activation production-speed multiplier base for Scale Up (see engine.js's
+// getScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
+// to state.scaleUpCount, so each activation doubles it (1x, 2x, 4x, 8x, …). Unlike the Prestige
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
-// speedUpCount > 0.
-export const SPEED_UP_MULTIPLIER_BASE = 2
+// scaleUpCount > 0.
+export const SCALE_UP_MULTIPLIER_BASE = 2
+// Once state.scaleUpTargetTierIndex (engine.js) reaches the last tier, Scale Up's own requirement
+// (see getScaleUpRequirement) shifts from "unlock the next tier" to a repeating multiple of the
+// last tier's own level: SCALE_UP_FINAL_TIER_REQUIREMENT_STEP (3) for the first such activation,
+// 2x that (6) for the second, 3x (9) for the third, and so on — read directly off how far
+// scaleUpTargetTierIndex has climbed past the last tier's own index. Deliberately the same value as
+// TIER_UNLOCK_PREV_LEVEL_REQUIREMENT (engine.js) — the flat requirement every earlier tier used
+// while still unlocking the next one — so the last tier's own repeating requirement reads as a
+// continuation of the same "every 3 levels" rule rather than a different number kicking in once the
+// ladder ends.
+export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // Per-level growth factor for Overclock's own reward — see engine.js's
 // getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper
-// Speed-Up-style soft reset. Each claimed Overclock level multiplies BOTH the (Money-funded) global
+// Scale-Up-style soft reset. Each claimed Overclock level multiplies BOTH the (Money-funded) global
 // tickspeed multiplier's regular and milestone per-level steps by a further (1 +
 // OVERCLOCK_MULTIPLIER_STEP) factor (×1.1 per level) — folded directly into that existing track's
 // own step rather than a separate multiplier stacked alongside it (see docs/DESIGN_HISTORY.md for
 // the history of this mechanic moving between a standalone factor and a folded-in step). A direct
 // consequence: Overclock has no effect at all while the global tickspeed multiplier is still at
 // level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
-// an ordinary Speed Up, unlike globalTickspeedMultiplier itself — see speedUpGame.
+// an ordinary Scale Up, unlike globalTickspeedMultiplier itself — see scaleUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // The per-cycle escalation step for how many more levels the last tier must reach before the next
 // Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed
 // +2 floor on top so a completely untouched last tier — starting at level 1 by default — can never
-// make the first claim of a cycle free) — the same +1-per-cycle shape Speed Up's own requirement
-// uses (see getSpeedUpRequirement), just without its display offset. There's no artificial ladder
-// beyond that floor; the last tier's already-steep cost curve is what makes reaching each
+// make the first claim of a cycle free) — a simple +1-per-cycle shape, unlike Scale Up's own
+// requirement (see getScaleUpRequirement), which only escalates once every tier is already
+// unlocked, and by SCALE_UP_FINAL_TIER_REQUIREMENT_STEP (3) rather than 1. There's no artificial
+// ladder beyond that floor; the last tier's already-steep cost curve is what makes reaching each
 // successive level meaningfully harder. A claim jumps straight to the last tier's current level
 // (see overclockGame), so falling behind never requires claiming every intermediate level one at a
 // time.
 export const OVERCLOCK_REQUIREMENT_STEP = 1
-// One-time PP cost to permanently automate Speed Up (see engine.js's buyAutoSpeedUp) — once
-// bought, tickGame triggers speedUpGame automatically the instant it's eligible, with no manual
-// click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Speed Up
+// One-time PP cost to permanently automate Scale Up (see engine.js's buyAutoScaleUp) — once
+// bought, tickGame triggers scaleUpGame automatically the instant it's eligible, with no manual
+// click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
 // itself fires far more often than either of those two over a run — but pricier than
 // TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
-// smaller, earlier-game upgrade than Speed Up.
-export const AUTO_SPEED_UP_COST = 20
+// smaller, earlier-game upgrade than Scale Up.
+export const AUTO_SCALE_UP_COST = 20
 // One-time PP cost to permanently unlock Compute auto-Boost (see engine.js's
 // buyComputeAutoBoost / tickAutoComputeBoost): while a reserve merge is in flight and any
 // compute-ladder tier is at COMPUTE_ENTITY_CAP, automatically activate (or stack) the player's
-// preferred Boost preset (default Standard). Priced just above AUTO_SPEED_UP_COST — a mid-early
+// preferred Boost preset (default Standard). Priced just above AUTO_SCALE_UP_COST — a mid-early
 // automation that only matters once Compute merges are timed — and well below AUTO_PRESTIGE_COST.
 export const COMPUTE_AUTO_BOOST_UNLOCK_COST = 30
 // One-time PP cost to automate the (Money-funded) global tickspeed multiplier — once bought,
 // tickGame calls buyGlobalTickspeedMultiplier automatically every tick, re-validating its own
 // eligibility internally (see engine.js's buyTickspeedAutobuyer/tickGame). The cheapest of all
-// four global PP automation unlocks (see PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_SPEED_UP_COST
+// four global PP automation unlocks (see PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_SCALE_UP_COST
 // above and AUTO_PRESTIGE_COST below), since the global tickspeed multiplier it automates is a
 // much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than any of
 // the actions those other three automate.
@@ -763,7 +774,7 @@ export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
 // consumptions can't trickle in one XP at a time forever; the required minimum grows alongside
 // however much has already been invested, mirroring the game's other escalating-cost patterns
-// (getTierCost's epoch multiplier, getSpeedUpRequirement).
+// (getTierCost's epoch multiplier, getScaleUpRequirement).
 export const LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1
 // The very first consumption has cumulative XP consumed = 0, so
 // LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT alone would compute a minimum of 0 — this floor

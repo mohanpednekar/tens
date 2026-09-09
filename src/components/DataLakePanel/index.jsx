@@ -374,7 +374,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   type="button"
                   variant={canUpgrade ? 'prestige' : 'neutral'}
                 >
-                  <ButtonContent>⚡ Upgrade</ButtonContent>
+                  <ButtonContent>⚡ Scale Out</ButtonContent>
                 </ActionButton>
               ) : unlocked ? (
                 <ActionButton

@@ -262,27 +262,27 @@ describe('schema merge on load', () => {
     expect(loaded.intro.mainGameUnlocked).toBe(true)
   })
 
-  it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
+  it('defaults autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
-      autoSpeedUp: true,
+      autoScaleUp: true,
       autoGlobalTickspeed: true,
       autoPrestige: 2,
       prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
-    expect(loaded.autoSpeedUpEnabled).toBe(true)
+    expect(loaded.autoScaleUpEnabled).toBe(true)
     expect(loaded.autoGlobalTickspeedEnabled).toBe(true)
     expect(loaded.autoPrestigeEnabled).toBe(true)
   })
 
-  it('preserves an explicitly-paused (false) autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled value', () => {
+  it('preserves an explicitly-paused (false) autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled value', () => {
     const state = {
       ...createInitialGameState(),
-      autoSpeedUp: true,
-      autoSpeedUpEnabled: false,
+      autoScaleUp: true,
+      autoScaleUpEnabled: false,
       autoGlobalTickspeed: true,
       autoGlobalTickspeedEnabled: false,
       autoPrestige: 1,
@@ -290,7 +290,7 @@ describe('schema merge on load', () => {
     }
     saveGameState(state)
     const loaded = loadGameState()
-    expect(loaded.autoSpeedUpEnabled).toBe(false)
+    expect(loaded.autoScaleUpEnabled).toBe(false)
     expect(loaded.autoGlobalTickspeedEnabled).toBe(false)
     expect(loaded.autoPrestigeEnabled).toBe(false)
   })

@@ -30,7 +30,7 @@ import {
   hasComputeAttention,
   hasFoundryAttention,
   hasOverclockAvailable,
-  hasSpeedUpAvailable,
+  hasScaleUpAvailable,
   hasTiersAttention,
   hasTiersGameAttention,
   maxAttention,
@@ -243,15 +243,17 @@ describe('navAttention', () => {
     expect(getNavAttention(state).boosters).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Factory when Speed Up is available on the last tier', () => {
+  it('lights Factory when Scale Up is available once every tier is unlocked', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purchaseLevels: { [lastTierId]: 6 },
-      everUnlockedTierIds: { [lastTierId]: true },
-      speedUpCount: 0,
+      // scaleUpTargetTierIndex at the last tier's own index puts getScaleUpRequirement into its
+      // phase-2 formula: a flat 3 for the first activation once there (see getScaleUpRequirement).
+      purchaseLevels: { [lastTierId]: 3 },
+      scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+      scaleUpCount: 0,
     }
-    expect(hasSpeedUpAvailable(state)).toBe(true)
+    expect(hasScaleUpAvailable(state)).toBe(true)
     expect(hasTiersGameAttention(state)).toBe(true)
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
@@ -263,10 +265,11 @@ describe('navAttention', () => {
       purchaseLevels: { [lastTierId]: 2 },
       everUnlockedTierIds: { [lastTierId]: true },
       overclockCount: 0,
-      speedUpCount: 99, // Speed Up needs level 105 — keep it unavailable so this isolates Overclock
+      // Once every tier is unlocked, Scale Up's own requirement on the last tier is a flat 3 (see
+      // getScaleUpRequirement) — level 2 here keeps it unavailable so this isolates Overclock.
     }
     expect(hasOverclockAvailable(state)).toBe(true)
-    expect(hasSpeedUpAvailable(state)).toBe(false)
+    expect(hasScaleUpAvailable(state)).toBe(false)
     expect(hasTiersGameAttention(state)).toBe(true)
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })

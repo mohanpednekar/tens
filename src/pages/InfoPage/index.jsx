@@ -4,8 +4,8 @@ import {
   formatOfflineDuration,
   getAutobuyerUnlockMilestone,
   getOverclockRequirement,
-  getSpeedUpRequirement,
   getTierTickspeedAutobuyerMilestone,
+  TIER_UNLOCK_PREV_LEVEL_REQUIREMENT,
 } from 'game/engine'
 import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
@@ -46,6 +46,7 @@ import {
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
+  SCALE_UP_FINAL_TIER_REQUIREMENT_STEP,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
@@ -136,7 +137,7 @@ const InfoPage = () => {
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
-  const speedUpFirstRequirement = getSpeedUpRequirement(0) - 1
+  const scaleUpFirstRequirement = TIER_UNLOCK_PREV_LEVEL_REQUIREMENT - 1
   const overclockFirstRequirement = getOverclockRequirement(0)
   const lastTierName = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name
   const firstTierName = TIER_DEFINITIONS[0].name
@@ -510,19 +511,23 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="speed up section">
-        <h2>Speed Up</h2>
+      <Section aria-label="scale up section">
+        <h2>Scale Up</h2>
         <ul>
           <li>
-            Reach the required level on {lastTierName} to trigger a Speed Up.
+            Reach displayed level {scaleUpFirstRequirement} on your highest-unlocked tier to trigger a
+            Scale Up.
           </li>
           <li>
-            Resets tiers and resources; keeps unlocked autobuyers and Prestige Points.
+            Resets tiers and resources — but keeps every tier unlocked so far, and permanently
+            unlocks the next one too, alongside unlocked autobuyers and Prestige Points.
           </li>
           <li>Permanently doubles production speed each time (stacks: ×2, ×4, ×8, …).</li>
           <li>
-            First Speed Up needs displayed level {speedUpFirstRequirement}; each later one needs
-            one more level than the last.
+            Every tier before {lastTierName} needs the same displayed level {scaleUpFirstRequirement} to
+            trigger the next Scale Up. Once {lastTierName} itself is unlocked, each later activation
+            instead needs {SCALE_UP_FINAL_TIER_REQUIREMENT_STEP} more levels of {lastTierName} than the
+            last (displayed level {scaleUpFirstRequirement}, then {SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * 2 - 1}, …).
           </li>
           <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
         </ul>
@@ -535,10 +540,10 @@ const InfoPage = () => {
             Reach the required level on {lastTierName} to claim an Overclock level.
           </li>
           <li>
-            Resets tiers and resources like Speed Up (keeps unlocked autobuyers and Prestige Points).
+            Resets tiers and resources like Scale Up (keeps unlocked autobuyers and Prestige Points).
           </li>
           <li>
-            Also wipes Speed Up’s stacking bonus back to zero.
+            Also wipes Scale Up’s stacking bonus back to zero.
           </li>
           <li>
             In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 each
