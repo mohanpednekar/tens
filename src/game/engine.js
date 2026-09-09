@@ -737,13 +737,12 @@ export const formatMoneyBalance = value => {
 // rather than throwing, and getTierCost below separately clamps level 0/negative levels to level 1
 // (epoch 0) before this is ever called, so this function itself never needs to handle a negative
 // epoch from that caller.
+// ⚡ Bolt Optimization: Replaced O(N) loop with O(1) mathematical calculation.
+// Reduces the time complexity from O(N) to O(1) which speeds up calculation especially for large epoch values.
 export const getCostEpochExponent = epoch => {
   const e = clampNonNegative(epoch)
-  let exponent = 1 // exponent at epoch 0
-  for (let n = 0; n < e; n++) {
-    exponent += Math.max(n, 1)
-  }
-  return exponent
+  if (e === 0) return 1 // exponent at epoch 0
+  return 2 + ((e - 1) * e) / 2
 }
 
 // The purchase block size every tier's current level currently requires to complete — a single
