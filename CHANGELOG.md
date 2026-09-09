@@ -383,6 +383,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   stops exactly at an active cap's own remaining allowance instead of an abundant buffer refill
   carrying it past — anything beyond what was already re-earned still needs a genuine manual click,
   same as before.
+- **Provision Disk's own first click no longer requires its first pass to already be banked** —
+  clicking it while the buffer doesn't yet cover a whole pass, or while a higher-priority action
+  currently outranks it, now queues the build (the same `diskBuildQueued` mechanism the automatic
+  mid-build continuation above already uses) instead of the button simply refusing the click. The
+  build then fires itself the instant it's affordable, with no further click needed — the same
+  "click once, then it just happens" treatment every pass past the first already had.
 - **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
   2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
   cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the

@@ -7150,3 +7150,56 @@ new invariant instead (Upgrade claims the slot over Buy whenever its array is co
 end-to-end in a real browser: a KB lake with its ×1 array complete, Disk Fill genuinely available
 (tier01 mid-redemption) and Speed also affordable, still showed an enabled, clickable Upgrade button
 that immediately advanced `capacityLevel` on click. `yarn test`/`yarn build` green.
+
+### Provision Disk's own click still required its first pass to already be banked — closing the one case the prior auto-continue fix left open
+
+A further player report on the same feature area: "Provision Disk button should not gate for full
+balance to be available for the first pass. Once clicked, it can wait for balance to fill up for the
+first pass, similar to how it waits for rest of the passes." The "Provision Disk: ordinal-scaled pass
+counts, and passes auto-continue after a manual start" entry above had already solved this for every
+pass PAST the first — once a manual click landed at least one pass, `provisionDisk` auto-armed
+`intro.diskBuildQueued` so the rest fired themselves. But STARTING a build in the first place still
+went through the button's own `disabled={!canStartDiskBuild || !!diskBuildInProgress}` — and
+`canStartDiskBuild` (`isProvisionDiskTurnAvailable`) requires the pool buffer to already cover a
+whole pass. So the maintainer's own stated design ("Provision Disk stays a deliberate action to
+START a new disk, but once started, no further clicks are needed to finish it" — see the entry
+above) was only half-realized: the "deliberate action to start" itself still needed the SAME kind of
+manual "wait, then remember to click at the right instant" the auto-continue fix specifically
+existed to eliminate for every pass after that one.
+
+The fix was already sitting unused: `queueDiskBuild` — "for committing to a build BEFORE its own
+first pass is even affordable" — existed in `engine.js`, fully implemented and tested (`state →
+state`, arms `intro.diskBuildQueued`, a same-reference no-op while already queued/mid-build/ladder-
+exhausted), and `tickQueuedDiskBuild` was already unconditionally wired into `tickGame`'s
+`tickStorage` every tick. It just had, per its own doc comment, "no UI control" reaching it at all.
+
+**Fix.** `ByteFoundryPage`'s Provision Disk button now calls `queueDiskBuild` directly from its own
+click handler (`handleProvisionDiskClick`) whenever it isn't currently turn-available — the SAME
+click a player already makes to start a build, just no longer refused when the timing isn't exactly
+right. `disabled` dropped the `!canStartDiskBuild` half of its own condition entirely, leaving only
+`diskBuildInProgress`/`diskLadderExhausted` (states where a click genuinely has nothing to do). The
+button's variant/icon now distinguish three live states instead of two — `'info'`/🏦 while
+turn-available (click fires the pass immediately, unchanged), `'smart'`/⏳ while queued-but-not-yet-
+turn-available (armed, waiting on the buffer or on a higher-priority action to clear), `'neutral'`/🏦
+otherwise (clickable to arm) — with `aria-label` deliberately held at a constant "provision disk" in
+every one of them (verified by a real click-through in a real browser, which is what caught this: an
+earlier draft renamed the label to "cancel queued disk build" once armed, silently breaking
+`getByRole` queries and, worse, disorienting anything relying on the control's identity staying
+put — screen readers included). No cancel affordance was added: since `provisionDisk` itself already
+auto-arms the identical flag the instant ANY partial progress lands, a click-to-cancel control would
+let a player silently undo the game's OWN automatic continuation on a build already underway, which
+directly contradicts "once started, no further clicks are needed" — `clearDiskBuildQueue` stays
+implemented/tested with no UI control, same posture as `queueIntroCapacityUpgrade`.
+
+**Verification.** Reproduced the reported friction and the fix in a real browser (`yarn dev`) before
+and after: seeded a pool buffer a few bits short of the first pass's own cost, confirmed the button
+was clickable (not merely present-but-disabled) and that clicking it set `diskBuildQueued`, then let
+real time pass with no further interaction — the pass fired itself, and for a size whose
+`getDiskProvisionPassesRequired` is 1 (an array's very first disk), the whole build started on its
+own from that single early click. Rewrote the two `App.test.jsx` tests that had asserted the button
+`toBeDisabled()` while underfunded or lower-priority-blocked to instead click the (now-enabled)
+button and assert `diskBuildQueued` became `true` with `diskProvisionPasses` still empty (queued, not
+incorrectly fired early). `yarn test`/`yarn build` green; no economy/formula change, so
+`simulate-run-times` wasn't re-run — an optimal bot already clicks the instant a pass becomes
+affordable regardless of whether the button would have refused an earlier click, so this fixes real
+human input friction without moving any ideal-play timing.

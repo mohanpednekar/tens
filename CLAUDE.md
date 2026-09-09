@@ -752,11 +752,15 @@ Strict three-layer separation:
    removed from the UI, but `intro.diskBuildQueued`/`tickQueuedDiskBuild` are unconditionally wired
    into `tickGame`'s own tick pipeline and live: `provisionDisk` auto-arms `diskBuildQueued` itself
    whenever a click only partially funds a disk's current pass, so the remaining passes fire
-   themselves as the pool buffer refills, no further click needed (see "Economy model" below).
-   `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as their own UI
-   control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only matter for the
-   narrower "arm the queue before even the first pass is affordable" case. Every action here or on
-   either dedicated screen stays
+   themselves as the pool buffer refills, no further click needed (see "Economy model" below). The
+   button's own click handler now also calls `queueDiskBuild` directly whenever it isn't
+   turn-available (underfunded for even a first pass, or outranked by a higher-priority action) —
+   previously the button stayed disabled until a whole pass was already banked, so the FIRST pass
+   needed the same manual "wait, then remember to click" babysitting every later pass had already
+   stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
+   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
+   matter for the narrower "arm the queue before even the first pass is affordable" case. Every
+   action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
    capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
    field-by-field UI layout:
@@ -1031,9 +1035,11 @@ at a time, not the whole cost — then takes real build time once fully funded (
 rate, snapshotted at start). A manual click that doesn't finish the build in one call auto-arms the
 **queue** (`diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild`, unconditionally wired into
 `tickGame`) so every remaining pass for that disk fires itself as the buffer refills — no further
-clicks needed; only starting a NEW disk's build still needs one click. `queueDiskBuild` itself
-remains available for arming the queue before even the first pass is affordable, though no UI
-control surfaces that narrower case directly. The smallest size per pool has an always-full **read
+clicks needed; only starting a NEW disk's build still needs one click. `queueDiskBuild` itself now
+also arms the queue directly from that one click when the first pass isn't affordable yet (or a
+higher-priority action currently outranks it) — the button's own `disabled` prop no longer requires
+turn-availability, only that no build is actually in flight and the ladder isn't exhausted; see
+`docs/DESIGN_HISTORY.md` for the gap this closed. The smallest size per pool has an always-full **read
 cache** (8 blocks); every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,

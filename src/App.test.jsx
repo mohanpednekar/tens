@@ -3049,16 +3049,23 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   })
 
-  test('Provision Disk is disabled below its cost, starting at 1 KB', () => {
+  test('Provision Disk stays clickable below its cost, starting at 1 KB — clicking queues the build instead of doing nothing', () => {
     // productionMilestoneTierClaims: 2 neutralizes Bandwidth, which otherwise outranks Provision Disk
-    // in the forced priority order (see "Byte Foundry" in CLAUDE.md) and would disable Provision for a
-    // different reason than the one this test is isolating.
+    // in the forced priority order (see "Byte Foundry" in CLAUDE.md) and would disable/queue Provision
+    // for a different reason than the one this test is isolating.
     seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).toHaveTextContent('1 KB')
-    expect(buildButton).toBeDisabled()
+    // The first pass isn't affordable yet, but the button is no longer disabled — clicking it
+    // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
+    // the same automatic continuation every LATER pass already gets once one is collected.
+    expect(buildButton).not.toBeDisabled()
+    fireEvent.click(buildButton)
+    const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(savedState.intro.diskBuildQueued).toBe(true)
+    expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
@@ -3196,11 +3203,17 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
   })
 
-  test('Provision Disk stays disabled while Bandwidth (higher priority) is currently available, even though its own cost is affordable', () => {
+  test('Provision Disk stays clickable while Bandwidth (higher priority) is currently available, even though its own cost is affordable — clicking queues it instead of firing', () => {
     seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true })
     render(<App />)
 
-    expect(screen.getByRole('button', { name: /provision disk/i })).toBeDisabled()
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).not.toBeDisabled()
+    fireEvent.click(buildButton)
+    const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
+    // Queued, not fired: Bandwidth still outranks it, so no pass was actually collected.
+    expect(savedState.intro.diskBuildQueued).toBe(true)
+    expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
 
   test('ByteFoundryPage renders the current size\'s full interactive Disk array detail inline (cache blocks and disk squares), not just a text summary', () => {
