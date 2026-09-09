@@ -3937,15 +3937,30 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   let diskReadCacheFlush = { ...(state.intro.diskReadCacheFlush ?? {}) }
   let changed = false
 
+  // Computed up front so the self-heal pass below can use the SAME "currently unlocked" test the
+  // active readCacheEligibleSizes list further down is scoped to — a size can be structurally
+  // read-cache-eligible (isDiskReadCacheEligible, the pool's own smallest denomination) while its
+  // pool ISN'T currently unlocked, and such an entry must still be refunded, not treated as live,
+  // or it would sit excluded from every fill/flush pass yet never self-heal either — permanently
+  // stranded. Not reachable via ordinary play today (pool-unlock count never decreases without
+  // buildEraIntroReset also wiping diskCache to `{}` outright), but cheap to close outright rather
+  // than leave as a latent trap for a future change to either invariant.
+  const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  const isCacheStillEligible = size => {
+    if (!isDiskReadCacheEligible(size)) return false
+    const poolIndex = getPoolIndexForDiskSize(size)
+    return Boolean(poolIndex) && poolIndex <= unlockedPoolCount
+  }
+
   // Self-heal a save carrying leftover diskCache/diskReadCacheFlush for a size that's no longer
-  // cache-eligible at all (never was the pool's own smallest denomination — see
-  // isDiskReadCacheEligible above), refunding whatever's cached back into ITS OWN pool's buffer
-  // (that's what funded it — see Pass 1 below) rather than stranding it where nothing will ever
-  // fill or flush it again. A same-reference no-op (aside from the loop itself) once nothing is
-  // stranded.
+  // cache-eligible (never was the pool's own smallest denomination, or that pool isn't currently
+  // unlocked — see isCacheStillEligible above), refunding whatever's cached back into ITS OWN
+  // pool's buffer (that's what funded it — see Pass 1 below) rather than stranding it where
+  // nothing will ever fill or flush it again. A same-reference no-op (aside from the loop itself)
+  // once nothing is stranded.
   for (const sizeStr in diskCache) {
     const size = Number(sizeStr)
-    if (isDiskReadCacheEligible(size)) continue
+    if (isCacheStillEligible(size)) continue
     const poolIndex = getPoolIndexForDiskSize(size)
     if (poolIndex) poolBuffers[poolIndex] = getPoolBufferBitsLocal(poolIndex) + diskCache[size]
     const { [size]: _removedCache, ...restCache } = diskCache
@@ -3954,7 +3969,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   }
   for (const sizeStr in diskReadCacheFlush) {
     const size = Number(sizeStr)
-    if (isDiskReadCacheEligible(size)) continue
+    if (isCacheStillEligible(size)) continue
     const { [size]: _removedFlush, ...restFlush } = diskReadCacheFlush
     diskReadCacheFlush = restFlush
     changed = true
@@ -3971,7 +3986,7 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   // model the original stall was diagnosed against). Passes 2/3 below already guard on
   // `hasEmptyContainer = builtTotal[size] > disks[size]` before flushing into an actual disk, so a
   // size with zero disks built simply accumulates cache and waits — no double-spend risk.
-  const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  // (unlockedPoolCount itself is computed above, alongside the self-heal pass it's shared with.)
   const readCacheEligibleSizes = []
   for (let poolIndex = 1; poolIndex <= unlockedPoolCount; poolIndex += 1) {
     readCacheEligibleSizes.push(getDataLakeUnitBits(poolIndex))

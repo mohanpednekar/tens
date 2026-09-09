@@ -3750,6 +3750,23 @@ describe('tickDiskAutoFill', () => {
     expect(tickDiskAutoFill(0)(state)).toBe(state) // same-reference no-op — cache already full, no disk to flush into yet
   })
 
+  it('self-heals a full read cache for a pool\'s own smallest size when that POOL itself is not currently unlocked, even though the size is structurally read-cache-eligible', () => {
+    // getDiskLadderSizeBits(4) is pool 2's own smallest denomination (each pool spans exactly 3
+    // disk-ladder steps — see the "each pool's Capacity end bound" test above) — structurally
+    // isDiskReadCacheEligible, but pool 2 is only unlocked once pool 1's own three sizes are fully
+    // built, which nothing here does, so getUnlockedStoragePoolCount(state) stays 1. A save can't
+    // reach this via ordinary play (nothing currently populates diskCache for a not-yet-unlocked
+    // pool), but the self-heal loop must still close it defensively — see isCacheStillEligible.
+    const pool2SmallestSize = getDiskLadderSizeBits(4)
+    const state = withIntro(createInitialGameState(), {
+      diskCache: { [pool2SmallestSize]: pool2SmallestSize },
+    })
+    expect(getUnlockedStoragePoolCount(state)).toBe(1)
+    const after = tickDiskAutoFill(0)(state)
+    expect(after.intro.diskCache?.[pool2SmallestSize] ?? 0).toBe(0)
+    expect(after.intro.poolBuffers?.[2]).toBe(pool2SmallestSize)
+  })
+
   it('does not pour read cache into an empty disk while that size\'s own fixed tier is at its required level, even with surplus Memory', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 1_000_000,

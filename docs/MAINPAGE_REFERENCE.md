@@ -201,7 +201,7 @@ Below Build, every size from `getDiskSizesToShow(state)` renders a full interact
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
 not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
 
-Provisioning a disk is no longer instant, and its cost is no longer paid in one lump sum either —
+Provisioning a disk's cost is no longer paid in one lump sum —
 `provisionDisk` (`actions.provisionDisk`) collects the cost in `getDiskProvisionPassesRequired(state,
 size)` separate PASSES of exactly the disk's own face-value size each (`intro.diskProvisionPasses[size]`,
 `getDiskProvisionPassesCollected`), so the pool buffer only ever needs to hold one pass at a time —
@@ -209,16 +209,17 @@ a click collects as many WHOLE passes as the buffer currently affords (every req
 click if the buffer already holds the full cost, fewer otherwise, banking the remainder). A click
 that doesn't finish the build in one call also auto-arms `intro.diskBuildQueued` (see below) so
 every remaining pass fires itself as the buffer refills, with no further clicks needed — only
-starting a NEW disk's build still needs one click. Only once the final required pass lands does it
-start a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
-(`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
-Memory bandwidth (the current Byte Foundry production rate, snapshotted at provisioning start), times
-the disk's own 1-indexed position in the array at the moment the build started, see
-`getProvisionDiskSeconds`/`getProvisionDiskBaseSeconds` in engine.js — so at the default starting rate
-(1 bit/sec) a 1 KB array's first disk takes 8000 seconds, its 6th disk 48,000 seconds, a 10 KB
-array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickProvisionDisk`
-(wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
-`diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
+starting a NEW disk's build still needs one click. Once the final required pass lands, the disk
+completes IMMEDIATELY — `disksBuiltTotal[size]` increments in that same call — with no further,
+separate timed wait: gathering the passes at the pool's own production rate already takes the
+intended build time, so an additional post-funding countdown would only duplicate it (see
+`docs/DESIGN_HISTORY.md`'s "Provision Disk's post-funding build timer duplicated the wait already
+spent funding it" entry). An earlier version DID impose a real timed countdown here
+(`intro.diskBuild = { size, remainingSeconds, totalSeconds }`, ticked down every tick by
+`tickProvisionDisk`, wired into `tickGame`) even after passes started taking real time to fund —
+`intro.diskBuild`/`tickProvisionDisk` and the "mid-build" behavioral state described below remain
+solely to finish out a countdown a save from before that change may still be carrying; a build
+`provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
 disallowed, "the array provisioning." The Provision button's idle state has three label variants
 depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)` (clamped at
@@ -235,7 +236,10 @@ once funding is under way (`diskFundingInProgress = diskPassesCollected > 0 && !
 the button renders three distinct BEHAVIORAL states (idle/mid-build/ladder-complete, each covering
 its own label variants above) off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
-isDiskLadderExhaustedForActivePools(state)`: **idle** (covers both the not-yet-started and
+isDiskLadderExhaustedForActivePools(state)` — **mid-build only ever occurs for a save carrying an
+already-in-flight legacy countdown from before the timed-build removal above; a fresh build started
+today goes straight from idle to the disk existing, in the same click, with no mid-build state ever
+rendered**: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
 a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active

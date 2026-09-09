@@ -7215,12 +7215,19 @@ actually accumulates a full face-value's worth of bits at that pool's current pr
 time, not an instant click. But once the LAST pass landed, `provisionDisk` still set a SEPARATE
 `intro.diskBuild = { size, remainingSeconds, totalSeconds }` countdown
 (`totalSeconds = getProvisionDiskBaseSeconds(state, size) * ordinal`, i.e. `size / rate` per pass,
-times the disk's own 1-indexed position) before the container actually existed — a leftover from
-when the whole cost was paid in one instant lump sum and a timed build was the ONLY time cost a disk
-imposed. Once funding itself started taking real time, that assumption silently became false: N
-passes at `size / rate` seconds each, THEN an additional `N × size / rate`-second countdown, is
-exactly double the intended wait — the array's very first disk, needing only 1 pass, took twice as
-long overall as it should have, and the effect only grew with a disk's own ordinal.
+times the disk's own 1-indexed position, using the pool's RAW, un-multiplied
+`getStoragePoolBandwidth`) before the container actually existed — a leftover from when the whole
+cost was paid in one instant lump sum and a timed build was the ONLY time cost a disk imposed. Once
+funding itself started taking real time, that assumption silently became false: each pass already
+takes as long as `tickPoolBufferFill` needs to bank one face-value's worth into the buffer — `size /
+(rate × multiplier)`, the SAME fill-based multiplier (`getPoolEffectMultiplier`, 50%-200%, boosted
+further by tapping) every other pool-buffer transfer scales by — so an additional, separately-timed
+countdown on top, using the raw rate alone, was always net-additional wait on top of whatever the
+passes themselves already took, not a double-counted RESTATEMENT of the identical number. At the
+multiplier's own 100% baseline the two durations coincide exactly (a disk needing 1 pass took twice
+as long overall as it should have); away from baseline they diverge further, but the countdown was
+still pure duplication either way, since nothing about "the passes already took real time" ever
+stopped applying.
 
 **Fix.** `provisionDisk`'s completion branch no longer sets `intro.diskBuild` at all — the instant
 the final pass lands, it increments `disksBuiltTotal[size]` in that SAME call, exactly like
@@ -7319,6 +7326,20 @@ cache genuinely never sits "wasted," it always resolves to one of its two uses, 
 mechanic advertises. `yarn test`: 1758/1758 green (+1 for this new test).
 `yarn build` succeeds. No economy constant/formula changed — only which point in Byte Foundry
 progression the read cache starts drawing from Memory — so `simulate-run-times` wasn't re-run.
+
+**Adversarial review follow-up.** A subsequent review of this same change (against commit
+`4cf0476`) surfaced one more latent self-heal gap: a diskCache/diskReadCacheFlush entry can be
+structurally read-cache-eligible (`isDiskReadCacheEligible` — the pool's own smallest denomination)
+while that entry's POOL isn't currently unlocked — a case the self-heal loop's original
+eligibility check didn't cover, since it only ever tested structural eligibility, not current
+unlock membership. Not reachable via ordinary play today (nothing populates `diskCache` for a
+not-yet-unlocked pool, and `getUnlockedStoragePoolCount` never decreases without
+`buildEraIntroReset` also wiping `diskCache` to `{}` outright), but cheap to close defensively
+rather than leave as a trap for a future change to either invariant. Fixed with a new
+`isCacheStillEligible(size)` helper in `tickDiskAutoFill` combining both checks, used by both
+self-heal loops (`diskCache` and `diskReadCacheFlush`). Verified by a new regression test seeding a
+full cache at pool 2's own smallest size while only pool 1 is unlocked, asserting it gets refunded
+to pool 2's own buffer. `yarn test`: 1759/1759 green (+1 for this new test).
 
 ### Data Stream/pool balances skip their padded trailing zeros once full for more than a second
 
