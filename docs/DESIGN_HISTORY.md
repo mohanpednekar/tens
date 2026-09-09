@@ -1,5 +1,35 @@
 # Design history & rationale
 
+### Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08
+
+A follow-up Devin Review finding on the fix commit above (same PR #608): `tickFoundryResetConvenience`'s
+own Provision Disk replay call could hand control to `tickQueuedDiskBuild`, which has no knowledge of
+`foundryResetCaps` and would keep funding passes past the exact point the replay was entitled to stop
+at — letting the player receive disk progress they hadn't actually re-earned since the reset, with no
+manual click involved.
+
+The mechanism: `tickFoundryResetConvenience` calls `provisionDisk` once per tick while
+`isDiskBuildBelowCap` says the replay still has room to catch up to the pre-reset high-water mark. If
+that call only partially funds the current disk's pass requirement, `provisionDisk` (per this PR's own
+auto-continue feature) unconditionally arms `intro.diskBuildQueued`. But `tickQueuedDiskBuild` — wired
+unconditionally into every tick — has no idea the state it's operating on came from a capped replay;
+once armed, it keeps firing `provisionDisk` on every subsequent tick as the (real, post-reset) buffer
+refills, funding passes 2, 3, … past the pass count the cap says the player is entitled to for free,
+without ever requiring the manual click the design intends for anything beyond that point.
+
+Fixed by clearing `diskBuildQueued` back to `false` immediately after any partial-funding call made
+BY `tickFoundryResetConvenience` itself (`engine.js`'s `tickFoundryResetConvenience`, right after its
+own `provisionDisk` call). This is safe because the replay never needed that flag in the first place —
+its own per-tick `isDiskBuildBelowCap` re-check is already the correct, capped pacing mechanism for a
+replay in progress; clearing the flag only removes the accidental hand-off to the uncapped
+`tickQueuedDiskBuild`, and a genuine manual click made after the replay catches up (or on some
+unrelated, never-capped size) arms its own queue completely independently, unaffected by this change.
+
+New regression tests: the existing "replays partial Provision Disk passes toward an in-progress disk"
+test now also asserts `diskBuildQueued` is `false` after a replay call, and a new test drives
+`tickFoundryResetConvenience` to exactly its own cap, then ticks `tickQueuedDiskBuild` repeatedly with
+a well-stocked buffer and confirms no further passes are funded. `yarn test`: 1751/1751 green.
+
 ### Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08
 
 Devin Review posted 4 findings on PR #608 (the ordinal-scaled Provision Disk pass count + auto-continue

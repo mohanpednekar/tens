@@ -1926,6 +1926,45 @@ describe('tickFoundryResetConvenience', () => {
     // its own cap.
     expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
     expect(after.intro.diskBuild).toBeNull()
+    // The replay's own per-tick isDiskBuildBelowCap re-check is the only pacing it needs — leaving
+    // diskBuildQueued armed here would hand continuation off to tickQueuedDiskBuild, which has no
+    // knowledge of foundryResetCaps (see the dedicated regression test below).
+    expect(after.intro.diskBuildQueued).toBe(false)
+  })
+
+  it('does not let diskBuildQueued auto-continue past the replay\'s own diskProvisionPasses cap once reached (Devin Review finding)', () => {
+    const size = getDiskLadderSizeBits(1)
+    const capacityHeadroom = getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10
+    // Same 3rd-disk shape as above, but the cap only entitles 1 of the 3 required passes — small
+    // enough that a single replay call reaches it exactly.
+    let state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: size },
+      disksBuiltTotal: { [size]: 2 },
+      capacity: capacityHeadroom,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 1 },
+      },
+    })
+
+    state = tickFoundryResetConvenience(state)
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(state.intro.diskBuildQueued).toBe(false)
+
+    // Refill the buffer well past every remaining pass and tick the queue repeatedly — without
+    // provisionDisk's own auto-arm (never set by the replay call above), tickQueuedDiskBuild must
+    // stay a no-op indefinitely: the player has to click Provision Disk themselves to fund anything
+    // past what the replay already re-earned for them.
+    for (let i = 0; i < 5; i += 1) {
+      state = withIntro(state, { poolBuffers: { 1: size * 10 } })
+      state = tickQueuedDiskBuild(state)
+    }
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(state.intro.diskBuild).toBeNull()
   })
 
   it('is a no-op without foundryResetCaps', () => {

@@ -351,7 +351,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   completes immediately even with an empty pool buffer, rather than being gated out by Provision
   Disk's own availability check before it ever got a chance to self-heal; and a save already
   carrying a genuine partial pass count auto-resumes the auto-continue behavior on load, with no
-  extra click needed to "wake it up."
+  extra click needed to "wake it up." Reset Byte Foundry's convenience replay (which auto-plays
+  Provision Disk up to what was already earned before the reset) no longer lets the new auto-continue
+  behavior carry it past its own cap — a replay-driven partial fund no longer arms auto-continue, so
+  anything beyond what was already re-earned still needs a genuine manual click, same as before.
 - **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
   2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
   cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the
