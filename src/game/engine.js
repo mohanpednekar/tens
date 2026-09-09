@@ -4484,7 +4484,7 @@ export const isBoosterPurchaseAvailable = (state, tierIndex) =>
 // discarded rather than carried forward inconsistently. A same-reference no-op when not
 // affordable/unlocked yet.
 export const buyBooster = (tierIndex, quantity = 1) => state => {
-  if (quantity < 1 || !isBoosterPurchaseAvailable(state, tierIndex)) return state
+  if ((quantity !== Infinity && (!Number.isInteger(quantity) || quantity < 1)) || !isBoosterPurchaseAvailable(state, tierIndex)) return state
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field) return state
   const lake = getDataLakeTier(state, tierIndex)
