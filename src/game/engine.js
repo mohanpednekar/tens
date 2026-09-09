@@ -6229,6 +6229,18 @@ export const prestigeGame = state => {
     // exactly like before this flag existed (see isTierUnlocked) — this flag only exists to stop
     // consumeXpForLastTierTickspeed's narrower owned-only reset from relocking tiers, not to
     // change what a full Prestige/Scale Up reset does.
+    // Era ascension progress (era count, banked Eons, purchased hyperscalers, Eon upgrade levels)
+    // is permanent meta-progression above even a real Prestige (see eraGame) — an ordinary Prestige
+    // must not wipe it either, same as scaleUpGame/overclockGame already carry it (see #626).
+    era: state.era ?? initial.era,
+    eons: state.eons ?? initial.eons,
+    hyperscalerCount: state.hyperscalerCount ?? initial.hyperscalerCount,
+    eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
+    // Flops autobuyer unlock flags + pause preference are one-time Era-milestone unlocks, just as
+    // permanent as the Era fields above (see eraGame's own identical treatment) — only the
+    // in-flight attempt budget below is run-scoped and resets.
+    computeFlopsAutobuyers: state.computeFlopsAutobuyers ?? initial.computeFlopsAutobuyers,
+    computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
     computeFlops: {
       pageUnlocked: Boolean(state.computeFlops?.pageUnlocked)
         || clampNonNegative(state.prestige.points) + pointsAwarded >= COMPUTE_FLOPS_REVEAL_PP,

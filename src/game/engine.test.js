@@ -8632,6 +8632,30 @@ describe('prestigeGame', () => {
     expect(after.tickspeedLevels[tensTier.id]).toBe(1)
   })
 
+  it('keeps era/eons/hyperscalerCount/eonsUpgrades/computeFlopsAutobuyers(Enabled) permanently, resetting only the attempt budget', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+    const state = {
+      ...withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
+      era: { count: 2 },
+      eons: { balance: 7 },
+      hyperscalerCount: 4,
+      eonsUpgrades: { someUpgrade: 3 },
+      computeFlopsAutobuyers: { [flopId]: 1 },
+      computeFlopsAutobuyersEnabled: { [flopId]: false },
+      computeFlopsAutobuyerAttemptBudgets: { [flopId]: 0.5 },
+    }
+    const after = prestigeGame(state)
+    expect(after.era).toEqual({ count: 2 })
+    expect(after.eons).toEqual({ balance: 7 })
+    expect(after.hyperscalerCount).toBe(4)
+    expect(after.eonsUpgrades).toEqual({ someUpgrade: 3 })
+    expect(after.computeFlopsAutobuyers[flopId]).toBe(1)
+    expect(after.computeFlopsAutobuyersEnabled[flopId]).toBe(false)
+    expect(after.computeFlopsAutobuyerAttemptBudgets).toEqual(
+      createInitialGameState().computeFlopsAutobuyerAttemptBudgets
+    )
+  })
+
   it('keeps the smart autobuyer flag permanently across prestige', () => {
     const state = withSmartAutobuyer(
       withMoney(createInitialGameState(), PRESTIGE_THRESHOLD),
