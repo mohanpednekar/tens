@@ -94,6 +94,7 @@ import {
   getCostEpochExponent,
   getDiskCost,
   getDiskProvisionPassesCollected,
+  getDiskProvisionPassesRequired,
   getDiskLadderSizeBits,
   getNextDiskLadderSize,
   getDiskRedeemTierName,
@@ -1069,6 +1070,61 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     expect(normalizePoolMemoryCapacity(state).intro.poolBuffers[1]).toBe(0)
   })
+
+  it('normalizePoolMemoryCapacity auto-arms diskBuildQueued for a genuinely partial diskProvisionPasses entry left over from before provisionDisk\'s own auto-arm existed', () => {
+    // The 3rd disk needs 3 passes; 1 already banked with diskBuildQueued still false is exactly the
+    // shape a save predating provisionDisk's own auto-arm-on-partial-funding fix would carry — it
+    // would otherwise need one extra manual Provision Disk click to resume auto-continuing.
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+    })
+    expect(state.intro.diskBuildQueued).toBeFalsy()
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskBuildQueued).toBe(true)
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued when the current offer owes nothing (no diskProvisionPasses entry at all)', () => {
+    const state = withIntro(createInitialGameState(), {})
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued for a stale, already-over-required pass count — nothing is left to auto-continue', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued while a build is already in progress', () => {
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+      diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued for a save reloaded mid-Reset-Byte-Foundry-replay that already sits exactly at its own foundryResetCaps ceiling (Devin Review finding)', () => {
+    // Same partial-pass shape as the genuine-wake-up test above, but this time an ACTIVE
+    // foundryResetCaps entry says the replay was only ever entitled to exactly this much for free —
+    // arming here would hand tickQueuedDiskBuild a green light to fund further, unearned passes the
+    // instant an affordable buffer refills, with no manual click.
+    const state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: FIRST_DISK_SIZE }, // affordable — would matter if the queue got armed
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+        diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+      },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
@@ -1169,7 +1225,10 @@ describe('storage pools', () => {
 
   it('each decade Capacity step exactly funds the disk-build cost one step behind it — reaching "10 KB" Capacity affords a 1 KB disk\'s own 80,000-bit build cost', () => {
     const size1KB = getDiskLadderSizeBits(1)
-    const cost1KB = getDiskCost(size1KB)
+    // The flat DISK_BUILD_COST_MULTIPLIER-times total, not getDiskCost's own ordinal-scaled figure
+    // (which now varies per disk) — this test checks the decade-power Capacity ladder's own fixed
+    // relationship to that flat constant, independent of which disk ordinal is currently being built.
+    const cost1KB = size1KB * DISK_BUILD_COST_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       capacity: BITS_PER_BYTE * (2 ** 14), // crosses into the 10 KB Capacity step
@@ -1450,7 +1509,7 @@ describe('pool buffers', () => {
   it('provisionDisk/isProvisionDiskAvailable read from the pool buffer that tickPoolBufferFill actually fills — the two stay consistent end to end', () => {
     let state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      bits: getDiskCost(FIRST_DISK_SIZE),
+      bits: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE),
       capacity: 4_000_000,
       productionMultiplier: 999_999,
       productionMilestoneTierClaims: 2,
@@ -1518,7 +1577,7 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       diskBuildQueued: true,
-      poolBuffers: { 1: getDiskCost(FIRST_DISK_SIZE) },
+      poolBuffers: { 1: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) },
     })
     const after = tickQueuedDiskBuild(state)
     expect(after.intro.diskBuildQueued).toBe(false)
@@ -1526,9 +1585,13 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
   })
 
   it('tickQueuedDiskBuild collects a single partial pass and stays armed for the next one', () => {
+    // 1 already built at this size — the 2nd disk's own ordinal needs 2 passes (see
+    // getDiskProvisionPassesRequired), so funding only 1 leaves it genuinely mid-build to test
+    // against (the array's very first disk needs just 1 pass and would complete immediately).
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       diskBuildQueued: true,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       poolBuffers: { 1: FIRST_DISK_SIZE },
     })
     const after = tickQueuedDiskBuild(state)
@@ -1537,11 +1600,46 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(after.intro.diskBuild).toBeNull()
   })
 
+  it('tickQueuedDiskBuild stops exactly at an active foundryResetCaps allowance even with an abundant buffer, instead of funding past it (Devin Review finding)', () => {
+    // The 3rd disk needs 3 passes; the replay cap only entitles 2 of them. 1 is already banked
+    // (genuinely BELOW the cap — the shape a save reloaded mid-replay, before fully catching up,
+    // would carry), with diskBuildQueued already armed (as normalizePoolMemoryCapacity's own
+    // load-time wake-up would legitimately do here, since there's still real allowance left). A
+    // buffer that could otherwise fund the entire rest of the disk must still stop at pass 2, not
+    // pass 3, and must not complete the disk.
+    const size = FIRST_DISK_SIZE
+    let state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      disksBuiltTotal: { [size]: 2 },
+      diskProvisionPasses: { [size]: 1 },
+      poolBuffers: { 1: size * 10 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 2 },
+      },
+    })
+
+    state = tickQueuedDiskBuild(state)
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 2 })
+    expect(state.intro.diskBuild).toBeNull()
+
+    // One more tick: the allowance is now exhausted (collected === cap), so this must disarm the
+    // queue without funding pass 3, even though the buffer still has plenty left.
+    state = tickQueuedDiskBuild(state)
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 2 })
+    expect(state.intro.diskBuildQueued).toBe(false)
+    expect(state.intro.diskBuild).toBeNull()
+  })
+
   it('a manual provisionDisk click also clears a stale queue, not just a queued fire', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       diskBuildQueued: true,
-      poolBuffers: { 1: getDiskCost(FIRST_DISK_SIZE) },
+      poolBuffers: { 1: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) },
     })
     const after = provisionDisk(state)
     expect(after.intro.diskBuildQueued).toBe(false)
@@ -1838,9 +1936,10 @@ describe('tickFoundryResetConvenience', () => {
     const state = withIntro(createInitialGameState(), {
       // provisionDisk (called directly by this reducer's own auto-replay) now spends from that
       // size's own POOL buffer, not the shared Data Stream Buffer — tickFoundryResetConvenience
-      // doesn't itself run tickPoolBufferFill, so this seeds the buffer directly.
-      poolBuffers: { 1: getDiskCost(size) + 10 },
-      capacity: getDiskCost(size) * 10,
+      // doesn't itself run tickPoolBufferFill, so this seeds the buffer directly. The live
+      // disksBuiltTotal here starts empty, so the size's own ordinal (and its real cost) is 1.
+      poolBuffers: { 1: getDiskCost(createInitialGameState(), size) + 10 },
+      capacity: getDiskCost(createInitialGameState(), size) * 10,
       byteCreated: true,
       productionMilestoneTier: 99,
       productionMilestoneTierClaims: 0,
@@ -1860,26 +1959,94 @@ describe('tickFoundryResetConvenience', () => {
     const size = getDiskLadderSizeBits(1)
     // Completed-disk count already matches the cap (2 === 2) — without the diskProvisionPasses cap,
     // isDiskBuildBelowCap would stop here and never call provisionDisk again, even though the
-    // player had already banked 4 of 10 passes toward a 3rd disk before the Foundry reset.
+    // player had already banked 2 of the 3rd disk's own 3 required passes (2 already built means
+    // this is the 3rd disk — getDiskProvisionPassesRequired — before the Foundry reset.
     const state = withIntro(createInitialGameState(), {
       poolBuffers: { 1: size },
       disksBuiltTotal: { [String(size)]: 2 },
-      capacity: getDiskCost(size) * 10,
+      capacity: getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10,
       byteCreated: true,
       foundryResetCaps: {
         byteCreated: true,
         productionMilestoneTier: 0,
         productionMilestoneTierClaims: 0,
         disksBuiltTotal: { [String(size)]: 2 },
-        diskProvisionPasses: { [String(size)]: 4 },
+        diskProvisionPasses: { [String(size)]: 2 },
       },
     })
     const after = tickFoundryResetConvenience(state)
     // One pass' worth was in the buffer, so provisionDisk fired once, collecting pass 1 of the
-    // still-below-cap replay — the disk itself isn't complete yet (that needs all 10 passes), but
-    // the replay kept going instead of stopping the instant disksBuiltTotal matched its own cap.
+    // still-below-cap replay — the disk itself isn't complete yet (the 3rd disk here needs all 3
+    // passes), but the replay kept going instead of stopping the instant disksBuiltTotal matched
+    // its own cap.
     expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
     expect(after.intro.diskBuild).toBeNull()
+    // The replay's own per-tick isDiskBuildBelowCap re-check is the only pacing it needs — leaving
+    // diskBuildQueued armed here would hand continuation off to tickQueuedDiskBuild, which has no
+    // knowledge of foundryResetCaps (see the dedicated regression test below).
+    expect(after.intro.diskBuildQueued).toBe(false)
+  })
+
+  it('does not let diskBuildQueued auto-continue past the replay\'s own diskProvisionPasses cap once reached (Devin Review finding)', () => {
+    const size = getDiskLadderSizeBits(1)
+    const capacityHeadroom = getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10
+    // Same 3rd-disk shape as above, but the cap only entitles 1 of the 3 required passes — small
+    // enough that a single replay call reaches it exactly.
+    let state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: size },
+      disksBuiltTotal: { [size]: 2 },
+      capacity: capacityHeadroom,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 1 },
+      },
+    })
+
+    state = tickFoundryResetConvenience(state)
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(state.intro.diskBuildQueued).toBe(false)
+
+    // Refill the buffer well past every remaining pass and tick the queue repeatedly — without
+    // provisionDisk's own auto-arm (never set by the replay call above), tickQueuedDiskBuild must
+    // stay a no-op indefinitely: the player has to click Provision Disk themselves to fund anything
+    // past what the replay already re-earned for them.
+    for (let i = 0; i < 5; i += 1) {
+      state = withIntro(state, { poolBuffers: { 1: size * 10 } })
+      state = tickQueuedDiskBuild(state)
+    }
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(state.intro.diskBuild).toBeNull()
+  })
+
+  it('does not let a single replay call collect more passes than its own cap allows, even when the pool buffer can afford the disk\'s full remaining cost (Devin Review finding)', () => {
+    const size = getDiskLadderSizeBits(1)
+    const capacityHeadroom = getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10
+    // The 3rd disk needs 3 passes total; the cap only entitles 1 of them, but the buffer holds
+    // enough for all 3 (e.g. from a long offline gap) — a single call must still stop at 1.
+    const state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: size * 5 },
+      disksBuiltTotal: { [size]: 2 },
+      capacity: capacityHeadroom,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 1 },
+      },
+    })
+
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(after.intro.diskBuild).toBeNull()
+    expect(after.intro.diskBuildQueued).toBe(false)
+    // Only 1 pass' worth was spent — the rest of the buffer stays banked, untouched by this call.
+    expect(after.intro.poolBuffers[1]).toBe(size * 4)
   })
 
   it('is a no-op without foundryResetCaps', () => {
@@ -2233,7 +2400,7 @@ describe('isBandwidthAvailable', () => {
 
 describe('isProvisionDiskAvailable', () => {
   it('is true once the currently-offered disk size\'s build cost is affordable out of its own pool buffer', () => {
-    const state = withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE))
+    const state = withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE))
     expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
@@ -2251,12 +2418,12 @@ describe('isProvisionDiskAvailable', () => {
   })
 
   it('a full pool buffer alone is not enough — a full shared Data Stream Buffer (intro.bits) does not fund Provision Disk any more', () => {
-    const state = withIntro(createInitialGameState(), { bits: getDiskCost(FIRST_DISK_SIZE) })
+    const state = withIntro(createInitialGameState(), { bits: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) })
     expect(isProvisionDiskAvailable(state)).toBe(false)
   })
 
   it('is false while an array is already mid-build, even with the build cost affordable', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
     expect(isProvisionDiskAvailable(state)).toBe(false)
@@ -2265,10 +2432,27 @@ describe('isProvisionDiskAvailable', () => {
   it('is false once the disk ladder is exhausted for every currently-active pool, even with the (stale) build cost fully affordable', () => {
     const size10KB = FIRST_DISK_SIZE * DISK_LADDER_SIZE_MULTIPLIER
     const size100KB = size10KB * DISK_LADDER_SIZE_MULTIPLIER
+    // The flat DISK_BUILD_COST_MULTIPLIER-times figure — comfortably affordable regardless of
+    // ordinal, which is the point (even a fully-topped buffer can't help once the ladder itself is
+    // exhausted for every active pool).
     const state = withPoolBuffer(withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [size10KB]: DISK_ARRAY_LADDER_CAP, [size100KB]: DISK_ARRAY_LADDER_CAP },
-    }), getDiskCost(size100KB))
+    }), size100KB * DISK_BUILD_COST_MULTIPLIER)
     expect(isProvisionDiskAvailable(state)).toBe(false)
+  })
+
+  it('is true for a stale, already-over-required pass count even with an EMPTY pool buffer — otherwise provisionDisk\'s own self-heal clamp could never run', () => {
+    // The 3rd disk only needs 3 passes now, but this carries a count an older, flat
+    // DISK_BUILD_COST_MULTIPLIER-passes-always version of provisionDisk could have left behind —
+    // already past what's required, and owing nothing further. Without this early check,
+    // isProvisionDiskAvailable's own buffer-size floor would gate out a disk that has nothing left
+    // to fund, making provisionDisk's self-heal branch unreachable behind an empty buffer.
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+    expect(state.intro.poolBuffers?.[1] ?? 0).toBe(0)
+    expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 })
 
@@ -2315,19 +2499,19 @@ describe('isBandwidthTurnAvailable', () => {
 
 describe('isProvisionDiskTurnAvailable', () => {
   it('matches isProvisionDiskAvailable with nothing ranked above it pending', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), { productionMilestoneTierClaims: 2 })
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), { productionMilestoneTierClaims: 2 })
     expect(isProvisionDiskTurnAvailable(state)).toBe(true)
   })
 
   it('is false while Bandwidth (higher priority) is currently available', () => {
     // Bandwidth (Speed/Invest) still spends from the shared Data Stream Buffer directly (it's not
     // pool-scoped) — bits must cover its own tier-0 cost for it to actually outrank Provision Disk.
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), { bits: INTRO_STARTING_CAPACITY })
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), { bits: INTRO_STARTING_CAPACITY })
     expect(isProvisionDiskTurnAvailable(state)).toBe(false)
   })
 
   it('is false while a Disk Fill (higher priority) is currently available', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       productionMilestoneTierClaims: 2, disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(isProvisionDiskTurnAvailable(state)).toBe(false)
@@ -2356,7 +2540,7 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
   })
 
   it('is false while Provision Disk (higher priority) is currently available', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), computeReady)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), computeReady)
     expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
@@ -2826,12 +3010,37 @@ describe('getNextDiskLadderSize', () => {
   })
 })
 
+describe('getDiskProvisionPassesRequired', () => {
+  it('is 1 for the array\'s very first disk, N for its Nth, capped at DISK_BUILD_COST_MULTIPLIER (10) for its last', () => {
+    const fresh = createInitialGameState()
+    expect(getDiskProvisionPassesRequired(fresh, FIRST_DISK_SIZE)).toBe(1)
+    const fifthBuilt = withIntro(fresh, { disksBuiltTotal: { [FIRST_DISK_SIZE]: 4 } })
+    expect(getDiskProvisionPassesRequired(fifthBuilt, FIRST_DISK_SIZE)).toBe(5)
+    const ninthBuilt = withIntro(fresh, { disksBuiltTotal: { [FIRST_DISK_SIZE]: 9 } })
+    expect(getDiskProvisionPassesRequired(ninthBuilt, FIRST_DISK_SIZE)).toBe(DISK_BUILD_COST_MULTIPLIER)
+    expect(getDiskProvisionPassesRequired(ninthBuilt, FIRST_DISK_SIZE)).toBe(10)
+    // DISK_ARRAY_LADDER_CAP disks already built would normally mean the ladder has already advanced
+    // past this size entirely (getDiskSize never offers it again) — this only checks the defensive
+    // cap itself holds even for a size an ordinary game state could never still be offering.
+    const capBuilt = withIntro(fresh, { disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP } })
+    expect(getDiskProvisionPassesRequired(capBuilt, FIRST_DISK_SIZE)).toBe(DISK_BUILD_COST_MULTIPLIER)
+  })
+})
+
 describe('getDiskCost', () => {
-  it('is DISK_BUILD_COST_MULTIPLIER times the disk\'s own size — no further BITS_PER_BYTE conversion needed, the size itself is already Byte-accurate', () => {
-    // A real 1 KB (8000-bit) disk costs 80,000 bits ("10 KB") to build — see the "Byte Foundry
-    // Storage" comment in layers.js for the Kilobit->Kilobyte bug this fixed.
-    expect(getDiskCost(FIRST_DISK_SIZE)).toBe(FIRST_DISK_SIZE * DISK_BUILD_COST_MULTIPLIER)
-    expect(getDiskCost(FIRST_DISK_SIZE)).toBe(80000)
+  it('is getDiskProvisionPassesRequired passes times the disk\'s own size — no further BITS_PER_BYTE conversion needed, the size itself is already Byte-accurate', () => {
+    // The array's first disk (fresh state, ordinal 1) costs just its own face value — a real 1 KB
+    // (8000-bit) disk costs 8,000 bits, not the flat 80,000-bit ("10 KB") figure every disk used to
+    // cost regardless of ordinal (see docs/DESIGN_HISTORY.md).
+    const fresh = createInitialGameState()
+    expect(getDiskCost(fresh, FIRST_DISK_SIZE)).toBe(FIRST_DISK_SIZE)
+    expect(getDiskCost(fresh, FIRST_DISK_SIZE)).toBe(8000)
+    // The array's LAST disk (9 already built, so this is its 10th) still costs the same flat
+    // DISK_BUILD_COST_MULTIPLIER-times figure every disk used to cost — see the "Byte Foundry
+    // Storage" comment in layers.js for the Kilobit->Kilobyte bug that figure originally fixed.
+    const ninthBuilt = withIntro(fresh, { disksBuiltTotal: { [FIRST_DISK_SIZE]: 9 } })
+    expect(getDiskCost(ninthBuilt, FIRST_DISK_SIZE)).toBe(FIRST_DISK_SIZE * DISK_BUILD_COST_MULTIPLIER)
+    expect(getDiskCost(ninthBuilt, FIRST_DISK_SIZE)).toBe(80000)
   })
 })
 
@@ -2958,8 +3167,8 @@ describe('provisionDisk', () => {
   // productionMultiplier ÷ tickSpeedSeconds = 1×1÷1), so at 1x Memory bandwidth a base build's
   // totalSeconds is numerically equal to the disk's own size in bits.
 
-  it('spends the whole build cost from its own pool buffer in one call (all 10 passes at once) and starts a timed build — does not construct the disk yet', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), bandwidthExhausted)
+  it('the array\'s very first disk needs just 1 pass — a fully-funded buffer completes it in one call and starts a timed build — does not construct the disk yet', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), bandwidthExhausted)
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
@@ -2969,70 +3178,158 @@ describe('provisionDisk', () => {
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
     // Fully funded in one call — no leftover pass counter for this size.
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+    // A build that fully completes in one call never needs auto-continue — the queue stays off.
+    expect(after.intro.diskBuildQueued).toBe(false)
+  })
+
+  it('the array\'s 6th disk needs 6 passes — a fully-funded buffer completes all of them in one call', () => {
+    // 5 already built — this build is the 6th, needing 6 passes (getDiskProvisionPassesRequired).
+    const withOrdinal = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
+    const state = withIntro(withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, FIRST_DISK_SIZE)), bandwidthExhausted)
+
+    const after = provisionDisk(state)
+    expect(after.intro.poolBuffers[1]).toBe(0)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 6, totalSeconds: FIRST_DISK_SIZE * 6 })
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+    expect(after.intro.diskBuildQueued).toBe(false)
+  })
+
+  it('maxPasses caps how many whole passes a single call collects even when the buffer can afford the full remaining cost', () => {
+    // 5 already built — this build is the 6th, needing 6 passes; the buffer holds the FULL
+    // remaining cost, but maxPasses=2 should stop collection at exactly 2, leaving the rest of the
+    // buffer untouched for a later call (see tickFoundryResetConvenience's own use of this, added
+    // for a Devin Review finding on PR #608).
+    const withOrdinal = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
+    const fullCost = getDiskCost(withOrdinal, FIRST_DISK_SIZE)
+    const state = withIntro(withPoolBuffer(withOrdinal, fullCost), bandwidthExhausted)
+
+    const after = provisionDisk(state, 2)
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(2)
+    expect(after.intro.diskBuild).toBeNull()
+    // Only 2 passes' worth was spent — the rest of the full cost stays banked in the buffer.
+    expect(after.intro.poolBuffers[1]).toBe(fullCost - FIRST_DISK_SIZE * 2)
+    expect(after.intro.diskBuildQueued).toBe(true)
   })
 
   it('collects a single pass (one disk face-value size) and stays mid-funding when only one pass is affordable', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), bandwidthExhausted)
+    // 1 already built — this build is the 2nd, needing 2 passes, so 1 pass genuinely leaves it
+    // mid-funding (the array's very first disk needs just 1 pass and would complete immediately).
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      ...bandwidthExhausted, disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+    })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
     expect(after.intro.diskBuild).toBeNull()
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(1)
+    // A manual click that leaves the build only partially funded auto-arms the queue, so the
+    // remaining pass fires itself (tickQueuedDiskBuild) as the buffer refills — no further click
+    // needed (see docs/DESIGN_HISTORY.md).
+    expect(after.intro.diskBuildQueued).toBe(true)
   })
 
   it('collects as many WHOLE passes as the buffer currently affords in one call, leaving the remainder banked', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE * 3 + 10), bandwidthExhausted)
+    // 4 already built — this build is the 5th, needing 5 passes, so funding 3 of them leaves 2 still
+    // outstanding (and it stays mid-funding, unlike a build that only ever needed 3 or fewer).
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE * 3 + 10), {
+      ...bandwidthExhausted, disksBuiltTotal: { [FIRST_DISK_SIZE]: 4 },
+    })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(10) // leftover, not enough for a 4th whole pass
     expect(after.intro.diskBuild).toBeNull()
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(3)
+    expect(after.intro.diskBuildQueued).toBe(true)
   })
 
   it('completes funding and starts the timed build once the final pass lands, clearing the per-size pass counter', () => {
+    // 3 already built — this build is the 4th, needing 4 passes; 3 already banked leaves exactly one
+    // more to land.
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
       ...bandwidthExhausted,
-      diskProvisionPasses: { [FIRST_DISK_SIZE]: DISK_BUILD_COST_MULTIPLIER - 1 },
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 3 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 3 },
     })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
-    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 4, totalSeconds: FIRST_DISK_SIZE * 4 })
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+  })
+
+  it('self-heals a stale, already-over-required pass count (e.g. banked under an earlier flat-multiplier version of this ladder) by completing immediately, without double-spending the buffer', () => {
+    // The 3rd disk only needs 3 passes now, but this state's diskProvisionPasses carries a count an
+    // older, flat DISK_BUILD_COST_MULTIPLIER-passes-always version of provisionDisk could have left
+    // behind (or a hand-edited/corrupted save) — already past what's required. Without clamping
+    // passesRemaining at 0, this would read as a NEGATIVE amount still owed and refund bits back into
+    // the buffer instead of completing.
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      ...bandwidthExhausted,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+
+    const after = provisionDisk(state)
+    // The buffer is untouched — nothing further was owed, so the pre-existing pass' worth just sits
+    // there for whatever comes next (e.g. the disk after this one), rather than being consumed or
+    // (worse) increased.
+    expect(after.intro.poolBuffers[1]).toBe(FIRST_DISK_SIZE)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 3, totalSeconds: FIRST_DISK_SIZE * 3 })
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
+  })
+
+  it('self-heals a stale, already-over-required pass count even with an EMPTY pool buffer, not just a topped-off one', () => {
+    // Same over-required scenario as above, but with nothing at all banked in the buffer — this is
+    // the realistic shape of the gap isProvisionDiskAvailable's own early over-required check closes:
+    // without it, this call would never even reach provisionDisk's body.
+    const state = withIntro(createInitialGameState(), {
+      ...bandwidthExhausted,
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 7 },
+    })
+    expect(state.intro.poolBuffers?.[1] ?? 0).toBe(0)
+
+    const after = provisionDisk(state)
+    expect(after.intro.poolBuffers?.[1] ?? 0).toBe(0)
+    expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 3, totalSeconds: FIRST_DISK_SIZE * 3 })
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
   })
 
   it('a disk can be fully funded across several separate calls as the pool buffer refills between them — no need to hold the whole cost at once', () => {
-    let state = withIntro(createInitialGameState(), bandwidthExhausted)
-    for (let pass = 1; pass <= DISK_BUILD_COST_MULTIPLIER; pass += 1) {
+    // 5 already built — this build is the 6th, needing 6 passes, giving enough rounds to exercise
+    // incremental funding meaningfully (the array's very first disk needs only 1).
+    let state = withIntro(createInitialGameState(), { ...bandwidthExhausted, disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
+    for (let pass = 1; pass <= 6; pass += 1) {
       state = withPoolBuffer(state, FIRST_DISK_SIZE) // buffer refills to exactly one pass each round
       expect(state.intro.diskBuild).toBeNull()
       state = provisionDisk(state)
     }
-    expect(state.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE, totalSeconds: FIRST_DISK_SIZE })
+    expect(state.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 6, totalSeconds: FIRST_DISK_SIZE * 6 })
     expect(state.intro.poolBuffers[1]).toBe(0)
     expect(getDiskProvisionPassesCollected(state, FIRST_DISK_SIZE)).toBe(0)
   })
 
   it('the FIRST disk ever built at the smallest size takes exactly the time to fill it at 1x Memory bandwidth', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), bandwidthExhausted)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), bandwidthExhausted)
     const after = provisionDisk(state)
     expect(after.intro.diskBuild.totalSeconds).toBe(FIRST_DISK_SIZE)
   })
 
   it('a 10 KB disk\'s first build takes 10x as long as the smallest size\'s — base time tracks its own real size', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(level2Size)), {
+    const withOrdinal = withIntro(createInitialGameState(), {
       ...bandwidthExhausted,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP }, // advances the ladder to level2Size
     })
+    const state = withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, level2Size))
     const after = provisionDisk(state)
     expect(after.intro.diskBuild).toEqual({ size: level2Size, remainingSeconds: level2Size, totalSeconds: level2Size })
   })
 
   it('a 1 MB disk uses pool 2 bandwidth for pacing while spending pool 2\'s own buffer', () => {
     const megabyteSize = FIRST_DISK_SIZE * 1000
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(megabyteSize), 2), {
-      capacity: getDiskCost(megabyteSize),
+    const withOrdinal = withIntro(createInitialGameState(), {
+      capacity: 0, // set below, once the disk's own real (ordinal-scaled) cost is known
       byteCreated: true,
       ...bandwidthExhausted,
       disksBuiltTotal: {
@@ -3041,6 +3338,8 @@ describe('provisionDisk', () => {
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
+    const megabyteCost = getDiskCost(withOrdinal, megabyteSize)
+    const state = withIntro(withPoolBuffer(withOrdinal, megabyteCost, 2), { capacity: megabyteCost })
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[2]).toBe(0)
     expect(after.intro.diskBuild).toEqual({
@@ -3051,10 +3350,11 @@ describe('provisionDisk', () => {
   })
 
   it('building the 6th disk of a size takes 6x that size\'s base build time — ordinal is read from disksBuiltTotal at the moment the build starts', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), {
+    const withOrdinal = withIntro(createInitialGameState(), {
       ...bandwidthExhausted,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 }, // 5 already built — this build is the 6th
     })
+    const state = withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, FIRST_DISK_SIZE))
     const after = provisionDisk(state)
     expect(after.intro.diskBuild.totalSeconds).toBe(FIRST_DISK_SIZE * 6)
   })
@@ -3065,7 +3365,7 @@ describe('provisionDisk', () => {
   })
 
   it('is a no-op while an array is already mid-build', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       ...bandwidthExhausted,
       diskBuild: { size: FIRST_DISK_SIZE, remainingSeconds: 1, totalSeconds: 1 },
     })
@@ -3075,12 +3375,12 @@ describe('provisionDisk', () => {
   it('is a no-op while Bandwidth (higher priority) is currently available', () => {
     // Bandwidth (Speed/Invest) still spends from the shared Data Stream Buffer directly (it's not
     // pool-scoped) — bits must cover its own tier-0 cost for it to actually outrank Provision Disk.
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), { bits: INTRO_STARTING_CAPACITY })
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), { bits: INTRO_STARTING_CAPACITY })
     expect(provisionDisk(state)).toBe(state)
   })
 
   it('is a no-op while a Disk Fill (higher priority) is currently available', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       ...bandwidthExhausted, disks: { [FIRST_DISK_SIZE]: 1 },
     })
     expect(provisionDisk(state)).toBe(state)
@@ -3202,7 +3502,7 @@ describe('tickDiskAutoFill', () => {
   })
 
   it("does NOT pre-fill a pool's own smallest size's read cache before a disk of that size has ever been built, even once the pool's own capacity could easily afford one (regression: the read cache used to start draining a freshly-unlocked pool's buffer the instant the pool unlocked, with no disk yet built to ever flush it into — silently starving the player-visible buffer balance, and any Data Lake overflow riding on it, for no reason)", () => {
-    const affordableCapacity = getDiskCost(FIRST_DISK_SIZE) * 2 // comfortably affordable, but nothing built yet
+    const affordableCapacity = getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) * 2 // comfortably affordable, but nothing built yet
     const state = withIntro(withPoolBuffer(createInitialGameState(), 0), {
       capacity: affordableCapacity,
       bits: FIRST_DISK_SIZE * 10, // plenty of Data Stream bits available to draw from
@@ -3575,7 +3875,7 @@ describe('tickDiskWriteCache', () => {
     expect(merge.flushTotalSeconds).toBeGreaterThan(0)
   })
 
-  it('times a freshly-started merge off the current production rate — flush is a DISK filling FROM cache (2x), each collect segment is a CACHE filling FROM Disks (2x)', () => {
+  it('times a freshly-started merge off the current production rate — flush is a DISK filling FROM cache (2x), each collect segment is a CACHE filling FROM Disks (5x)', () => {
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: {
@@ -3588,10 +3888,11 @@ describe('tickDiskWriteCache', () => {
     // Default production rate is 1 bit/sec.
     expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
     expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER)
-    // 10 source-disk segments sum to exactly one target's own size, so — with both multipliers
-    // currently equal — the two phases happen to take the same total time (see the doc comment on
-    // getDiskWriteCacheSegmentSeconds in engine.js for why this is coincidental, not structural).
-    expect(merge.segmentTotalSeconds * DISK_ARRAY_LADDER_CAP).toBe(merge.flushTotalSeconds)
+    // 10 source-disk segments sum to exactly one target's own size, but the two multipliers are
+    // deliberately different rates (5x collect vs. 2x flush — see the doc comment on
+    // getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster overall
+    // than the flush phase, not equal to it.
+    expect(merge.segmentTotalSeconds * DISK_ARRAY_LADDER_CAP).toBeLessThan(merge.flushTotalSeconds)
   })
 
   it('scales a freshly-started merge\'s timings with Byte Foundry production rate', () => {
@@ -4825,7 +5126,7 @@ describe('activateComputeBoost', () => {
   })
 
   it('is a same-reference no-op while Provision Disk (higher priority) is currently available', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(FIRST_DISK_SIZE)), {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       computeCores: 1, productionMilestoneTierClaims: 2,
     })
     expect(activateComputeBoost('burst', 1)(state)).toBe(state)

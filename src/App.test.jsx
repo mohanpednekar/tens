@@ -3062,17 +3062,64 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
-    seedIntroState({ bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
+    // 9 already built — this is the array's 10th (last) disk at this size, still costing the flat
+    // DISK_BUILD_COST_MULTIPLIER-times figure every disk used to cost regardless of ordinal (see
+    // getDiskProvisionPassesRequired in game/engine) — chosen so the cost meaningfully differs from
+    // the disk's own "1 KB" face size, unlike the array's first disk (which now costs just 1x, the
+    // same figure as its own size).
+    seedIntroState({
+      bits: currentBankCost, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
     render(<App />)
 
     // currentBankCost is 80,000 bits = 10,000 Bytes — "10 KB" in the Disk's own SI scale
-    // (getDiskCost = diskSize * DISK_BUILD_COST_MULTIPLIER, exactly 10x the array's own SI face
-    // value), shown as "10 KB" rather than Memory's binary scale ("9.765 KiB") or the raw "80,000"
-    // bit count — a Disk's build cost is a Disk-denominated amount, so it renders on the same SI
-    // scale as the Disk's own size right next to it, not Memory's binary Sacrifice-ladder scale.
+    // (getDiskCost = diskSize * DISK_BUILD_COST_MULTIPLIER for this, the array's last disk), shown
+    // as "10 KB" rather than Memory's binary scale ("9.765 KiB") or the raw "80,000" bit count — a
+    // Disk's build cost is a Disk-denominated amount, so it renders on the same SI scale as the
+    // Disk's own size right next to it, not Memory's binary Sacrifice-ladder scale.
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).toHaveTextContent('10 KB')
     expect(buildButton).not.toHaveTextContent('80,000')
+  })
+
+  test('Provision Disk shows the pass count up front (0/N) for a multi-pass disk, even before the first pass is collected', () => {
+    // 9 already built — this build is the array's 10th (last) disk, needing 10 passes
+    // (getDiskProvisionPassesRequired) — before this fix the idle label only showed the total cost,
+    // giving no hint that funding it takes multiple passes until after the first click landed one.
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent('0/10')
+  })
+
+  test('Provision Disk omits the pass count for a single-pass disk — nothing to clarify', () => {
+    // A fresh array's very first disk needs just 1 pass, so its idle label stays the simple
+    // "Provision <size> Disk (<cost>)" form rather than a redundant "0/1".
+    seedIntroState({ bits: currentBankCost - 1, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2 })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).not.toHaveTextContent('0/1')
+  })
+
+  test('Provision Disk clamps a stale, over-required collected-pass count in the DISPLAYED label rather than showing a nonsensical "N/M" with N > M', () => {
+    // A save carrying diskProvisionPasses banked under the old flat-10-passes-always system, on a
+    // disk whose real ordinal only needs 1 pass now — the raw stored value (5) exceeds what's
+    // required (1); the label must clamp what it SHOWS to "1/1", never the literal stored "5/1".
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true, productionMilestoneTierClaims: 2,
+      diskProvisionPasses: { [currentBankSize]: 5 },
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent('1/1')
+    expect(buildButton).not.toHaveTextContent('5/1')
   })
 
   test('Provision Disk advances to the next pool after the current pool is fully built', () => {
@@ -3290,8 +3337,11 @@ describe('Byte Foundry Storage', () => {
     // bits) exactly covers it; seeding `capacity: currentBankCost` directly would derive a pool
     // Capacity one decade LOWER (8,000 bits, see docs/DESIGN_HISTORY.md), which the normalization
     // pass would then clamp the seeded poolBuffers value down to.
+    // This is the array's very first disk (fresh state, nothing built yet), so its own real cost is
+    // just 1 pass — currentBankSize itself, not currentBankCost (the flat DISK_BUILD_COST_MULTIPLIER-
+    // times figure only its LAST disk still costs) — see getDiskProvisionPassesRequired.
     seedIntroState({
-      poolBuffers: { 1: currentBankCost },
+      poolBuffers: { 1: currentBankSize },
       capacity: BITS_PER_BYTE * (2 ** 14),
       byteCreated: true,
       productionMilestoneTierClaims: 2,
