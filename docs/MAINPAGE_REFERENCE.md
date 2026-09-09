@@ -275,14 +275,25 @@ split — every shown size's full interactive DiskArrayRow already lives on this
 
 The pin-icon `QueueToggleButton` that used to sit beside the Provision Disk button
 (`ProvisionDiskRow` wrapping the pair) has been removed from the page — `provisionDiskButton` now
-renders the plain `Button` directly, with no wrapper. `provisionDisk` itself now auto-arms
+renders the plain `Button` directly, with no wrapper. `provisionDisk` itself auto-arms
 `intro.diskBuildQueued` whenever a manual click leaves a build mid-funded (see above), so a build
-already begun always finishes itself pass by pass with no further clicks — no toggle needed for
-that. `actions.queueDiskBuild`/`actions.clearDiskBuildQueue`/`tickQueuedDiskBuild` remain fully
-implemented and tested in `engine.js` for the narrower "commit to the NEXT build before its own
-first pass is even affordable" case, but no UI control arms `queueDiskBuild` directly — the same
-"implemented, no UI control" posture Capacity's own `queueIntroCapacityUpgrade` already had. See
-docs/ECONOMY_REFERENCE.md's "Disks" section for the full queue mechanic.
+already begun always finishes itself pass by pass with no further clicks. The button's own click
+handler (`handleProvisionDiskClick`) now covers the one remaining case that mechanic didn't —
+STARTING a build whose first pass isn't affordable yet, or that's currently outranked by a
+higher-priority action: `canStartDiskBuild` (turn-available right now) fires `actions.provisionDisk()`
+directly, exactly as before; otherwise it calls `actions.queueDiskBuild()`, so
+`tickQueuedDiskBuild` fires the very first pass itself the instant it can, the same "click once,
+then it just happens" treatment every later pass already had. `disabled` dropped its own
+affordability/priority checks — the button refuses input only while a build's own timed countdown
+is running or the ladder is exhausted for active pools, since a click in every other state now does
+something useful. Variant/icon reflect three live states: `'info'`/🏦 while turn-available (fires
+now), `'smart'`/⏳ while queued-but-not-yet-turn-available (armed, waiting), `'neutral'`/🏦
+otherwise (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
+so the control's identity never changes out from under assistive tech or a `getByRole` query.
+`actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same
+posture Capacity's own `queueIntroCapacityUpgrade` still has. See docs/ECONOMY_REFERENCE.md's
+"Disks" section for the full queue mechanic, and docs/DESIGN_HISTORY.md for why the first pass
+needed this and later passes didn't.
 
 Below its own disk-array rows, each pool card renders `components/DataLakePanel` with both `bare`
 and `tierIndex={poolIndex}` set (`<DataLakePanel actions={actions} state={state} bare
@@ -316,10 +327,10 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes (`isDataLakeCapacityDoublingAvailable`, preferring Upgrade whenever it's actually
-clickable or Buy isn't an option either — a disabled-but-available Upgrade must never hide an
-immediately-affordable Buy, since Buy isn't part of the forced priority chain at all — no longer
-guaranteed mutually exclusive, see engine.js and `docs/DESIGN_HISTORY.md`): "⚡ Scale Out"
+between two modes, unconditionally preferring Scale Out whenever `isDataLakeCapacityDoublingAvailable`
+is true — Scale Out is never merely disabled-but-visible any more, and no longer arbitrated against
+Buy via the forced priority order at all (removed — see `docs/DESIGN_HISTORY.md`; array completion,
+independent of every other action's availability, is now Scale Out's only gate): "⚡ Scale Out"
 (`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the

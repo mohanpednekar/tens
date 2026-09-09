@@ -506,11 +506,15 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // A lake's own actual capacity is a purchasable ladder (see getDataLakeCapacity/
 // doubleDataLakeCapacity in engine.js): starting at 1 unit (level 0, "1 KB" for the KB lake),
 // climbing a plain DECADE-POWER-OF-10 ladder per purchase — 1, 10, 100, 1,000 — the same coarse
-// shape pool Capacity itself uses (getDecadePowerEquivalentBits). Advancing a level is available
-// once the next Booster's own cost would exceed the lake's CURRENT capacity (rather than requiring
-// the lake to be completely full first, as an earlier version did — see docs/DESIGN_HISTORY.md),
-// and — like before — is funded by draining whatever the lake currently holds. Values are read
-// from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit, already-integer level index, so this
+// shape pool Capacity itself uses (getDecadePowerEquivalentBits). Advancing a level
+// (isDataLakeCapacityDoublingAvailable) is available once the CORRESPONDING Storage disk array —
+// the pool's smallest ×1 array for level 0→1, the middle ×10 array for 1→2, the largest ×100 array
+// for 2→3 — is fully built (rather than requiring the lake itself to be completely full first, as
+// an earlier version did — see docs/DESIGN_HISTORY.md), independent of every other action's own
+// availability — no longer arbitrated against the forced priority order at all (see
+// docs/DESIGN_HISTORY.md's "Data Lake capacity Upgrade removed from the forced priority order"
+// entry) — and — like before — is funded by draining whatever the lake currently holds. Values are
+// read from DATA_LAKE_CAPACITY_BY_LEVEL directly (an explicit, already-integer level index, so this
 // needs no float-precision handling).
 //
 // At each capacity level, that level's own total is represented as up to DATA_LAKE_SUB_SIZE_DISK_

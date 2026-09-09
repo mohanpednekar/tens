@@ -7158,3 +7158,107 @@ wasn't isolated in a separate run: collect/flush run automatically regardless of
 strategy (the simulator's ideal-player script doesn't gate any of its own actions on write-cache
 timing), so a faster collect phase only speeds up a background, secondary path — restocking higher
 disk sizes for Data Lakes/Compute — not anything on the critical path the sim measures.
+
+### Data Lake capacity Upgrade removed from the forced priority order — array completion is now the only gate
+
+The maintainer's explicit request: "Data lake upgrade should be available once the disk array
+corresponding to the same disk size is fully built in main disk pool array." Read literally against
+the actual code, `isDataLakeCapacityDoublingAvailable` already implemented exactly that rule (level 0
+requires the pool's ×1 array complete, level 1 the ×10 array, level 2 the ×100 array —
+`getDataLakeCapacityUnlockArraySize` reads the correct Storage array size for the lake's own CURRENT
+level, verified against `getDataLakeSubSizeStep`/`DATA_LAKE_SUB_SIZES` directly; no indexing bug
+found). What didn't match the stated rule was `isDataLakeCapacityDoublingTurnAvailable` — the
+CLICKABLE gate a player actually experiences — which additionally required Disk Fill, Speed,
+Provision Disk, and Compute to ALL be currently unavailable (the same forced priority order every
+other Byte Foundry milestone action follows), on top of the array-completion check. A player could
+watch the Upgrade button sit visibly present-but-disabled with its own array long complete, entirely
+because an unrelated Compute Boost preset happened to be armable elsewhere on the page — an extra
+condition the stated rule never mentioned.
+
+**Fix.** `isDataLakeCapacityDoublingTurnAvailable` is now defined as exactly
+`isDataLakeCapacityDoublingAvailable(state, tierIndex)` — the forced-priority checks
+(`!isDiskFillAvailable`/`!isBandwidthAvailable`/`!isProvisionDiskAvailable`/`!isComputeUpgradeAvailable`)
+are gone entirely. This mirrors `isBoosterPurchaseAvailable`'s own existing "outside the forced
+priority order entirely, always available the instant affordable" posture (see "Data Lake Boosters:
+spending real deposits..." above) — the two actions were already documented as no longer mutually
+exclusive by construction once `isDataLakeCapacityDoublingAvailable` moved off the lake's own cost
+curve onto real Storage array completion (see "Data Lake capacity-doubling cost..." above), so there
+was no genuine remaining contention between Upgrade and any OTHER Foundry action left to arbitrate —
+keeping it in the forced order was policing a conflict that mechanically could no longer happen.
+
+**DataLakePanel simplified as a result.** With `canUpgrade` now always identical to
+`upgradeAvailable`, the button-slot ternary that used to read `upgradeAvailable && (canUpgrade ||
+!canBuy)` — added specifically to stop a disabled-but-available Upgrade from hiding an
+immediately-clickable Buy (see "A disabled-but-available Data Lake Upgrade button could hide an
+immediately-clickable Buy button" above) — collapsed to a plain `upgradeAvailable`, since there is no
+more "available but not its turn" state for that guard to protect against; the whole `canUpgrade`
+variable and its `isDataLakeCapacityDoublingTurnAvailable` import were removed from the component as
+dead duplication (calling a function that now does exactly what `isDataLakeCapacityDoublingAvailable`
+already did). The Upgrade button's own `disabled`/`variant` props, which used to vary between
+`canUpgrade` true/false, are now constant (`disabled` absent, `variant="prestige"`) inside that
+branch, since reaching the branch at all now guarantees clickability.
+
+**Verification.** Two `engine.test.js` tests asserting the old forced-priority-blocked behavior
+(`'is blocked by a higher-priority forced-order action (Disk Fill) even while available'` and half of
+`'is a no-op while not available or blocked by priority'`) were rewritten to assert the opposite —
+Disk Fill being available no longer blocks Upgrade's own turn-availability, and `doubleDataLakeCapacity`
+now succeeds even with Disk Fill simultaneously available; a companion `App.test.jsx` test
+(`'Buy stays reachable when Upgrade is available but not its turn...'`) was rewritten to assert the
+new invariant instead (Upgrade claims the slot over Buy whenever its array is complete, since that
+"available but not its turn" scenario the test used to construct is no longer reachable). Confirmed
+end-to-end in a real browser: a KB lake with its ×1 array complete, Disk Fill genuinely available
+(tier01 mid-redemption) and Speed also affordable, still showed an enabled, clickable Upgrade button
+that immediately advanced `capacityLevel` on click. `yarn test`/`yarn build` green.
+
+### Provision Disk's own click still required its first pass to already be banked — closing the one case the prior auto-continue fix left open
+
+A further player report on the same feature area: "Provision Disk button should not gate for full
+balance to be available for the first pass. Once clicked, it can wait for balance to fill up for the
+first pass, similar to how it waits for rest of the passes." The "Provision Disk: ordinal-scaled pass
+counts, and passes auto-continue after a manual start" entry above had already solved this for every
+pass PAST the first — once a manual click landed at least one pass, `provisionDisk` auto-armed
+`intro.diskBuildQueued` so the rest fired themselves. But STARTING a build in the first place still
+went through the button's own `disabled={!canStartDiskBuild || !!diskBuildInProgress}` — and
+`canStartDiskBuild` (`isProvisionDiskTurnAvailable`) requires the pool buffer to already cover a
+whole pass. So the maintainer's own stated design ("Provision Disk stays a deliberate action to
+START a new disk, but once started, no further clicks are needed to finish it" — see the entry
+above) was only half-realized: the "deliberate action to start" itself still needed the SAME kind of
+manual "wait, then remember to click at the right instant" the auto-continue fix specifically
+existed to eliminate for every pass after that one.
+
+The fix was already sitting unused: `queueDiskBuild` — "for committing to a build BEFORE its own
+first pass is even affordable" — existed in `engine.js`, fully implemented and tested (`state →
+state`, arms `intro.diskBuildQueued`, a same-reference no-op while already queued/mid-build/ladder-
+exhausted), and `tickQueuedDiskBuild` was already unconditionally wired into `tickGame`'s
+`tickStorage` every tick. It just had, per its own doc comment, "no UI control" reaching it at all.
+
+**Fix.** `ByteFoundryPage`'s Provision Disk button now calls `queueDiskBuild` directly from its own
+click handler (`handleProvisionDiskClick`) whenever it isn't currently turn-available — the SAME
+click a player already makes to start a build, just no longer refused when the timing isn't exactly
+right. `disabled` dropped the `!canStartDiskBuild` half of its own condition entirely, leaving only
+`diskBuildInProgress`/`diskLadderExhausted` (states where a click genuinely has nothing to do). The
+button's variant/icon now distinguish three live states instead of two — `'info'`/🏦 while
+turn-available (click fires the pass immediately, unchanged), `'smart'`/⏳ while queued-but-not-yet-
+turn-available (armed, waiting on the buffer or on a higher-priority action to clear), `'neutral'`/🏦
+otherwise (clickable to arm) — with `aria-label` deliberately held at a constant "provision disk" in
+every one of them (verified by a real click-through in a real browser, which is what caught this: an
+earlier draft renamed the label to "cancel queued disk build" once armed, silently breaking
+`getByRole` queries and, worse, disorienting anything relying on the control's identity staying
+put — screen readers included). No cancel affordance was added: since `provisionDisk` itself already
+auto-arms the identical flag the instant ANY partial progress lands, a click-to-cancel control would
+let a player silently undo the game's OWN automatic continuation on a build already underway, which
+directly contradicts "once started, no further clicks are needed" — `clearDiskBuildQueue` stays
+implemented/tested with no UI control, same posture as `queueIntroCapacityUpgrade`.
+
+**Verification.** Reproduced the reported friction and the fix in a real browser (`yarn dev`) before
+and after: seeded a pool buffer a few bits short of the first pass's own cost, confirmed the button
+was clickable (not merely present-but-disabled) and that clicking it set `diskBuildQueued`, then let
+real time pass with no further interaction — the pass fired itself, and for a size whose
+`getDiskProvisionPassesRequired` is 1 (an array's very first disk), the whole build started on its
+own from that single early click. Rewrote the two `App.test.jsx` tests that had asserted the button
+`toBeDisabled()` while underfunded or lower-priority-blocked to instead click the (now-enabled)
+button and assert `diskBuildQueued` became `true` with `diskProvisionPasses` still empty (queued, not
+incorrectly fired early). `yarn test`/`yarn build` green; no economy/formula change, so
+`simulate-run-times` wasn't re-run — an optimal bot already clicks the instant a pass becomes
+affordable regardless of whether the button would have refused an earlier click, so this fixes real
+human input friction without moving any ideal-play timing.

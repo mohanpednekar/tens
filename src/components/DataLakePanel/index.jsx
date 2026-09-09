@@ -19,7 +19,6 @@ import {
   isDataLakeAutoBuyEnabled,
   isDataLakeBoosterUnlocked,
   isDataLakeCapacityDoublingAvailable,
-  isDataLakeCapacityDoublingTurnAvailable,
   isDataLakeCapacityMaxed,
   isDataLakePoolReady,
 } from 'game/engine'
@@ -248,9 +247,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // engine.js, tied to real Storage array completion now, not the lake's own escalating
         // Booster cost) — a lake CAN simultaneously afford its next Booster and have its next array
         // already complete. The same button slot still repurposes between the two, preferring
-        // Upgrade when both are true (see the ternary below).
+        // Upgrade when both are true (see the ternary below). Availability alone also decides
+        // actionability now — isDataLakeCapacityDoublingAvailable is no longer part of the forced
+        // priority order (see its own doc comment in engine.js), so there's no separate "available
+        // but not its turn" state left to represent.
         const upgradeAvailable = isDataLakeCapacityDoublingAvailable(state, tierIndex)
-        const canUpgrade = isDataLakeCapacityDoublingTurnAvailable(state, tierIndex)
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
         const unlocked = isDataLakeBoosterUnlocked(state, tierIndex)
         // Distinct from `unlocked` above for old-save compatibility: a legacy `boostersUnlocked`
@@ -356,23 +357,18 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
             />
 
             <LakeActionsRow>
-              {/* upgradeAvailable alone isn't enough to claim this slot: no longer mutually
-                  exclusive with Buy by construction (see isDataLakeCapacityDoublingAvailable's own
-                  comment) — Upgrade can sit available-but-not-its-turn (canUpgrade false, blocked
-                  by the forced priority chain) at the same time Buy is genuinely actionable right
-                  now (Buy isn't part of that chain at all). Showing a dead disabled Upgrade button
-                  in that window while hiding an immediately-clickable Buy left a player with no
-                  action to take even though one existed (found by the adversarial reviewer).
-                  Upgrade only claims the slot when it's actually clickable OR Buy isn't an option
-                  either — otherwise Buy takes it. */}
-              {upgradeAvailable && (canUpgrade || !canBuy) ? (
+              {/* Upgrade claims the slot whenever it's available — no longer any "available but
+                  not its turn" window to arbitrate against Buy, since isDataLakeCapacityDoublingAvailable
+                  is no longer part of the forced priority order (see its own doc comment in
+                  engine.js): it's always immediately clickable the instant its array is complete,
+                  the same posture Buy already had. */}
+              {upgradeAvailable ? (
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
-                  disabled={!canUpgrade}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
                   title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSize(nextCapacity * unitBits)} — unlocked by completing that array in Storage`}
                   type="button"
-                  variant={canUpgrade ? 'prestige' : 'neutral'}
+                  variant="prestige"
                 >
                   <ButtonContent>⚡ Scale Out</ButtonContent>
                 </ActionButton>

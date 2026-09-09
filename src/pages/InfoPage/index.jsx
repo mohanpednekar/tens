@@ -356,9 +356,8 @@ const InfoPage = () => {
             ×10-per-level ladder (1, 10, 100, 1,000) — the same decade-power-of-10 shape a Storage
             pool's own Capacity uses, permanently hard-capped at{' '}
             {DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_BY_LEVEL.length - 1]} units. It only
-            becomes available to buy once the next Booster's cost would exceed the lake's current
-            capacity — not once the lake is simply full — and advancing a level drains every banked
-            disk back to zero to pay for it.
+            becomes available once the corresponding Storage disk array for that capacity level is
+            fully built — advancing a level drains every banked disk back to zero to pay for it.
           </li>
           <li>
             Boosters unlock permanently for a lake the first time it fills even one disk. From then

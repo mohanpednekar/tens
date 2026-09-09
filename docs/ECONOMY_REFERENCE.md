@@ -905,18 +905,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `getDataLakeCapacityDoublingCost` (display-only — the REAL amount that will actually drain right
    now, `depositedUnits × getDataLakeUnitBits(tierIndex)`, not the level's own full capacity, since
    the lake need not be full when this fires) feeds the button's own tooltip; no code path spends it
-   out of `intro.bits`. Gated by the same forced priority chain as every other Byte Foundry
-   milestone action (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
-   Speed, Provision Disk, and Compute are all currently unavailable; sits at the former Sacrifice
-   rank). **No longer mutually exclusive with Booster-buying by construction** — that guarantee held
-   only under the old cost-based condition; a lake CAN now simultaneously afford its next Booster
-   and have its next array already complete — `DataLakePanel` still repurposes ONE button slot
-   between the two, preferring Upgrade whenever it's actually clickable
-   (`isDataLakeCapacityDoublingTurnAvailable`) or Buy isn't an option either; if Upgrade is merely
-   available-but-not-its-turn (blocked by the forced priority chain) while Buy IS currently
-   affordable, Buy takes the slot instead — Buy isn't part of that chain at all, so a disabled
-   Upgrade must never hide an immediately-clickable Buy (an adversarial-review finding — see
-   `docs/DESIGN_HISTORY.md`).
+   out of `intro.bits`. **No longer part of the forced priority chain at all**
+   (`isDataLakeCapacityDoublingTurnAvailable` is now exactly `isDataLakeCapacityDoublingAvailable`,
+   nothing else) — Upgrade is always immediately clickable the instant its own array completes,
+   regardless of what else is currently available (Disk Fill, Speed, Provision Disk, Compute), the
+   same "always available the instant affordable" posture Buying Boosters already had; removed per
+   the maintainer's explicit request — see `docs/DESIGN_HISTORY.md`. **No longer mutually exclusive
+   with Booster-buying by construction** — that guarantee held only under the old cost-based
+   condition; a lake CAN simultaneously afford its next Booster and have its next array already
+   complete — `DataLakePanel` still repurposes ONE button slot between the two, always preferring
+   Upgrade whenever its own array is complete (there is no more "available but not its turn"
+   window to arbitrate against Buy — the earlier adversarial-review finding this section used to
+   describe, about a disabled Upgrade hiding an immediately-clickable Buy, no longer has a scenario
+   to occur in; see `docs/DESIGN_HISTORY.md`).
 
    **Migration.** A save written under an older, longer capacity ladder can carry a `capacityLevel`
    above the current array's own bounds — left unclamped, `getDataLakeCapacity` would index past
@@ -2756,8 +2757,8 @@ purchases were manual or automatic.
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose own fixed corresponding tier is currently at that size's required level, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `provisionDisk` | `(state, maxPasses = Infinity) → state` | Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, then collects as many WHOLE `size`-bit passes as that size's own POOL buffer (`intro.poolBuffers`, not the shared Data Stream Buffer directly) currently affords, capped at whichever is smallest of the buffer's own affordability, however many of `getDiskProvisionPassesRequired`'s own total remain (clamped at 0, so a stale over-collected count self-heals rather than going negative), and `maxPasses` — banking a partial installment in `intro.diskProvisionPasses[size]` when fewer than the full remaining requirement lands — and, on a partial installment, auto-arming `intro.diskBuildQueued` (always with `intro.diskBuildQueuedByReplay` reset to `false` — correct for its two direct callers, a manual click or `queueDiskBuild`'s own arm; its two OTHER callers, `tickFoundryResetConvenience` and `tickQueuedDiskBuild`, each re-mark it `true` on their own result when appropriate — see there) so the remaining passes fire themselves as the buffer refills, with no further click needed. Once the final pass lands, clears that counter, resets both queue flags, and sets the intentionally historical `intro.diskBuild` persisted key. Duration uses `getProvisionDiskBaseSeconds` at that pool's own Bandwidth. `maxPasses` is passed only by `tickFoundryResetConvenience` and `tickQueuedDiskBuild` (both via `getDiskReplayPassAllowance`), never by a manual click |
 | `tickProvisionDisk` | `elapsedSeconds → state → state` | Counts down the persisted `intro.diskBuild` timer and, on completion, increments that size's cumulative built count and clears the timer; unconditional in `tickGame` |
-| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` so the next Provision Disk pass fires itself once affordable — for committing to a build BEFORE its own first pass is even affordable; `provisionDisk` itself now auto-arms this same flag whenever a manual click leaves a build already begun mid-funded (see `provisionDisk` above), so this standalone action only matters for that narrower "queue up early" case. Mirrors `queueIntroCapacityUpgrade`'s shape — like that one, no UI control currently arms it directly (the pin-icon toggle that used to was removed from `ByteFoundryPage`). Same-reference no-op while already queued, mid-build, or the ladder is exhausted for active pools |
-| `clearDiskBuildQueue` | `state → state` | Clears `intro.diskBuildQueued`. Same-reference no-op when already false |
+| `queueDiskBuild` | `state → state` | Arms `intro.diskBuildQueued` so the next Provision Disk pass fires itself once affordable — for committing to a build BEFORE its own first pass is even affordable; `provisionDisk` itself also auto-arms this same flag whenever a manual click leaves a build already begun mid-funded (see `provisionDisk` above). Called directly by `ByteFoundryPage`'s Provision Disk button (`handleProvisionDiskClick`, see `docs/MAINPAGE_REFERENCE.md`) whenever a click isn't currently turn-available — the pin-icon toggle this used to require was removed, then this action was folded into the primary button's own click handler instead of reintroducing a separate control (see `docs/DESIGN_HISTORY.md`). Same-reference no-op while already queued, mid-build, or the ladder is exhausted for active pools |
+| `clearDiskBuildQueue` | `state → state` | Clears `intro.diskBuildQueued`. Same-reference no-op when already false. Implemented/tested but not wired to any UI control (same posture as `queueIntroCapacityUpgrade`) |
 | `tickQueuedDiskBuild` | `state → state` | If `diskBuildQueued` is set, calls `provisionDisk` (deferring to its own `isProvisionDiskTurnAvailable` guard rather than duplicating it) — fires and clears the queue once affordable, otherwise a same-reference no-op leaving it armed. Called from `tickGame`'s `tickStorage`, ranked the same as an ordinary manual click. Only when `intro.diskBuildQueuedByReplay` is set does it also resolve `getDiskReplayPassAllowance(state, getDiskSize(state))` and pass it as `provisionDisk`'s `maxPasses` (clearing both queue flags directly at the exact allowance boundary, `0`, instead of calling `provisionDisk` with a zero `maxPasses`, and re-marking the flag `true` on its own partial result so a multi-tick capped continuation stays capped) — every other way the queue gets armed (a genuine manual click, or the standalone `queueDiskBuild`) always sets that flag `false`, so it runs fully unrestricted here even if it happens to land on the same size/count an old `foundryResetCaps` entry covers (see `docs/DESIGN_HISTORY.md`'s "round 6" entry on PR #608 — an earlier version applied the allowance unconditionally here, which incorrectly throttled genuine manual continuations too) |
 | `getPoolBufferCapacity` | `(state, poolIndex) → number` | Byte Foundry Storage: a pool's own local buffer ceiling — equals `getStoragePoolCapacity(state, poolIndex)` exactly (see the "Pool buffers" entry below for why the fraction is 1, not smaller) |
 | `getPoolBufferBits` | `(state, poolIndex) → number` | Byte Foundry Storage: how much of that ceiling is currently banked — `state.intro.poolBuffers[poolIndex] ?? 0` |

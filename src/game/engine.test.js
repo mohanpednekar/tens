@@ -10555,7 +10555,7 @@ describe('Data Lakes', () => {
       expect(isDataLakeCapacityDoublingTurnAvailable(state, 1)).toBe(true)
     })
 
-    it('is blocked by a higher-priority forced-order action (Disk Fill) even while available', () => {
+    it('is NOT blocked by a higher-priority forced-order action (Disk Fill) — no longer part of the forced priority chain, same as Booster purchases', () => {
       const state = withIntro(createInitialGameState(), {
         disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
         disks: { [kb1]: 1 },
@@ -10563,7 +10563,7 @@ describe('Data Lakes', () => {
       })
       expect(isDiskFillAvailable(state)).toBe(true)
       expect(isDataLakeCapacityDoublingAvailable(state, 1)).toBe(true)
-      expect(isDataLakeCapacityDoublingTurnAvailable(state, 1)).toBe(false)
+      expect(isDataLakeCapacityDoublingTurnAvailable(state, 1)).toBe(true)
     })
 
     it('doubleDataLakeCapacity drains whatever the lake CURRENTLY holds (not necessarily full) and advances the level', () => {
@@ -10582,15 +10582,20 @@ describe('Data Lakes', () => {
       expect(getDataLakeCapacityLevel(after, 2)).toBe(0)
     })
 
-    it('is a no-op while not available or blocked by priority', () => {
+    it('is a no-op while not available (array not yet complete)', () => {
       const notAvailable = withIntro(createInitialGameState(), { ...noOtherUpgradesLeft })
       expect(doubleDataLakeCapacity(1)(notAvailable)).toBe(notAvailable)
-      const blocked = withIntro(createInitialGameState(), {
+    })
+
+    it('succeeds even while a higher-priority forced-order action (Disk Fill) is also currently available — no longer arbitrated against it', () => {
+      const state = withIntro(createInitialGameState(), {
         disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP },
         disks: { [kb1]: 1 },
         ...noOtherUpgradesLeft,
       })
-      expect(doubleDataLakeCapacity(1)(blocked)).toBe(blocked)
+      expect(isDiskFillAvailable(state)).toBe(true)
+      const after = doubleDataLakeCapacity(1)(state)
+      expect(getDataLakeCapacityLevel(after, 1)).toBe(1)
     })
 
     it('hard-caps at DATA_LAKE_CAPACITY_MAX_LEVEL — never advances past it even once every array is complete', () => {
