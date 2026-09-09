@@ -134,43 +134,28 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 ### Byte Foundry
 
 `ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save must pass through once
-(a one-time-ever gate — see `latchMainGameUnlocked` above) before `MainPage` (`tier01`/Kilobytes
-onward) is reachable. The player taps to accumulate bits into the **Data Stream** (Buffer-capped, displayed in binary units —
-B/KiB/MiB/…, 1 KiB = 1024 Bytes — Disks/Data Lake/caches stay SI), combines the first 8 into a
-permanent, passively-producing Byte generator, then grows production via **Speed ×2** (Invest — own
-cost ladder now ×4/tier) and **Capacity ×2**.
+— a one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes
+onward) is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary
+units — Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via
+**Speed ×2** (Invest) and **Capacity ×2**; a separate fill-based multiplier (never the displayed
+Speed/Bandwidth figures themselves) scales the real delivery rate by buffer fullness and recent taps.
+Disks (`StoragePage`) fill and pull into Factory automatically, with no manual redeem step, and each
+Storage pool's overflow feeds its own Data Lake automatically too — but Boosters, which spend banked
+Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), are a manual
+`buyBooster` action unless the player enables that lake's own optional auto-buy (`autoBuyEnabled`,
+off by default). A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
+reveals at 100 PP. The generator, Disks, Data Lakes, and Compute entities are permanent across every
+real Prestige; Era ascension is a bigger reset (`buildEraIntroReset`) that wipes Disks/Data
+Lakes/Compute entity balances back to scratch while still keeping `byteCreated`, the
+`mainGameUnlocked` latch, and select automation-unlock flags. Only the Data Stream balance resets
+each ordinary cycle.
 
-**Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in layers.js): the displayed Speed/
-Bandwidth figures never change — both are always what applies at 100% of a separate multiplier that
-scales only the real per-tick amount actually delivered into `intro.bits`/a pool's own buffer (every
-other consumer of those rate functions — disk build/cache/Data Lake/merge pacing — stays on the raw
-rate). Starts at 150% empty, exactly 100% at 50% full, bottoms out at 50% completely full. Tapping
-the Data Stream (once Storage pools reveal at 1 KiB) or a pool's own Memory buffer adds +5% to that
-one Data Stream/pool's own bonus, decaying at 1%/sec (`tickFillMultiplierDecay`); before reveal, a
-Data Stream tap keeps its original flat one-second direct-credit effect instead. The CUMULATIVE
-total (fill-based value + tap bonus) is hard-capped at 200% (`FILL_MULTIPLIER_TAP_CAP_PERCENT`) —
-both tap actions no-op once already at that cap, AND `tickFillMultiplierDecay` truncates any stored
-excess down to the cap's current headroom every tick (not just at tap time), so effect beyond 200%
-is always lost instantly rather than banked for later. `ByteFoundryPage` shows a compact two-tone
-`MultiplierBar` for both the Data Stream and every pool — a bar that grows/shrinks from the MIDDLE
-(200% fills the full track width, 0% is a zero-width point at center), replacing an earlier corner
-needle-speedometer that took too much vertical space. Each tile's own top row is title top-left,
-that section's own current full-disk count top-right; the balance sits below that in a bigger
-centered font; the bar renders as its own full-width row below the balance, with its own percent
-readout below the bar itself; Speed/Bandwidth (left half) and Capacity (right half) split across a
-footer row at the bottom. For a pool, the SAME bar does
-double duty rather than a second stacked bar: once that pool's own Memory buffer is completely
-full, it switches from the fill-based multiplier reading to that pool's own Data Lake overflow RATE
-instead (progress on the ONE disk currently being filled, not the lake's overall total — 50%→0% as
-that disk fills, back to 50% once it completes, drawn in `theme.color.info` on the SAME 0–200% scale
-so the bar's width doesn't jump at the transition — both readings hit 50 at that exact boundary by
-design; see "Data Lakes" below). The Data Lake's own accumulated LEVEL (as opposed to that rate) is
-shown by `DataLakePanel`'s own fill tile once that pool's card is expanded, not a second
-always-visible bar on the pool card itself. In its default multiplier mode, an outer layer sized to
-the TOTAL (fill + tap bonus) reading reads in the accent color, with a narrower inner layer — sized
-to just the tap-bonus portion — nested in the middle of it in `theme.color.warn` (gold/caution — the
-closest existing token to orange): a live tap bonus reads as a highlighted band right in the bar's
-own middle, pushing the accent-colored edges outward as it grows.
+**Same caveat as above applies here too — every formula, threshold, and UI-rendering detail behind
+this paragraph is deliberately omitted; do not guess at any of it.** Read `CLAUDE.md`'s "Economy
+model"/"Architecture" sections and `docs/ECONOMY_REFERENCE.md` in full before touching
+`src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or `ByteFoundryPage`/`StoragePage`/
+`ComputePage` — and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration
+may already have tried and rejected.
 
 **Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
 values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
@@ -297,6 +282,9 @@ For run times / pacing questions — and after any change that can significantly
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
 Snapshots land on the stable orphan branch `ideal-run-strategy` as **one file per run** under
 `runs/` (never merge into `main`; do not rename with an agent/session suffix). Details:
+For run-time/pacing questions, and after any change that can significantly affect ideal Foundry or
+prestige timings, use the `simulate-run-times` skill and publish via `publish-strategy.sh` (one file
+per run on the orphan `ideal-run-strategy` branch — never merge into `main`). Details:
 `.claude/skills/simulate-run-times/SKILL.md` / `CLAUDE.md`.
 
 ### Adding a new tier
