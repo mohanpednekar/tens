@@ -6349,6 +6349,14 @@ export const scaleUpGame = state => {
     everUnlockedTierIds: state.everUnlockedTierIds ?? initial.everUnlockedTierIds,
     // Museum is permanent per save — Scale Up must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    // Era ascension progress (era count, banked Eons, purchased hyperscalers, Eon upgrade levels)
+    // is permanent meta-progression above even a real Prestige (see eraGame) — an intra-cycle Scale
+    // Up must not wipe it either. See issue #626 for the same fields' missing carry-over in
+    // prestigeGame itself (a separate, pre-existing bug, out of scope here).
+    era: state.era ?? initial.era,
+    eons: state.eons ?? initial.eons,
+    hyperscalerCount: state.hyperscalerCount ?? initial.hyperscalerCount,
+    eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
     // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
     computeFlops: {
       pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
@@ -6422,6 +6430,12 @@ export const overclockGame = state => {
     // see there.
     // Museum is permanent per save — Overclock must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
+    // Era ascension progress is permanent above even a real Prestige — see scaleUpGame's own
+    // comment above (and issue #626) for why this is carried over the same way here.
+    era: state.era ?? initial.era,
+    eons: state.eons ?? initial.eons,
+    hyperscalerCount: state.hyperscalerCount ?? initial.hyperscalerCount,
+    eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
     // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
     computeFlops: {
       pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),

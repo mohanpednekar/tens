@@ -62,7 +62,18 @@ the rename dropped `speedUpCount`/`autoSpeedUp`/`autoSpeedUpEnabled` with no mig
 existing player's save silently lost that data (including a paid 20 PP Auto Speed Up unlock and its
 pause preference) on their first load after this shipped — `mergeState` (`storage.js`) now falls
 back to the legacy field names when the new ones are absent, same pattern as the pre-existing
-`lastTierTickspeedXpUnlocked` removal just above it. `yarn test`: 1757 → 1773 green.
+`lastTierTickspeedXpUnlocked` removal just above it.
+
+Devin Review (a separate GitHub bot review, distinct from the internal adversarial `code-reviewer`
+subagent) then found that `scaleUpGame`'s returned object omitted `era`/`eons`/`hyperscalerCount`/
+`eonsUpgrades` — Era ascension's own permanent meta-progression fields — so an ordinary Scale Up
+silently wiped a player's Eons balance, hyperscaler count, and Eon upgrade levels back to fresh
+defaults. Investigating whether this was new to this PR revealed the identical gap already exists
+in `prestigeGame` itself on `main`, unrelated to this diff — filed separately as issue #626 (out of
+scope here, since `prestigeGame`'s own reset shape is untouched by this PR). Fixed in `scaleUpGame`
+and `overclockGame` (which shares the same reset shape) by carrying these four fields through
+unchanged, same `?? initial.X` pattern as every other permanent field both functions already
+preserve. `yarn test`: 1757 → 1775 green.
 
 ### Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09
 
