@@ -295,6 +295,42 @@ describe('schema merge on load', () => {
     expect(loaded.autoPrestigeEnabled).toBe(false)
   })
 
+  it('migrates the pre-rename speedUpCount/autoSpeedUp/autoSpeedUpEnabled field names to scaleUpCount/autoScaleUp/autoScaleUpEnabled on load', () => {
+    const oldSave = {
+      intro: { mainGameUnlocked: true },
+      resources: { [MONEY_ID]: 10 },
+      speedUpCount: 5,
+      autoSpeedUp: true,
+      autoSpeedUpEnabled: false,
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.scaleUpCount).toBe(5)
+    expect(loaded.autoScaleUp).toBe(true)
+    expect(loaded.autoScaleUpEnabled).toBe(false)
+    // The legacy keys don't linger as dead fields on the migrated state.
+    expect(loaded.speedUpCount).toBeUndefined()
+    expect(loaded.autoSpeedUp).toBeUndefined()
+    expect(loaded.autoSpeedUpEnabled).toBeUndefined()
+  })
+
+  it('prefers the current scaleUpCount/autoScaleUp/autoScaleUpEnabled field names over legacy ones when both are present', () => {
+    const oldSave = {
+      intro: { mainGameUnlocked: true },
+      resources: { [MONEY_ID]: 10 },
+      speedUpCount: 5,
+      scaleUpCount: 9,
+      autoSpeedUp: false,
+      autoScaleUp: true,
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.scaleUpCount).toBe(9)
+    expect(loaded.autoScaleUp).toBe(true)
+  })
+
   it('defaults autobuyersEnabled/tierTickspeedAutobuyerEnabled to true for every tier on a save missing those fields', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },

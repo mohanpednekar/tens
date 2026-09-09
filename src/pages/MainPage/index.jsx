@@ -1031,10 +1031,12 @@ const MainPage = ({ game, focusNonce = 0 }) => {
 
   // Scale Up: a more frequent soft-reset than Prestige, available well before Money reaches
   // PRESTIGE_THRESHOLD (see scaleUpGame in engine.js) — once the current scale-up target tier (see
-  // getScaleUpTargetTier in engine.js: the highest tier unlocked so far while any tier remains
-  // locked, or permanently the last tier once every tier is unlocked) reaches that cycle's
-  // requirement (getScaleUpRequirement(state): a flat level 3 during the unlock phase, or a
-  // repeating multiple of 3 on the last tier once every tier is unlocked), it resets
+  // getScaleUpTargetTier in engine.js: state.scaleUpTargetTierIndex into TIER_DEFINITIONS, an
+  // independent counter that only advances when Scale Up itself fires — NOT necessarily the
+  // highest tier unlocked so far, which can run ahead of it via ordinary play; clamped to the last
+  // tier once reached) reaches that cycle's requirement (getScaleUpRequirement(state): a flat
+  // level 3 during the unlock phase, or a repeating multiple of 3 on the last tier once every tier
+  // is unlocked), it resets
   // tiers/resources but permanently doubles production speed (stacking with every prior
   // activation) AND keeps every tier unlocked so far, plus the one that reaching this level just
   // permanently unlocked. Always shown (relevant from the very first cycle, well before the last

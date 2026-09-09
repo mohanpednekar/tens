@@ -57,7 +57,12 @@ the new per-tier mechanic — it still only drives the production-doubling stack
 `MainPage` also dropped its `everRevealed` progressive-disclosure gate entirely (unlike
 `OverclockCard`, unaffected and still gated on the last tier ever unlocking) — Scale Up is now
 relevant from the very first cycle, well before the last tier exists, so hiding it made no sense
-under the new design. `yarn test`: 1757 → 1770 green (+13, net).
+under the new design. Also fixes a save-migration gap the adversarial reviewer caught before merge:
+the rename dropped `speedUpCount`/`autoSpeedUp`/`autoSpeedUpEnabled` with no migration step, so an
+existing player's save silently lost that data (including a paid 20 PP Auto Speed Up unlock and its
+pause preference) on their first load after this shipped — `mergeState` (`storage.js`) now falls
+back to the legacy field names when the new ones are absent, same pattern as the pre-existing
+`lastTierTickspeedXpUnlocked` removal just above it. `yarn test`: 1757 → 1773 green.
 
 ### Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09
 

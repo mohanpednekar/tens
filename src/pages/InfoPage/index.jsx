@@ -514,8 +514,8 @@ const InfoPage = () => {
         <h2>Scale Up</h2>
         <ul>
           <li>
-            Reach displayed level {scaleUpFirstRequirement} on your highest-unlocked tier to trigger a
-            Scale Up.
+            Reach displayed level {scaleUpFirstRequirement} on the tier Scale Up is currently
+            working through — starting with {firstTierName} — to trigger a Scale Up.
           </li>
           <li>
             Resets tiers and resources — but keeps every tier unlocked so far, and permanently
