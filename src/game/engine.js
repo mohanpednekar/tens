@@ -4481,9 +4481,9 @@ export const isBoosterPurchaseAvailable = (state, tierIndex) =>
 // the forced priority order at all; it's always available the instant it's affordable. Resets
 // fillBits to 0 — whichever disk was mid-fill before the spend may no longer be the lake's own
 // open slot afterward (see getDataLakeCurrentFillSubSize), so any in-progress fill on it is
-// discarded rather than carried forward inconsistently. A same-reference no-op when not
 // affordable/unlocked yet.
 export const buyBooster = (tierIndex, quantity = 1) => state => {
+  if (quantity < 1 || !isBoosterPurchaseAvailable(state, tierIndex)) return state
   if ((quantity !== Infinity && (!Number.isInteger(quantity) || quantity < 1)) || !isBoosterPurchaseAvailable(state, tierIndex)) return state
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field) return state
@@ -4493,16 +4493,16 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   const maxed = isDataLakeCapacityMaxed(state, tierIndex)
   const capacity = getDataLakeCapacity(state, tierIndex)
   let deposited = lake.depositedUnits ?? 0
-  let purchased = lake.purchased ?? 0
-  let p = purchased
+  let totalCost = 0
+  
 
   let totalBought = 0
   let totalCost = 0
 
   if (!maxed || purchased < capacity) {
     const term = Math.pow(2 * p + 1, 2) + 8 * deposited;
-    const k = term >= 0 ? Math.floor((-(2 * p + 1) + Math.sqrt(term)) / 2) : 0;
     const escalatingBought = maxed ? Math.min(k, Math.max(0, capacity - p)) : k;
+    
 
     if (escalatingBought > 0) {
       const escalatingCost = escalatingBought * p + (escalatingBought * (escalatingBought + 1)) / 2
@@ -4512,9 +4512,9 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
       totalBought += escalatingBought
     }
   }
+  
 
   if (maxed && purchased >= capacity && deposited >= capacity) {
-    const constantBought = Math.floor(deposited / capacity)
     totalBought += constantBought
     totalCost += constantBought * capacity
     purchased += constantBought
@@ -4525,9 +4525,10 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   if (totalBought > quantity) {
       totalBought = quantity;
       
-      const escalatingBought = maxed ? Math.min(totalBought, Math.max(0, capacity - p)) : totalBought;
-      const escalatingCost = escalatingBought * p + (escalatingBought * (escalatingBought + 1)) / 2;
-      const constantBought = totalBought - escalatingBought;
+      // recalculate cost for the constrained quantity
+      let costSum = 0;
+      let pur = p;
+      for (let i=0; i<quantity; i++) {
       const constantCost = constantBought * capacity;
       
       totalCost = escalatingCost + constantCost;
@@ -4541,6 +4542,7 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   if (field) {
     const nextCount = (state.intro[field] ?? 0) + totalBought
     computeUpdates[field] = nextCount
+    
 
     if (tierIndex === 1) {
       computeUpdates.computeCoresEverEarned = (state.intro.computeCoresEverEarned ?? 0) + totalBought
@@ -4554,7 +4556,6 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
     intro: {
       ...state.intro,
       ...computeUpdates,
-      dataLakes: {
         ...state.intro.dataLakes,
         [tierIndex]: {
           ...lake,
@@ -4593,6 +4594,7 @@ export const tickDataLakeAutoBuy = state => {
   let nextState = state
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     if (!isDataLakeAutoBuyEnabled(nextState, tierIndex)) continue
+    
 
     // Use O(1) bulk purchase formula natively inside buyBooster
     nextState = buyBooster(tierIndex, Infinity)(nextState)
@@ -4607,7 +4609,6 @@ export const tickDataLakeAutoBuy = state => {
 // all 3, then earning 5 more now correctly reads 8 lifetime-earned, not 5 (the old `max()` approach
 // re-derived "lifetime" from the CURRENT balance, which drops right back down every time Cores get
 // spent, silently forgetting everything earned before the most recent spend and potentially
-// leaving the merge-page unlock permanently one Core short of true).
 const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {
   const nextCount = (intro[field] ?? 0) + 1
   const updates = { [field]: nextCount }
