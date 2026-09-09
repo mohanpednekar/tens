@@ -7100,6 +7100,57 @@ strategy (the simulator's ideal-player script doesn't gate any of its own action
 timing), so a faster collect phase only speeds up a background, secondary path — restocking higher
 disk sizes for Data Lakes/Compute — not anything on the critical path the sim measures.
 
+### Data Lake capacity Upgrade removed from the forced priority order — array completion is now the only gate
+
+The maintainer's explicit request: "Data lake upgrade should be available once the disk array
+corresponding to the same disk size is fully built in main disk pool array." Read literally against
+the actual code, `isDataLakeCapacityDoublingAvailable` already implemented exactly that rule (level 0
+requires the pool's ×1 array complete, level 1 the ×10 array, level 2 the ×100 array —
+`getDataLakeCapacityUnlockArraySize` reads the correct Storage array size for the lake's own CURRENT
+level, verified against `getDataLakeSubSizeStep`/`DATA_LAKE_SUB_SIZES` directly; no indexing bug
+found). What didn't match the stated rule was `isDataLakeCapacityDoublingTurnAvailable` — the
+CLICKABLE gate a player actually experiences — which additionally required Disk Fill, Speed,
+Provision Disk, and Compute to ALL be currently unavailable (the same forced priority order every
+other Byte Foundry milestone action follows), on top of the array-completion check. A player could
+watch the Upgrade button sit visibly present-but-disabled with its own array long complete, entirely
+because an unrelated Compute Boost preset happened to be armable elsewhere on the page — an extra
+condition the stated rule never mentioned.
+
+**Fix.** `isDataLakeCapacityDoublingTurnAvailable` is now defined as exactly
+`isDataLakeCapacityDoublingAvailable(state, tierIndex)` — the forced-priority checks
+(`!isDiskFillAvailable`/`!isBandwidthAvailable`/`!isProvisionDiskAvailable`/`!isComputeUpgradeAvailable`)
+are gone entirely. This mirrors `isBoosterPurchaseAvailable`'s own existing "outside the forced
+priority order entirely, always available the instant affordable" posture (see "Data Lake Boosters:
+spending real deposits..." above) — the two actions were already documented as no longer mutually
+exclusive by construction once `isDataLakeCapacityDoublingAvailable` moved off the lake's own cost
+curve onto real Storage array completion (see "Data Lake capacity-doubling cost..." above), so there
+was no genuine remaining contention between Upgrade and any OTHER Foundry action left to arbitrate —
+keeping it in the forced order was policing a conflict that mechanically could no longer happen.
+
+**DataLakePanel simplified as a result.** With `canUpgrade` now always identical to
+`upgradeAvailable`, the button-slot ternary that used to read `upgradeAvailable && (canUpgrade ||
+!canBuy)` — added specifically to stop a disabled-but-available Upgrade from hiding an
+immediately-clickable Buy (see "A disabled-but-available Data Lake Upgrade button could hide an
+immediately-clickable Buy button" above) — collapsed to a plain `upgradeAvailable`, since there is no
+more "available but not its turn" state for that guard to protect against; the whole `canUpgrade`
+variable and its `isDataLakeCapacityDoublingTurnAvailable` import were removed from the component as
+dead duplication (calling a function that now does exactly what `isDataLakeCapacityDoublingAvailable`
+already did). The Upgrade button's own `disabled`/`variant` props, which used to vary between
+`canUpgrade` true/false, are now constant (`disabled` absent, `variant="prestige"`) inside that
+branch, since reaching the branch at all now guarantees clickability.
+
+**Verification.** Two `engine.test.js` tests asserting the old forced-priority-blocked behavior
+(`'is blocked by a higher-priority forced-order action (Disk Fill) even while available'` and half of
+`'is a no-op while not available or blocked by priority'`) were rewritten to assert the opposite —
+Disk Fill being available no longer blocks Upgrade's own turn-availability, and `doubleDataLakeCapacity`
+now succeeds even with Disk Fill simultaneously available; a companion `App.test.jsx` test
+(`'Buy stays reachable when Upgrade is available but not its turn...'`) was rewritten to assert the
+new invariant instead (Upgrade claims the slot over Buy whenever its array is complete, since that
+"available but not its turn" scenario the test used to construct is no longer reachable). Confirmed
+end-to-end in a real browser: a KB lake with its ×1 array complete, Disk Fill genuinely available
+(tier01 mid-redemption) and Speed also affordable, still showed an enabled, clickable Upgrade button
+that immediately advanced `capacityLevel` on click. `yarn test`/`yarn build` green.
+
 ### Provision Disk's own click still required its first pass to already be banked — closing the one case the prior auto-continue fix left open
 
 A further player report on the same feature area: "Provision Disk button should not gate for full

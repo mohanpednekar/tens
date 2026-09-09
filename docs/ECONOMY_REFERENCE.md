@@ -898,18 +898,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `getDataLakeCapacityDoublingCost` (display-only — the REAL amount that will actually drain right
    now, `depositedUnits × getDataLakeUnitBits(tierIndex)`, not the level's own full capacity, since
    the lake need not be full when this fires) feeds the button's own tooltip; no code path spends it
-   out of `intro.bits`. Gated by the same forced priority chain as every other Byte Foundry
-   milestone action (`isDataLakeCapacityDoublingTurnAvailable` — available only once Disk Fill,
-   Speed, Provision Disk, and Compute are all currently unavailable; sits at the former Sacrifice
-   rank). **No longer mutually exclusive with Booster-buying by construction** — that guarantee held
-   only under the old cost-based condition; a lake CAN now simultaneously afford its next Booster
-   and have its next array already complete — `DataLakePanel` still repurposes ONE button slot
-   between the two, preferring Upgrade whenever it's actually clickable
-   (`isDataLakeCapacityDoublingTurnAvailable`) or Buy isn't an option either; if Upgrade is merely
-   available-but-not-its-turn (blocked by the forced priority chain) while Buy IS currently
-   affordable, Buy takes the slot instead — Buy isn't part of that chain at all, so a disabled
-   Upgrade must never hide an immediately-clickable Buy (an adversarial-review finding — see
-   `docs/DESIGN_HISTORY.md`).
+   out of `intro.bits`. **No longer part of the forced priority chain at all**
+   (`isDataLakeCapacityDoublingTurnAvailable` is now exactly `isDataLakeCapacityDoublingAvailable`,
+   nothing else) — Upgrade is always immediately clickable the instant its own array completes,
+   regardless of what else is currently available (Disk Fill, Speed, Provision Disk, Compute), the
+   same "always available the instant affordable" posture Buying Boosters already had; removed per
+   the maintainer's explicit request — see `docs/DESIGN_HISTORY.md`. **No longer mutually exclusive
+   with Booster-buying by construction** — that guarantee held only under the old cost-based
+   condition; a lake CAN simultaneously afford its next Booster and have its next array already
+   complete — `DataLakePanel` still repurposes ONE button slot between the two, always preferring
+   Upgrade whenever its own array is complete (there is no more "available but not its turn"
+   window to arbitrate against Buy — the earlier adversarial-review finding this section used to
+   describe, about a disabled Upgrade hiding an immediately-clickable Buy, no longer has a scenario
+   to occur in; see `docs/DESIGN_HISTORY.md`).
 
    **Migration.** A save written under an older, longer capacity ladder can carry a `capacityLevel`
    above the current array's own bounds — left unclamped, `getDataLakeCapacity` would index past

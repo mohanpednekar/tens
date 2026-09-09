@@ -243,8 +243,10 @@ climbs a plain decade-power-of-10 step per purchase (1, 10, 100, 1,000, hard-cap
 available once the CORRESPONDING Storage array for the current level is fully built (level 0→1
 needs the pool's smallest ×1 array, 1→2 the middle ×10, 2→3 the largest ×100 — no longer tied to the
 lake's own escalating Booster cost or to "the lake is full," both superseded), draining whatever it
-currently holds. Buying and upgrading are no longer guaranteed mutually exclusive, so the UI
-repurposes one button between the two, preferring Upgrade when both apply. A save
+currently holds — independent of every other action's own availability, same as Booster purchases
+above, not arbitrated against the forced priority order at all. The UI repurposes one button
+between Buy and Upgrade, unconditionally preferring Upgrade whenever its own array-completion gate
+is met. A save
 carrying a `capacityLevel` from an older, longer ladder — or written under the earlier
 deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
 load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.

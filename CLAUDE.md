@@ -757,10 +757,13 @@ Strict three-layer separation:
    turn-available (underfunded for even a first pass, or outranked by a higher-priority action) —
    previously the button stayed disabled until a whole pass was already banked, so the FIRST pass
    needed the same manual "wait, then remember to click" babysitting every later pass had already
-   stopped needing; `clearDiskBuildQueue` remains implemented/tested but has no UI control (same
-   posture as Capacity's own `queueIntroCapacityUpgrade`) — see `docs/DESIGN_HISTORY.md`. Every
+   stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
+   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
+   matter for the narrower "arm the queue before even the first pass is affordable" case. Every
    action here or on either dedicated screen stays
-   gated by the forced priority order (see "Economy model" below). Full field-by-field UI layout:
+   gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
+   capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
+   field-by-field UI layout:
    `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
    capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
    Component contracts (`DiskArrayRow`, `DataLakePanel`): `docs/COMPONENTS_REFERENCE.md`.
@@ -1204,7 +1207,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1756 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1757 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

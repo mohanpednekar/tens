@@ -328,10 +328,10 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes (`isDataLakeCapacityDoublingAvailable`, preferring Upgrade whenever it's actually
-clickable or Buy isn't an option either — a disabled-but-available Upgrade must never hide an
-immediately-affordable Buy, since Buy isn't part of the forced priority chain at all — no longer
-guaranteed mutually exclusive, see engine.js and `docs/DESIGN_HISTORY.md`): "⚡ Upgrade"
+between two modes, unconditionally preferring Upgrade whenever `isDataLakeCapacityDoublingAvailable`
+is true — Upgrade is never merely disabled-but-visible any more, and no longer arbitrated against
+Buy via the forced priority order at all (removed — see `docs/DESIGN_HISTORY.md`; array completion,
+independent of every other action's availability, is now Upgrade's only gate): "⚡ Upgrade"
 (`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
