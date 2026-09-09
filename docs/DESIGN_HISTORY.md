@@ -1,5 +1,62 @@
 # Design history & rationale
 
+### Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09
+
+Two more Devin Review findings landed on the round-2 fix above (same PR #608), both variations on the
+same root cause the round-2 fix only partially closed:
+
+1. **A single `provisionDisk` call could still overshoot the cap in ONE tick.** Round 2's fix
+   (clearing `diskBuildQueued` after `tickFoundryResetConvenience`'s own call) only prevents
+   *later-tick* overshoot via `tickQueuedDiskBuild` — it does nothing about the call itself
+   collecting more passes than the cap allows if the pool buffer already holds enough for it (e.g.
+   after a long offline gap where `tickPoolBufferFill` had many elapsed seconds to top it up before
+   the replay ever got a look). `provisionDisk` happily collects every affordable whole pass up to
+   the disk's own full requirement, with no awareness of any cap.
+2. **The exact same gap, reachable by reloading a save mid-replay instead of waiting out ticks.**
+   The Devin Review round-1 fix (`normalizePoolMemoryCapacity`'s load-time `diskBuildQueued` auto-arm,
+   for a save whose partial pass count predates `provisionDisk`'s own auto-arm) had no idea about
+   `foundryResetCaps` either — a save reloaded exactly at its own replay cap (progress matching the
+   cap exactly, `diskBuildQueued` correctly left `false`) would get re-armed on load anyway, handing
+   `tickQueuedDiskBuild` the same uncapped green light the moment an affordable buffer showed up.
+
+Both share the same underlying question: "is this exact disk size, at its exact current progress,
+sitting at an ACTIVE `foundryResetCaps` boundary where further passes need a genuine action rather
+than automatic funding?" Extracted that question into one new predicate,
+`getDiskReplayPassAllowance(state, size)` — `Infinity` (unrestricted) unless the size sits EXACTLY at
+the boundary between a fully pre-earned run of completed disks and a next disk only partially paid
+before the reset (the same "matched exactly" case `isDiskBuildBelowCap` already special-cases), in
+which case `max(0, passesCap - passesCollected)`. A whole earlier disk still owed (`built < cap`) stays
+unrestricted too — `provisionDisk` can only ever complete ONE disk per call regardless (the timed
+build gate), so there's no overshoot risk funding the rest of an already-fully-earned disk in one shot.
+
+Used in two places:
+- `provisionDisk` gained an optional `maxPasses` parameter (default `Infinity`, folded into the
+  existing `Math.min(passesRemaining, floor(bufferBits / size))` affordability calculation).
+  `tickFoundryResetConvenience` is the only caller that ever passes a finite value (via
+  `getDiskReplayPassAllowance`) — a normal manual click or `tickQueuedDiskBuild` never does, so this
+  is invisible to ordinary play. Any buffer beyond what the capped call spends stays banked for a
+  later, genuine call.
+- `normalizePoolMemoryCapacity`'s existing auto-arm (from the round-1 fix) now also requires
+  `getDiskReplayPassAllowance(...) > 0` before arming — a save sitting exactly at its own replay
+  ceiling is left un-armed, same as `tickFoundryResetConvenience`'s own live-tick behavior after the
+  round-2 fix.
+
+Both the round-2 fix (clearing `diskBuildQueued` after a replay call) and this round's `maxPasses`
+cap are still needed together: `maxPasses` prevents a single call from ever exceeding the allowance,
+while clearing the queue afterward prevents a *later* tick's `tickQueuedDiskBuild` from continuing
+once the call (necessarily) still leaves the disk itself only partially funded relative to its own
+FULL requirement (a capped replay call essentially never finishes a disk outright, since a finite
+allowance is by definition less than what's needed to complete it — otherwise `isDiskBuildBelowCap`
+wouldn't have put us in this restricted branch at all).
+
+New regression tests: `provisionDisk` given a fully-affordable buffer but a small explicit
+`maxPasses`, confirming only that many passes are collected and the rest of the buffer is left
+untouched; `tickFoundryResetConvenience` given a cap allowing only 1 more pass but a buffer that can
+afford the whole remaining disk, confirming a single call still stops at exactly 1; and
+`normalizePoolMemoryCapacity` given a save reloaded exactly at its own replay ceiling (with an
+affordable buffer sitting right there, which would matter if the queue got armed), confirming it
+stays un-armed. `yarn test`: 1754/1754 green.
+
 ### Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08
 
 A follow-up Devin Review finding on the fix commit above (same PR #608): `tickFoundryResetConvenience`'s

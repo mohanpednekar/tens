@@ -2675,13 +2675,17 @@ export const normalizePoolMemoryCapacity = state => {
   // disk with diskBuildQueued still false, needing one extra manual Provision Disk click to resume
   // auto-continuing. Only ever touches the CURRENTLY offered ladder size — a stale entry for some
   // other, no-longer-current size isn't queueable anyway, since provisionDisk/tickQueuedDiskBuild
-  // always act on getDiskSize(state)'s current offer only.
+  // always act on getDiskSize(state)'s current offer only. Also refuses to arm when
+  // getDiskReplayPassAllowance says this exact size is sitting at an active foundryResetCaps
+  // ceiling (a save reloaded mid-Reset-Byte-Foundry-replay, exactly caught up and no further passes
+  // are owed for free) — otherwise tickQueuedDiskBuild would resume funding past what the replay
+  // was ever entitled to hand out, with no manual click (Devin Review finding on PR #608).
   if (!nextIntro.diskBuild && !nextIntro.diskBuildQueued) {
     const stateForDiskCheck = { ...state, intro: nextIntro }
     const size = getDiskSize(stateForDiskCheck)
     const collected = getDiskProvisionPassesCollected(stateForDiskCheck, size)
     const required = getDiskProvisionPassesRequired(stateForDiskCheck, size)
-    if (collected > 0 && collected < required) {
+    if (collected > 0 && collected < required && getDiskReplayPassAllowance(stateForDiskCheck, size) > 0) {
       changed = true
       nextIntro.diskBuildQueued = true
     }
@@ -3527,7 +3531,13 @@ export const isProvisionDiskTurnAvailable = state =>
 // funding/build is in progress. No-op below a single pass's cost, or if an array is already
 // mid-build (isProvisionDiskAvailable). Only ever queues ONE build at a time — only one size is
 // ever offered on the ladder, so there's nothing to parallelize.
-export const provisionDisk = state => {
+// `maxPasses` (default unlimited) caps how many WHOLE passes this single call may collect
+// regardless of buffer/requirement headroom — used exclusively by tickFoundryResetConvenience's
+// own replay call, to stop a buffer that can afford more than the pre-reset high-water mark allows
+// from funding past it in one shot (Devin Review finding on PR #608); any excess buffer beyond the
+// cap is simply left banked for a later, genuine call to spend. Never passed by a normal manual
+// click or tickQueuedDiskBuild.
+export const provisionDisk = (state, maxPasses = Infinity) => {
   if (!isProvisionDiskTurnAvailable(state)) return state
 
   const size = getDiskSize(state)
@@ -3537,7 +3547,7 @@ export const provisionDisk = state => {
   const passesRemaining = Math.max(0, passesRequired - alreadyCollected)
   const bufferBits = getPoolBufferBits(state, poolIndex)
   // isProvisionDiskTurnAvailable already guarantees at least one whole pass is affordable.
-  const affordablePasses = Math.min(passesRemaining, Math.floor(bufferBits / size))
+  const affordablePasses = Math.min(passesRemaining, Math.floor(bufferBits / size), maxPasses)
   const passesCollected = alreadyCollected + affordablePasses
   const poolBuffers = { ...state.intro.poolBuffers, [poolIndex]: bufferBits - affordablePasses * size }
 
@@ -5824,6 +5834,28 @@ const isDiskBuildBelowCap = (state, caps) => {
   return passesCollected < passesCap
 }
 
+// How many more whole passes toward `size`'s CURRENTLY in-progress disk an active
+// foundryResetCaps replay is still entitled to hand out for free — Infinity (unrestricted) unless
+// this exact size is sitting at the boundary between a fully pre-earned run of completed disks and
+// a NEXT disk that was only partially paid before the reset (the same "matched exactly" case
+// isDiskBuildBelowCap treats specially above). A whole earlier disk still owed (built < cap) is
+// unrestricted too — provisionDisk can only ever complete ONE disk per call regardless (the timed
+// build gate), so there's no overshoot risk funding the rest of an already-fully-earned disk in one
+// shot. Used to stop a single provisionDisk call from collecting more passes than the cap allows
+// when the pool buffer can afford more than that in one go (Devin Review finding on PR #608) —
+// without this, clearing diskBuildQueued after the call (see tickFoundryResetConvenience) closes
+// the multi-tick overshoot but not a single-call one.
+const getDiskReplayPassAllowance = (state, size) => {
+  const caps = state.intro?.foundryResetCaps
+  if (!caps) return Infinity
+  const built = state.intro?.disksBuiltTotal?.[size] ?? 0
+  const diskCap = caps.disksBuiltTotal?.[String(size)] ?? caps.disksBuiltTotal?.[size] ?? 0
+  if (built !== diskCap) return Infinity
+  const passesCollected = getDiskProvisionPassesCollected(state, size)
+  const passesCap = caps.diskProvisionPasses?.[String(size)] ?? caps.diskProvisionPasses?.[size] ?? 0
+  return Math.max(0, passesCap - passesCollected)
+}
+
 // Safety bound: one tick should not infinite-loop if a reducer keeps succeeding unexpectedly.
 const FOUNDRY_RESET_CONVENIENCE_MAX_STEPS = 64
 
@@ -5855,7 +5887,11 @@ export const tickFoundryResetConvenience = state => {
   }
 
   if (isDiskBuildBelowCap(next, caps)) {
-    const built = provisionDisk(next)
+    // getDiskReplayPassAllowance stops a single call from collecting more passes than the cap
+    // allows even when the pool buffer (e.g. after a long offline gap) can afford more than that in
+    // one go — Infinity everywhere except the exact "matched a fully pre-earned run of completed
+    // disks, now partially paid toward the next one" boundary (Devin Review finding on PR #608).
+    const built = provisionDisk(next, getDiskReplayPassAllowance(next, getDiskSize(next)))
     if (built !== next) {
       // provisionDisk unconditionally arms diskBuildQueued on a partial-funding call so a genuine
       // manual click keeps auto-continuing with no further clicks needed — but tickQueuedDiskBuild

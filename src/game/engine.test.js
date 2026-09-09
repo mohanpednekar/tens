@@ -1105,6 +1105,26 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
   })
+
+  it('normalizePoolMemoryCapacity does not arm diskBuildQueued for a save reloaded mid-Reset-Byte-Foundry-replay that already sits exactly at its own foundryResetCaps ceiling (Devin Review finding)', () => {
+    // Same partial-pass shape as the genuine-wake-up test above, but this time an ACTIVE
+    // foundryResetCaps entry says the replay was only ever entitled to exactly this much for free —
+    // arming here would hand tickQueuedDiskBuild a green light to fund further, unearned passes the
+    // instant an affordable buffer refills, with no manual click.
+    const state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: FIRST_DISK_SIZE }, // affordable — would matter if the queue got armed
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+      diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [FIRST_DISK_SIZE]: 2 },
+        diskProvisionPasses: { [FIRST_DISK_SIZE]: 1 },
+      },
+    })
+    expect(normalizePoolMemoryCapacity(state).intro.diskBuildQueued).toBeFalsy()
+  })
 })
 
 describe('pickIntroCapacityMilestone', () => {
@@ -1965,6 +1985,33 @@ describe('tickFoundryResetConvenience', () => {
     }
     expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
     expect(state.intro.diskBuild).toBeNull()
+  })
+
+  it('does not let a single replay call collect more passes than its own cap allows, even when the pool buffer can afford the disk\'s full remaining cost (Devin Review finding)', () => {
+    const size = getDiskLadderSizeBits(1)
+    const capacityHeadroom = getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10
+    // The 3rd disk needs 3 passes total; the cap only entitles 1 of them, but the buffer holds
+    // enough for all 3 (e.g. from a long offline gap) — a single call must still stop at 1.
+    const state = withIntro(createInitialGameState(), {
+      poolBuffers: { 1: size * 5 },
+      disksBuiltTotal: { [size]: 2 },
+      capacity: capacityHeadroom,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 1 },
+      },
+    })
+
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(after.intro.diskBuild).toBeNull()
+    expect(after.intro.diskBuildQueued).toBe(false)
+    // Only 1 pass' worth was spent — the rest of the buffer stays banked, untouched by this call.
+    expect(after.intro.poolBuffers[1]).toBe(size * 4)
   })
 
   it('is a no-op without foundryResetCaps', () => {
@@ -3110,6 +3157,23 @@ describe('provisionDisk', () => {
     expect(after.intro.diskBuild).toEqual({ size: FIRST_DISK_SIZE, remainingSeconds: FIRST_DISK_SIZE * 6, totalSeconds: FIRST_DISK_SIZE * 6 })
     expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(0)
     expect(after.intro.diskBuildQueued).toBe(false)
+  })
+
+  it('maxPasses caps how many whole passes a single call collects even when the buffer can afford the full remaining cost', () => {
+    // 5 already built — this build is the 6th, needing 6 passes; the buffer holds the FULL
+    // remaining cost, but maxPasses=2 should stop collection at exactly 2, leaving the rest of the
+    // buffer untouched for a later call (see tickFoundryResetConvenience's own use of this, added
+    // for a Devin Review finding on PR #608).
+    const withOrdinal = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
+    const fullCost = getDiskCost(withOrdinal, FIRST_DISK_SIZE)
+    const state = withIntro(withPoolBuffer(withOrdinal, fullCost), bandwidthExhausted)
+
+    const after = provisionDisk(state, 2)
+    expect(getDiskProvisionPassesCollected(after, FIRST_DISK_SIZE)).toBe(2)
+    expect(after.intro.diskBuild).toBeNull()
+    // Only 2 passes' worth was spent — the rest of the full cost stays banked in the buffer.
+    expect(after.intro.poolBuffers[1]).toBe(fullCost - FIRST_DISK_SIZE * 2)
+    expect(after.intro.diskBuildQueued).toBe(true)
   })
 
   it('collects a single pass (one disk face-value size) and stays mid-funding when only one pass is affordable', () => {
