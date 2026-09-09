@@ -28,7 +28,7 @@ Play it live at [mohanpednekar.github.io/tens](https://mohanpednekar.github.io/t
 - Bytes are **not** a purchasable tier. Every fresh save earns its first Kilobytes via the **Byte Foundry** tap screen; once that happens, Factory stays permanently reachable for every future Prestige/Era ascension in that save — no per-cycle re-gate.
 - Reaching **1 Googol Bytes** (8×10^100 Bits) freezes production until Prestige.
 
-Full formulas, Prestige Points, Storage, Compute, tickspeed, Speed Up, Overclock, and offline progress: [`docs/ECONOMY_REFERENCE.md`](docs/ECONOMY_REFERENCE.md). Current behavior summary: [`CLAUDE.md`](CLAUDE.md). Design rationale / superseded ideas: [`docs/DESIGN_HISTORY.md`](docs/DESIGN_HISTORY.md).
+Full formulas, Prestige Points, Storage, Compute, tickspeed, Scale Up, Overclock, and offline progress: [`docs/ECONOMY_REFERENCE.md`](docs/ECONOMY_REFERENCE.md). Current behavior summary: [`CLAUDE.md`](CLAUDE.md). Design rationale / superseded ideas: [`docs/DESIGN_HISTORY.md`](docs/DESIGN_HISTORY.md).
 
 ### Byte Foundry
 

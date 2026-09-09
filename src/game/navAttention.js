@@ -1,5 +1,5 @@
 import {
-  AUTO_SPEED_UP_COST,
+  AUTO_SCALE_UP_COST,
   BYTES_ID,
   COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -18,7 +18,8 @@ import {
   getPrestigeDoublePpUpgradeCost,
   getPurchaseBlockSize,
   getSmartAutobuyerCost,
-  getSpeedUpRequirement,
+  getScaleUpRequirement,
+  getScaleUpTargetTier,
   getTierAffordableQuantity,
   getTierSpendableAmount,
   isComputeFlopsPageRevealed,
@@ -54,7 +55,7 @@ import {
 // Attention dots on AppNav — lit when a destination has a pending player action. Levels:
 //   'high'   — time-sensitive / high-value (Memory full, full purchase level, Prestige freeze,
 //              redeemable disk, combine ready) → larger emphasis dot
-//   'normal' — other actionable cues (Invest/Build, PP upgrades, merges, Speed Up, …)
+//   'normal' — other actionable cues (Invest/Build, PP upgrades, merges, Scale Up, …)
 //   false    — nothing pending
 // Pure predicates over game state; the UI only renders the dot. Engine re-validates on click.
 
@@ -143,12 +144,11 @@ export const hasAffordableGlobalTickspeed = state => {
   return (state.resources[BYTES_ID] ?? 0) >= cost
 }
 
-export const hasSpeedUpAvailable = state => {
+export const hasScaleUpAvailable = state => {
   if (isProductionFrozen(state)) return false
-  const tier = lastTier()
-  if (!isTierUnlocked(state)(tier)) return false
+  const tier = getScaleUpTargetTier(state)
   const level = state.purchaseLevels?.[tier.id] ?? 1
-  return level >= getSpeedUpRequirement(state.speedUpCount ?? 0)
+  return level >= getScaleUpRequirement(state)
 }
 
 export const hasOverclockAvailable = state => {
@@ -159,12 +159,12 @@ export const hasOverclockAvailable = state => {
   return level >= getOverclockRequirement(state.overclockCount ?? 0)
 }
 
-/** Byte Factory-view cues (buys, prestige, Speed Up / Overclock, Money tickspeed). */
+/** Byte Factory-view cues (buys, prestige, Scale Up / Overclock, Money tickspeed). */
 export const hasTiersGameAttention = state =>
   isProductionFrozen(state) ||
   hasAffordableFullLevel(state) ||
   hasAffordableGlobalTickspeed(state) ||
-  hasSpeedUpAvailable(state) ||
+  hasScaleUpAvailable(state) ||
   hasOverclockAvailable(state)
 
 /** PP Upgrades view — unspent PP can buy at least one upgrade. */
@@ -184,7 +184,7 @@ export const hasAffordablePpUpgrade = state => {
       points >= getSmartAutobuyerCost(tier.id),
     ) ||
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
-    (!(state.autoSpeedUp ?? false) && points >= AUTO_SPEED_UP_COST) ||
+    (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
     (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
     (allTiersFullyAutomated && points >= getAutoPrestigeCost(state.autoPrestige ?? 0))
   )

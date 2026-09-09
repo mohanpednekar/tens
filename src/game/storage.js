@@ -498,12 +498,25 @@ const applyPendingComputeGrants = (intro, pendingComputeGrants) => {
 // Schema transforms run in save-migration/ on every load before this runs.
 const mergeState = saved => {
   const fresh = createInitialGameState()
-  const { lastTierTickspeedXpUnlocked: _removed, ...savedClean } = saved
+  // speedUpCount/autoSpeedUp/autoSpeedUpEnabled are the pre-rename names of
+  // scaleUpCount/autoScaleUp/autoScaleUpEnabled (see engine.js) — stripped here (like
+  // lastTierTickspeedXpUnlocked below) so they don't linger as dead keys, with their values carried
+  // forward via the explicit fallbacks below instead of silently lost to fresh's defaults.
+  const {
+    lastTierTickspeedXpUnlocked: _removed,
+    speedUpCount: legacySpeedUpCount,
+    autoSpeedUp: legacyAutoSpeedUp,
+    autoSpeedUpEnabled: legacyAutoSpeedUpEnabled,
+    ...savedClean
+  } = saved
   const { dataLakes, pendingComputeGrants } = mergeDataLakes(fresh.intro.dataLakes, saved.intro?.dataLakes)
 
   return normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
+    scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
+    autoScaleUp: saved.autoScaleUp ?? legacyAutoSpeedUp ?? fresh.autoScaleUp,
+    autoScaleUpEnabled: saved.autoScaleUpEnabled ?? legacyAutoSpeedUpEnabled ?? fresh.autoScaleUpEnabled,
     resources: mergeTierMap(fresh.resources, saved.resources),
     owned: mergeTierMap(fresh.owned, saved.owned),
     purchased: mergeTierMap(fresh.purchased, saved.purchased),

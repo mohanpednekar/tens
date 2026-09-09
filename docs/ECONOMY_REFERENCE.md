@@ -4,7 +4,7 @@ Referenced from `CLAUDE.md`'s Economy model section. Read this before touching
 `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed
 constant or formula — it's the full mechanic reference (cost/production formulas, the purchase
 block size and level system, Prestige Points, the per-tier and global tickspeed multipliers, the
-last tier's XP-funded tickspeed, Speed Up, Overclock, Reset, the complete game state shape, and the
+last tier's XP-funded tickspeed, Scale Up, Overclock, Reset, the complete game state shape, and the
 engine function/constants tables).
 
 
@@ -43,9 +43,9 @@ Expressed as a level target rather than an owned-count threshold so it stays exa
 stay unlocked even if the rule changes later, so old saves stay playable. Beyond that live check,
 `state.everUnlockedTierIds[tierId]` latches a tier's unlocked status the moment it's first reached (see
 `latchEverUnlockedTiers`, called from `buyTier` and `tickGame`) so a narrower reset than a full
-Prestige/Speed Up can't hide/relock it — specifically, this is what keeps `consumeXpForLastTierTickspeed`'s
+Prestige/Scale Up can't hide/relock it — specifically, this is what keeps `consumeXpForLastTierTickspeed`'s
 owned-quantity reset (see "The last tier's XP-funded tickspeed" below) from relocking every tier it
-resets. This flag is **not** permanent across a real Prestige or Speed Up, though — both still reset it
+resets. This flag is **not** permanent across a real Prestige or Scale Up, though — both still reset it
 to the fresh default (only the first tier true) exactly like `owned`/`purchased`, so those two resets
 keep relocking every tier beyond the first exactly as they always have; only `consumeXpForLastTierTickspeed`'s
 narrower reset is guarded against relocking.
@@ -69,13 +69,13 @@ requires — not a hardcoded constant, so it can grow over the course of a run i
 forever. It starts at `DEFAULT_PURCHASE_BLOCK_SIZE` (`layers.js`, `8`) and grows by
 `PURCHASE_BLOCK_SIZE_GROWTH_STEP` (`1`) every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS` (`100`)
 levels the **last tier** (not any other tier, and not a global total) completes — the same
-"flagship" progress marker `getSpeedUpRequirement`/`isLastTierTickspeedXpUnlocked` already key off.
+"flagship" progress marker `getScaleUpRequirement`/`isLastTierTickspeedXpUnlocked` already key off.
 Because every earlier tier must already be unlocked (and
 hence permanently latched via `everUnlockedTierIds`) by the time the last tier is reachable at all, a
 later block-size increase never retroactively changes an already-unlocked tier's own unlock
 threshold — it only affects whatever level a tier currently happens to be working toward. Both
 `purchaseLevels` and `purchaseLevelProgress` reset to their fresh defaults (level 1, progress 0) for
-every tier on Prestige and Speed Up, same as `owned`/`purchased` — which also resets
+every tier on Prestige and Scale Up, same as `owned`/`purchased` — which also resets
 `getPurchaseBlockSize` back down to `DEFAULT_PURCHASE_BLOCK_SIZE`, since it's derived from the last
 tier's own (now-reset) level.
 
@@ -86,11 +86,11 @@ directly too. The "every 10th level is a bigger 10x milestone instead of 2x" meg
 `getPurchaseMilestoneMultiplier` is **independent** of the block size — it always spans 10 levels,
 regardless of how many purchases make up any one of them.
 
-`getSpeedUpRequirement(speedUpCount)` — how many levels the last tier must reach for the *next* Speed
-Up — is likewise expressed as a level target (`speedUpCount + 6`: level 6/displayed 5 for the first
-activation, level 7/displayed 6 for the second, …) rather than a lifetime-purchased-count threshold, since how many purchases
-a given level boundary corresponds to now depends on the current block size, while the level number
-itself doesn't.
+`getScaleUpRequirement(state)` — how many levels the current scale-up target tier (see "Scale Up"
+below) must reach for the *next* Scale Up — is likewise expressed as a level target (a flat 3 while
+any tier remains locked, or a repeating multiple of 3 on the last tier once every tier is unlocked)
+rather than a lifetime-purchased-count threshold, since how many purchases a given level boundary
+corresponds to now depends on the current block size, while the level number itself doesn't.
 
 Saves must already carry `purchaseLevels`/`purchaseLevelProgress` in the current schema —
 `storage.js`'s `mergeState` only fills missing fields from fresh defaults and does not derive levels
@@ -319,7 +319,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      raising the base back up); without this, a bonus already contributing nothing beyond the cap
      would sit as dead weight, resurfacing as a "real" boost once the base later dropped again.
    - Both bonus fields, like `computeBoostType`, are NOT permanent — they reset to 0/`{}` on every
-     real Prestige, Era ascension, and Reset Byte Foundry, but are carried through Speed Up/Overclock
+     real Prestige, Era ascension, and Reset Byte Foundry, but are carried through Scale Up/Overclock
      untouched (the whole `intro` object passes through those unchanged either way).
    - `intro.bits` is no longer always an integer as a result — `tickIntroProduction`'s own per-tick
      delivery is now continuous (`getDataStreamEffectMultiplier` is rarely exactly 1); every existing
@@ -426,7 +426,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    reachable, no gate replay. The generator itself
    (byteCreated/capacity/tickSpeedSeconds/productionMultiplier/productionMilestoneTier/
    productionMilestoneTierClaims) carries over regardless, same as always, making every cycle after
-   the first a fast pit-stop rather than a full replay. `speedUpGame`/`overclockGame` are intra-cycle
+   the first a fast pit-stop rather than a full replay. `scaleUpGame`/`overclockGame` are intra-cycle
    soft resets, not new cycles, and still carry the whole `intro` object through completely
    untouched, Memory included. A full Reset also restarts the intro from true scratch (via
    `createInitialGameState()`'s fresh defaults for every field, generator and the `mainGameUnlocked`
@@ -687,7 +687,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    time. `tickDiskPull(state)` — called from every branch of `tickGame`, frozen or not (bypasses the
    production freeze, same as the intro-bits bootstrap conversion does), right after
    `tickDiskAutoFill` each tick (so a disk filled THIS tick can also pull the same tick) and after
-   every other per-tick automation including a possible automatic Speed Up, so it always sees every
+   every other per-tick automation including a possible automatic Scale Up, so it always sees every
    tier's truly final level for the tick — pulls the smallest pull-eligible size each tick (a pull
    can itself advance a tier's level, which can in turn change which OTHER sizes now match, so a
    further eligible disk just gets picked up on a later tick, imperceptibly fast at the tick loop's
@@ -1098,7 +1098,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    does not backfill it from live balances on load.
 10. **Compute Boost** (`intro.computeBoostType`/`computeBoostTierIndex`/`computeBoostStacks`/
    `computeBoostRemainingSeconds`, all run-scoped — reset to inactive on every real Prestige, unlike
-   `computeCores`/`computeNodes`/etc. themselves, but carried through untouched by Speed Up/Overclock
+   `computeCores`/`computeNodes`/etc. themselves, but carried through untouched by Scale Up/Overclock
    same as the rest of `intro`) — the first mechanic that actually spends compute-ladder tokens.
    **Tier-funded** (issue #326): activating a boost spends 1 token of whichever compute-ladder tier
    the player selects on `ComputePage` — Core through Megacomputer (`COMPUTE_BOOST_TIER_FIELDS` in
@@ -1338,9 +1338,9 @@ the autobuyer and Auto-Prestige attempt-budget threshold checks.
 
 `owned` and `resources` are integer-valued by construction, so a production credit must itself always
 be an integer. Of the factors in a tier's production credit (`owned × ticksElapsed × multiplier ×
-speedUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
+scaleUpMultiplier × getPurchaseMilestoneMultiplier(purchased)`, where `multiplier` is
 `getPrestigeProductionMultiplier(points)` once `prestigeSpeedBonusUnlocked` is true, else a flat `1`),
-`owned`/`ticksElapsed` are already integers, `getSpeedUpMultiplier` is always a power of 2, and
+`owned`/`ticksElapsed` are already integers, `getScaleUpMultiplier` is always a power of 2, and
 `getPurchaseMilestoneMultiplier` is always a product of powers of 2 and 10 (see its own row above) —
 the only fractional factor is `getPrestigeProductionMultiplier` (`1 + 0.01 ×
 points`). **Neither tickspeed multiplier appears in this formula** — `getTickspeedProductionMultiplier`
@@ -1556,18 +1556,18 @@ milestones" below), spending no PP at all.
   historical pricing benchmark — see below). `state.smartAutobuyer[tierId]` is permanent across
   prestige (unlike `purchased`, which resets each run and re-triggers the one-at-a-time bootstrap each
   time). Independent of the tier tickspeed autobuyer, which is milestone-unlocked separately (below).
-- **Active — Auto Speed Up:** `buyAutoSpeedUp(state)` permanently spends `AUTO_SPEED_UP_COST` PP (`20`
-  — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more
+- **Active — Auto Scale Up:** `buyAutoScaleUp(state)` permanently spends `AUTO_SCALE_UP_COST` PP (`20`
+  — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Scale Up fires far more
   often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it
-  automates is a much smaller, earlier-game upgrade than Speed Up) to set `autoSpeedUp = true`. Once
-  bought, `tickGame` calls `speedUpGame` every tick (edge-triggered, re-validating eligibility
-  internally) whenever `autoSpeedUpEnabled` is also true (see "Pause/resume for the three global
+  automates is a much smaller, earlier-game upgrade than Scale Up) to set `autoScaleUp = true`. Once
+  bought, `tickGame` calls `scaleUpGame` every tick (edge-triggered, re-validating eligibility
+  internally) whenever `autoScaleUpEnabled` is also true (see "Pause/resume for the three global
   automations" below). No-op if already bought, insufficient points, or frozen. Permanent — never reset.
 - **Active — Tickspeed Autobuyer:** `buyTickspeedAutobuyer(state)` permanently spends
   `TICKSPEED_AUTOBUYER_COST` PP (`10` — the cheapest of all four global PP automation unlocks, since
   the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade — unlocked as
   soon as the second tier is owned — than what any of the other three automate) to set
-  `autoGlobalTickspeed = true`. Same one-time-unlock pattern as Auto Speed Up rather than Auto-Prestige's
+  `autoGlobalTickspeed = true`. Same one-time-unlock pattern as Auto Scale Up rather than Auto-Prestige's
   leveled one, since there's no cadence to speed up here either: once bought, `tickGame` calls
   `buyGlobalTickspeedMultiplier` every tick (edge-triggered, re-validating its own eligibility
   internally — a no-op unless `isGlobalTickspeedMultiplierUnlocked` and there's enough Money) whenever
@@ -1646,16 +1646,16 @@ per-tier milestone, no PP spent, no button to click:
 
 #### Pause/resume for the global automations
 
-Each of the four automations above (Auto Speed Up, the global Tickspeed Autobuyer, the Auto-Prestige
+Each of the four automations above (Auto Scale Up, the global Tickspeed Autobuyer, the Auto-Prestige
 Autobuyer, Auto-Prestige) splits "has this ever been bought" (the permanent fields documented above —
-`autoSpeedUp`/`autoGlobalTickspeed`/`autoPrestigeAutobuyer`/`autoPrestige`, all unaffected by this
+`autoScaleUp`/`autoGlobalTickspeed`/`autoPrestigeAutobuyer`/`autoPrestige`, all unaffected by this
 feature) from a separate, independently toggleable "is this currently allowed to act" bit:
-`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled`
+`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled`
 (`layers.js`/`engine.js`), each defaulting to `true` the moment its parent automation is bought and
-**itself also permanent** — never reset by Prestige or Speed Up, since pausing is a standing player
-preference, not run-scoped state (`prestigeGame`/`speedUpGame` carry all four through unchanged, the
-same way they already carry `autoSpeedUp`/`autoGlobalTickspeed`/`autoPrestigeAutobuyer`/`autoPrestige`
-through). `setAutoSpeedUpEnabled(enabled)`/`setAutoGlobalTickspeedEnabled(enabled)`/
+**itself also permanent** — never reset by Prestige or Scale Up, since pausing is a standing player
+preference, not run-scoped state (`prestigeGame`/`scaleUpGame` carry all four through unchanged, the
+same way they already carry `autoScaleUp`/`autoGlobalTickspeed`/`autoPrestigeAutobuyer`/`autoPrestige`
+through). `setAutoScaleUpEnabled(enabled)`/`setAutoGlobalTickspeedEnabled(enabled)`/
 `setAutoPrestigeAutobuyerEnabled(enabled)`/`setAutoPrestigeEnabled(enabled)` (all `state → state`) are
 unconditional — **not** gated by `isProductionFrozen`, since toggling a preference isn't a purchase and
 should always be possible — and each is a no-op (returns the same state) if its automation hasn't been
@@ -1688,7 +1688,7 @@ gated the same way on `tierTickspeedAutobuyerEnabled[tier.id] ?? true`, alongsid
 `tierTickspeedAutobuyer[tier.id]` check — this also covers the last tier's XP-funded branch (see "The
 last tier's XP-funded tickspeed" below), since that branch is reached through the same gated reduce
 step; manual `buyTickspeedMultiplier`/the "🧬 XP" button are unaffected either way.
-`prestigeGame`/`speedUpGame` carry both fields through unchanged, same permanence as
+`prestigeGame`/`scaleUpGame` carry both fields through unchanged, same permanence as
 `autobuyers`/`tierTickspeedAutobuyer` themselves. **Smart (`smartAutobuyer[tierId]`) has no pause
 toggle** — it's a batch-size behavior modifier for the unit autobuyer (buy singly until a level
 completes, then in full blocks), not something that independently "acts" each tick, so "pausing" it
@@ -1752,7 +1752,7 @@ prestiged.
   globalTickspeedMultiplier != null` — gates the *initial* activation on owning at least 1 of the
   second tier (so Money can't be spent on this before `tier01`'s own cost/production resource has a
   second income source backing it); once active this stays true even if `tier02`'s owned count is
-  later reset to 0 by a Prestige/Speed Up — the check never revokes an already-active level.
+  later reset to 0 by a Prestige/Scale Up — the check never revokes an already-active level.
 - `getGlobalTickspeedMultiplierCost(currentLevel) = 10 ** (currentLevel + 1)` — `currentLevel` is the
   level *before* the purchase (`null`/not-yet-bought treated as 0): 10 Money to activate (level 0 → 1),
   100 Money for the next level, 1000 after that, and so on — spent from the same base-currency balance
@@ -1783,11 +1783,11 @@ prestiged.
 - `buyGlobalTickspeedMultiplier(state)` spends Money to raise the level by 1 — a no-op if
   `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough
   Money. `state.globalTickspeedMultiplier` (the level) **resets to `null` (not-yet-bought) on both a
-  real Prestige (`prestigeGame`) and Speed Up (`speedUpGame`)** — the same run-scoped reset the
-  per-tier `tickspeedLevels` gets, since both are funded from the same Money balance prestige/Speed Up
+  real Prestige (`prestigeGame`) and Scale Up (`scaleUpGame`)** — the same run-scoped reset the
+  per-tier `tickspeedLevels` gets, since both are funded from the same Money balance prestige/Scale Up
   already wipe; unlike every other automation toggle/level in this section, which both leave
-  untouched; see "Speed Up" below. The `autoGlobalTickspeed` automation toggle itself still carries over
-  unchanged, so a Prestige or Speed Up with Tickspeed Autobuyer already bought just starts re-buying
+  untouched; see "Scale Up" below. The `autoGlobalTickspeed` automation toggle itself still carries over
+  unchanged, so a Prestige or Scale Up with Tickspeed Autobuyer already bought just starts re-buying
   the level back up from scratch once Money allows.
 - Clicking is optional: once `buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points,
   autobuyer unlock, and the tickspeed multiplier" above), `tickGame` calls
@@ -1809,18 +1809,18 @@ is its one purpose.
 - `isLastTierTickspeedXpUnlocked(state) = owned[lastTierId] >= getPurchaseBlockSize(state)` — a
   **live** check against the last tier's current owned count, matching the same threshold every
   other tier's own unlock condition uses (see `isTierUnlocked`), deliberately not a permanent latch: a
-  Prestige/Speed Up resets the last tier's `owned` count to 0 along with every other tier's (see
-  `prestigeGame`/`speedUpGame` below), and this mechanic disengages right along with it — reverting
+  Prestige/Scale Up resets the last tier's `owned` count to 0 along with every other tier's (see
+  `prestigeGame`/`scaleUpGame` below), and this mechanic disengages right along with it — reverting
   the last tier's row back to the normal Money-funded tickspeed button — until the player buys back
   up to a full level, which re-engages it. There is no separate stored "ever unlocked" flag for this
   (unlike, say, `everUnlockedTierIds`) — the whole point is that it *should* turn back off when the
   player no longer actually has a full level of the tier.
 - `state.lastTierXpConsumed` (run-scoped global counter, default `0`) is the cumulative total XP ever
   spent via `consumeXpForLastTierTickspeed` within the current run. Reset to 0 by both Prestige and
-  Speed Up (same as `prestige.xp`, the currency that funds it — see `prestigeGame`/`speedUpGame`
+  Scale Up (same as `prestige.xp`, the currency that funds it — see `prestigeGame`/`scaleUpGame`
   below) — never reset by `consumeXpForLastTierTickspeed` itself (it only ever grows within a run) —
   so the bonus it drives survives the mechanic being temporarily disengaged (owned dropping below a
-  full level) and later re-engaged within the same run, but not a Prestige/Speed Up.
+  full level) and later re-engaged within the same run, but not a Prestige/Scale Up.
 - `getLastTierXpTickspeedMultiplier(xpConsumed) = (1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed`
   (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — the same multiplicative, compounding form every other
   tier's own `(1 + TICKSPEED_PRODUCTION_STEP) ** (level - 1)` tickspeed multiplier uses, just keyed
@@ -1836,7 +1836,7 @@ is its one purpose.
   already consumed this way (floored at 1 XP, since the percentage term alone is 0 before any XP has
   ever been consumed) — so repeat consumptions can't trickle in one XP at a time forever; the required
   minimum grows alongside however much has already been invested, mirroring the game's other
-  escalating-cost patterns (`getTierCost`'s epoch multiplier, `getSpeedUpRequirement`).
+  escalating-cost patterns (`getTierCost`'s epoch multiplier, `getScaleUpRequirement`).
 - `consumeXpForLastTierTickspeed(amount)` spends `amount` XP from `prestige.xp`, adds it to
   `lastTierXpConsumed`, and — **every time, no matter how small the amount** — **resets the `owned`
   (and, to keep them in sync, `resources`) count of every tier *except* the last tier back to 0,
@@ -1849,7 +1849,7 @@ is its one purpose.
   isn't enough unspent XP, or while production is frozen.
 - `buyTickspeedMultiplier(lastTierId)` is a no-op for as long as `isLastTierTickspeedXpUnlocked` holds
   — there's nothing for that button to do for the last tier while it does. It resumes working normally
-  the moment owned drops back below a full level (e.g. after a Prestige/Speed Up).
+  the moment owned drops back below a full level (e.g. after a Prestige/Scale Up).
 - **Automation:** `tickGame`'s per-tier tickspeed self-upgrade loop (see `tierTickspeedAutobuyer`)
   repurposes the last tier's bought `tierTickspeedAutobuyer` flag once `isLastTierTickspeedXpUnlocked`
   is true — instead of calling the now-inert `buyTickspeedMultiplier(lastTierId)`, it calls
@@ -1864,11 +1864,11 @@ is its one purpose.
   exactly as it does for every other tier — this only changes behavior once the threshold is crossed,
   and reverts the moment owned drops back below a full level.
 - **MainPage**: while `isLastTierTickspeedXpUnlocked(state)`, the last tier's row swaps its normal
-  `⚙ {cost} {symbol}` Money-funded tickspeed button for a quick-access **Speed Up** button
-  (`⏩ ×{next}`, `actions.speedUp`) in the same grid slot — not a manual XP-consume control any more (an
+  `⚙ {cost} {symbol}` Money-funded tickspeed button for a quick-access **Scale Up** button
+  (`⏩ ×{next}`, `actions.scaleUp`) in the same grid slot — not a manual XP-consume control any more (an
   earlier version showed `🧬 {current unspent XP} XP` here, spending the player's entire current XP
-  balance on click; that manual trigger was removed in favor of surfacing Speed Up in this slot instead,
-  since reaching a full last-tier level is also exactly when Speed Up tends to become available). The
+  balance on click; that manual trigger was removed in favor of surfacing Scale Up in this slot instead,
+  since reaching a full last-tier level is also exactly when Scale Up tends to become available). The
   underlying mechanic still fires — but now *only* via the tier tickspeed autobuyer (see "Automation"
   above), which spends the player's entire current XP balance each tick the same way the old manual
   button used to on click. `actions.consumeXpForLastTierTickspeed` remains a valid hook action (still
@@ -1883,8 +1883,8 @@ is its one purpose.
 
 `getLastTierXpTickspeedMultiplier` compounds `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (see
 above) against `lastTierXpConsumed`. `1.01 ** xpConsumed` overflows to `Infinity` around `xpConsumed ≈
-71,333`; `lastTierXpConsumed` now resets to 0 on every Prestige/Speed Up (see `prestigeGame`/
-`speedUpGame` above), which makes reaching that magnitude far less likely than when this guard was first
+71,333`; `lastTierXpConsumed` now resets to 0 on every Prestige/Scale Up (see `prestigeGame`/
+`scaleUpGame` above), which makes reaching that magnitude far less likely than when this guard was first
 added (it would need a single run, between resets, to earn and spend that much XP), but the guard is
 kept regardless as defense in depth — a sufficiently long single run could still in principle drive it
 there. Dividing `getEffectiveTierTickSpeedSeconds`'s period by an `Infinity` multiplier would
@@ -1929,7 +1929,7 @@ How the Prestige control is presented depends on `prestige.count` (times ever pr
   `ResizeObserver` (e.g. jsdom in tests).
 
 There used to also be a bottom `PrestigeCard` (Factory view) mirroring the analogous informational
-`SpeedUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
+`ScaleUpCard` below — it carried no Prestige button of its own (the PP header display, `PpHeaderCard`,
 see "Balances (top HUD)" above, already doubles as the Prestige button once `canPrestige`), so it was
 purely informational: prestige progress/award preview, prestiged count, unspent PP, and Auto-Prestige
 status. It has been removed entirely as redundant with the `TopPrestigeBar`/`FullScreenOverlay`/
@@ -1940,84 +1940,116 @@ isAutoPrestigeActive`, prefixed with the dimmable `✦` `PpUpgradeBadge`) still 
 page's Auto-Prestige row (see "PP Upgrades view" above) — Auto-Prestige's *control* lives there too,
 gated on `allTiersFullyAutomated` — UI-only, `buyAutoPrestige`/`tickGame` don't check it.
 
-### Speed Up
+### Scale Up
 
 A more frequent, cheaper soft-reset than real Prestige, available well before Money reaches
-`PRESTIGE_THRESHOLD`: once
-the last tier (`tier10`) reaches that cycle's requirement — `getSpeedUpRequirement(speedUpCount) =
-speedUpCount + 6`, a LEVEL target (raw level 6 — displayed level 5, see the display-offset paragraph
-below — for the first activation, level 7/displayed 6 for the second, …), compared
-against `state.purchaseLevels[lastTier.id]` — `speedUpGame` (`engine.js`) resets resources/owned/purchased (everything a fresh
-`createInitialGameState()` would have) but permanently multiplies production speed by
-`SPEED_UP_MULTIPLIER_BASE` (2) raised to `state.speedUpCount`, unconditional (no PP unlock needed), read
-via `getSpeedUpMultiplier`. Each activation increments `speedUpCount` by 1, so the multiplier stacks: 1x
-→ 2x → 4x → 8x → …, always doubling. See `docs/DESIGN_HISTORY.md` for why this mechanic and its
-escalating requirement exist (empirically-confirmed stall + cost-curve dodge otherwise).
+`PRESTIGE_THRESHOLD` and, unlike every other soft/hard reset in the game, relevant from the very
+first cycle — its gate walks through the tier ladder one tier at a time rather than sitting only on
+the last tier. `state.scaleUpTargetTierIndex` (0-indexed into `TIER_DEFINITIONS`, starting at 0) is
+the tier Scale Up is currently measured against — `getScaleUpTargetTier(state)` reads it directly,
+clamped to the last tier's own index once reached (there's no tier past it to keep targeting).
+`getScaleUpRequirement(state)` is a flat `TIER_UNLOCK_PREV_LEVEL_REQUIREMENT` (3) — the SAME level
+that unlocks the next tier via `isTierUnlocked` — while `scaleUpTargetTierIndex` hasn't yet reached
+`TIER_DEFINITIONS.length - 1`; once it has, the requirement becomes a repeating multiple of
+`SCALE_UP_FINAL_TIER_REQUIREMENT_STEP` (3) that climbs one further step per activation already
+fired since then — read directly off how far `scaleUpTargetTierIndex` has climbed past the last
+tier's own index (level 3 for the first such activation, 6 for the second, 9 for the third, …), no
+separate counter needed. `scaleUpGame` (`engine.js`) checks
+`state.purchaseLevels[getScaleUpTargetTier(state).id] >= getScaleUpRequirement(state)`, and on
+success resets resources/owned/purchased (everything a fresh `createInitialGameState()` would have)
+but permanently doubles production speed — `SCALE_UP_MULTIPLIER_BASE` (2) raised to
+`state.scaleUpCount`, unconditional (no PP unlock needed), read via `getScaleUpMultiplier` — AND
+increments `scaleUpTargetTierIndex` by 1 unconditionally, advancing the target to the next tier.
+Each activation increments `scaleUpCount` by 1 too, so the multiplier stacks: 1x → 2x → 4x → 8x →
+…, always doubling — `scaleUpCount` and `scaleUpTargetTierIndex` are separate counters (the former
+never resets on Scale Up itself and drives only the multiplier; the latter drives only the
+requirement and IS what Scale Up itself advances). See `docs/DESIGN_HISTORY.md` for why an
+escalating requirement exists at all once the last tier is reached (empirically-confirmed stall +
+cost-curve dodge otherwise) and for the redesign from a last-tier-only gate to this per-tier one.
 
-`speedUpGame`'s reset pattern otherwise mirrors `prestigeGame`'s, with one deliberate asymmetry:
+Because `scaleUpTargetTierIndex` only ever advances when Scale Up itself fires — never merely by a
+tier separately unlocking via ordinary play (see `isTierUnlocked`, unaffected and still independent
+of Scale Up) — a deferred Scale Up (Auto Scale Up off, or just not clicked) never permanently misses
+its moment: it simply becomes available the instant its current target tier's own level (reset to 1
+the last time Scale Up fired, or still whatever it organically grew to if Scale Up hasn't fired even
+once this cycle) climbs past the requirement, however that happened to occur.
+
+`scaleUpGame`'s reset pattern otherwise mirrors `prestigeGame`'s, with two deliberate asymmetries:
 `state.intro` (the Byte Foundry screen's own state — see "Byte Foundry" below) is carried over
-completely untouched by Speed Up (and Overclock, below), Memory included — an intra-cycle soft
+completely untouched by Scale Up (and Overclock, below), Memory included — an intra-cycle soft
 reset, not a new cycle — while a real Prestige resets Memory (`bits`/`productionAccumulator`) and
 the completion gate every time, sending the player back through the gate, while still keeping the
 Byte generator and its upgrades permanent (see "Byte Foundry" below and `prestigeGame`'s row in the
-function table). An already-unlocked autobuyer stays permanently
-active (its flag is untouched) and every tier's `tickspeedLevels`/`purchaseLevels`/
-`purchaseLevelProgress` entries reset to their baseline (1/1/0 respectively), same
-as `owned`/`purchased` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back down to
-`DEFAULT_PURCHASE_BLOCK_SIZE`, since it's derived from the last tier's own level. `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/
-`prestigeSpeedBonusUnlocked`/`autoSpeedUp`/`autoGlobalTickspeed` (the automation toggles) all carry over
+function table). The second asymmetry: **`everUnlockedTierIds` is carried over unchanged rather than
+wiped** — unlike `prestigeGame`/`overclockGame`, which both still fully relock every tier beyond the
+first — so every tier unlocked so far, PLUS the one that reaching this activation's target level
+just permanently unlocked (the same live threshold `isTierUnlocked` already checks), stays unlocked
+through the reset; this is the mechanism behind "provide the ×2 multiplier and then unlock the next
+tier" — Scale Up's whole point is to trade away this cycle's progress for one more
+permanently-reachable tier plus the stacking bonus, not to relock what's already been reached. An
+already-unlocked autobuyer stays permanently active (its flag is untouched) and every tier's
+`tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries reset to their baseline (1/1/0
+respectively), same as `owned`/`purchased` — resetting `purchaseLevels` also resets
+`getPurchaseBlockSize` back down to `DEFAULT_PURCHASE_BLOCK_SIZE`, since it's derived from the last
+tier's own level. `smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/
+`prestigeSpeedBonusUnlocked`/`autoScaleUp`/`autoGlobalTickspeed` (the automation toggles) all carry over
 unchanged — but **`globalTickspeedMultiplier` (the level itself) resets to `null`**, same as its own
 behavior across a real Prestige (see "The global tickspeed multiplier" above) — so neither a
-repeatedly-Speed-Up'd nor a repeatedly-Prestiged run can keep stacking it for free.
+repeatedly-Scale-Up'd nor a repeatedly-Prestiged run can keep stacking it for free.
 `lastTierXpConsumed`/`prestige.xp` reset to 0 the same way (see "The last tier's XP-funded tickspeed"
 above) — everything XP-related is run-scoped, not permanent meta-progression. `prestige.highestMilestone`
 (the money-exponent watermark `checkMilestones` grants further XP against) resets to the fresh initial
 value here too, same as `prestigeGame` — otherwise a fresh run (money reset to `MONEY_STARTING_AMOUNT`)
 would earn no XP at all until money climbed back past wherever the previous run's peak left off. Unlike
-`prestigeGame`: `prestige.points`/`count` are passed through completely untouched (Speed Up doesn't
-award/spend PP), and the gate condition is `getTierPurchasedCount(lastTier) >=
-getSpeedUpRequirement(speedUpCount)`, not `Money >= PRESTIGE_THRESHOLD` — also refuses while `isProductionFrozen`.
-`speedUpCount` itself is run-scoped, NOT permanent: `speedUpGame` increments it by 1 on every
-activation (stacking within a run), but **`prestigeGame` resets it back to 0** — a real Prestige is
-the bigger, rarer reset, and Speed Up's stacking multiplier is meant to be rebuilt from scratch each
-Prestige cycle rather than carried forward forever. `autoSpeedUp` (the automation toggle deciding
-*whether* Speed Up fires automatically) is unaffected by this and still carries over permanently, so a
-player who already bought it doesn't need to re-buy it after a Prestige — it just starts
-re-accumulating `speedUpCount` from 0 on the next cycle. Can fire without a manual click once Auto
-Speed Up is bought.
+`prestigeGame`: `prestige.points`/`count` are passed through completely untouched (Scale Up doesn't
+award/spend PP) — also refuses while `isProductionFrozen`.
+`scaleUpCount` itself is run-scoped, NOT permanent: `scaleUpGame` increments it by 1 on every
+activation (stacking within a run), but **`prestigeGame`/`overclockGame` reset it back to 0** — a real
+Prestige/Overclock is the bigger, rarer reset, and Scale Up's stacking multiplier is meant to be
+rebuilt from scratch each such cycle rather than carried forward forever; `scaleUpTargetTierIndex`
+and `everUnlockedTierIds` reset alongside it (via the same `...initial` fallback, no explicit
+override needed in either function), so the tier ladder has to be re-earned from tier one again too.
+`autoScaleUp` (the automation toggle deciding *whether* Scale Up fires automatically) is unaffected by
+this and still carries over permanently, so a player who already bought it doesn't need to re-buy it
+after a Prestige — it just starts re-accumulating `scaleUpCount`/`scaleUpTargetTierIndex` from 0 on
+the next cycle. Can fire without a manual click once Auto Scale Up is bought.
 
-`MainPage` surfaces this as a `SpeedUpCard` (cyan accent; Factory view only), rendered directly below
+`MainPage` surfaces this as a `ScaleUpCard` (cyan accent; Factory view only), rendered directly below
 `TierList`, side by side with `OverclockCard` (inside a shared `SpeedCardsRow` flex row, wrapping to
 stacked on narrow viewports) — `GlobalTickspeedCard` renders separately, alone at the top of the Game
 view, since it's the one control relevant before the last tier is even reachable (see "Global Tickspeed
-card" in docs/MAINPAGE_REFERENCE.md). Gated on `speedUpEverRevealed` (see docs/MAINPAGE_REFERENCE.md). A
-quick-access copy of the same button also appears inline in the last tier's own row once that tier is
-full — see "The last tier's XP-funded tickspeed" above. The button
-(`SpeedUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
+card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `overclockEverRevealed`,
+the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
+shown — relevant from the very first cycle, well before the last tier even exists. The button
+(`ScaleUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
 larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — not a percentage, so the
-player sees concretely what's still needed. `state.purchaseLevels[lastTier.id]` and
-`getSpeedUpRequirement(speedUpCount)` are both internally 1-indexed so that "level 1" means "no
+player sees concretely what's still needed, against the CURRENT target tier's name/level (via
+`getScaleUpTargetTier`), not always the last tier's. `state.purchaseLevels[targetTier.id]` and
+`getScaleUpRequirement(state)` are both internally 1-indexed so that "level 1" means "no
 completed block yet" (see "The (configurable) purchase block size and tier levels" above); displayed
 raw, that reads as an off-by-one to the player, so `MainPage` subtracts 1 from both
-(`lastTierLevelDisplay`/`speedUpRequirementDisplay`) before rendering — the visible "Lv." and the
-requirement sentence/`aria-label` ("Reach level N…"/"requires … level N") instead count completed
-blocks directly: Lv.1 once the last tier finishes its first block (8 purchases at the default block
-size), Lv.2 after two, and the first Speed Up requires reaching (displayed) level 5. The underlying
-`purchaseLevels`/`getSpeedUpRequirement` values driving eligibility (`canSpeedUp`) are unchanged — only
-the two numbers rendered to the player are shifted. The on-button `$progress` fill (`speedUpProgressPercent`)
+(`scaleUpTargetTierLevelDisplay`/`scaleUpRequirementDisplay`) before rendering — the visible "Lv." and
+the requirement sentence/`aria-label` ("Reach level N…"/"requires … level N") instead count completed
+blocks directly: Lv.1 once the target tier finishes its first block (8 purchases at the default
+block size), Lv.2 after two, and the flat per-tier requirement (3) displays as level 2. The underlying
+`purchaseLevels`/`getScaleUpRequirement` values driving eligibility (`canScaleUp`) are unchanged — only
+the two numbers rendered to the player are shifted. The on-button `$progress` fill (`scaleUpProgressPercent`)
 is computed from these same displayed values, not the raw ones, so it reads 0% before any block is
 completed rather than already partway filled. Enabled once the requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
-and `autoSpeedUp` bought, a static "⏩ Auto Speed Up active" note shows (the purchase button itself
+and `autoScaleUp` bought, a static "⏩ Auto Scale Up active" note shows (the purchase button itself
 lives on the PP Upgrades page).
 
 ### Overclock
 
-A second, rarer soft-reset than Speed Up, sharing the same last-tier gate but with no fixed-step
-ladder beyond a small floor: `getOverclockRequirement(overclockCount) = overclockCount *
+A second, rarer soft-reset than Scale Up, gated purely on the last tier's own level (unlike Scale
+Up, whose own target walks through the tier ladder one tier at a time — see above) with no
+fixed-step ladder beyond a small floor: `getOverclockRequirement(overclockCount) = overclockCount *
 OVERCLOCK_REQUIREMENT_STEP + 2` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — level 2 for the first claim, level
-3 for the second, level 4 for the third, … — the same +1-per-cycle shape `getSpeedUpRequirement` uses,
-just without Speed Up's own display offset (see below). The `+2` floor (not `+1`/`+0`) is deliberate:
+3 for the second, level 4 for the third, … — a simple +1-per-cycle shape, unconditional (unlike
+`getScaleUpRequirement`, whose own requirement only escalates once every tier is already unlocked,
+and by `SCALE_UP_FINAL_TIER_REQUIREMENT_STEP` (3) per activation rather than 1), and without Scale
+Up's own display offset (see below). The `+2` floor (not `+1`/`+0`) is deliberate:
 every tier's `purchaseLevels` starts at 1 (the tier's own un-purchased default), so a requirement of
 exactly 1 would already be satisfied by a completely untouched last tier, making the first Overclock
 claim of every cycle free — requiring level 2 means at least one real level of last-tier progress is
@@ -2025,19 +2057,23 @@ always needed first. A claim is gated on `state.purchaseLevels[lastTier.id]` rea
 requirement, but **jumps straight to the last tier's current level rather than just the minimum
 required** — see `overclockGame` below — so there's no fixed ladder to climb beyond that floor and
 whatever the last tier's own (already steep) cost curve demands from there.
-`overclockGame` (`engine.js`) does everything `speedUpGame` does — full
-resources/owned/purchased/tickspeedLevels/purchaseLevels/purchaseLevelProgress reset, `globalTickspeedMultiplier`
-reset to `null`, `lastTierXpConsumed`/`prestige.xp`/`prestige.highestMilestone` reset, every automation
-toggle (`smartAutobuyer`/`tierTickspeedAutobuyer`/`autoPrestige`/`prestigeSpeedBonusUnlocked`/
-`autoSpeedUp`/`autoGlobalTickspeed`) carried over unchanged, `prestige.points`/`count` passed through
-untouched — **plus two differences**: it resets `speedUpCount` back to 0 (wiping Speed Up's own stacking
-multiplier back to its 1x baseline, not just refusing to grow it further) instead of leaving it alone,
-and it sets `overclockCount` to `state.purchaseLevels[lastTier.id]` (the last tier's level *at the
-moment of the claim*) instead of leaving it untouched or merely incrementing it by 1 — since the
-eligibility check already guarantees that level is `>= overclockCount + 1`, this is always at least a
-+1 gain, and lets a player who claims late (e.g. last claimed at level 5, but the last tier has since
-reached level 8) catch all the way up to level 8 in a single claim rather than needing three separate
-ones. Refuses while `isProductionFrozen`, same as `speedUpGame`.
+`overclockGame` (`engine.js`) does everything `scaleUpGame` does EXCEPT keeping tiers permanently
+unlocked — full resources/owned/purchased/tickspeedLevels/purchaseLevels/purchaseLevelProgress
+reset, `globalTickspeedMultiplier` reset to `null`, `lastTierXpConsumed`/`prestige.xp`/
+`prestige.highestMilestone` reset, every automation toggle (`smartAutobuyer`/
+`tierTickspeedAutobuyer`/`autoPrestige`/`prestigeSpeedBonusUnlocked`/`autoScaleUp`/
+`autoGlobalTickspeed`) carried over unchanged, `prestige.points`/`count` passed through untouched —
+**plus three differences**: unlike `scaleUpGame`, it does NOT carry `everUnlockedTierIds` through —
+Overclock is the steeper reset and fully relocks every tier beyond the first, same as `prestigeGame`
+(so `scaleUpTargetTierIndex` also resets to 0 here, same as `prestigeGame`, rather than being
+incremented); it resets `scaleUpCount` back to 0 (wiping Scale Up's own stacking multiplier back to
+its 1x baseline, not just refusing to grow it further) instead of leaving it alone; and it sets
+`overclockCount` to `state.purchaseLevels[lastTier.id]` (the last tier's level *at the moment of the
+claim*) instead of leaving it untouched or merely incrementing it by 1 — since the eligibility check
+already guarantees that level is `>= overclockCount + 1`, this is always at least a +1 gain, and lets
+a player who claims late (e.g. last claimed at level 5, but the last tier has since reached level 8)
+catch all the way up to level 8 in a single claim rather than needing three separate ones. Refuses
+while `isProductionFrozen`, same as `scaleUpGame`.
 
 The reward is **not** a separate multiplier stacked alongside the (Money-funded) global tickspeed
 multiplier — it permanently raises that multiplier's own per-level growth rate instead, and it does so
@@ -2065,34 +2101,34 @@ now grows **multiplicatively** (×1.1 per level, compounding: 1% → 1.1% → 1.
 additively (a flat percentage point added per activation), and the boost now applies to the
 **milestone step too**, not just regular levels.
 
-`overclockCount` itself sits one rung above `speedUpCount` in the reset hierarchy (Prestige > Overclock >
-Speed Up): it's run-scoped like `speedUpCount`, but **survives an ordinary Speed Up** (`speedUpGame`
-explicitly carries it over unchanged — see `speedUpGame`'s own return object) rather than resetting on
-every soft-reset the way `speedUpCount` does. It resets to 0 only on a real Prestige (`prestigeGame`
+`overclockCount` itself sits one rung above `scaleUpCount` in the reset hierarchy (Prestige > Overclock >
+Scale Up): it's run-scoped like `scaleUpCount`, but **survives an ordinary Scale Up** (`scaleUpGame`
+explicitly carries it over unchanged — see `scaleUpGame`'s own return object) rather than resetting on
+every soft-reset the way `scaleUpCount` does. It resets to 0 only on a real Prestige (`prestigeGame`
 doesn't list it among its carried-over fields, so it falls through to `createInitialGameState()`'s
-default, same mechanism `speedUpCount` itself uses there) or on its own claim (`overclockGame` sets it
-to the last tier's current level, same event that resets `speedUpCount`). There is no PP-funded "Auto
-Overclock" automation (unlike Speed Up's `autoSpeedUp`) — Overclock is meant to be a deliberate,
-occasional player decision given how much it costs the run (wiping Speed Up's bonus along with
+default, same mechanism `scaleUpCount` itself uses there) or on its own claim (`overclockGame` sets it
+to the last tier's current level, same event that resets `scaleUpCount`). There is no PP-funded "Auto
+Overclock" automation (unlike Scale Up's `autoScaleUp`) — Overclock is meant to be a deliberate,
+occasional player decision given how much it costs the run (wiping Scale Up's bonus along with
 everything else).
 
 `MainPage` surfaces this as an `OverclockCard` (orange accent; Factory view only), rendered directly below
-`TierList`, side by side with `SpeedUpCard` inside the shared `SpeedCardsRow` flex row (see "Speed Up"
+`TierList`, side by side with `ScaleUpCard` inside the shared `SpeedCardsRow` flex row (see "Scale Up"
 above) — not grouped with `GlobalTickspeedCard`, which renders separately at the top of the Factory view.
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
-progressive-disclosure pattern as `speedUpEverRevealed`. The button (`OverclockButton`, sized to match
-`SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
+progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
+`ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
 — e.g. `⚡ 2.14%/lvl · Lv.8/7` — where `{nextStep}` is the regular-step percentage that would result
 from claiming right now (`1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel,
 overclockRequirement))`, accounting for a catch-up jump past the bare minimum requirement, not just
 `overclockCount + 1`), formatted as a percentage by reusing `formatGlobalTickspeedBonusPercent`'s
 trimmed-decimal formatting (passing it `1 + step` as if it were a multiplier, since that function
-already computes `(multiplier - 1) * 100`). Unlike Speed Up's own button, **this level/requirement
+already computes `(multiplier - 1) * 100`). Unlike Scale Up's own button, **this level/requirement
 pair is NOT given the -1 "completed blocks" display offset** — `getOverclockRequirement`'s numbers are
 shown exactly as `state.purchaseLevels[lastTier.id]` and the requirement itself already read, matching
 the same raw level number the last tier's own Details disclosure shows, rather than introducing a
 second, differently-offset "level" reading for the same underlying value. Enabled once the requirement
-is met and disabled while frozen — no `window.confirm` guard, same rationale as Speed Up (beneficial,
+is met and disabled while frozen — no `window.confirm` guard, same rationale as Scale Up (beneficial,
 not destructive).
 
 ### Prestige info is hidden until first prestige
@@ -2166,13 +2202,13 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                   // size a level requires can change over a run (see
                                                   // getPurchaseBlockSize), so there's no fixed divisor to
                                                   // derive a level from after the fact. Resets to 1 for
-                                                  // every tier on Prestige and Speed Up, same as owned/purchased
+                                                  // every tier on Prestige and Scale Up, same as owned/purchased
   purchaseLevelProgress: { tier01: 0, tier02: 0, … }, // how many of the current level's pieces are already
                                                   // bought — 0 up to (but not including) whatever
                                                   // getPurchaseBlockSize(state) currently is; reaching that
                                                   // value completes the level (see buyTier), resetting this
                                                   // back to 0 and advancing purchaseLevels[tierId] by 1.
-                                                  // Resets to 0 for every tier on Prestige and Speed Up
+                                                  // Resets to 0 for every tier on Prestige and Scale Up
   autobuyers: { tier01: null, tier02: null, … }, // null = not yet unlocked (see
                                                   // applyAutobuyerMilestones — a free, permanent,
                                                   // prestige-count-milestone-triggered unlock, no PP
@@ -2182,7 +2218,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                   // (see tickspeedLevels below for the actual tickspeed
                                                   // level, tracked independently). An unlocked tier
                                                   // self-buys units automatically every tick; never reset
-                                                  // by prestige/Speed Up
+                                                  // by prestige/Scale Up
   autobuyersEnabled: { tier01: true, tier02: true, … }, // permanent per-tier flag, default true: whether
                                                   // this tier's unit-buying autobuyer (once unlocked, see
                                                   // autobuyers above) currently acts — split "unlocked"
@@ -2191,7 +2227,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                   // per-tier automations" below). Meaningless (a no-op to
                                                   // toggle, see setAutobuyerEnabled) while
                                                   // autobuyers[tierId] is still null. Never reset by
-                                                  // prestige/Speed Up
+                                                  // prestige/Scale Up
   tickspeedLevels: { tier01: 1, tier02: 1, … },  // per-tier level for that tier's own
                                                   // Money-funded tickspeed multiplier (see
                                                   // getTickspeedProductionMultiplier/buyTickspeedMultiplier
@@ -2199,7 +2235,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                   // delivered) — starts at 1 (baseline, no speed bonus) and
                                                   // is buyable from the moment the tier itself is unlocked,
                                                   // with no PP prerequisite and no bearing from autobuyers
-                                                  // above. Resets to 1 for every tier on Prestige and Speed
+                                                  // above. Resets to 1 for every tier on Prestige and Scale
                                                   // Up, same as owned/purchased
   autobuyerAttemptBudgets: { tier01: 0, tier02: 0, … }, // fractional purchase-attempt budget per tier accumulated
                                                           // each tick at a flat rate of 1 (independent of
@@ -2223,7 +2259,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // split "unlocked" from "enabled" the same way
                                                           // autobuyersEnabled splits from autobuyers above
                                                           // (see setTierTickspeedAutobuyerEnabled). Never
-                                                          // reset by prestige/Speed Up
+                                                          // reset by prestige/Scale Up
   tierProductionAccumulators: { tier01: 0, tier02: 0, … }, // fractional seconds banked per tier toward its next
                                                           // production batch, incremented every tick by
                                                           // elapsedSeconds and drained once it crosses that
@@ -2241,7 +2277,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // setAutoPrestigeEnabled/tickGame, "Pause/resume for
                                                           // the global automations" above). Meaningless
                                                           // (a no-op to toggle) while autoPrestige is null; never
-                                                          // reset by Prestige/Speed Up, same permanence as
+                                                          // reset by Prestige/Scale Up, same permanence as
                                                           // autoPrestige itself
   globalTickspeedMultiplier: null,                       // RUN-SCOPED GLOBAL level (not per-tier — only
                                                           // one to buy/upgrade, mirroring autoPrestige
@@ -2252,8 +2288,8 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // the amount delivered (see
                                                           // getGlobalTickspeedProductionMultiplier/
                                                           // buyGlobalTickspeedMultiplier) — reset to null by
-                                                          // both a real Prestige and Speed Up (see
-                                                          // prestigeGame/speedUpGame/"Speed Up" above), same
+                                                          // both a real Prestige and Scale Up (see
+                                                          // prestigeGame/scaleUpGame/"Scale Up" above), same
                                                           // as tickspeedLevels — unlike every other
                                                           // permanent automation toggle/level in this state
                                                           // shape, which both leave untouched
@@ -2266,16 +2302,25 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // +1%-per-unspent-point production speed bonus
                                                           // (getPrestigeProductionMultiplier) is active at all —
                                                           // see buyPrestigeSpeedBonus. Never reset by prestige
-  speedUpCount: 0,                                       // RUN-SCOPED count of Speed Up activations (see
-                                                          // speedUpGame/getSpeedUpMultiplier below) — drives an
-                                                          // unconditional, stacking production-speed multiplier
-                                                          // (2^speedUpCount) AND how many last-tier purchases the
-                                                          // next activation requires (getSpeedUpRequirement).
-                                                          // Never reset by Speed Up itself (it's the thing being
+  scaleUpCount: 0,                                       // RUN-SCOPED count of Scale Up activations (see
+                                                          // scaleUpGame/getScaleUpMultiplier below) — drives ONLY
+                                                          // an unconditional, stacking production-speed multiplier
+                                                          // (2^scaleUpCount); see scaleUpTargetTierIndex below for
+                                                          // what drives the next activation's own requirement.
+                                                          // Never reset by Scale Up itself (it's the thing being
                                                           // incremented), but IS reset to 0 by a real Prestige,
                                                           // unlike every permanent flag/level around it — see
-                                                          // "Speed Up" below
-  overclockCount: 0,                                     // RUN-SCOPED (but Speed-Up-surviving) level reached
+                                                          // "Scale Up" below
+  scaleUpTargetTierIndex: 0,                             // RUN-SCOPED index into TIER_DEFINITIONS Scale Up
+                                                          // currently targets (see getScaleUpTargetTier/
+                                                          // getScaleUpRequirement/scaleUpGame below) — climbs by
+                                                          // exactly 1 on every activation, unconditionally;
+                                                          // deliberately unbounded (not clamped to the last tier)
+                                                          // so how far past it drives that phase's own repeating
+                                                          // requirement. Reset to 0 by a real Prestige/Overclock,
+                                                          // same as scaleUpCount and everUnlockedTierIds — see
+                                                          // "Scale Up" below
+  overclockCount: 0,                                     // RUN-SCOPED (but Scale-Up-surviving) level reached
                                                           // by Overclock (see overclockGame/
                                                           // getGlobalTickspeedProductionMultiplier below) —
                                                           // permanently multiplies BOTH the global tickspeed
@@ -2286,51 +2331,51 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // jumps this straight to the last tier's current level
                                                           // (not just +1) once that level passes
                                                           // getOverclockRequirement(overclockCount). Never reset
-                                                          // by Speed Up (speedUpGame explicitly carries it over
-                                                          // unchanged, unlike speedUpCount) — only by a real
-                                                          // Prestige or by Overclock itself resetting speedUpCount
+                                                          // by Scale Up (scaleUpGame explicitly carries it over
+                                                          // unchanged, unlike scaleUpCount) — only by a real
+                                                          // Prestige or by Overclock itself resetting scaleUpCount
                                                           // (not overclockCount) — see "Overclock" below
-  autoSpeedUp: false,                                    // permanent GLOBAL flag: PP spent to make Speed Up
+  autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make Scale Up
                                                           // trigger automatically every tick once eligible (see
-                                                          // buyAutoSpeedUp) — never reset by Speed Up or prestige
-  autoSpeedUpEnabled: true,                              // permanent GLOBAL flag, default true: whether Auto
-                                                          // Speed Up (once bought) currently acts — split from
-                                                          // autoSpeedUp the same way autoPrestigeEnabled splits
-                                                          // from autoPrestige above (see setAutoSpeedUpEnabled/
-                                                          // tickGame). Never reset by Speed Up or prestige
+                                                          // buyAutoScaleUp) — never reset by Scale Up or prestige
+  autoScaleUpEnabled: true,                              // permanent GLOBAL flag, default true: whether Auto
+                                                          // Scale Up (once bought) currently acts — split from
+                                                          // autoScaleUp the same way autoPrestigeEnabled splits
+                                                          // from autoPrestige above (see setAutoScaleUpEnabled/
+                                                          // tickGame). Never reset by Scale Up or prestige
   autoGlobalTickspeed: false,                            // permanent GLOBAL flag: PP spent to make the
                                                           // (Money-funded) global tickspeed multiplier upgrade
                                                           // itself automatically every tick once affordable (see
-                                                          // buyTickspeedAutobuyer) — never reset by Speed Up or
+                                                          // buyTickspeedAutobuyer) — never reset by Scale Up or
                                                           // prestige
   autoGlobalTickspeedEnabled: true,                      // permanent GLOBAL flag, default true: whether the
                                                           // global Tickspeed Autobuyer (once bought) currently
                                                           // acts — split from autoGlobalTickspeed the same way
-                                                          // autoPrestigeEnabled/autoSpeedUpEnabled split from
+                                                          // autoPrestigeEnabled/autoScaleUpEnabled split from
                                                           // their own parent flags above (see
                                                           // setAutoGlobalTickspeedEnabled/tickGame). Never reset
-                                                          // by Speed Up or prestige
+                                                          // by Scale Up or prestige
   autoPrestigeAutobuyer: false,                          // permanent GLOBAL flag: PP spent to make Auto-Prestige
                                                           // keep RE-LEVELING itself automatically once affordable
                                                           // (see buyAutoPrestigeAutobuyer/tickGame) — a
                                                           // "meta-automation" companion to autoPrestige above,
                                                           // distinct from activating Auto-Prestige in the first
                                                           // place; only meaningful once autoPrestige is already
-                                                          // non-null. Never reset by Speed Up or prestige
+                                                          // non-null. Never reset by Scale Up or prestige
   autoPrestigeAutobuyerEnabled: true,                    // permanent GLOBAL flag, default true: whether the
                                                           // Auto-Prestige Autobuyer (once bought) currently acts —
                                                           // split from autoPrestigeAutobuyer the same way
-                                                          // autoPrestigeEnabled/autoSpeedUpEnabled/
+                                                          // autoPrestigeEnabled/autoScaleUpEnabled/
                                                           // autoGlobalTickspeedEnabled split from their own parent
                                                           // flags above (see setAutoPrestigeAutobuyerEnabled/
-                                                          // tickGame). Never reset by Speed Up or prestige
+                                                          // tickGame). Never reset by Scale Up or prestige
   lastTierXpConsumed: 0,                                 // RUN-SCOPED GLOBAL counter: cumulative total XP
                                                           // spent via consumeXpForLastTierTickspeed within the
                                                           // current run — each XP spent compounds another 1%
                                                           // into the last tier's own delivery frequency (see
                                                           // getLastTierXpTickspeedMultiplier). Reset to 0 by
-                                                          // both Prestige and Speed Up (see prestigeGame/
-                                                          // speedUpGame), same as prestige.xp below — never
+                                                          // both Prestige and Scale Up (see prestigeGame/
+                                                          // scaleUpGame), same as prestige.xp below — never
                                                           // reset by consumeXpForLastTierTickspeed itself
                                                           // (only grows within a run)
   everUnlockedTierIds: { tier01: true, tier02: false, … }, // RUN-SCOPED per-tier flag: latched true
@@ -2342,22 +2387,24 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // additional way to stay unlocked, so a tier that's
                                                           // ever been reached within the current run doesn't
                                                           // disappear from the Factory view just because a
-                                                          // narrower reset than a full Prestige/Speed Up zeroed
+                                                          // narrower reset than a full Prestige/Overclock zeroed
                                                           // its `owned` count — specifically
                                                           // consumeXpForLastTierTickspeed (see "The last
                                                           // tier's XP-funded tickspeed" below). NOT permanent
                                                           // like the flags above it, though: prestigeGame and
-                                                          // speedUpGame both reset this back to the fresh
+                                                          // overclockGame both reset this back to the fresh
                                                           // default, same as owned/purchased, so a real
-                                                          // Prestige/Speed Up still relocks every tier beyond
-                                                          // the first exactly as it always has
+                                                          // Prestige/Overclock still relocks every tier beyond
+                                                          // the first exactly as it always has —
+                                                          // **scaleUpGame is the one exception**, carrying it
+                                                          // through unchanged instead (see "Scale Up" below)
   prestige:   { xp: 0, points: 0, count: 0, highestMilestone: 1 }, // xp is earned via money milestones (see
                                                           // checkMilestones); its one use is funding
                                                           // consumeXpForLastTierTickspeed (see "The last
                                                           // tier's XP-funded tickspeed" above) — otherwise
                                                           // still absent from the rest of the UI. RUN-SCOPED,
                                                           // unlike points/count below — both prestigeGame and
-                                                          // speedUpGame reset it to 0, same as
+                                                          // scaleUpGame reset it to 0, same as
                                                           // lastTierXpConsumed;
                                                           // points is the spendable Prestige Point balance
                                                           // (earned via prestigeGame, spent via
@@ -2365,7 +2412,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // also drives production speed once unlocked —
                                                           // see "Prestige Points, autobuyer unlock, and the
                                                           // tickspeed multiplier") — permanent, never reset by
-                                                          // Speed Up, only added to by prestigeGame;
+                                                          // Scale Up, only added to by prestigeGame;
                                                           // count is the number of times ever prestiged (renamed
                                                           // from the old `level` field), driving only the
                                                           // first-run-vs-repeat UI presentation; prestige itself
@@ -2374,7 +2421,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // checkMilestones grants further xp against) resets
                                                           // to the fresh default on prestigeGame (consistent
                                                           // with Money itself resetting) but is left untouched
-                                                          // by speedUpGame — a pre-existing asymmetry, unrelated
+                                                          // by scaleUpGame — a pre-existing asymmetry, unrelated
                                                           // to xp's own reset above
   computeFlops: {                                         // PP Compute (Flops) screen — see "PP Compute (Flops)"
                                                           // above. pageUnlocked latches true once PP >= reveal;
@@ -2406,7 +2453,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // "purchaseLevelProgress" below), which reset like
                                                           // every other tier's on prestige, same as any other
                                                           // tier — no field of its own here.
-                                                          // speedUpGame/overclockGame carry the whole object
+                                                          // scaleUpGame/overclockGame carry the whole object
                                                           // through completely untouched either way
                                                           // (intra-cycle soft resets, not new cycles). A full
                                                           // Reset restarts everything, generator included
@@ -2591,7 +2638,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
     computeDatacentersMergeRemainingSeconds: 0,           // tickComputeMergeReserveTimer and issue #321
     computeSupercomputersMergeRemainingSeconds: 0,
     computeBoostType: null,                               // NOT permanent — resets to null on every real Prestige,
-                                                          // carried through untouched by Speed Up/Overclock.
+                                                          // carried through untouched by Scale Up/Overclock.
                                                           // Which COMPUTE_BOOST_PRESETS key is active, if any —
                                                           // see activateComputeBoost/tickComputeBoost
     computeBoostStacks: 0,                                // NOT permanent, same reset posture as computeBoostType.
@@ -2634,7 +2681,7 @@ purchases were manual or automatic.
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `MONEY_ID`, `'base'`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases — display/back-compat only; no longer used for cost scaling (see `state.purchaseLevels`/`purchaseLevelProgress`) |
 | `isProductionFrozen` | `state → bool` | `Money >= PRESTIGE_THRESHOLD` AND `prestige.count < PRESTIGE_UNBOUNDED_MIN_COUNT` (100) — once true, `buyTier`/`buyTickspeedMultiplier`/most PP purchases become no-ops; `tickGame` either stays frozen or calls `prestigeGame` automatically once Auto-Prestige's banked attempt budget crosses 1. At/after 100 lifetime prestiges, `isUnboundedPrestigeUnlocked` — production continues and Prestige is optional |
-| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | First, unconditionally, `latchMainGameUnlocked` (see above — a no-op once already latched or before Storage's own capacity threshold). Then runs the Byte Foundry's `tickIntroProduction`, then `tickDiskBuild`, then `tickDiskAutoFill`, then every `tickAutoMerge*(elapsedSeconds)` (issues #316/#321 — lowest tier first including Core → Node, see `AUTO_MERGE_TICKERS` — each both auto-starts a reserve merge and counts down any merge already in flight), then `tickComputeBoost(elapsedSeconds)` (counting an active Compute Boost's remaining duration down, unconditionally, alongside the rest of this pipeline), then `tickIntroAutoInvest`, in that order, unconditionally, before anything below (see "Byte Foundry" above) — `tickDiskBuild` counts down any in-progress disk array build (unconditional, bypasses nothing); `tickDiskAutoFill` then gets first claim on the Memory `tickIntroProduction` just delivered, ahead of `tickIntroAutoInvest`'s own direct bit-to-Kilobyte conversion — a Disk array the player has already built isn't starved of Memory it's waiting to be filled with; `tickDiskAutoFill` has no dependency on tier01's level so running it this early costs nothing (unlike `tickDiskPull`/`tickDiskLevelOneCachePull`, which still run last — see their own table rows below). Compute Cores are no longer minted from Memory at all — they're bought instantly with a Data Lake's own banked units via `buyBooster`; `tickDataLakeAutoBuy` (auto-buying every lake with `autoBuyEnabled`) runs right after `tickPoolBufferFill` (whose own overflow branch is what feeds the lakes — see "Data Lakes" above), so a Booster that tick's overflow just funded can auto-buy the same tick, though it only cascades through `AUTO_MERGE_TICKERS` (which runs earlier in the pipeline, right after `tickFoundryResetConvenience`) starting the NEXT tick — a one-tick lag, imperceptible at `TICK_RATE_MS`. `tickIntroProduction` short-circuits to a same-reference no-op before `byteCreated`, and `tickIntroAutoInvest` once `bits` can't cover even one more `getIntroKilobyteConversionCost(state)` unit; neither ever fully freezes, and neither is capped (`tickIntroAutoInvest` is capped per-call at one tier01 level's worth, not overall — see its own table row). If `isProductionFrozen`: when `autoPrestige` isn't bought OR `autoPrestigeEnabled` is false (paused — see "Pause/resume for the global automations" above), short-circuits (returns the same state, unchanged); otherwise accumulates `autoPrestigeAttemptBudget` by `getAutoPrestigeAttemptRate(autoPrestige) * elapsedSeconds` and, once that crosses 1 (with `TICK_ACCUMULATION_EPSILON` tolerance), calls `prestigeGame` immediately (prestigeGame's own reset zeroes the budget back out) — otherwise returns the state with just the updated budget. Otherwise (not frozen) runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier — but only once its `tierProductionAccumulators[tier.id]` (incremented by `elapsedSeconds` this tick) crosses that tier's own `getEffectiveTierTickSpeedSeconds(state, tier.id)` — the tier's base tickspeed shrunk by both tickspeed multipliers (with the same epsilon tolerance); when it does, delivers `floor(owned × (whole effective periods elapsed) × multiplier × speedUpMultiplier × getPurchaseMilestoneMultiplier(level) × computeBoostMultiplier)` in one batch — `computeBoostMultiplier` is `getComputeBoostMultiplier(intro)` for tier01 specifically and `1` for every other tier (see "Compute Boost" above) — note neither tickspeed multiplier appears in this credit formula, since they already did their work by shrinking the period the "whole effective periods elapsed" count is measured against — where `multiplier` is `getPrestigeProductionMultiplier(prestige.points)` if `prestigeSpeedBonusUnlocked` is true, or a flat `1` otherwise, and `speedUpMultiplier` is `getSpeedUpMultiplier(speedUpCount)` — always ≥ 1, unconditional, no unlock needed — and the result is floored so `owned`/`resources` stay integer-valued — and banks any leftover remainder for the next tick — then checks milestones, then — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]` — no dependency on `autobuyers[tier.id]` at all) and whose `tierTickspeedAutobuyerEnabled[tier.id] ?? true` is true (paused behaves exactly as if `tierTickspeedAutobuyer[tier.id]` were still false, see "Pause/resume for per-tier automations" in CLAUDE.md) — calls `buyTickspeedMultiplier(tier.id)` once more automatically, no-op if unaffordable (edge-triggered on affordability, not scaled by `elapsedSeconds`), **except for the last tier once `isLastTierTickspeedXpUnlocked` holds**, where the same bought flag instead calls `consumeXpForLastTierTickspeed(state.prestige.xp)` (spending the tier's entire current XP balance, same edge-triggered convention, no-op below the minimum consumption threshold — see "The last tier's XP-funded tickspeed" in CLAUDE.md), and — if `autoPrestige` is bought and `autoPrestigeEnabled` is true — accumulates `autoPrestigeAttemptBudget` here too, scaled by `elapsedSeconds` (the clock runs continuously regardless of frozen state, but can only ever fire from the frozen branch above). `globalTickspeedMultiplier` needs no per-tick accumulation of its own — unlike Auto-Prestige's attempt budget, it's just a permanent level read via `getGlobalTickspeedProductionMultiplier` inside `getEffectiveTierTickSpeedSeconds` each tick, changed only by the player's own `buyGlobalTickspeedMultiplier` clicks or — once `autoGlobalTickspeed` is bought (see `buyTickspeedAutobuyer`) and `autoGlobalTickspeedEnabled` is true — by `tickGame` calling `buyGlobalTickspeedMultiplier` automatically every tick right after the per-tier tickspeed self-upgrade step above, the same edge-triggered convention, re-validating its own eligibility internally each time. Next, if `autoPrestigeAutobuyer` is bought and `autoPrestigeAutobuyerEnabled` is true, calls `buyAutoPrestige` once more automatically (edge-triggered, re-validating its own eligibility internally — no rate-accumulating budget, unlike Auto-Prestige's own attempt budget above), the same convention as the tickspeed self-upgrade steps just before it. For each non-`null` (unlocked) autobuyer whose `autobuyersEnabled[tier.id] ?? true` is also true (a paused tier is treated exactly like "never unlocked" here, including skipping this budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md), accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + elapsedSeconds` — a flat rate, independent of tickspeed level) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget (with the same epsilon tolerance), carrying any fractional remainder into the next tick. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`) still on its very first level (`purchaseLevels[tier.id] === 1`), which uses 1 instead — above 1 (`Number.MAX_SAFE_INTEGER` in the running app, see `useIncrementalGame`'s `BUY_QUANTITY`) each attempt only buys once the tier can afford the *entire* current cost block up to that size. Finally, if `autoSpeedUp` is bought and `autoSpeedUpEnabled` is true, calls `speedUpGame` once more (edge-triggered, re-validates its own eligibility internally) |
+| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | First, unconditionally, `latchMainGameUnlocked` (see above — a no-op once already latched or before Storage's own capacity threshold). Then runs the Byte Foundry's `tickIntroProduction`, then `tickDiskBuild`, then `tickDiskAutoFill`, then every `tickAutoMerge*(elapsedSeconds)` (issues #316/#321 — lowest tier first including Core → Node, see `AUTO_MERGE_TICKERS` — each both auto-starts a reserve merge and counts down any merge already in flight), then `tickComputeBoost(elapsedSeconds)` (counting an active Compute Boost's remaining duration down, unconditionally, alongside the rest of this pipeline), then `tickIntroAutoInvest`, in that order, unconditionally, before anything below (see "Byte Foundry" above) — `tickDiskBuild` counts down any in-progress disk array build (unconditional, bypasses nothing); `tickDiskAutoFill` then gets first claim on the Memory `tickIntroProduction` just delivered, ahead of `tickIntroAutoInvest`'s own direct bit-to-Kilobyte conversion — a Disk array the player has already built isn't starved of Memory it's waiting to be filled with; `tickDiskAutoFill` has no dependency on tier01's level so running it this early costs nothing (unlike `tickDiskPull`/`tickDiskLevelOneCachePull`, which still run last — see their own table rows below). Compute Cores are no longer minted from Memory at all — they're bought instantly with a Data Lake's own banked units via `buyBooster`; `tickDataLakeAutoBuy` (auto-buying every lake with `autoBuyEnabled`) runs right after `tickPoolBufferFill` (whose own overflow branch is what feeds the lakes — see "Data Lakes" above), so a Booster that tick's overflow just funded can auto-buy the same tick, though it only cascades through `AUTO_MERGE_TICKERS` (which runs earlier in the pipeline, right after `tickFoundryResetConvenience`) starting the NEXT tick — a one-tick lag, imperceptible at `TICK_RATE_MS`. `tickIntroProduction` short-circuits to a same-reference no-op before `byteCreated`, and `tickIntroAutoInvest` once `bits` can't cover even one more `getIntroKilobyteConversionCost(state)` unit; neither ever fully freezes, and neither is capped (`tickIntroAutoInvest` is capped per-call at one tier01 level's worth, not overall — see its own table row). If `isProductionFrozen`: when `autoPrestige` isn't bought OR `autoPrestigeEnabled` is false (paused — see "Pause/resume for the global automations" above), short-circuits (returns the same state, unchanged); otherwise accumulates `autoPrestigeAttemptBudget` by `getAutoPrestigeAttemptRate(autoPrestige) * elapsedSeconds` and, once that crosses 1 (with `TICK_ACCUMULATION_EPSILON` tolerance), calls `prestigeGame` immediately (prestigeGame's own reset zeroes the budget back out) — otherwise returns the state with just the updated budget. Otherwise (not frozen) runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier — but only once its `tierProductionAccumulators[tier.id]` (incremented by `elapsedSeconds` this tick) crosses that tier's own `getEffectiveTierTickSpeedSeconds(state, tier.id)` — the tier's base tickspeed shrunk by both tickspeed multipliers (with the same epsilon tolerance); when it does, delivers `floor(owned × (whole effective periods elapsed) × multiplier × scaleUpMultiplier × getPurchaseMilestoneMultiplier(level) × computeBoostMultiplier)` in one batch — `computeBoostMultiplier` is `getComputeBoostMultiplier(intro)` for tier01 specifically and `1` for every other tier (see "Compute Boost" above) — note neither tickspeed multiplier appears in this credit formula, since they already did their work by shrinking the period the "whole effective periods elapsed" count is measured against — where `multiplier` is `getPrestigeProductionMultiplier(prestige.points)` if `prestigeSpeedBonusUnlocked` is true, or a flat `1` otherwise, and `scaleUpMultiplier` is `getScaleUpMultiplier(scaleUpCount)` — always ≥ 1, unconditional, no unlock needed — and the result is floored so `owned`/`resources` stay integer-valued — and banks any leftover remainder for the next tick — then checks milestones, then — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]` — no dependency on `autobuyers[tier.id]` at all) and whose `tierTickspeedAutobuyerEnabled[tier.id] ?? true` is true (paused behaves exactly as if `tierTickspeedAutobuyer[tier.id]` were still false, see "Pause/resume for per-tier automations" in CLAUDE.md) — calls `buyTickspeedMultiplier(tier.id)` once more automatically, no-op if unaffordable (edge-triggered on affordability, not scaled by `elapsedSeconds`), **except for the last tier once `isLastTierTickspeedXpUnlocked` holds**, where the same bought flag instead calls `consumeXpForLastTierTickspeed(state.prestige.xp)` (spending the tier's entire current XP balance, same edge-triggered convention, no-op below the minimum consumption threshold — see "The last tier's XP-funded tickspeed" in CLAUDE.md), and — if `autoPrestige` is bought and `autoPrestigeEnabled` is true — accumulates `autoPrestigeAttemptBudget` here too, scaled by `elapsedSeconds` (the clock runs continuously regardless of frozen state, but can only ever fire from the frozen branch above). `globalTickspeedMultiplier` needs no per-tick accumulation of its own — unlike Auto-Prestige's attempt budget, it's just a permanent level read via `getGlobalTickspeedProductionMultiplier` inside `getEffectiveTierTickSpeedSeconds` each tick, changed only by the player's own `buyGlobalTickspeedMultiplier` clicks or — once `autoGlobalTickspeed` is bought (see `buyTickspeedAutobuyer`) and `autoGlobalTickspeedEnabled` is true — by `tickGame` calling `buyGlobalTickspeedMultiplier` automatically every tick right after the per-tier tickspeed self-upgrade step above, the same edge-triggered convention, re-validating its own eligibility internally each time. Next, if `autoPrestigeAutobuyer` is bought and `autoPrestigeAutobuyerEnabled` is true, calls `buyAutoPrestige` once more automatically (edge-triggered, re-validating its own eligibility internally — no rate-accumulating budget, unlike Auto-Prestige's own attempt budget above), the same convention as the tickspeed self-upgrade steps just before it. For each non-`null` (unlocked) autobuyer whose `autobuyersEnabled[tier.id] ?? true` is also true (a paused tier is treated exactly like "never unlocked" here, including skipping this budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md), accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + elapsedSeconds` — a flat rate, independent of tickspeed level) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget (with the same epsilon tolerance), carrying any fractional remainder into the next tick. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`) still on its very first level (`purchaseLevels[tier.id] === 1`), which uses 1 instead — above 1 (`Number.MAX_SAFE_INTEGER` in the running app, see `useIncrementalGame`'s `BUY_QUANTITY`) each attempt only buys once the tier can afford the *entire* current cost block up to that size. Finally, if `autoScaleUp` is bought and `autoScaleUpEnabled` is true, calls `scaleUpGame` once more (edge-triggered, re-validates its own eligibility internally) |
 | `getIntroProductionRate` | `intro → number` | Byte Foundry: current bits/sec, `(INTRO_BYTE_BASE_RATE * productionMultiplier) / tickSpeedSeconds` — always an exact integer, since both factors are always powers of `INTRO_PRODUCTION_MULTIPLIER_STEP`. This is the DISPLAYED rate — see point 4a above, `getDataStreamEffectMultiplier` is what actually scales `tickIntroProduction`'s real per-tick delivery. Used by `tapIntroBit`'s pre-reveal branch and the passive-production display |
 | `getFillMultiplierPercent` | `fillFraction → percent` | `FILL_MULTIPLIER_MAX_PERCENT - clamp(fillFraction, 0, 1) * 100` — see point 4a above |
 | `getDataStreamFillFraction` | `intro → number` | `min(1, bits / capacity)`, or 0 if `capacity <= 0` |
@@ -2716,7 +2763,7 @@ purchases were manual or automatic.
 | `isDiskRedeemable` | `(state, capacityBits) → bool` | Byte Foundry Disks: true whenever `capacityBits`' own FIXED, PERMANENT corresponding tier (via the internal `getMatchingTierForDiskSize`/`getDiskRequiredTierLevel` helpers — the tier sharing that disk-ladder step's Data Lake grouping, `getDataLakeTierIndex`, and that step's 1st/2nd/3rd position within its 3-step group as the required level) is CURRENTLY sitting at exactly that required level (`purchaseLevels[tier.id] ?? 1 === requiredLevel`) — a genuine one-tick-only EXACT match, same as before, but now against a fixed (tier, level) pair rather than a live price comparison (superseded the earlier "whichever tier's current per-unit cost happens to coincidentally match its size" design — see `docs/DESIGN_HISTORY.md`). Does NOT also require zero progress (unlike `isDiskPullEligible` above) — used by write-cache/read-cache-flush pause logic and UI display, where "tier match" alone (regardless of progress) is the relevant fact. A tier already past its required level, or not yet there, makes the disk simply wait, full and untouched, until the tier's level matches again — which only happens after the next real Prestige resets purchase levels (see "Data Lakes" above) |
 
 | `pullDiskForCurrentLevel` | `capacityBits → state → state` (private, invoked only from `tickDiskPull`) | Byte Foundry Disks: no-op unless `isDiskPullEligible`; otherwise decrements `intro.disks[capacityBits]` (removing the key entirely once it reaches 0 — `intro.disksBuiltTotal[capacityBits]` is untouched, so the disk re-enters the fillable pool) and grants `getPurchaseBlockSize(state)` free units of that fixed tier via `grantTierUnits` — always the FULL block, since `isDiskPullEligible` already guarantees zero progress (an earlier `redeemDisk` design granted `getPurchaseBlockSize(state) - progress` instead, back when a partial-progress level was still poolable by a disk — see `docs/DESIGN_HISTORY.md`) — completing the tier's WHOLE current level in one shot, not a single unit — bypasses `isProductionFrozen`/`isTierUnlocked`/cost entirely, and deliberately bypasses `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` too (a disk's contents came from Memory via `tickDiskAutoFill`, not a further bit-to-Kilobyte conversion at pull time) |
-| `tickDiskPull` | `state → state` | Byte Foundry Disks: no-op unless there's a pull-eligible size (`isDiskPullEligible`). Pulls the SMALLEST eligible size each call via `pullDiskForCurrentLevel` — fully automatic and unconditional, no autobuyer gate, no per-cycle throttle ("Byte Foundry does not know about Byte Factory at all — it simply supplies if asked and otherwise minds its own business," issue #571; this replaced the earlier autobuyer-gated `tickDiskAutoRedeem`/manual `redeemDisk` design — see `docs/DESIGN_HISTORY.md`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `pullDiskForCurrentLevel` itself), at the very end, after every other per-tick automation (including `tickDiskAutoFill`, which runs much earlier, right after `tickDiskBuild` — see the `tickGame` row above — and a possible automatic Speed Up), so it always reacts to every tier's truly final level for the tick — a disk filled earlier the same tick can still pull the same tick |
+| `tickDiskPull` | `state → state` | Byte Foundry Disks: no-op unless there's a pull-eligible size (`isDiskPullEligible`). Pulls the SMALLEST eligible size each call via `pullDiskForCurrentLevel` — fully automatic and unconditional, no autobuyer gate, no per-cycle throttle ("Byte Foundry does not know about Byte Factory at all — it simply supplies if asked and otherwise minds its own business," issue #571; this replaced the earlier autobuyer-gated `tickDiskAutoRedeem`/manual `redeemDisk` design — see `docs/DESIGN_HISTORY.md`). Called from every branch of `tickGame`, frozen or not (bypasses the production freeze, same as `pullDiskForCurrentLevel` itself), at the very end, after every other per-tick automation (including `tickDiskAutoFill`, which runs much earlier, right after `tickDiskBuild` — see the `tickGame` row above — and a possible automatic Scale Up), so it always reacts to every tier's truly final level for the tick — a disk filled earlier the same tick can still pull the same tick |
 | `getDiskSizeForTierLevel` | `(tierIndex, level) → capacityBits or null` (private) | Byte Foundry Disks: the forward inverse of `getDiskRequiredTierLevel`/`getDataLakeTierIndex` (size → tier+level) — given a main-game tier's own 1-based Data Lake `tierIndex` and one of its three levels (1/2/3), the disk-ladder size that tier+level pair fixes to, or `null` when no such size exists. Used by `tickDiskLevelOneCachePull` to find "my own level 1's disk size" without scanning every built disk size the way `getMatchingTierForDiskSize`'s own reverse direction does |
 | `tickDiskLevelOneCachePull` | `state → state` | Byte Foundry Disks: generalizes tier01's own pre-Storage-unlock bootstrap (`convertIntroBitsToKilobytes` — untouched, drawing from `intro.bits` before any pool/cache exists at all) to every tier's own level 1, once its matching pool exists. For every tier currently at level 1 with no fresh disk pull-eligible this tick (`isDiskPullEligible` false for its own level-1 disk size — covering both "no disk built yet" and "a disk exists but this level already has progress"), spends whole units straight out of that tier's own pool's smallest-size `diskCache` at the tier's current per-unit cost, via `grantTierUnits` (same bypass rationale as `pullDiskForCurrentLevel`) — capped at as many whole units as the cache affords AND the level's own remaining requirement (`getPurchaseBlockSize(state) - purchaseLevelProgress`); also cancels any `intro.diskReadCacheFlush` entry already in flight for that same size (Devin Review finding — a preserved flush after a level reset would otherwise block that size's cache refill for its whole remaining duration, then complete with too little cache left to produce a disk). Never applies past level 1 — a tier's 2nd/3rd disk-funded levels only ever pull from a whole disk, never cache (see `docs/DESIGN_HISTORY.md`). Called right after `tickDiskPull` in `tickStorage`, every tick, frozen or not |
 | `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (400,000 — 50 KB SI) — drives whether `ByteFoundryPage` shows the "⚡ Compute" nav button to `ComputePage` at all. Unrelated to Disks entirely (earlier versions gated on Disk array fullness, then on a dynamic Memory flush — see `docs/DESIGN_HISTORY.md`) |
@@ -2745,18 +2792,19 @@ purchases were manual or automatic.
 | `buyAutoPrestigeAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if Auto-Prestige hasn't been activated yet (`state.autoPrestige` is still `null` — this automates RE-leveling only, not the initial activation), if already bought, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_PRESTIGE_AUTOBUYER_COST` PP and permanently sets `autoPrestigeAutobuyer = true`, making `tickGame` call `buyAutoPrestige` automatically every tick |
 | `isGlobalTickspeedMultiplierUnlocked` | `state → bool` | `owned[TIER_DEFINITIONS[1].id] >= 1 \|\| globalTickspeedMultiplier != null` — gates the global tickspeed multiplier's *initial* activation on owning at least 1 of the second tier; once active it stays true regardless of tier02's current owned count |
 | `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough Money; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getGlobalTickspeedMultiplierCost(currentLevel)`, spending `resources[MONEY_ID]` directly (no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
-| `buyAutoSpeedUp` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoSpeedUp` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_SPEED_UP_COST` PP and permanently sets `autoSpeedUp = true`, making `tickGame` call `speedUpGame` automatically every tick |
+| `buyAutoScaleUp` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoScaleUp` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_SCALE_UP_COST` PP and permanently sets `autoScaleUp = true`, making `tickGame` call `scaleUpGame` automatically every tick |
 | `buyTickspeedAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoGlobalTickspeed` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `TICKSPEED_AUTOBUYER_COST` PP and permanently sets `autoGlobalTickspeed = true`, making `tickGame` call `buyGlobalTickspeedMultiplier` automatically every tick |
-| `setAutoSpeedUpEnabled` | `enabled → state → state` | Unconditional (not gated by `isProductionFrozen`) and a no-op if `autoSpeedUp` is still falsy; otherwise sets `autoSpeedUpEnabled` to `!!enabled`, pausing/resuming `tickGame`'s automatic `speedUpGame` call without touching `autoSpeedUp` itself — see "Pause/resume for the global automations" above |
-| `setAutoGlobalTickspeedEnabled` | `enabled → state → state` | Same convention as `setAutoSpeedUpEnabled`, gating `autoGlobalTickspeed` instead — a no-op if `autoGlobalTickspeed` is still falsy |
-| `setAutoPrestigeEnabled` | `enabled → state → state` | Same convention as `setAutoSpeedUpEnabled`, gating `autoPrestige` instead — a no-op if `autoPrestige` is still `null` |
-| `setAutoPrestigeAutobuyerEnabled` | `enabled → state → state` | Same convention as `setAutoSpeedUpEnabled`, gating `autoPrestigeAutobuyer` instead — a no-op if `autoPrestigeAutobuyer` is still falsy |
-| `setAutobuyerEnabled` | `(tierId, enabled) → state → state` | Same convention as `setAutoSpeedUpEnabled`, gating that tier's `autobuyersEnabled[tierId]` instead — unconditional, not gated by `isProductionFrozen`, and a no-op if `autobuyers[tierId]` is still `null` (not yet unlocked). `tickGame` treats a paused tier's autobuyer exactly like "never unlocked" for automation purposes, including its attempt-budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md |
+| `setAutoScaleUpEnabled` | `enabled → state → state` | Unconditional (not gated by `isProductionFrozen`) and a no-op if `autoScaleUp` is still falsy; otherwise sets `autoScaleUpEnabled` to `!!enabled`, pausing/resuming `tickGame`'s automatic `scaleUpGame` call without touching `autoScaleUp` itself — see "Pause/resume for the global automations" above |
+| `setAutoGlobalTickspeedEnabled` | `enabled → state → state` | Same convention as `setAutoScaleUpEnabled`, gating `autoGlobalTickspeed` instead — a no-op if `autoGlobalTickspeed` is still falsy |
+| `setAutoPrestigeEnabled` | `enabled → state → state` | Same convention as `setAutoScaleUpEnabled`, gating `autoPrestige` instead — a no-op if `autoPrestige` is still `null` |
+| `setAutoPrestigeAutobuyerEnabled` | `enabled → state → state` | Same convention as `setAutoScaleUpEnabled`, gating `autoPrestigeAutobuyer` instead — a no-op if `autoPrestigeAutobuyer` is still falsy |
+| `setAutobuyerEnabled` | `(tierId, enabled) → state → state` | Same convention as `setAutoScaleUpEnabled`, gating that tier's `autobuyersEnabled[tierId]` instead — unconditional, not gated by `isProductionFrozen`, and a no-op if `autobuyers[tierId]` is still `null` (not yet unlocked). `tickGame` treats a paused tier's autobuyer exactly like "never unlocked" for automation purposes, including its attempt-budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md |
 | `setTierTickspeedAutobuyerEnabled` | `(tierId, enabled) → state → state` | Same convention as `setAutobuyerEnabled`, gating that tier's `tierTickspeedAutobuyerEnabled[tierId]` instead — a no-op if `tierTickspeedAutobuyer[tierId]` is still falsy |
 | `getPurchaseMilestoneMultiplier` | `level → number` | `levelsCompleted = level - 1`, `megaBlocks = floor(levelsCompleted/10)`, `regularBlocks = levelsCompleted - megaBlocks`; returns `PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks` (`2`, `10`) — doubles a tier's own passive production at every completed level, the same boundary where `getTierCost`'s cost-epoch exponent steps up, **except** every 10th such level contributes a 10x factor instead of the regular 2x for that one level, compounding into the rest (e.g. level 81 → `2^9 * 10^1` = 5120, not `2^10` = 1024) — this "every 10th level" mega cadence is independent of the (now variable) block size and stays a fixed 10 regardless of level size. Takes the tier's current LEVEL directly, not a lifetime purchased count. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
-| `getSpeedUpMultiplier` | `speedUpCount → number` | `SPEED_UP_MULTIPLIER_BASE ** speedUpCount` (2^speedUpCount) — the unconditional, stacking production-speed multiplier from Speed Up activations; no unlock purchase needed, unlike `getPrestigeProductionMultiplier` |
-| `getSpeedUpRequirement` | `speedUpCount → number` | `speedUpCount + 6` — the last tier's LEVEL the *next* Speed Up needs: level 6 (displayed level 5) for the first activation, level 7 (displayed 6) for the second, level 8 (displayed 7) for the third, … Expressed as a level target rather than a lifetime-purchased-count threshold since how many purchases a level boundary corresponds to now depends on the current (possibly grown) block size, while the level number itself doesn't |
-| `getOverclockRequirement` | `overclockCount → number` | `overclockCount * OVERCLOCK_REQUIREMENT_STEP + 2` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — the last tier's LEVEL the *next* Overclock claim needs: level 2 for the first claim, level 3 for the second, level 4 for the third, … Same `+1`-per-cycle shape as `getSpeedUpRequirement`, just without its display offset; the `+2` floor (not `+1`) stops a completely untouched last tier (which starts at level 1 by default) from making the first claim of a cycle free |
+| `getScaleUpMultiplier` | `scaleUpCount → number` | `SCALE_UP_MULTIPLIER_BASE ** scaleUpCount` (2^scaleUpCount) — the unconditional, stacking production-speed multiplier from Scale Up activations; no unlock purchase needed, unlike `getPrestigeProductionMultiplier` |
+| `getScaleUpTargetTier` | `state → tier` | `TIER_DEFINITIONS[min(max(scaleUpTargetTierIndex, 0), TIER_DEFINITIONS.length - 1)]` — the tier Scale Up's own requirement is currently measured against; clamped to the last tier once `scaleUpTargetTierIndex` reaches or passes it |
+| `getScaleUpRequirement` | `state → number` | If `scaleUpTargetTierIndex` hasn't yet reached the last tier's own index: `TIER_UNLOCK_PREV_LEVEL_REQUIREMENT` (a flat 3) — the SAME threshold that unlocks the tier one past the target (see `isTierUnlocked`). Otherwise: `SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * (activationsPastLastTier + 1)`, where `activationsPastLastTier = scaleUpTargetTierIndex - (TIER_DEFINITIONS.length - 1)` — level 3 for the first such activation, 6 for the second, 9 for the third, … Expressed as a level target rather than a lifetime-purchased-count threshold since how many purchases a level boundary corresponds to now depends on the current (possibly grown) block size, while the level number itself doesn't |
+| `getOverclockRequirement` | `overclockCount → number` | `overclockCount * OVERCLOCK_REQUIREMENT_STEP + 2` (`OVERCLOCK_REQUIREMENT_STEP = 1`) — the last tier's LEVEL the *next* Overclock claim needs: level 2 for the first claim, level 3 for the second, level 4 for the third, … Same `+1`-per-cycle shape as `getScaleUpRequirement`, just without its display offset; the `+2` floor (not `+1`) stops a completely untouched last tier (which starts at level 1 by default) from making the first claim of a cycle free |
 | `getOverclockMultiplier` | `overclockCount → number` | `(1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount` (`OVERCLOCK_MULTIPLIER_STEP = 0.1`) — Overclock's own growth factor: ×1 with no claims, ×1.1 after the first claimed level, ×1.21 after the second, and so on. Folded into `getGlobalTickspeedProductionMultiplier` below (multiplies both its regular and milestone steps) — not a standalone factor |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |
 | `getTickspeedMultiplierCost` | `(tierId, targetLevel) → number` | `getTickspeedMultiplierBaseCost(tierIndex) ** (targetLevel - 1)` — the resource cost, in that tier's own resource, to reach `targetLevel`: level 1 costs `base^0 = 1` (the free baseline, never actually charged), level 2 costs exactly the tier's base cost (`base^1`), level 3 costs `base^2`, and so on. Money-funded only — unrelated to `getAutobuyerUnlockCost` (below) |
@@ -2783,16 +2831,16 @@ purchases were manual or automatic.
 | `applyFlopsAutobuyerMilestones` | `state → state` | Unlocks Flops autobuyers free at Era milestones; called from `eraGame` |
 | `setComputeFlopsAutobuyerEnabled` | `(flopId, enabled) → state → state` | Pause/resume a unlocked Flops autobuyer |
 | `getPrestigeProductionMultiplier` | `points → number` | `1 + PRESTIGE_POINT_SPEED_BONUS * points` — a flat +1% production speed per unspent Prestige Point. A pure formula, not auto-applied — callers must check `prestigeSpeedBonusUnlocked` first; before that's bought, every caller uses a flat `1` instead. Fractional whenever `points` isn't a multiple of 100; `tickGame` floors its production credit to absorb this |
-| `prestigeGame` | `state → state` | Requires Money ≥ `PRESTIGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `speedUpGame` does), `speedUpCount` back to 0 (run-scoped — unlike every other flag/level listed next, the stacking Speed Up multiplier does NOT survive a real Prestige and must be rebuilt from scratch each cycle), `prestige.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits`/`intro.productionAccumulator` ("Memory") back to `createInitialGameState()`'s fresh defaults, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.mainGameUnlocked` (the gate — now PERMANENT, see `latchMainGameUnlocked`), `intro.capacity`/`intro.byteCreated`/`intro.tickSpeedSeconds`/`intro.productionMultiplier`/`intro.productionMilestoneTier`/`intro.productionMilestoneTierClaims` (the Byte generator and its upgrades) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige resets Memory but never the main-game-unlock gate itself once it's ever latched, and never the generator from scratch either; keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (permanent, including the Auto-Prestige *level*, the Auto-Prestige Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoSpeedUp` is the automation *toggle* only — it carries over even though the `speedUpCount` multiplier it drives resets), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
-| `speedUpGame` | `state → state` | Requires `state.purchaseLevels[lastTier.id] >= getSpeedUpRequirement(speedUpCount)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPrestigeAttemptBudget/tickspeedLevels/purchaseLevels/purchaseLevelProgress (every tier back to baseline)/`globalTickspeedMultiplier` (back to `null`)/`prestige.xp`/`lastTierXpConsumed` (both back to 0, same as `prestigeGame`)/`everUnlockedTierIds` (back to the fresh default, same as `prestigeGame`) exactly like a fresh `createInitialGameState` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`, undoing any in-run growth — unlike `prestigeGame`, keeps `intro` completely untouched (an intra-cycle soft reset, not a new cycle — see "Byte Foundry" below), autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`prestigeSpeedBonusUnlocked`/`autoSpeedUp`/`autoGlobalTickspeed`/`autoSpeedUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (mirrors `prestigeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier`/`prestige.xp`/`lastTierXpConsumed` the same way; see "The global tickspeed multiplier" above), **and now also `overclockCount`** (carried over unchanged — see "Overclock" below) — and — same as `prestigeGame` — disengages the last tier's live-checked XP-funded tickspeed mechanic with nothing banked to re-engage with — leaves `prestige.points`/`count`/`highestMilestone` untouched — unlike `prestigeGame`, it doesn't award or spend Prestige Points — and increments `speedUpCount` by 1. Called either by the player's manual click or automatically by `tickGame` when Auto Speed Up is bought |
-| `overclockGame` | `state → state` | Requires `state.purchaseLevels[lastTier.id] >= getOverclockRequirement(overclockCount)` and not `isProductionFrozen`; resets everything `speedUpGame` resets, the same way, keeps the same permanent flags/levels `speedUpGame` keeps — **plus two differences**: resets `speedUpCount` back to 0 (wiping Speed Up's own stacking multiplier, not just leaving it alone) and sets `overclockCount` to `state.purchaseLevels[lastTier.id]` (the last tier's level at claim time — always at least +1 above the previous `overclockCount`, and a catch-up jump past that when the player is ahead of the bare minimum) instead of leaving it untouched. Leaves `prestige.points`/`count`/`highestMilestone` untouched, same as `speedUpGame` — doesn't award or spend Prestige Points. See "Overclock" below |
+| `prestigeGame` | `state → state` | Requires Money ≥ `PRESTIGE_THRESHOLD`; resets resources/owned/purchased, every tier's `tickspeedLevels`/`purchaseLevels`/`purchaseLevelProgress` entries back to their baseline (1/1/0 — no speed bonus, level 1, no progress; resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`), `globalTickspeedMultiplier` back to `null` (not-yet-bought — same reset `scaleUpGame` does), `scaleUpCount`/`scaleUpTargetTierIndex` back to 0 (run-scoped — unlike every other flag/level listed next, Scale Up's stacking multiplier and tier-ladder progress do NOT survive a real Prestige and must be rebuilt from scratch each cycle), `prestige.xp`/`lastTierXpConsumed` back to 0 (run-scoped, like resources/owned/purchased), and `everUnlockedTierIds` back to the fresh default (only the first tier true — so every tier beyond the first relocks exactly as it always has, same as owned/purchased), resets `intro.bits`/`intro.productionAccumulator` ("Memory") back to `createInitialGameState()`'s fresh defaults, purely as a side effect of `purchaseLevels`/`purchaseLevelProgress` resetting for every tier above, tier01 included, while keeping `intro.mainGameUnlocked` (the gate — now PERMANENT, see `latchMainGameUnlocked`), `intro.capacity`/`intro.byteCreated`/`intro.tickSpeedSeconds`/`intro.productionMultiplier`/`intro.productionMilestoneTier`/`intro.productionMilestoneTierClaims` (the Byte generator and its upgrades) and `intro.computeCores`/`intro.computeCoresEverEarned`/`intro.computeNodes`/`intro.computeClusters`/`intro.computeNetworks`/`intro.computeGrids`/`intro.computeFabrics`/`intro.computeClouds`/`intro.computeDatacenters`/`intro.computeSupercomputers`/`intro.computeMegacomputers`/`intro.computeMergePageUnlocked`/`intro.autoMergeCoresIntoNode`/`intro.autoMergeNodesIntoCluster`/`intro.autoMergeClustersIntoNetwork`/`intro.autoMergeNetworksIntoGrid`/`intro.autoMergeGridsIntoFabric`/`intro.autoMergeFabricsIntoCloud`/`intro.autoMergeCloudsIntoDatacenter`/`intro.autoMergeDatacentersIntoSupercomputer`/`intro.autoMergeSupercomputersIntoMegacomputer`/`intro.computeCoresMergeRemainingSeconds`/`intro.computeNodesMergeRemainingSeconds`/`intro.computeClustersMergeRemainingSeconds`/`intro.computeNetworksMergeRemainingSeconds`/`intro.computeGridsMergeRemainingSeconds`/`intro.computeFabricsMergeRemainingSeconds`/`intro.computeCloudsMergeRemainingSeconds`/`intro.computeDatacentersMergeRemainingSeconds`/`intro.computeSupercomputersMergeRemainingSeconds` (issue #321 — an in-flight reserve merge's timer is PERMANENT too, carried through unchanged rather than cancelled, since it represents already-committed tokens) PERMANENT, carried over from `state` unchanged (see "Byte Foundry" below) — a real Prestige resets Memory but never the main-game-unlock gate itself once it's ever latched, and never the generator from scratch either; keeps autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (permanent, including the Auto-Prestige *level*, the Auto-Prestige Autobuyer, and each automation's pause/resume preference, both global and per-tier; `autoScaleUp` is the automation *toggle* only — it carries over even though the `scaleUpCount` multiplier it drives resets), resets `autoPrestigeAttemptBudget` to 0 (like `autobuyerAttemptBudgets`), adds `getPrestigePointsAwarded(money)` on top of any already-unspent `prestige.points`, increments `prestige.count` by 1 (both permanent, unlike `xp`). Since `owned` resets, this also disengages the last tier's XP-funded tickspeed mechanic (`isLastTierTickspeedXpUnlocked` is a live check — see "The last tier's XP-funded tickspeed" in CLAUDE.md) — with nothing banked to re-engage with either, since `lastTierXpConsumed` was just wiped along with it. Called either by the player's manual click or automatically by `tickGame` when Auto-Prestige's attempt budget fires |
+| `scaleUpGame` | `state → state` | Requires `state.purchaseLevels[getScaleUpTargetTier(state).id] >= getScaleUpRequirement(state)` and not `isProductionFrozen`; resets resources/owned/purchased/tierProductionAccumulators/autobuyerAttemptBudgets/autoPrestigeAttemptBudget/tickspeedLevels/purchaseLevels/purchaseLevelProgress (every tier back to baseline)/`globalTickspeedMultiplier` (back to `null`)/`prestige.xp`/`lastTierXpConsumed` (both back to 0, same as `prestigeGame`) exactly like a fresh `createInitialGameState` — resetting `purchaseLevels` also resets `getPurchaseBlockSize` back to `DEFAULT_PURCHASE_BLOCK_SIZE`, undoing any in-run growth — unlike `prestigeGame`/`overclockGame`, keeps `intro` completely untouched (an intra-cycle soft reset, not a new cycle — see "Byte Foundry" below), autobuyer *unlock* flags, and `smartAutobuyer`/`tierTickspeedAutobuyer`/`autobuyersEnabled`/`tierTickspeedAutobuyerEnabled`/`autoPrestige`/`autoPrestigeAutobuyer`/`prestigeSpeedBonusUnlocked`/`autoScaleUp`/`autoGlobalTickspeed`/`autoScaleUpEnabled`/`autoGlobalTickspeedEnabled`/`autoPrestigeAutobuyerEnabled`/`autoPrestigeEnabled` unchanged (mirrors `prestigeGame`'s reset pattern, including now resetting `globalTickspeedMultiplier`/`prestige.xp`/`lastTierXpConsumed` the same way; see "The global tickspeed multiplier" above), **and now also `overclockCount`** (carried over unchanged — see "Overclock" below) — and **`everUnlockedTierIds`, carried over unchanged rather than reset** (the one deliberate departure from `prestigeGame`/`overclockGame`, which both still fully relock every tier beyond the first — see "Scale Up" above) — and — same as `prestigeGame` — disengages the last tier's live-checked XP-funded tickspeed mechanic with nothing banked to re-engage with — leaves `prestige.points`/`count`/`highestMilestone` untouched — unlike `prestigeGame`, it doesn't award or spend Prestige Points — and increments `scaleUpCount` by 1 and `scaleUpTargetTierIndex` by 1, unconditionally. Called either by the player's manual click or automatically by `tickGame` when Auto Scale Up is bought |
+| `overclockGame` | `state → state` | Requires `state.purchaseLevels[lastTier.id] >= getOverclockRequirement(overclockCount)` and not `isProductionFrozen`; resets everything `scaleUpGame` resets, the same way, keeps the same permanent flags/levels `scaleUpGame` keeps — **plus three differences**: unlike `scaleUpGame`, does NOT carry `everUnlockedTierIds` through (fully relocks every tier beyond the first, same as `prestigeGame` — so `scaleUpTargetTierIndex` also resets to 0 here rather than being incremented); resets `scaleUpCount` back to 0 (wiping Scale Up's own stacking multiplier, not just leaving it alone); and sets `overclockCount` to `state.purchaseLevels[lastTier.id]` (the last tier's level at claim time — always at least +1 above the previous `overclockCount`, and a catch-up jump past that when the player is ahead of the bare minimum) instead of leaving it untouched. Leaves `prestige.points`/`count`/`highestMilestone` untouched, same as `scaleUpGame` — doesn't award or spend Prestige Points. See "Overclock" below |
 | `isTierUnlocked` | `state → tier → bool` | First tier always unlocked; later tiers need `owned[tierId] > 0`, `purchaseLevels[prevTier] >= 3` (the tier below has fully purchased two levels), or the permanent `everUnlockedTierIds[tierId]` flag (see `latchEverUnlockedTiers`) |
 | `latchEverUnlockedTiers` | `state → state` | Not exported — sets `everUnlockedTierIds[tierId] = true` for any tier whose live `isTierUnlocked` condition is met but not yet flagged; returns the same state reference if nothing newly qualifies. Called from `buyTier` and `tickGame`'s production step, the only two places `owned` can increase |
 | `getMoneyExponent` | `money → number` | `floor(log10(money))`, floored to 0 below 1 — money's order of magnitude, also what `checkMilestones` tracks as XP milestones |
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
 | `getNextBytePowerProgressFraction` | `moneyBits → number` | Progress `0–1` toward the next power-of-ten Bytes: `(moneyBits / BITS_PER_BYTE) / 10^(floor(log10(bytes))+1)`, clamped to `[0, 1]` — MainPage's 8-segment bar under MoneyHero (each segment = 12.5%) |
-| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier, overclockCount))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Overclock has no separate third factor here — its effect is already folded into the global tickspeed multiplier itself via that function's own `overclockCount` parameter (see "Overclock" below). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle within a single run before the next Prestige/Speed Up resets `lastTierXpConsumed` — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
-| `isLastTierTickspeedXpUnlocked` | `state → bool` | `owned[lastTierId] >= getPurchaseBlockSize(state)` — a live check against the last tier's current owned count reaching one full level's worth (not a stored/latched flag) — a lighter-weight threshold than `isTierUnlocked`'s own two-level requirement for the tier below it, since this gates an XP bonus rather than revealing a new tier; whether the last tier's Money-funded tickspeed multiplier is currently replaced by the XP-funded one. Turns back off the moment owned drops below that threshold (e.g. a Prestige/Speed Up reset), then back on again once bought back up to it |
+| `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier, overclockCount))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Overclock has no separate third factor here — its effect is already folded into the global tickspeed multiplier itself via that function's own `overclockCount` parameter (see "Overclock" below). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle within a single run before the next Prestige/Scale Up resets `lastTierXpConsumed` — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
+| `isLastTierTickspeedXpUnlocked` | `state → bool` | `owned[lastTierId] >= getPurchaseBlockSize(state)` — a live check against the last tier's current owned count reaching one full level's worth (not a stored/latched flag) — a lighter-weight threshold than `isTierUnlocked`'s own two-level requirement for the tier below it, since this gates an XP bonus rather than revealing a new tier; whether the last tier's Money-funded tickspeed multiplier is currently replaced by the XP-funded one. Turns back off the moment owned drops below that threshold (e.g. a Prestige/Scale Up reset), then back on again once bought back up to it |
 | `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — compounds 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, the same multiplicative form every other tier's own tickspeed multiplier uses (37 XP consumed = `1.01^37` ≈ ×1.446, not a flat +37%) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
 | `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not currently `isLastTierTickspeedXpUnlocked`, if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 plus the Money balance (`resources[MONEY_ID]`) to 0 — `purchased` and the last tier's own `owned`/`resources` are untouched (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Called both manually (the "🧬 {XP} XP" button, always passing the tier's entire current XP balance) and automatically by `tickGame`, once per tick, for a tier whose `tierTickspeedAutobuyer` flag is bought while `isLastTierTickspeedXpUnlocked` holds — same self-no-op behavior either way |
@@ -2834,7 +2882,7 @@ purchases were manual or automatic.
 - `OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS = 600` (10 minutes) — real elapsed time at or below this runs offline progress at 100% speed with no notice shown; only beyond it does `OFFLINE_PROGRESS_SPEED_MULTIPLIER` apply
 - `MAX_OFFLINE_SECONDS = 86400` (24 hours) — cap on real elapsed time counted toward offline progress
 - `PRESTIGE_POINT_SPEED_BONUS = 0.01` — +1% production speed per unspent Prestige Point, once unlocked (see next)
-- `PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000` — one-time PP cost to unlock the passive production speed bonus above (see `buyPrestigeSpeedBonus`) — inert until bought, regardless of PP balance. The priciest of the four global PP automation unlocks (see `AUTO_SPEED_UP_COST`/`TICKSPEED_AUTOBUYER_COST`/`AUTO_PRESTIGE_COST` below), since it's passive and always-on rather than a one-shot action
+- `PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000` — one-time PP cost to unlock the passive production speed bonus above (see `buyPrestigeSpeedBonus`) — inert until bought, regardless of PP balance. The priciest of the four global PP automation unlocks (see `AUTO_SCALE_UP_COST`/`TICKSPEED_AUTOBUYER_COST`/`AUTO_PRESTIGE_COST` below), since it's passive and always-on rather than a one-shot action
 - `TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10` — exponent driving the (Money-funded) tickspeed multiplier's per-tier base cost (see `getTickspeedMultiplierBaseCost`): 10^10 for the first tier, down to 10^1 for the 10th/last tier
 - `TICKSPEED_PRODUCTION_STEP = 0.1` — each tickspeed multiplier level speeds up a tier's delivery frequency by another 10%, not the amount delivered (see `getTickspeedProductionMultiplier`/`getEffectiveTierTickSpeedSeconds`)
 - `AUTOBUYER_UNLOCK_BASE_COST = 1` — no longer an actual PP cost (see `getAutobuyerUnlockCost`'s doc above) — kept only as the pricing benchmark `SMART_AUTOBUYER_COST_MULTIPLIER` below multiplies: 1 through 10 across the ten tiers
@@ -2848,16 +2896,16 @@ purchases were manual or automatic.
 - `PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1` — the amount the block size grows by every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`
 - `PURCHASE_MILESTONE_MULTIPLIER_BASE = 2` — the regular per-level production-doubling factor for a tier's own lifetime purchase count (see `getPurchaseMilestoneMultiplier`)
 - `PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10` — every 10th level uses this larger factor instead of `PURCHASE_MILESTONE_MULTIPLIER_BASE` for that one level, compounding into the rest (see `getPurchaseMilestoneMultiplier`) — this "every 10th level" cadence is independent of the (now variable) purchase block size and stays fixed at 10
-- `AUTO_PRESTIGE_COST = 1000` — PP cost to activate Auto-Prestige (level 1); a single global upgrade track, not per-tier. Priced above `AUTO_SPEED_UP_COST` since Auto-Prestige only ever fires once per run at most, versus Speed Up's much higher activation frequency
+- `AUTO_PRESTIGE_COST = 1000` — PP cost to activate Auto-Prestige (level 1); a single global upgrade track, not per-tier. Priced above `AUTO_SCALE_UP_COST` since Auto-Prestige only ever fires once per run at most, versus Scale Up's much higher activation frequency
 - `AUTO_PRESTIGE_COST_MULTIPLIER = 2` — Auto-Prestige's cost doubles with each level purchased
 - `AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000` — Auto-Prestige's base check cadence at level 1, in real seconds (independent of `TICK_RATE_MS`); each level speeds this up 10%
-- `SPEED_UP_MULTIPLIER_BASE = 2` — per-activation production-speed multiplier base for Speed Up (see `getSpeedUpMultiplier`/`speedUpGame`, "Speed Up" above) — unconditional, no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
+- `SCALE_UP_MULTIPLIER_BASE = 2` — per-activation production-speed multiplier base for Scale Up (see `getScaleUpMultiplier`/`scaleUpGame`, "Scale Up" above) — unconditional, no PP unlock needed, unlike `PRESTIGE_POINT_SPEED_BONUS`
 - `OVERCLOCK_MULTIPLIER_STEP = 0.1` — per-level growth factor for Overclock's own reward (see `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier`/`overclockGame`, "Overclock" above) — each claimed level multiplies both the global tickspeed multiplier's regular and milestone per-level steps by a further ×1.1, folded directly into that existing track's own step rather than a separate multiplier stacked alongside it; unconditional, no PP unlock needed
-- `OVERCLOCK_REQUIREMENT_STEP = 1` — the per-cycle escalation step for Overclock's own requirement (see `getOverclockRequirement`, which adds a fixed `+2` floor on top: level 2 for the first claim, 3 for the second, 4 for the third, …) — the same `+1`-per-cycle shape as `getSpeedUpRequirement`'s own ladder, just without its display offset; a claim jumps straight to the last tier's current level (see `overclockGame`), not just one step, so there's no fixed ladder to climb beyond that floor and the last tier's own cost curve
-- `AUTO_SPEED_UP_COST = 20` — one-time PP cost to permanently automate Speed Up (see `buyAutoSpeedUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Speed Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Speed Up
+- `OVERCLOCK_REQUIREMENT_STEP = 1` — the per-cycle escalation step for Overclock's own requirement (see `getOverclockRequirement`, which adds a fixed `+2` floor on top: level 2 for the first claim, 3 for the second, 4 for the third, …) — the same `+1`-per-cycle shape as `getScaleUpRequirement`'s own ladder, just without its display offset; a claim jumps straight to the last tier's current level (see `overclockGame`), not just one step, so there's no fixed ladder to climb beyond that floor and the last tier's own cost curve
+- `AUTO_SCALE_UP_COST = 20` — one-time PP cost to permanently automate Scale Up (see `buyAutoScaleUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Scale Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Scale Up
 - `TICKSPEED_AUTOBUYER_COST = 10` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate
-- `AUTO_PRESTIGE_AUTOBUYER_COST = 100` — one-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see `buyAutoPrestigeAutobuyer`) — a "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one like the two costs above), only ever useful once Auto-Prestige has already been activated once, so priced below `AUTO_PRESTIGE_COST`'s own initial-activation cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but well above `AUTO_SPEED_UP_COST`/`TICKSPEED_AUTOBUYER_COST` above, since this row is gated behind `allTiersFullyAutomated` — a genuinely late-game convenience, not an early one
-- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier while it currently has >= `getPurchaseBlockSize(state)` owned; both the XP spent and the bonus it drives reset to 0 on Prestige/Speed Up (see "The last tier's XP-funded tickspeed" above)
+- `AUTO_PRESTIGE_AUTOBUYER_COST = 100` — one-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see `buyAutoPrestigeAutobuyer`) — a "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one like the two costs above), only ever useful once Auto-Prestige has already been activated once, so priced below `AUTO_PRESTIGE_COST`'s own initial-activation cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but well above `AUTO_SCALE_UP_COST`/`TICKSPEED_AUTOBUYER_COST` above, since this row is gated behind `allTiersFullyAutomated` — a genuinely late-game convenience, not an early one
+- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier while it currently has >= `getPurchaseBlockSize(state)` owned; both the XP spent and the bonus it drives reset to 0 on Prestige/Scale Up (see "The last tier's XP-funded tickspeed" above)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
 
