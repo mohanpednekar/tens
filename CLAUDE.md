@@ -1195,7 +1195,14 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1757 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- A starter set of `engine.js`'s core economy formulas (`getTierCost`, `getPrestigePointsAwarded`,
+  `buyTierQuantity`'s cost-resource spend) also carry property-based tests via `fast-check`
+  (devDependency), alongside — not replacing — their example-based tests: `describe('<fn> (property-based)', …)`
+  blocks colocated right after that function's own example-based `describe` block in `engine.test.js`,
+  asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
+  across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
+  bounds each property's generated-case count so this stays fast in CI.
+- `yarn test` is green (1761 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
