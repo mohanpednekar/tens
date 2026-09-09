@@ -1600,6 +1600,41 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(after.intro.diskBuild).toBeNull()
   })
 
+  it('tickQueuedDiskBuild stops exactly at an active foundryResetCaps allowance even with an abundant buffer, instead of funding past it (Devin Review finding)', () => {
+    // The 3rd disk needs 3 passes; the replay cap only entitles 2 of them. 1 is already banked
+    // (genuinely BELOW the cap — the shape a save reloaded mid-replay, before fully catching up,
+    // would carry), with diskBuildQueued already armed (as normalizePoolMemoryCapacity's own
+    // load-time wake-up would legitimately do here, since there's still real allowance left). A
+    // buffer that could otherwise fund the entire rest of the disk must still stop at pass 2, not
+    // pass 3, and must not complete the disk.
+    const size = FIRST_DISK_SIZE
+    let state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      disksBuiltTotal: { [size]: 2 },
+      diskProvisionPasses: { [size]: 1 },
+      poolBuffers: { 1: size * 10 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 2 },
+      },
+    })
+
+    state = tickQueuedDiskBuild(state)
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 2 })
+    expect(state.intro.diskBuild).toBeNull()
+
+    // One more tick: the allowance is now exhausted (collected === cap), so this must disarm the
+    // queue without funding pass 3, even though the buffer still has plenty left.
+    state = tickQueuedDiskBuild(state)
+    expect(state.intro.diskProvisionPasses).toEqual({ [size]: 2 })
+    expect(state.intro.diskBuildQueued).toBe(false)
+    expect(state.intro.diskBuild).toBeNull()
+  })
+
   it('a manual provisionDisk click also clears a stale queue, not just a queued fire', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,

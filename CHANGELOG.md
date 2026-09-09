@@ -353,11 +353,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   carrying a genuine partial pass count auto-resumes the auto-continue behavior on load, with no
   extra click needed to "wake it up." Reset Byte Foundry's convenience replay (which auto-plays
   Provision Disk up to what was already earned before the reset) no longer lets the new auto-continue
-  behavior carry it past its own cap — a replay-driven partial fund no longer arms auto-continue, a
-  single replay call can no longer collect more passes than the cap allows even when the pool buffer
-  can afford the disk's full remaining cost, and reloading a save exactly at its own replay cap no
-  longer resumes auto-funding past it either — anything beyond what was already re-earned still needs
-  a genuine manual click, same as before.
+  behavior carry it past its own cap under any of the ways that could happen — a replay-driven
+  partial fund no longer arms auto-continue, a single replay call can no longer collect more passes
+  than the cap allows even when the pool buffer can afford the disk's full remaining cost, and the
+  automatic queue itself (regardless of what armed it, including a reload mid-replay) now always
+  stops exactly at an active cap's own remaining allowance instead of an abundant buffer refill
+  carrying it past — anything beyond what was already re-earned still needs a genuine manual click,
+  same as before.
 - **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
   2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
   cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the

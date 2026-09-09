@@ -1,5 +1,42 @@
 # Design history & rationale
 
+### Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09
+
+Round 3's fix let `normalizePoolMemoryCapacity` arm `diskBuildQueued` on load whenever an active
+`foundryResetCaps` replay still had genuine allowance left (`getDiskReplayPassAllowance(...) > 0`) —
+correct as far as it went, but it only blocked arming exactly AT the cap boundary, not the case of
+arming while GENUINELY BELOW it (e.g. reloading with 1 of 2 allowed passes already banked). Devin's
+4th finding: once armed in that legitimate-looking state, `tickQueuedDiskBuild` still called
+`provisionDisk(state)` with its default, unlimited `maxPasses` — so a large pool-buffer refill (the
+same real cause as every prior round) could still fund straight past the remaining allowance and
+complete a disk the player hadn't fully re-earned, via yet another path this bug chain's first three
+rounds hadn't touched.
+
+Three rounds in, patching each individual "who armed the queue" call site (provisionDisk's own
+partial-fund branch, `tickFoundryResetConvenience`'s replay call, `normalizePoolMemoryCapacity`'s
+load-time wake-up) had produced three separate near-misses. `tickQueuedDiskBuild` itself is the ONE
+place every automatic (no-click) continuation call funnels through, regardless of who armed the flag
+— so this round moves the enforcement there instead: `tickQueuedDiskBuild` now always resolves
+`getDiskReplayPassAllowance(state, getDiskSize(state))` and passes it as `provisionDisk`'s own
+`maxPasses` (`Infinity`, i.e. unchanged, outside an active replay). At the exact cap boundary
+(allowance `0`) it clears `diskBuildQueued` directly rather than calling `provisionDisk` with a zero
+`maxPasses`, which would otherwise re-arm the flag every tick for zero funding progress — a harmless
+but pointless infinite state-churn loop.
+
+This is deliberately layered on top of, not instead of, the round-2/round-3 fixes (clearing the
+queue after `tickFoundryResetConvenience`'s own call; not arming at the boundary on load) — both
+remain in place as defense in depth, consistent with this file's existing "engine re-validates every
+UI-disabled action" posture, even though the new `tickQueuedDiskBuild` fix alone would now also catch
+what they catch. A genuine manual click (never routed through `tickQueuedDiskBuild`) is entirely
+unaffected — the player's own deliberate action still funds at full, unrestricted speed regardless of
+any historical cap, since only unattended/automatic continuation is what the cap was ever meant to
+restrict.
+
+New regression test: `tickQueuedDiskBuild` given a disk genuinely below its own replay allowance (1
+of 2 passes banked) with an abundant buffer, driven across two ticks — the first stops exactly at the
+allowance (pass 2, not pass 3), the second disarms the queue instead of looping. `yarn test`:
+1755/1755 green.
+
 ### Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09
 
 Two more Devin Review findings landed on the round-2 fix above (same PR #608), both variations on the

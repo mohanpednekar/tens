@@ -3605,10 +3605,23 @@ export const clearDiskBuildQueue = state => {
 
 // Fires a queued Provision Disk build once its own pool buffer can afford it and nothing else
 // outranks it in the forced priority order (isProvisionDiskTurnAvailable, checked by provisionDisk
-// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick.
+// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick. Always
+// passes getDiskReplayPassAllowance as provisionDisk's own maxPasses (Infinity outside an active
+// Reset Byte Foundry replay, so ordinary play is unaffected) — this is the ONE place every
+// automatic (no-click) continuation path funnels through, whether the queue got armed by a genuine
+// manual click's own partial funding, by normalizePoolMemoryCapacity's load-time wake-up, or by the
+// standalone (currently UI-unwired) queueDiskBuild — so capping here closes the whole class of
+// "automatic funding outruns an active replay's own cap" bugs at its one true chokepoint, rather
+// than requiring every future arming site to separately reason about foundryResetCaps (three
+// rounds of Devin Review findings on PR #608 each found a different such site before this). At the
+// exact cap boundary (allowance 0) this clears the flag instead of calling provisionDisk with a
+// zero maxPasses, which would otherwise re-arm the queue every tick for no funding progress.
 export const tickQueuedDiskBuild = state => {
   if (!(state.intro?.diskBuildQueued ?? false)) return state
-  return provisionDisk(state)
+  const size = getDiskSize(state)
+  const maxPasses = getDiskReplayPassAllowance(state, size)
+  if (maxPasses <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false } }
+  return provisionDisk(state, maxPasses)
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
