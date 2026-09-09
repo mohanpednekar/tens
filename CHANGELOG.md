@@ -333,13 +333,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   half, leaving a large empty band below the percent label. The canvas now crops to just past the
   label itself; the dial, needle, and label render at identical coordinates, only the unused canvas
   beneath them is gone.
-- **Provision Disk's build cost is now paid in 10 installments ("passes") instead of one lump sum**
-  — each pass costs exactly the disk's own face-value size (a 10 KB disk still costs 100 KB total,
-  paid as 10 passes of 10 KB each), so a pool's local buffer only ever needs to hold one pass at a
-  time rather than the disk's full build cost. A click collects as many whole passes as the buffer
-  currently affords (all 10 at once if it already holds the full cost, fewer otherwise, banking the
-  remainder for a later click); the button's label and progress bar reflect passes collected so far
-  while funding is in progress. Total cost is unchanged.
+- **Provision Disk's build cost is now paid in installments ("passes") instead of one lump sum, and
+  early disks in an array are now cheaper than later ones** — each pass costs exactly the disk's own
+  face-value size, so a pool's local buffer only ever needs to hold one pass at a time rather than
+  the disk's full build cost. The number of passes now scales with the disk's own position in the
+  array (1 for the very first disk, 2 for the second, … up to 10 for the tenth and last), instead of
+  every disk costing a flat 10 passes regardless — a 1 KB array's first disk now costs just 1 KB
+  total to build (was 10 KB), its last disk still costs 100 KB, unchanged. A click collects as many
+  whole passes as the buffer currently affords (every required pass at once if it already holds the
+  full cost, fewer otherwise, banking the remainder); the button's label and progress bar reflect
+  passes collected so far while funding is in progress, now including a "0/N" count on the button's
+  own idle label before the first pass ever lands (for any disk needing more than one), so it's
+  clear upfront that a multi-pass disk isn't a single-click purchase. Once a click leaves a build
+  only partially funded, the remaining passes now fire themselves automatically as the buffer
+  refills — no more manual re-clicking between passes; only starting a brand-new disk's build still
+  needs one click. A stale, already-over-required pass count (e.g. from a hand-edited save) now
+  completes immediately even with an empty pool buffer, rather than being gated out by Provision
+  Disk's own availability check before it ever got a chance to self-heal; and a save already
+  carrying a genuine partial pass count auto-resumes the auto-continue behavior on load, with no
+  extra click needed to "wake it up." Reset Byte Foundry's convenience replay (which auto-plays
+  Provision Disk up to what was already earned before the reset) no longer lets the new auto-continue
+  behavior carry it past its own cap under any of the ways that could happen — a replay-driven
+  partial fund no longer arms auto-continue, a single replay call can no longer collect more passes
+  than the cap allows even when the pool buffer can afford the disk's full remaining cost, and the
+  automatic queue itself (regardless of what armed it, including a reload mid-replay) now always
+  stops exactly at an active cap's own remaining allowance instead of an abundant buffer refill
+  carrying it past — anything beyond what was already re-earned still needs a genuine manual click,
+  same as before.
+- **Write-cache collect now runs faster than its own flush phase (5x production rate instead of
+  2x)** — a write cache's collect-from-Disks phase (folding a full source disk's contents into the
+  cache) now moves at 5x the current Byte Foundry production rate instead of 2x, while the
+  subsequent flush-into-target-disk phase is unchanged at 2x — so collecting no longer happens to
+  take the same total time as flushing, and completes noticeably sooner.
 - **Storage pools now top out at 100x their own base unit instead of 1000x** — e.g. the MB Pool's
   Memory Capacity now maxes at 100 MB instead of 1 GB (pool 1/KB Pool: 100 KB instead of 1 MB; pool
   3/GB Pool: 100 GB instead of 1 TB; and so on). Enabled directly by the Provision Disk pass change

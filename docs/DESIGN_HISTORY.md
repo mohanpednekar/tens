@@ -1,5 +1,175 @@
 # Design history & rationale
 
+### Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09
+
+Round 3's fix let `normalizePoolMemoryCapacity` arm `diskBuildQueued` on load whenever an active
+`foundryResetCaps` replay still had genuine allowance left (`getDiskReplayPassAllowance(...) > 0`) —
+correct as far as it went, but it only blocked arming exactly AT the cap boundary, not the case of
+arming while GENUINELY BELOW it (e.g. reloading with 1 of 2 allowed passes already banked). Devin's
+4th finding: once armed in that legitimate-looking state, `tickQueuedDiskBuild` still called
+`provisionDisk(state)` with its default, unlimited `maxPasses` — so a large pool-buffer refill (the
+same real cause as every prior round) could still fund straight past the remaining allowance and
+complete a disk the player hadn't fully re-earned, via yet another path this bug chain's first three
+rounds hadn't touched.
+
+Three rounds in, patching each individual "who armed the queue" call site (provisionDisk's own
+partial-fund branch, `tickFoundryResetConvenience`'s replay call, `normalizePoolMemoryCapacity`'s
+load-time wake-up) had produced three separate near-misses. `tickQueuedDiskBuild` itself is the ONE
+place every automatic (no-click) continuation call funnels through, regardless of who armed the flag
+— so this round moves the enforcement there instead: `tickQueuedDiskBuild` now always resolves
+`getDiskReplayPassAllowance(state, getDiskSize(state))` and passes it as `provisionDisk`'s own
+`maxPasses` (`Infinity`, i.e. unchanged, outside an active replay). At the exact cap boundary
+(allowance `0`) it clears `diskBuildQueued` directly rather than calling `provisionDisk` with a zero
+`maxPasses`, which would otherwise re-arm the flag every tick for zero funding progress — a harmless
+but pointless infinite state-churn loop.
+
+This is deliberately layered on top of, not instead of, the round-2/round-3 fixes (clearing the
+queue after `tickFoundryResetConvenience`'s own call; not arming at the boundary on load) — both
+remain in place as defense in depth, consistent with this file's existing "engine re-validates every
+UI-disabled action" posture, even though the new `tickQueuedDiskBuild` fix alone would now also catch
+what they catch. A genuine manual click (never routed through `tickQueuedDiskBuild`) is entirely
+unaffected — the player's own deliberate action still funds at full, unrestricted speed regardless of
+any historical cap, since only unattended/automatic continuation is what the cap was ever meant to
+restrict.
+
+New regression test: `tickQueuedDiskBuild` given a disk genuinely below its own replay allowance (1
+of 2 passes banked) with an abundant buffer, driven across two ticks — the first stops exactly at the
+allowance (pass 2, not pass 3), the second disarms the queue instead of looping. `yarn test`:
+1755/1755 green.
+
+### Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09
+
+Two more Devin Review findings landed on the round-2 fix above (same PR #608), both variations on the
+same root cause the round-2 fix only partially closed:
+
+1. **A single `provisionDisk` call could still overshoot the cap in ONE tick.** Round 2's fix
+   (clearing `diskBuildQueued` after `tickFoundryResetConvenience`'s own call) only prevents
+   *later-tick* overshoot via `tickQueuedDiskBuild` — it does nothing about the call itself
+   collecting more passes than the cap allows if the pool buffer already holds enough for it (e.g.
+   after a long offline gap where `tickPoolBufferFill` had many elapsed seconds to top it up before
+   the replay ever got a look). `provisionDisk` happily collects every affordable whole pass up to
+   the disk's own full requirement, with no awareness of any cap.
+2. **The exact same gap, reachable by reloading a save mid-replay instead of waiting out ticks.**
+   The Devin Review round-1 fix (`normalizePoolMemoryCapacity`'s load-time `diskBuildQueued` auto-arm,
+   for a save whose partial pass count predates `provisionDisk`'s own auto-arm) had no idea about
+   `foundryResetCaps` either — a save reloaded exactly at its own replay cap (progress matching the
+   cap exactly, `diskBuildQueued` correctly left `false`) would get re-armed on load anyway, handing
+   `tickQueuedDiskBuild` the same uncapped green light the moment an affordable buffer showed up.
+
+Both share the same underlying question: "is this exact disk size, at its exact current progress,
+sitting at an ACTIVE `foundryResetCaps` boundary where further passes need a genuine action rather
+than automatic funding?" Extracted that question into one new predicate,
+`getDiskReplayPassAllowance(state, size)` — `Infinity` (unrestricted) unless the size sits EXACTLY at
+the boundary between a fully pre-earned run of completed disks and a next disk only partially paid
+before the reset (the same "matched exactly" case `isDiskBuildBelowCap` already special-cases), in
+which case `max(0, passesCap - passesCollected)`. A whole earlier disk still owed (`built < cap`) stays
+unrestricted too — `provisionDisk` can only ever complete ONE disk per call regardless (the timed
+build gate), so there's no overshoot risk funding the rest of an already-fully-earned disk in one shot.
+
+Used in two places:
+- `provisionDisk` gained an optional `maxPasses` parameter (default `Infinity`, folded into the
+  existing `Math.min(passesRemaining, floor(bufferBits / size))` affordability calculation).
+  `tickFoundryResetConvenience` is the only caller that ever passes a finite value (via
+  `getDiskReplayPassAllowance`) — a normal manual click or `tickQueuedDiskBuild` never does, so this
+  is invisible to ordinary play. Any buffer beyond what the capped call spends stays banked for a
+  later, genuine call.
+- `normalizePoolMemoryCapacity`'s existing auto-arm (from the round-1 fix) now also requires
+  `getDiskReplayPassAllowance(...) > 0` before arming — a save sitting exactly at its own replay
+  ceiling is left un-armed, same as `tickFoundryResetConvenience`'s own live-tick behavior after the
+  round-2 fix.
+
+Both the round-2 fix (clearing `diskBuildQueued` after a replay call) and this round's `maxPasses`
+cap are still needed together: `maxPasses` prevents a single call from ever exceeding the allowance,
+while clearing the queue afterward prevents a *later* tick's `tickQueuedDiskBuild` from continuing
+once the call (necessarily) still leaves the disk itself only partially funded relative to its own
+FULL requirement (a capped replay call essentially never finishes a disk outright, since a finite
+allowance is by definition less than what's needed to complete it — otherwise `isDiskBuildBelowCap`
+wouldn't have put us in this restricted branch at all).
+
+New regression tests: `provisionDisk` given a fully-affordable buffer but a small explicit
+`maxPasses`, confirming only that many passes are collected and the rest of the buffer is left
+untouched; `tickFoundryResetConvenience` given a cap allowing only 1 more pass but a buffer that can
+afford the whole remaining disk, confirming a single call still stops at exactly 1; and
+`normalizePoolMemoryCapacity` given a save reloaded exactly at its own replay ceiling (with an
+affordable buffer sitting right there, which would matter if the queue got armed), confirming it
+stays un-armed. `yarn test`: 1754/1754 green.
+
+### Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08
+
+A follow-up Devin Review finding on the fix commit above (same PR #608): `tickFoundryResetConvenience`'s
+own Provision Disk replay call could hand control to `tickQueuedDiskBuild`, which has no knowledge of
+`foundryResetCaps` and would keep funding passes past the exact point the replay was entitled to stop
+at — letting the player receive disk progress they hadn't actually re-earned since the reset, with no
+manual click involved.
+
+The mechanism: `tickFoundryResetConvenience` calls `provisionDisk` once per tick while
+`isDiskBuildBelowCap` says the replay still has room to catch up to the pre-reset high-water mark. If
+that call only partially funds the current disk's pass requirement, `provisionDisk` (per this PR's own
+auto-continue feature) unconditionally arms `intro.diskBuildQueued`. But `tickQueuedDiskBuild` — wired
+unconditionally into every tick — has no idea the state it's operating on came from a capped replay;
+once armed, it keeps firing `provisionDisk` on every subsequent tick as the (real, post-reset) buffer
+refills, funding passes 2, 3, … past the pass count the cap says the player is entitled to for free,
+without ever requiring the manual click the design intends for anything beyond that point.
+
+Fixed by clearing `diskBuildQueued` back to `false` immediately after any partial-funding call made
+BY `tickFoundryResetConvenience` itself (`engine.js`'s `tickFoundryResetConvenience`, right after its
+own `provisionDisk` call). This is safe because the replay never needed that flag in the first place —
+its own per-tick `isDiskBuildBelowCap` re-check is already the correct, capped pacing mechanism for a
+replay in progress; clearing the flag only removes the accidental hand-off to the uncapped
+`tickQueuedDiskBuild`, and a genuine manual click made after the replay catches up (or on some
+unrelated, never-capped size) arms its own queue completely independently, unaffected by this change.
+
+New regression tests: the existing "replays partial Provision Disk passes toward an in-progress disk"
+test now also asserts `diskBuildQueued` is `false` after a replay call, and a new test drives
+`tickFoundryResetConvenience` to exactly its own cap, then ticks `tickQueuedDiskBuild` repeatedly with
+a well-stocked buffer and confirms no further passes are funded. `yarn test`: 1751/1751 green.
+
+### Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08
+
+Devin Review posted 4 findings on PR #608 (the ordinal-scaled Provision Disk pass count + auto-continue
+feature, previous entry below) after two of my own adversarial review rounds had already returned
+APPROVE — both real bugs my own review missed, plus two stale-doc findings:
+
+1. **`isProvisionDiskAvailable` made `provisionDisk`'s own self-heal clamp unreachable.** The clamp
+   (`Math.max(0, passesRequired - alreadyCollected)`, added for a stale over-required
+   `diskProvisionPasses` entry — e.g. banked under an earlier flat-multiplier version of the ladder,
+   or a hand-edited save) only ever runs once `provisionDisk` is actually called — but `provisionDisk`
+   gates its very first line on `isProvisionDiskTurnAvailable`/`isProvisionDiskAvailable`, which
+   unconditionally required the pool buffer to hold at least one pass's worth of bits
+   (`getPoolBufferBits(state, poolIndex) >= size`). A disk that already owes nothing further sitting
+   behind an EMPTY buffer would never reach the clamp at all — the self-heal path was dead code for
+   that realistic case. My own regression test for the self-heal scenario didn't catch this because it
+   happened to seed a non-empty buffer (exactly one pass' worth) rather than an empty one. Fixed by
+   adding an early check to `isProvisionDiskAvailable`: whenever the current offer's collected passes
+   already meet or exceed what's required, it's available regardless of buffer balance, letting
+   `provisionDisk`'s own clamp run and complete the build immediately.
+2. **A save with a genuine partial `diskProvisionPasses` entry from before `provisionDisk`'s own
+   auto-arm-on-partial-funding fix would need one extra manual click to "wake up" auto-continuing.**
+   `provisionDisk` only sets `diskBuildQueued: true` on a fresh call to its own partial-funding branch
+   — a save whose partial pass count predates that behavior wouldn't have the flag set, so
+   `tickQueuedDiskBuild` (which strictly requires `diskBuildQueued`) would sit idle on it until the
+   player re-clicked Provision Disk once. Fixed by folding a small auto-arm check into
+   `normalizePoolMemoryCapacity` (the existing save-load/`setDevState` sanitization pass — see its own
+   `poolBuffers`/`dataLakes.capacityLevel` clamps above): if the currently-offered size has a
+   collected-but-incomplete pass count and `diskBuildQueued` isn't already set, arm it. Chosen over a
+   new standalone normalization function specifically so it rides the same two call sites
+   (`storage.js`'s `mergeState`, `useIncrementalGame.js`'s `setDevState`) `normalizePoolMemoryCapacity`
+   already has, rather than duplicating that wiring.
+3. **`CLAUDE.md`'s Architecture section still described `tickQueuedDiskBuild` as "implemented and
+   tested but unwired"** — stale since the very same PR wired it unconditionally into `provisionDisk`'s
+   own partial-funding branch. Corrected to describe what's actually wired (`tickQueuedDiskBuild`/
+   `diskBuildQueued`, live) vs. what still isn't exposed as its own UI control
+   (`queueDiskBuild`/`clearDiskBuildQueue`, same posture as Capacity's `queueIntroCapacityUpgrade`).
+4. **`AGENTS.md` still said write-cache collects from Disks at "2x"** after the rate was raised to 5x
+   elsewhere in the same PR (`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`) — `AGENTS.md` was never
+   touched during that edit pass since it isn't auto-synced. Corrected to 5x.
+
+New regression tests added for both bugs: `isProvisionDiskAvailable`/`provisionDisk` given a stale
+over-required pass count with an explicitly EMPTY pool buffer (the previous self-heal test only ever
+exercised a topped-off one), and `normalizePoolMemoryCapacity` given a genuine partial pass count with
+`diskBuildQueued` unset, plus negative-case coverage (no entry, already-over-required, mid-build) so
+the auto-arm doesn't fire when it shouldn't. `yarn test`: 1750/1750 green.
+
 ### Two more gaps in Reset Byte Foundry's convenience-replay caps — 2026-09-08
 
 A further round of Devin's automated review on PR #597 caught two more real bugs in the very fix
@@ -6699,3 +6869,126 @@ how close to full the block actually was.
 seeded save (a read-cache block sitting mid-fill) in a real browser: the previously-indistinguishable
 partial block now shows a clearly proportional accent bar against the three fully-filled blocks
 ahead of it and the four still-empty ones behind it.
+
+### Provision Disk: ordinal-scaled pass counts, and passes auto-continue after a manual start
+
+Player feedback: "Disk Provisioning passes should not need manual action between two passes. First
+disk in an array needs one pass. Nth disk needs N passes." This asked for two independent changes to
+`provisionDisk` (see the still-unreleased "Provision Disk's build cost is now paid in installments"
+`CHANGELOG.md` entry that introduced the pass-funding mechanic this builds on): (1) every disk in an
+array previously cost a flat `DISK_BUILD_COST_MULTIPLIER` (10) passes regardless of its position in
+the array — the very first disk cost exactly as much as the tenth; (2) a manual click that only
+partially funded a build left the player needing to click again (possibly several times) as the pool
+buffer refilled, even though `intro.diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild` already
+existed in `engine.js`, fully implemented and tested, to auto-fire a queued build's passes — just
+never armed by anything a player could actually trigger through normal play.
+
+Presented with a build-vs-design choice on the second point (fully automatic disk provisioning with
+no button at all, vs. keeping a manual "start" click that then auto-continues), the maintainer chose
+the latter: Provision Disk stays a deliberate action to START a new disk, but once started, no
+further clicks are needed to finish it.
+
+**Fix.**
+1. **Ordinal-scaled pass count.** Added `getDiskProvisionPassesRequired(state, size)` =
+   `Math.min(DISK_BUILD_COST_MULTIPLIER, (disksBuiltTotal[size] ?? 0) + 1)` — the same ordinal
+   `getProvisionDiskSeconds` already read to scale BUILD TIME by, now also driving pass COUNT. Since
+   `DISK_BUILD_COST_MULTIPLIER` happens to equal `DISK_ARRAY_LADDER_CAP`, the `Math.min` cap is
+   purely defensive (the ordinal never actually reaches it in play — the ladder always advances to
+   the next size once `DISK_ARRAY_LADDER_CAP` disks are built) rather than a real gameplay ceiling.
+   `getDiskCost` changed signature from `capacityBits → number` to `(state, capacityBits) → number`
+   so it can read the ordinal too, becoming `capacityBits * getDiskProvisionPassesRequired(state,
+   capacityBits)`. `provisionDisk` swapped its `DISK_BUILD_COST_MULTIPLIER` references for the new
+   function; `passesRemaining` is now `Math.max(0, passesRequired - alreadyCollected)` rather than a
+   bare subtraction — without the clamp, a save carrying a `diskProvisionPasses[size]` value banked
+   under the OLD flat-10 system (now exceeding a smaller ordinal's own requirement) would read as a
+   NEGATIVE amount still owed, and `provisionDisk`'s `poolBuffers[poolIndex] = bufferBits -
+   affordablePasses * size` would then ADD bits back into the buffer instead of completing the build
+   — a real self-heal bug this clamp exists specifically to prevent, covered by its own regression
+   test ("self-heals a stale, already-over-required pass count…") rather than left to chance.
+   `INTRO_CAPACITY_CAP_BITS`/`getStoragePoolMemoryBounds`'s pool-boundary formulas were NOT touched —
+   they were already sized to fund exactly ONE pass of a pool's largest disk (not the flat whole
+   cost), a relationship this change doesn't disturb at all.
+2. **Auto-continue after a manual start.** `provisionDisk`'s own partial-funding branch now sets
+   `intro.diskBuildQueued = true` unconditionally (previously left untouched) — since
+   `tickQueuedDiskBuild` was ALREADY unconditionally wired into `tickGame`'s `tickStorage` pipeline
+   every tick (just never armed by anything reachable from the UI), this one-line addition was enough
+   to make every remaining pass of an already-started build fire itself as the pool buffer refills,
+   with zero further engine or UI wiring needed. Starting a NEW disk's build still requires one
+   click — `diskBuildQueued` still resets to `false` the instant a build fully completes, same as
+   before. `queueDiskBuild` itself (arming the queue BEFORE even the first pass is affordable) stays
+   available for that narrower case, still with no dedicated UI control, same posture as Capacity's
+   own `queueIntroCapacityUpgrade`.
+
+Every UI/doc reference to the flat "`DISK_BUILD_COST_MULTIPLIER` passes always" wording — the
+Provision Disk button's own cost/progress label and title text on `ByteFoundryPage`, and every
+`CLAUDE.md`/`AGENTS.md`/`docs/ECONOMY_REFERENCE.md`/`docs/MAINPAGE_REFERENCE.md` passage describing
+it — was updated in the same commit to describe the ordinal-scaled figure instead; historical
+`docs/DESIGN_HISTORY.md` entries from when the flat-10 mechanic was originally introduced were left
+untouched, since they correctly describe what was true at the time they were written.
+
+**Verification.** `yarn test`: 1741/1741 green (+3 from a new `getDiskProvisionPassesRequired`
+describe block, a new self-heal regression test, and a new "6th disk needs 6 passes, funds in one
+call" test). Roughly a dozen existing `engine.test.js`/`App.test.jsx` tests that seeded a fresh
+size's flat 10-pass cost, or asserted the old flat pass-count label, were rewritten to seed a
+specific disk ordinal (via `disksBuiltTotal`) matching what each test was actually trying to
+exercise — a test genuinely about the array's very first disk kept ordinal 1; a test whose real
+point was "collects several passes at once" or "stays mid-funding after a partial pass" moved to a
+later ordinal (2, 5, or 6) so the scenario stayed meaningful rather than completing in a single pass
+by coincidence. The one test whose real invariant was structurally unrelated to any specific ordinal
+(the decade-power Capacity ladder's fixed relationship to the flat `DISK_BUILD_COST_MULTIPLIER`
+constant) kept that literal constant rather than switching to `getDiskCost`, since the ordinal-scaled
+function no longer represents what that test needed to check.
+
+### Provision Disk's idle label now shows "0/N" up front; write-cache collect sped up to 5x
+
+Two more rounds of player feedback on the Provision Disk work above. First: "Current UI doesn't make
+it clear that there are multiple passes involved." The button's `title` tooltip already spelled out
+the pass count even before the first pass landed, but the VISIBLE label — the only thing most players
+ever see without hovering — read a flat `"Provision {size} Disk ({cost})"` right up until a click
+banked the first pass, at which point it switched to showing `"{collected}/{required}"`. For any disk
+needing more than one pass (every disk past an array's first), there was nothing in the visible label
+itself hinting this wasn't a single-click purchase.
+
+**Fix.** The idle (not-yet-started) label now reads `"Provision {size} Disk — 0/{required}
+({cost})"` whenever `getDiskProvisionPassesRequired > 1`, so the pass count is visible from the very
+first render, not just after the first pass lands. A disk needing just 1 pass (an array's first)
+keeps the simpler, unchanged `"Provision {size} Disk ({cost})"` form, since there's nothing to
+clarify — showing "0/1" there would be pure noise.
+
+Second: "Disk to cache should be 5x instead of 2x" — `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`
+(the write cache's own collect-from-Disks phase, folding a full source disk's contents into the
+cache) was 2, the same rate as the unrelated `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (the
+opposite direction — a disk filling FROM the cache, during flush). The two happening to share a
+value meant the write cache's 10-segment collect phase coincidentally summed to the same total
+duration as its own flush phase — a coincidence the code's own comments already flagged as
+"coincidental, not structural."
+
+**Fix.** Changed `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER` from 2 to 5 in `layers.js`. This only
+affects `getDiskWriteCacheSegmentSeconds` (the collect phase); the flush phase's own
+`DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` is untouched at 2, so collect and flush are now
+deliberately different rates — collect (folding an already-built disk into the cache, a bulk
+transfer) is now meaningfully faster than flush (the bandwidth-limited disk-from-cache fill that
+follows it), rather than coincidentally equal. Updated the one test and the `docs/ECONOMY_REFERENCE.md`
+passages that had asserted/described the now-obsolete "happens to take the same total time"
+coincidence.
+
+**Verification.** `yarn test`: 1744/1744 green (+3 tests over the pre-follow-up 1743: the multi-pass
+idle label showing "0/N", the single-pass idle label NOT showing "0/1", and a stale-over-required
+`diskProvisionPasses` value clamping the DISPLAYED count rather than showing a nonsensical "N/M"
+with N > M — an adversarial review round caught that `ByteFoundryPage`'s own `diskPassesCollected`
+read the raw, unclamped stored value directly, so a save carrying passes banked under the earlier
+flat-multiplier system could show e.g. "5/1" until its next `provisionDisk` call self-healed the
+underlying number; fixed by clamping the value used for DISPLAY at `diskPassesRequired`, same review
+round also added direct `diskBuildQueued` assertions to the existing partial/full-funding
+`provisionDisk` tests above, since none of them had actually asserted on the queue-arming behavior
+that whole section is about). Visually confirmed the new idle label in a real browser via a seeded
+save at a disk needing 10 passes: `"🏦 Provision 1 KB Disk — 0/10 (10 KB)"`. `simulate-run-times` was
+re-run and republished against this PR's actual final commit (the first publish attempt, made before
+this commit existed, stamped a stale sha) — Main → Googol time for a fresh 0-prestige career cycle
+moved from 21h 45m 31s to 21h 32m 59s, confirming the ordinal pass-count change has a real, measured
+pacing effect; Foundry time itself (1m 5s) is unchanged either way, since that phase's own bottleneck
+is Capacity/Combine/Invest progress, not disk-array build cost. The write-cache collect-rate change
+wasn't isolated in a separate run: collect/flush run automatically regardless of the bot's own
+strategy (the simulator's ideal-player script doesn't gate any of its own actions on write-cache
+timing), so a faster collect phase only speeds up a background, secondary path — restocking higher
+disk sizes for Data Lakes/Compute — not anything on the critical path the sim measures.

@@ -455,22 +455,25 @@ export const createInitialGameState = () => ({
     // rebuild" — until the build completes and disksBuiltTotal[size] increments.
     diskBuild: null,
     // PERMANENT — { [capacityBits]: passes collected so far } toward the CURRENT ladder offer's
-    // build cost (see provisionDisk) — funding is paid in DISK_BUILD_COST_MULTIPLIER (10)
-    // installments of the disk's own face-value size each, rather than the full cost in one lump
-    // sum, so a pool's buffer only ever needs to hold one pass at a time. Keyed by size (not a
-    // single scalar) for the same "per-size map" shape disks/disksBuiltTotal/diskCache use, though
-    // only ever one size is actively accumulating passes at a time (getDiskSize's single-size
-    // ladder). Cleared for that size the instant the final pass lands and diskBuild's own timed
-    // countdown starts.
+    // build cost (see provisionDisk) — funding is paid in getDiskProvisionPassesRequired(state,
+    // size) installments of the disk's own face-value size each (N for the array's Nth disk, capped
+    // at DISK_BUILD_COST_MULTIPLIER (10)), rather than the full cost in one lump sum, so a pool's
+    // buffer only ever needs to hold one pass at a time. Keyed by size (not a single scalar) for the
+    // same "per-size map" shape disks/disksBuiltTotal/diskCache use, though only ever one size is
+    // actively accumulating passes at a time (getDiskSize's single-size ladder). Cleared for that
+    // size the instant the final pass lands and diskBuild's own timed countdown starts.
     diskProvisionPasses: {},
-    // PERMANENT — true once the player has armed "queue next build" (see queueDiskBuild): the next
-    // Provision Disk pass fires itself (tickQueuedDiskBuild) the instant its own pool buffer can
-    // afford at least one pass and nothing outranks it in the forced priority order, rather than
-    // requiring a click at that exact instant — and keeps re-firing, pass after pass, as the buffer
-    // refills, until the disk is fully funded. Clears only once a build actually FULLY starts
-    // (diskProvisionPasses reaches DISK_BUILD_COST_MULTIPLIER and provisionDisk sets diskBuild),
-    // whether that final pass was fired by the queue or an ordinary manual click; re-arm for the
-    // next one. Same shape as disks/disksBuiltTotal/diskBuild above.
+    // PERMANENT — true once a build's own first pass (manual click, always — see provisionDisk)
+    // hasn't yet finished funding the whole disk: the remaining passes then fire themselves
+    // (tickQueuedDiskBuild) the instant its own pool buffer can afford one and nothing outranks it
+    // in the forced priority order, with no further click needed — and keeps re-firing, pass after
+    // pass, as the buffer refills, until the disk is fully funded. Also settable directly via
+    // queueDiskBuild, to commit to the NEXT build before its own pool buffer can afford even the
+    // first pass (unlike provisionDisk's own auto-arm, which only ever applies to a build already
+    // begun). Clears once a build actually FULLY starts (diskProvisionPasses reaches
+    // getDiskProvisionPassesRequired and provisionDisk sets diskBuild), whether that final pass was
+    // fired by the queue or an ordinary manual click; re-arm — automatically on the next click, or
+    // via queueDiskBuild again — for the next one. Same shape as disks/disksBuiltTotal/diskBuild above.
     diskBuildQueued: false,
     // PERMANENT — { [poolIndex]: bits currently held } in each unlocked pool's own small local
     // buffer (see getPoolBufferCapacity/tickPoolBufferFill). Every bit-costing Storage action for
@@ -2666,6 +2669,27 @@ export const normalizePoolMemoryCapacity = state => {
       nextIntro.dataLakes = dataLakes
     }
   }
+  // Auto-arm the disk-build queue for a genuinely partial diskProvisionPasses entry that predates
+  // provisionDisk's own auto-arm-on-partial-funding behavior (added alongside ordinal-scaled pass
+  // counts — see docs/DESIGN_HISTORY.md): without this, such a save would sit on a partially funded
+  // disk with diskBuildQueued still false, needing one extra manual Provision Disk click to resume
+  // auto-continuing. Only ever touches the CURRENTLY offered ladder size — a stale entry for some
+  // other, no-longer-current size isn't queueable anyway, since provisionDisk/tickQueuedDiskBuild
+  // always act on getDiskSize(state)'s current offer only. Also refuses to arm when
+  // getDiskReplayPassAllowance says this exact size is sitting at an active foundryResetCaps
+  // ceiling (a save reloaded mid-Reset-Byte-Foundry-replay, exactly caught up and no further passes
+  // are owed for free) — otherwise tickQueuedDiskBuild would resume funding past what the replay
+  // was ever entitled to hand out, with no manual click (Devin Review finding on PR #608).
+  if (!nextIntro.diskBuild && !nextIntro.diskBuildQueued) {
+    const stateForDiskCheck = { ...state, intro: nextIntro }
+    const size = getDiskSize(stateForDiskCheck)
+    const collected = getDiskProvisionPassesCollected(stateForDiskCheck, size)
+    const required = getDiskProvisionPassesRequired(stateForDiskCheck, size)
+    if (collected > 0 && collected < required && getDiskReplayPassAllowance(stateForDiskCheck, size) > 0) {
+      changed = true
+      nextIntro.diskBuildQueued = true
+    }
+  }
   return changed ? { ...state, intro: nextIntro } : state
 }
 
@@ -2771,11 +2795,16 @@ export const getComputeBandwidthSacrificeLabel = state => {
 // isStorageUnlocked; that threshold only governs the button's own UI reveal. Also false once
 // isDiskLadderExhaustedForActivePools — there is no active-pool size left to build, so there is no
 // cost to become newly affordable towards; that's a distinct, permanent state from "not affordable
-// yet" (see ByteFoundryPage, which renders the two differently).
+// yet" (see ByteFoundryPage, which renders the two differently). Also true — regardless of buffer
+// balance — whenever the current size already has enough banked passes to finish outright (a stale
+// over-required diskProvisionPasses entry, e.g. left over from a since-lowered pass requirement):
+// without this, provisionDisk's own self-heal clamp (Math.max(0, passesRequired - alreadyCollected))
+// would be unreachable behind an empty buffer, since this gate runs before that clamp ever executes.
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
+  if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
   const poolIndex = getPoolIndexForDiskSize(size)
   return getPoolBufferBits(state, poolIndex) >= size
 }
@@ -3382,18 +3411,31 @@ export const getDiskSize = state => {
   return size
 }
 
-// A disk's one-time build (construction) cost — DISK_BUILD_COST_MULTIPLIER (10) times its own
-// face value: a real 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), not the 10,000-bit figure
-// an earlier "kilobit"-scaled version of this ladder produced (see docs/DESIGN_HISTORY.md). No
-// further BITS_PER_BYTE conversion is needed here — capacityBits (from getDiskSize) is already
-// Byte-accurate. This cost only ever pays for the empty container itself — it is NOT what fills it
-// (see tickDiskAutoFill).
-export const getDiskCost = capacityBits => capacityBits * DISK_BUILD_COST_MULTIPLIER
+// Passes required to fund the CURRENT disk being built at `size` — N for the array's Nth disk (1
+// for its very first, 2 for its second, …), read from disksBuiltTotal at the moment this is called,
+// same ordinal getProvisionDiskSeconds already uses to scale BUILD TIME by. Capped at
+// DISK_BUILD_COST_MULTIPLIER (10), which — since it equals DISK_ARRAY_LADDER_CAP — the ordinal
+// itself never actually exceeds (the ladder always advances to the next size once
+// DISK_ARRAY_LADDER_CAP disks are built); the cap is a defensive guard in case the two constants
+// ever diverge, not a real gameplay ceiling today. An earlier version paid every disk in a flat
+// DISK_BUILD_COST_MULTIPLIER passes regardless of ordinal — see docs/DESIGN_HISTORY.md for why the
+// array's early disks are now quicker to fund, its last still costing the same as before.
+export const getDiskProvisionPassesRequired = (state, size) =>
+  Math.min(DISK_BUILD_COST_MULTIPLIER, (state.intro?.disksBuiltTotal?.[size] ?? 0) + 1)
+
+// A disk's one-time build (construction) cost — getDiskProvisionPassesRequired(state, capacityBits)
+// passes of its own face value each: the array's first disk costs just 1x, its last still costs
+// DISK_BUILD_COST_MULTIPLIER (10)x, same as every disk used to cost flat (see
+// docs/DESIGN_HISTORY.md). No further BITS_PER_BYTE conversion is needed here — capacityBits (from
+// getDiskSize) is already Byte-accurate. This cost only ever pays for the empty container itself —
+// it is NOT what fills it (see tickDiskAutoFill).
+export const getDiskCost = (state, capacityBits) =>
+  capacityBits * getDiskProvisionPassesRequired(state, capacityBits)
 
 // Passes already collected toward the CURRENT ladder offer's build cost (see provisionDisk) — one
-// pass = the disk's own face-value size, DISK_BUILD_COST_MULTIPLIER (10) passes fund the full
-// getDiskCost total. Always 0 once a size's funding completes and diskBuild's own timed countdown
-// takes over (the per-size counter is cleared at that point).
+// pass = the disk's own face-value size, getDiskProvisionPassesRequired(state, size) passes fund
+// the full getDiskCost total. Always 0 once a size's funding completes and diskBuild's own timed
+// countdown takes over (the per-size counter is cleared at that point).
 export const getDiskProvisionPassesCollected = (state, size) => state.intro?.diskProvisionPasses?.[size] ?? 0
 
 // The base build TIME, in seconds, for the FIRST disk ever built at a given size — exactly the
@@ -3466,39 +3508,50 @@ export const isProvisionDiskTurnAvailable = state =>
   isProvisionDiskAvailable(state) && !isDiskFillAvailable(state) && !isBandwidthAvailable(state)
 
 // Funds one or more PASSES toward building one EMPTY disk sized to getDiskSize(state): the full
-// getDiskCost(that size) is paid in DISK_BUILD_COST_MULTIPLIER (10) installments of the disk's own
-// face-value size each — see getDiskProvisionPassesCollected above — rather than the whole cost at
-// once, so the pool buffer only ever needs to hold one pass at a time, not the full lump sum. Each
-// call collects as many WHOLE passes as the pool buffer currently affords (capped at however many
-// remain) — a buffer already holding the full cost completes every pass, and starts the timed
-// build, in one call, exactly as a single-payment build always has; a smaller buffer collects a
-// partial installment and leaves the rest for a later call (an ordinary re-click, or the "queue
-// next build" auto-fire below, once the buffer refills). Once the final pass lands, this clears the
-// per-size pass counter and sets intro.diskBuild to a { size, remainingSeconds, totalSeconds }
-// countdown (see getProvisionDiskSeconds above/tickProvisionDisk below) — the array itself only
-// actually gains the new container, and starts accepting IO again, once that countdown finishes.
-// `totalSeconds` is fixed at the build's own starting duration (tickProvisionDisk only ever updates
-// remainingSeconds), kept alongside remainingSeconds purely so the UI can render a "% built"
-// progress fill without having to recompute getProvisionDiskSeconds itself (which depends on
-// disksBuiltTotal at the moment the build started, not the moment it's being rendered) — computing
-// it here rather than at completion is safe either way, since nothing else can touch
-// disksBuiltTotal[size] while this size's own funding/build is in progress. No-op below a single
-// pass's cost, or if an array is already mid-build (isProvisionDiskAvailable). Only ever queues ONE
-// build at a time — only one size is ever offered on the ladder, so there's nothing to parallelize.
-export const provisionDisk = state => {
+// getDiskCost(that size) is paid in getDiskProvisionPassesRequired(state, size) installments of the
+// disk's own face-value size each — see getDiskProvisionPassesCollected above — rather than the
+// whole cost at once, so the pool buffer only ever needs to hold one pass at a time, not the full
+// lump sum. Each call collects as many WHOLE passes as the pool buffer currently affords (capped at
+// however many remain) — a buffer already holding the full cost completes every pass, and starts
+// the timed build, in one call, exactly as a single-payment build always has; a smaller buffer
+// collects a partial installment and leaves the rest for a later call. `passesRemaining` is clamped
+// at 0 (never negative) so a save carrying a stale, already-over-required `diskProvisionPasses`
+// entry (e.g. one banked under an earlier flat-multiplier version of this ladder, now exceeding the
+// current ordinal's own smaller requirement) self-heals by completing immediately on its next call
+// rather than reading as a negative "passes remaining" and refunding bits back into the buffer.
+// Once the final pass lands, this clears the per-size pass counter and sets intro.diskBuild to a
+// { size, remainingSeconds, totalSeconds } countdown (see getProvisionDiskSeconds above/
+// tickProvisionDisk below) — the array itself only actually gains the new container, and starts
+// accepting IO again, once that countdown finishes. `totalSeconds` is fixed at the build's own
+// starting duration (tickProvisionDisk only ever updates remainingSeconds), kept alongside
+// remainingSeconds purely so the UI can render a "% built" progress fill without having to
+// recompute getProvisionDiskSeconds itself (which depends on disksBuiltTotal at the moment the
+// build started, not the moment it's being rendered) — computing it here rather than at completion
+// is safe either way, since nothing else can touch disksBuiltTotal[size] while this size's own
+// funding/build is in progress. No-op below a single pass's cost, or if an array is already
+// mid-build (isProvisionDiskAvailable). Only ever queues ONE build at a time — only one size is
+// ever offered on the ladder, so there's nothing to parallelize.
+// `maxPasses` (default unlimited) caps how many WHOLE passes this single call may collect
+// regardless of buffer/requirement headroom — used exclusively by tickFoundryResetConvenience's
+// own replay call, to stop a buffer that can afford more than the pre-reset high-water mark allows
+// from funding past it in one shot (Devin Review finding on PR #608); any excess buffer beyond the
+// cap is simply left banked for a later, genuine call to spend. Never passed by a normal manual
+// click or tickQueuedDiskBuild.
+export const provisionDisk = (state, maxPasses = Infinity) => {
   if (!isProvisionDiskTurnAvailable(state)) return state
 
   const size = getDiskSize(state)
   const poolIndex = getPoolIndexForDiskSize(size)
   const alreadyCollected = getDiskProvisionPassesCollected(state, size)
-  const passesRemaining = DISK_BUILD_COST_MULTIPLIER - alreadyCollected
+  const passesRequired = getDiskProvisionPassesRequired(state, size)
+  const passesRemaining = Math.max(0, passesRequired - alreadyCollected)
   const bufferBits = getPoolBufferBits(state, poolIndex)
   // isProvisionDiskTurnAvailable already guarantees at least one whole pass is affordable.
-  const affordablePasses = Math.min(passesRemaining, Math.floor(bufferBits / size))
+  const affordablePasses = Math.min(passesRemaining, Math.floor(bufferBits / size), maxPasses)
   const passesCollected = alreadyCollected + affordablePasses
   const poolBuffers = { ...state.intro.poolBuffers, [poolIndex]: bufferBits - affordablePasses * size }
 
-  if (passesCollected >= DISK_BUILD_COST_MULTIPLIER) {
+  if (passesCollected >= passesRequired) {
     const { [size]: _cleared, ...diskProvisionPasses } = state.intro.diskProvisionPasses ?? {}
     const totalSeconds = getProvisionDiskSeconds(state, size)
     return {
@@ -3521,17 +3574,23 @@ export const provisionDisk = state => {
       ...state.intro,
       poolBuffers,
       diskProvisionPasses: { ...state.intro.diskProvisionPasses, [size]: passesCollected },
-      // Funding isn't complete yet — an armed queue stays armed so it keeps auto-firing passes as
-      // the buffer refills, rather than needing to be re-armed after every partial installment.
+      // Funding isn't complete yet — auto-arm the queue so the remaining passes fire themselves
+      // (tickQueuedDiskBuild, unconditionally wired into tickGame's own tickStorage) as the buffer
+      // refills, with no further clicks needed — "no manual action between passes." Only STARTING a
+      // new disk's build still needs one click; this stays armed only for the disk already begun.
+      diskBuildQueued: true,
     },
   }
 }
 
-// Commit to the next Provision Disk build before its own pool buffer can afford it — the same
-// "arm it once, it fires itself" aid as Capacity's own (see docs/DESIGN_HISTORY.md for why that
-// one isn't reachable from the UI today; this one is, via ByteFoundryPage). Especially useful here
-// since a size's array never advances the disk ladder until DISK_ARRAY_LADDER_CAP (10) builds have
-// completed at that size — 10 separate affordability instants to catch by hand otherwise.
+// Commit to the NEXT Provision Disk build before its own pool buffer can afford even its first
+// pass — the same "arm it once, it fires itself" aid as Capacity's own queueIntroCapacityUpgrade,
+// and implemented/tested but likewise not exposed as its own UI control (see docs/DESIGN_HISTORY.md
+// for why); `provisionDisk` itself now auto-arms this same flag for a build already begun (see
+// there), so this standalone action only matters for the narrower "queue up before the first pass
+// is even affordable" case. Especially useful there since a size's array never advances the disk
+// ladder until DISK_ARRAY_LADDER_CAP (10) builds have completed at that size — up to 10 separate
+// affordability instants to catch by hand otherwise, one per disk.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
   if (state.intro.diskBuild) return state
@@ -3546,10 +3605,23 @@ export const clearDiskBuildQueue = state => {
 
 // Fires a queued Provision Disk build once its own pool buffer can afford it and nothing else
 // outranks it in the forced priority order (isProvisionDiskTurnAvailable, checked by provisionDisk
-// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick.
+// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick. Always
+// passes getDiskReplayPassAllowance as provisionDisk's own maxPasses (Infinity outside an active
+// Reset Byte Foundry replay, so ordinary play is unaffected) — this is the ONE place every
+// automatic (no-click) continuation path funnels through, whether the queue got armed by a genuine
+// manual click's own partial funding, by normalizePoolMemoryCapacity's load-time wake-up, or by the
+// standalone (currently UI-unwired) queueDiskBuild — so capping here closes the whole class of
+// "automatic funding outruns an active replay's own cap" bugs at its one true chokepoint, rather
+// than requiring every future arming site to separately reason about foundryResetCaps (three
+// rounds of Devin Review findings on PR #608 each found a different such site before this). At the
+// exact cap boundary (allowance 0) this clears the flag instead of calling provisionDisk with a
+// zero maxPasses, which would otherwise re-arm the queue every tick for no funding progress.
 export const tickQueuedDiskBuild = state => {
   if (!(state.intro?.diskBuildQueued ?? false)) return state
-  return provisionDisk(state)
+  const size = getDiskSize(state)
+  const maxPasses = getDiskReplayPassAllowance(state, size)
+  if (maxPasses <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false } }
+  return provisionDisk(state, maxPasses)
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
@@ -3664,12 +3736,13 @@ const getDiskWriteCacheFlushSeconds = (state, targetSize) => {
 }
 
 // Each of the 10 collect segments is a CACHE filling FROM Disks — one full source disk's worth of
-// bits, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER times the current production rate. 10 segments
-// of one source disk each sum to exactly one target disk's own size (source × DISK_LADDER_SIZE_MULTIPLIER
-// = target), so with DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER and CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER
-// currently equal, the full collect phase happens to take the same total time as the flush phase
-// below — coincidental, not structural: the two phases pace conceptually distinct fills (cache-from-
-// disk vs. disk-from-cache) and would diverge if either multiplier changed independently.
+// bits, at CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5) times the current production rate. 10
+// segments of one source disk each sum to exactly one target disk's own size (source ×
+// DISK_LADDER_SIZE_MULTIPLIER = target), but the collect phase's own total time is independent of
+// the flush phase below's — DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER (2, disk-from-cache) and
+// CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER (5, cache-from-disk) pace conceptually distinct fills
+// and are deliberately set to different rates: collecting an already-built disk's contents into the
+// write cache is a faster bulk transfer than the bandwidth-limited disk-from-cache flush that follows.
 const getDiskWriteCacheSegmentSeconds = (state, sourceSize) => {
   const poolIndex = getPoolIndexForDiskSize(sourceSize)
   const rate = getStoragePoolBandwidth(state, poolIndex)
@@ -4408,10 +4481,10 @@ export const isBoosterPurchaseAvailable = (state, tierIndex) =>
 // the forced priority order at all; it's always available the instant it's affordable. Resets
 // fillBits to 0 — whichever disk was mid-fill before the spend may no longer be the lake's own
 // open slot afterward (see getDataLakeCurrentFillSubSize), so any in-progress fill on it is
-// discarded rather than carried forward inconsistently. A same-reference no-op when not
 // affordable/unlocked yet.
 export const buyBooster = (tierIndex, quantity = 1) => state => {
   if (quantity < 1 || !isBoosterPurchaseAvailable(state, tierIndex)) return state
+  if ((quantity !== Infinity && (!Number.isInteger(quantity) || quantity < 1)) || !isBoosterPurchaseAvailable(state, tierIndex)) return state
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field) return state
   const lake = getDataLakeTier(state, tierIndex)
@@ -4420,17 +4493,17 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   const maxed = isDataLakeCapacityMaxed(state, tierIndex)
   const capacity = getDataLakeCapacity(state, tierIndex)
   let deposited = lake.depositedUnits ?? 0
-  let purchased = lake.purchased ?? 0
-  let p = purchased
-  
-  let totalBought = 0
   let totalCost = 0
   
+
+  let totalBought = 0
+  let totalCost = 0
+
   if (!maxed || purchased < capacity) {
     const term = Math.pow(2 * p + 1, 2) + 8 * deposited;
-    const k = term >= 0 ? Math.floor((-(2 * p + 1) + Math.sqrt(term)) / 2) : 0;
     const escalatingBought = maxed ? Math.min(k, Math.max(0, capacity - p)) : k;
     
+
     if (escalatingBought > 0) {
       const escalatingCost = escalatingBought * p + (escalatingBought * (escalatingBought + 1)) / 2
       deposited -= escalatingCost
@@ -4440,8 +4513,8 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
     }
   }
   
+
   if (maxed && purchased >= capacity && deposited >= capacity) {
-    const constantBought = Math.floor(deposited / capacity)
     totalBought += constantBought
     totalCost += constantBought * capacity
     purchased += constantBought
@@ -4456,13 +4529,10 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
       let costSum = 0;
       let pur = p;
       for (let i=0; i<quantity; i++) {
-          let cost = pur + 1;
-          if (maxed) cost = Math.min(cost, capacity);
-          costSum += cost;
-          pur += 1;
-      }
-      totalCost = costSum;
-      purchased = p + quantity;
+      const constantCost = constantBought * capacity;
+      
+      totalCost = escalatingCost + constantCost;
+      purchased = p + totalBought;
       deposited = (lake.depositedUnits ?? 0) - totalCost;
   }
 
@@ -4473,6 +4543,7 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
     const nextCount = (state.intro[field] ?? 0) + totalBought
     computeUpdates[field] = nextCount
     
+
     if (tierIndex === 1) {
       computeUpdates.computeCoresEverEarned = (state.intro.computeCoresEverEarned ?? 0) + totalBought
       computeUpdates.computeMergePageUnlocked =
@@ -4485,7 +4556,6 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
     intro: {
       ...state.intro,
       ...computeUpdates,
-      dataLakes: {
         ...state.intro.dataLakes,
         [tierIndex]: {
           ...lake,
@@ -4525,6 +4595,7 @@ export const tickDataLakeAutoBuy = state => {
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     if (!isDataLakeAutoBuyEnabled(nextState, tierIndex)) continue
     
+
     // Use O(1) bulk purchase formula natively inside buyBooster
     nextState = buyBooster(tierIndex, Infinity)(nextState)
   }
@@ -4538,7 +4609,6 @@ export const tickDataLakeAutoBuy = state => {
 // all 3, then earning 5 more now correctly reads 8 lifetime-earned, not 5 (the old `max()` approach
 // re-derived "lifetime" from the CURRENT balance, which drops right back down every time Cores get
 // spent, silently forgetting everything earned before the most recent spend and potentially
-// leaving the merge-page unlock permanently one Core short of true).
 const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {
   const nextCount = (intro[field] ?? 0) + 1
   const updates = { [field]: nextCount }
@@ -5834,6 +5904,28 @@ const isDiskBuildBelowCap = (state, caps) => {
   return passesCollected < passesCap
 }
 
+// How many more whole passes toward `size`'s CURRENTLY in-progress disk an active
+// foundryResetCaps replay is still entitled to hand out for free — Infinity (unrestricted) unless
+// this exact size is sitting at the boundary between a fully pre-earned run of completed disks and
+// a NEXT disk that was only partially paid before the reset (the same "matched exactly" case
+// isDiskBuildBelowCap treats specially above). A whole earlier disk still owed (built < cap) is
+// unrestricted too — provisionDisk can only ever complete ONE disk per call regardless (the timed
+// build gate), so there's no overshoot risk funding the rest of an already-fully-earned disk in one
+// shot. Used to stop a single provisionDisk call from collecting more passes than the cap allows
+// when the pool buffer can afford more than that in one go (Devin Review finding on PR #608) —
+// without this, clearing diskBuildQueued after the call (see tickFoundryResetConvenience) closes
+// the multi-tick overshoot but not a single-call one.
+const getDiskReplayPassAllowance = (state, size) => {
+  const caps = state.intro?.foundryResetCaps
+  if (!caps) return Infinity
+  const built = state.intro?.disksBuiltTotal?.[size] ?? 0
+  const diskCap = caps.disksBuiltTotal?.[String(size)] ?? caps.disksBuiltTotal?.[size] ?? 0
+  if (built !== diskCap) return Infinity
+  const passesCollected = getDiskProvisionPassesCollected(state, size)
+  const passesCap = caps.diskProvisionPasses?.[String(size)] ?? caps.diskProvisionPasses?.[size] ?? 0
+  return Math.max(0, passesCap - passesCollected)
+}
+
 // Safety bound: one tick should not infinite-loop if a reducer keeps succeeding unexpectedly.
 const FOUNDRY_RESET_CONVENIENCE_MAX_STEPS = 64
 
@@ -5865,7 +5957,11 @@ export const tickFoundryResetConvenience = state => {
   }
 
   if (isDiskBuildBelowCap(next, caps)) {
-    const built = provisionDisk(next)
+    // getDiskReplayPassAllowance stops a single call from collecting more passes than the cap
+    // allows even when the pool buffer (e.g. after a long offline gap) can afford more than that in
+    // one go — Infinity everywhere except the exact "matched a fully pre-earned run of completed
+    // disks, now partially paid toward the next one" boundary (Devin Review finding on PR #608).
+    const built = provisionDisk(next, getDiskReplayPassAllowance(next, getDiskSize(next)))
     if (built !== next) {
       next = built
       changed = true

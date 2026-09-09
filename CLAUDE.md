@@ -728,8 +728,8 @@ Strict three-layer separation:
    Provision Disk's build cost, the read-cache fill-from-Memory pass — spends from exclusively
    (`tickPoolBufferFill` tops it up from `intro.bits`, pool 1 first, after tier01's own bootstrap
    conversion and Queued Capacity each tick; `getPoolBufferCapacity` equals the pool's own Capacity
-   exactly, so a full buffer can always fund one `DISK_BUILD_COST_MULTIPLIER`-pass `provisionDisk`
-   pass of even that pool's largest disk). One `PoolCard` renders per VISIBLE pool
+   exactly, so a full buffer can always fund one `provisionDisk` funding pass of even that pool's
+   largest disk). One `PoolCard` renders per VISIBLE pool
    (`getVisibleStoragePoolCount` — the smaller of the disk-build-based unlock count
    (`isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only and keep
    driving the disk ladder/read-cache/`tickPoolBufferFill` eligibility) and the capacity-threshold
@@ -749,9 +749,14 @@ Strict three-layer separation:
    "Provision Disk moved back inside its pool card" entry for why it moved there from the shared Data
    Stream section. Each disk array shows every size from `getDiskSizesToShow`, all
    `DISK_ARRAY_LADDER_CAP` (10) slots in one unbroken row. The "queue next build" pin-icon toggle was
-   removed from the UI; `intro.diskBuildQueued`/`queueDiskBuild`/`clearDiskBuildQueue`/
-   `tickQueuedDiskBuild` remain in `engine.js`, implemented and tested but unwired, same posture as
-   Capacity's own `queueIntroCapacityUpgrade`. Every action here or on either dedicated screen stays
+   removed from the UI, but `intro.diskBuildQueued`/`tickQueuedDiskBuild` are unconditionally wired
+   into `tickGame`'s own tick pipeline and live: `provisionDisk` auto-arms `diskBuildQueued` itself
+   whenever a click only partially funds a disk's current pass, so the remaining passes fire
+   themselves as the pool buffer refills, no further click needed (see "Economy model" below).
+   `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as their own UI
+   control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only matter for the
+   narrower "arm the queue before even the first pass is affordable" case. Every action here or on
+   either dedicated screen stays
    gated by the forced priority order (see "Economy model" below). Full field-by-field UI layout:
    `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
    capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
@@ -1016,13 +1021,18 @@ constant name are in `docs/ECONOMY_REFERENCE.md`.
 `isDiskPullEligible`/`tickDiskPull`/`tickDiskLevelOneCachePull` in `engine.js`) are a real storage
 medium, not tier01-only: a size's ladder (1 KB → 10 KB → 100 KB, …, `DISK_LADDER_SIZE_MULTIPLIER`)
 advances every `DISK_ARRAY_LADDER_CAP` (10) disks built at that size, up to the highest size any
-unlocked pool can fund. `provisionDisk` collects the cost in `DISK_BUILD_COST_MULTIPLIER` (10)
-passes of the disk's own face-value size each — so a pool's buffer only ever needs to hold one pass
+unlocked pool can fund. `provisionDisk` collects the cost in `getDiskProvisionPassesCollected`/
+`getDiskProvisionPassesRequired` passes of the disk's own face-value size each — N for the array's
+Nth disk (1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER` (10) for its last) rather than a
+flat count for every disk regardless of ordinal — so a pool's buffer only ever needs to hold one pass
 at a time, not the whole cost — then takes real build time once fully funded (scaled by production
-rate, snapshotted at start); a **queue toggle** (`diskBuildQueued`/`queueDiskBuild`/
-`tickQueuedDiskBuild`) can auto-fire each pass as it becomes affordable, though no UI control
-currently arms it (removed — see "Architecture" above; the engine action stays implemented and
-tested). The smallest size per pool has an always-full **read cache** (8 blocks); every larger size
+rate, snapshotted at start). A manual click that doesn't finish the build in one call auto-arms the
+**queue** (`diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild`, unconditionally wired into
+`tickGame`) so every remaining pass for that disk fires itself as the buffer refills — no further
+clicks needed; only starting a NEW disk's build still needs one click. `queueDiskBuild` itself
+remains available for arming the queue before even the first pass is affordable, though no UI
+control surfaces that narrower case directly. The smallest size per pool has an always-full **read
+cache** (8 blocks); every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
 `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed
@@ -1185,7 +1195,7 @@ already cover the genuinely useful items on that checklist.
   and reports as its own test case), far less duplicated setup/assertion code to keep in sync when the
   shared behavior changes. See `App.test.jsx`'s pause-toggle and disabled-without-enough-PP tables for the
   convention.
-- `yarn test` is green (1738 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1755 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
