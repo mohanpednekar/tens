@@ -475,6 +475,15 @@ export const createInitialGameState = () => ({
     // fired by the queue or an ordinary manual click; re-arm — automatically on the next click, or
     // via queueDiskBuild again — for the next one. Same shape as disks/disksBuiltTotal/diskBuild above.
     diskBuildQueued: false,
+    // True only while diskBuildQueued was armed by normalizePoolMemoryCapacity's own load-time
+    // wake-up for a save reloaded mid-Reset-Byte-Foundry-replay (see there) — distinguishes that
+    // narrow, still-capped-by-foundryResetCaps case from every other way diskBuildQueued gets armed
+    // (a genuine manual provisionDisk click, or the standalone queueDiskBuild), which continue
+    // unrestricted regardless of any historical foundryResetCaps entry. tickQueuedDiskBuild is the
+    // only reader (see there); every other diskBuildQueued-arming site sets this back to false, and
+    // every disarming site clears it too, so it never lingers stale. See docs/DESIGN_HISTORY.md's
+    // PR #608 round 5 entry.
+    diskBuildQueuedByReplay: false,
     // PERMANENT — { [poolIndex]: bits currently held } in each unlocked pool's own small local
     // buffer (see getPoolBufferCapacity/tickPoolBufferFill). Every bit-costing Storage action for
     // a pool (Provision Disk's build cost, cache fill-from-Memory) spends exclusively from this
@@ -2685,9 +2694,15 @@ export const normalizePoolMemoryCapacity = state => {
     const size = getDiskSize(stateForDiskCheck)
     const collected = getDiskProvisionPassesCollected(stateForDiskCheck, size)
     const required = getDiskProvisionPassesRequired(stateForDiskCheck, size)
-    if (collected > 0 && collected < required && getDiskReplayPassAllowance(stateForDiskCheck, size) > 0) {
+    const replayAllowance = getDiskReplayPassAllowance(stateForDiskCheck, size)
+    if (collected > 0 && collected < required && replayAllowance > 0) {
       changed = true
       nextIntro.diskBuildQueued = true
+      // Mark this arm as replay-owned only when an active foundryResetCaps entry is actually
+      // still restricting this exact size (a finite allowance) — tickQueuedDiskBuild reads this to
+      // apply that same restriction on later ticks, rather than letting it fund past what the
+      // replay was ever entitled to hand out for free (Devin Review finding on PR #608).
+      nextIntro.diskBuildQueuedByReplay = Number.isFinite(replayAllowance)
     }
   }
   return changed ? { ...state, intro: nextIntro } : state
@@ -3564,6 +3579,7 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
         // The build just fully started (whether the last pass was fired by a manual click or a
         // queued fire below) — the queue's job for this build is done; re-arm for the next one.
         diskBuildQueued: false,
+        diskBuildQueuedByReplay: false,
       },
     }
   }
@@ -3579,6 +3595,13 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
       // refills, with no further clicks needed — "no manual action between passes." Only STARTING a
       // new disk's build still needs one click; this stays armed only for the disk already begun.
       diskBuildQueued: true,
+      // A direct provisionDisk call (a genuine manual click, or tickFoundryResetConvenience's own
+      // capped call — which clears diskBuildQueued right back off itself afterward, so this value
+      // never actually persists for that caller) is never itself the narrower "load-time wake-up"
+      // case normalizePoolMemoryCapacity's own arm marks — see diskBuildQueuedByReplay's own comment
+      // in createInitialGameState. A manual click here should always auto-continue unrestricted,
+      // even if it happens to land on the same size/count an old foundryResetCaps entry covers.
+      diskBuildQueuedByReplay: false,
     },
   }
 }
@@ -3595,33 +3618,44 @@ export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
   if (state.intro.diskBuild) return state
   if (isDiskLadderExhaustedForActivePools(state)) return state
-  return { ...state, intro: { ...state.intro, diskBuildQueued: true } }
+  // A standalone/manual arm, never replay-owned — see diskBuildQueuedByReplay's own comment in
+  // createInitialGameState.
+  return { ...state, intro: { ...state.intro, diskBuildQueued: true, diskBuildQueuedByReplay: false } }
 }
 
 export const clearDiskBuildQueue = state => {
   if (!(state.intro?.diskBuildQueued ?? false)) return state
-  return { ...state, intro: { ...state.intro, diskBuildQueued: false } }
+  return { ...state, intro: { ...state.intro, diskBuildQueued: false, diskBuildQueuedByReplay: false } }
 }
 
 // Fires a queued Provision Disk build once its own pool buffer can afford it and nothing else
 // outranks it in the forced priority order (isProvisionDiskTurnAvailable, checked by provisionDisk
-// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick. Always
-// passes getDiskReplayPassAllowance as provisionDisk's own maxPasses (Infinity outside an active
-// Reset Byte Foundry replay, so ordinary play is unaffected) — this is the ONE place every
-// automatic (no-click) continuation path funnels through, whether the queue got armed by a genuine
-// manual click's own partial funding, by normalizePoolMemoryCapacity's load-time wake-up, or by the
-// standalone (currently UI-unwired) queueDiskBuild — so capping here closes the whole class of
-// "automatic funding outruns an active replay's own cap" bugs at its one true chokepoint, rather
-// than requiring every future arming site to separately reason about foundryResetCaps (three
-// rounds of Devin Review findings on PR #608 each found a different such site before this). At the
-// exact cap boundary (allowance 0) this clears the flag instead of calling provisionDisk with a
-// zero maxPasses, which would otherwise re-arm the queue every tick for no funding progress.
+// itself) — a same-reference no-op otherwise, leaving the queue armed for a later tick.
+//
+// Only when diskBuildQueuedByReplay is set (normalizePoolMemoryCapacity's own load-time wake-up for
+// a save reloaded mid-Reset-Byte-Foundry-replay — see there) does this also resolve
+// getDiskReplayPassAllowance and pass it as provisionDisk's own maxPasses, so that narrow case can't
+// fund past what the replay was ever entitled to hand out for free; at the exact allowance boundary
+// (0) it clears the queue directly instead of calling provisionDisk with a zero maxPasses, which
+// would otherwise re-arm it every tick for no funding progress. Every OTHER way the queue gets armed
+// — a genuine manual click's own partial funding, or the standalone (currently UI-unwired)
+// queueDiskBuild — always sets diskBuildQueuedByReplay false, so it stays unrestricted here even if
+// it happens to land on the same size/count some old foundryResetCaps entry covers: a deliberate
+// player action always continues at full, unattended speed once armed, regardless of history (Devin
+// Review finding on PR #608 — an earlier version of this function applied the allowance
+// unconditionally, which incorrectly throttled a genuine manual continuation too).
 export const tickQueuedDiskBuild = state => {
   if (!(state.intro?.diskBuildQueued ?? false)) return state
+  if (!state.intro?.diskBuildQueuedByReplay) return provisionDisk(state)
   const size = getDiskSize(state)
   const maxPasses = getDiskReplayPassAllowance(state, size)
-  if (maxPasses <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false } }
-  return provisionDisk(state, maxPasses)
+  if (maxPasses <= 0) return { ...state, intro: { ...state.intro, diskBuildQueued: false, diskBuildQueuedByReplay: false } }
+  const built = provisionDisk(state, maxPasses)
+  // provisionDisk itself always marks a partial-funding result as NOT replay-owned (correct for its
+  // other caller, a genuine manual click) — but THIS call was itself replay-restricted, so a build
+  // it leaves only partially funded must stay marked replay-owned, or the very next tick would treat
+  // it as an unrestricted manual continuation and fund straight past this same allowance.
+  return built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
 }
 
 // Counts down intro.diskBuild's remainingSeconds every tick — a no-op when no build is in
@@ -4476,90 +4510,30 @@ export const isBoosterPurchaseAvailable = (state, tierIndex) =>
   isDataLakeBoosterUnlocked(state, tierIndex) &&
   getDataLakeDepositedUnits(tierIndex)(state) >= getBoosterPurchaseCost(tierIndex)(state)
 
-// Buys `quantity` Boosters instantly, funded ONLY from this lake's own banked units — no other
-// resource involved, so (unlike Disk Fill/Speed/Provision Disk/Compute Boost) this isn't part of
-// the forced priority order at all; it's always available the instant it's affordable. Resets
-// fillBits to 0 — whichever disk was mid-fill before the spend may no longer be the lake's own
-// open slot afterward (see getDataLakeCurrentFillSubSize), so any in-progress fill on it is
-// affordable/unlocked yet.
-export const buyBooster = (tierIndex, quantity = 1) => state => {
-  if (quantity < 1 || !isBoosterPurchaseAvailable(state, tierIndex)) return state
-  if ((quantity !== Infinity && (!Number.isInteger(quantity) || quantity < 1)) || !isBoosterPurchaseAvailable(state, tierIndex)) return state
+// Buys one Booster instantly, funded ONLY from this lake's own banked units — no other resource
+// involved, so (unlike Disk Fill/Speed/Provision Disk/Compute Boost) this isn't part of the forced
+// priority order at all; it's always available the instant it's affordable. Resets fillBits to 0 —
+// whichever disk was mid-fill before the spend may no longer be the lake's own open slot afterward
+// (see getDataLakeCurrentFillSubSize), so any in-progress fill on it is discarded rather than left
+// pointing at a slot that may no longer be the one actually open.
+export const buyBooster = tierIndex => state => {
+  if (!isBoosterPurchaseAvailable(state, tierIndex)) return state
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field) return state
   const lake = getDataLakeTier(state, tierIndex)
-
-  // Use the same O(1) mathematical calculation as the autobuyer to find the total affordable quantity
-  const maxed = isDataLakeCapacityMaxed(state, tierIndex)
-  const capacity = getDataLakeCapacity(state, tierIndex)
-  let deposited = lake.depositedUnits ?? 0
-  let totalCost = 0
-  
-
-  let totalBought = 0
-  let totalCost = 0
-
-  if (!maxed || purchased < capacity) {
-    const term = Math.pow(2 * p + 1, 2) + 8 * deposited;
-    const escalatingBought = maxed ? Math.min(k, Math.max(0, capacity - p)) : k;
-    
-
-    if (escalatingBought > 0) {
-      const escalatingCost = escalatingBought * p + (escalatingBought * (escalatingBought + 1)) / 2
-      deposited -= escalatingCost
-      totalCost += escalatingCost
-      purchased += escalatingBought
-      totalBought += escalatingBought
-    }
-  }
-  
-
-  if (maxed && purchased >= capacity && deposited >= capacity) {
-    totalBought += constantBought
-    totalCost += constantBought * capacity
-    purchased += constantBought
-    deposited -= constantBought * capacity
-  }
-
-  // Constrain to the requested quantity, and re-calculate cost if constrained
-  if (totalBought > quantity) {
-      totalBought = quantity;
-      
-      // recalculate cost for the constrained quantity
-      let costSum = 0;
-      let pur = p;
-      for (let i=0; i<quantity; i++) {
-      const constantCost = constantBought * capacity;
-      
-      totalCost = escalatingCost + constantCost;
-      purchased = p + totalBought;
-      deposited = (lake.depositedUnits ?? 0) - totalCost;
-  }
-
-  if (totalBought <= 0) return state;
-
-  let computeUpdates = {}
-  if (field) {
-    const nextCount = (state.intro[field] ?? 0) + totalBought
-    computeUpdates[field] = nextCount
-    
-
-    if (tierIndex === 1) {
-      computeUpdates.computeCoresEverEarned = (state.intro.computeCoresEverEarned ?? 0) + totalBought
-      computeUpdates.computeMergePageUnlocked =
-        (state.intro.computeMergePageUnlocked ?? false) || computeUpdates.computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
-    }
-  }
-
+  const cost = getBoosterPurchaseCost(tierIndex)(state)
+  const purchased = (lake.purchased ?? 0) + 1
+  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field)
   return {
     ...state,
     intro: {
       ...state.intro,
-      ...computeUpdates,
+      ...boosterUpdates,
+      dataLakes: {
         ...state.intro.dataLakes,
         [tierIndex]: {
           ...lake,
-          depositedUnits: deposited,
+          depositedUnits: (lake.depositedUnits ?? 0) - cost,
           fillBits: 0,
           purchased,
         },
@@ -4594,10 +4568,11 @@ export const tickDataLakeAutoBuy = state => {
   let nextState = state
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     if (!isDataLakeAutoBuyEnabled(nextState, tierIndex)) continue
-    
-
-    // Use O(1) bulk purchase formula natively inside buyBooster
-    nextState = buyBooster(tierIndex, Infinity)(nextState)
+    let bought = buyBooster(tierIndex)(nextState)
+    while (bought !== nextState) {
+      nextState = bought
+      bought = buyBooster(tierIndex)(nextState)
+    }
   }
   return nextState
 }
@@ -5963,7 +5938,12 @@ export const tickFoundryResetConvenience = state => {
     // disks, now partially paid toward the next one" boundary (Devin Review finding on PR #608).
     const built = provisionDisk(next, getDiskReplayPassAllowance(next, getDiskSize(next)))
     if (built !== next) {
-      next = built
+      // provisionDisk itself always marks a partial-funding arm as NOT replay-owned (correct for a
+      // genuine manual click, its only other caller) — but THIS call is the replay itself, so a
+      // build it leaves only partially funded must be marked replay-owned instead, or
+      // tickQueuedDiskBuild would apply no restriction at all on later ticks and let an abundant
+      // buffer fund straight past this same cap (Devin Review finding on PR #608, round 5).
+      next = built.intro?.diskBuildQueued ? { ...built, intro: { ...built.intro, diskBuildQueuedByReplay: true } } : built
       changed = true
     }
   }
@@ -6078,6 +6058,7 @@ export const prestigeGame = state => {
       // An armed "queue next build" (see queueDiskBuild) survives a real Prestige too — same
       // permanence as the disk state it's arming.
       diskBuildQueued: state.intro?.diskBuildQueued ?? initial.intro.diskBuildQueued,
+      diskBuildQueuedByReplay: state.intro?.diskBuildQueuedByReplay ?? initial.intro.diskBuildQueuedByReplay,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       // In-flight cache transfers are just as permanent as the Disks/build state they operate on
       // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond

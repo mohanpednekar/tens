@@ -1,5 +1,68 @@
 # Design history & rationale
 
+### Critical: reverted a broken `buyBooster` bulk-purchase optimization that had merged onto `main` — 2026-09-09
+
+After PR #608 merged, a separate, unrelated automated change (`bolt/optimize-tickDataLakeAutoBuy`,
+PRs #610/#611) attempted to rewrite `buyBooster`/`tickDataLakeAutoBuy` from an O(N) per-unit purchase
+loop into an O(1) bulk-quantity formula. It merged onto `main` in a badly-conflicted state: two
+`let totalCost` redeclarations, references to undefined variables (`p`, `k`, `constantBought`,
+`escalatingCost` outside its own scope), an unclosed `for` loop, and a malformed final `return` (a
+bare `...state.intro.dataLakes,` spread with no `dataLakes:` key wrapping it) — the file didn't even
+parse, so `main` was fully broken (no build, no tests could run) with no open PR left to fix it.
+
+A follow-up bot commit (`aeeacd9`, "Revert PR 608 attempt to disarm queue; manual continuations
+work") had already landed on `main` too, removing part of this PR's own round-2 fix
+(`tickFoundryResetConvenience` clearing `diskBuildQueued` after its own replay call) because it was
+throttling genuine manual Provision Disk continuations — a real bug, but treating the symptom rather
+than the cause (see the round 6 entry below for the actual fix).
+
+Found while starting a routine follow-up to this PR's own Devin Review round 5 — discovered `main`
+wouldn't even parse. Fixed by reverting `buyBooster`/`tickDataLakeAutoBuy` to their last known-good,
+already-tested implementation (the plain O(N) loop, pre-dating the bulk-optimization attempt) rather
+than guessing at the intended O(1) formula from the corrupted merge — the existing test suite already
+fully covers this behavior (every test calls the original single-argument `buyBooster(tierIndex)`
+curried form; nothing referenced the broken `quantity` parameter), so no test changes were needed for
+this specific revert. The O(1) bulk-purchase optimization itself may still be worth pursuing later,
+but needs a clean, fully-tested reattempt — not a repeat of this merge.
+
+### Devin Review on PR #608, round 6: a provenance-tracking fix superseding an incomplete bot revert — 2026-09-09
+
+Devin Review's round-5 finding (below) was independently addressed by another bot (`aeeacd9`, see
+the entry above) via a blunt revert of round 2's "clear `diskBuildQueued` after `tickFoundryResetConvenience`'s
+own call" fix — this did stop that fix from throttling manual continuations, but for the wrong
+reason: `tickQueuedDiskBuild` (from round 4) still applied `getDiskReplayPassAllowance` **unconditionally**
+to every automatic continuation regardless of who armed it, so a genuine manual click landing at the
+same size/pass-count an old `foundryResetCaps` entry covers would still get throttled on its very next
+tick — the revert removed a symptom, not the actual cause, and this repo's own now-stale round-2/3/4
+tests (which asserted `diskBuildQueued: false` immediately after a single capped replay call) had
+gone unfixed alongside it.
+
+The real fix needs provenance: `diskBuildQueuedByReplay` (new `intro` boolean, defaults `false`) marks
+whether the CURRENT armed queue was armed by `normalizePoolMemoryCapacity`'s own load-time wake-up for
+a save reloaded mid-replay (the one case that genuinely still needs `foundryResetCaps` enforcement) —
+every other arming path (a genuine manual `provisionDisk` click, the standalone `queueDiskBuild`, and
+`tickFoundryResetConvenience`'s own replay-driven calls, which explicitly re-mark it `true` right after
+calling `provisionDisk` since that function's own default is `false`) leaves it `false`, so
+`tickQueuedDiskBuild` only applies `getDiskReplayPassAllowance` when this flag is set — a manual
+continuation now always runs full-speed regardless of history, while a genuine replay-armed queue (from
+either `tickFoundryResetConvenience` or `normalizePoolMemoryCapacity`) still can't fund past its own cap.
+`tickQueuedDiskBuild` itself re-marks the flag `true` on its own partial-funding result too (since
+`provisionDisk`'s default is `false`), so a multi-tick capped continuation stays correctly capped
+across every subsequent tick, not just its first.
+
+Also folded in a previously-promised but never-shipped fix: `DISK_BUILD_COST_MULTIPLIER`'s own doc
+comment in `layers.js` still described the old flat "every disk costs `capacity * DISK_BUILD_COST_MULTIPLIER`"
+formula (a separate Devin Review finding from round 3) — the reply claiming it fixed went out before
+the commit was actually pushed, because PR #608 merged in the gap between the reply and the push. Now
+genuinely corrected, in this follow-up.
+
+New/updated tests: the 3 existing round-2/3/4 `tickFoundryResetConvenience` tests now correctly assert
+`diskBuildQueued: true` + `diskBuildQueuedByReplay: true` after a single capped replay call (previously
+asserted `false`, which had already gone stale under the bot's revert); a new `tickQueuedDiskBuild` test
+confirms a manual-armed queue (`diskBuildQueuedByReplay: false`) completes a disk fully instead of
+stopping at an old cap; the existing capped-continuation test now seeds `diskBuildQueuedByReplay: true`
+explicitly. `yarn test`: 1756/1756 green.
+
 ### Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09
 
 Round 3's fix let `normalizePoolMemoryCapacity` arm `diskBuildQueued` on load whenever an active
