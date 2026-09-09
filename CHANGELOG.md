@@ -111,6 +111,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **Byte Foundry and Boosters page titles rendered behind the iPhone Dynamic Island** — both
+  pages' root container was missing the `env(safe-area-inset-top)` top-padding convention every
+  other page already uses, so their fixed `theme.space.xl` top padding wasn't enough to clear the
+  island on notched iPhones. Now adds the safe-area inset to the existing top padding, matching
+  `MainPage`/`InfoPage`/`SettingsPage`/etc.
 - **Buying Boosters and the Data Lake auto-buy could crash outright** — a separate, unrelated bulk-
   purchase optimization attempt for `buyBooster`/`tickDataLakeAutoBuy` had merged in a broken,
   unparseable state (undefined variables, an unclosed loop, a malformed object spread). Reverted
