@@ -111,6 +111,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **Buying Boosters and the Data Lake auto-buy could crash outright** — a separate, unrelated bulk-
+  purchase optimization attempt for `buyBooster`/`tickDataLakeAutoBuy` had merged in a broken,
+  unparseable state (undefined variables, an unclosed loop, a malformed object spread). Reverted
+  both back to their previous, fully-tested single-purchase-per-call implementation; the intended
+  O(1) bulk-purchase optimization can be reattempted separately, with real testing this time.
+- **Reset Byte Foundry's convenience replay could still be made to fund disk progress past its own
+  cap by a genuine manual click, immediately after that click's own continuation was (incorrectly)
+  throttled by an unrelated fix** — the automatic continuation queue now only enforces the replay's
+  own historical cap when IT armed the queue (via its own load-time wake-up), never when a player's
+  own manual click did; a manual continuation always runs at full, unattended speed once armed,
+  regardless of any prior Reset Byte Foundry history for that same disk.
 - **A disk stranded by an advanced tier could never again feed the write cache, permanently
   starving every disk size above a pool's smallest one (and, one level deeper, every size across a
   Factory tier-group boundary too)** — after Storage funding became fully automatic and

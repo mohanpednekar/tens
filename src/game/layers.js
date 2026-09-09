@@ -275,18 +275,22 @@ export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 200
 // mid-decade. An earlier version gated this much later (80,000 bits, by which point pool 1's own
 // Capacity had already advanced past "1 KB" to "10 KB") — see docs/DESIGN_HISTORY.md.
 export const INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP
-// A disk of `capacity` bits costs `capacity * DISK_BUILD_COST_MULTIPLIER` bits to build — a real
-// 1 KB (8000-bit) disk costs 80,000 bits ("10 KB"), a real 10 KB (80,000-bit) disk costs 800,000
-// bits ("100 KB"), and so on; see getDiskCost in engine.js. This cost only ever pays for the empty
-// container — it is NOT what fills it. `capacity` here is already Byte-accurate (see getDiskSize's
-// own BITS_PER_BYTE factor in engine.js — a past version of this ladder priced Disks in
-// "kilobits" instead of real Kilobytes; see docs/DESIGN_HISTORY.md for that bug and its fix), so no
-// further unit conversion is needed here the way an older version of this constant once required.
-// Also doubles as the number of funding PASSES provisionDisk splits that cost into — see
+// A disk of `capacity` bits costs `capacity * getDiskProvisionPassesRequired(state, capacity)` bits
+// to build — N passes for the array's Nth disk (1 for its first, 2 for its second, …), CAPPED at
+// this constant for the 10th and every later disk in the array; see getDiskCost/
+// getDiskProvisionPassesRequired in engine.js. A real 1 KB (8000-bit) array's first disk costs just
+// 8,000 bits, its 10th (and every later) disk costs the flat 80,000 bits ("10 KB") every disk used
+// to cost regardless of ordinal — see docs/DESIGN_HISTORY.md for why passes were scaled by ordinal
+// instead of staying flat. This cost only ever pays for the empty container — it is NOT what fills
+// it. `capacity` here is already Byte-accurate (see getDiskSize's own BITS_PER_BYTE factor in
+// engine.js — a past version of this ladder priced Disks in "kilobits" instead of real Kilobytes;
+// see docs/DESIGN_HISTORY.md for that bug and its fix), so no further unit conversion is needed
+// here the way an older version of this constant once required.
+// Also doubles as the CAP on the number of funding PASSES provisionDisk splits that cost into — see
 // getDiskProvisionPassesCollected/provisionDisk in engine.js: each pass costs exactly one disk's
-// own face-value size (capacity), so DISK_BUILD_COST_MULTIPLIER passes always sum to the full cost
-// above. Paying in passes rather than the full lump sum means a pool's buffer only ever needs to
-// hold one pass at a time, not the whole build cost at once.
+// own face-value size (capacity), so getDiskProvisionPassesRequired(state, capacity) passes always
+// sum to the full cost above. Paying in passes rather than the full lump sum means a pool's buffer
+// only ever needs to hold one pass at a time, not the whole build cost at once.
 export const DISK_BUILD_COST_MULTIPLIER = 10
 // Smallest buildable Disk size, in bits — 1 KB Byte-accurate (same face value tier01's own level-1
 // unit cost × BITS_PER_BYTE). See getDiskLadderSizeBits / getDiskSize in engine.js.

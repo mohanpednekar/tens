@@ -1573,6 +1573,31 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     expect(tickQueuedDiskBuild(state)).toBe(state)
   })
 
+  it('tickQueuedDiskBuild stays a same-reference no-op for a replay-owned queue too, not a merely-equal new object (Devin Review finding)', () => {
+    // Replay-owned (diskBuildQueuedByReplay: true) with a live allowance, but an empty buffer means
+    // provisionDisk itself is a same-reference no-op — the wrapper that re-marks diskBuildQueuedByReplay
+    // on a genuine change must not construct a new-but-equal object here, or callers that rely on
+    // reference equality to detect "nothing happened" (e.g. tickGame's own no-op checks) would see a
+    // false positive for changed state on every blocked tick.
+    const size = FIRST_DISK_SIZE
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      diskBuildQueuedByReplay: true,
+      disksBuiltTotal: { [size]: 2 },
+      diskProvisionPasses: { [size]: 1 },
+      poolBuffers: { 1: 0 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 2 },
+      },
+    })
+    expect(tickQueuedDiskBuild(state)).toBe(state)
+  })
+
   it('tickQueuedDiskBuild fires the build and clears the queue once the pool buffer can afford it', () => {
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
@@ -1611,6 +1636,7 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     let state = withIntro(createInitialGameState(), {
       byteCreated: true,
       diskBuildQueued: true,
+      diskBuildQueuedByReplay: true,
       disksBuiltTotal: { [size]: 2 },
       diskProvisionPasses: { [size]: 1 },
       poolBuffers: { 1: size * 10 },
@@ -1632,7 +1658,38 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
     state = tickQueuedDiskBuild(state)
     expect(state.intro.diskProvisionPasses).toEqual({ [size]: 2 })
     expect(state.intro.diskBuildQueued).toBe(false)
+    expect(state.intro.diskBuildQueuedByReplay).toBe(false)
     expect(state.intro.diskBuild).toBeNull()
+  })
+
+  it('tickQueuedDiskBuild does NOT apply the replay allowance to a genuine manual continuation, even if it sits at the same size/count an old foundryResetCaps entry covers (Devin Review finding)', () => {
+    // Same shape as the test above (built === diskCap, 1 of 2 allowed passes already banked), but
+    // diskBuildQueuedByReplay is false — the shape a genuine manual provisionDisk click leaves
+    // behind (see provisionDisk's own partial-funding branch), not normalizePoolMemoryCapacity's
+    // load-time wake-up. A buffer that can afford the rest of the disk must fund it fully, unthrottled.
+    const size = FIRST_DISK_SIZE
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskBuildQueued: true,
+      diskBuildQueuedByReplay: false,
+      disksBuiltTotal: { [size]: 2 },
+      diskProvisionPasses: { [size]: 1 },
+      poolBuffers: { 1: size * 10 },
+      foundryResetCaps: {
+        byteCreated: true,
+        productionMilestoneTier: 0,
+        productionMilestoneTierClaims: 0,
+        disksBuiltTotal: { [String(size)]: 2 },
+        diskProvisionPasses: { [String(size)]: 2 },
+      },
+    })
+
+    const after = tickQueuedDiskBuild(state)
+    // Completes the disk outright (needs 3 total, 1 already banked, 2 more funded here) rather than
+    // stopping at the old cap's 2.
+    expect(after.intro.diskBuild).toEqual({ size, remainingSeconds: expect.any(Number), totalSeconds: expect.any(Number) })
+    expect(getDiskProvisionPassesCollected(after, size)).toBe(0)
+    expect(after.intro.diskBuildQueued).toBe(false)
   })
 
   it('a manual provisionDisk click also clears a stale queue, not just a queued fire', () => {
@@ -1981,10 +2038,11 @@ describe('tickFoundryResetConvenience', () => {
     // its own cap.
     expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
     expect(after.intro.diskBuild).toBeNull()
-    // The replay's own per-tick isDiskBuildBelowCap re-check is the only pacing it needs — leaving
-    // diskBuildQueued armed here would hand continuation off to tickQueuedDiskBuild, which has no
-    // knowledge of foundryResetCaps (see the dedicated regression test below).
-    expect(after.intro.diskBuildQueued).toBe(false)
+    // Left armed, but marked replay-owned — tickQueuedDiskBuild reads that flag to keep applying
+    // this same cap on later ticks, rather than treating it as an unrestricted manual continuation
+    // (see the dedicated regression tests below).
+    expect(after.intro.diskBuildQueued).toBe(true)
+    expect(after.intro.diskBuildQueuedByReplay).toBe(true)
   })
 
   it('does not let diskBuildQueued auto-continue past the replay\'s own diskProvisionPasses cap once reached (Devin Review finding)', () => {
@@ -2008,17 +2066,21 @@ describe('tickFoundryResetConvenience', () => {
 
     state = tickFoundryResetConvenience(state)
     expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
-    expect(state.intro.diskBuildQueued).toBe(false)
+    // Left armed and marked replay-owned — the allowance is already exhausted (collected === cap),
+    // so the very next tickQueuedDiskBuild call below must disarm it without funding anything more.
+    expect(state.intro.diskBuildQueued).toBe(true)
+    expect(state.intro.diskBuildQueuedByReplay).toBe(true)
 
-    // Refill the buffer well past every remaining pass and tick the queue repeatedly — without
-    // provisionDisk's own auto-arm (never set by the replay call above), tickQueuedDiskBuild must
-    // stay a no-op indefinitely: the player has to click Provision Disk themselves to fund anything
-    // past what the replay already re-earned for them.
+    // Refill the buffer well past every remaining pass and tick the queue repeatedly — with the
+    // allowance already exhausted, tickQueuedDiskBuild must disarm on the first iteration and stay a
+    // no-op for the rest: the player has to click Provision Disk themselves to fund anything past
+    // what the replay already re-earned for them.
     for (let i = 0; i < 5; i += 1) {
       state = withIntro(state, { poolBuffers: { 1: size * 10 } })
       state = tickQueuedDiskBuild(state)
     }
     expect(state.intro.diskProvisionPasses).toEqual({ [size]: 1 })
+    expect(state.intro.diskBuildQueued).toBe(false)
     expect(state.intro.diskBuild).toBeNull()
   })
 
@@ -2044,7 +2106,10 @@ describe('tickFoundryResetConvenience', () => {
     const after = tickFoundryResetConvenience(state)
     expect(after.intro.diskProvisionPasses).toEqual({ [size]: 1 })
     expect(after.intro.diskBuild).toBeNull()
-    expect(after.intro.diskBuildQueued).toBe(false)
+    // Left armed and marked replay-owned, even though the allowance is already exhausted — a later
+    // tickQueuedDiskBuild tick (not this call) is what actually disarms it (see the dedicated test).
+    expect(after.intro.diskBuildQueued).toBe(true)
+    expect(after.intro.diskBuildQueuedByReplay).toBe(true)
     // Only 1 pass' worth was spent — the rest of the buffer stays banked, untouched by this call.
     expect(after.intro.poolBuffers[1]).toBe(size * 4)
   })
