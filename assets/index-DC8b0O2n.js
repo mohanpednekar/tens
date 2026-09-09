@@ -484,7 +484,8 @@ Error generating stack: `+e.message+`
   gap: ${e=>e.theme.space.lg};
   max-width: 480px;
   margin: 0 auto;
-  padding: ${e=>e.theme.space.xl} ${e=>e.theme.space.md};
+  padding: calc(${e=>e.theme.space.xl} + env(safe-area-inset-top))
+    ${e=>e.theme.space.md} ${e=>e.theme.space.xl};
   color: ${e=>e.theme.color.text};
 `,wf=F.h1`
   font-family: ${e=>e.theme.font.display};
@@ -742,7 +743,8 @@ Error generating stack: `+e.message+`
   gap: ${e=>e.theme.space.lg};
   max-width: 480px;
   margin: 0 auto;
-  padding: ${e=>e.theme.space.xl} ${e=>e.theme.space.md};
+  padding: calc(${e=>e.theme.space.xl} + env(safe-area-inset-top))
+    ${e=>e.theme.space.md} ${e=>e.theme.space.xl};
   color: ${e=>e.theme.color.text};
 `,hp=F.header`
   align-items: center;
