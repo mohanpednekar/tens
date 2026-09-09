@@ -4524,18 +4524,14 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   // Constrain to the requested quantity, and re-calculate cost if constrained
   if (totalBought > quantity) {
       totalBought = quantity;
-
-      // recalculate cost for the constrained quantity
-      let costSum = 0;
-      let pur = p;
-      for (let i=0; i<quantity; i++) {
-          let cost = pur + 1;
-          if (maxed) cost = Math.min(cost, capacity);
-          costSum += cost;
-          pur += 1;
-      }
-      totalCost = costSum;
-      purchased = p + quantity;
+      
+      const escalatingBought = maxed ? Math.min(totalBought, Math.max(0, capacity - p)) : totalBought;
+      const escalatingCost = escalatingBought * p + (escalatingBought * (escalatingBought + 1)) / 2;
+      const constantBought = totalBought - escalatingBought;
+      const constantCost = constantBought * capacity;
+      
+      totalCost = escalatingCost + constantCost;
+      purchased = p + totalBought;
       deposited = (lake.depositedUnits ?? 0) - totalCost;
   }
 
