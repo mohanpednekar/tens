@@ -77,10 +77,13 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 - **Tickspeed (Money / XP):** buy the global tickspeed multiplier and each tier's own tickspeed
   multiplier whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the
   min-consumption gate allows.
-- **Soft resets:** Overclock first when eligible (`getOverclockRequirement`), then Scale Up
-  (`getScaleUpRequirement`: a flat level 3 on the current unlock-frontier tier while any tier is
-  still locked, then a repeating multiple of 3 on the last tier once every tier is unlocked).
-  Overclock-first is empirically faster to Googol than Scale-Up-first or either alone.
+- **Soft resets:** Scale Up first when eligible (`getScaleUpRequirement`: a flat level 3 on the
+  current unlock-frontier tier while any tier is still locked, then a repeating multiple of 3 on
+  the last tier once every tier is unlocked), then Overclock (`getOverclockRequirement`).
+  Scale-Up-first is empirically faster to Googol than Overclock-first since the Scale Up redesign
+  (Devin Review on PR #623) — Overclock-first repeatedly discards `scaleUpTargetTierIndex`/
+  `everUnlockedTierIds` ladder progress whenever both conditions are met the same tick; see
+  `docs/DESIGN_HISTORY.md` for the A/B numbers.
 - **PP lever kept active:** unlock the passive +1%-per-unspent-point production-speed bonus
   (`buyPrestigeSpeedBonus`) the instant `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) is banked —
   note that unlock **spends** those 10000 PP, so a starting balance of exactly 10000 leaves 0

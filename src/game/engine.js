@@ -6357,6 +6357,11 @@ export const scaleUpGame = state => {
     eons: state.eons ?? initial.eons,
     hyperscalerCount: state.hyperscalerCount ?? initial.hyperscalerCount,
     eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
+    // Flops autobuyer unlock flags + pause preference are one-time Era-milestone unlocks, just as
+    // permanent as the Era fields above (see eraGame's own identical treatment) — only the
+    // in-flight attempt budget below is run-scoped and resets.
+    computeFlopsAutobuyers: state.computeFlopsAutobuyers ?? initial.computeFlopsAutobuyers,
+    computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
     // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
     computeFlops: {
       pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),
@@ -6436,6 +6441,8 @@ export const overclockGame = state => {
     eons: state.eons ?? initial.eons,
     hyperscalerCount: state.hyperscalerCount ?? initial.hyperscalerCount,
     eonsUpgrades: state.eonsUpgrades ?? initial.eonsUpgrades,
+    computeFlopsAutobuyers: state.computeFlopsAutobuyers ?? initial.computeFlopsAutobuyers,
+    computeFlopsAutobuyersEnabled: state.computeFlopsAutobuyersEnabled ?? initial.computeFlopsAutobuyersEnabled,
     // Flops Compute owned counts + page unlock are permanent; per-cycle boost resets like Prestige.
     computeFlops: {
       pageUnlocked: Boolean(state.computeFlops?.pageUnlocked),

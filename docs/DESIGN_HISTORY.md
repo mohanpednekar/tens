@@ -65,15 +65,36 @@ back to the legacy field names when the new ones are absent, same pattern as the
 `lastTierTickspeedXpUnlocked` removal just above it.
 
 Devin Review (a separate GitHub bot review, distinct from the internal adversarial `code-reviewer`
-subagent) then found that `scaleUpGame`'s returned object omitted `era`/`eons`/`hyperscalerCount`/
-`eonsUpgrades` — Era ascension's own permanent meta-progression fields — so an ordinary Scale Up
-silently wiped a player's Eons balance, hyperscaler count, and Eon upgrade levels back to fresh
-defaults. Investigating whether this was new to this PR revealed the identical gap already exists
-in `prestigeGame` itself on `main`, unrelated to this diff — filed separately as issue #626 (out of
-scope here, since `prestigeGame`'s own reset shape is untouched by this PR). Fixed in `scaleUpGame`
-and `overclockGame` (which shares the same reset shape) by carrying these four fields through
-unchanged, same `?? initial.X` pattern as every other permanent field both functions already
-preserve. `yarn test`: 1757 → 1775 green.
+subagent) then found that `scaleUpGame`'s returned object omitted all six of `era`/`eons`/
+`hyperscalerCount`/`eonsUpgrades`/`computeFlopsAutobuyers`/`computeFlopsAutobuyersEnabled` — Era
+ascension's own permanent meta-progression fields plus its Flops-autobuyer unlock/pause flags — so
+an ordinary Scale Up silently wiped a player's Eons balance, hyperscaler count, Eon upgrade levels,
+and any Flops autobuyer unlocks back to fresh defaults. Investigating whether this was new to this
+PR revealed the identical gap already exists in `prestigeGame` itself on `main`, unrelated to this
+diff — filed separately as issue #626 (out of scope here, since `prestigeGame`'s own reset shape is
+untouched by this PR). Fixed in `scaleUpGame` and `overclockGame` (which shares the same reset
+shape) by carrying all six fields through unchanged, same `?? initial.X` pattern as every other
+permanent field both functions already preserve, matching `eraGame`'s own identical treatment of
+the two Flops-autobuyer fields. `yarn test`: 1757 → 1775 green.
+
+Devin's fourth finding questioned `.claude/skills/simulate-run-times/run-simulation.mjs`'s
+`actSoftResets`, which called `scaleUpGame(overclockGame(state))` (Overclock-first) every tick with
+a comment claiming this was empirically faster — a claim made under the OLD last-tier-only Scale Up
+and never re-validated after this PR's redesign. Since Scale Up now permanently advances
+`scaleUpTargetTierIndex`/`everUnlockedTierIds` on every activation, Overclock-first repeatedly
+discards that ladder progress whenever both conditions happen to be met the same tick (Overclock's
+own reset wipes both fields via `...initial`, same as Prestige — see `scaleUpGame`'s own comment).
+A direct A/B re-run of the career-cycle simulation (prestiges 0/1/2/3/5/10, same engine, only the
+soft-reset order swapped) confirmed the old claim no longer holds: Scale-Up-first was faster in 4 of
+6 cycles (up to ~14%/cycle: e.g. prestige 0 went from 6h40m17s Overclock-first to 5h42m45s
+Scale-Up-first) and only marginally slower in the other 2 (<2%), for a ~7% faster aggregate. A
+phase-dependent hybrid (Overclock-first only once `scaleUpTargetTierIndex` reaches the last tier)
+was also tried and performed no better than unconditional Scale-Up-first, since the tier ladder is
+walked fast enough that nearly the whole "Main → Googol" phase already sits in the last-tier
+endgame regardless. `actSoftResets` now calls `overclockGame(scaleUpGame(state))`
+(Scale-Up-first); `SKILL.md`/the header comment/the published-strategy template string were updated
+to match, and a fresh run was published to the `ideal-run-strategy` orphan branch per the skill's
+own "re-run and publish after any change that can significantly affect timings" rule.
 
 ### Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09
 

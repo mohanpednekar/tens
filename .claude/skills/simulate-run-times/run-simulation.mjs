@@ -29,9 +29,8 @@
 //     - Buy the Money-funded global tickspeed multiplier and each tier's own tickspeed multiplier
 //       whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the min
 //       consumption gate allows.
-//     - Soft resets: Overclock first when eligible, then Scale Up (empirically faster to Googol
-//       than Scale-Up-first or either alone — Overclock permanently boosts global tickspeed's
-//       per-level step; Scale Up still rebuilds its 2^n multiplier afterward).
+//     - Soft resets: Scale Up first when eligible, then Overclock (empirically faster to Googol
+//       than Overclock-first since the Scale Up redesign — see actSoftResets below).
 //     - Unlock the passive PP speed bonus the instant PRESTIGE_SPEED_BONUS_UNLOCK_COST is banked.
 //       Other PP automations (Smart / Auto-Scale-Up / Auto-Prestige / tickspeed autobuyer) are NOT
 //       bought — those are separate levers; this bot isolates Foundry + ladder + free/Money/XP
@@ -314,10 +313,17 @@ function actTickspeed(state) {
 }
 
 function actSoftResets(state) {
-  // Overclock-first empirically reaches Googol faster than Scale-Up-first (see skill header).
-  // Both engine functions already no-op internally when not eligible (frozen, or the relevant
-  // tier hasn't reached its own requirement yet), so no separate pre-check is needed here.
-  return scaleUpGame(overclockGame(state))
+  // Scale-Up-first (re-validated after the Scale Up redesign — Devin Review on PR #623,
+  // docs/DESIGN_HISTORY.md). Overclock-first was correct under the old last-tier-only Scale Up, but
+  // now that Scale Up permanently unlocks a tier per activation (scaleUpTargetTierIndex/
+  // everUnlockedTierIds), letting Overclock go first repeatedly discards that ladder progress
+  // whenever both conditions are met the same tick. A direct A/B across career prestiges 0-10 with
+  // both fixed orderings found Scale-Up-first faster in 4 of 6 cycles (by up to ~14% per cycle) and
+  // only marginally slower in the other 2 (<2%), for a ~7% faster aggregate — a phase-dependent
+  // strategy (Overclock-first only once scaleUpTargetTierIndex reaches the last tier) was also
+  // tried and performed no better than unconditional Scale-Up-first. Both engine functions already
+  // no-op internally when not eligible, so no separate pre-check is needed here.
+  return overclockGame(scaleUpGame(state))
 }
 
 function actSpeedBonus(state) {
@@ -643,7 +649,7 @@ Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-time
 2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
-5. **Soft resets:** Overclock first, then Scale Up (level 3 on the current unlock-frontier tier while any tier is still locked, then every 3 levels of the last tier once all are unlocked).
+5. **Soft resets:** Scale Up first, then Overclock (level 3 on the current unlock-frontier tier while any tier is still locked, then every 3 levels of the last tier once all are unlocked).
 6. **PP:** Unlock prestige speed bonus at 10000 PP (spends 10000); do not buy Smart / Auto-Scale-Up / Auto-Prestige in this baseline.
 
 ## Simulation results

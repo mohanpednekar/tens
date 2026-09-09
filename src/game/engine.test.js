@@ -9083,19 +9083,24 @@ describe('scaleUpGame', () => {
     expect(after.autoGlobalTickspeed).toBe(true)
   })
 
-  it('keeps era/eons/hyperscalerCount/eonsUpgrades permanently', () => {
+  it('keeps era/eons/hyperscalerCount/eonsUpgrades/computeFlopsAutobuyers(Enabled) permanently', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
     const state = {
       ...eligibleState(),
       era: { count: 2 },
       eons: { balance: 7 },
       hyperscalerCount: 4,
       eonsUpgrades: { someUpgrade: 3 },
+      computeFlopsAutobuyers: { [flopId]: 1 },
+      computeFlopsAutobuyersEnabled: { [flopId]: false },
     }
     const after = scaleUpGame(state)
     expect(after.era).toEqual({ count: 2 })
     expect(after.eons).toEqual({ balance: 7 })
     expect(after.hyperscalerCount).toBe(4)
     expect(after.eonsUpgrades).toEqual({ someUpgrade: 3 })
+    expect(after.computeFlopsAutobuyers[flopId]).toBe(1)
+    expect(after.computeFlopsAutobuyersEnabled[flopId]).toBe(false)
   })
 
   it('keeps the Auto-Prestige Autobuyer flag permanently', () => {
@@ -9355,19 +9360,24 @@ describe('overclockGame', () => {
     expect(after.autoPrestige).toBe(3)
   })
 
-  it('keeps era/eons/hyperscalerCount/eonsUpgrades permanently', () => {
+  it('keeps era/eons/hyperscalerCount/eonsUpgrades/computeFlopsAutobuyers(Enabled) permanently', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
     const state = {
       ...eligibleState(),
       era: { count: 2 },
       eons: { balance: 7 },
       hyperscalerCount: 4,
       eonsUpgrades: { someUpgrade: 3 },
+      computeFlopsAutobuyers: { [flopId]: 1 },
+      computeFlopsAutobuyersEnabled: { [flopId]: false },
     }
     const after = overclockGame(state)
     expect(after.era).toEqual({ count: 2 })
     expect(after.eons).toEqual({ balance: 7 })
     expect(after.hyperscalerCount).toBe(4)
     expect(after.eonsUpgrades).toEqual({ someUpgrade: 3 })
+    expect(after.computeFlopsAutobuyers[flopId]).toBe(1)
+    expect(after.computeFlopsAutobuyersEnabled[flopId]).toBe(false)
   })
 
   it('resets the global tickspeed multiplier level back to not-yet-bought (null)', () => {

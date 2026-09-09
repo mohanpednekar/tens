@@ -986,9 +986,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - **Scale Up and Overclock no longer erase Era ascension progress.** Both soft-resets were silently
-  wiping `era`/`eons`/`hyperscalerCount`/Eon upgrade levels back to fresh defaults on every
-  activation; they now carry these permanent fields through unchanged, same as every other
-  permanent field they already preserve.
+  wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
+  unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
+  fields through unchanged, same as every other permanent field they already preserve.
 
 ## [0.5.0] - 2026-07-14
 
