@@ -52,10 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Buying a Booster (manual, or auto-buy via a per-lake toggle) costs escalating lake units (the nth
   Booster ever bought costs n) and spends only that lake's own banked units, instantly — no transfer,
   no waiting. A lake's own deposit capacity is a separate, purchasable decade-power ladder (1 → 10 →
-  100 → 1,000 units); advancing it is available once the next Booster's own cost would exceed the
-  lake's current capacity (not "the lake is full"), and drains whatever the lake currently holds.
-  Buying a Booster and upgrading capacity are mutually exclusive by construction, so Foundry's
-  per-lake panel repurposes one button between the two. Once a size's Storage Disk array is fully
+  100 → 1,000 units); advancing it is available once the corresponding Storage disk array for that
+  level is fully built, and drains whatever the lake currently holds. Foundry's per-lake panel
+  repurposes one button between Buy and Upgrade, unconditionally preferring Upgrade whenever it's
+  available (see the "Changed" entry below — Upgrade is no longer forced-priority-gated or ever
+  merely disabled-but-visible). Once a size's Storage Disk array is fully
   built and a full disk on it is no longer redeemable, it liquidates straight into Bits instead of
   sitting idle (previously only a pool's largest size did this, tied to the old deposit mechanic).
 - **Storage Pool cards now also require a capacity threshold to appear** — each pool's own card
@@ -312,6 +313,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   step; a negative pool buffer gets the same defensive floor for consistency.
 
 ### Changed
+- **Provision Disk no longer imposes a separate build-time countdown after funding completes** —
+  gathering a disk's funding passes at the pool's own production rate already takes exactly the
+  intended build time, so an additional post-funding wait was pure duplication (an array's very
+  first disk, needing only 1 pass, previously took twice as long overall as it should have). A disk
+  now exists the instant its final pass lands. A save with an already-in-progress countdown from
+  before this change still finishes it out normally.
+- **A pool's smallest size's read cache pre-fills the instant its pool unlocks again** — ready to
+  flush before the player's first disk of that size even exists, rather than waiting for one to be
+  built first.
+- **The Data Stream and pool buffer balances drop their padded decimal zeros once full for more
+  than a second** — the fixed-3-decimal display exists to stop a fast-changing balance from
+  jittering width tick to tick, which no longer matters once it sits completely full; reverts
+  instantly the moment it drains back below full.
+- **Data Lake capacity Upgrade is no longer blocked by the forced priority order** — it's now
+  available and immediately clickable the instant its own corresponding Storage disk array is
+  fully built, regardless of whether Disk Fill, Speed, Provision Disk, or a Compute Boost is also
+  currently available, matching Buying Boosters' own "always available the instant affordable"
+  behavior. Previously the button could sit visibly present but disabled — its own array long
+  complete — solely because an unrelated action elsewhere on the page happened to outrank it.
 - **Byte Foundry's corner needle-speedometer replaced with a center-grow multiplier bar** — the
   fill-based Speed/Bandwidth multiplier now shows as a compact bar that grows and shrinks from the
   middle (200% fills the full width) instead of a tall dial, with a live tap bonus rendered as a
@@ -972,6 +992,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Security
 - Pinned the `vite-plugin-pwa` build toolchain's `glob > minimatch > brace-expansion` dependency to `^5.0.8` via a `resolutions` override, fixing a high-severity ReDoS/OOM advisory (`yarn audit`) in the version it previously resolved to. Build-time only — no runtime/user-facing impact.
 - Pinned the `vite-plugin-pwa` build toolchain's `workbox-build > ajv > fast-uri` dependency to `^3.1.5` via a `resolutions` override, fixing a high-severity host-confusion advisory (`yarn audit`) in the `3.1.4` version it previously resolved to. Build-time only — no runtime/user-facing impact.
+
+### Changed
+- **"Speed Up" renamed to "Scale Up," and redesigned to unlock tiers one at a time instead of gating only on the last tier.** A Scale Up is now available once the tier it's currently working through (starting with Kilobytes) hits level 3 (displayed Lv.2) — firing it doubles production speed (stacking, same as before) and permanently unlocks the next tier, on top of keeping every tier already reached. The Scale Up card is now always shown from the very first cycle, rather than staying hidden until the last tier unlocks. Once every tier has been reached, Scale Up settles into a repeating "every 3 levels of the last tier" endgame phase (level 3, then 6, then 9, …) instead of its old +1-per-activation last-tier-only ladder.
+- **Data Lake's capacity-increase button now reads "⚡ Scale Out"** (was "⚡ Upgrade") — same action, cost, and gating as before.
+
+### Fixed
+- **Scale Up and Overclock no longer erase Era ascension progress.** Both soft-resets were silently
+  wiping era count, Eons balance, hyperscaler count, Eon upgrade levels, and Flops autobuyer
+  unlock/pause flags back to fresh defaults on every activation; they now carry these permanent
+  fields through unchanged, same as every other permanent field they already preserve.
 
 ## [0.5.0] - 2026-07-14
 

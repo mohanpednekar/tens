@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -267,7 +267,7 @@ test('the Guide nav item opens the Info page and Factory returns, preserving gam
   expect(screen.getByRole('heading', { level: 1, name: /tens — guide/i })).toBeInTheDocument()
   // Guide sections covering the Byte Foundry pre-game (Data Stream/tapping/Speed, Storage,
   // and Compute — including the full merge chain) render alongside the pre-existing main-game
-  // sections (Tickspeed, Speed Up, …) plus Prestige.
+  // sections (Tickspeed, Scale Up, …) plus Prestige.
   expect(screen.getByRole('heading', { level: 2, name: /^byte foundry$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^storage$/i })).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 2, name: /^boosters$/i })).toBeInTheDocument()
@@ -1001,70 +1001,83 @@ test('production and every other control freeze once money reaches a googol', as
   expect(screen.getByRole('button', { name: /reset game/i })).toBeDisabled()
 })
 
-test('the Speed Up panel stays hidden before the last tier unlocks', () => {
+test('the Scale Up panel is always shown, unlike the Overclock panel which stays hidden before the last tier unlocks', () => {
   seedMainGameState({
     resources: { base: 10 },
   })
   render(<App />)
 
-  expect(screen.queryByLabelText(/^speed up panel$/i)).not.toBeInTheDocument()
+  expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
+  expect(screen.queryByLabelText(/^overclock panel$/i)).not.toBeInTheDocument()
 })
 
-test('the Speed Up panel appears once the last tier unlocks, with the button disabled below the required level', () => {
+test('the Scale Up button is disabled below the first tier\'s required level (3)', () => {
   seedMainGameState({
     resources: { base: 10 },
-    owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 1 },
+    purchaseLevels: { tier01: 2 },
   })
   render(<App />)
 
-  expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeDisabled()
+  expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeDisabled()
 })
 
-test('the Speed Up button is enabled once the last tier reaches the required level', () => {
+test('the Scale Up button is enabled once the first tier reaches the required level (3)', () => {
   seedMainGameState({
     resources: { base: 10 },
-    owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 6 },
+    purchaseLevels: { tier01: 3 },
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeEnabled()
 })
 
-test('the second Speed Up requires one more level than the first, not the same level 5', () => {
+test('the second Scale Up targets the next tier, at the same flat level requirement — not one more level of the same tier', () => {
   seedMainGameState({
     resources: { base: 10 },
-    owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 6 },
-    speedUpCount: 1,
+    purchaseLevels: { tier01: 3, tier02: 2 },
+    scaleUpTargetTierIndex: 1,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /speed up \(requires quettabytes level 6/i })
+  const button = screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /speed up \(requires quettabytes level 5\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /scale up \(requires kilobytes/i })).not.toBeInTheDocument()
 })
 
-test('the Speed Up button shows the next multiplier and requirement progress on itself', () => {
+test('once every tier is unlocked, each further Scale Up on the last tier requires 3 more levels than the last', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
-    speedUpCount: 2,
+    purchaseLevels: { tier09: 3, tier10: 5 },
+    scaleUpTargetTierIndex: 10, // TIER_DEFINITIONS.length (10 tiers) + 1 prior activation past the last tier
   })
   render(<App />)
 
-  // Third activation requires the last tier to reach level 7 (Lv.1/7) and would raise the
+  // Requirement is now level 6 (raw), displayed Lv.5 — not the flat level 3 (displayed Lv.2) an
+  // earlier, still-mid-ladder activation needed.
+  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 5/i })
+  expect(button).toBeDisabled()
+  expect(screen.queryByRole('button', { name: /scale up \(requires quettabytes level 2\b/i })).not.toBeInTheDocument()
+})
+
+test('the Scale Up button shows the next multiplier and requirement progress on itself', () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    purchaseLevels: { tier01: 2 },
+    scaleUpCount: 2,
+  })
+  render(<App />)
+
+  // Flat per-tier requirement (level 3, displayed Lv.2) and the third activation would raise the
   // permanent multiplier to ×8 — both shown on the button itself, with no separate status text line.
   expect(screen.getByRole('button', {
-    name: /speed up \(requires quettabytes level 7\) — doubles production speed to ×8/i,
+    name: /scale up \(requires kilobytes level 2\) — doubles production speed to ×8/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/7')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/2')
 })
 
-test('the speed up and overclock panels render below the tier list, not above it', () => {
+test('the scale up and overclock panels render below the tier list, not above it', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1073,15 +1086,16 @@ test('the speed up and overclock panels render below the tier list, not above it
   render(<App />)
 
   const regions = screen.getAllByRole('region').map(region => region.getAttribute('aria-label'))
-  expect(regions.indexOf('speed up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
+  expect(regions.indexOf('scale up panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
   expect(regions.indexOf('overclock panel')).toBeGreaterThan(regions.indexOf('Kilobytes layer'))
 })
 
-test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Speed Up panel button', () => {
+test('once the last tier is full, its row shows the XP-consume tickspeed button, distinct from the top Scale Up panel button', () => {
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier09: 3, tier10: 2 },
+    scaleUpTargetTierIndex: 9, // targets Quettabytes, so the panel button's own label is comparable below
     prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
   })
   render(<App />)
@@ -1092,43 +1106,40 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
   })
   expect(rowXpButton).toHaveTextContent('🧬')
 
-  // The top panel's own Speed Up button is a separate element doing something else entirely
+  // The top panel's own Scale Up button is a separate element doing something else entirely
   // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
-  const panelSpeedUpButton = screen.getByRole('button', { name: /^speed up \(requires quettabytes level 5/i })
-  expect(panelSpeedUpButton).not.toBe(rowXpButton)
+  const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires quettabytes level 2/i })
+  expect(panelScaleUpButton).not.toBe(rowXpButton)
 })
 
-test('clicking Speed Up once eligible resets resources but keeps the panel visible (disabled) rather than hiding it again', async () => {
+test('clicking Scale Up once eligible resets resources but advances the target to the next tier', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 12345 },
-    owned: { tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 6 },
+    purchaseLevels: { tier01: 3 },
   })
   render(<App />)
 
-  const speedUpButton = screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })
-  expect(speedUpButton).toBeEnabled()
+  const scaleUpButton = screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })
+  expect(scaleUpButton).toBeEnabled()
 
-  await user.click(speedUpButton)
+  await user.click(scaleUpButton)
 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  // Speed Up resets owned counts too, so the last tier is no longer unlocked — but since the
-  // panel was already revealed once, it stays visible (in a disabled state) rather than
-  // disappearing again until the player climbs back up to it. The next cycle now requires level 6
-  // (speedUpCount incremented to 1 — see getSpeedUpRequirement).
-  expect(screen.getByLabelText(/^speed up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 6/i })).toBeDisabled()
+  // Scale Up resets owned/purchaseLevels for every tier and advances the target to the next tier
+  // (Megabytes), at the same flat level-3 (displayed level 2) requirement.
+  expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })).toBeDisabled()
 })
 
-test('Speed Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
+test('Scale Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier02: 1, tier09: 10, tier10: 25 },
-    purchaseLevels: { tier09: 3, tier10: 6 },
+    purchaseLevels: { tier01: 3, tier09: 3, tier10: 6 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -1137,15 +1148,15 @@ test('Speed Up resets the global tickspeed multiplier level back to not-yet-boug
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i }))
+  await user.click(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i }))
 
-  // Speed Up also resets tier02's owned count to 0, so the card's initial-unlock condition
+  // Scale Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
   // way back to its pre-activation "Enable" state rather than staying at Lv.2.
   expect(screen.getByRole('button', { name: /enable clock speed for 10 b/i })).toBeInTheDocument()
 })
 
-test('the Speed Up button is disabled once production freezes at a googol', () => {
+test('the Scale Up button is disabled once production freezes at a googol', () => {
   seedMainGameState({
     resources: { base: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
@@ -1154,18 +1165,18 @@ test('the Speed Up button is disabled once production freezes at a googol', () =
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeDisabled()
 })
 
-test('no Auto Speed Up control appears during the first run, even with the last tier unlocked', () => {
+test('no Auto Scale Up control appears during the first run, even with the last tier unlocked', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
   })
   render(<App />)
 
-  expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
-  expect(screen.queryByText(/auto speed up active/i)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
+  expect(screen.queryByText(/auto scale up active/i)).not.toBeInTheDocument()
 })
 
 test('the Overclock panel stays hidden before the last tier unlocks', () => {
@@ -1242,7 +1253,7 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   // the Tickspeed upgrade's own per-level rate to 2.14% (1% × 1.1^8) — both shown on the button
   // itself, no separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 7\) — resets speed up's bonus and raises clock speed's per-level rate to 2\.14%/i,
+    name: /overclock \(requires quettabytes level 7\) — resets scale up's bonus and raises clock speed's per-level rate to 2\.14%/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · Lv.8/7')
 })
@@ -1277,19 +1288,19 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
   expect(panel).not.toHaveTextContent(/per-level rate/i)
 })
 
-test('clicking Overclock once eligible jumps overclockCount straight to the last tier\'s current level (catch-up), wipes the Speed Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
+test('clicking Overclock once eligible jumps overclockCount straight to the last tier\'s current level (catch-up), wipes the Scale Up bonus, and keeps the panel visible (disabled) rather than hiding it again', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 12345 },
     owned: { tier09: 10, tier10: 25 },
     purchaseLevels: { tier10: 8 },
-    speedUpCount: 5,
+    scaleUpCount: 5,
   })
   render(<App />)
 
-  // speedUpCount 5 → next activation would raise the multiplier to ×64 (getSpeedUpMultiplier(6)).
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×64')
+  // scaleUpCount 5 → next activation would raise the multiplier to ×64 (getScaleUpMultiplier(6)).
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×64')
 
   const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })
   expect(overclockButton).toBeEnabled()
@@ -1300,13 +1311,13 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
   // disappearing again. The claim jumped overclockCount straight to 8 (the last tier's level at
-  // claim time), not just to 2, so the next cycle now requires level 10 — and Speed Up's own
-  // stacking bonus is wiped back to ×2 (speedUpCount reset to 0, so the *next* activation would
+  // claim time), not just to 2, so the next cycle now requires level 10 — and Scale Up's own
+  // stacking bonus is wiped back to ×2 (scaleUpCount reset to 0, so the *next* activation would
   // only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from level 8\./i)
-  expect(screen.getByLabelText(/^speed up panel$/i)).toHaveTextContent('⏩ ×2')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
 })
 
 test('the Overclock button is disabled once production freezes at a googol', () => {
@@ -1352,7 +1363,7 @@ test('the Production Bonuses category disappears once the speed bonus is bought 
   expect(screen.queryByLabelText(/^production bonuses category$/i)).not.toBeInTheDocument()
 })
 
-test('an Enable Auto Speed Up button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
+test('an Enable Auto Scale Up button appears on the PP Upgrades page after the first prestige, and spends 20 PP to enable it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1363,13 +1374,13 @@ test('an Enable Auto Speed Up button appears on the PP Upgrades page after the f
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  const autoSpeedUpButton = screen.getByRole('button', { name: /enable auto speed up for 20 prestige points/i })
-  expect(autoSpeedUpButton).toBeEnabled()
+  const autoScaleUpButton = screen.getByRole('button', { name: /enable auto scale up for 20 prestige points/i })
+  expect(autoScaleUpButton).toBeEnabled()
 
-  await user.click(autoSpeedUpButton)
+  await user.click(autoScaleUpButton)
 
-  expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
@@ -1405,49 +1416,49 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
 })
 
-test('a static "Active" badge shows on the PP Upgrades page once Auto Speed Up has been bought', async () => {
+test('a static "Active" badge shows on the PP Upgrades page once Auto Scale Up has been bought', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    autoSpeedUp: true,
+    autoScaleUp: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
   await user.click(screen.getByRole('tab', { name: /open upgrades/i }))
 
-  expect(screen.getByLabelText('Auto Speed Up active')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /enable auto speed up/i })).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
 })
 
-test('pausing Auto Speed Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
+test('pausing Auto Scale Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
   vi.useFakeTimers()
 
   seedMainGameState({
     resources: { base: 12345 },
-    owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 6 },
-    autoSpeedUp: true,
-    autoSpeedUpEnabled: false,
+    purchaseLevels: { tier01: 3 },
+    autoScaleUp: true,
+    autoScaleUpEnabled: false,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   const { unmount } = render(<App />)
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
-  // Still eligible (purchaseLevels.tier10 untouched) since Auto Speed Up starts paused.
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 5/i })).toBeEnabled()
+  // Still eligible (purchaseLevels.tier01 untouched) since Auto Scale Up starts paused.
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeEnabled()
 
   // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
   fireEvent.click(screen.getByRole('tab', { name: /open upgrades/i }))
-  fireEvent.click(screen.getByRole('button', { name: /resume auto speed up automation/i }))
+  fireEvent.click(screen.getByRole('button', { name: /resume auto scale up automation/i }))
   fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
-  // Speed Up fired automatically once resumed — resources reset and the next cycle requires level 6.
+  // Scale Up fired automatically once resumed — resources reset and the target tier advances to
+  // Megabytes, at the same flat level-3 (displayed level 2) requirement.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /speed up \(requires quettabytes level 6/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -1603,9 +1614,9 @@ test.each([
     buttonName: /enable tickspeed autobuyer for 10 prestige points/i,
   },
   {
-    name: 'Enable Auto Speed Up',
+    name: 'Enable Auto Scale Up',
     seed: { owned: { tier09: 10 }, prestige: { xp: 0, points: 19, count: 1, highestMilestone: 1 } },
-    buttonName: /enable auto speed up for 20 prestige points/i,
+    buttonName: /enable auto scale up for 20 prestige points/i,
   },
   {
     name: 'Auto-Prestige',
@@ -1655,10 +1666,10 @@ test.each([
     resumeName: /resume tickspeed autobuyer automation/i,
   },
   {
-    name: 'Auto Speed Up',
-    seed: { owned: { tier09: 10 }, autoSpeedUp: true },
-    pauseName: /pause auto speed up automation/i,
-    resumeName: /resume auto speed up automation/i,
+    name: 'Auto Scale Up',
+    seed: { owned: { tier09: 10 }, autoScaleUp: true },
+    pauseName: /pause auto scale up automation/i,
+    resumeName: /resume auto scale up automation/i,
   },
   {
     name: 'Auto-Prestige',
@@ -1860,10 +1871,10 @@ test('PP-spending buttons report how much of their cost the current balance cove
   expect(smartProgress).toHaveAttribute('aria-valuenow', '10')
   expect(smartProgress).toHaveAttribute('aria-valuemax', '10')
 
-  // Auto Speed Up costs 20 PP — 10 PP covers half.
-  const autoSpeedUpProgress = screen.getByRole('progressbar', { name: /auto speed up prestige point progress/i })
-  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuenow', '10')
-  expect(autoSpeedUpProgress).toHaveAttribute('aria-valuemax', '20')
+  // Auto Scale Up costs 20 PP — 10 PP covers half.
+  const autoScaleUpProgress = screen.getByRole('progressbar', { name: /auto scale up prestige point progress/i })
+  expect(autoScaleUpProgress).toHaveAttribute('aria-valuenow', '10')
+  expect(autoScaleUpProgress).toHaveAttribute('aria-valuemax', '20')
 })
 
 test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer milestone has not been reached yet', async () => {
@@ -2232,7 +2243,7 @@ test('clicking the money balance expands a breakdown of every global production 
     resources: { base: 10 },
     owned: { tier02: 1, tier10: 10 },
     prestigeSpeedBonusUnlocked: true,
-    speedUpCount: 2,
+    scaleUpCount: 2,
     globalTickspeedMultiplier: 1,
     prestige: { xp: 0, points: 50, count: 1, highestMilestone: 1 },
   })
@@ -2247,7 +2258,7 @@ test('clicking the money balance expands a breakdown of every global production 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
-  expect(breakdown).toHaveTextContent(/speed up: ×4 production speed from 2 activations/i)
+  expect(breakdown).toHaveTextContent(/scale up: ×4 production speed from 2 activations/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)
@@ -2269,11 +2280,11 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
-  expect(breakdown).toHaveTextContent(/speed up: not yet activated \(reach level 5 on quettabytes\)/i)
+  expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach level 2 on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
 
-test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Speed Up/Global Tickspeed status once those are revealed', async () => {
+test('the money balance breakdown omits the Prestige speed bonus line before the first prestige, but still shows Scale Up/Global Tickspeed status once those are revealed', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -2285,7 +2296,7 @@ test('the money balance breakdown omits the Prestige speed bonus line before the
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).not.toHaveTextContent(/prestige speed bonus/i)
-  expect(breakdown).toHaveTextContent(/speed up: not yet activated/i)
+  expect(breakdown).toHaveTextContent(/scale up: not yet activated/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
 
@@ -2833,6 +2844,68 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
 })
 
+test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
+  vi.useFakeTimers()
+  // Below INTRO_CONVERSION_UNLOCK_CAPACITY (8000 bits) so tickIntroAutoInvest can never afford even
+  // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
+  // drained back down the instant it tops up, which a bigger, conversion-eligible capacity would be.
+  // 4000 bits is exactly 500 B (below MEMORY_BINARY_UNIT_STEP's own 1 KiB rung), a round balance so
+  // the stable/trimmed forms visibly differ ("500.000 B" vs "500 B").
+  const capacity = 4000
+  seedIntroState({ bits: capacity, capacity, byteCreated: true })
+  const { unmount } = render(<App />)
+
+  const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
+  const balanceText = () => balanceBar.closest('section').querySelector('p')
+  // Immediately full, but not YET trimmed — the delay hasn't elapsed.
+  expect(balanceText()).toHaveTextContent('500.000 B')
+
+  act(() => { vi.advanceTimersByTime(1000) })
+  expect(balanceText()).toHaveTextContent('500 B')
+
+  unmount()
+  vi.useRealTimers()
+})
+
+test('a pool\'s own Memory buffer balance also drops its padded trailing zeros once its buffer has been full for more than 1 second', async () => {
+  vi.useFakeTimers()
+  const firstDiskSize = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE // 8000 — pool 1's own smallest (read-cache-eligible) size
+  const poolBufferCapacity = getPoolBufferCapacity({ intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } }, 1)
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolBufferCapacity },
+    // Pre-filled to full so pool 1's own eager read-cache pre-fill (tickDiskAutoFill) has nothing
+    // left to draw from the buffer — otherwise it would siphon this buffer back down every tick
+    // (no disk of this size exists yet to flush the cache into, so it would take far longer than
+    // 1 second to fill on its own), making poolBufferFull flicker instead of staying continuously
+    // true.
+    diskCache: { [firstDiskSize]: firstDiskSize },
+    // Already latched, and explicitly navigated to Foundry below, so ByteFoundryPage doesn't get
+    // yanked out from under this test the instant intro.capacity's own storage-unlock threshold
+    // (which this test's capacity already sits at) would otherwise latch this mid-test and switch
+    // the app over to MainPage (see latchMainGameUnlocked/App.jsx's showingFoundry).
+    mainGameUnlocked: true,
+  }, {
+    // tier01 past level 1 so the now-full cache above isn't immediately drained right back out by
+    // tickDiskLevelOneCachePull's own level-1 fallback (which would otherwise spend the whole cache
+    // to grant a free purchase block, emptying it and restarting the same siphon-from-buffer cycle
+    // this seed is trying to avoid).
+    purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
+  })
+  const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  const balanceText = () => pool1.querySelector('p')
+  expect(balanceText()).toHaveTextContent(formatDiskSizeStable(poolBufferCapacity))
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+  expect(balanceText()).toHaveTextContent(formatDiskSize(poolBufferCapacity))
+
+  unmount()
+  vi.useRealTimers()
+})
+
 test('the top-right disk-status figure sums full disks per section — the whole Foundry for Data Stream, just that pool\'s own sizes for a pool card', () => {
   seedIntroState({
     bits: 0,
@@ -3342,9 +3415,7 @@ describe('Byte Foundry Storage', () => {
     })
   })
 
-  test('starting a build spends the cost from its own pool buffer immediately, then constructs an EMPTY disk once the timed build completes', () => {
-    vi.useFakeTimers()
-
+  test('starting a build spends the cost from its own pool buffer and constructs an EMPTY disk, both in the same click', () => {
     // Raw Data Stream capacity must derive (via the decade-power pool Capacity ladder) at least
     // currentBankCost — 2**14 doublings is the smallest step whose derived pool 1 Capacity (80,000
     // bits) exactly covers it; seeding `capacity: currentBankCost` directly would derive a pool
@@ -3363,19 +3434,12 @@ describe('Byte Foundry Storage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
 
-    // The cost is spent immediately, but the disk itself doesn't exist until the timed build
-    // finishes — the button itself reflects the in-progress rebuild.
-    let saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    // The cost is spent, and the disk itself constructed, immediately — funding the passes already
+    // took as long as the build itself once did, so there is no further separate timed wait once the
+    // final pass lands (see docs/DESIGN_HISTORY.md's "Provision Disk's post-funding build timer
+    // duplicated the wait already spent funding it" entry).
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.poolBuffers['1']).toBe(0)
-    expect(saved.intro.diskBuild).toEqual({ size: currentBankSize, remainingSeconds: currentBankSize, totalSeconds: currentBankSize })
-    expect(saved.intro.disksBuiltTotal?.[currentBankSize] ?? 0).toBe(0)
-    expect(screen.getByRole('button', { name: /disk array rebuilding/i })).toBeDisabled()
-
-    // The smallest size's very first build takes exactly the time to fill it at 1x Memory
-    // bandwidth — the default 1 bit/sec production rate, so currentBankSize (8000) seconds.
-    act(() => { vi.advanceTimersByTime(currentBankSize * 1000) })
-
-    saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.diskBuild).toBeNull()
     expect(saved.intro.disksBuiltTotal[currentBankSize]).toBe(1)
     // The disk exists (built) but starts empty — no full disk yet.
@@ -3387,7 +3451,6 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByLabelText(/empty 1 kb disk/i)).toBeInTheDocument()
 
     unmount()
-    vi.useRealTimers()
   })
 
   test('Memory keeps read cache full then pours into an empty disk on a later tick when tier does not block', () => {
@@ -3569,7 +3632,7 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByRole('button', { name: /buy 1 cores from the kb data lake/i })).toBeInTheDocument()
   })
 
-  test('Data Lake capacity can be increased ×10 by clicking its ⚡ Upgrade button', () => {
+  test('Data Lake capacity can be increased ×10 by clicking its ⚡ Scale Out button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another
     // forced-priority input out from under the click before it's processed.
@@ -3578,10 +3641,10 @@ describe('Byte Foundry Storage', () => {
     // The pool's own ×1 array (KB) is fully built — the "upgrade available" condition — regardless
     // of how full the lake currently is; draining whatever it holds (here, nothing) funds the
     // advance, not Bits. bits (8000) is included only to prove it never touches it. Provision
-    // Disk's own cost (80,000) stays out of reach either way, so it never outranks this action;
-    // Invest's current-tier claims are already used up (productionMilestoneTierClaims: 2) — the
-    // same higher-priority-action neutralization the Sacrifice tests above use, since Data Lake
-    // capacity sits at the same forced-priority rank.
+    // Disk's own cost (80,000) and Invest's current-tier claims (productionMilestoneTierClaims: 2)
+    // are set up the same way the Sacrifice tests above neutralize higher-priority actions, but
+    // that no longer matters for Upgrade itself: it's no longer part of the forced priority chain
+    // at all, so it would render/enable identically even without this seeding.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3607,14 +3670,13 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Buy stays reachable when Upgrade is available but not its turn — Upgrade no longer hides an immediately-clickable Buy (adversarial-review finding)', () => {
-    // Upgrade is available (the KB pool's ×1 array is fully built) but blocked from actually
-    // firing by the forced priority order — Bandwidth (Speed ×2) is left available here (unlike
-    // the "capacity can be increased" test above, which neutralizes it via
-    // productionMilestoneTierClaims) specifically to put Upgrade in this available-but-not-its-turn
-    // state. Buy is genuinely affordable (1 unit banked, first Booster costs 1) and isn't part of
-    // the forced priority order at all, so it must still be clickable rather than hidden behind a
-    // dead disabled Upgrade button.
+  test('Upgrade claims the action slot over Buy whenever its own array is complete — no longer gated by the forced priority order', () => {
+    // Upgrade is available (the KB pool's ×1 array is fully built) and, since
+    // isDataLakeCapacityDoublingTurnAvailable is no longer part of the forced priority order (Speed
+    // ×2/Bandwidth is left available here, unlike the "capacity can be increased" test above, which
+    // neutralizes it — Upgrade is unaffected either way), it's immediately clickable regardless.
+    // Buy would also be genuinely affordable here (1 unit banked, first Booster costs 1), but
+    // Upgrade still takes the one shared slot — see DataLakePanel's own ternary.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
@@ -3625,9 +3687,9 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
-    expect(buyButton).toBeEnabled()
-    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
+    const upgradeButton = screen.getByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })
+    expect(upgradeButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /buy 1 cores from the kb data lake/i })).not.toBeInTheDocument()
   })
 
   test('Data Lake capacity-increase button disappears once the lake hits its hard cap', () => {
@@ -4173,7 +4235,7 @@ describe('Compute auto-merge automation', () => {
 // back through the intro; App.jsx's own routing derives off mainGameUnlocked, which simply stays
 // true from then on. The Byte generator itself (capacity/byteCreated/tickSpeedSeconds/
 // productionMultiplier) is likewise PERMANENT — only the Data Stream balance (bits/
-// productionAccumulator) resets each cycle. Speed Up/Overclock remain unaffected (covered at the
+// productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
 test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {

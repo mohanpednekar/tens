@@ -757,10 +757,13 @@ Strict three-layer separation:
    turn-available (underfunded for even a first pass, or outranked by a higher-priority action) —
    previously the button stayed disabled until a whole pass was already banked, so the FIRST pass
    needed the same manual "wait, then remember to click" babysitting every later pass had already
-   stopped needing; `clearDiskBuildQueue` remains implemented/tested but has no UI control (same
-   posture as Capacity's own `queueIntroCapacityUpgrade`) — see `docs/DESIGN_HISTORY.md`. Every
+   stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
+   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
+   matter for the narrower "arm the queue before even the first pass is affordable" case. Every
    action here or on either dedicated screen stays
-   gated by the forced priority order (see "Economy model" below). Full field-by-field UI layout:
+   gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
+   capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
+   field-by-field UI layout:
    `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
    capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
    Component contracts (`DiskArrayRow`, `DataLakePanel`): `docs/COMPONENTS_REFERENCE.md`.
@@ -797,7 +800,7 @@ Strict three-layer separation:
    `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
-   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Clock Speed, Speed Up,
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Clock Speed, Scale Up,
    Overclock, Tier Autobuyers, Milestones, Prestige, Era ascension). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
@@ -1028,8 +1031,12 @@ unlocked pool can fund. `provisionDisk` collects the cost in `getDiskProvisionPa
 `getDiskProvisionPassesRequired` passes of the disk's own face-value size each — N for the array's
 Nth disk (1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER` (10) for its last) rather than a
 flat count for every disk regardless of ordinal — so a pool's buffer only ever needs to hold one pass
-at a time, not the whole cost — then takes real build time once fully funded (scaled by production
-rate, snapshotted at start). A manual click that doesn't finish the build in one call auto-arms the
+at a time, not the whole cost — and completes the instant the final pass lands, with no further
+separate build-time delay: gathering the passes at the pool's own production rate already takes
+exactly that much real time, so an additional post-funding countdown would only duplicate it (see
+`docs/DESIGN_HISTORY.md`). `diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard
+remain solely to finish out a countdown a save from before this change may still be carrying — a
+build `provisionDisk` itself starts never creates one. A manual click that doesn't finish the build in one call auto-arms the
 **queue** (`diskBuildQueued`/`queueDiskBuild`/`tickQueuedDiskBuild`, unconditionally wired into
 `tickGame`) so every remaining pass for that disk fires itself as the buffer refills — no further
 clicks needed; only starting a NEW disk's build still needs one click. `queueDiskBuild` itself now
@@ -1088,7 +1095,7 @@ Full overflow-segment math, the disk-breakdown mixed-radix proof, and every gati
 loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
 Cores/Nodes/Boost, every forced-priority-order predicate, cost/production formulas, the (configurable,
 growing) purchase block size and level system, Prestige Points and every PP-funded automation, the
-per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Speed Up, Overclock,
+per-tier and global tickspeed multipliers, the last tier's XP-funded tickspeed, Scale Up, Overclock,
 Reset, the complete game state shape, and the engine function/constants tables — lives in
 `docs/ECONOMY_REFERENCE.md`. Read it before touching `src/game/engine.js`, `src/game/layers.js`,
 `TIER_DEFINITIONS`, `ByteFoundryPage`/`StoragePage`/`ComputePage`, or any economy/prestige/tickspeed
@@ -1207,7 +1214,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1761 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1776 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

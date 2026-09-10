@@ -53,7 +53,8 @@ second line applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
 toward Capacity the same visual way every button on this page already does, and shows the balance
 ALONE in a bigger, centered `BalanceText` (`formatMemoryBalanceValue`, see "Numbers are formatted"
-below) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
+below — `useTrimBalanceAfterFull` switches it to the ordinary trimmed form once `isFull` has held
+continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
@@ -200,7 +201,7 @@ Below Build, every size from `getDiskSizesToShow(state)` renders a full interact
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
 not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
 
-Provisioning a disk is no longer instant, and its cost is no longer paid in one lump sum either —
+Provisioning a disk's cost is no longer paid in one lump sum —
 `provisionDisk` (`actions.provisionDisk`) collects the cost in `getDiskProvisionPassesRequired(state,
 size)` separate PASSES of exactly the disk's own face-value size each (`intro.diskProvisionPasses[size]`,
 `getDiskProvisionPassesCollected`), so the pool buffer only ever needs to hold one pass at a time —
@@ -208,16 +209,17 @@ a click collects as many WHOLE passes as the buffer currently affords (every req
 click if the buffer already holds the full cost, fewer otherwise, banking the remainder). A click
 that doesn't finish the build in one call also auto-arms `intro.diskBuildQueued` (see below) so
 every remaining pass fires itself as the buffer refills, with no further clicks needed — only
-starting a NEW disk's build still needs one click. Only once the final required pass lands does it
-start a countdown, `intro.diskBuild = { size, remainingSeconds, totalSeconds }`
-(`totalSeconds` fixed at the build's own starting duration — the time to fill that size at 1x
-Memory bandwidth (the current Byte Foundry production rate, snapshotted at provisioning start), times
-the disk's own 1-indexed position in the array at the moment the build started, see
-`getProvisionDiskSeconds`/`getProvisionDiskBaseSeconds` in engine.js — so at the default starting rate
-(1 bit/sec) a 1 KB array's first disk takes 8000 seconds, its 6th disk 48,000 seconds, a 10 KB
-array's first disk 80,000 seconds, all shrinking together as the rate grows), ticked down every tick by `tickProvisionDisk`
-(wired into `tickGame`) until it hits 0, at which point `disksBuiltTotal[size]` increments and
-`diskBuild` resets to `null`. Only one build slot exists at a time — while it's set, every IO
+starting a NEW disk's build still needs one click. Once the final required pass lands, the disk
+completes IMMEDIATELY — `disksBuiltTotal[size]` increments in that same call — with no further,
+separate timed wait: gathering the passes at the pool's own production rate already takes the
+intended build time, so an additional post-funding countdown would only duplicate it (see
+`docs/DESIGN_HISTORY.md`'s "Provision Disk's post-funding build timer duplicated the wait already
+spent funding it" entry). An earlier version DID impose a real timed countdown here
+(`intro.diskBuild = { size, remainingSeconds, totalSeconds }`, ticked down every tick by
+`tickProvisionDisk`, wired into `tickGame`) even after passes started taking real time to fund —
+`intro.diskBuild`/`tickProvisionDisk` and the "mid-build" behavioral state described below remain
+solely to finish out a countdown a save from before that change may still be carrying; a build
+`provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
 disallowed, "the array provisioning." The Provision button's idle state has three label variants
 depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)` (clamped at
@@ -234,7 +236,10 @@ once funding is under way (`diskFundingInProgress = diskPassesCollected > 0 && !
 the button renders three distinct BEHAVIORAL states (idle/mid-build/ladder-complete, each covering
 its own label variants above) off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
-isDiskLadderExhaustedForActivePools(state)`: **idle** (covers both the not-yet-started and
+isDiskLadderExhaustedForActivePools(state)` — **mid-build only ever occurs for a save carrying an
+already-in-flight legacy countdown from before the timed-build removal above; a fresh build started
+today goes straight from idle to the disk existing, in the same click, with no mid-build state ever
+rendered**: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
 a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active
@@ -327,15 +332,16 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes (`isDataLakeCapacityDoublingAvailable`, preferring Upgrade whenever it's actually
-clickable or Buy isn't an option either — a disabled-but-available Upgrade must never hide an
-immediately-affordable Buy, since Buy isn't part of the forced priority chain at all — no longer
-guaranteed mutually exclusive, see engine.js and `docs/DESIGN_HISTORY.md`): "⚡ Upgrade"
+between two modes, unconditionally preferring Scale Out whenever `isDataLakeCapacityDoublingAvailable`
+is true — Scale Out is never merely disabled-but-visible any more, and no longer arbitrated against
+Buy via the forced priority order at all (removed — see `docs/DESIGN_HISTORY.md`; array completion,
+independent of every other action's availability, is now Scale Out's only gate): "⚡ Scale Out"
 (`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
 capacity ladder itself is a plain decade-power-of-10 step per level, not a literal doubling; the
-action name still says "double" since only the ladder's VALUES changed, see
+action/function name still says "double" (unrelated to the button's own "Scale Out" label) since
+only the ladder's VALUES changed, see
 docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden (not merely disabled) unless that array is
 actually complete, and hidden once the lake's own 1,000-unit hard cap is reached
 (`isDataLakeCapacityMaxed`); otherwise a `🎯 <cost>` "Buy" button (`actions.buyBooster`) once that
@@ -375,7 +381,16 @@ BALANCE — changing nearly every tick — visibly change display width from one
 because a digit happened to land on zero. The stable variant always shows exactly 3 decimal places
 once ≥ 1 in its unit (a true zero still renders bare, "0 <unit>") so "3.578" and "5.600" read as the
 same precision instead of "3.578" and "5.6" reading like a bigger jump than actually occurred — see
-`docs/DESIGN_HISTORY.md`. Capacity always renders in its own unit; the balance shares it unless that
+`docs/DESIGN_HISTORY.md`. That stability stops mattering once a balance sits completely full (nothing
+left to jitter against), so `useTrimBalanceAfterFull` (`ByteFoundryPage`, one hook instance per
+balance — a shared per-pool `PoolBalanceText` subcomponent for pool buffers, since a hook can't be
+called a variable number of times in one render) switches BOTH the Data Stream and every pool's own
+balance over to the ordinary trimmed formatter once `isFull` (`bits >= capacity` / `poolBufferBits >=
+poolBufferCapacity`) has held continuously for `FULL_BALANCE_TRIM_DELAY_MS` (1 real second, wall-clock
+— independent of the game's own tick rate), reverting instantly the moment it drains back below full.
+The 1-second hold-off is deliberate: a balance that only brushes full for a single tick before
+draining again (e.g. a production tick landing exactly at capacity) never flickers into the trimmed
+form for an instant. Capacity always renders in its own unit; the balance shares it unless that
 would floor the balance below 1 (a bare "0.xyz" fraction), in which case the balance self-sizes into
 its own finer unit instead (e.g. "30.031 KiB" alongside a "1 MiB" capacity) — only a genuinely
 sub-Byte balance still falls back to a raw bit count, since neither unit ladder defines anything
@@ -698,7 +713,7 @@ not at the bottom"):
   bar. Its own `VisuallyHidden role="progressbar"` reuses `getPrestigeProgressPercent`.
 - **HUD-scoped muted/accent text.** The PP header line's "N PP" figure renders via `HudMutedText`/
   `HudGoldText` — a fork of the app-wide `MutedText` (still hardcoded `#a3a3a3`, still used by
-  `TierList`/`SpeedUpCard`/`GlobalTickspeedCard`) — token-driven
+  `TierList`/`ScaleUpCard`/`GlobalTickspeedCard`) — token-driven
   (`theme.color.textMuted`/`theme.color.warn`) so this HUD region's own AA audit is meaningful without
   migrating those other regions out of turn (tier rows in #138; prestige surfaces below in #139).
   `HudGoldText` is sized at `1.25em`, not `1.1em`: `theme.color.warn` against the light theme's white
@@ -719,7 +734,7 @@ not at the bottom"):
   `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
-  `!isFirstRun`), Speed Up, Tickspeed, and Overclock — each gated on the same
+  `!isFirstRun`), Scale Up, Tickspeed, and Overclock — each gated on the same
   reveal/`everRevealed` flag its own card already uses (so a not-yet-relevant multiplier doesn't appear
   here before its own card would show it either), reading either its live effect (e.g. "+50% production
   speed from 50 unspent PP", "×4 production speed from 2 activations", "+1% faster ticks on every tier
@@ -733,7 +748,7 @@ not at the bottom"):
   again once scrolled back to the uncompressed layout shows it immediately with no re-click needed.
 - **No description prose on this page.** Every mechanic's evergreen explanation (what used to live
   inline as `InfoDetails` disclosure bodies) moved to `InfoPage` (see the file header note above).
-  Headings with nothing left to show (`SpeedUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
+  Headings with nothing left to show (`ScaleUpCard`'s `<h2>`, the page `Header`'s `<h1>`, the Tier
   Autobuyers category's old shared "How these controls work" panel, the Milestones view's Tier
   Autobuyer Unlocks category) are now plain, non-interactive text — there's no click target because
   there's nothing to reveal. `GlobalTickspeedCard`/`OverclockCard`'s own `<h2>` and the Milestones
@@ -742,7 +757,7 @@ not at the bottom"):
   it — no separate visible "expand" affordance) — but only when there's a genuinely *live game
   status* number to reveal (not a description of how the mechanic works): `GlobalTickspeedCard`'s
   `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
-  Milestones view's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Speed Up and
+  Milestones view's Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
   Overclock cards"/"Milestones view" below) — each collapsed until the player clicks that heading.
   *Closing* it back is more permissive: clicking the heading again (native `<summary>` toggle) or
   clicking the revealed status line itself both work, via a shared `collapseDisclosure` click
@@ -763,7 +778,7 @@ not at the bottom"):
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
   bought this level, amber = units affordable now but not yet bought). Prestige gets the same single-tone fill
   treatment (spendable ÷ cost, or `prestigeProgressPercent`), and both pulse (`$pulse`) when
-  actionable. Every PP-spending button (per-tier Unlock/Smart, Auto Speed Up, Unlock Speed Bonus,
+  actionable. Every PP-spending button (per-tier Unlock/Smart, Auto Scale Up, Unlock Speed Bonus,
   Auto-Prestige — all on the PP Upgrades page) carries the same single-tone fill (unspent PP ÷ that
   button's cost, `ppProgressPercent`), each nesting a `VisuallyHidden` `role="progressbar"`
   (`aria-valuenow` = PP balance capped at cost, `aria-valuemax` = cost).
@@ -789,7 +804,7 @@ autobuyer are both free milestone unlocks now (see "Tier Autobuyers" below), thi
 purchases plus the global automations' PP costs, not the two free unlocks (the Money-funded global
 tickspeed multiplier *itself* doesn't factor in either, since it's not a PP purchase — only its
 automation toggle, Tickspeed Autobuyer, does). Money/PP balances stay visible across both views;
-`GlobalTickspeedCard`, `TierList`, `SpeedUpCard`, and `OverclockCard` are Factory-view-only; every
+`GlobalTickspeedCard`, `TierList`, `ScaleUpCard`, and `OverclockCard` are Factory-view-only; every
 PP-spending control lives on the Upgrades view. Milestones/Chapters status lives on
 `MilestonesPage` under AppNav → More (see "Milestones view" below) — not a MainPage tab anymore.
 Full-save Reset lives only under AppNav → More → Settings → Danger zone — not on MainPage.
@@ -797,18 +812,19 @@ Full-save Reset lives only under AppNav → More → Settings → Danger zone �
 **Global Tickspeed card (Factory view).** Unlike every other automation upgrade, this one is
 Money-funded (not PP-funded) and lives on the Factory view as its own `GlobalTickspeedCard`, rendered
 alone at the very top of the Factory view — above `TierList`/tier 1, before anything else — since it's
-relevant from the very start of a run, well before Speed Up, Overclock, or Prestige are, or even the
-tier list itself. `SpeedUpCard` and `OverclockCard` (see below) render together instead, in their own
-row *below* `TierList` — the two soft-reset controls, which share the same last-tier prerequisite,
-form their own cluster there rather than sharing this card's row at the top; `GlobalTickspeedCard`
-deliberately doesn't join them, since it's the one control relevant before the last tier is even
-reachable. (Earlier iterations tried grouping all three speed-related cards together at the top; this
-was reverted to the current split — Tickspeed alone at top, Speed Up/Overclock below the tier list —
+relevant from the very start of a run, well before Overclock or Prestige are, or even the tier list
+itself — `ScaleUpCard` is likewise always shown (unlike `OverclockCard`, still gated on the last
+tier having ever been unlocked — see below), but stays down in its own row below `TierList` rather
+than joining this card, since its own target walks through the tier ladder one tier at a time (see
+"Scale Up" in docs/ECONOMY_REFERENCE.md) and reads more naturally beside the tier list it's advancing
+through. `ScaleUpCard` and `OverclockCard` (see below) render together in that shared row instead.
+(Earlier iterations tried grouping all three speed-related cards together at the top; this
+was reverted to the current split — Tickspeed alone at top, Scale Up/Overclock below the tier list —
 per direct player feedback.) See "The global tickspeed multiplier"/"Overclock" below for the underlying
 `engine.js` mechanics. The heading text itself never changes
 (`Tickspeed`, no level/percent readout — shortened first from `Global Tickspeed Multiplier` to
-`Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `SpeedUpCard`
-during that earlier iteration and the `Global` prefix stopped earning its width against `SpeedUpCard`'s
+`Global Tickspeed`, then to just `Tickspeed` once this card started sharing a row with `ScaleUpCard`
+during that earlier iteration and the `Global` prefix stopped earning its width against `ScaleUpCard`'s
 own two-word heading; no behavior change, and the shortened heading stuck even after the two cards
 split back apart — the `GlobalTickspeedCard` component/prop names are unaffected either way, this is
 purely the rendered heading text), but it lives inside a `Disclosure`'s `<summary>` (see "No
@@ -829,9 +845,9 @@ every other multiplier badge in the app once the numbers get large. The button c
 (same `formatGlobalTickspeedBonusPercent` formatting) for assistive tech, independent of the
 collapsed/expanded visual state. A `globalTickspeedCardEverRevealed` flag (seeded from/latched to
 `isGlobalTickspeedMultiplierUnlocked(state)`) follows the same `everRevealed` pattern as
-`SpeedUpCard` — once tier02 has ever been owned (or the multiplier is already active),
+`OverclockCard` (see below) — once tier02 has ever been owned (or the multiplier is already active),
 the card stays visible rather than disappearing if tier02's owned count is later reset by a
-Prestige/Speed Up; Reset clears the flag alongside `speedUpEverRevealed`. It
+Prestige/Scale Up; Reset clears the flag alongside `overclockEverRevealed`. It
 needs no `!isFirstRun` gate — unlike the PP Upgrades page, it has nothing to do with Prestige Points, so
 it's available (once tier02 is owned) even during a player's very first run. Clicking is optional: once
 `buyTickspeedAutobuyer` is bought (PP-funded, see "Prestige Points, autobuyer unlock, and the tickspeed
@@ -862,11 +878,11 @@ below).
 Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
 level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
 tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by a quick-access **Speed Up** button instead (`⏩ ×{next}`, `actions.speedUp` — the same
-action `SpeedUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
+grid slot — by a quick-access **Scale Up** button instead (`⏩ ×{next}`, `actions.scaleUp` — the same
+action `ScaleUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
 the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
 the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
-this slot used to show — reaching a full last-tier level is also exactly when Speed Up tends to be
+this slot used to show — reaching a full last-tier level is also exactly when Scale Up tends to be
 close, so this reuses the slot for the more actionable control. The underlying XP-funded tickspeed
 mechanic keeps running unattended: it's still spent automatically once per tick by the tier tickspeed
 autobuyer (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
@@ -874,7 +890,7 @@ its current unspent-XP balance/next-consumption minimum still show in the row's 
 an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The Details
 disclosure keeps working unchanged for the last tier otherwise, still reading the XP-funded
 multiplier instead of the Money-funded one. This is a live check, not a one-time unlock: a
-Prestige/Speed Up resets the last tier's owned count to 0 along with every other tier's, which reverts
+Prestige/Scale Up resets the last tier's owned count to 0 along with every other tier's, which reverts
 this slot back to the normal Money-funded button until the player buys back up to a full level — see
 "The last tier's XP-funded tickspeed" below for why.
 
@@ -884,8 +900,8 @@ same first line, right-aligned to the row center — no tickspeed-bonus badge (s
 above) and no autobuyer status icon. An earlier version showed an always-visible, read-only
 `PpUpgradeBadge` here (a single 🤖 glyph, full opacity while active / dimmed `$dimmed` while paused,
 via the same icon-instead-of-text convention every other automation status badge in the app still
-uses — the tier tickspeed/global tickspeed/Auto Speed Up/Auto-Prestige Autobuyer badges on the PP
-Upgrades page, and the Auto-Prestige/Auto Speed Up status lines — see their own sections below) once
+uses — the tier tickspeed/global tickspeed/Auto Scale Up/Auto-Prestige Autobuyer badges on the PP
+Upgrades page, and the Auto-Prestige/Auto Scale Up status lines — see their own sections below) once
 a tier's unit-buying autobuyer was unlocked (`autobuyers`/`applyAutobuyerMilestones` — a free,
 prestige-count-milestone-triggered unlock, not a PP purchase). Both removed to keep the Factory view
 row down to just the tier name plus live production/owned figures and the two action buttons —
@@ -941,28 +957,28 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    is currently reachable in this run.
 2. **Global Automation** — rows ordered by ascending PP cost: **Tickspeed Autobuyer** (🌐, automates the
    Money-funded *global* tickspeed multiplier, which itself lives on the Factory view, not here — distinct
-   from the per-tier tickspeed autobuyer in category 1 above), **Auto Speed Up** (⏩, an icon-only badge
+   from the per-tier tickspeed autobuyer in category 1 above), **Auto Scale Up** (⏩, an icon-only badge
    once bought, otherwise a button), both gated only on `!isFirstRun`; **Auto-Prestige Autobuyer** (🔁,
    only once `allTiersFullyAutomated && isAutoPrestigeActive` — i.e. Auto-Prestige must already be
    revealed *and* bought at least once — automates RE-LEVELING Auto-Prestige itself, distinct from
    activating it in the first place); and **Auto-Prestige** (✦, only once `allTiersFullyAutomated`;
    shows its current level inline when active). The Auto-Prestige Autobuyer's cost
-   (`AUTO_PRESTIGE_AUTOBUYER_COST`, 500 PP) sits between Auto Speed Up's (100) and Auto-Prestige's own
+   (`AUTO_PRESTIGE_AUTOBUYER_COST`, 500 PP) sits between Auto Scale Up's (100) and Auto-Prestige's own
    initial-activation cost (1000), which is why it's ordered directly before the Auto-Prestige row
    despite being a "meta-automation" of it. Each row's icon matches the icon of the feature it
-   automates (🌐 Global Tickspeed card, ⏩ Speed Up card, ✦ Prestige card/button) — except the
+   automates (🌐 Global Tickspeed card, ⏩ Scale Up card, ✦ Prestige card/button) — except the
    Auto-Prestige Autobuyer, which automates a PP-funded track (Auto-Prestige's own leveling) rather
    than a Money-funded feature, so it gets its own distinct icon (🔁) instead of reusing ✦ — so every
    row stays visually distinct from each other and from the per-tier automation icons in category 1
    above (🤖 Unlock, ⚙ tier tickspeed autobuyer, 🧠 Smart). Once bought, each of the four carries a
    small secondary `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven) beside its badge/level
-   text — Tickspeed Autobuyer's, Auto Speed Up's, and the Auto-Prestige Autobuyer's badge is the same
+   text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
    icon-only, `$dimmed`-while-paused `PpUpgradeBadge` convention as category 1 above (no written
    "Active"/"Paused" anywhere), and Auto-Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
 3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted
-   once it's bought, since there's nothing left to show there (unlike Auto Speed Up/Tickspeed
+   once it's bought, since there's nothing left to show there (unlike Auto Scale Up/Tickspeed
    Autobuyer, it has no persistent status badge — its effect is already visible in the PP balance
    display).
 
@@ -1052,33 +1068,36 @@ so would only invite the question "as opposed to what."
 Unlike the Upgrades view's Tier Autobuyers category, nothing on this page is ever a button — every row
 is purely informational, so there's no `hasAffordablePpUpgrade`-style `NavDot` on this tab either.
 
-**Speed Up and Overclock cards, below the tier list.** `SpeedUpCard` and `OverclockCard` render
+**Scale Up and Overclock cards, below the tier list.** `ScaleUpCard` and `OverclockCard` render
 together, in that order, inside a shared `SpeedCardsRow` flex row placed directly below `TierList` —
 not above it alongside `GlobalTickspeedCard` (see "Global Tickspeed card" above for why the three
 speed-related cards are split into a top card plus this separate bottom pair rather than one shared
 row). Above the 40rem mobile breakpoint, `SpeedCardsRow` uses the same layout mechanics the old top
 row did: each card shares the row equally (`flex: 1 1 8rem`). Below 40rem it switches to a single
-column instead (`flex-direction: column`) — Speed Up above Overclock, matching their JSX/render
+column instead (`flex-direction: column`) — Scale Up above Overclock, matching their JSX/render
 order — rather than staying side by side down to phone width (an earlier version's floor width was
 tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
-`SpeedCardsRow`'s own comment for why that was superseded). The row renders (empty, zero height) even
-before either card's own reveal flag is true, and works unchanged if only one of the two is currently
-revealed — the lone card just fills the row/column.
+`SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
+so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
+alongside it.
 
-A `speedUpEverRevealed` boolean (seeded from, and latched permanently true the first time,
-`lastTierUnlocked`) drives `SpeedUpCard`'s render condition instead of a live check — once shown, it
-stays shown, with its button simply going disabled rather than the card vanishing. It resets only on a
-full Reset (`handleResetClick`), never on an ordinary Speed Up or Prestige. There is no equivalent card
-for Prestige — the bottom Prestige panel that used to mirror this pattern (via a
-`prestigeCardEverRevealed` flag) was removed as purely informational and redundant with the
-`TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige (see "Prestige and
-the Googol freeze" below).
+Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
+progressive-disclosure gate at all — it's unconditionally rendered, since Scale Up is relevant from
+the very first cycle (its own target walks through the tier ladder one tier at a time, starting at
+the first tier — see "Scale Up" in docs/ECONOMY_REFERENCE.md — rather than sitting only on the last
+tier the way it used to). `getScaleUpTargetTier(state)` (`engine.js`) determines which tier's name/
+level the card's button currently reads against; `getScaleUpRequirement(state)` determines the
+level it requires. There is no equivalent card for Prestige — the bottom Prestige panel that used to
+mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purely informational and
+redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
+(see "Prestige and the Googol freeze" below).
 
-`OverclockCard` — same orange-accented `StatCard` shape as `SpeedUpCard`'s cyan — is gated on the same
-`lastTierUnlocked` condition (reusing the exact same `everRevealed`-flag pattern, its own
-`overclockEverRevealed` boolean, latched permanently true and reset only on a full Reset alongside
-`speedUpEverRevealed`) since both share the same last-tier prerequisite. `OverclockButton` (sized to
-match `SpeedUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
+`OverclockCard` — same orange-accented `StatCard` shape as `ScaleUpCard`'s cyan — is gated on
+`lastTierUnlocked` (the last tier having ever been unlocked), via its own `overclockEverRevealed`
+`everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
+which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
+redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
+match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
 — e.g. `⚡ 2.14%/lvl · Lv.8/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
@@ -1087,14 +1106,14 @@ reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passin
 it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
 reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
 `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier` in engine.js.
-Unlike `SpeedUpButton`'s `Lv.{lastTierLevelDisplay}/{speedUpRequirementDisplay}`, this
+Unlike `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDisplay}`, this
 level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
 `getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —
 so the numbers Overclock's own requirement produces show exactly as `engine.js` computes them,
 matching the same raw level number the last tier's own Details disclosure already shows, rather than
 introducing a second, differently-offset "level" reading for the same underlying value; see
 `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
-docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Speed Up gets
+docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Scale Up gets
 one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
 deliberate, occasional decision reached via this card, not a frequent one-tap action.
 
@@ -1116,7 +1135,7 @@ bonus" figure needed anywhere else in the UI besides the money-balance breakdown
 explicit `aria-label` on the button itself is required (accessible-name computation would otherwise
 recurse into the nested node). Buy/Prestige/Reset carry a `title` tooltip; Reset additionally wires
 `aria-describedby` to a `VisuallyHidden` description (`reset-description` — the app's only
-irreversible action). The Tickspeed/Speed Up/Overclock buttons used to wire `aria-describedby` to their
+irreversible action). The Tickspeed/Scale Up/Overclock buttons used to wire `aria-describedby` to their
 now-removed `InfoDetails` prose too; that's gone along with the prose itself (see "No description prose
 on this page" above) — each button's own `title`/`aria-label` already carries the mechanic's short
 explanation, so nothing about the accessible name/description regressed.
@@ -1208,7 +1227,7 @@ the two buttons, which override it via their own `disabled`-dependent cursor rul
 in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
-(`getPurchaseMilestoneMultiplier`), the Speed Up multiplier (only shown once `speedUpCount > 0`), for
+(`getPurchaseMilestoneMultiplier`), the Scale Up multiplier (only shown once `scaleUpCount > 0`), for
 the last tier once `isLastTierTickspeedXpUnlocked` an extra line with its current unspent XP balance
 and the minimum needed for the next `consumeXpForLastTierTickspeed` call (see "The last tier's
 XP-funded tickspeed" below), and the tier's cost/produces resource symbols. This — plus the
@@ -1222,10 +1241,10 @@ speed bonus in the HUD/money-balance breakdown) is rendered through a shared
 `formatBonusOrMultiplier(multiplier, { precise })` helper in `MainPage/index.jsx`: below +100% it reads
 as a percentage (`+21%`, or `+N.NN%` with `precise: true` for the global tickspeed multiplier's
 sub-1%-per-level compounding — see `formatGlobalTickspeedBonusPercent`), and at/above +100% (multiplier
-`>= 2`) it switches to a Speed-Up-style `"Nx"` multiplier (`2x`, `5.5x`, via `formatRate`) instead — a
+`>= 2`) it switches to a Scale-Up-style `"Nx"` multiplier (`2x`, `5.5x`, via `formatRate`) instead — a
 percentage reads awkwardly once it doubles the baseline, and `"Nx"` is already this app's convention for
-large stacking bonuses (Speed Up's own `×N`, though that one keeps its pre-existing `×`-prefix styling
-rather than switching to this helper's `N`-suffix style, since Speed Up's multiplier was never expressed
+large stacking bonuses (Scale Up's own `×N`, though that one keeps its pre-existing `×`-prefix styling
+rather than switching to this helper's `N`-suffix style, since Scale Up's multiplier was never expressed
 as a percentage to begin with). This is purely a display-layer convention — no economy formula changed;
 only the rendered text shifts at the +100% threshold. Every call site that used to hardcode `+N%` now
 goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedBonusPercent` directly
@@ -1234,7 +1253,7 @@ goes through this helper instead of `formatBonusPercent`/`formatGlobalTickspeedB
 **Auto-collapsing expanded disclosures on scroll.** The tier row Details disclosure
 (`TierDetailsContent`/`openTierDetailIds`) automatically collapses once its row scrolls fully out of
 the viewport in either direction, so an expanded row doesn't stay open (and out of context) as the
-player keeps scrolling. Since tier rows mount/unmount as tiers unlock/lock across Prestige/Speed Up,
+player keeps scrolling. Since tier rows mount/unmount as tiers unlock/lock across Prestige/Overclock,
 a single shared `IntersectionObserver` (created once, not per row) watches every currently-rendered
 row, with each `TierLine` registered/unregistered via a stable per-tier ref callback
 (`registerTierRowRef`, cached in a `Map` keyed by tier id so the callback's identity doesn't change

@@ -262,27 +262,27 @@ describe('schema merge on load', () => {
     expect(loaded.intro.mainGameUnlocked).toBe(true)
   })
 
-  it('defaults autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
+  it('defaults autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled to true for saves missing those fields', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
-      autoSpeedUp: true,
+      autoScaleUp: true,
       autoGlobalTickspeed: true,
       autoPrestige: 2,
       prestige: { xp: 0, count: 0, highestMilestone: 1 },
     }
     localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
     const loaded = loadGameState()
-    expect(loaded.autoSpeedUpEnabled).toBe(true)
+    expect(loaded.autoScaleUpEnabled).toBe(true)
     expect(loaded.autoGlobalTickspeedEnabled).toBe(true)
     expect(loaded.autoPrestigeEnabled).toBe(true)
   })
 
-  it('preserves an explicitly-paused (false) autoSpeedUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled value', () => {
+  it('preserves an explicitly-paused (false) autoScaleUpEnabled/autoGlobalTickspeedEnabled/autoPrestigeEnabled value', () => {
     const state = {
       ...createInitialGameState(),
-      autoSpeedUp: true,
-      autoSpeedUpEnabled: false,
+      autoScaleUp: true,
+      autoScaleUpEnabled: false,
       autoGlobalTickspeed: true,
       autoGlobalTickspeedEnabled: false,
       autoPrestige: 1,
@@ -290,9 +290,45 @@ describe('schema merge on load', () => {
     }
     saveGameState(state)
     const loaded = loadGameState()
-    expect(loaded.autoSpeedUpEnabled).toBe(false)
+    expect(loaded.autoScaleUpEnabled).toBe(false)
     expect(loaded.autoGlobalTickspeedEnabled).toBe(false)
     expect(loaded.autoPrestigeEnabled).toBe(false)
+  })
+
+  it('migrates the pre-rename speedUpCount/autoSpeedUp/autoSpeedUpEnabled field names to scaleUpCount/autoScaleUp/autoScaleUpEnabled on load', () => {
+    const oldSave = {
+      intro: { mainGameUnlocked: true },
+      resources: { [MONEY_ID]: 10 },
+      speedUpCount: 5,
+      autoSpeedUp: true,
+      autoSpeedUpEnabled: false,
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.scaleUpCount).toBe(5)
+    expect(loaded.autoScaleUp).toBe(true)
+    expect(loaded.autoScaleUpEnabled).toBe(false)
+    // The legacy keys don't linger as dead fields on the migrated state.
+    expect(loaded.speedUpCount).toBeUndefined()
+    expect(loaded.autoSpeedUp).toBeUndefined()
+    expect(loaded.autoSpeedUpEnabled).toBeUndefined()
+  })
+
+  it('prefers the current scaleUpCount/autoScaleUp/autoScaleUpEnabled field names over legacy ones when both are present', () => {
+    const oldSave = {
+      intro: { mainGameUnlocked: true },
+      resources: { [MONEY_ID]: 10 },
+      speedUpCount: 5,
+      scaleUpCount: 9,
+      autoSpeedUp: false,
+      autoScaleUp: true,
+      prestige: { xp: 0, count: 0, highestMilestone: 1 },
+    }
+    localStorage.setItem('tens_game_state', JSON.stringify(oldSave))
+    const loaded = loadGameState()
+    expect(loaded.scaleUpCount).toBe(9)
+    expect(loaded.autoScaleUp).toBe(true)
   })
 
   it('defaults autobuyersEnabled/tierTickspeedAutobuyerEnabled to true for every tier on a save missing those fields', () => {

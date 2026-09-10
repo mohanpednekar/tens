@@ -1,5 +1,101 @@
 # Design history & rationale
 
+### Speed Up renamed to Scale Up and redesigned from a last-tier-only gate to a per-tier unlock ladder — 2026-09-09
+
+Requested directly by the maintainer (not a filed issue): rename the "Speed Up" soft-reset mechanic
+to "Scale Up," and change its own requirement from a fixed last-tier-only gate (`speedUpCount + 6`,
+escalating by 1 level per activation forever) to one that walks through the tier ladder one tier at a
+time — available after 3 levels of whichever tier is currently its target, permanently unlocking the
+next tier (in addition to the existing production-doubling stack) each time it fires — and only once
+every tier has been reached does it settle into a repeating "every 3 levels of the last tier"
+endgame phase, mirroring the "3 levels" rule from the unlock phase rather than introducing a
+different number.
+
+**The core implementation problem, and why a simple "highest currently-unlocked tier" definition
+doesn't work.** The natural-seeming approach — define Scale Up's target as `TIER_DEFINITIONS`'s
+highest tier for which `isTierUnlocked` is currently true — is unreachable in practice: `isTierUnlocked`
+already unlocks tier N+1 live the *instant* tier N's own level hits 3 (the pre-existing, unrelated
+rule this redesign deliberately reuses as the SAME threshold), so by the time any code re-derives
+"the highest unlocked tier" on that same resulting state, tier N+1 (freshly unlocked, still at level
+1) has already displaced tier N as the answer. Scale Up's own gate — checking that derived target's
+level against 3 — would then never observe tier N sitting at exactly level 3, for any N: the tier
+whose completion should trigger it is never the one the derivation reports at that exact instant.
+Under that design Scale Up could only ever fire once the ladder reaches its true last tier (the one
+case with no "next tier" to displace the derivation), making the entire per-tier phase dead,
+unreachable code — a real bug caught before merge, not shipped.
+
+**The fix: `state.scaleUpTargetTierIndex`, an explicit, monotonic counter — not a re-derived "highest
+unlocked" lookup.** It starts at 0 (the first tier) and advances by exactly 1 on every Scale Up
+activation, unconditionally, independent of `isTierUnlocked`'s own live/latched unlock state
+entirely. `getScaleUpTargetTier`/`getScaleUpRequirement` read this counter directly (clamped to the
+last tier's own index for the target-tier lookup; left unclamped for the requirement formula, which
+uses how far *past* the last tier's index it has climbed to drive the endgame phase's escalation —
+see their own comments in `engine.js`). Because the counter is independent of live unlock state, a
+deferred Scale Up (Auto Scale Up off, or the player just hasn't clicked) never permanently misses its
+moment: whatever tier the counter currently points to, that tier's own level — whether freshly reset
+or organically grown past 3 through ordinary play while Scale Up sat unused — is compared against the
+requirement fresh every time, so eligibility always self-corrects rather than depending on exact
+timing.
+
+**The second behavior change this redesign required: `everUnlockedTierIds` now survives an ordinary
+Scale Up.** The old mechanic was a *full* soft reset, including relocking every tier beyond the
+first — appropriate when Scale Up was purely a repeatable "double production" lever with no unlock
+role of its own. Once Scale Up is also the thing that permanently unlocks the next tier, relocking
+tiers on the very same reset that's supposed to unlock one would be self-defeating. `scaleUpGame` now
+carries `state.everUnlockedTierIds` through unchanged instead of resetting it (the one deliberate
+departure from `prestigeGame`/`overclockGame`, which both still fully relock every tier beyond the
+first — Overclock's own gate, still last-tier-only, was deliberately left unchanged by this redesign,
+since the maintainer's request was scoped to Speed Up specifically). `scaleUpTargetTierIndex` itself
+resets to 0 on a real Prestige/Overclock, same as `scaleUpCount` and `everUnlockedTierIds` — the
+tier ladder has to be re-earned from the first tier again after either of those bigger resets.
+
+Renamed throughout: `speedUpGame` → `scaleUpGame`, `getSpeedUpRequirement`/`getSpeedUpMultiplier` →
+`getScaleUpRequirement`/`getScaleUpMultiplier`, `speedUpCount` → `scaleUpCount` (kept, unrelated to
+the new per-tier mechanic — it still only drives the production-doubling stack), `autoSpeedUp*` →
+`autoScaleUp*`, `SPEED_UP_MULTIPLIER_BASE`/`AUTO_SPEED_UP_COST` → `SCALE_UP_MULTIPLIER_BASE`/
+`AUTO_SCALE_UP_COST`, every UI label/aria-label, and the Guide's own explanation. `ScaleUpCard` on
+`MainPage` also dropped its `everRevealed` progressive-disclosure gate entirely (unlike
+`OverclockCard`, unaffected and still gated on the last tier ever unlocking) — Scale Up is now
+relevant from the very first cycle, well before the last tier exists, so hiding it made no sense
+under the new design. Also fixes a save-migration gap the adversarial reviewer caught before merge:
+the rename dropped `speedUpCount`/`autoSpeedUp`/`autoSpeedUpEnabled` with no migration step, so an
+existing player's save silently lost that data (including a paid 20 PP Auto Speed Up unlock and its
+pause preference) on their first load after this shipped — `mergeState` (`storage.js`) now falls
+back to the legacy field names when the new ones are absent, same pattern as the pre-existing
+`lastTierTickspeedXpUnlocked` removal just above it.
+
+Devin Review (a separate GitHub bot review, distinct from the internal adversarial `code-reviewer`
+subagent) then found that `scaleUpGame`'s returned object omitted all six of `era`/`eons`/
+`hyperscalerCount`/`eonsUpgrades`/`computeFlopsAutobuyers`/`computeFlopsAutobuyersEnabled` — Era
+ascension's own permanent meta-progression fields plus its Flops-autobuyer unlock/pause flags — so
+an ordinary Scale Up silently wiped a player's Eons balance, hyperscaler count, Eon upgrade levels,
+and any Flops autobuyer unlocks back to fresh defaults. Investigating whether this was new to this
+PR revealed the identical gap already exists in `prestigeGame` itself on `main`, unrelated to this
+diff — filed separately as issue #626 (out of scope here, since `prestigeGame`'s own reset shape is
+untouched by this PR). Fixed in `scaleUpGame` and `overclockGame` (which shares the same reset
+shape) by carrying all six fields through unchanged, same `?? initial.X` pattern as every other
+permanent field both functions already preserve, matching `eraGame`'s own identical treatment of
+the two Flops-autobuyer fields. `yarn test`: 1757 → 1775 green.
+
+Devin's fourth finding questioned `.claude/skills/simulate-run-times/run-simulation.mjs`'s
+`actSoftResets`, which called `scaleUpGame(overclockGame(state))` (Overclock-first) every tick with
+a comment claiming this was empirically faster — a claim made under the OLD last-tier-only Scale Up
+and never re-validated after this PR's redesign. Since Scale Up now permanently advances
+`scaleUpTargetTierIndex`/`everUnlockedTierIds` on every activation, Overclock-first repeatedly
+discards that ladder progress whenever both conditions happen to be met the same tick (Overclock's
+own reset wipes both fields via `...initial`, same as Prestige — see `scaleUpGame`'s own comment).
+A direct A/B re-run of the career-cycle simulation (prestiges 0/1/2/3/5/10, same engine, only the
+soft-reset order swapped) confirmed the old claim no longer holds: Scale-Up-first was faster in 4 of
+6 cycles (up to ~14%/cycle: e.g. prestige 0 went from 6h40m17s Overclock-first to 5h42m45s
+Scale-Up-first) and only marginally slower in the other 2 (<2%), for a ~7% faster aggregate. A
+phase-dependent hybrid (Overclock-first only once `scaleUpTargetTierIndex` reaches the last tier)
+was also tried and performed no better than unconditional Scale-Up-first, since the tier ladder is
+walked fast enough that nearly the whole "Main → Googol" phase already sits in the last-tier
+endgame regardless. `actSoftResets` now calls `overclockGame(scaleUpGame(state))`
+(Scale-Up-first); `SKILL.md`/the header comment/the published-strategy template string were updated
+to match, and a fresh run was published to the `ideal-run-strategy` orphan branch per the skill's
+own "re-run and publish after any change that can significantly affect timings" rule.
+
 ### Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09
 
 Devin Review found 4 issues on PR #614 (the `buyBooster` revert + `diskBuildQueuedByReplay`
@@ -1229,7 +1325,7 @@ The following records *why* specific MainPage/component behaviors were built the
   once each tier row got its own `+X` production figure (the per-tier replacement), since an
   aggregate no longer added information once tickspeeds diverged in principle (even though they're
   currently uniform — see "Tier production tickspeed" in `docs/ECONOMY_REFERENCE.md`).
-- **On-button gradient fill instead of a separate progress bar.** Buy/Prestige/Speed Up/PP-spending
+- **On-button gradient fill instead of a separate progress bar.** Buy/Prestige/Scale Up/PP-spending
   buttons all render `$progress`/`$secondaryProgress` fills rather than a bar below them, to avoid a
   second visual element per row; green = units already bought in the current cost block, amber = units
   affordable but not yet bought.
@@ -1256,10 +1352,10 @@ The following records *why* specific MainPage/component behaviors were built the
   "Automate" button had a bypass for the first tier's Money-funded activation step; that step no
   longer exists (autobuyer unlock is PP-funded uniformly across all tiers now), so the special-casing
   was simply removed rather than ported forward.
-- **Speed Up card stays visible once revealed.** `SpeedUpCard` used to disappear again the
-  moment a successful Speed Up reset `owned` and re-locked the last tier. It no longer does — the
-  `speedUpEverRevealed` flag replaced a live `lastTierUnlocked` check specifically to avoid the
-  disappear/reappear churn every Speed Up cycle would otherwise cause, which was jarring in practice.
+- **Scale Up card stays visible once revealed.** `ScaleUpCard` used to disappear again the
+  moment a successful Scale Up reset `owned` and re-locked the last tier. It no longer does — the
+  `scaleUpEverRevealed` flag replaced a live `lastTierUnlocked` check specifically to avoid the
+  disappear/reappear churn every Scale Up cycle would otherwise cause, which was jarring in practice.
   The bottom `PrestigeCard` got the identical treatment for the same reason when it existed, before
   being removed entirely — see "Bottom Prestige panel removed" below.
 - **`aria-describedby` only on Prestige and Reset.** These two are the app's only irreversible
@@ -1587,7 +1683,7 @@ save either predates both or postdates both.
 
 The entry above describes the Byte Foundry as shipped: a permanent, one-time bootstrap gating a
 fresh save's very first Kilobytes, with `intro.completed` carried through unchanged by
-`prestigeGame`/`speedUpGame`/`overclockGame` — only a full Reset restarted it. That was true at the
+`prestigeGame`/`scaleUpGame`/`overclockGame` — only a full Reset restarted it. That was true at the
 time, but a player who'd already played through it once (and reported being unable to see it again
 on a returning-save load — working as designed, per the pre-existing-save migration described
 above) pointed out that the Byte Foundry "sets the pace for every run," not just the very first one.
@@ -1602,7 +1698,7 @@ exception: it stays a no-op while the player is on the static Guide page (`'info
 Auto-Prestige firing while they're reading it doesn't yank them off it — the sync catches up the
 moment they click back to `'game'`.
 
-`speedUpGame`/`overclockGame` were deliberately left unchanged — they're intra-cycle soft resets, not
+`scaleUpGame`/`overclockGame` were deliberately left unchanged — they're intra-cycle soft resets, not
 new cycles, so they still carry `intro` through completely untouched, same as before. The load-time
 migration backfill (`isPreByteFoundrySave`/`storage.js`'s `intro.completed: true` for a save that
 predates the `intro` field entirely) is also unaffected — it remains a one-time, load-time decision
@@ -1626,7 +1722,7 @@ real Prestige (confirmed explicitly, rather than assumed, before implementing) �
 built *inside* it when it reopens changes. In practice this means the very first cycle plays out the
 full bootstrap loop, and every cycle after that is a fast pit-stop: Memory refills using whatever
 capacity/rate was already earned, typically crossing the 8000-bit auto-invest threshold in a handful
-of ticks rather than a full replay. `speedUpGame`/`overclockGame` needed no change — they already
+of ticks rather than a full replay. `scaleUpGame`/`overclockGame` needed no change — they already
 carried the whole `intro` object through untouched, Memory included, and that stays correct.
 
 This also prompted a related fix to the underlying production model, requested in the same round: a
@@ -1873,7 +1969,7 @@ immediately after `tickIntroProduction`, *ahead of* `tickIntroAutoInvest`, so a 
 claim on fresh Memory; `tickIntroAutoInvest` then converts whatever's left over. This is safe because
 `tickStorageAutoFill` has no dependency on tier01's level at all (only `intro.bits`/`storageBanks`/
 `storageBanksBuiltTotal`) — unlike `tickStorageAutoRedeem`, which still has to run last, after
-autobuyers/Speed Up, so it always checks `isStorageBankRedeemable` against the tick's truly final
+autobuyers/Scale Up, so it always checks `isStorageBankRedeemable` against the tick's truly final
 tier01 level; only the fill half of the old combined `tickStorage` helper needed to move.
 
 The same round also tightened "Invest for Double Production" to a single claim per tier across the
@@ -1921,7 +2017,7 @@ built to avoid (see "Storage's buildable size drops from 'one level ahead' to ti
 above): an autobuyer burst completing more than one tier01 level in a single tick can jump the price
 straight past a bank's exact size without it ever equaling that size mid-tick, leaving the bank
 un-redeemable for the rest of that stretch. This is accepted as a temporary-wait, not a "never lost"
-regression: `getFirstTierCost` only ever grows with level *within* a cycle, so the next Speed
+regression: `getFirstTierCost` only ever grows with level *within* a cycle, so the next Scale
 Up/Overclock/Prestige resets tier01's level back down, and its price regrows through that exact value
 again on the way back up — a full bank simply waits, unredeemable, until the next reset cycle reaches
 its size again, rather than losing its contents. `INTRO_BITS_PER_KILOBYTE_CONVERSION` itself was kept
@@ -1999,17 +2095,17 @@ instead each tier row gained a collapsed-by-default `Details` disclosure (`TierD
 that surfaces the base/effective tickspeed numbers as text on demand, which doesn't add the ring's
 always-on animation cost/clutter to the compact row layout.
 
-### Why Speed Up exists, and why its requirement escalates
+### Why Scale Up exists, and why its requirement escalates
 
 Even with the Fibonacci-driven cost curve and every tier sharing a uniform 1s tickspeed, a single
 unbroken run's cost still eventually outpaces any *constant*-factor production speedup — confirmed
 empirically via the `simulate-run-times` skill, where every tested starting Prestige Point balance
-still hit the simulator's 5,000,000-tick safety cap without ever reaching Googol. Speed Up restarts
+still hit the simulator's 5,000,000-tick safety cap without ever reaching Googol. Scale Up restarts
 the cost curve from block 0 every time while permanently doubling production, so each cycle is faster
 than the last — the compounding multiplier outruns the compounding cost, rather than losing to it the
 way a flat bonus eventually does.
 
-The escalating requirement (`getSpeedUpRequirement`) exists because a flat "always 10 more" trigger
+The escalating requirement (`getScaleUpRequirement`) exists because a flat "always 10 more" trigger
 lets the last tier dodge the Fibonacci cost curve entirely, forever: since the requirement would
 otherwise sit exactly at the epoch-0/epoch-1 boundary, every cycle's 10 units would be bought at the
 same flat `baseCost` no matter how many cycles had already happened — the last tier's cost would never
@@ -2017,18 +2113,18 @@ actually escalate. Scaling the requirement up by a full block of 10 each cycle m
 purchases *do* cross into deeper cost epochs, so the mechanic can't be spammed for cost-free
 compounding indefinitely.
 
-Re-running the `simulate-run-times` bot (updated to always accept Speed Up the instant each cycle's
+Re-running the `simulate-run-times` bot (updated to always accept Scale Up the instant each cycle's
 requirement is met) confirmed the run still completes at every tested starting PP balance, just with
-far fewer, more consequential cycles: **9 Speed Ups** over **~94,900 simulated ticks** (about 1
+far fewer, more consequential cycles: **9 Scale Ups** over **~94,900 simulated ticks** (about 1
 simulated day) instead of the flat-requirement version's 333 cycles over ~3,900 ticks (~1 hour) —
 slower overall, but the mechanic no longer sidesteps the cost curve that everything else in this
 economy is built around.
 
-`speedUpGame`'s reset pattern deliberately mirrors `prestigeGame`'s, matching the original framing for
+`scaleUpGame`'s reset pattern deliberately mirrors `prestigeGame`'s, matching the original framing for
 this feature: "similar to starting the first run but with automations retained and 2x the speed."
 
-**Follow-up: starting requirement raised from level 1 to level 5.** `getSpeedUpRequirement` changed
-from `speedUpCount + 2` to `speedUpCount + 6` (raw; displayed level 1 → displayed level 5 for the
+**Follow-up: starting requirement raised from level 1 to level 5.** `getScaleUpRequirement` changed
+from `scaleUpCount + 2` to `scaleUpCount + 6` (raw; displayed level 1 → displayed level 5 for the
 first activation), keeping the same `+1`-per-cycle escalation step — only the floor moved. This
 session attempted to re-run the `simulate-run-times` bot to get updated pacing figures the way the
 original tuning above did, but the skill's `run-simulation.mjs` bot script is currently broken
@@ -2041,22 +2137,22 @@ numbers in here; until then, treat the +4-level shift as untested against the "n
 5,000,000-tick safety cap" bar the original tuning above was held to, though the same `+1`-per-cycle
 escalation reasoning that made the original level-1 floor work continues to apply at a level-5 floor.
 
-### Why `speedUpCount` now resets on Prestige, reversing the original design
+### Why `scaleUpCount` now resets on Prestige, reversing the original design
 
-For most of this mechanic's life, `speedUpCount` (and the `2^speedUpCount` multiplier it drives) was
-explicitly permanent — `prestigeGame` carried it through unchanged, on the theory that Speed Up's whole
-point (per the "Why Speed Up exists" analysis above) was to keep compounding a production multiplier
+For most of this mechanic's life, `scaleUpCount` (and the `2^scaleUpCount` multiplier it drives) was
+explicitly permanent — `prestigeGame` carried it through unchanged, on the theory that Scale Up's whole
+point (per the "Why Scale Up exists" analysis above) was to keep compounding a production multiplier
 that outruns the cost curve, and stripping that on Prestige would undermine it. The maintainer asked
-for this reversed: Prestige is the bigger, much rarer reset (Money must reach `GOOGOL`, vs. Speed Up's
-comparatively frequent per-cycle level requirement), and letting `speedUpCount` also survive it meant a
+for this reversed: Prestige is the bigger, much rarer reset (Money must reach `GOOGOL`, vs. Scale Up's
+comparatively frequent per-cycle level requirement), and letting `scaleUpCount` also survive it meant a
 long-lived save could accumulate an unbounded, ever-compounding production multiplier across every
-future Prestige forever, with no analogous escalating requirement of the kind that keeps Speed Up's
+future Prestige forever, with no analogous escalating requirement of the kind that keeps Scale Up's
 *own* cost-curve dodge in check (see above) — nothing similarly re-prices a Prestige cycle as
-`speedUpCount` climbs. Resetting it to 0 on `prestigeGame` (kept unbounded within a single Prestige
-cycle, same as before) makes each Prestige cycle rebuild its Speed Up progression from scratch, mirroring
-how `globalTickspeedMultiplier` already resets on both Prestige and Speed Up (see "The global tickspeed
-multiplier" in `CLAUDE.md`). `autoSpeedUp` (the
-automation toggle deciding whether Speed Up fires automatically) was deliberately left permanent — the
+`scaleUpCount` climbs. Resetting it to 0 on `prestigeGame` (kept unbounded within a single Prestige
+cycle, same as before) makes each Prestige cycle rebuild its Scale Up progression from scratch, mirroring
+how `globalTickspeedMultiplier` already resets on both Prestige and Scale Up (see "The global tickspeed
+multiplier" in `CLAUDE.md`). `autoScaleUp` (the
+automation toggle deciding whether Scale Up fires automatically) was deliberately left permanent — the
 player doesn't need to re-buy that PP unlock every Prestige, only rebuild the multiplier it happens to
 be driving at the time.
 
@@ -2134,7 +2230,7 @@ it.
 Prestiging no longer doubles production directly — it now awards **Prestige Points (PP)**, a
 permanent, cumulative currency that never resets. This is the direct replacement for the old "prestige
 level doubles production" mechanic, chosen so that Prestige could fund an explicit menu of upgrades
-(autobuyer unlocks, Smart, the passive speed bonus, Auto Speed Up, Auto-Prestige) rather than a single
+(autobuyer unlocks, Smart, the passive speed bonus, Auto Scale Up, Auto-Prestige) rather than a single
 undifferentiated multiplier.
 
 ### Why Prestige/PP info is hidden until first prestige
@@ -2143,7 +2239,7 @@ Prestige Points don't exist as a concept for the player until they've prestiged 
 `MainPage` keeps every PP-related display and control out of the page entirely during the first run,
 rather than showing a premature "0 PP" or a button costing points the player has never earned. PP
 upgrades additionally reveal one by one, cheapest first — e.g. the 10000 PP Speed Bonus unlock stays
-hidden until the far cheaper Auto Speed Up (100 PP) has been bought, so a fresh post-prestige page
+hidden until the far cheaper Auto Scale Up (100 PP) has been bought, so a fresh post-prestige page
 isn't fronting a cost that's still thousands of points away.
 
 ### Reset button history
@@ -2164,12 +2260,12 @@ no longer displayed, pending being repurposed for something else later.
 
 `isLastTierTickspeedXpUnlocked` originally read a stored `state.lastTierTickspeedXpUnlocked` flag,
 latched permanently true by `buyTier` the first time the last tier's lifetime `purchased` count ever
-reached 10, and never cleared again — not even by a Prestige or Speed Up, both of which reset the last
+reached 10, and never cleared again — not even by a Prestige or Scale Up, both of which reset the last
 tier's own `owned`/`purchased` back to 0 like every other tier's. The explicit reasoning at the time was
 that a live `purchased >= 10` check "would hide the mechanic again" once a reset dropped the count back
 below 10, which read as a regression for a player who'd already earned it once.
 
-In practice this meant a player could Prestige or Speed Up, immediately own 0 of the last tier, and
+In practice this meant a player could Prestige or Scale Up, immediately own 0 of the last tier, and
 still see the XP-funded tickspeed button/bonus presented as active on a tier they no longer meaningfully
 had — the mechanic never actually reverted to reflect the reset it was supposed to respect. This was
 changed so `isLastTierTickspeedXpUnlocked` is a live check (`owned[lastTierId] >= 10`) instead, with the
@@ -2177,9 +2273,9 @@ stored latch flag removed entirely — matching the same live `>= 10` threshold 
 uses for ordinary tier unlocking, and reverting the last tier's row to its normal Money-funded tickspeed
 button whenever owned drops back below 10. `lastTierXpConsumed` (the ever-growing total XP invested) was
 deliberately kept as a separate counter from the unlock check itself — the accumulated bonus it drives
-is never lost across a *narrower* reset than a full Prestige/Speed Up, only not *applied* while the live
+is never lost across a *narrower* reset than a full Prestige/Scale Up, only not *applied* while the live
 check is unsatisfied; buying back up to 10 re-engages it at the same cumulative bonus rather than
-starting over. (`lastTierXpConsumed` was permanent — surviving Prestige/Speed Up too — at the time this
+starting over. (`lastTierXpConsumed` was permanent — surviving Prestige/Scale Up too — at the time this
 entry was written; a later change made it run-scoped instead, resetting on both. See "XP and everything
 it funds became run-scoped, not permanent" below.)
 
@@ -2232,50 +2328,50 @@ needed guarding against.
 ### XP and everything it funds became run-scoped, not permanent
 
 `prestige.xp` and `lastTierXpConsumed` were both permanent up to this point — carried through unchanged
-by both `prestigeGame` and `speedUpGame`, the same treatment given to genuinely permanent
-meta-progression like `speedUpCount` or an unlocked autobuyer. The maintainer asked for this to change:
-XP, and the last tier's XP-funded tickspeed bonus it funds, should reset to 0 on both Prestige and Speed
+by both `prestigeGame` and `scaleUpGame`, the same treatment given to genuinely permanent
+meta-progression like `scaleUpCount` or an unlocked autobuyer. The maintainer asked for this to change:
+XP, and the last tier's XP-funded tickspeed bonus it funds, should reset to 0 on both Prestige and Scale
 Up, the same as resources/owned/purchased — a run-scoped currency, not a permanent one like Prestige
 Points.
 
-`prestigeGame` and `speedUpGame` both now reset `prestige.xp` and `lastTierXpConsumed` to 0 (`0` is
+`prestigeGame` and `scaleUpGame` both now reset `prestige.xp` and `lastTierXpConsumed` to 0 (`0` is
 already `createInitialGameState`'s default for both, so this is simply *not* explicitly carrying them
 over — the same pattern `everUnlockedTierIds` already used for a run-scoped-not-permanent field).
 `prestige.points`/`count`/`highestMilestone` are unaffected — this only touches the two fields
 XP-consumption actually funds. One pre-existing asymmetry was deliberately left alone rather than
 "fixed" as part of this change: `prestigeGame` already reset `highestMilestone` (the money-exponent
 watermark `checkMilestones` grants further XP against) to the fresh default before this change, simply
-by never explicitly carrying it over, while `speedUpGame` left it untouched (full `prestige` passthrough)
+by never explicitly carrying it over, while `scaleUpGame` left it untouched (full `prestige` passthrough)
 — an inconsistency between the two reset paths that predates this change and wasn't part of what was
 asked, so it was left as-is rather than second-guessed.
 
 This also happens to make the overflow scenario the previous entry's floor guards against far less
-reachable in practice — `lastTierXpConsumed` resetting every Prestige/Speed Up means the ~71,333-XP
+reachable in practice — `lastTierXpConsumed` resetting every Prestige/Scale Up means the ~71,333-XP
 overflow threshold would need to be earned and spent within a single run between resets, rather than
 accumulating indefinitely across an entire save's lifetime. The `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS`
 floor was kept regardless, as defense in depth — a single long enough run could still in principle reach
 it, and the guard costs nothing when unused.
 
-### `speedUpGame`'s `highestMilestone` passthrough was a real bug, not a harmless asymmetry
+### `scaleUpGame`'s `highestMilestone` passthrough was a real bug, not a harmless asymmetry
 
-The previous entry's "left as-is rather than second-guessed" call on `speedUpGame` carrying
+The previous entry's "left as-is rather than second-guessed" call on `scaleUpGame` carrying
 `prestige.highestMilestone` through untouched turned out to be wrong in practice, not just
-inconsistent. A player who had already Speed Up'd at least once reported their post-Speed-Up run
+inconsistent. A player who had already Scale Up'd at least once reported their post-Scale-Up run
 showing far less unspent XP than expected — e.g. Money back at `1.319e30` (exponent 30) with 0 XP
 ever spent this run, but only 1 XP available instead of the expected 30.
 
 The cause: `checkMilestones` only awards XP for the delta between the current money exponent and
 `prestige.highestMilestone` (`xp: prestige.xp + (currentMilestone - prestige.highestMilestone)`).
-Money itself resets to `MONEY_STARTING_AMOUNT` on Speed Up, but `highestMilestone` — left fully
+Money itself resets to `MONEY_STARTING_AMOUNT` on Scale Up, but `highestMilestone` — left fully
 passed through — stayed at the previous run's peak (e.g. 29). The new run then had to silently
 re-climb past that old watermark before any XP resumed accruing, so by the time money reached
 exponent 30 again, only the 1-exponent delta above the stale watermark (30 − 29) had actually been
 credited, not the full 30 a fresh run's watermark of 0 would have earned.
 
-Fixed by having `speedUpGame` reset `prestige.highestMilestone` to `createInitialGameState()`'s
+Fixed by having `scaleUpGame` reset `prestige.highestMilestone` to `createInitialGameState()`'s
 value (`0`, since `MONEY_STARTING_AMOUNT = 1`) exactly like `prestigeGame` already did, while still
 leaving `prestige.points`/`count` untouched — those two remain genuinely permanent meta-progression
-that Speed Up doesn't touch, unlike the milestone watermark which only exists to gate a run-scoped
+that Scale Up doesn't touch, unlike the milestone watermark which only exists to gate a run-scoped
 currency and must track that same run's money, not a stale higher-water-mark from before the reset.
 
 ### Purchase level resized from 10 to 8, and the cost-epoch sequence changed from Fibonacci to triangular
@@ -2292,7 +2388,7 @@ cadence was a bare block-of-10 computed independently in three places (`getTierC
 10 for the manual/autobuyer batch size (`BUY_QUANTITY`) and a fifth for the "smart" autobuyer's
 bootstrap threshold (`purchased < 10`). Several conceptually related but separately-hardcoded `10`s also
 existed: `isTierUnlocked`/`isLastTierTickspeedXpUnlocked`'s owned-count thresholds, and
-`getSpeedUpRequirement`'s per-cycle step (`10 * (speedUpCount + 1)`) — the last of these was already
+`getScaleUpRequirement`'s per-cycle step (`10 * (scaleUpCount + 1)`) — the last of these was already
 documented as deliberately tracking the same block size as the cost-epoch mechanic, just without an
 actual shared symbol enforcing that.
 
@@ -2303,7 +2399,7 @@ indexed, `Math.floor(purchased / PURCHASE_BLOCK_SIZE) + 1` — became the one pl
 level is this." `getTierCost`, `getTierBulkQuantity`, and `getPurchaseMilestoneMultiplier` now all derive
 their epoch/block-position/completed-levels figures from `getTierLevel` instead of independently
 recomputing `purchased / 8`. `isTierUnlocked`/`isLastTierTickspeedXpUnlocked`'s owned-count thresholds
-and `getSpeedUpRequirement`'s per-cycle step were moved to read `PURCHASE_BLOCK_SIZE` directly (they
+and `getScaleUpRequirement`'s per-cycle step were moved to read `PURCHASE_BLOCK_SIZE` directly (they
 gate on `owned`, a different field from `purchased`, so they don't go through `getTierLevel` itself, but
 they now share the same sizing constant rather than an independently-hardcoded copy of it).
 
@@ -2371,20 +2467,20 @@ tiers diverge independently. It starts at `DEFAULT_PURCHASE_BLOCK_SIZE` (`8`, re
 levels the **last tier** completes. The maintainer specified this trigger directly ("every 100
 levels") after a round of back-and-forth about which progress marker should drive it; the last tier
 was chosen (by the implementer, as the most consistent option) because it's the same "flagship"
-marker `getSpeedUpRequirement`/`isLastTierTickspeedXpUnlocked`/`prestigeCardEverRevealed` already key
+marker `getScaleUpRequirement`/`isLastTierTickspeedXpUnlocked`/`prestigeCardEverRevealed` already key
 off, rather than introducing a new kind of progress signal. A deliberately-considered consequence:
 because every earlier tier must already be unlocked (and permanently latched via
 `everUnlockedTierIds`) by the time the last tier can reach level 100+, a block-size increase can
 never retroactively raise an *already-unlocked* tier's own unlock threshold — it only makes whatever
 level a tier is currently mid-way through require more purchases than it did when that level started.
 `isTierUnlocked`/`isLastTierTickspeedXpUnlocked`'s owned-count thresholds and
-`getSpeedUpRequirement`'s per-cycle step all now read `getPurchaseBlockSize(state)` instead of the
-old fixed constant. `getSpeedUpRequirement` itself changed from a purchased-count threshold
-(`PURCHASE_BLOCK_SIZE * (speedUpCount + 1)`) to a **level target** (`speedUpCount + 2`), since a
+`getScaleUpRequirement`'s per-cycle step all now read `getPurchaseBlockSize(state)` instead of the
+old fixed constant. `getScaleUpRequirement` itself changed from a purchased-count threshold
+(`PURCHASE_BLOCK_SIZE * (scaleUpCount + 1)`) to a **level target** (`scaleUpCount + 2`), since a
 purchased-count requirement stops being a stable comparison point once block size can grow mid-run,
-while a level number stays meaningful regardless. `MainPage`'s Speed Up card/button display changed
+while a level number stays meaningful regardless. `MainPage`'s Scale Up card/button display changed
 to match (showing the last tier's level and level-based requirement instead of a raw purchase count).
-Both `purchaseLevels` and `purchaseLevelProgress` reset to their fresh defaults on Prestige and Speed
+Both `purchaseLevels` and `purchaseLevelProgress` reset to their fresh defaults on Prestige and Scale
 Up, same as `owned`/`purchased` — which, as a side effect, also resets `getPurchaseBlockSize` back
 down to `DEFAULT_PURCHASE_BLOCK_SIZE` for every tier, since it's derived from the last tier's own
 (now-reset) level; growth is a within-a-run phenomenon only.
@@ -2513,7 +2609,7 @@ grows past its default (see above) — level totals now grow (proportionally to 
 whereas the division model would have shrunk the per-unit price instead while leaving the total
 roughly flat.
 
-### Overclock: from a standalone multiplier to a Tickspeed-upgrade step boost
+### Overclock: from a standalone multiplier to a Tickscale-upgrade step boost
 
 Overclock's first implementation (merged, then corrected one PR later — see engine.js's
 `getGlobalTickspeedProductionMultiplier`/`getGlobalTickspeedRegularStep`) applied its 0.1%-per-activation
@@ -2574,7 +2670,7 @@ Three changes shipped together:
    OVERCLOCK_REQUIREMENT_STEP` (the old fixed 10-per-activation ladder: level 10, 20, 30, …) to
    `overclockCount * OVERCLOCK_REQUIREMENT_STEP + 2` with `OVERCLOCK_REQUIREMENT_STEP = 1` — level 2
    for the first claim, level 3 for the second, level 4 for the third, … the same `+1`-per-cycle shape
-   `getSpeedUpRequirement` already uses, just without Speed Up's own display offset. The maintainer's
+   `getScaleUpRequirement` already uses, just without Scale Up's own display offset. The maintainer's
    framing was "no levels concept at all" beyond the last tier's own level — the intent being that the
    last tier's own (already steep) cost curve should be what gates Overclock, not an additional
    artificial multiplier stacked on top of it.
@@ -2586,7 +2682,7 @@ Three changes shipped together:
    satisfied by a completely untouched last tier. That made the first Overclock claim of *every* cycle
    free — click it the instant its panel appears, every time, for a permanent bonus at zero cost —
    directly contradicting both the "last tier's own cost curve should gate this" intent above and this
-   same rework's own parallel fix to `getSpeedUpRequirement` (raising Speed Up's floor from level 1 to
+   same rework's own parallel fix to `getScaleUpRequirement` (raising Scale Up's floor from level 1 to
    level 5 specifically so its first activation isn't free either — see the entry on that above). A
    `code-reviewer` pass caught this before merge by tracing the exact `purchaseLevels` default through
    `overclockGame`'s eligibility check, not by manual testing — worth remembering if this formula is
@@ -2611,7 +2707,7 @@ helper (3 decimal places, same trimming convention as `formatRate`) used everywh
 multiplier is displayed.
 
 Everything else about `overclockGame` (the full soft-reset shape, which permanent flags/levels carry
-over, wiping `speedUpCount` back to 0) is unchanged from the original design and from the entry above
+over, wiping `scaleUpCount` back to 0) is unchanged from the original design and from the entry above
 — only the reward formula, the requirement formula, and the claim's target value changed.
 
 ### Overclock, once more: back to folding into the Tickspeed multiplier's own step — now multiplicative and covering milestones too
@@ -2665,7 +2761,7 @@ What actually changed from the entry above:
 floor (a completely untouched last tier can never make the first claim of a cycle free) and its
 `+1`-per-cycle escalation beyond that floor; `overclockGame`'s catch-up claim (`overclockCount` jumps
 straight to the last tier's current level, not just `+1`); the full soft-reset shape and which
-permanent flags/levels survive it; wiping `speedUpCount` to 0 on claim.
+permanent flags/levels survive it; wiping `scaleUpCount` to 0 on claim.
 
 ### The 1000-Byte Invest tier drops from two claims to one
 
@@ -2877,7 +2973,7 @@ one, and every test asserting a specific `getTierCost`/`getStorageBankSize` valu
 recomputed against the Fibonacci sequence.
 
 The remaining constant tweaks in the same commit
-run (`OVERCLOCK_PRODUCTION_STEP` 0.001→0.01, `AUTO_SPEED_UP_COST` 100→20, `TICKSPEED_AUTOBUYER_COST`
+run (`OVERCLOCK_PRODUCTION_STEP` 0.001→0.01, `AUTO_SCALE_UP_COST` 100→20, `TICKSPEED_AUTOBUYER_COST`
 20→10, `AUTO_PRESTIGE_AUTOBUYER_COST` 500→100, `INTRO_BITS_PER_KILOBYTE_CONVERSION` 1000→8000,
 `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` 800,000→8,000,000) don't match any previously-rejected design
 recorded here, so they were kept as genuine (if informal) balance changes — comments/tests/docs across
@@ -7100,6 +7196,57 @@ strategy (the simulator's ideal-player script doesn't gate any of its own action
 timing), so a faster collect phase only speeds up a background, secondary path — restocking higher
 disk sizes for Data Lakes/Compute — not anything on the critical path the sim measures.
 
+### Data Lake capacity Upgrade removed from the forced priority order — array completion is now the only gate
+
+The maintainer's explicit request: "Data lake upgrade should be available once the disk array
+corresponding to the same disk size is fully built in main disk pool array." Read literally against
+the actual code, `isDataLakeCapacityDoublingAvailable` already implemented exactly that rule (level 0
+requires the pool's ×1 array complete, level 1 the ×10 array, level 2 the ×100 array —
+`getDataLakeCapacityUnlockArraySize` reads the correct Storage array size for the lake's own CURRENT
+level, verified against `getDataLakeSubSizeStep`/`DATA_LAKE_SUB_SIZES` directly; no indexing bug
+found). What didn't match the stated rule was `isDataLakeCapacityDoublingTurnAvailable` — the
+CLICKABLE gate a player actually experiences — which additionally required Disk Fill, Speed,
+Provision Disk, and Compute to ALL be currently unavailable (the same forced priority order every
+other Byte Foundry milestone action follows), on top of the array-completion check. A player could
+watch the Upgrade button sit visibly present-but-disabled with its own array long complete, entirely
+because an unrelated Compute Boost preset happened to be armable elsewhere on the page — an extra
+condition the stated rule never mentioned.
+
+**Fix.** `isDataLakeCapacityDoublingTurnAvailable` is now defined as exactly
+`isDataLakeCapacityDoublingAvailable(state, tierIndex)` — the forced-priority checks
+(`!isDiskFillAvailable`/`!isBandwidthAvailable`/`!isProvisionDiskAvailable`/`!isComputeUpgradeAvailable`)
+are gone entirely. This mirrors `isBoosterPurchaseAvailable`'s own existing "outside the forced
+priority order entirely, always available the instant affordable" posture (see "Data Lake Boosters:
+spending real deposits..." above) — the two actions were already documented as no longer mutually
+exclusive by construction once `isDataLakeCapacityDoublingAvailable` moved off the lake's own cost
+curve onto real Storage array completion (see "Data Lake capacity-doubling cost..." above), so there
+was no genuine remaining contention between Upgrade and any OTHER Foundry action left to arbitrate —
+keeping it in the forced order was policing a conflict that mechanically could no longer happen.
+
+**DataLakePanel simplified as a result.** With `canUpgrade` now always identical to
+`upgradeAvailable`, the button-slot ternary that used to read `upgradeAvailable && (canUpgrade ||
+!canBuy)` — added specifically to stop a disabled-but-available Upgrade from hiding an
+immediately-clickable Buy (see "A disabled-but-available Data Lake Upgrade button could hide an
+immediately-clickable Buy button" above) — collapsed to a plain `upgradeAvailable`, since there is no
+more "available but not its turn" state for that guard to protect against; the whole `canUpgrade`
+variable and its `isDataLakeCapacityDoublingTurnAvailable` import were removed from the component as
+dead duplication (calling a function that now does exactly what `isDataLakeCapacityDoublingAvailable`
+already did). The Upgrade button's own `disabled`/`variant` props, which used to vary between
+`canUpgrade` true/false, are now constant (`disabled` absent, `variant="prestige"`) inside that
+branch, since reaching the branch at all now guarantees clickability.
+
+**Verification.** Two `engine.test.js` tests asserting the old forced-priority-blocked behavior
+(`'is blocked by a higher-priority forced-order action (Disk Fill) even while available'` and half of
+`'is a no-op while not available or blocked by priority'`) were rewritten to assert the opposite —
+Disk Fill being available no longer blocks Upgrade's own turn-availability, and `doubleDataLakeCapacity`
+now succeeds even with Disk Fill simultaneously available; a companion `App.test.jsx` test
+(`'Buy stays reachable when Upgrade is available but not its turn...'`) was rewritten to assert the
+new invariant instead (Upgrade claims the slot over Buy whenever its array is complete, since that
+"available but not its turn" scenario the test used to construct is no longer reachable). Confirmed
+end-to-end in a real browser: a KB lake with its ×1 array complete, Disk Fill genuinely available
+(tier01 mid-redemption) and Speed also affordable, still showed an enabled, clickable Upgrade button
+that immediately advanced `capacityLevel` on click. `yarn test`/`yarn build` green.
+
 ### Provision Disk's own click still required its first pass to already be banked — closing the one case the prior auto-continue fix left open
 
 A further player report on the same feature area: "Provision Disk button should not gate for full
@@ -7152,3 +7299,199 @@ incorrectly fired early). `yarn test`/`yarn build` green; no economy/formula cha
 `simulate-run-times` wasn't re-run — an optimal bot already clicks the instant a pass becomes
 affordable regardless of whether the button would have refused an earlier click, so this fixes real
 human input friction without moving any ideal-play timing.
+
+### Provision Disk's post-funding build timer duplicated the wait already spent funding it
+
+Player feedback: "Provisioning Disk once funded shall take the same time as filling it. We are
+already consuming time in the provisioning pass fundings. So no need to duplicate that time again."
+This landed directly on top of the pass-funding-installments feature above (from another session, in
+between): `provisionDisk` had already been changed to collect its cost in
+`getDiskProvisionPassesRequired`-many passes, each one only banking once the pool's own buffer
+actually accumulates a full face-value's worth of bits at that pool's current production rate — real
+time, not an instant click. But once the LAST pass landed, `provisionDisk` still set a SEPARATE
+`intro.diskBuild = { size, remainingSeconds, totalSeconds }` countdown
+(`totalSeconds = getProvisionDiskBaseSeconds(state, size) * ordinal`, i.e. `size / rate` per pass,
+times the disk's own 1-indexed position, using the pool's RAW, un-multiplied
+`getStoragePoolBandwidth`) before the container actually existed — a leftover from when the whole
+cost was paid in one instant lump sum and a timed build was the ONLY time cost a disk imposed. Once
+funding itself started taking real time, that assumption silently became false: each pass already
+takes as long as `tickPoolBufferFill` needs to bank one face-value's worth into the buffer — `size /
+(rate × multiplier)`, the SAME fill-based multiplier (`getPoolEffectMultiplier`, 50%-200%, boosted
+further by tapping) every other pool-buffer transfer scales by — so an additional, separately-timed
+countdown on top, using the raw rate alone, was always net-additional wait on top of whatever the
+passes themselves already took, not a double-counted RESTATEMENT of the identical number. At the
+multiplier's own 100% baseline the two durations coincide exactly (a disk needing 1 pass took twice
+as long overall as it should have); away from baseline they diverge further, but the countdown was
+still pure duplication either way, since nothing about "the passes already took real time" ever
+stopped applying.
+
+**Fix.** `provisionDisk`'s completion branch no longer sets `intro.diskBuild` at all — the instant
+the final pass lands, it increments `disksBuiltTotal[size]` in that SAME call, exactly like
+`tickProvisionDisk`'s own completion branch already did at the end of a countdown. `diskBuild`,
+`tickProvisionDisk`, and every "IO blocked mid-build" guard (`isDiskPullEligible`,
+`tickDiskAutoFill`'s `buildingSize` skip, `tickDiskWriteCache`'s merge guard, `isProvisionDiskAvailable`'s
+own `diskBuild` check) all remain exactly as they were — a save from before this change can still be
+mid-countdown on load, and needs somewhere to finish that out — but `provisionDisk` itself never
+creates a new one, so in practice `tickProvisionDisk` becomes a permanent no-op for every build
+started from here on. `getProvisionDiskBaseSeconds`/`getProvisionDiskSeconds` (the now-unused
+ordinal-scaled duration formula) were deleted outright rather than left as dead code, since nothing
+else ever called them.
+
+**Why not just zero out `totalSeconds` instead of removing the countdown entirely?** Considered and
+rejected: it would still leave the array read as "mid-build" (IO-blocked, a "rebuilding" UI state)
+for one full tick after every completion, a purely cosmetic flicker with no benefit over completing
+synchronously in the same call.
+
+**Verification.** Of the 17 tests this broke, most were seeded expectations that `provisionDisk`'s
+result carried a `diskBuild` object — rewritten to assert `disksBuiltTotal[size]` incremented and
+`diskBuild` stayed `null` instead. Four tests (`engine.test.js`) existed purely to check the removed
+ordinal-scaled duration FORMULA (e.g. "a 10 KB disk's first build takes 10x as long as the smallest
+size's") — deleted outright, since there's no longer a duration value for them to assert against;
+the ordinal-scaling behavior they cared about (a later disk needing more passes) stays covered by
+`getDiskProvisionPassesRequired`'s own tests. One `App.test.jsx` end-to-end test
+(seeding a fresh pool buffer, clicking Provision Disk, advancing fake timers by the old countdown
+duration, then asserting the disk existed) collapsed to asserting the disk exists immediately after
+the click, with the `vi.useFakeTimers()`/`vi.advanceTimersByTime` dance removed entirely since there
+is no more countdown to advance past. `yarn test`: 1753/1753 green (net -4 from the 1757 baseline —
++13 rewritten in place, 4 formula-only tests deleted). `yarn build` succeeds. No economy CONSTANT
+changed (no `TIER_DEFINITIONS`/cost formula touched), only when a already-funded disk's construction
+resolves, so `simulate-run-times` wasn't re-run — the model already assumed a bot spends exactly the
+funding time and no more, which is now actually true rather than an approximation.
+
+### Read cache pre-fills on pool unlock, reinstated
+
+Player feedback: "cache should be available for use as soon as pool is unlocked. No need to wait for
+a disk to be provisioned." This asked to reverse a deliberate, twice-confirmed prior decision (see
+"Pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock" and "The read-
+cache pre-fill design was never reconciled with the later decade-of-10 Capacity ladder, starving a
+freshly-unlocked pool's buffer" above): a pool's smallest size's read cache used to pre-fill from
+that pool's own buffer the instant the pool unlocked, but that design was reverted after a real
+player-reported bug — the cache greedily drained the buffer toward an inert reserve with no disk yet
+built to ever flush it into, stalling the buffer's own visible balance (and any Data Lake overflow
+riding on it) indefinitely. The fix at the time made cache eligibility require
+`disksBuiltTotal[unitBits] > 0` outright, with no capacity/affordability branch.
+
+**Why reinstating this is actually SOLVED today, not just a safer trade-off.** A first pass at this
+justification framed it as accepting a bounded cost — the cache competing with the buffer for
+Provision Disk's own funding, capped at "however long the cache itself takes to fill." Explicit
+follow-up feedback rejected that framing: "Just don't flush the cache unless there is an empty disk
+already provisioned. Keep the cache filled till then. It will fund the first level if asked or fund
+an empty disk if exists. Better to 'solve' the problem rather than avoiding it." — i.e. don't accept
+a residual risk, confirm the mechanism has none. And it doesn't: every bit the eager pre-fill diverts
+into the cache is never actually wasted or competing for anything, because the cache only has two
+possible fates, and BOTH are already fully implemented and pre-existing — `tickDiskAutoFill`'s own
+Pass 2/3 already refuse to flush a cache into a disk (`hasEmptyContainer = builtTotal[size] >
+disks[size]`) until one exists, so a pre-filled cache with nothing to receive it just sits full and
+waits, exactly as intended; and, while a tier still sits at its own level 1 (checked every tick,
+first-come-first-served with a fresh disk pull),
+`tickDiskLevelOneCachePull` spends that SAME cache directly to fund the tier's whole level-1 purchase
+block the moment it's affordable — no waiting on a disk at all. The original stall (see the two
+prior entries above) was a genuinely different, now-superseded situation: a FLAT, lump-sum disk cost
+model where the pool's buffer needed to hold an entire `DISK_BUILD_COST_MULTIPLIER`× build cost at
+once, a threshold the buffer's own capacity at the time couldn't even reach while the cache kept
+re-diverting whatever accumulated — an effectively PERMANENT stall with the diverted bits genuinely
+going nowhere useful. Since then, Provision Disk's cost was split into installments (see "Provision
+Disk funding split into passes" above) and a size's own read cache is deliberately sized to exactly
+fund one tier level (`DISK_CACHE_BLOCK_COUNT` blocks totaling one disk's face value, which — by the
+disk-ladder's own construction — always equals `unitCost × DEFAULT_PURCHASE_BLOCK_SIZE` for that
+size's fixed corresponding tier level), so there's no longer any value the cache could accumulate
+that isn't immediately spendable on one of its two uses.
+
+**Fix.** `tickDiskAutoFill`'s `readCacheEligibleSizes` no longer filters on `disksBuiltTotal[unitBits]
+> 0` — every currently unlocked pool's own smallest (read-cache-eligible) size is eligible,
+regardless of whether a disk of that size exists yet. The self-heal loop that used to refund a stale
+cache entry for a "no-longer-eligible" (not-yet-built) size was narrowed back to its original,
+narrower purpose — refunding a cache entry for a size that was NEVER read-cache-eligible at all (not
+the pool's own smallest denomination) — since a not-yet-built size's cache is legitimate state again,
+not stale. Passes 2/3 (flushing a full cache into an actual disk) were never touched — they already
+gated on `hasEmptyContainer = builtTotal[size] > disks[size]`, so a pre-filled cache with no disk yet
+simply sits full and waits, exactly as the original "cache-instant-fill" design intended.
+
+**Verification.** One test asserting the OLD "does NOT pre-fill before a disk exists" regression was
+rewritten into its own opposite — confirming pre-fill DOES happen — with a new, narrower test taking
+over its one still-valid sub-case (a same-reference no-op when the pool buffer itself is empty,
+independent of whether a disk exists). A second test asserting a full-but-unbuilt cache gets refunded
+(added for a Devin Review finding on PR #562, back when that state was genuinely stale) now asserts
+the opposite: that state is legitimate and must NOT be touched. A third, new END-TO-END test proves
+the "solved, not avoided" claim directly rather than by argument alone: seeds a pool 1 that's just
+unlocked, tier01 fresh at level 1, and a pool buffer holding exactly one disk's worth of bits, then
+runs one real `tickGame` call with ample elapsed time — the SAME call both eager-pre-fills the cache
+to capacity (`tickDiskAutoFill`) and spends that same, now-full cache to fund tier01's ENTIRE level-1
+purchase block (`tickDiskLevelOneCachePull`), landing on `diskCache` back at exactly 0 — proving the
+cache genuinely never sits "wasted," it always resolves to one of its two uses, in the same tick the
+mechanic advertises. `yarn test`: 1758/1758 green (+1 for this new test).
+`yarn build` succeeds. No economy constant/formula changed — only which point in Byte Foundry
+progression the read cache starts drawing from Memory — so `simulate-run-times` wasn't re-run.
+
+**Adversarial review follow-up.** A subsequent review of this same change (against commit
+`4cf0476`) surfaced one more latent self-heal gap: a diskCache/diskReadCacheFlush entry can be
+structurally read-cache-eligible (`isDiskReadCacheEligible` — the pool's own smallest denomination)
+while that entry's POOL isn't currently unlocked — a case the self-heal loop's original
+eligibility check didn't cover, since it only ever tested structural eligibility, not current
+unlock membership. Not reachable via ordinary play today (nothing populates `diskCache` for a
+not-yet-unlocked pool, and `getUnlockedStoragePoolCount` never decreases without
+`buildEraIntroReset` also wiping `diskCache` to `{}` outright), but cheap to close defensively
+rather than leave as a trap for a future change to either invariant. Fixed with a new
+`isCacheStillEligible(size)` helper in `tickDiskAutoFill` combining both checks, used by both
+self-heal loops (`diskCache` and `diskReadCacheFlush`). Verified by a new regression test seeding a
+full cache at pool 2's own smallest size while only pool 1 is unlocked, asserting it gets refunded
+to pool 2's own buffer. `yarn test`: 1759/1759 green (+1 for this new test).
+
+### Data Stream/pool balances skip their padded trailing zeros once full for more than a second
+
+Player feedback: "Skip the trailing zeros once full for more than 1 second." The Data Stream and
+pool buffer balances (`BalanceText`) render via `formatMemoryAmountStable`/`formatDiskSizeStable` —
+a fixed-3-decimal-place formatter deliberately chosen (see "The Data Stream/pool balance now shows a
+stable, non-trimmed decimal digit count" entry) specifically to stop a fast-changing figure's own
+DISPLAYED WIDTH from jittering tick to tick purely because a digit happens to land on zero. That
+stability has no purpose once the balance is sitting completely full — it isn't changing tick to
+tick any more, so the padding is pure "8.000 KB" trailing-zero noise with nothing left to jitter
+against.
+
+**Fix.** A new `useTrimBalanceAfterFull(isFull)` hook (`ByteFoundryPage`) starts a plain
+`setTimeout` the instant `isFull` goes true, flips a `trimmed` boolean once `FULL_BALANCE_TRIM_DELAY_MS`
+(1000ms, real wall-clock time via `setTimeout` — deliberately NOT tied to the game's own tick rate,
+which can run much faster or slower depending on Tickspeed) elapses, and resets immediately the
+moment `isFull` goes false again (effect cleanup cancels the pending timer) — so a balance that only
+brushes full for a single tick before draining right back down never flickers into the trimmed form
+for an instant. `formatMemoryBalanceValue` (the Data Stream's own balance formatter) grew a `stable`
+parameter (default `true`, preserving every other call site) selecting `formatMemoryAmountStable` vs.
+plain `formatMemoryAmount`. The Data Stream calls the hook directly (a single, unconditional call in
+`ByteFoundryPage`'s own top-level body). Pool buffers needed a different shape: `poolBufferFull` is
+computed once per pool inside a `.map()` loop over `visiblePoolCount`, and a hook can never be called
+a variable number of times within one render — so pool balances render through a new tiny
+`PoolBalanceText` subcomponent instead, giving each pool its OWN `useTrimBalanceAfterFull` instance
+(one per mounted `PoolBalanceText`, entirely independent of how many pools happen to be visible).
+
+**A red herring while writing the App-level test.** The obvious test — seed a pool buffer already at
+its own exact capacity, advance fake/real timers by 1 second, assert the balance trimmed — failed
+every way it was written (sync `act`, async `act`, `vi.advanceTimersByTimeAsync`, even genuinely
+real timers), always still showing the padded form. Root cause, found by checking whether
+`screen.getByRole('region', { name: 'pool 1' })` still resolved to the SAME node after the wait: it
+didn't — it threw "unable to find element" entirely. The seeded capacity happened to sit exactly AT
+`INTRO_DISK_UNLOCK_CAPACITY`, `isStorageUnlocked`'s own threshold — the SAME one `latchMainGameUnlocked`
+checks every tick to permanently flip `intro.mainGameUnlocked`. The instant real ticks got to run
+(which the very act of waiting a second let happen), the latch fired, and `App.jsx`'s
+`showingFoundry` check switched the whole page from `ByteFoundryPage` to `MainPage` out from under
+the test — nothing wrong with the hook at all, the pool card (and the `PoolBalanceText` mounted
+inside it) had simply been unmounted. Two more real drains had to be neutralized once the page stuck
+around: pool 1's own newly-eager read-cache pre-fill (see the entry directly above) would otherwise
+have kept siphoning the buffer back down every tick with no disk yet built to fill it (fixed by
+seeding `diskCache` already full for that size), and `tickDiskLevelOneCachePull`'s level-1 fallback
+would have immediately spent that same full cache to grant tier01 its first purchase block, emptying
+it and restarting the exact same siphon (fixed by seeding tier01 past level 1). Fix: seed
+`mainGameUnlocked: true` up front and explicitly click the "open byte foundry" nav button right after
+render, so the test's own page selection stays pinned to Foundry regardless of what the latch does
+mid-test — matching how a player revisiting a permanently-unlocked save would actually navigate
+there, rather than relying on the mandatory-gate's forced Foundry display like every other pool-card
+test in this file does (none of which advance real/fake time far enough to ever trip the latch).
+
+**Verification.** Two new `App.test.jsx` tests (Data Stream and pool buffer), plus a standalone
+`renderHook`-based scratch check of `useTrimBalanceAfterFull` in isolation used while diagnosing the
+above (confirmed the hook itself was correct well before the page-navigation cause was found — not
+committed, since the two App-level tests already cover the same behavior end to end). Verified
+additionally in a real browser (`yarn dev` + a disposable Playwright script): a Data Stream balance
+seeded at a small, sub-conversion-threshold capacity (so `tickIntroAutoInvest` can never drain it)
+read "500.000 B" immediately and "500 B" 1.5 real seconds later. `yarn test`: 1756/1756 green (+2).
+`yarn build` succeeds. Pure display formatting — no economy constant/formula changed, so
+`simulate-run-times` wasn't re-run.
