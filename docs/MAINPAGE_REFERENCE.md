@@ -1079,7 +1079,9 @@ order — rather than staying side by side down to phone width (an earlier versi
 tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
 `SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it.
+alongside it. Both soft-reset cards deliberately override the shared `StatCard` spacing with compact
+`0.5rem 0.65rem` padding and a `0.35rem` internal gap; their headings have no default margin, their
+buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
 progressive-disclosure gate at all — it's unconditionally rendered, since Scale Up is relevant from
