@@ -1865,7 +1865,7 @@ is its one purpose.
   and reverts the moment owned drops back below a full level.
 - **MainPage**: while `isLastTierTickspeedXpUnlocked(state)`, the last tier's row swaps its normal
   `⚙ {cost} {symbol}` Money-funded tickspeed button for a quick-access **Scale Up** button
-  (`⏩ ×{next}`, `actions.scaleUp`) in the same grid slot — not a manual XP-consume control any more (an
+  (`⏩ ×2`, `actions.scaleUp`) in the same grid slot — not a manual XP-consume control any more (an
   earlier version showed `🧬 {current unspent XP} XP` here, spending the player's entire current XP
   balance on click; that manual trigger was removed in favor of surfacing Scale Up in this slot instead,
   since reaching a full last-tier level is also exactly when Scale Up tends to become available). The
@@ -2016,7 +2016,7 @@ card" in docs/MAINPAGE_REFERENCE.md). Unlike `OverclockCard` (still gated on `ov
 the last tier having ever been unlocked — see docs/MAINPAGE_REFERENCE.md), `ScaleUpCard` is always
 shown — relevant from the very first cycle, well before the last tier even exists. The button
 (`ScaleUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
-larger default `Button` size) shows `⏩ ×{next} · Lv.{level}/{requirement}` — not a percentage, so the
+larger default `Button` size) shows `⏩ ×2 · Lv.{level}/{requirement}` — not a percentage, so the
 player sees concretely what's still needed, against the CURRENT target tier's name/level (via
 `getScaleUpTargetTier`), not always the last tier's. `state.purchaseLevels[targetTier.id]` and
 `getScaleUpRequirement(state)` are both internally 1-indexed so that "level 1" means "no
@@ -2036,19 +2036,12 @@ lives on the PP Upgrades page).
 
 ### Overclock
 
-A second, rarer soft-reset than Scale Up, gated purely on the last tier's own level (unlike Scale
-Up, whose own target walks through the tier ladder one tier at a time — see above) with no
-fixed-step ladder beyond a small floor: `getOverclockRequirement(overclockCount)` requires level 5 for the first claim, then at least three levels beyond the previous claim (`OVERCLOCK_REQUIREMENT_STEP = 3`) — a simple +1-per-cycle shape, unconditional (unlike
-`getScaleUpRequirement`, whose own requirement only escalates once every tier is already unlocked,
-and by `SCALE_UP_FINAL_TIER_REQUIREMENT_STEP` (3) per activation rather than 1), and without Scale
-Up's own display offset (see below). The `+2` floor (not `+1`/`+0`) is deliberate:
-every tier's `purchaseLevels` starts at 1 (the tier's own un-purchased default), so a requirement of
-exactly 1 would already be satisfied by a completely untouched last tier, making the first Overclock
-claim of every cycle free — requiring level 2 means at least one real level of last-tier progress is
-always needed first. A claim is gated on `state.purchaseLevels[lastTier.id]` reaching that
-requirement, but **jumps straight to the last tier's current level rather than just the minimum
-required** — see `overclockGame` below — so there's no fixed ladder to climb beyond that floor and
-whatever the last tier's own (already steep) cost curve demands from there.
+A second, rarer soft-reset than Scale Up, gated purely on the last tier's own level.
+`getOverclockRequirement(overclockCount)` requires level 5 for the first claim, then at least three
+levels beyond the previous claim (`OVERCLOCK_REQUIREMENT_STEP = 3`). A claim is gated on
+`state.purchaseLevels[lastTier.id]` reaching that requirement, but jumps straight to the last tier's
+current level rather than merely recording the minimum. Thus a delayed claim catches up in one use,
+while the next claim still requires three additional levels.
 `overclockGame` (`engine.js`) does everything `scaleUpGame` does EXCEPT keeping tiers permanently
 unlocked — full resources/owned/purchased/tickspeedLevels/purchaseLevels/purchaseLevelProgress
 reset, `globalTickspeedMultiplier` reset to `null`, `lastTierXpConsumed`/`prestige.xp`/
@@ -2110,7 +2103,7 @@ above) — not grouped with `GlobalTickspeedCard`, which renders separately at t
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
 `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 2.14%/lvl · Lv.8/7` — where `{nextStep}` is the regular-step percentage that would result
+— e.g. `⚡ 2.14%/lvl · Lv.8/8` — where `{nextStep}` is the regular-step percentage that would result
 from claiming right now (`1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel,
 overclockRequirement))`, accounting for a catch-up jump past the bare minimum requirement, not just
 `overclockCount + 1`), formatted as a percentage by reusing `formatGlobalTickspeedBonusPercent`'s

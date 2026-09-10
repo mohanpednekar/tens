@@ -242,16 +242,15 @@ export const createInitialGameState = () => ({
   // level — reset to 1 the last time Scale Up fired, or still whatever it organically grew to if
   // Scale Up hasn't fired even once this cycle — climbs past the requirement, so nothing is ever
   // permanently missed by waiting. Deliberately NOT clamped to TIER_DEFINITIONS.length - 1: once it
-  // reaches that boundary (the last tier), it keeps climbing past it, and getScaleUpRequirement
-  // reads how far past as "how many times Scale Up has fired since the last tier became its
-  // target" to drive that phase's own repeating requirement (a multiple of
-  // SCALE_UP_FINAL_TIER_REQUIREMENT_STEP levels, one step higher per such activation). Reset to 0 by
+  // reaches that boundary (the last tier), it keeps climbing past it while getScaleUpTargetTier
+  // remains clamped to the final tier and getScaleUpRequirement stays at its fresh three-level
+  // requirement after every reset. Reset to 0 by
   // a real Prestige/Overclock, same as scaleUpCount and everUnlockedTierIds below — all three
   // relock/re-earn from scratch once every tier needs re-reaching.
   scaleUpTargetTierIndex: 0,
   // RUN-SCOPED level reached by Overclock (see overclockGame) — a second, steeper Scale-Up-style
   // soft reset, claimable once the last tier's own level passes getOverclockRequirement(overclockCount)
-  // (one more than the last claimed level; a claim jumps straight to the last tier's current level,
+  // (level 5 initially, then three more than the last claimed level; a claim jumps straight to the last tier's current level,
   // so falling behind doesn't require claiming every intermediate level). Permanently multiplies the
   // (Money-funded) global tickspeed multiplier's own regular AND milestone per-level steps by
   // getOverclockMultiplier(overclockCount) — see getGlobalTickspeedProductionMultiplier — compounding
@@ -6380,16 +6379,17 @@ export const scaleUpGame = state => {
 }
 
 // A second, steeper soft-reset than Scale Up (see scaleUpGame above), gated behind the last tier's
-// LEVEL reaching getOverclockRequirement(overclockCount) — one more than the last claimed level.
+// LEVEL reaching getOverclockRequirement(overclockCount) — level 5 initially, then three more
+// than the last claimed level.
 // Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
 // automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount,
 // overclockGame resets it to 0 (initial.scaleUpCount) instead, wiping Scale Up's own stacking
 // 2^scaleUpCount production multiplier along with the rest of the reset. Unlike scaleUpGame's own
 // +1 self-increment, overclockCount jumps directly to the last tier's *current* level rather than
-// just the minimum required +1 — since that level is only ever checked against, never consumed, a
+// just the minimum requirement — since that level is only ever checked against, never consumed, a
 // player who claims late (last claimed at level 5, last tier now at level 8) catches up to level 8
-// in one claim instead of needing three separate ones. This is always at least a +1 gain, since the
-// eligibility check above already guarantees lastTierLevel > overclockCount. Overclock's reward
+// in one claim instead of needing intermediate claims. This is always at least a +3 gain, since the
+// eligibility check above guarantees lastTierLevel >= overclockCount + 3. Overclock's reward
 // (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's own regular and
 // milestone steps, see getEffectiveTierTickSpeedSeconds) is keyed off this same overclockCount.
 // `autoScaleUp` (the automation toggle deciding whether Scale Up
