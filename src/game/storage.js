@@ -515,6 +515,12 @@ const mergeState = saved => {
     ...fresh,
     ...savedClean,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
+    scaleUpTierCounts: mergeTierMap(
+      fresh.scaleUpTierCounts,
+      saved.scaleUpTierCounts ?? Object.fromEntries(
+        Object.keys(fresh.scaleUpTierCounts).map(tierId => [tierId, saved.scaleUpCount ?? legacySpeedUpCount ?? 0])
+      ),
+    ),
     autoScaleUp: saved.autoScaleUp ?? legacyAutoSpeedUp ?? fresh.autoScaleUp,
     autoScaleUpEnabled: saved.autoScaleUpEnabled ?? legacyAutoSpeedUpEnabled ?? fresh.autoScaleUpEnabled,
     resources: mergeTierMap(fresh.resources, saved.resources),
