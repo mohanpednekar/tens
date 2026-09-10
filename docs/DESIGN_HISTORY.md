@@ -1,5 +1,24 @@
 # Design history & rationale
 
+### `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09
+
+A latent bug, pre-existing on `main`, surfaced by Devin Review on PR #623 (the Scale Up rename) —
+that PR's own `scaleUpGame`/`overclockGame` return objects omitted `era`/`eons`/`hyperscalerCount`/
+`eonsUpgrades`/`computeFlopsAutobuyers`/`computeFlopsAutobuyersEnabled` too, and got fixed there
+directly, but checking `prestigeGame` (the far more common ordinary Prestige, not either intra-cycle
+soft reset) turned up the identical gap already on `main`, unrelated to PR #623's diff.
+
+`prestigeGame` spreads `...initial` (a fresh `createInitialGameState()`) and, unlike every other
+permanent Foundry/automation field it explicitly carries forward with the `state.X ?? initial.X`
+pattern, never re-listed these six — so they silently fell through to `initial`'s zero/empty
+defaults on every real Prestige, even though CLAUDE.md's Economy model section already documented
+Era ascension (the *bigger* meta-prestige) as explicitly keeping "museum, hyperscalers, Eon upgrade
+levels" — implying the smaller, far-more-frequent ordinary Prestige should never have been erasing
+them in the first place. Fixed by adding the same six fields `scaleUpGame`/`overclockGame`/`eraGame`
+already carry, in the same place relative to the `computeFlops` block. Deliberately did NOT carry
+`computeFlopsAutobuyerAttemptBudgets` — it's run-scoped in-flight progress, and `eraGame`/
+`scaleUpGame`/`overclockGame` all reset it fresh too.
+
 ### Speed Up renamed to Scale Up and redesigned from a last-tier-only gate to a per-tier unlock ladder — 2026-09-09
 
 Requested directly by the maintainer (not a filed issue): rename the "Speed Up" soft-reset mechanic

@@ -112,6 +112,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   automatic (pull-based)" entry under Changed below. `DiskArrayRow` is a pure status display now.
 
 ### Fixed
+- **An ordinary Prestige wiped Era ascension progress** — `prestigeGame` never carried
+  `era`/`eons`/`hyperscalerCount`/`eonsUpgrades`/`computeFlopsAutobuyers(Enabled)` forward, so every
+  real Prestige (far more frequent than Era ascension) silently reset a player's Eons balance,
+  hyperscaler count, Eon upgrade levels, and Flops autobuyer unlocks/pause preferences back to fresh
+  defaults. Now carries all six through unchanged, matching `scaleUpGame`/`overclockGame`/`eraGame`'s
+  existing treatment (#626).
 - **Byte Foundry and Boosters page titles rendered behind the iPhone Dynamic Island** — both
   pages' root container was missing the `env(safe-area-inset-top)` top-padding convention every
   other page already uses, so their fixed `theme.space.xl` top padding wasn't enough to clear the
