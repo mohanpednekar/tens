@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import fc from 'fast-check'
 import {
   activateComputeBoost,
   isAnyComputeMergeInFlight,
@@ -5750,6 +5751,24 @@ describe('getTierCost', () => {
   })
 })
 
+describe('getTierCost (property-based)', () => {
+  it('never decreases as level increases, for any positive baseCost', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 1_000_000 }),
+        fc.integer({ min: 1, max: 40 }),
+        fc.integer({ min: 1, max: 40 }),
+        (baseCost, levelA, levelB) => {
+          const tier = { baseCost }
+          const [lowerLevel, higherLevel] = levelA <= levelB ? [levelA, levelB] : [levelB, levelA]
+          expect(getTierCost(tier, lowerLevel)).toBeLessThanOrEqual(getTierCost(tier, higherLevel))
+        }
+      ),
+      { numRuns: 200 }
+    )
+  })
+})
+
 // ─── getTierBulkQuantity / getTierQuantityCost ────────────────────────────────
 // Both now take blockSize/levelProgress explicitly (read directly from state by callers) instead
 // of a tier + lifetime purchased count.
@@ -6171,6 +6190,38 @@ describe('getPrestigePointsAwarded', () => {
     expect(getPrestigePointsAwarded(0)).toBe(0)
     expect(getPrestigePointsAwarded(GOOGOL)).toBe(0)
     expect(getPrestigePointsAwarded(PRESTIGE_THRESHOLD / 10)).toBe(0)
+  })
+})
+
+describe('getPrestigePointsAwarded (property-based)', () => {
+  it('is monotonically non-decreasing in money, for any fixed Double PP level', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 1e300, noNaN: true }),
+        fc.double({ min: 0, max: 1e300, noNaN: true }),
+        fc.integer({ min: 0, max: 10 }),
+        (moneyA, moneyB, doublePpLevel) => {
+          const [lowerMoney, higherMoney] = moneyA <= moneyB ? [moneyA, moneyB] : [moneyB, moneyA]
+          expect(getPrestigePointsAwarded(lowerMoney, doublePpLevel)).toBeLessThanOrEqual(
+            getPrestigePointsAwarded(higherMoney, doublePpLevel)
+          )
+        }
+      ),
+      { numRuns: 200 }
+    )
+  })
+
+  it('never awards a negative amount', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 1e300, noNaN: true }),
+        fc.integer({ min: 0, max: 10 }),
+        (money, doublePpLevel) => {
+          expect(getPrestigePointsAwarded(money, doublePpLevel)).toBeGreaterThanOrEqual(0)
+        }
+      ),
+      { numRuns: 200 }
+    )
   })
 })
 
@@ -7000,6 +7051,23 @@ describe('buyTierQuantity', () => {
     }
     const after = buyTierQuantity(tensTier.id, 3)(state)
     expect(after.owned[tensTier.id]).toBe(3)
+  })
+})
+
+describe('buyTierQuantity (property-based)', () => {
+  it('never leaves the cost resource negative, regardless of starting money or requested quantity', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0, max: 1e12, noNaN: true }),
+        fc.integer({ min: 0, max: 1000 }),
+        (money, quantity) => {
+          const state = withMoney(createInitialGameState(), money)
+          const after = buyTierQuantity(tensTier.id, quantity)(state)
+          expect(after.resources[MONEY_ID]).toBeGreaterThanOrEqual(0)
+        }
+      ),
+      { numRuns: 200 }
+    )
   })
 })
 
