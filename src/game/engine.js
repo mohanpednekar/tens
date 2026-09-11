@@ -6309,7 +6309,13 @@ export const scaleUpGame = state => {
   if (targetTierLevel < getScaleUpRequirement(state)) return state
 
   const initial = createInitialGameState()
-  const newlyRevealedTierId = TIER_DEFINITIONS[getClampedScaleUpTargetTierIndex(state) + 1]?.id
+  const targetTierIndex = getClampedScaleUpTargetTierIndex(state)
+  const successorTier = TIER_DEFINITIONS[targetTierIndex + 1]
+  const hasProgressBeyondSuccessor = successorTier && (
+    (state.owned?.[successorTier.id] ?? 0) > 0 ||
+    TIER_DEFINITIONS.slice(targetTierIndex + 2).some(isTierUnlocked(state))
+  )
+  const newlyRevealedTierId = hasProgressBeyondSuccessor ? null : successorTier?.id
   const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [
     tier.id,
     (state.scaleUpTierCounts?.[tier.id] ?? 0) + (

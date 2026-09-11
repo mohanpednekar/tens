@@ -9322,6 +9322,21 @@ describe('scaleUpGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(1)
   })
 
+  it('boosts the successor too when progress beyond it proves it was unlocked before a lagging Scale Up claim', () => {
+    const state = {
+      ...withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 3),
+      everUnlockedTierIds: {
+        ...createInitialGameState().everUnlockedTierIds,
+        [TIER_DEFINITIONS[1].id]: true,
+        [TIER_DEFINITIONS[2].id]: true,
+      },
+    }
+    const after = scaleUpGame(state)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[0].id)).toBe(2)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[1].id)).toBe(2)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(2)
+  })
+
   it('keeps overclockCount permanently across an ordinary Scale Up', () => {
     const state = withOverclockCount(eligibleState(), 4)
     const after = scaleUpGame(state)
