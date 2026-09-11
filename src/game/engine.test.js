@@ -9040,11 +9040,11 @@ describe('scaleUpGame', () => {
   })
 
   it('stacks across repeated activations', () => {
-    // getScaleUpRequirement at scaleUpTargetTierIndex lastIndex + 2 = level 9
+    // The final-tier requirement remains the flat level 3 after repeated activations.
     const state = {
       ...withPurchaseLevel(
         { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 },
-        lastTier.id, 9
+        lastTier.id, 3
       ),
       scaleUpCount: 2,
     }
