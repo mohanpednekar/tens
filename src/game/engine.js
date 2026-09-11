@@ -6468,10 +6468,9 @@ export const overclockGame = state => {
 }
 
 // One-time PP cost to permanently automate Scale Up (see AUTO_SCALE_UP_COST) — once bought,
-// tickGame calls scaleUpGame automatically every tick, which re-validates eligibility internally
-// (a no-op unless the current scale-up target tier has reached its own requirement — see
-// getScaleUpTargetTier/getScaleUpRequirement — and production isn't frozen), so this just
-// removes the need for a manual click once eligible. A no-op if already bought, if there aren't
+// tickGame calls scaleUpGame automatically every tick before the final-tier target, re-validating
+// eligibility internally (see getScaleUpTargetTier/getScaleUpRequirement); final-tier Scale Up
+// remains manual so automation cannot starve Overclock's higher gate. A no-op if already bought, if there aren't
 // enough unspent points, or while production is frozen — same convention as
 // buyPrestigeSpeedBonus/buySmartAutobuyer.
 export const buyAutoScaleUp = state => {

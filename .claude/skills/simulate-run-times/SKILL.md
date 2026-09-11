@@ -150,6 +150,6 @@ imports — leave them alone unless that resolution itself breaks.
 wrong against the current game (real Buy batches to the cost-block boundary;
 `mainGameUnlocked` starts false and only flips via Foundry conversion). Also don't reintroduce
 `getScaleUpRequirement`'s old `scaleUpCount + 6` or last-tier-multiples-of-3 shapes (superseded by
-the flat level-3 target mechanic) — `actSoftResets` calls `scaleUpGame`/`overclockGame`
-unconditionally each cycle rather than duplicating the eligibility check here, since both engine
-functions already no-op internally when not eligible.
+the flat level-3 target mechanic). `actSoftResets` calls Scale Up first while moving through the
+tier ladder, then skips it at the final-tier target until Overclock fires; do not turn that branch
+back into an unconditional pair of reset calls, which would starve Overclock's level-5 gate.

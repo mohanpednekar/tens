@@ -2041,7 +2041,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   color={canBuyAutoScaleUp ? '#38bdf8' : 'darkgrey'}
                   disabled={!canBuyAutoScaleUp}
                   onClick={actions.buyAutoScaleUp}
-                  title="Spend Prestige Points so Scale Up happens automatically, forever, the instant it's eligible"
+                  title="Spend Prestige Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock"
                   type="button"
                   $progress={ppProgressPercent(AUTO_SCALE_UP_COST)}
                   $progressColor="#38bdf8"
