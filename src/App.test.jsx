@@ -1045,7 +1045,7 @@ test('the second Scale Up targets the next tier, at the same flat level requirem
   expect(screen.queryByRole('button', { name: /scale up \(requires kilobytes/i })).not.toBeInTheDocument()
 })
 
-test('once every tier is unlocked, each further Scale Up on the last tier requires 3 more levels than the last', () => {
+test('once every tier is unlocked, each further Scale Up requires a fresh three-level climb', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1054,11 +1054,8 @@ test('once every tier is unlocked, each further Scale Up on the last tier requir
   })
   render(<App />)
 
-  // Requirement is now level 6 (raw), displayed Lv.5 — not the flat level 3 (displayed Lv.2) an
-  // earlier, still-mid-ladder activation needed.
-  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 5/i })
-  expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /scale up \(requires quettabytes level 2\b/i })).not.toBeInTheDocument()
+  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 2/i })
+  expect(button).toBeEnabled()
 })
 
 test('the Scale Up button shows the next multiplier and requirement progress on itself', () => {
@@ -1310,11 +1307,11 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
   // disappearing again. The claim jumped overclockCount straight to 8 (the last tier's level at
-  // claim time), not just to 2, so the next cycle now requires level 10 — and Scale Up's own
+  // claim time), so the next cycle now requires level 11 — and Scale Up's own
   // stacking bonus is wiped back to ×2 (scaleUpCount reset to 0, so the *next* activation would
   // only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 11/i })).toBeDisabled()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from level 8\./i)
   expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
 })
@@ -2257,7 +2254,7 @@ test('clicking the money balance expands a breakdown of every global production 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
-  expect(breakdown).toHaveTextContent(/scale up: ×4 production speed from 2 activations/i)
+  expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)
