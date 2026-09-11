@@ -2253,7 +2253,7 @@ test('clicking the money balance expands a breakdown of every global production 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
-  expect(breakdown).toHaveTextContent(/scale up: ×4 production speed from 2 activations/i)
+  expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)

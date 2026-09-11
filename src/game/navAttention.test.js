@@ -262,11 +262,11 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purchaseLevels: { [lastTierId]: 2 },
+      purchaseLevels: { [lastTierId]: 5 },
       everUnlockedTierIds: { [lastTierId]: true },
       overclockCount: 0,
-      // Once every tier is unlocked, Scale Up's own requirement on the last tier is a flat 3 (see
-      // getScaleUpRequirement) — level 2 here keeps it unavailable so this isolates Overclock.
+      // Scale Up still targets tier01 here, whose default level 1 keeps it unavailable, while the
+      // last tier has reached Overclock's first-claim level-5 requirement.
     }
     expect(hasOverclockAvailable(state)).toBe(true)
     expect(hasScaleUpAvailable(state)).toBe(false)
