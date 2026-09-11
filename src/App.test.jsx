@@ -1045,7 +1045,7 @@ test('the second Scale Up targets the next tier, at the same flat level requirem
   expect(screen.queryByRole('button', { name: /scale up \(requires kilobytes/i })).not.toBeInTheDocument()
 })
 
-test('once every tier is unlocked, each further Scale Up on the last tier requires 3 more levels than the last', () => {
+test('once every tier is unlocked, each further Scale Up requires a fresh three-level climb', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1054,11 +1054,8 @@ test('once every tier is unlocked, each further Scale Up on the last tier requir
   })
   render(<App />)
 
-  // Requirement is now level 6 (raw), displayed Lv.5 — not the flat level 3 (displayed Lv.2) an
-  // earlier, still-mid-ladder activation needed.
-  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 5/i })
-  expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /scale up \(requires quettabytes level 2\b/i })).not.toBeInTheDocument()
+  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 2/i })
+  expect(button).toBeEnabled()
 })
 
 test('the Scale Up button shows the next multiplier and requirement progress on itself', () => {
@@ -1069,12 +1066,12 @@ test('the Scale Up button shows the next multiplier and requirement progress on 
   })
   render(<App />)
 
-  // Flat per-tier requirement (level 3, displayed Lv.2) and the third activation would raise the
-  // permanent multiplier to ×8 — both shown on the button itself, with no separate status text line.
+  // Flat per-tier requirement (level 3, displayed Lv.2) and the per-claim ×2 are shown on the
+  // button itself, while the accessible name explains that only tiers unlocked so far are doubled.
   expect(screen.getByRole('button', {
-    name: /scale up \(requires kilobytes level 2\) — doubles production speed to ×8/i,
+    name: /scale up \(requires kilobytes level 2\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×8 · Lv.1/2')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · Lv.1/2')
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
@@ -1193,7 +1190,7 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
     resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 3 },
-    overclockCount: 3,
+    overclockCount: 0,
   })
   render(<App />)
 
@@ -1206,7 +1203,7 @@ test('the Overclock button is enabled once the last tier reaches the required le
     resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 5 },
-    overclockCount: 3,
+    overclockCount: 0,
   })
   render(<App />)
 
@@ -1221,21 +1218,21 @@ test('the first Overclock claim of a cycle is never free — a completely untouc
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5/i })).toBeDisabled()
 })
 
-test('the second Overclock requires one more level than the first, not the same level', () => {
+test('a later Overclock requires three more levels than the previous use', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 2 },
-    overclockCount: 1,
+    purchaseLevels: { tier09: 3, tier10: 7 },
+    overclockCount: 5,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 3/i })
+  const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 8/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 5\b/i })).not.toBeInTheDocument()
 })
 
 test('the Overclock button shows the next per-level Tickspeed rate and requirement progress on itself, using the raw (non-offset) tier level', () => {
@@ -1247,15 +1244,15 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   })
   render(<App />)
 
-  // Next claim requires the last tier to reach raw level 7 (Lv.8/7, not a "completed blocks"
+  // Next claim requires the last tier to reach raw level 8 (Lv.8/8, not a "completed blocks"
   // display offset — see getOverclockRequirement in engine.js) but a claim right now would jump
   // straight to level 8 (the last tier's own current level, ahead of the bare minimum), raising
   // the Tickspeed upgrade's own per-level rate to 2.14% (1% × 1.1^8) — both shown on the button
   // itself, no separate status text line.
   expect(screen.getByRole('button', {
-    name: /overclock \(requires quettabytes level 7\) — resets scale up's bonus and raises clock speed's per-level rate to 2\.14%/i,
+    name: /overclock \(requires quettabytes level 8\) — resets scale up's bonus and raises clock speed's per-level rate to 2\.14%/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · Lv.8/7')
+  expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent('⚡ 2.14%/lvl · Lv.8/8')
 })
 
 test('the Overclock card\'s disclosure states the current per-level Tickspeed rate once claimed', () => {
@@ -1299,10 +1296,9 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   })
   render(<App />)
 
-  // scaleUpCount 5 → next activation would raise the multiplier to ×64 (getScaleUpMultiplier(6)).
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×64')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
 
-  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })
+  const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 5\b/i })
   expect(overclockButton).toBeEnabled()
 
   await user.click(overclockButton)
@@ -1311,11 +1307,11 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
   // disappearing again. The claim jumped overclockCount straight to 8 (the last tier's level at
-  // claim time), not just to 2, so the next cycle now requires level 10 — and Scale Up's own
+  // claim time), so the next cycle now requires level 11 — and Scale Up's own
   // stacking bonus is wiped back to ×2 (scaleUpCount reset to 0, so the *next* activation would
   // only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 10/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 11/i })).toBeDisabled()
   expect(screen.getByLabelText(/^overclock panel$/i)).toHaveTextContent(/from level 8\./i)
   expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
 })
@@ -1329,7 +1325,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 2\b/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5\b/i })).toBeDisabled()
 })
 
 test('the PP Upgrades page groups purchases into labeled categories', async () => {
@@ -2258,7 +2254,7 @@ test('clicking the money balance expands a breakdown of every global production 
   expect(moneyDisplay).toHaveAttribute('aria-expanded', 'true')
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: \+50% production speed from 50 unspent pp/i)
-  expect(breakdown).toHaveTextContent(/scale up: ×4 production speed from 2 activations/i)
+  expect(breakdown).toHaveTextContent(/scale up: 2 activations; multiplier varies by tier/i)
   expect(breakdown).toHaveTextContent(/clock speed: \+[\d.]+% faster ticks on every tier \(lv\.1\)/i)
 
   await user.click(moneyDisplay)

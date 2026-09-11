@@ -225,13 +225,15 @@ export const createInitialGameState = () => ({
   // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
   // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
   prestigeDoublePpLevel: 0,
-  // RUN-SCOPED count of how many times Scale Up has been triggered (see scaleUpGame) — drives
-  // getScaleUpMultiplier's unconditional production-speed multiplier. Never reset by Scale Up
-  // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
+  // RUN-SCOPED count of total Scale Up activations (see scaleUpGame), retained for progression and
+  // status display. Per-tier production bonuses live in scaleUpTierCounts below. Never reset by
+  // Scale Up itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
   // prestigeGame) — unlike the automation toggles/levels around it (smartAutobuyer/autoPrestige/
   // prestigeSpeedBonusUnlocked/autoScaleUp), the Scale Up multiplier itself doesn't survive a real
-  // Prestige and has to be rebuilt from scratch each Prestige cycle.
+  // Prestige; the per-tier counts reset at the same time.
   scaleUpCount: 0,
+  // Per-tier Scale Up counts let a claim boost only the tiers that were already unlocked.
+  scaleUpTierCounts: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 0])),
   // RUN-SCOPED index into TIER_DEFINITIONS that Scale Up currently targets (see
   // getScaleUpTargetTier/getScaleUpRequirement/scaleUpGame) — starts at 0 (the first tier) and
   // climbs by exactly 1 on every successful activation, regardless of how far tiers have
@@ -1339,6 +1341,9 @@ export const getPurchaseMilestoneMultiplier = level => {
 export const getScaleUpMultiplier = scaleUpCount =>
   SCALE_UP_MULTIPLIER_BASE ** clampNonNegative(scaleUpCount)
 
+export const getTierScaleUpMultiplier = (state, tierId) =>
+  getScaleUpMultiplier(state.scaleUpTierCounts?.[tierId] ?? state.scaleUpCount ?? 0)
+
 // The index (see state.scaleUpTargetTierIndex) clamped into TIER_DEFINITIONS' actual bounds —
 // scaleUpTargetTierIndex itself is deliberately allowed to climb past the last tier (see its own
 // comment in createInitialGameState), so this is the one place that clamp is applied.
@@ -1360,42 +1365,17 @@ const isScaleUpTargetingLastTier = state =>
 // through unchanged rather than wiping it, keeping it unlocked permanently either way.
 export const getScaleUpTargetTier = state => TIER_DEFINITIONS[getClampedScaleUpTargetTierIndex(state)]
 
-// The scale-up target tier's (see getScaleUpTargetTier above) LEVEL Scale Up currently requires: a
-// flat TIER_UNLOCK_PREV_LEVEL_REQUIREMENT (3) while scaleUpTargetTierIndex hasn't yet reached the
-// last tier — the SAME threshold that unlocks the tier one past the target (see isTierUnlocked), so
-// reaching it always coincides with a new tier becoming permanently reachable too — or, once
-// scaleUpTargetTierIndex has reached (and, on every further activation, climbed past) the last
-// tier, a repeating multiple of SCALE_UP_FINAL_TIER_REQUIREMENT_STEP (3) that climbs by one further
-// step per activation already fired since then: level 3 for the first such activation, 6 for the
-// second, 9 for the third, and so on — read directly off how far scaleUpTargetTierIndex already
-// sits past the last tier's own index, with no separate counter needed. Expressed as a level target
-// rather than a lifetime-purchased-count threshold (as it was before block size became variable —
-// see docs/DESIGN_HISTORY.md): how many purchases a given level boundary corresponds to now depends
-// on the current (possibly grown) block size (see getPurchaseBlockSize), while the level number
-// itself doesn't.
+// Scale Up always requires level 3 on its current target. Before the final tier this reveals the
+// next tier; at the final tier each reset starts another fresh three-level climb.
 export const getScaleUpRequirement = state => {
   if (!isScaleUpTargetingLastTier(state)) return TIER_UNLOCK_PREV_LEVEL_REQUIREMENT
-  const activationsPastLastTier = clampNonNegative(state.scaleUpTargetTierIndex ?? 0) - (TIER_DEFINITIONS.length - 1)
-  return SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * (activationsPastLastTier + 1)
+  return SCALE_UP_FINAL_TIER_REQUIREMENT_STEP
 }
 
-// The last tier's LEVEL the *next* Overclock level requires: level 2 for the first claim
-// (overclockCount 0), level 3 for the second, and so on — overclockCount * OVERCLOCK_REQUIREMENT_STEP
-// + 2, with OVERCLOCK_REQUIREMENT_STEP = 1. The +2 floor (not +1/+0) is deliberate: every tier's
-// purchaseLevels starts at 1 (the tier's own un-purchased default — see createInitialGameState), so
-// a requirement of exactly 1 would already be satisfied by a completely untouched last tier, making
-// the first Overclock claim of every cycle free. Requiring level 2 means the last tier's own already-
-// steep cost curve has to demand at least one real level of progress before Overclock is claimable.
-// Beyond that floor, each further claim needs one more level than the last — unlike
-// getScaleUpRequirement (whose own requirement only ever grows once every tier is already
-// unlocked, and by 3 per activation rather than 1), Overclock is only ever reachable once the last
-// tier itself is unlocked to begin with, so it keeps its own simple +1-per-claim shape unconditionally.
-// Expressed as a level target against state.purchaseLevels[lastTierId] directly (no "completed
-// blocks" display offset the way Scale Up's own requirement gets — see
-// docs/MAINPAGE_REFERENCE.md), so the number shown to the player matches the same raw level number
-// the last tier's own Details disclosure already shows.
+// The first Overclock requires last-tier level 5. Later uses require at least three levels more
+// than the level recorded by the previous use; claiming late still catches up to the current level.
 export const getOverclockRequirement = overclockCount =>
-  clampNonNegative(overclockCount) * OVERCLOCK_REQUIREMENT_STEP + 2
+  clampNonNegative(overclockCount) === 0 ? 5 : clampNonNegative(overclockCount) + OVERCLOCK_REQUIREMENT_STEP
 
 // Overclock's own growth factor: compounds OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per claimed
 // level. Folded directly into getGlobalTickspeedProductionMultiplier above — it multiplies BOTH the
@@ -1759,7 +1739,6 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     : 1
   // Scale Up's multiplier, unlike the PP bonus above, needs no unlock step — it applies as soon
   // as scaleUpCount > 0 (see getScaleUpMultiplier/scaleUpGame).
-  const scaleUpMultiplier = getScaleUpMultiplier(stateAfterFlops.scaleUpCount ?? 0)
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) at a flat rate of 1 per real second — the tickspeed
@@ -1844,6 +1823,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // (see tickIntroProduction) — every other tier's own multiplier stays 1 regardless.
     const computeBoostMultiplier = tier.id === TIER_DEFINITIONS[0].id ? getComputeBoostMultiplier(stateAfterAutobuyers.intro) : 1
     const flopsBoostMultiplier = getComputeFlopsTierProductionMultiplier(stateAfterAutobuyers, tier.id)
+    const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
     newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
@@ -5806,8 +5786,8 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tierTickspeedAutobuyer, by contrast, are permanent and carry over unchanged. globalTickspeedMultiplier
 // (the Money-funded global tickspeed level) resets to not-yet-bought here too, same as scaleUpGame —
 // neither reset preserves it, since it's funded from the same Money balance prestige/Scale Up
-// already wipe, same as tickspeedLevels. scaleUpCount (the stacking 2^scaleUpCount production
-// multiplier Scale Up builds up) ALSO resets to 0 here — unlike every other automation flag/level
+// already wipe, same as tickspeedLevels. scaleUpCount and the per-tier scaleUpTierCounts bonuses
+// ALSO reset to 0 here — unlike every other automation flag/level
 // in this function, which are all permanent, this one doesn't survive a real Prestige, so a fresh
 // post-Prestige run has to rebuild its Scale Up multiplier from scratch; autoScaleUp (the
 // automation toggle) is unaffected and still carries over permanently, so it simply starts
@@ -6210,9 +6190,9 @@ export const prestigeGame = state => {
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // scaleUpCount is NOT carried over here — it resets to 0 (initial.scaleUpCount) same as
-    // globalTickspeedMultiplier above, so the stacking 2^scaleUpCount production multiplier from
-    // Scale Up doesn't survive a real Prestige (a real Prestige is the bigger, rarer reset; Scale
-    // Up's multiplier is meant to be rebuilt within a single Prestige cycle, not to keep
+    // globalTickspeedMultiplier above, so Scale Up's per-tier production multipliers don't survive
+    // a real Prestige (a real Prestige is the bigger, rarer reset; Scale Up's multipliers are rebuilt
+    // within a single Prestige cycle, not allowed to keep
     // compounding across them). autoScaleUp (the automation toggle) is unaffected by this — it
     // still carries over permanently above, so a player who already bought Auto Scale Up doesn't
     // need to re-buy it; it simply starts re-accumulating scaleUpCount from 0 on the next cycle.
@@ -6328,6 +6308,11 @@ export const scaleUpGame = state => {
   if (targetTierLevel < getScaleUpRequirement(state)) return state
 
   const initial = createInitialGameState()
+  const targetTierIndex = getClampedScaleUpTargetTierIndex(state)
+  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map((tier, index) => [
+    tier.id,
+    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (index <= targetTierIndex ? 1 : 0),
+  ]))
   return {
     ...initial,
     // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
@@ -6382,6 +6367,7 @@ export const scaleUpGame = state => {
     },
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
     scaleUpCount: (state.scaleUpCount ?? 0) + 1,
+    scaleUpTierCounts,
     // Unconditional +1 — see this function's own comment above and scaleUpTargetTierIndex's own
     // comment in createInitialGameState for why no separate phase check is needed here.
     scaleUpTargetTierIndex: clampNonNegative(state.scaleUpTargetTierIndex ?? 0) + 1,
@@ -6394,16 +6380,17 @@ export const scaleUpGame = state => {
 }
 
 // A second, steeper soft-reset than Scale Up (see scaleUpGame above), gated behind the last tier's
-// LEVEL reaching getOverclockRequirement(overclockCount) — one more than the last claimed level.
+// LEVEL reaching getOverclockRequirement(overclockCount) — level 5 initially, then three more
+// than the last claimed level.
 // Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
 // automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount,
 // overclockGame resets it to 0 (initial.scaleUpCount) instead, wiping Scale Up's own stacking
-// 2^scaleUpCount production multiplier along with the rest of the reset. Unlike scaleUpGame's own
+// per-tier Scale Up production multipliers along with the rest of the reset. Unlike scaleUpGame's own
 // +1 self-increment, overclockCount jumps directly to the last tier's *current* level rather than
-// just the minimum required +1 — since that level is only ever checked against, never consumed, a
+// just the minimum required +3 — since that level is only ever checked against, never consumed, a
 // player who claims late (last claimed at level 5, last tier now at level 8) catches up to level 8
-// in one claim instead of needing three separate ones. This is always at least a +1 gain, since the
-// eligibility check above already guarantees lastTierLevel > overclockCount. Overclock's reward
+// in one claim instead of needing multiple claims. This is always at least a +3 gain, since the
+// eligibility check guarantees lastTierLevel >= overclockCount + 3. Overclock's reward
 // (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's own regular and
 // milestone steps, see getEffectiveTierTickSpeedSeconds) is keyed off this same overclockCount.
 // `autoScaleUp` (the automation toggle deciding whether Scale Up

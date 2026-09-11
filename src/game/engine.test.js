@@ -153,6 +153,7 @@ import {
   getScaleUpMultiplier,
   getScaleUpRequirement,
   getScaleUpTargetTier,
+  getTierScaleUpMultiplier,
   getTickspeedMultiplierBaseCost,
   getTickspeedMultiplierCost,
   getTickspeedProductionMultiplier,
@@ -393,6 +394,7 @@ const withPrestigeSpeedBonusUnlocked = (state, unlocked = true) => ({
 const withScaleUpCount = (state, count) => ({
   ...state,
   scaleUpCount: count,
+  scaleUpTierCounts: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, count])),
 })
 
 const withOverclockCount = (state, count) => ({
@@ -6368,11 +6370,11 @@ describe('getScaleUpRequirement', () => {
     expect(getScaleUpRequirement(state)).toBe(3)
   })
 
-  it('climbs by one further step (3) per Scale Up already fired past the last tier', () => {
+  it('stays at 3 after every final-tier Scale Up', () => {
     const lastIndex = TIER_DEFINITIONS.length - 1
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 })).toBe(6)
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 })).toBe(9)
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 3 })).toBe(12)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 })).toBe(3)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 })).toBe(3)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 3 })).toBe(3)
   })
 
   it('treats a negative scaleUpTargetTierIndex as 0 (the flat per-tier requirement)', () => {
@@ -6381,18 +6383,17 @@ describe('getScaleUpRequirement', () => {
 })
 
 describe('getOverclockRequirement', () => {
-  it('is level 2 for the first claim (overclockCount 0) — not level 1, which a fresh, untouched last tier already sits at', () => {
-    expect(getOverclockRequirement(0)).toBe(2)
+  it('is level 5 for the first claim', () => {
+    expect(getOverclockRequirement(0)).toBe(5)
   })
 
-  it('increases by one more than the last claimed level, a simple +1-per-cycle shape unconditionally (unlike getScaleUpRequirement, whose own requirement only escalates once every tier is already unlocked)', () => {
-    expect(getOverclockRequirement(1)).toBe(3)
-    expect(getOverclockRequirement(2)).toBe(4)
-    expect(getOverclockRequirement(3)).toBe(5)
+  it('requires three more levels than the previous use', () => {
+    expect(getOverclockRequirement(5)).toBe(8)
+    expect(getOverclockRequirement(8)).toBe(11)
   })
 
   it('treats a negative count as 0', () => {
-    expect(getOverclockRequirement(-1)).toBe(2)
+    expect(getOverclockRequirement(-1)).toBe(5)
   })
 })
 
@@ -9012,20 +9013,18 @@ describe('scaleUpGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(1)
   })
 
-  it('requires SCALE_UP_FINAL_TIER_REQUIREMENT_STEP (3) more levels on each subsequent activation once every tier is unlocked', () => {
-    // At scaleUpTargetTierIndex lastIndex + 1 (one prior activation past the last tier), the
-    // requirement is level 6, not the flat level 3 the first such activation needed.
-    const stillLevel3 = withPurchaseLevel(
+  it('doubles only tiers unlocked before the claim, leaving the newly unlocked tier at ×1', () => {
+    const after = scaleUpGame(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 3))
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[0].id)).toBe(2)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[1].id)).toBe(1)
+  })
+
+  it('is available after each fresh three-level climb once every tier is unlocked', () => {
+    const level3 = withPurchaseLevel(
       { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 },
       lastTier.id, 3
     )
-    expect(scaleUpGame(stillLevel3)).toBe(stillLevel3)
-
-    const level6 = withPurchaseLevel(
-      { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 },
-      lastTier.id, 6
-    )
-    const after = scaleUpGame(level6)
+    const after = scaleUpGame(level3)
     expect(after.scaleUpTargetTierIndex).toBe(lastIndex + 2)
   })
 
@@ -9337,10 +9336,8 @@ describe('scaleUpGame', () => {
 
 describe('overclockGame', () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
-  // getOverclockRequirement(0) = 2 — a fresh state's last tier starts at level 1 by default, so it
-  // takes one real level of progress (to level 2) before the first claim of a cycle is eligible;
-  // level 1 alone is never enough (see the +2 floor in getOverclockRequirement's own comment).
-  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 2)
+  // The first Overclock requires the last tier to reach level 5.
+  const eligibleState = () => withPurchaseLevel(createInitialGameState(), lastTier.id, 5)
 
   it('does nothing when the last tier is still at its untouched default level (1) — the first claim of a cycle is never free', () => {
     const state = withPurchaseLevel(createInitialGameState(), lastTier.id, 1)
@@ -9362,25 +9359,25 @@ describe('overclockGame', () => {
 
   it('sets overclockCount to the last tier\'s current level on a claim', () => {
     const after = overclockGame(eligibleState())
-    expect(after.overclockCount).toBe(2)
+    expect(after.overclockCount).toBe(5)
   })
 
-  it('requires one more level than the last claim, a simple +1-per-cycle shape unconditionally', () => {
-    // After 1 prior claim (now at level 2), the requirement is level 3, not level 2 again.
+  it('requires three more levels than the last claim', () => {
+    // After a level-5 claim, level 7 is too early and level 8 is eligible.
     const stillLevel2 = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 2), 1
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 7), 5
     )
     expect(overclockGame(stillLevel2)).toBe(stillLevel2)
 
     const level3 = withOverclockCount(
-      withPurchaseLevel(createInitialGameState(), lastTier.id, 3), 1
+      withPurchaseLevel(createInitialGameState(), lastTier.id, 8), 5
     )
     const after = overclockGame(level3)
-    expect(after.overclockCount).toBe(3)
+    expect(after.overclockCount).toBe(8)
   })
 
   it('jumps straight to the last tier\'s current level in one claim when behind, instead of requiring one claim per intermediate level', () => {
-    // Last claimed at level 5 (overclockCount 5, requirement 7), but the last tier has since
+    // Last claimed at level 5 (overclockCount 5, requirement 8), and the last tier has since
     // reached level 8 — a single claim should catch all the way up to 8, not just to 7.
     const state = withOverclockCount(
       withPurchaseLevel(createInitialGameState(), lastTier.id, 8), 5
@@ -9602,7 +9599,7 @@ describe('overclockGame', () => {
     expect(after.autoGlobalTickspeedEnabled).toBe(fresh.autoGlobalTickspeedEnabled)
   })
 
-  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which still falls short of the (≥2) requirement', () => {
+  it('falls back to level 1 for the last tier when purchaseLevels is missing from state entirely, which still falls short of the (≥5) requirement', () => {
     const state = omit(createInitialGameState(), 'purchaseLevels')
     expect(overclockGame(state)).toBe(state)
   })
@@ -9610,7 +9607,7 @@ describe('overclockGame', () => {
   it('falls back to 0 when overclockCount is missing from state entirely', () => {
     const state = omit(eligibleState(), 'overclockCount')
     const after = overclockGame(state)
-    expect(after.overclockCount).toBe(2)
+    expect(after.overclockCount).toBe(5)
   })
 
   it('keeps the Byte Foundry intro state permanently untouched across overclock, unlike prestige', () => {
