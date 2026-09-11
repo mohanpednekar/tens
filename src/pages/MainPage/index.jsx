@@ -1073,10 +1073,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const canScaleUp = !isFrozen && scaleUpTargetTierLevel >= scaleUpRequirement
 
   // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own level
-  // passes the next Overclock level — one more than the last claimed level (see
-  // getOverclockRequirement/overclockGame in engine.js); no artificial ladder beyond that. Unlike
-  // Scale Up, claiming it also wipes Scale Up's own stacking bonus back to zero (its scaleUpCount
-  // resets to 0) in exchange for permanently multiplying BOTH the (Money-funded) global Tickspeed
+  // reaches the next Overclock level — level 5 initially, then three beyond the last claimed level
+  // (see getOverclockRequirement/overclockGame in engine.js). Unlike Scale Up, claiming it also
+  // wipes Scale Up's per-tier bonuses back to ×1 (scaleUpTierCounts resets) in exchange for
+  // permanently multiplying BOTH the (Money-funded) global Tickspeed
   // upgrade's regular and milestone per-level steps by getOverclockMultiplier(overclockCount)
   // (×1.1 per level) — folded into that existing track's own compounding rate, not a separate
   // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
