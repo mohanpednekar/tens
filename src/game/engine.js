@@ -6312,9 +6312,12 @@ export const scaleUpGame = state => {
   if (targetTierLevel < getScaleUpRequirement(state)) return state
 
   const initial = createInitialGameState()
+  const newlyRevealedTierId = TIER_DEFINITIONS[getClampedScaleUpTargetTierIndex(state) + 1]?.id
   const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [
     tier.id,
-    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (isTierUnlocked(state)(tier) ? 1 : 0),
+    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (
+      isTierUnlocked(state)(tier) && tier.id !== newlyRevealedTierId ? 1 : 0
+    ),
   ]))
   return {
     ...initial,

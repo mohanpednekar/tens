@@ -125,6 +125,15 @@ endgame regardless. `actSoftResets` now calls `overclockGame(scaleUpGame(state))
 to match, and a fresh run was published to the `ideal-run-strategy` orphan branch per the skill's
 own "re-run and publish after any change that can significantly affect timings" rule.
 
+A follow-up review found that the later change to a flat level-3 requirement for repeated
+final-tier Scale Ups invalidated that unconditional ordering: Scale-Up-first resets the last tier
+at level 3 on every climb, so the simulator can never reach Overclock's initial level-5 gate. The
+strategy now keeps Scale-Up-first while advancing through tiers, but once Scale Up targets the
+final tier it defers that reset entirely until Overclock fires. This is intentionally not the
+earlier phase-dependent experiment above: that experiment still invoked Scale Up after an
+ineligible Overclock attempt, whereas the corrected strategy must skip final-tier Scale Up while
+waiting for Overclock.
+
 ### Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09
 
 Devin Review found 4 issues on PR #614 (the `buyBooster` revert + `diskBuildQueuedByReplay`

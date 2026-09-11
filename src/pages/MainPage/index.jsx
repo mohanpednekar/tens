@@ -1117,6 +1117,18 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
   // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
+  const autoScaleUpFinalTierSuspended = (state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1
+  const autoScaleUpEffectivelyActive = autoScaleUpEnabled && !autoScaleUpFinalTierSuspended
+  const autoScaleUpStatusLabel = !autoScaleUpEnabled
+    ? 'Auto Scale Up paused'
+    : autoScaleUpFinalTierSuspended
+      ? 'Auto Scale Up suspended at final tier'
+      : 'Auto Scale Up active'
+  const autoScaleUpStatusTitle = !autoScaleUpEnabled
+    ? 'Auto Scale Up is currently paused — it will not trigger until resumed'
+    : autoScaleUpFinalTierSuspended
+      ? 'Auto Scale Up is suspended at the final tier — Scale Up is manual here so Overclock can be reached'
+      : "Scale Up now triggers automatically the instant it's eligible"
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
@@ -1776,12 +1788,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             />
           </ScaleUpButton>
           {!isFirstRun && isAutoScaleUpActive && (
-            <MutedText title={
-              autoScaleUpEnabled
-                ? "Scale Up now triggers automatically the instant it's eligible"
-                : 'Auto Scale Up is currently paused — it will not trigger until resumed'
-            }>
-              <PpUpgradeBadge $dimmed={!autoScaleUpEnabled} aria-label={autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'}>⏩</PpUpgradeBadge>
+            <MutedText title={autoScaleUpStatusTitle}>
+              <PpUpgradeBadge $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel}>⏩</PpUpgradeBadge>
             </MutedText>
           )}
         </ScaleUpCard>
@@ -2009,14 +2017,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               {isAutoScaleUpActive ? (
                 <UpgradeRowControls>
                   <PpUpgradeBadge
-                    $color={autoScaleUpEnabled ? '#4ade80' : '#facc15'}
-                    $dimmed={!autoScaleUpEnabled}
-                    aria-label={autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'}
-                    title={
-                      autoScaleUpEnabled
-                        ? "Scale Up now triggers automatically the instant it's eligible"
-                        : 'Auto Scale Up is currently paused — it will not trigger until resumed'
-                    }
+                    $color={autoScaleUpEffectivelyActive ? '#4ade80' : '#facc15'}
+                    $dimmed={!autoScaleUpEffectivelyActive}
+                    aria-label={autoScaleUpStatusLabel}
+                    title={autoScaleUpStatusTitle}
                   >
                     ⏩
                   </PpUpgradeBadge>
