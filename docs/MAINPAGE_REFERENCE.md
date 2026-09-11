@@ -1079,7 +1079,9 @@ order — rather than staying side by side down to phone width (an earlier versi
 tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
 `SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it.
+alongside it. Both soft-reset cards deliberately override the shared `StatCard` spacing with compact
+`0.5rem 0.65rem` padding and a `0.35rem` internal gap; their headings have no default margin, their
+buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
 progressive-disclosure gate at all — it's unconditionally rendered, since Scale Up is relevant from
@@ -1098,10 +1100,10 @@ redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button way
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
 match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 2.14%/lvl · Lv.8/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
+— e.g. `⚡ 2.14%/lvl · Lv.8/8` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
-claim past the bare minimum requirement, not just `overclockCount + 1`), formatted as a percentage by
+claim past the bare minimum requirement, not just `overclockCount + 3`), formatted as a percentage by
 reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passing it `1 + step` as if
 it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
 reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see

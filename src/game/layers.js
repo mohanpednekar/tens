@@ -698,19 +698,12 @@ export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Per-activation production-speed multiplier base for Scale Up (see engine.js's
 // getScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
-// to state.scaleUpCount, so each activation doubles it (1x, 2x, 4x, 8x, …). Unlike the Prestige
+// to each included tier’s Scale Up count, so a claim doubles only tiers already unlocked.
 // Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
 // scaleUpCount > 0.
 export const SCALE_UP_MULTIPLIER_BASE = 2
-// Once state.scaleUpTargetTierIndex (engine.js) reaches the last tier, Scale Up's own requirement
-// (see getScaleUpRequirement) shifts from "unlock the next tier" to a repeating multiple of the
-// last tier's own level: SCALE_UP_FINAL_TIER_REQUIREMENT_STEP (3) for the first such activation,
-// 2x that (6) for the second, 3x (9) for the third, and so on — read directly off how far
-// scaleUpTargetTierIndex has climbed past the last tier's own index. Deliberately the same value as
-// TIER_UNLOCK_PREV_LEVEL_REQUIREMENT (engine.js) — the flat requirement every earlier tier used
-// while still unlocking the next one — so the last tier's own repeating requirement reads as a
-// continuation of the same "every 3 levels" rule rather than a different number kicking in once the
-// ladder ends.
+// Scale Up always requires three levels on its target. Once the final tier is reached, every
+// reset starts another fresh three-level climb.
 export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // Per-level growth factor for Overclock's own reward — see engine.js's
 // getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper
@@ -723,17 +716,8 @@ export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
 // an ordinary Scale Up, unlike globalTickspeedMultiplier itself — see scaleUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.1
-// The per-cycle escalation step for how many more levels the last tier must reach before the next
-// Overclock level can be claimed (see engine.js's getOverclockRequirement, which also adds a fixed
-// +2 floor on top so a completely untouched last tier — starting at level 1 by default — can never
-// make the first claim of a cycle free) — a simple +1-per-cycle shape, unlike Scale Up's own
-// requirement (see getScaleUpRequirement), which only escalates once every tier is already
-// unlocked, and by SCALE_UP_FINAL_TIER_REQUIREMENT_STEP (3) rather than 1. There's no artificial
-// ladder beyond that floor; the last tier's already-steep cost curve is what makes reaching each
-// successive level meaningfully harder. A claim jumps straight to the last tier's current level
-// (see overclockGame), so falling behind never requires claiming every intermediate level one at a
-// time.
-export const OVERCLOCK_REQUIREMENT_STEP = 1
+// Minimum last-tier level growth required between Overclock uses after the initial level-5 claim.
+export const OVERCLOCK_REQUIREMENT_STEP = 3
 // One-time PP cost to permanently automate Scale Up (see engine.js's buyAutoScaleUp) — once
 // bought, tickGame triggers scaleUpGame automatically the instant it's eligible, with no manual
 // click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
