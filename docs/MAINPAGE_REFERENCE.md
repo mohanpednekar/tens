@@ -1103,7 +1103,7 @@ match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {next
 — e.g. `⚡ 2.14%/lvl · Lv.8/8` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
-claim past the bare minimum requirement, not just `overclockCount + 1`), formatted as a percentage by
+claim past the bare minimum requirement, not just `overclockCount + 3`), formatted as a percentage by
 reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passing it `1 + step` as if
 it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
 reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
