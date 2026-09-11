@@ -1053,10 +1053,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // independent counter that only advances when Scale Up itself fires — NOT necessarily the
   // highest tier unlocked so far, which can run ahead of it via ordinary play; clamped to the last
   // tier once reached) reaches that cycle's requirement (getScaleUpRequirement(state): a flat
-  // level 3 during the unlock phase, or a repeating multiple of 3 on the last tier once every tier
-  // is unlocked), it resets
-  // tiers/resources but permanently doubles production speed (stacking with every prior
-  // activation) AND keeps every tier unlocked so far, plus the one that reaching this level just
+  // level 3 for every target, including repeats on the last tier), it resets tiers/resources but
+  // permanently doubles production for every tier already unlocked before the claim (stacking per
+  // tier) AND keeps every tier unlocked so far, plus the one that reaching this level just
   // permanently unlocked. Always shown (relevant from the very first cycle, well before the last
   // tier itself exists) — unlike Overclock below, there's no progressive-disclosure gate here.
   const scaleUpTargetTier = getScaleUpTargetTier(state)

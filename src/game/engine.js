@@ -225,8 +225,8 @@ export const createInitialGameState = () => ({
   // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
   // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
   prestigeDoublePpLevel: 0,
-  // RUN-SCOPED count of how many times Scale Up has been triggered (see scaleUpGame) — drives
-  // getScaleUpMultiplier's unconditional production-speed multiplier. Never reset by Scale Up
+  // RUN-SCOPED total of how many times Scale Up has been triggered (see scaleUpGame); the per-tier
+  // counts below, rather than this display/history total, drive production. Never reset by Scale Up
   // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
   // prestigeGame) — unlike the automation toggles/levels around it (smartAutobuyer/autoPrestige/
   // prestigeSpeedBonusUnlocked/autoScaleUp), the Scale Up multiplier itself doesn't survive a real
@@ -1736,8 +1736,8 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   const multiplier = stateAfterFlops.prestigeSpeedBonusUnlocked
     ? getPrestigeProductionMultiplier(stateAfterFlops.prestige.points)
     : 1
-  // Scale Up's multiplier, unlike the PP bonus above, needs no unlock step — it applies as soon
-  // as scaleUpCount > 0 (see getScaleUpMultiplier/scaleUpGame).
+  // Scale Up's per-tier multipliers, unlike the PP bonus above, need no unlock step — each applies
+  // as soon as that tier has a positive scaleUpTierCounts entry (see scaleUpGame).
 
   // Apply autobuyers: for each unlocked (non-null) tier, accumulate a fractional purchase-attempt
   // budget (see createInitialGameState) at a flat rate of 1 per real second — the tickspeed
@@ -1911,7 +1911,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // rate-accumulating budget — Scale Up has no cadence to throttle, unlike Auto-Prestige. Gated on
   // autoScaleUpEnabled (see setAutoScaleUpEnabled) — paused behaves exactly as if autoScaleUp were
   // still false, for automation purposes only; the manual Scale Up button is unaffected.
-  const stateAfterScaleUp = stateAfterAutoPrestigeAutobuyer.autoScaleUp && (stateAfterAutoPrestigeAutobuyer.autoScaleUpEnabled ?? true)
+  // Stop at the final tier so Auto Scale Up cannot repeatedly reset its level-3 progress before
+  // the player can reach the higher, deliberately manual Overclock requirement.
+  const stateAfterScaleUp = stateAfterAutoPrestigeAutobuyer.autoScaleUp
+    && (stateAfterAutoPrestigeAutobuyer.autoScaleUpEnabled ?? true)
+    && !isScaleUpTargetingLastTier(stateAfterAutoPrestigeAutobuyer)
     ? scaleUpGame(stateAfterAutoPrestigeAutobuyer)
     : stateAfterAutoPrestigeAutobuyer
 
@@ -6264,12 +6268,13 @@ export const unpinMuseumEntry = entryId => state => {
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches PRESTIGE_THRESHOLD:
 // once the current scale-up target tier (see getScaleUpTargetTier) reaches getScaleUpRequirement(state)'s
-// target LEVEL — a flat level 3 while scaleUpTargetTierIndex hasn't yet reached the last tier, or a
-// repeating multiple of 3 once it has — resets resources/owned/purchased (and every other per-run
+// target LEVEL — a flat level 3, including repeated final-tier claims — resets
+// resources/owned/purchased (and every other per-run
 // field, including every tier's own tickspeed level, purchase level/progress, and the global
 // tickspeed multiplier, both back to not-yet-bought — same reset prestigeGame now does) back to a
-// fresh game exactly like createInitialGameState, but permanently doubles production speed (see
-// getScaleUpMultiplier) and — unlike prestigeGame/overclockGame — carries `everUnlockedTierIds`
+// fresh game exactly like createInitialGameState, but permanently doubles production for each tier
+// already unlocked before the claim (see getTierScaleUpMultiplier) and — unlike
+// prestigeGame/overclockGame — carries `everUnlockedTierIds`
 // through unchanged instead of wiping it (see below), so every tier unlocked so far, PLUS the one
 // that reaching this activation's target level just permanently unlocked (same live threshold as
 // isTierUnlocked), stays unlocked through the reset. Autobuyer unlock/smartAutobuyer/
@@ -6307,10 +6312,9 @@ export const scaleUpGame = state => {
   if (targetTierLevel < getScaleUpRequirement(state)) return state
 
   const initial = createInitialGameState()
-  const targetTierIndex = getClampedScaleUpTargetTierIndex(state)
-  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map((tier, index) => [
+  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [
     tier.id,
-    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (index <= targetTierIndex ? 1 : 0),
+    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (isTierUnlocked(state)(tier) ? 1 : 0),
   ]))
   return {
     ...initial,

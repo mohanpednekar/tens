@@ -697,10 +697,9 @@ export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 // reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
 export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Per-activation production-speed multiplier base for Scale Up (see engine.js's
-// getScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
+// getTierScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
 // to each included tier’s Scale Up count, so a claim doubles only tiers already unlocked.
-// Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
-// scaleUpCount > 0.
+// Point speed bonus above, this needs no PP-spent unlock step.
 export const SCALE_UP_MULTIPLIER_BASE = 2
 // Scale Up always requires three levels on its target. Once the final tier is reached, every
 // reset starts another fresh three-level climb.

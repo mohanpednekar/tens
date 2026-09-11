@@ -7784,6 +7784,17 @@ describe('tickGame', () => {
     expect(after.purchaseLevels[firstTier.id]).toBe(1)
   })
 
+  it('leaves final-tier Scale Up manual so Auto Scale Up cannot block an Overclock climb', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withAutoScaleUp(withPurchaseLevel({
+      ...createInitialGameState(),
+      scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+    }, lastTier.id, 3))
+    const after = tickGame(1)(state)
+    expect(after.scaleUpCount).toBe(0)
+    expect(after.purchaseLevels[lastTier.id]).toBe(3)
+  })
+
   it('does not trigger Scale Up automatically when the first tier is not yet eligible', () => {
     const firstTier = TIER_DEFINITIONS[0]
     const state = withAutoScaleUp(
@@ -9060,6 +9071,7 @@ describe('scaleUpGame', () => {
     expect(after.purchaseLevels[thirdTier.id]).toBe(1)
     expect(after.everUnlockedTierIds[thirdTier.id]).toBe(true)
     expect(isTierUnlocked(after)(thirdTier)).toBe(true)
+    expect(getTierScaleUpMultiplier(after, thirdTier.id)).toBe(2)
   })
 
   it('resets money to the starting amount', () => {

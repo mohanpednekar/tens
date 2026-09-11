@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - **Scale Up now boosts only tiers already unlocked when it is used**; the newly revealed tier
   starts without that multiplier. At the final tier it remains available after every three levels.
-  Overclock now first unlocks at level 5 and requires at least three more levels after each use.
+  Auto Scale Up pauses there so it cannot prevent an Overclock climb. Overclock now first unlocks
+  at level 5 and requires at least three more levels after each use.
 - **Scale Up and Overclock cards are more compact**, with reduced card/button padding, heading
   margins, and spacing between and within the two soft-reset controls.
 - **A dedicated Data Lake pool-fill tile** — a small fillable element inside each Data Lake block
