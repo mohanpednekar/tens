@@ -262,8 +262,8 @@ export const createInitialGameState = () => ({
   // (never itself — see overclockGame).
   overclockCount: 0,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
-  // make Scale Up trigger automatically (see buyAutoScaleUp/tickGame) the instant it's eligible —
-  // no manual click needed. Never reset by prestige or by Scale Up itself, like
+  // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame) before the
+  // final-tier target; claims remain manual there so Overclock can be reached. Never reset by prestige or by Scale Up itself, like
   // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
   autoScaleUp: false,
   // Permanent GLOBAL flag, false = not yet bought: whether the 30 PP Compute auto-Boost unlock

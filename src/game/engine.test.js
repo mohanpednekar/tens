@@ -9413,10 +9413,18 @@ describe('overclockGame', () => {
     expect(after.overclockCount).toBe(8)
   })
 
-  it('resets scaleUpCount to 0, wiping Scale Up\'s own stacking bonus', () => {
-    const state = withScaleUpCount(eligibleState(), 5)
+  it('resets the aggregate Scale Up count and per-tier production bonuses to 0', () => {
+    const state = {
+      ...withScaleUpCount(eligibleState(), 5),
+      scaleUpTierCounts: {
+        ...eligibleState().scaleUpTierCounts,
+        [TIER_DEFINITIONS[0].id]: 5,
+      },
+    }
     const after = overclockGame(state)
     expect(after.scaleUpCount).toBe(0)
+    expect(after.scaleUpTierCounts[TIER_DEFINITIONS[0].id]).toBe(0)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[0].id)).toBe(1)
   })
 
   it('resets scaleUpTargetTierIndex to 0, along with everUnlockedTierIds relocking the last tier', () => {

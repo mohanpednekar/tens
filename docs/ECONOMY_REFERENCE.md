@@ -2323,9 +2323,9 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // unchanged, unlike scaleUpCount) — only by a real
                                                           // Prestige or by Overclock itself resetting scaleUpCount
                                                           // (not overclockCount) — see "Overclock" below
-  autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make Scale Up
-                                                          // trigger automatically every tick once eligible (see
-                                                          // buyAutoScaleUp) — never reset by Scale Up or prestige
+  autoScaleUp: false,                                    // permanent GLOBAL flag: PP spent to make eligible Scale Up
+                                                          // claims automatic before the final-tier target (see
+                                                          // buyAutoScaleUp); final-tier claims remain manual
   autoScaleUpEnabled: true,                              // permanent GLOBAL flag, default true: whether Auto
                                                           // Scale Up (once bought) currently acts — split from
                                                           // autoScaleUp the same way autoPrestigeEnabled splits
