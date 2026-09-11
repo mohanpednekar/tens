@@ -13,3 +13,6 @@
 ## 2026-09-06 - Focus Visible Styles for custom interactive components and Disclosure summary elements
 **Learning:** Custom components with `cursor: pointer` like `TierLine` that simulate button functionality often omit focus states, impairing keyboard navigation. Furthermore, native `<summary>` elements inside custom `<details>` (like `Disclosure`) require an explicit `:focus-visible` ring rather than relying on browser defaults to ensure proper keyboard accessibility within a styled-components environment.
 **Action:** When creating or modifying custom interactive elements with styled-components (such as `TierLine` and `Disclosure` summary elements), ensure `&:focus-visible` outlines are explicitly added to maintain standard keyboard accessibility flow.
+## 2024-09-11 - Static aria-label for Toggle Buttons with aria-pressed
+**Learning:** When adding `aria-pressed` to toggle buttons, ensure the button's `aria-label` is static (e.g., "Auto-buy") rather than dynamically changing based on state (e.g., "Enable Auto-buy" / "Disable Auto-buy"). Dynamic labels combined with `aria-pressed` cause redundant and confusing screen reader announcements.
+**Action:** When converting a button to a toggle state by adding `aria-pressed={bool}`, always remove dynamic state wording from its `aria-label` to provide a consistent control identity.
