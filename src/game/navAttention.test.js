@@ -262,14 +262,16 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purchaseLevels: { [lastTierId]: 2 },
+      purchaseLevels: { [lastTierId]: 5 },
       everUnlockedTierIds: { [lastTierId]: true },
       overclockCount: 0,
+      scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
       // Once every tier is unlocked, Scale Up's own requirement on the last tier is a flat 3 (see
-      // getScaleUpRequirement) — level 2 here keeps it unavailable so this isolates Overclock.
+      // getScaleUpRequirement).
     }
     expect(hasOverclockAvailable(state)).toBe(true)
-    expect(hasScaleUpAvailable(state)).toBe(false)
+    // Scale Up is also available because level 5 > 3
+    expect(hasScaleUpAvailable(state)).toBe(true)
     expect(hasTiersGameAttention(state)).toBe(true)
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })

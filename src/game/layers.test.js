@@ -292,7 +292,7 @@ describe('constants', () => {
   })
 
   it('OVERCLOCK_REQUIREMENT_STEP is 1 (the per-cycle escalation step, on top of getOverclockRequirement\'s own fixed +2 floor)', () => {
-    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(1)
+    expect(OVERCLOCK_REQUIREMENT_STEP).toBe(3)
   })
 
   it('POOL_CAPACITY_SI_STEP is 1000 (pool Capacity end bounds land on clean SI powers of 1000 Bytes)', () => {

@@ -1,5 +1,15 @@
 # Design history & rationale
 
+### Scale Up tier-scoped boosts and three-level reset cadence — 2026-09-10
+
+Scale Up now doubles only the tiers that were unlocked before the claim. The tier revealed by that
+claim deliberately starts at ×1, so each tier earns its first Scale Up multiplier only on the next
+claim. Per-tier counts (`scaleUpTierCounts`) preserve that boundary while `scaleUpCount` remains the
+run-wide activation count used for progression and display. Once the target reaches the final tier,
+the requirement stays at level 3 because every Scale Up resets tier levels and therefore already
+requires a fresh three-level climb. Overclock now requires level 5 initially and then three levels
+beyond the level recorded by its previous use.
+
 ### `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09
 
 A latent bug, pre-existing on `main`, surfaced by Devin Review on PR #623 (the Scale Up rename) —

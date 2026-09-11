@@ -878,7 +878,7 @@ below).
 Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
 level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
 tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by a quick-access **Scale Up** button instead (`⏩ ×{next}`, `actions.scaleUp` — the same
+grid slot — by a quick-access **Scale Up** button instead (`⏩ ×2`, `actions.scaleUp` — the same
 action `ScaleUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
 the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
 the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
@@ -1079,7 +1079,9 @@ order — rather than staying side by side down to phone width (an earlier versi
 tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
 `SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it.
+alongside it. Both soft-reset cards deliberately override the shared `StatCard` spacing with compact
+`0.5rem 0.65rem` padding and a `0.35rem` internal gap; their headings have no default margin, their
+buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
 progressive-disclosure gate at all — it's unconditionally rendered, since Scale Up is relevant from
@@ -1098,7 +1100,7 @@ redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button way
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
 match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 2.14%/lvl · Lv.8/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
+— e.g. `⚡ 2.14%/lvl · Lv.8/8` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
 claim past the bare minimum requirement, not just `overclockCount + 1`), formatted as a percentage by
