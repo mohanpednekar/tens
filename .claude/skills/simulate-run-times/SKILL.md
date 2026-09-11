@@ -78,8 +78,8 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   multiplier whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the
   min-consumption gate allows.
 - **Soft resets:** Scale Up first when eligible (`getScaleUpRequirement`: a flat level 3 on the
-  current unlock-frontier tier while any tier is still locked, then a repeating multiple of 3 on
-  the last tier once every tier is unlocked), then Overclock (`getOverclockRequirement`).
+  current target, including every repeat on the last tier), then Overclock
+  (`getOverclockRequirement`).
   Scale-Up-first is empirically faster to Googol than Overclock-first since the Scale Up redesign
   (Devin Review on PR #623) — Overclock-first repeatedly discards `scaleUpTargetTierIndex`/
   `everUnlockedTierIds` ladder progress whenever both conditions are met the same tick; see
@@ -151,7 +151,7 @@ imports — leave them alone unless that resolution itself breaks.
 **Do not** reintroduce the old `BUY_QUANTITY = 10` hardcode or a Foundry-skipping bot: both are
 wrong against the current game (real Buy batches to the cost-block boundary;
 `mainGameUnlocked` starts false and only flips via Foundry conversion). Also don't reintroduce
-`getScaleUpRequirement`'s old `scaleUpCount + 6` shape (superseded by the per-tier-unlock-then-
-last-tier-multiples-of-3 mechanic) — `actSoftResets` calls `scaleUpGame`/`overclockGame`
+`getScaleUpRequirement`'s old `scaleUpCount + 6` or last-tier-multiples-of-3 shapes (superseded by
+the flat level-3 target mechanic) — `actSoftResets` calls `scaleUpGame`/`overclockGame`
 unconditionally each cycle rather than duplicating the eligibility check here, since both engine
 functions already no-op internally when not eligible.
