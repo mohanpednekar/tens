@@ -136,7 +136,7 @@ const InfoPage = () => {
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
-  const scaleUpFirstRequirement = TIER_UNLOCK_PREV_LEVEL_REQUIREMENT - 1
+  const scaleUpFirstRequirement = TIER_UNLOCK_PREV_LEVEL_REQUIREMENT
   const overclockFirstRequirement = getOverclockRequirement(0)
   const lastTierName = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name
   const firstTierName = TIER_DEFINITIONS[0].name
@@ -517,16 +517,16 @@ const InfoPage = () => {
             working through — starting with {firstTierName} — to trigger a Scale Up.
           </li>
           <li>
-            Resets tiers and resources — but keeps every tier unlocked so far, and permanently
-            unlocks the next one too, alongside unlocked autobuyers and Prestige Points.
+            Resets tiers and resources and records the next tier. Recorded tiers reappear after
+            their predecessor reaches level 2; first-time reveals happen only on a successful Scale Up.
           </li>
           <li>
             Permanently doubles production for every tier already unlocked when you claim it.
             Each tier stacks its own bonus (×2, ×4, ×8, …); a newly revealed tier starts at ×1.
           </li>
           <li>
-            Every tier, including {lastTierName}, needs the same displayed level{' '}
-            {scaleUpFirstRequirement} for each Scale Up.
+            Each tier first needs level {scaleUpFirstRequirement}. At {lastTierName}, requirements
+            continue 3, 6, 9, and so on.
           </li>
           <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
         </ul>
@@ -546,7 +546,7 @@ const InfoPage = () => {
           </li>
           <li>
             In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 each
-            claim (1% → 1.1% → 1.21% → …), including its every-10th-level milestone bonus.
+            claim (1% → 1.1% → 1.21% → …), Clock Speed milestones remain progression markers but add no separate bonus.
           </li>
           <li>
             First claim needs level {overclockFirstRequirement}; each later claim needs three more
