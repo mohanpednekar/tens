@@ -974,9 +974,10 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    small secondary `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven) beside its badge/level
    text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
    icon-only, `$dimmed`-while-inactive `PpUpgradeBadge` convention as category 1 above (no written
-   "Active"/"Paused" anywhere). Auto Scale Up also dims and exposes an accessible "suspended at
-   final tier" status while its engine guard leaves final-tier claims manual for Overclock. Auto-
-   Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
+   "Active"/"Paused" anywhere). Auto Scale Up remains active at the final tier, where requirements
+   progress through raw levels 3, 6, 9, and so on; the automatic level-3 claim leaves Overclock
+   available at level 5 before the next automatic Scale Up at level 6. Auto-Prestige's
+   `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
 3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted
