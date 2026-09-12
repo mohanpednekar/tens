@@ -1427,6 +1427,23 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Scale Up h
   expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
 })
 
+test('Auto Scale Up reports its automatic final-tier suspension instead of claiming to be active', async () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier09: 10 },
+    autoScaleUp: true,
+    scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  expect(screen.getByLabelText('Auto Scale Up suspended at final tier')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Auto Scale Up active')).not.toBeInTheDocument()
+
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
+  expect(screen.getByLabelText('Auto Scale Up suspended at final tier')).toBeInTheDocument()
+})
+
 test('pausing Auto Scale Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
   vi.useFakeTimers()
 

@@ -262,8 +262,8 @@ export const createInitialGameState = () => ({
   // (never itself — see overclockGame).
   overclockCount: 0,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
-  // make Scale Up trigger automatically (see buyAutoScaleUp/tickGame) the instant it's eligible —
-  // no manual click needed. Never reset by prestige or by Scale Up itself, like
+  // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame) before the
+  // final-tier target; claims remain manual there so Overclock can be reached. Never reset by prestige or by Scale Up itself, like
   // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
   autoScaleUp: false,
   // Permanent GLOBAL flag, false = not yet bought: whether the 30 PP Compute auto-Boost unlock
@@ -5789,10 +5789,10 @@ export const buyGlobalTickspeedMultiplier = state => {
 // tierTickspeedAutobuyer, by contrast, are permanent and carry over unchanged. globalTickspeedMultiplier
 // (the Money-funded global tickspeed level) resets to not-yet-bought here too, same as scaleUpGame —
 // neither reset preserves it, since it's funded from the same Money balance prestige/Scale Up
-// already wipe, same as tickspeedLevels. scaleUpCount (the stacking 2^scaleUpCount production
-// multiplier Scale Up builds up) ALSO resets to 0 here — unlike every other automation flag/level
-// in this function, which are all permanent, this one doesn't survive a real Prestige, so a fresh
-// post-Prestige run has to rebuild its Scale Up multiplier from scratch; autoScaleUp (the
+// already wipe, same as tickspeedLevels. scaleUpCount (the aggregate activation counter) and
+// scaleUpTierCounts (the per-tier counters that drive production multipliers) ALSO reset here —
+// unlike every other automation flag/level in this function, neither survives a real Prestige, so
+// a fresh post-Prestige run has to rebuild its Scale Up multipliers from scratch; autoScaleUp (the
 // automation toggle) is unaffected and still carries over permanently, so it simply starts
 // re-accumulating scaleUpCount on its own. everUnlockedTierIds, by contrast, is
 // NOT carried over — it resets to the fresh initial default same as owned/purchased, so a real
@@ -6192,11 +6192,8 @@ export const prestigeGame = state => {
     computeAutoBoostUnlocked: state.computeAutoBoostUnlocked ?? initial.computeAutoBoostUnlocked,
     autoGlobalTickspeed: state.autoGlobalTickspeed ?? initial.autoGlobalTickspeed,
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
-    // scaleUpCount is NOT carried over here — it resets to 0 (initial.scaleUpCount) same as
-    // globalTickspeedMultiplier above, so the stacking 2^scaleUpCount production multiplier from
-    // Scale Up doesn't survive a real Prestige (a real Prestige is the bigger, rarer reset; Scale
-    // Up's multiplier is meant to be rebuilt within a single Prestige cycle, not to keep
-    // compounding across them). autoScaleUp (the automation toggle) is unaffected by this — it
+    // scaleUpCount/scaleUpTierCounts are NOT carried over here — both reset through ...initial, so
+    // Scale Up's aggregate count and per-tier production multipliers don't survive a real Prestige. autoScaleUp (the automation toggle) is unaffected by this — it
     // still carries over permanently above, so a player who already bought Auto Scale Up doesn't
     // need to re-buy it; it simply starts re-accumulating scaleUpCount from 0 on the next cycle.
     // overclockCount is likewise NOT carried over — same reasoning as scaleUpCount above, just one
@@ -6396,9 +6393,9 @@ export const scaleUpGame = state => {
 // LEVEL reaching getOverclockRequirement(overclockCount) — level 5 initially, then three more
 // than the last claimed level.
 // Resets everything scaleUpGame does (every per-run field back to a fresh game, permanent
-// automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount,
-// overclockGame resets it to 0 (initial.scaleUpCount) instead, wiping Scale Up's own stacking
-// 2^scaleUpCount production multiplier along with the rest of the reset. Unlike scaleUpGame's own
+// automation toggles/flags carried over unchanged) — but where scaleUpGame increments scaleUpCount
+// and eligible scaleUpTierCounts entries, overclockGame resets both through the fresh initial state,
+// wiping Scale Up's per-tier production multipliers. Unlike scaleUpGame's own
 // +1 self-increment, overclockCount jumps directly to the last tier's *current* level rather than
 // just the minimum requirement — since that level is only ever checked against, never consumed, a
 // player who claims late (last claimed at level 5, last tier now at level 8) catches up to level 8
@@ -6462,8 +6459,8 @@ export const overclockGame = state => {
       cumulativeBoost: initial.computeFlops.cumulativeBoost,
     },
     prestige: { ...state.prestige, xp: initial.prestige.xp, highestMilestone: initial.prestige.highestMilestone },
-    // scaleUpCount is deliberately NOT carried over (unlike scaleUpGame's own self-increment) —
-    // resets to 0 (initial.scaleUpCount), wiping Scale Up's own stacking bonus. This is Overclock's
+    // scaleUpCount/scaleUpTierCounts are deliberately NOT carried over (unlike scaleUpGame's own
+    // increments) — both reset through ...initial, wiping Scale Up's per-tier bonuses. This is Overclock's
     // defining trade: a steeper reset, in exchange for a permanent, much smaller, but
     // never-touched-by-an-ordinary-Scale-Up global tickspeed bonus instead.
     scaleUpCount: initial.scaleUpCount,
@@ -6472,10 +6469,9 @@ export const overclockGame = state => {
 }
 
 // One-time PP cost to permanently automate Scale Up (see AUTO_SCALE_UP_COST) — once bought,
-// tickGame calls scaleUpGame automatically every tick, which re-validates eligibility internally
-// (a no-op unless the current scale-up target tier has reached its own requirement — see
-// getScaleUpTargetTier/getScaleUpRequirement — and production isn't frozen), so this just
-// removes the need for a manual click once eligible. A no-op if already bought, if there aren't
+// tickGame calls scaleUpGame automatically every tick before the final-tier target, re-validating
+// eligibility internally (see getScaleUpTargetTier/getScaleUpRequirement); final-tier Scale Up
+// remains manual so automation cannot starve Overclock's higher gate. A no-op if already bought, if there aren't
 // enough unspent points, or while production is frozen — same convention as
 // buyPrestigeSpeedBonus/buySmartAutobuyer.
 export const buyAutoScaleUp = state => {

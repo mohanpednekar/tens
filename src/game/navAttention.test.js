@@ -265,8 +265,8 @@ describe('navAttention', () => {
       purchaseLevels: { [lastTierId]: 5 },
       everUnlockedTierIds: { [lastTierId]: true },
       overclockCount: 0,
-      // Scale Up still targets tier01 here, whose default level 1 keeps it unavailable, while the
-      // last tier has reached Overclock's first-claim level-5 requirement.
+      // Scale Up still targets tier01 in this state, so its untouched level keeps Scale Up
+      // unavailable while last-tier level 5 independently makes Overclock available.
     }
     expect(hasOverclockAvailable(state)).toBe(true)
     expect(hasScaleUpAvailable(state)).toBe(false)

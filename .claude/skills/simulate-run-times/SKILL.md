@@ -77,13 +77,11 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 - **Tickspeed (Money / XP):** buy the global tickspeed multiplier and each tier's own tickspeed
   multiplier whenever affordable; dump run XP into the last tier's XP-funded tickspeed when the
   min-consumption gate allows.
-- **Soft resets:** Scale Up first when eligible (`getScaleUpRequirement`: a flat level 3 on the
-  current target, including every repeat on the last tier), then Overclock
-  (`getOverclockRequirement`).
-  Scale-Up-first is empirically faster to Googol than Overclock-first since the Scale Up redesign
-  (Devin Review on PR #623) — Overclock-first repeatedly discards `scaleUpTargetTierIndex`/
-  `everUnlockedTierIds` ladder progress whenever both conditions are met the same tick; see
-  `docs/DESIGN_HISTORY.md` for the A/B numbers.
+- **Soft resets:** Scale Up first while its target advances through the tier ladder
+  (`getScaleUpRequirement`: a flat level 3). Once it targets the final tier, defer Scale Up and
+  continue climbing until Overclock (`getOverclockRequirement`) fires; otherwise repeatedly taking
+  the level-3 Scale Up would prevent the first level-5 Overclock forever. This mirrors Auto Scale
+  Up's own final-tier pause.
 - **PP lever kept active:** unlock the passive +1%-per-unspent-point production-speed bonus
   (`buyPrestigeSpeedBonus`) the instant `PRESTIGE_SPEED_BONUS_UNLOCK_COST` (10000) is banked —
   note that unlock **spends** those 10000 PP, so a starting balance of exactly 10000 leaves 0
@@ -152,6 +150,6 @@ imports — leave them alone unless that resolution itself breaks.
 wrong against the current game (real Buy batches to the cost-block boundary;
 `mainGameUnlocked` starts false and only flips via Foundry conversion). Also don't reintroduce
 `getScaleUpRequirement`'s old `scaleUpCount + 6` or last-tier-multiples-of-3 shapes (superseded by
-the flat level-3 target mechanic) — `actSoftResets` calls `scaleUpGame`/`overclockGame`
-unconditionally each cycle rather than duplicating the eligibility check here, since both engine
-functions already no-op internally when not eligible.
+the flat level-3 target mechanic). `actSoftResets` calls Scale Up first while moving through the
+tier ladder, then skips it at the final-tier target until Overclock fires; do not turn that branch
+back into an unconditional pair of reset calls, which would starve Overclock's level-5 gate.

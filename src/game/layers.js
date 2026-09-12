@@ -718,8 +718,8 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // Minimum last-tier level growth required between Overclock uses after the initial level-5 claim.
 export const OVERCLOCK_REQUIREMENT_STEP = 3
 // One-time PP cost to permanently automate Scale Up (see engine.js's buyAutoScaleUp) — once
-// bought, tickGame triggers scaleUpGame automatically the instant it's eligible, with no manual
-// click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
+// bought, tickGame triggers eligible Scale Ups automatically before the final-tier target; claims
+// remain manual there so Overclock can be reached. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
 // itself fires far more often than either of those two over a run — but pricier than
 // TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
 // smaller, earlier-game upgrade than Scale Up.
