@@ -1971,8 +1971,10 @@ shown — relevant from the very first cycle, well before the last tier even exi
 (`ScaleUpButton`, sized to match the tier rows' own Buy/tickspeed button font size rather than the
 larger default `Button` size) shows `⏩ ×2 · Lv.{level}/{requirement}` — not a percentage, so the
 player sees concretely what's still needed, against the CURRENT target tier's name/level (via
-`getScaleUpTargetTier`), not always the last tier's. `state.purchaseLevels[targetTier.id]` and `getScaleUpRequirement(state)` are displayed raw as
-one-based game levels, so the final-tier button shows 3, then 6, then 9. Enabled once the requirement is met and disabled
+`getScaleUpTargetTier`), not always the last tier's. Player-facing levels count completed purchase
+blocks, so the one-based `state.purchaseLevels[targetTier.id]` cursor and
+`getScaleUpRequirement(state)` are each displayed with a `-1` offset; the final-tier requirements
+therefore show 2, then 5, then 8. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
 and `autoScaleUp` bought, a static "⏩ Auto Scale Up active" note shows (the purchase button itself
 lives on the PP Upgrades page).
@@ -2044,15 +2046,14 @@ above) — not grouped with `GlobalTickspeedCard`, which renders separately at t
 Gated on `overclockEverRevealed` (see docs/MAINPAGE_REFERENCE.md), the same
 progressive-disclosure pattern as `scaleUpEverRevealed`. The button (`OverclockButton`, sized to match
 `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) shows `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 2.14%/lvl · Lv.8/8` — where `{nextStep}` is the regular-step percentage that would result
+— e.g. `⚡ 2.14%/lvl · Lv.7/7` — where `{nextStep}` is the regular-step percentage that would result
 from claiming right now (`1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel,
 overclockRequirement))`, accounting for a catch-up jump past the bare minimum requirement, not just
 `overclockCount + 1`), formatted as a percentage by reusing `formatGlobalTickspeedBonusPercent`'s
 trimmed-decimal formatting (passing it `1 + step` as if it were a multiplier, since that function
-already computes `(multiplier - 1) * 100`). Both Scale Up and Overclock show the raw one-based engine level and requirement without a `-1`
-display offset. `getOverclockRequirement`'s numbers are shown exactly as `state.purchaseLevels[lastTier.id]` and the requirement itself already read, matching
-the same raw level number the last tier's own Details disclosure shows, rather than introducing a
-second, differently-offset "level" reading for the same underlying value. Enabled once the requirement
+already computes `(multiplier - 1) * 100`). Like Scale Up, Overclock displays the raw one-based
+engine level and requirement with a `-1` offset so both numbers indicate completed purchase levels;
+the fill bar uses those same displayed values. Enabled once the raw engine requirement
 is met and disabled while frozen — no `window.confirm` guard, same rationale as Scale Up (beneficial,
 not destructive).
 
