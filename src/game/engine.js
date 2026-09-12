@@ -6310,18 +6310,19 @@ export const scaleUpGame = state => {
 
   const initial = createInitialGameState()
   const targetTierIndex = getClampedScaleUpTargetTierIndex(state)
-  const successorTier = TIER_DEFINITIONS[targetTierIndex + 1]
-  const hasProgressBeyondSuccessor = successorTier && (
-    (state.owned?.[successorTier.id] ?? 0) > 0 ||
-    TIER_DEFINITIONS.slice(targetTierIndex + 2).some(isTierUnlocked(state))
-  )
-  const newlyRevealedTierId = hasProgressBeyondSuccessor ? null : successorTier?.id
-  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [
-    tier.id,
-    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (
-      isTierUnlocked(state)(tier) && tier.id !== newlyRevealedTierId ? 1 : 0
-    ),
-  ]))
+  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map((tier, index) => {
+    // Reaching the target's claim boundary also makes its immediate successor satisfy the live
+    // isTierUnlocked predicate. That successor only counts if it had genuinely been reached before
+    // this claim (latched or owned); every other currently unlocked tier is part of the snapshot.
+    const isNewlyRevealedSuccessor = index === targetTierIndex + 1
+      && !state.everUnlockedTierIds?.[tier.id]
+      && (state.owned?.[tier.id] ?? 0) <= 0
+    const receivesBonus = isTierUnlocked(state)(tier) && !isNewlyRevealedSuccessor
+    return [
+      tier.id,
+      (state.scaleUpTierCounts?.[tier.id] ?? 0) + (receivesBonus ? 1 : 0),
+    ]
+  }))
   return {
     ...initial,
     // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
