@@ -483,10 +483,11 @@ test('cancelling Reset Byte Foundry leaves Foundry progress untouched', async ()
   expect(saved.intro.computeCores).toBe(3)
 })
 
-test('Megabytes tier appears and is purchasable once Kilobytes has fully purchased two levels (16 owned)', () => {
+test('a recorded Megabytes tier reappears and is purchasable once Kilobytes reaches level 2', () => {
   seedMainGameState({
     resources: { base: 8_000_000 },
     owned: { tier01: 16 },
+    everUnlockedTierIds: { tier01: true, tier02: true },
   })
   render(<App />)
 
@@ -507,6 +508,7 @@ test('buying a higher tier does not deduct the tier below\'s owned count', async
   seedMainGameState({
     resources: { base: 8_000_000 },
     owned: { tier01: 16 },
+    everUnlockedTierIds: { tier01: true, tier02: true },
   })
   render(<App />)
 
@@ -1019,7 +1021,7 @@ test('the Scale Up button is disabled below the first tier\'s required level (3)
   render(<App />)
 
   expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeDisabled()
 })
 
 test('the Scale Up button is enabled once the first tier reaches the required level (3)', () => {
@@ -1029,7 +1031,7 @@ test('the Scale Up button is enabled once the first tier reaches the required le
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeEnabled()
 })
 
 test('the second Scale Up targets the next tier, at the same flat level requirement — not one more level of the same tier', () => {
@@ -1040,21 +1042,22 @@ test('the second Scale Up targets the next tier, at the same flat level requirem
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })
+  const button = screen.getByRole('button', { name: /scale up \(requires megabytes level 3/i })
   expect(button).toBeDisabled()
   expect(screen.queryByRole('button', { name: /scale up \(requires kilobytes/i })).not.toBeInTheDocument()
 })
 
-test('once every tier is unlocked, each Scale Up requires a fresh three-level climb', () => {
+test('after the first final-tier Scale Up, the next requirement advances to level 6', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 3 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
+    purchaseLevels: { tier09: 3, tier10: 6 },
     scaleUpTargetTierIndex: 10,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 2/i })
+  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 6/i })
   expect(button).toBeEnabled()
 })
 
@@ -1068,15 +1071,16 @@ test('the Scale Up button shows its per-claim ×2 effect and requirement progres
 
   // The action always doubles currently unlocked tiers, regardless of prior activation count.
   expect(screen.getByRole('button', {
-    name: /scale up \(requires kilobytes level 2\) — doubles production for tiers unlocked so far/i,
+    name: /scale up \(requires kilobytes level 3\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · Lv.1/2')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · Lv.2/3')
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3 },
   })
   render(<App />)
@@ -1104,7 +1108,7 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
 
   // The top panel's own Scale Up button is a separate element doing something else entirely
   // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
-  const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires quettabytes level 2/i })
+  const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires quettabytes level 3/i })
   expect(panelScaleUpButton).not.toBe(rowXpButton)
 })
 
@@ -1117,16 +1121,16 @@ test('clicking Scale Up once eligible resets resources but advances the target t
   })
   render(<App />)
 
-  const scaleUpButton = screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })
+  const scaleUpButton = screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })
   expect(scaleUpButton).toBeEnabled()
 
   await user.click(scaleUpButton)
 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Scale Up resets owned/purchaseLevels for every tier and advances the target to the next tier
-  // (Megabytes), at the same flat level-3 (displayed level 2) requirement.
+  // (Megabytes), at the same flat level-3 (displayed level 3) requirement.
   expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 3/i })).toBeDisabled()
 })
 
 test('Scale Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
@@ -1144,7 +1148,7 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i }))
+  await user.click(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i }))
 
   // Scale Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
@@ -1156,18 +1160,20 @@ test('the Scale Up button is disabled once production freezes at a googol', () =
   seedMainGameState({
     resources: { base: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 2 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeDisabled()
 })
 
 test('no Auto Scale Up control appears during the first run, even with the last tier unlocked', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
   })
   render(<App />)
 
@@ -1188,6 +1194,7 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 3 },
     overclockCount: 3,
   })
@@ -1201,6 +1208,7 @@ test('the Overclock button is enabled once the last tier reaches the required le
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 6 },
     overclockCount: 3,
   })
@@ -1213,6 +1221,7 @@ test('the first Overclock claim of a cycle is never free — a completely untouc
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3 },
   })
   render(<App />)
@@ -1224,6 +1233,7 @@ test('the next Overclock requires three levels beyond the previous use', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 7 },
     overclockCount: 5,
   })
@@ -1237,6 +1247,7 @@ test('the Overclock button shows the next per-level Tickspeed rate and requireme
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 8 },
     overclockCount: 5,
   })
@@ -1260,6 +1271,7 @@ test('the Overclock card\'s disclosure states the current per-level Tickspeed ra
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 12 },
     overclockCount: 10,
   })
@@ -1274,6 +1286,7 @@ test('the Overclock card\'s disclosure shows no per-level rate line before the f
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 1 },
   })
 
@@ -1319,6 +1332,7 @@ test('the Overclock button is disabled once production freezes at a googol', () 
   seedMainGameState({
     resources: { base: PRESTIGE_THRESHOLD },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 10 },
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 100 },
   })
@@ -1364,6 +1378,7 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     prestige: { xp: 0, points: 20, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1396,6 +1411,7 @@ test('an Enable Tickspeed Autobuyer button appears on the PP Upgrades page after
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     prestige: { xp: 0, points: 10, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1417,6 +1433,7 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Scale Up h
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     autoScaleUp: true,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
@@ -1427,21 +1444,22 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Scale Up h
   expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
 })
 
-test('Auto Scale Up reports its automatic final-tier suspension instead of claiming to be active', async () => {
+test('Auto Scale Up remains active at the final tier', async () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
+    everUnlockedTierIds: { tier01: true, tier10: true },
     autoScaleUp: true,
     scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
     prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
   })
   render(<App />)
 
-  expect(screen.getByLabelText('Auto Scale Up suspended at final tier')).toBeInTheDocument()
-  expect(screen.queryByLabelText('Auto Scale Up active')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Auto Scale Up suspended at final tier')).not.toBeInTheDocument()
 
   await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
-  expect(screen.getByLabelText('Auto Scale Up suspended at final tier')).toBeInTheDocument()
+  expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
 })
 
 test('pausing Auto Scale Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {
@@ -1458,7 +1476,7 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   // Still eligible (purchaseLevels.tier01 untouched) since Auto Scale Up starts paused.
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeEnabled()
 
   // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
@@ -1468,9 +1486,9 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Scale Up fired automatically once resumed — resources reset and the target tier advances to
-  // Megabytes, at the same flat level-3 (displayed level 2) requirement.
+  // Megabytes, at the same flat level-3 (displayed level 3) requirement.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 3/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -1567,42 +1585,35 @@ test('the Clock Speed Upgrade button costs another power of ten each level, and 
   expect(panel).toHaveTextContent(/\+2\.01%/i)
 })
 
-test('the global tickspeed bonus jumps at the first 10-level milestone, compounding the 10% milestone step on top of the regular 1% levels before it', () => {
+test('Clock Speed milestone levels use the same compounded step as every other level', () => {
   seedMainGameState({
     resources: { base: 1e15 },
     globalTickspeedMultiplier: 10,
   })
   render(<App />)
 
-  // 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%:
-  // 1.01^9 * 1.10 ≈ ×1.2031.
-  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+20\.31%/i)
+  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+10\.46%/i)
 })
 
-test('the global tickspeed bonus still shows fractional percent precision one level before a milestone pushes it past 100%', () => {
+test('the global tickspeed bonus keeps fractional percent precision between milestones', () => {
   seedMainGameState({
     resources: { base: 1e15 },
     globalTickspeedMultiplier: 39,
   })
   render(<App />)
 
-  // Level 39 (no milestone yet — next one is at 40) is still under 100%, so it shows 2 decimals.
-  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+90\.44%/i)
+  expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/\+47\.41%/i)
 })
 
-test('the global tickspeed bonus switches to an "Nx" multiplier once it crosses +100% at a milestone', () => {
+test('the global tickspeed bonus switches to an "Nx" multiplier once uniform compounding crosses +100%', () => {
   seedMainGameState({
     resources: { base: 1e15 },
-    globalTickspeedMultiplier: 40,
+    globalTickspeedMultiplier: 70,
   })
   render(<App />)
 
-  // Level 40 is a milestone (every 10th level up to 100) — the resulting jump crosses +100%
-  // (×2.0948), so it's shown as a "2.09x" multiplier (formatBonusOrMultiplier) instead of a
-  // percentage.
   const panel = screen.getByLabelText(/^global clock speed panel$/i)
-  expect(panel).toHaveTextContent(/2\.09x/i)
-  expect(panel).not.toHaveTextContent(/109%/i)
+  expect(panel).toHaveTextContent(/2\.01x/i)
 })
 
 const ALL_TIER_IDS = ['tier01', 'tier02', 'tier03', 'tier04', 'tier05', 'tier06', 'tier07', 'tier08', 'tier09', 'tier10']
@@ -1899,6 +1910,7 @@ test('a locked badge appears on the PP Upgrades page for a tier whose autobuyer 
     // no locked state to observe for it. tier02's own milestone (Prestige 2) isn't met yet at
     // count 1, so it's the one that stays locked here.
     owned: { tier01: 16 }, // fully purchases two levels, unlocking Megabytes
+    everUnlockedTierIds: { tier01: true, tier02: true },
     prestige: { xp: 0, points: 100, count: 1, highestMilestone: 1 },
   })
   render(<App />)
@@ -1915,6 +1927,7 @@ test('a tier\'s autobuyer auto-unlocks (no PP spent) once its prestige milestone
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 16 },
+    everUnlockedTierIds: { tier01: true, tier02: true },
     prestige: { xp: 0, points: 20, count: 2, highestMilestone: 1 }, // meets megabytes' milestone (2)
   })
   render(<App />)
@@ -2292,7 +2305,7 @@ test('the money balance breakdown reports a not-yet-unlocked/not-yet-activated s
 
   const breakdown = screen.getByLabelText(/^global production multipliers$/i)
   expect(breakdown).toHaveTextContent(/prestige speed bonus: not yet unlocked \(10,000 pp on the upgrades page\)/i)
-  expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach level 2 on kilobytes\)/i)
+  expect(breakdown).toHaveTextContent(/scale up: not yet activated \(reach level 3 on kilobytes\)/i)
   expect(breakdown).toHaveTextContent(/clock speed: not yet active/i)
 })
 
