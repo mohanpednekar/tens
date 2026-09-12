@@ -697,10 +697,9 @@ export const AUTO_PRESTIGE_COST_MULTIPLIER = 2
 // reached GOOGOL. Each level beyond the first speeds this up by 10%, compounding.
 export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // Per-activation production-speed multiplier base for Scale Up (see engine.js's
-// getScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
+// getTierScaleUpMultiplier/scaleUpGame) — production is multiplied by SCALE_UP_MULTIPLIER_BASE raised
 // to each included tier’s Scale Up count, so a claim doubles only tiers already unlocked.
-// Point speed bonus above, this is unconditional — no PP-spent unlock step, it applies as soon as
-// scaleUpCount > 0.
+// Point speed bonus above, this needs no PP-spent unlock step.
 export const SCALE_UP_MULTIPLIER_BASE = 2
 // Scale Up always requires three levels on its target. Once the final tier is reached, every
 // reset starts another fresh three-level climb.
@@ -719,8 +718,8 @@ export const OVERCLOCK_MULTIPLIER_STEP = 0.1
 // Minimum last-tier level growth required between Overclock uses after the initial level-5 claim.
 export const OVERCLOCK_REQUIREMENT_STEP = 3
 // One-time PP cost to permanently automate Scale Up (see engine.js's buyAutoScaleUp) — once
-// bought, tickGame triggers scaleUpGame automatically the instant it's eligible, with no manual
-// click needed. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
+// bought, tickGame triggers eligible Scale Ups automatically before the final-tier target; claims
+// remain manual there so Overclock can be reached. Cheaper than PRESTIGE_SPEED_BONUS_UNLOCK_COST/AUTO_PRESTIGE_COST since Scale Up
 // itself fires far more often than either of those two over a run — but pricier than
 // TICKSPEED_AUTOBUYER_COST below, since the global tickspeed multiplier it automates is a much
 // smaller, earlier-game upgrade than Scale Up.

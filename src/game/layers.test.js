@@ -291,7 +291,7 @@ describe('constants', () => {
     expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 
-  it('OVERCLOCK_REQUIREMENT_STEP is 3 (the minimum level increase between claims after the level-5 floor)', () => {
+  it('OVERCLOCK_REQUIREMENT_STEP is 3 (each later claim requires three more levels)', () => {
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(3)
   })
 

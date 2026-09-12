@@ -7784,6 +7784,17 @@ describe('tickGame', () => {
     expect(after.purchaseLevels[firstTier.id]).toBe(1)
   })
 
+  it('leaves final-tier Scale Up manual so Auto Scale Up cannot block an Overclock climb', () => {
+    const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
+    const state = withAutoScaleUp(withPurchaseLevel({
+      ...createInitialGameState(),
+      scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+    }, lastTier.id, 3))
+    const after = tickGame(1)(state)
+    expect(after.scaleUpCount).toBe(0)
+    expect(after.purchaseLevels[lastTier.id]).toBe(3)
+  })
+
   it('does not trigger Scale Up automatically when the first tier is not yet eligible', () => {
     const firstTier = TIER_DEFINITIONS[0]
     const state = withAutoScaleUp(
@@ -9029,11 +9040,11 @@ describe('scaleUpGame', () => {
   })
 
   it('stacks across repeated activations', () => {
-    // getScaleUpRequirement at scaleUpTargetTierIndex lastIndex + 2 = level 9
+    // The final-tier requirement remains the flat level 3 after repeated activations.
     const state = {
       ...withPurchaseLevel(
         { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 },
-        lastTier.id, 9
+        lastTier.id, 3
       ),
       scaleUpCount: 2,
     }
@@ -9060,6 +9071,7 @@ describe('scaleUpGame', () => {
     expect(after.purchaseLevels[thirdTier.id]).toBe(1)
     expect(after.everUnlockedTierIds[thirdTier.id]).toBe(true)
     expect(isTierUnlocked(after)(thirdTier)).toBe(true)
+    expect(getTierScaleUpMultiplier(after, thirdTier.id)).toBe(2)
   })
 
   it('resets money to the starting amount', () => {
@@ -9310,6 +9322,21 @@ describe('scaleUpGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(1)
   })
 
+  it('boosts the successor too when progress beyond it proves it was unlocked before a lagging Scale Up claim', () => {
+    const state = {
+      ...withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 3),
+      everUnlockedTierIds: {
+        ...createInitialGameState().everUnlockedTierIds,
+        [TIER_DEFINITIONS[1].id]: true,
+        [TIER_DEFINITIONS[2].id]: true,
+      },
+    }
+    const after = scaleUpGame(state)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[0].id)).toBe(2)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[1].id)).toBe(2)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(2)
+  })
+
   it('keeps overclockCount permanently across an ordinary Scale Up', () => {
     const state = withOverclockCount(eligibleState(), 4)
     const after = scaleUpGame(state)
@@ -9386,10 +9413,18 @@ describe('overclockGame', () => {
     expect(after.overclockCount).toBe(8)
   })
 
-  it('resets scaleUpCount to 0, wiping Scale Up\'s own stacking bonus', () => {
-    const state = withScaleUpCount(eligibleState(), 5)
+  it('resets the aggregate Scale Up count and per-tier production bonuses to 0', () => {
+    const state = {
+      ...withScaleUpCount(eligibleState(), 5),
+      scaleUpTierCounts: {
+        ...eligibleState().scaleUpTierCounts,
+        [TIER_DEFINITIONS[0].id]: 5,
+      },
+    }
     const after = overclockGame(state)
     expect(after.scaleUpCount).toBe(0)
+    expect(after.scaleUpTierCounts[TIER_DEFINITIONS[0].id]).toBe(0)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[0].id)).toBe(1)
   })
 
   it('resets scaleUpTargetTierIndex to 0, along with everUnlockedTierIds relocking the last tier', () => {
