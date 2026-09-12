@@ -291,7 +291,11 @@ describe('constants', () => {
     expect(OVERCLOCK_MULTIPLIER_STEP).toBe(0.1)
   })
 
+<<<<<<< HEAD
   it('OVERCLOCK_REQUIREMENT_STEP is 1 (the per-cycle escalation step, on top of getOverclockRequirement\'s own fixed +2 floor)', () => {
+=======
+  it('OVERCLOCK_REQUIREMENT_STEP is 3 (each later claim requires three more levels)', () => {
+>>>>>>> origin/main
     expect(OVERCLOCK_REQUIREMENT_STEP).toBe(3)
   })
 

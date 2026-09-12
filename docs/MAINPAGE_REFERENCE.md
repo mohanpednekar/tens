@@ -973,8 +973,10 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    above (🤖 Unlock, ⚙ tier tickspeed autobuyer, 🧠 Smart). Once bought, each of the four carries a
    small secondary `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven) beside its badge/level
    text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
-   icon-only, `$dimmed`-while-paused `PpUpgradeBadge` convention as category 1 above (no written
-   "Active"/"Paused" anywhere), and Auto-Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
+   icon-only, `$dimmed`-while-inactive `PpUpgradeBadge` convention as category 1 above (no written
+   "Active"/"Paused" anywhere). Auto Scale Up also dims and exposes an accessible "suspended at
+   final tier" status while its engine guard leaves final-tier claims manual for Overclock. Auto-
+   Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
 3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted
@@ -1103,7 +1105,7 @@ match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {next
 — e.g. `⚡ 2.14%/lvl · Lv.8/8` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
-claim past the bare minimum requirement, not just `overclockCount + 1`), formatted as a percentage by
+claim past the bare minimum requirement, not just `overclockCount + 3`), formatted as a percentage by
 reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passing it `1 + step` as if
 it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
 reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see

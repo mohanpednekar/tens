@@ -46,7 +46,6 @@ import {
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_PRODUCTION_MULTIPLIER_STEP,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
-  SCALE_UP_FINAL_TIER_REQUIREMENT_STEP,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
   getStoragePoolMemoryBounds,
@@ -521,12 +520,13 @@ const InfoPage = () => {
             Resets tiers and resources — but keeps every tier unlocked so far, and permanently
             unlocks the next one too, alongside unlocked autobuyers and Prestige Points.
           </li>
-          <li>Permanently doubles production speed each time (stacks: ×2, ×4, ×8, …).</li>
           <li>
-            Every tier before {lastTierName} needs the same displayed level {scaleUpFirstRequirement} to
-            trigger the next Scale Up. Once {lastTierName} itself is unlocked, each later activation
-            instead needs {SCALE_UP_FINAL_TIER_REQUIREMENT_STEP} more levels of {lastTierName} than the
-            last (displayed level {scaleUpFirstRequirement}, then {SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * 2 - 1}, …).
+            Permanently doubles production for every tier already unlocked when you claim it.
+            Each tier stacks its own bonus (×2, ×4, ×8, …); a newly revealed tier starts at ×1.
+          </li>
+          <li>
+            Every tier, including {lastTierName}, needs the same displayed level{' '}
+            {scaleUpFirstRequirement} for each Scale Up.
           </li>
           <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
         </ul>
@@ -549,8 +549,8 @@ const InfoPage = () => {
             claim (1% → 1.1% → 1.21% → …), including its every-10th-level milestone bonus.
           </li>
           <li>
-            First claim needs level {overclockFirstRequirement}; each later claim needs one more
-            level than the last.
+            First claim needs level {overclockFirstRequirement}; each later claim needs three more
+            levels than the last.
           </li>
           <li>
             Claiming jumps straight to whatever level {lastTierName} has already reached — you don’t
