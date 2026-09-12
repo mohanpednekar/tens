@@ -1045,12 +1045,12 @@ test('the second Scale Up targets the next tier, at the same flat level requirem
   expect(screen.queryByRole('button', { name: /scale up \(requires kilobytes/i })).not.toBeInTheDocument()
 })
 
-test('once every tier is unlocked, each further Scale Up requires a fresh three-level climb', () => {
+test('once every tier is unlocked, each Scale Up requires a fresh three-level climb', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 5 },
-    scaleUpTargetTierIndex: 10, // TIER_DEFINITIONS.length (10 tiers) + 1 prior activation past the last tier
+    purchaseLevels: { tier09: 3, tier10: 3 },
+    scaleUpTargetTierIndex: 10,
   })
   render(<App />)
 
@@ -1058,7 +1058,7 @@ test('once every tier is unlocked, each further Scale Up requires a fresh three-
   expect(button).toBeEnabled()
 })
 
-test('the Scale Up button shows the next multiplier and requirement progress on itself', () => {
+test('the Scale Up button shows its per-claim ×2 effect and requirement progress on itself', () => {
   seedMainGameState({
     resources: { base: 10 },
     purchaseLevels: { tier01: 2 },
@@ -1066,8 +1066,7 @@ test('the Scale Up button shows the next multiplier and requirement progress on 
   })
   render(<App />)
 
-  // Flat per-tier requirement (level 3, displayed Lv.2) and the per-claim ×2 are shown on the
-  // button itself, while the accessible name explains that only tiers unlocked so far are doubled.
+  // The action always doubles currently unlocked tiers, regardless of prior activation count.
   expect(screen.getByRole('button', {
     name: /scale up \(requires kilobytes level 2\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
@@ -1190,24 +1189,24 @@ test('the Overclock panel appears once the last tier unlocks, with the button di
     resources: { base: 10 },
     owned: { tier09: 10 },
     purchaseLevels: { tier09: 3, tier10: 3 },
-    overclockCount: 0,
+    overclockCount: 3,
   })
   render(<App />)
 
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 6/i })).toBeDisabled()
 })
 
 test('the Overclock button is enabled once the last tier reaches the required level', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
-    purchaseLevels: { tier09: 3, tier10: 5 },
-    overclockCount: 0,
+    purchaseLevels: { tier09: 3, tier10: 6 },
+    overclockCount: 3,
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 6/i })).toBeEnabled()
 })
 
 test('the first Overclock claim of a cycle is never free — a completely untouched last tier (level 1) is not enough', () => {
@@ -1221,7 +1220,7 @@ test('the first Overclock claim of a cycle is never free — a completely untouc
   expect(screen.getByRole('button', { name: /overclock \(requires quettabytes level 5/i })).toBeDisabled()
 })
 
-test('a later Overclock requires three more levels than the previous use', () => {
+test('the next Overclock requires three levels beyond the previous use', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
@@ -1232,7 +1231,6 @@ test('a later Overclock requires three more levels than the previous use', () =>
 
   const button = screen.getByRole('button', { name: /overclock \(requires quettabytes level 8/i })
   expect(button).toBeDisabled()
-  expect(screen.queryByRole('button', { name: /overclock \(requires quettabytes level 5\b/i })).not.toBeInTheDocument()
 })
 
 test('the Overclock button shows the next per-level Tickspeed rate and requirement progress on itself, using the raw (non-offset) tier level', () => {
@@ -1296,6 +1294,7 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   })
   render(<App />)
 
+  // Each Scale Up action advertises the ×2 applied to eligible tiers.
   expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2')
 
   const overclockButton = screen.getByRole('button', { name: /overclock \(requires quettabytes level 5\b/i })
@@ -1307,7 +1306,7 @@ test('clicking Overclock once eligible jumps overclockCount straight to the last
   // Overclock resets owned counts too, so the last tier is no longer unlocked — but since both
   // panels were already revealed once, they stay visible (in a disabled state) rather than
   // disappearing again. The claim jumped overclockCount straight to 8 (the last tier's level at
-  // claim time), so the next cycle now requires level 11 — and Scale Up's own
+  // claim time), not just to 2, so the next cycle now requires level 11 — and Scale Up's own
   // stacking bonus is wiped back to ×2 (scaleUpCount reset to 0, so the *next* activation would
   // only reach ×2 again).
   expect(screen.getByLabelText(/^overclock panel$/i)).toBeInTheDocument()
@@ -1426,6 +1425,23 @@ test('a static "Active" badge shows on the PP Upgrades page once Auto Scale Up h
 
   expect(screen.getByLabelText('Auto Scale Up active')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
+})
+
+test('Auto Scale Up reports its automatic final-tier suspension instead of claiming to be active', async () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier09: 10 },
+    autoScaleUp: true,
+    scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  expect(screen.getByLabelText('Auto Scale Up suspended at final tier')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Auto Scale Up active')).not.toBeInTheDocument()
+
+  await userEvent.setup().click(screen.getByRole('tab', { name: /open upgrades/i }))
+  expect(screen.getByLabelText('Auto Scale Up suspended at final tier')).toBeInTheDocument()
 })
 
 test('pausing Auto Scale Up via its toggle stops it from firing automatically, even once eligible; resuming fires it again', () => {

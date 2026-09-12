@@ -878,7 +878,7 @@ below).
 Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
 level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
 tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by a quick-access **Scale Up** button instead (`⏩ ×{next}`, `actions.scaleUp` — the same
+grid slot — by a quick-access **Scale Up** button instead (`⏩ ×2`, `actions.scaleUp` — the same
 action `ScaleUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
 the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
 the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
@@ -973,8 +973,10 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    above (🤖 Unlock, ⚙ tier tickspeed autobuyer, 🧠 Smart). Once bought, each of the four carries a
    small secondary `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven) beside its badge/level
    text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
-   icon-only, `$dimmed`-while-paused `PpUpgradeBadge` convention as category 1 above (no written
-   "Active"/"Paused" anywhere), and Auto-Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
+   icon-only, `$dimmed`-while-inactive `PpUpgradeBadge` convention as category 1 above (no written
+   "Active"/"Paused" anywhere). Auto Scale Up also dims and exposes an accessible "suspended at
+   final tier" status while its engine guard leaves final-tier claims manual for Overclock. Auto-
+   Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
 3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted

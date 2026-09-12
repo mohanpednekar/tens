@@ -1053,10 +1053,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // independent counter that only advances when Scale Up itself fires — NOT necessarily the
   // highest tier unlocked so far, which can run ahead of it via ordinary play; clamped to the last
   // tier once reached) reaches that cycle's requirement (getScaleUpRequirement(state): a flat
-  // level 3 during the unlock phase, or a repeating multiple of 3 on the last tier once every tier
-  // is unlocked), it resets
-  // tiers/resources but permanently doubles production speed (stacking with every prior
-  // activation) AND keeps every tier unlocked so far, plus the one that reaching this level just
+  // level 3 for every target, including repeats on the last tier), it resets tiers/resources but
+  // permanently doubles production for every tier already unlocked before the claim (stacking per
+  // tier) AND keeps every tier unlocked so far, plus the one that reaching this level just
   // permanently unlocked. Always shown (relevant from the very first cycle, well before the last
   // tier itself exists) — unlike Overclock below, there's no progressive-disclosure gate here.
   const scaleUpTargetTier = getScaleUpTargetTier(state)
@@ -1074,10 +1073,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const canScaleUp = !isFrozen && scaleUpTargetTierLevel >= scaleUpRequirement
 
   // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own level
-  // passes the next Overclock level — one more than the last claimed level (see
-  // getOverclockRequirement/overclockGame in engine.js); no artificial ladder beyond that. Unlike
-  // Scale Up, claiming it also wipes Scale Up's own stacking bonus back to zero (its scaleUpCount
-  // resets to 0) in exchange for permanently multiplying BOTH the (Money-funded) global Tickspeed
+  // reaches the next Overclock level — level 5 initially, then three beyond the last claimed level
+  // (see getOverclockRequirement/overclockGame in engine.js). Unlike Scale Up, claiming it also
+  // wipes Scale Up's per-tier bonuses back to ×1 (scaleUpTierCounts resets) in exchange for
+  // permanently multiplying BOTH the (Money-funded) global Tickspeed
   // upgrade's regular and milestone per-level steps by getOverclockMultiplier(overclockCount)
   // (×1.1 per level) — folded into that existing track's own compounding rate, not a separate
   // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
@@ -1118,6 +1117,18 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
   // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
+  const autoScaleUpFinalTierSuspended = (state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1
+  const autoScaleUpEffectivelyActive = autoScaleUpEnabled && !autoScaleUpFinalTierSuspended
+  const autoScaleUpStatusLabel = !autoScaleUpEnabled
+    ? 'Auto Scale Up paused'
+    : autoScaleUpFinalTierSuspended
+      ? 'Auto Scale Up suspended at final tier'
+      : 'Auto Scale Up active'
+  const autoScaleUpStatusTitle = !autoScaleUpEnabled
+    ? 'Auto Scale Up is currently paused — it will not trigger until resumed'
+    : autoScaleUpFinalTierSuspended
+      ? 'Auto Scale Up is suspended at the final tier — Scale Up is manual here so Overclock can be reached'
+      : "Scale Up now triggers automatically the instant it's eligible"
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
@@ -1777,12 +1788,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             />
           </ScaleUpButton>
           {!isFirstRun && isAutoScaleUpActive && (
-            <MutedText title={
-              autoScaleUpEnabled
-                ? "Scale Up now triggers automatically the instant it's eligible"
-                : 'Auto Scale Up is currently paused — it will not trigger until resumed'
-            }>
-              <PpUpgradeBadge $dimmed={!autoScaleUpEnabled} aria-label={autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'}>⏩</PpUpgradeBadge>
+            <MutedText title={autoScaleUpStatusTitle}>
+              <PpUpgradeBadge $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel}>⏩</PpUpgradeBadge>
             </MutedText>
           )}
         </ScaleUpCard>
@@ -2010,14 +2017,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               {isAutoScaleUpActive ? (
                 <UpgradeRowControls>
                   <PpUpgradeBadge
-                    $color={autoScaleUpEnabled ? '#4ade80' : '#facc15'}
-                    $dimmed={!autoScaleUpEnabled}
-                    aria-label={autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'}
-                    title={
-                      autoScaleUpEnabled
-                        ? "Scale Up now triggers automatically the instant it's eligible"
-                        : 'Auto Scale Up is currently paused — it will not trigger until resumed'
-                    }
+                    $color={autoScaleUpEffectivelyActive ? '#4ade80' : '#facc15'}
+                    $dimmed={!autoScaleUpEffectivelyActive}
+                    aria-label={autoScaleUpStatusLabel}
+                    title={autoScaleUpStatusTitle}
                   >
                     ⏩
                   </PpUpgradeBadge>
@@ -2038,7 +2041,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   color={canBuyAutoScaleUp ? '#38bdf8' : 'darkgrey'}
                   disabled={!canBuyAutoScaleUp}
                   onClick={actions.buyAutoScaleUp}
-                  title="Spend Prestige Points so Scale Up happens automatically, forever, the instant it's eligible"
+                  title="Spend Prestige Points so eligible Scale Ups happen automatically until the final tier, where they stay manual for Overclock"
                   type="button"
                   $progress={ppProgressPercent(AUTO_SCALE_UP_COST)}
                   $progressColor="#38bdf8"
