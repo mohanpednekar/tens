@@ -377,10 +377,10 @@ export const clearAllSaveProgress = () => {
 /** Re-exported for callers/tests — canonical definitions live in save-migration/. */
 export { SAVE_SCHEMA_VERSION, getSaveIncompatibilityReason } from 'save-migration'
 
-const readActiveSavePayload = () => {
+const readActiveSavePayload = (storage = localStorage) => {
   const slotId = getActiveSlotId()
   try {
-    const raw = localStorage.getItem(slotStateKey(slotId))
+    const raw = storage.getItem(slotStateKey(slotId))
     if (!raw) return null
     return safeJsonParse(raw)
   } catch {
@@ -588,9 +588,9 @@ export const saveGameState = state => {
   }
 }
 
-export const loadGameState = () => {
+export const loadGameState = (storage = localStorage) => {
   try {
-    const parsed = readActiveSavePayload()
+    const parsed = readActiveSavePayload(storage)
     if (!parsed) return null
     const result = adaptSaveForCurrentSchema(parsed)
     if (!result.ok) return null

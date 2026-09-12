@@ -142,6 +142,156 @@ export const createInitialGameState = () => ({
     ...acc,
     [tier.id]: 0,
   }), {}),
+  // Permanent per-tier flag: whether Prestige Points have been spent to make this tier's
+  // autobuyer "smart" — buys one unit at a time until it completes its first level, then
+  // switches to the normal full-block batching from then on (see tickGame/buySmartAutobuyer) —
+  // never reset by prestige.
+  smartAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: false,
+  }), {}),
+  // Permanent per-tier flag: whether this tier's own (Money-funded) tickspeed multiplier upgrades
+  // itself automatically — see applyAutobuyerMilestones/tickGame; unlocked automatically at a
+  // prestige-count milestone, no PP cost. Needs no other prerequisite (the manual purchase itself
+  // is unlocked by default — see tickspeedLevels above); independent of smartAutobuyer and of
+  // whether the tier's own autobuyer has ever been unlocked — never reset by prestige.
+  tierTickspeedAutobuyer: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: false,
+  }), {}),
+  // Permanent per-tier flag, default true: whether this tier's tier tickspeed autobuyer (once
+  // bought — see tierTickspeedAutobuyer above) currently acts — split "unlocked" from "enabled" the
+  // same way autobuyersEnabled splits from autobuyers above (see
+  // setTierTickspeedAutobuyerEnabled/tickGame). Meaningless (and a no-op to toggle) while
+  // tierTickspeedAutobuyer[tierId] is still false. The manual tickspeed-multiplier button is
+  // unaffected either way.
+  tierTickspeedAutobuyerEnabled: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: true,
+  }), {}),
+  // Fractional seconds accumulated per tier toward its next production batch, since each tier
+  // only delivers production once every getTierBaseTickSpeedSeconds(tier.id) seconds rather than
+  // continuously every global tick — see tickGame. Each tier's base tickspeed increases down the
+  // list (tier01=1s, matching the global tick, up through tier10=10s), banking any remainder below
+  // that full period.
+  tierProductionAccumulators: TIER_DEFINITIONS.reduce((acc, tier) => ({
+    ...acc,
+    [tier.id]: 0,
+  }), {}),
+  // Permanent global level (not per-tier — there's only one to buy), null = not yet bought: how
+  // many times Prestige Points have been spent to make Prestige itself automatic and faster (see
+  // buyAutoPrestige/getAutoPrestigeAttemptRate) — never reset by prestige.
+  autoPrestige: null,
+  // Permanent GLOBAL flag, default true: whether Auto-Prestige (once bought — see autoPrestige
+  // above) currently acts, independent of whether it's been bought at all. Split "unlocked" (the
+  // autoPrestige level above, permanent, unaffected) from "enabled" (this field, also permanent —
+  // pausing is a standing preference, not run-scoped state) so a player can temporarily stop
+  // Auto-Prestige from firing without losing the level/PP already invested — see
+  // setAutoPrestigeEnabled/tickGame. Meaningless while autoPrestige is null; toggling it then is a
+  // no-op (see setAutoPrestigeEnabled).
+  autoPrestigeEnabled: true,
+  // Permanent GLOBAL flag, default false: whether Prestige Points have been spent to make
+  // Auto-Prestige keep RE-LEVELING itself automatically once affordable (see
+  // buyAutoPrestigeAutobuyer/tickGame) — a "meta-automation" companion to autoPrestige above,
+  // distinct from activating Auto-Prestige in the first place. Only meaningful once autoPrestige is
+  // already non-null (buyAutoPrestigeAutobuyer is a no-op before that) — never reset by
+  // prestige/Scale Up, like every other automation-unlock flag in this state.
+  autoPrestigeAutobuyer: false,
+  // Permanent GLOBAL flag, default true: whether the Auto-Prestige Autobuyer (once bought — see
+  // autoPrestigeAutobuyer above) currently acts — split from "unlocked" the same way
+  // autoPrestigeEnabled/autoScaleUpEnabled/autoGlobalTickspeedEnabled split from their own parent
+  // flags. Never reset by prestige or Scale Up. Meaningless (and a no-op to toggle, see
+  // setAutoPrestigeAutobuyerEnabled) while autoPrestigeAutobuyer is false.
+  autoPrestigeAutobuyerEnabled: true,
+  // Run-scoped global level (not per-tier — there's only one to buy, mirroring autoPrestige
+  // above), null = not yet bought: how many times Money has been spent on the global tickspeed
+  // multiplier (unlocked once at least 1 of the second tier is owned — see
+  // isGlobalTickspeedMultiplierUnlocked), which speeds up *every* tier's delivery frequency by
+  // another 1% per level, not the amount delivered (see
+  // getGlobalTickspeedProductionMultiplier/getEffectiveTierTickSpeedSeconds/
+  // buyGlobalTickspeedMultiplier) — resets to null on both Prestige and Scale Up, same as
+  // tickspeedLevels, since it's funded from the same Money balance both wipe.
+  globalTickspeedMultiplier: null,
+  // Fractional Auto-Prestige attempt budget, accumulated every tick (frozen or not) by
+  // getAutoPrestigeAttemptRate(autoPrestige) once bought — see tickGame. Unlike the per-tier
+  // autobuyerAttemptBudgets, this is a single global counter; resets to 0 on every prestige
+  // (manual or automatic) same as they do.
+  autoPrestigeAttemptBudget: 0,
+  // Permanent global flag, false = not yet bought: whether the passive +1%-per-unspent-point
+  // production speed bonus (getPrestigeProductionMultiplier) is active at all — see
+  // buyPrestigeSpeedBonus. Never reset by prestige, like smartAutobuyer/
+  // autoPrestige above.
+  prestigeSpeedBonusUnlocked: false,
+  // Permanent count of Double PP upgrades bought (see buyPrestigeDoublePp) — never reset by
+  // Prestige or Scale Up. Each level halves powers-per-PP until 1, then doubles PP-per-power.
+  prestigeDoublePpLevel: 0,
+  // RUN-SCOPED total of how many times Scale Up has been triggered (see scaleUpGame); the per-tier
+  // counts below, rather than this display/history total, drive production. Never reset by Scale Up
+  // itself (it's the thing being incremented), but IS reset to 0 by a real Prestige (see
+  // prestigeGame) — unlike the automation toggles/levels around it (smartAutobuyer/autoPrestige/
+  // prestigeSpeedBonusUnlocked/autoScaleUp), the Scale Up multiplier itself doesn't survive a real
+  // Prestige and has to be rebuilt from scratch each Prestige cycle.
+  scaleUpCount: 0,
+  // Per-tier Scale Up counts let a claim boost its target tier and every earlier tier.
+  scaleUpTierCounts: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 0])),
+  // RUN-SCOPED index into TIER_DEFINITIONS that Scale Up currently targets (see
+  // getScaleUpTargetTier/getScaleUpRequirement/scaleUpGame) — starts at 0 (the first tier) and
+  // climbs by exactly 1 on every successful activation. A deferred Scale Up (Auto Scale Up
+  // off, or just not clicked) simply becomes available the moment its current target tier's own
+  // level — reset to 1 the last time Scale Up fired, or still whatever it organically grew to if
+  // Scale Up hasn't fired even once this cycle — climbs past the requirement, so nothing is ever
+  // permanently missed by waiting. Deliberately NOT clamped to TIER_DEFINITIONS.length - 1: once it
+  // reaches that boundary (the last tier), it keeps climbing past it while getScaleUpTargetTier
+  // remains clamped to the final tier and getScaleUpRequirement advances 3, 6, 9, and so on.
+  // Reset to 0 by
+  // a real Prestige/Overclock, same as scaleUpCount and everUnlockedTierIds below — all three
+  // relock/re-earn from scratch once every tier needs re-reaching.
+  scaleUpTargetTierIndex: 0,
+  // RUN-SCOPED level reached by Overclock (see overclockGame) — a second, steeper Scale-Up-style
+  // soft reset, claimable once the last tier's own level passes getOverclockRequirement(overclockCount)
+  // (level 5 initially, then three more than the last claimed level; a claim jumps straight to the last tier's current level,
+  // so falling behind doesn't require claiming every intermediate level). Permanently multiplies the
+  // (Money-funded) global tickspeed multiplier's single uniform per-level step by
+  // getOverclockMultiplier(overclockCount) — see getGlobalTickspeedProductionMultiplier — compounding
+  // OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per level, not a separate multiplier stacked
+  // alongside it. Unlike scaleUpCount just above, this is NOT reset by an ordinary Scale Up
+  // (scaleUpGame explicitly carries it through unchanged) — only by a real Prestige (same reasoning
+  // as scaleUpCount: an unbounded permanent compounding bonus across every future Prestige forever
+  // would trivialize the Prestige cost curve) or by Overclock's own claim resetting *scaleUpCount*
+  // (never itself — see overclockGame).
+  overclockCount: 0,
+  // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
+  // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame), including the
+  // final tier. Its 3/6/9 cadence leaves Overclock reachable at level 5. Never reset by prestige or by Scale Up itself, like
+  // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
+  autoScaleUp: false,
+  // Permanent GLOBAL flag, false = not yet bought: whether the 30 PP Compute auto-Boost unlock
+  // has been purchased (see COMPUTE_AUTO_BOOST_UNLOCK_COST / buyComputeAutoBoost /
+  // tickAutoComputeBoost). Never reset by Prestige or Scale Up — same permanence class as
+  // autoScaleUp above. Preferred preset lives on intro.computeAutoBoostType (default 'standard').
+  computeAutoBoostUnlocked: false,
+  // Permanent GLOBAL flag, default true: whether Auto Scale Up (once bought — see autoScaleUp
+  // above) currently acts — split from "unlocked" the same way autoPrestigeEnabled splits from
+  // autoPrestige (see its own comment above). Never reset by prestige or Scale Up. Meaningless
+  // (and a no-op to toggle, see setAutoScaleUpEnabled) while autoScaleUp is false.
+  autoScaleUpEnabled: true,
+  // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
+  // make the (Money-funded) global tickspeed multiplier upgrade itself automatically every tick
+  // (see buyTickspeedAutobuyer/tickGame) — no manual click needed. Never reset by prestige or by
+  // Scale Up, like autoScaleUp above.
+  autoGlobalTickspeed: false,
+  // Permanent GLOBAL flag, default true: whether the global Tickspeed Autobuyer (once bought —
+  // see autoGlobalTickspeed above) currently acts — split from "unlocked" the same way
+  // autoPrestigeEnabled/autoScaleUpEnabled split from their own parent flags above. Never reset by
+  // prestige or Scale Up. Meaningless (and a no-op to toggle, see
+  // setAutoGlobalTickspeedEnabled) while autoGlobalTickspeed is false.
+  autoGlobalTickspeedEnabled: true,
+  // Run-scoped cumulative total of XP ever spent via consumeXpForLastTierTickspeed — each XP spent
+  // compounds another 1% into the last tier's own delivery frequency (see
+  // getLastTierXpTickspeedMultiplier), so this counter alone drives that bonus. Reset to 0 by both
+  // prestigeGame and scaleUpGame (same as prestige.xp, the currency that funds it) — never reset by
+  // consumeXpForLastTierTickspeed itself, though (it only ever grows within a run).
+  lastTierXpConsumed: 0,
   // Run-scoped record of tiers earned through successful Scale Up claims. A recorded tier
   // re-reveals after its predecessor reaches raw level 2; tier01 starts recorded because it is
   // always available. Real Prestige and Overclock reset this progression.
