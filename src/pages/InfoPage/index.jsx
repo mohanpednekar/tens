@@ -522,8 +522,9 @@ const InfoPage = () => {
             Each tier stacks its own bonus (×2, ×4, ×8, …); a newly revealed tier starts at ×1.
           </li>
           <li>
-            Each claim needs a completed-level multiple of 3 — 3, 6, 9, 12, and so on,
-            counting every Scale Up claimed this cycle, on whatever tier is currently targeted.
+            Each of the first ten claims needs 3 completed levels on the last unlocked tier. After
+            every tier has received its first claim, repeated final-tier claims need 6, 9, 12, and
+            so on.
           </li>
           <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
         </ul>

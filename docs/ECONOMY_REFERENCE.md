@@ -1902,9 +1902,10 @@ first cycle — its gate walks through the tier ladder one tier at a time rather
 the last tier. `state.scaleUpTargetTierIndex` (0-indexed into `TIER_DEFINITIONS`, starting at 0) is
 the tier Scale Up is currently measured against — `getScaleUpTargetTier(state)` reads it directly,
 clamped to the last tier's own index once reached (there's no tier past it to keep targeting).
-`getScaleUpRequirement(state)` is **completed levels of the current target tier**: `3 *
-(scaleUpCount + 1)` — 3, 6, 9, 12, … completed levels for successive Scale Ups, against whichever
-tier the target index currently sits on (completed levels = `purchaseLevels − 1`). This requirement
+`getScaleUpRequirement(state)` is **completed levels of the current target tier**. Each of the first
+ten Scale Ups requires 3 completed levels on its target (the last unlocked tier); after all tiers
+receive their first claim, repeated final-tier claims require 6, 9, 12, … completed levels
+(completed levels = `purchaseLevels − 1`). This requirement
 is separate from tier re-reveal: a predecessor reaching a level does not itself reveal a new tier —
 only a successful `scaleUpGame` records the successor in `everUnlockedTierIds`. After a reset, a tier
 already unlocked by a previous Scale Up within the same Overclock re-reveals when its predecessor
@@ -1966,7 +1967,7 @@ larger default `Button` size) shows `×2 · {targetTier.symbol} {completed}/{req
 `· Unlock TB` suffix when the current target's successor is the Terabytes tier (`scaleUpUnlocksTB`)
 — naming the target tier's symbol inline so it's always clear *which* tier's completed levels the
 requirement is measured against (via `getScaleUpTargetTier`), not always the last tier's. The
-requirement is already in completed levels (`3 * (scaleUpCount + 1)`); the displayed current count is
+requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
 and `autoScaleUp` bought, a static "⏩ Auto Scale Up active" note shows (the purchase button itself
@@ -2686,7 +2687,7 @@ purchases were manual or automatic.
 | `getPurchaseMilestoneMultiplier` | `level → number` | `levelsCompleted = level - 1`, `megaBlocks = floor(levelsCompleted/10)`, `regularBlocks = levelsCompleted - megaBlocks`; returns `PURCHASE_MILESTONE_MULTIPLIER_BASE ** regularBlocks * PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE ** megaBlocks` (`2`, `10`) — doubles a tier's own passive production at every completed level, the same boundary where `getTierCost`'s cost-epoch exponent steps up, **except** every 10th such level contributes a 10x factor instead of the regular 2x for that one level, compounding into the rest (e.g. level 81 → `2^9 * 10^1` = 5120, not `2^10` = 1024) — this "every 10th level" mega cadence is independent of the (now variable) block size and stays a fixed 10 regardless of level size. Takes the tier's current LEVEL directly, not a lifetime purchased count. Applies uniformly regardless of whether those purchases were manual or via an autobuyer |
 | `getTierScaleUpMultiplier` | `(state, tierId) → number` | `SCALE_UP_MULTIPLIER_BASE ** scaleUpTierCounts[tierId]` — the stacking production multiplier earned by that tier from Scale Up claims made while it was unlocked |
 | `getScaleUpTargetTier` | `state → tier` | `TIER_DEFINITIONS[min(max(scaleUpTargetTierIndex, 0), TIER_DEFINITIONS.length - 1)]` — the tier Scale Up's own requirement is currently measured against; clamped to the last tier once `scaleUpTargetTierIndex` reaches or passes it |
-| `getScaleUpRequirement` | `state → number` | `3 * (scaleUpCount + 1)` completed levels of the current target tier — 3, 6, 9, 12, … across successive claims. |
+| `getScaleUpRequirement` | `state → number` | 3 completed levels of the current target tier for each of the first ten claims; then 6, 9, 12, … completed final-tier levels for repeated claims. |
 | `getOverclockRequirement` | `state → number` | 5 completed final-tier levels for the first claim; afterward, `overclockLastClaimCompletedLevels + OVERCLOCK_REQUIREMENT_STEP` (3). |
 | `getOverclockMultiplier` | `overclockCount → number` | `(1 + OVERCLOCK_MULTIPLIER_STEP) ** overclockCount` (`OVERCLOCK_MULTIPLIER_STEP = 0.1`) — Overclock's own growth factor: ×1 with no claims, ×1.1 after the first claimed level, ×1.21 after the second, and so on. Folded into `getGlobalTickspeedProductionMultiplier` below (scales its single per-level step) — not a standalone factor |
 | `getTickspeedMultiplierBaseCost` | `tierIndex → number` | `10 ** (TICKSPEED_MULTIPLIER_BASE_EXPONENT - tierIndex)` — 10^10 for the first tier (index 0), decreasing by a power of ten per subsequent tier, down to 10^1 for the 10th/last tier (index 9); an out-of-range index is clamped into range rather than throwing |

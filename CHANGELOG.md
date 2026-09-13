@@ -13,8 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   level compounds the same Overclock-scaled 1% step.
 - **Completed levels now multiply production by ×1.1** (was ×2), compounding per completed level.
 - **Tier tickspeed upgrades now give +1% per level** (was +10%).
-- **Scale Up requirements are based on the target tier's completed levels** — completed-level
-  multiples of 3 (3, 6, 9, 12, … by Scale Up count), separate from tier re-reveal. A tier already
+- **Scale Up requirements are based on the target tier's completed levels** — each of the first ten
+  Scale Ups requires 3 completed levels on its target (the last unlocked tier), then repeated
+  final-tier claims require 6, 9, 12, … completed levels. This remains separate from tier re-reveal. A tier already
   unlocked by a previous Scale Up within the same Overclock re-reveals at 2 completed predecessor
   levels. The Scale Up button names the required tier, shows completed-level progress, and displays
   "Unlock TB" when the claim will reveal Terabytes.

@@ -242,7 +242,8 @@ export const createInitialGameState = () => ({
   // Scale Up hasn't fired even once this cycle — climbs past the requirement, so nothing is ever
   // permanently missed by waiting. Deliberately NOT clamped to TIER_DEFINITIONS.length - 1: once it
   // reaches that boundary (the last tier), it keeps climbing past it while getScaleUpTargetTier
-  // remains clamped to the final tier and getScaleUpRequirement advances 3, 6, 9, and so on.
+  // remains clamped to the final tier and getScaleUpRequirement advances beyond its initial 3
+  // completed levels only after every tier has received its first claim.
   // Reset to 0 by
   // a real Prestige/Overclock, same as scaleUpCount and everUnlockedTierIds below — all three
   // relock/re-earn from scratch once every tier needs re-reaching.
@@ -1296,11 +1297,14 @@ const getClampedScaleUpTargetTierIndex = state =>
 // becomes current; ordinary predecessor progress alone never records a first-time tier.
 export const getScaleUpTargetTier = state => TIER_DEFINITIONS[getClampedScaleUpTargetTierIndex(state)]
 
-// Scale Up's requirement, in COMPLETED levels (purchaseLevels - 1) of the current target tier:
-// the Nth Scale Up of a cycle (scaleUpCount + 1) requires a completed-level multiple of 3 — 3, 6,
-// 9, 12, … on whatever tier is currently targeted.
+// Scale Up's requirement, in COMPLETED levels (purchaseLevels - 1) of the current target tier.
+// Each of the first TIER_DEFINITIONS.length claims requires 3 levels, letting every newly unlocked
+// tier become the next target on the same cadence. Once all tiers have received a claim, repeated
+// final-tier claims advance to 6, 9, 12, … completed levels.
 export const getScaleUpRequirement = state =>
-  SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * (clampNonNegative(state.scaleUpCount ?? 0) + 1)
+  SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * (
+    Math.max(0, clampNonNegative(state.scaleUpCount ?? 0) - (TIER_DEFINITIONS.length - 1)) + 1
+  )
 
 // The first Overclock requires 5 completed last-tier levels — a minimum only, the player may keep
 // climbing before claiming. Later claims require three completed levels more than the

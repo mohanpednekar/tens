@@ -669,8 +669,8 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // to each included tier’s Scale Up count, so a claim doubles only tiers already unlocked.
 // Point speed bonus above, this needs no PP-spent unlock step.
 export const SCALE_UP_MULTIPLIER_BASE = 2
-// Scale Up requirements are completed-level multiples of 3: the Nth Scale Up of a cycle requires
-// 3N completed levels on its target tier (see getScaleUpRequirement/scaleUpGame in engine.js).
+// Each tier's first Scale Up requires 3 completed levels. After all ten tiers have received their
+// first claim, repeated final-tier requirements advance by 3 (see getScaleUpRequirement/scaleUpGame).
 export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // Per-level growth factor for Overclock's own reward — see engine.js's
 // getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper

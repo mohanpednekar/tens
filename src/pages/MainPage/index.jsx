@@ -1047,7 +1047,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
 
-  // Scale Up requires completed-level multiples of 3 on its current target tier — 3, 6, 9, …
+  // Scale Up requires 3 completed levels on each tier's first claim, then final-tier requirements
+  // advance by 3 after all tiers have received one.
   // counting every claim this cycle (see getScaleUpRequirement in engine.js) — recording the
   // successor only when the claim succeeds. Recorded tiers re-reveal at 2 completed predecessor
   // levels after a reset (see isTierUnlocked in engine.js).
