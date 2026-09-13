@@ -24,10 +24,10 @@ describe('loadGameState', () => {
   })
 
   it('returns null (rather than throwing) when localStorage.getItem itself throws', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('SecurityError: private browsing')
-    })
-    expect(loadGameState()).toBeNull()
+    const unavailableStorage = {
+      getItem: () => { throw new Error('SecurityError: private browsing') },
+    }
+    expect(loadGameState(unavailableStorage)).toBeNull()
   })
 
   it('strips __proto__ / constructor from polluted save JSON without polluting Object.prototype', () => {
