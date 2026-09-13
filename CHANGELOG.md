@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
   tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
   and continuous with transparent tracks.
+- **Foundry balance tiles are cleaner and centered:** Speed/Bandwidth moved to the top-right, disk
+  counts were removed, balance and Capacity now share one centered line, and active tap percentages
+  use a neutral plus with a yellow percentage and tap icon.
 
 
 ### Accessibility
