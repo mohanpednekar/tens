@@ -38,7 +38,7 @@ import {
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
-  INTRO_BANDWIDTH_COST_MULTIPLIER,
+  
   INTRO_CAPACITY_CAP_BITS,
   INTRO_CAPACITY_DOUBLING_STEP,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
@@ -251,8 +251,8 @@ describe('constants', () => {
     expect(TICKSPEED_MULTIPLIER_BASE_EXPONENT).toBe(10)
   })
 
-  it('TICKSPEED_PRODUCTION_STEP is 0.1 (10% production per tickspeed level)', () => {
-    expect(TICKSPEED_PRODUCTION_STEP).toBe(0.1)
+  it('TICKSPEED_PRODUCTION_STEP is 0.01 (1% production per tickspeed level)', () => {
+    expect(TICKSPEED_PRODUCTION_STEP).toBe(0.01)
   })
 
   it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x the unlock cost)', () => {
@@ -312,10 +312,6 @@ describe('constants', () => {
 
   it('INTRO_CAPACITY_DOUBLING_STEP is 2 (shared binary Capacity ladder spacing)', () => {
     expect(INTRO_CAPACITY_DOUBLING_STEP).toBe(2)
-  })
-
-  it('INTRO_BANDWIDTH_COST_MULTIPLIER is 4 (Speed\'s own cost ladder steps ×4 per tier)', () => {
-    expect(INTRO_BANDWIDTH_COST_MULTIPLIER).toBe(4)
   })
 
   it('FILL_MULTIPLIER_* span exactly 100 percentage points, centered on 100% at 50% full', () => {

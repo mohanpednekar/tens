@@ -93,37 +93,19 @@ fill, so a second meter on the tap button would just duplicate it; its `backgrou
 used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a `MilestonesRow` (`display: flex`, each child button
-`flex: 1`) holds BOTH of Data Stream's own recurring milestone actions side by side — not a single
-button — replacing the earlier paired Sacrifice+Invest row. Each renders its own two-line
-`MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
-`components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
-of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
-activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
-than crammed inline in parentheses. "Speed ×2" (was Bandwidth / Invest for Double Production; top
-line `⚡ Speed ×2`; cost line `formatBitsInNearestUnit(investCost)` — or, once a Compute Boost can
-fund it instead (`isComputeFundedBandwidthAvailable`), `{COMPUTE_ENTITY_CAP} {computeBandwidthLabel}`
-— live/dynamic information worth keeping visible even in the shortened label; `aria-label="invest
-bits for double production"` (or, compute-funded, `"sacrifice {COMPUTE_ENTITY_CAP}
-{computeBandwidthLabel} for double production"`) carries the full description — cost
-`getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
-— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)`, no currently-redeemable Disk Fill
-outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md), and it is either compute-funded (when the bit cost exceeds Capacity) or `bits >=` the (bits-denominated) cost; this cost is entirely
-independent of `capacity`, so the button is frequently enabled well before Buffer is full — see
-docs/ECONOMY_REFERENCE.md's "Byte
-Foundry") — paired with a hidden `role="progressbar"`
-(`aria-label="byte foundry speed progress"`, max set to the Speed cost in bits, not
-`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below. Beside it, "Capacity ×2"
-(top line `🪣 Capacity ×2` — the bucket icon reused from the Capacity footer figure, replacing an
-earlier 🧠 brain icon that was already doing double duty for the unrelated "Smart" autobuyer concept
-elsewhere in the app, see docs/DESIGN_HISTORY.md; cost line `formatBitsInNearestUnit(capacity)`;
-`aria-label="double Memory
-Capacity"`; `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
-isMemoryCapacityUpgradeAvailable(state)`) requires a full Buffer, drains it, and doubles Capacity up
-to `INTRO_CAPACITY_CAP_BITS` (the active highest-unlocked-pool's end bound, though the raw Capacity multiplier tracks past this limit silently) — it carries no
-`role="progressbar"` of its own, since its own gating (a full Buffer) is already visible on the Data
-Stream tile above.
+INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
+(`aria-label="upgrade data stream"`, no icon) consolidates the former paired Speed ×2 (Invest) and
+Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
+button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
+`intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from Capacity,
+never purchased — `getDataStreamSpeedBytesPerSecond(capacityBits)` returns `sqrt(capacityBytes)`
+B/s at even `log2` exponents and the arithmetic mean of the two neighbouring even-exponent speeds at
+odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
+derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
+after-upgrade preview. `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
+isMemoryCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and no higher-priority
+action (Disk Fill, Provision Disk, Compute) currently available — Upgrade Data Stream is now the
+LOWEST-priority action in the forced order (see "Forced priority order" in docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
@@ -867,7 +849,7 @@ purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {sym
 icon (matching the tier tickspeed autobuyer's own icon-only status badge on the PP Upgrades page)
 identifies the button as the tickspeed control; no separate icon marks the marginal effect, since
 it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10% step) and
-implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster ticks"
+implied by the button itself — `aria-label`/`title` still spell out the full "+1% faster ticks"
 sentence for assistive tech; the button's `title` is the only place on this page the cumulative
 speed bonus (as opposed to the fixed marginal step) is shown at all — an earlier version also
 carried a compact `⚙ +N%`/`⚙ 2x` badge beside the tier name, removed as one automation icon too
@@ -975,8 +957,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
    icon-only, `$dimmed`-while-inactive `PpUpgradeBadge` convention as category 1 above (no written
    "Active"/"Paused" anywhere). Auto Scale Up remains active at the final tier, where requirements
-   progress through raw levels 3, 6, 9, and so on; the automatic level-3 claim leaves Overclock
-   available at level 5 before the next automatic Scale Up at level 6. Auto-Prestige's
+   progress through completed levels 3, 6, 9, and so on. Auto-Prestige's
    `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
@@ -1097,15 +1078,24 @@ mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purel
 redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
 (see "Prestige and the Googol freeze" below).
 
-Player-facing purchase levels on both reset cards are zero-indexed completed-level counts: the UI
-subtracts one from the engine's one-based current-level cursor and from its eligibility requirement.
+Player-facing purchase levels on both reset cards are zero-indexed **completed-level** counts: the
+UI subtracts one from the engine's one-based current-level cursor, and both requirements are
+expressed in completed levels — Scale Up requires completed-level multiples of 3 (3, 6, 9, … by
+`scaleUpCount`), Overclock requires the final tier's completed levels to reach the dynamic
+`getOverclockRequirement` (5 first, then last-claimed + 3).
 
 `OverclockCard` — same orange-accented `StatCard` shape as `ScaleUpCard`'s cyan — is gated on
 `lastTierUnlocked` (the last tier having ever been unlocked), via its own `overclockEverRevealed`
 `everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
-match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
+match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl ·
+{lastTier.symbol} {completed}/{required}` — completed levels of the final tier vs. this cycle's
+requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
+levels) — …`. `ScaleUpButton` similarly reads `×2 · {targetTier.symbol} {completed}/{required}`
+plus a `· Unlock TB` suffix when the current target's successor is the Terabytes tier, with
+`aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
+for tiers unlocked so far[ and unlocks TB]`
 — e.g. `⚡ 2.14%/lvl · Lv.7/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up

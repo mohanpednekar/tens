@@ -3,7 +3,7 @@
 // `id` is a naming-agnostic key (tier01…tier10), decoupled from `name`/`symbol`
 // so a future re-theme never has to touch state keys, tests, or save data.
 // 'tier01' is bought with Bits but produces Bytes (see BYTES_ID below) — the Factory's
-// byte-scale output currency for Clock Speed. `tickGame` also mirrors each Byte into Bits at
+// byte-scale output currency for Latency. `tickGame` also mirrors each Byte into Bits at
 // `BITS_PER_BYTE` so MoneyHero / Prestige / Buys (still Bits-denominated) keep moving. Bytes
 // themselves are still not a purchasable tier here; the Byte Foundry pre-game screen (see the
 // "Byte Foundry" constants section and `intro` state below) hands the player their first
@@ -170,33 +170,12 @@ export const getStoragePoolMemoryBounds = (poolIndex = 1) => {
     endBits: (BITS_PER_BYTE / DISK_BUILD_COST_MULTIPLIER) * (POOL_CAPACITY_SI_STEP ** (index + 1)),
   }
 }
-// "Speed ×2" (was Bandwidth / Invest) cost ladder steps ×4 per tier — see
-// getIntroProductionMilestoneCost in engine.js. Independent of the Capacity level ladder above.
-export const INTRO_BANDWIDTH_COST_MULTIPLIER = 4
-// The Byte generator's starting delivery period, in seconds — matches TIER_DEFINITIONS' own
-// per-tier `baseTickSpeedSeconds` convention (a fixed period a batch is delivered every, not a
-// continuous rate). "Invest for Double Production" halves this (see
-// INTRO_MIN_TICK_SPEED_SECONDS/pickIntroProductionMilestone in engine.js) each time it's taken,
-// until the tick loop's own real-time resolution can't usefully go any faster.
-export const INTRO_STARTING_TICK_SPEED_SECONDS = 1
-// Floor for the Byte generator's tickSpeedSeconds — halving the period below the live tick loop's
-// own granularity (TICK_RATE_MS, i.e. 10 ticks/sec) wouldn't actually deliver bits any faster, only
-// make tickIntroProduction's per-call math finer-grained for no observable effect. Once
-// "Invest for Double Production" would halve tickSpeedSeconds below this, it multiplies
-// productionMultiplier instead — the same "speed up delivery, then scale the batch" split
-// TIER_DEFINITIONS' own tickspeed-vs-production-multiplier distinction already uses (see
-// getEffectiveTierTickSpeedSeconds in engine.js) — so growth never stalls once the tick loop's
-// own resolution limit is reached. See pickIntroProductionMilestone in engine.js.
-export const INTRO_MIN_TICK_SPEED_SECONDS = TICK_RATE_MS / 1000
-// "Invest for Double Production" multiplies by this each time it's taken — either dividing
-// tickSpeedSeconds (speeding up delivery) or multiplying productionMultiplier (growing the batch
-// size), whichever INTRO_MIN_TICK_SPEED_SECONDS above currently allows (see
-// pickIntroProductionMilestone in engine.js). Net effect is the same either way: bits/sec doubles.
-export const INTRO_PRODUCTION_MULTIPLIER_STEP = 2
-// The Byte generator's base batch size, in bits, delivered once every tickSpeedSeconds — before
-// productionMultiplier is applied (see tickIntroProduction/getIntroProductionRate in engine.js).
-// At the starting tickSpeedSeconds (1s) and productionMultiplier (1x) this is exactly 1 bit/sec,
-// matching a manual tap's own base amount (see tapIntroBit/getIntroProductionRate in engine.js).
+// Data Stream Speed is DERIVED from Capacity, not independently upgraded (see
+// getIntroProductionRate in engine.js): with e = log2(capacity in Bytes), Speed is sqrt(capacity
+// Bytes)/s when e is even and the arithmetic mean of the neighbouring even-exponent sqrt speeds
+// when e is odd — alternating ×1.5 and ×4/3 growth, exactly ×2 per two Capacity doublings.
+// At the starting Capacity (1 Byte) this is exactly 1 Byte/sec (8 bits/sec), matching a manual
+// tap's own base amount (see tapIntroBit/getIntroProductionRate in engine.js).
 export const INTRO_BYTE_BASE_RATE = 1
 // One-time cost, in bits, to combine your first 8 tapped bits into the Byte generator (see
 // combineIntroByte in engine.js) — equal to the starting capacity, since that's exactly how many
@@ -239,10 +218,13 @@ export const FILL_MULTIPLIER_MAX_PERCENT = 150
 export const FILL_MULTIPLIER_MIN_PERCENT = 50
 export const FILL_MULTIPLIER_TAP_BONUS_PERCENT = 5
 export const FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1
+// Hard ceiling on the manual tap bonus ITSELF (stored separately from the fill-based value — see
+// dataStreamTapBonusPercent/poolTapBonusPercents in engine.js and the dedicated bonus bar on
+// ByteFoundryPage). Clamped to 0..this; a tap at the cap is a no-op.
+export const FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT = 100
 // Hard ceiling on the CUMULATIVE effect (fill-based value + live tap bonus combined), not on the
 // tap bonus alone — see getDataStreamMultiplierPercent/getPoolMultiplierPercent in engine.js, which
-// clamp their combined total to this. A tap that would push the total at/above this cap is a no-op
-// (same "nothing left to gain" reasoning as tapping an already-full Buffer).
+// clamp their combined total to this.
 export const FILL_MULTIPLIER_TAP_CAP_PERCENT = 200
 
 // --- Byte Foundry Storage (Disks) --- see provisionDisk/tickProvisionDisk/tickDiskAutoFill/
@@ -324,7 +306,7 @@ export const DISK_CACHE_BLOCK_COUNT = 8
 // --- Disk/Cache fill bandwidth --- every timed Byte Foundry storage transfer (disk build,
 // read-cache refill/flush, write-cache collect/flush) is paced as a multiple of the Byte Foundry's
 // own current production rate (getIntroProductionRate in engine.js — "Memory bandwidth"), not a
-// flat/hardcoded rate, so it always tracks Invest/Compute Boost like every other timed mechanic
+// flat/hardcoded rate, so it always tracks the derived Data Stream rate/Compute Boost like every other timed mechanic
 // here. Building a fresh disk (an empty container, not yet fed by any cache) takes exactly the
 // time to fill it at 1x Memory bandwidth — no multiplier constant of its own, since 1x is bandwidth
 // itself.
@@ -608,9 +590,10 @@ export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 
-// A tier's production doubles at every level milestone (see engine.js's
-// getPurchaseMilestoneMultiplier) — the per-level multiplier normally applied.
-export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 2
+// A tier's production is multiplied by 1.1 at every completed level (see engine.js's
+// getPurchaseMilestoneMultiplier), compounding per completed level — the per-level multiplier
+// normally applied.
+export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.1
 // Every 10th level uses this larger multiplier instead of PURCHASE_MILESTONE_MULTIPLIER_BASE for
 // that one level — a bigger milestone every 10 levels on top of the regular one every level (see
 // engine.js's getPurchaseMilestoneMultiplier). This "every 10th level" cadence is independent of
@@ -639,10 +622,8 @@ export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
 // AUTOBUYER_UNLOCK_BASE_COST below) no longer reuses it.
 export const TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10
 // Each tickspeed multiplier level compounds a tier's
-// production by another 10% (see engine.js's getTickspeedProductionMultiplier) — the same 1.1x
-// compounding rate that used to drive autobuyer purchase-attempt frequency before that effect was
-// moved to production instead (see "Tickspeed multiplier" in CLAUDE.md).
-export const TICKSPEED_PRODUCTION_STEP = 0.1
+// production by another 1% (see engine.js's getTickspeedProductionMultiplier).
+export const TICKSPEED_PRODUCTION_STEP = 0.01
 // Historical per-tier PP-cost formula (see engine.js's getAutobuyerUnlockCost) — no longer an
 // actual purchase (a tier's autobuyer now unlocks automatically at a prestige-count milestone
 // instead, see AUTOBUYER_UNLOCK_MILESTONE_START below), kept only as the pricing benchmark
@@ -667,10 +648,9 @@ export const AUTOBUYER_UNLOCK_MILESTONE_STEP = 1
 // unit-buying autobuyer above. Also no longer PP-funded.
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_START = 12
 export const TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP = 2
-// Clock Speed (the global tickspeed multiplier — see engine.js's
+// Latency (the global tickspeed multiplier — see engine.js's
 // getGlobalTickspeedProductionMultiplier/buyGlobalTickspeedMultiplier) speeds up *every* tier's
-// production at once. Every level compounds by the same rate; milestone levels remain designated
-// UI/progression points, but do not receive an additional production multiplier.
+// production at once. Every level compounds by the same rate.
 export const GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01
 // Base PP cost of Auto-Prestige's first level (see engine.js's getAutoPrestigeCost/
 // buyAutoPrestige) — a single global upgrade track, not per-tier, so unlike the tier costs above
@@ -689,8 +669,8 @@ export const AUTO_PRESTIGE_BASE_INTERVAL_SECONDS = 1000
 // to each included tier’s Scale Up count, so a claim doubles only tiers already unlocked.
 // Point speed bonus above, this needs no PP-spent unlock step.
 export const SCALE_UP_MULTIPLIER_BASE = 2
-// Scale Up always requires three levels on its target. Once the final tier is reached, every
-// reset starts another fresh three-level climb.
+// Scale Up requirements are completed-level multiples of 3: the Nth Scale Up of a cycle requires
+// 3N completed levels on its target tier (see getScaleUpRequirement/scaleUpGame in engine.js).
 export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // Per-level growth factor for Overclock's own reward — see engine.js's
 // getOverclockMultiplier/getGlobalTickspeedProductionMultiplier/overclockGame — a second, steeper
@@ -703,7 +683,10 @@ export const SCALE_UP_FINAL_TIER_REQUIREMENT_STEP = 3
 // level 0/not yet bought, same as before Overclock existed. state.overclockCount is never reset by
 // an ordinary Scale Up, unlike globalTickspeedMultiplier itself — see scaleUpGame.
 export const OVERCLOCK_MULTIPLIER_STEP = 0.1
-// Minimum last-tier level growth required between Overclock uses after the initial level-5 claim.
+// Minimum last-tier completed-level growth required between Overclock uses: the first Overclock
+// is available at 5 completed final-tier levels; each later claim requires the completed-level
+// count the previous claim was taken at, plus this step (see getOverclockRequirement/
+// overclockGame in engine.js).
 export const OVERCLOCK_REQUIREMENT_STEP = 3
 // One-time PP cost to permanently automate Scale Up (see engine.js's buyAutoScaleUp) — once
 // bought, tickGame triggers eligible Scale Ups automatically before the final-tier target; claims

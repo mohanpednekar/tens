@@ -168,7 +168,7 @@ const LakeActionsRow = styled.div`
 `
 
 // Icon + amount only, cost/state tucked into the title/aria-label rather than a second visible
-// line — matches every other milestone-style action button on this page (Speed ×2, Capacity ×2,
+// line — matches every other milestone-style action button on this page (Upgrade Data Stream,
 // Provision Disk).
 const ActionButton = styled(Button)`
   padding: 0.1rem 0.5rem;

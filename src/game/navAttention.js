@@ -32,7 +32,6 @@ import {
   isAutoMergeNetworksIntoGridUnlockAvailable,
   isAutoMergeNodesIntoClusterUnlockAvailable,
   isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable,
-  isBandwidthTurnAvailable,
   isComputeCloudsMergeStartAvailable,
   isComputeClustersMergeStartAvailable,
   isComputeCoreConversionUnlocked,
@@ -55,7 +54,7 @@ import {
 // Attention dots on AppNav — lit when a destination has a pending player action. Levels:
 //   'high'   — time-sensitive / high-value (Memory full, full purchase level, Prestige freeze,
 //              redeemable disk, combine ready) → larger emphasis dot
-//   'normal' — other actionable cues (Invest/Build, PP upgrades, merges, Scale Up, …)
+//   'normal' — other actionable cues (Upgrade Data Stream/Provision Disk, PP upgrades, merges, Scale Up, …)
 //   false    — nothing pending
 // Pure predicates over game state; the UI only renders the dot. Engine re-validates on click.
 
@@ -147,16 +146,16 @@ export const hasAffordableGlobalTickspeed = state => {
 export const hasScaleUpAvailable = state => {
   if (isProductionFrozen(state)) return false
   const tier = getScaleUpTargetTier(state)
-  const level = state.purchaseLevels?.[tier.id] ?? 1
-  return level >= getScaleUpRequirement(state)
+  const completedLevels = Math.max(0, (state.purchaseLevels?.[tier.id] ?? 1) - 1)
+  return completedLevels >= getScaleUpRequirement(state)
 }
 
 export const hasOverclockAvailable = state => {
   if (isProductionFrozen(state)) return false
   const tier = lastTier()
   if (!isTierUnlocked(state)(tier)) return false
-  const level = state.purchaseLevels?.[tier.id] ?? 1
-  return level >= getOverclockRequirement(state.overclockCount ?? 0)
+  const completedLevels = Math.max(0, (state.purchaseLevels?.[tier.id] ?? 1) - 1)
+  return completedLevels >= getOverclockRequirement(state)
 }
 
 /** Byte Factory-view cues (buys, prestige, Scale Up / Overclock, Money tickspeed). */
@@ -204,12 +203,11 @@ export const getTiersAttentionLevel = state =>
 // involved (see isDiskPullEligible/tickDiskPull/tickDiskLevelOneCachePull in engine.js). There is
 // nothing left for a nav attention dot to point the player at for it, so Storage no longer
 // contributes its own attention signal — Foundry's dot reflects only what's still genuinely
-// player-actionable there (Combine, Invest, Provision Disk, Capacity, Memory full).
+// player-actionable there (Combine, Provision Disk, Upgrade Data Stream, Memory full).
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
   isMemoryCapacityUpgradeAvailable(state) ||
-  isBandwidthTurnAvailable(state) ||
   isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state)
 
