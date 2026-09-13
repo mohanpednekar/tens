@@ -35,10 +35,9 @@ const Header = styled.header`
   width: 100%;
 `
 
-// The section's own current balance — bigger font, centered (see "Put title on top left, current
-// disks status on the top right, the balance in a bigger centered font below that, a center-grow
-// multiplier bar (with its own percent readout below it) below the balance, then Speed/Bandwidth
-// and Capacity split across the bottom row's two halves" in CLAUDE.md's UI conventions) — sized a
+// The section's own current balance — bigger font, centered (see "Put title on top left, Speed/Bandwidth
+// on the top right, the balance in a bigger centered font below that, a center-grow
+// multiplier bar (with its own percent readout below it) below the combined balance/capacity line" in CLAUDE.md's UI conventions) — sized a
 // step above the rest of the tile's text but below the page's own H1 so a stack of several pool
 // cards doesn't read as several competing headlines.
 const BalanceText = styled.p`
@@ -47,6 +46,11 @@ const BalanceText = styled.p`
   font-size: ${props => props.theme.type.scale.xl.size};
   font-weight: 700;
   text-align: center;
+`
+
+const BalanceSeparator = styled.span`
+  color: ${props => props.theme.color.textMuted};
+  font-weight: 500;
 `
 
 // Tapping stays a fully live action forever (never freezes, never goes read-only — see
@@ -177,11 +181,9 @@ const ExpandToggleButton = styled.button`
 `
 
 // Shared top row for both the Data Stream card and every pool's own summary: title top-left,
-// that section's own current disks status top-right (see MultiplierBar below for what replaced
-// the old middle gauge column, and getFullDisksCount for the count itself) — a plain flex row
-// (not a grid) since there's no longer a middle column to keep centered between the two ends. The
-// balance, multiplier bar, and Speed/Bandwidth + Capacity figures all render as their own rows
-// below this one, in the tile beneath it — see docs/DESIGN_HISTORY.md for the corner-speedometer →
+// that section's own Speed/Bandwidth top-right — a plain flex row
+// (not a grid) since there's no middle column to keep centered between the two ends. The
+// combined balance/capacity line and multiplier bars render below it — see docs/DESIGN_HISTORY.md for the corner-speedometer →
 // center-grow-bar redesign this replaced.
 const TitleRow = styled.div`
   display: flex;
@@ -208,24 +210,8 @@ const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
-const DiskStatusText = styled.span`
+const SpeedText = styled.span`
   flex-shrink: 0;
-  color: ${props => props.theme.color.textMuted};
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-`
-
-// Speed/Bandwidth (left half) and Capacity (right half) sit below the balance, each centered
-// within its own half of the tile — a 2-column grid rather than flex so the halves stay exactly
-// even regardless of either figure's own text length.
-const FooterRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: 100%;
-`
-
-const FooterText = styled.span`
-  justify-self: center;
   color: ${props => props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -244,9 +230,8 @@ const FooterText = styled.span`
 // Memory buffer block reuses this SAME component, always rendered as a real <button>
 // (tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
 // fill-based multiplier bonus (see FILL_MULTIPLIER_* in game/layers), it never credits bits
-// directly. Everything for that section lives inside this one tile — TitleRow (title/disks status),
-// the big centered BalanceText, the MultiplierBar (with its own percent readout below it), and the
-// FooterRow (Speed/Bandwidth left half, Capacity right half) — see CLAUDE.md's UI conventions.
+// directly. Everything for that section lives inside this one tile — TitleRow (title and Speed/Bandwidth),
+// the big centered balance/capacity line, and the MultiplierBar with its own percent readout — see CLAUDE.md's UI conventions.
 const FillableStatCard = styled.div`
   width: 100%;
   display: flex;
@@ -281,7 +266,7 @@ const FillableStatCard = styled.div`
   `}
 `
 
-// The balance (BalanceText) and Capacity (FooterText) figures share ONE unit — capacity's own (see
+// The balance and Capacity figures use compact formatting (see
 // getMemoryUnit in game/engine) — UNLESS that would put the balance below 1 (e.g. "0.234 MiB"
 // alongside a "1 MiB" capacity) — in that case the balance self-sizes into its own finer unit
 // instead (e.g. "30.031 KiB" alongside "1 MiB"), which still reads as a real magnitude rather than
@@ -300,6 +285,12 @@ const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true
 
 const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
   formatMemoryAmount(capacityBits, getMemoryUnit(capacityBits, byteCreated))
+
+const formatCombinedBalance = (balance, capacity) => {
+  const balanceUnit = balance.match(/\s+(\S+)$/)?.[1]
+  const capacityUnit = capacity.match(/\s+(\S+)$/)?.[1]
+  return balanceUnit === capacityUnit ? balance.replace(/\s+\S+$/, '') : balance
+}
 
 // A balance's fixed decimal padding (formatMemoryAmountStable/formatDiskSizeStable — see either's
 // own doc comment) exists only to stop its displayed WIDTH from jittering tick to tick while the
@@ -327,16 +318,16 @@ const useTrimBalanceAfterFull = isFull => {
 // A pool's own Memory balance, as its own tiny component (rather than inline in the pool-card
 // loop below) purely so useTrimBalanceAfterFull gets its own hook instance per pool — a hook
 // can't be called a variable number of times inside a single component's own render.
-const PoolBalanceText = ({ bits, isFull }) => {
+const PoolBalanceText = ({ bits, capacityBits, isFull }) => {
   const trimmed = useTrimBalanceAfterFull(isFull)
-  return <BalanceText>{trimmed ? formatDiskSize(bits) : formatDiskSizeStable(bits)}</BalanceText>
+  const balance = trimmed ? formatDiskSize(bits) : formatDiskSizeStable(bits)
+  const capacity = formatDiskSize(capacityBits)
+  return (
+    <BalanceText>
+      {formatCombinedBalance(balance, capacity)} <BalanceSeparator>/</BalanceSeparator> {capacity}
+    </BalanceText>
+  )
 }
-
-// Top-right "current disks status" figure (see TitleRow above) — a rough at-a-glance count of full
-// disks across every size this section covers (the whole Foundry for the Data Stream card, just
-// this one pool's own sizes for a pool card), visible without expanding that pool's disclosure.
-const getFullDisksCount = (state, sizes) =>
-  sizes.reduce((total, size) => total + (state.intro.disks?.[size] ?? 0), 0)
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
@@ -415,9 +406,22 @@ const BarFillLake = styled(BarFillBase)`
 `
 
 const BarPercentLabel = styled.span`
-  color: ${props => props.theme.color.textMuted};
+  display: inline-flex;
+  gap: 0.25em;
   font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
+`
+
+const BasePercentText = styled.span`
+  color: ${props => props.theme.color.accent};
+`
+
+const BonusPercentText = styled.span`
+  color: ${props => props.theme.color.warn};
+`
+
+const PercentJoiner = styled.span`
+  color: ${props => props.theme.color.textMuted};
 `
 
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
@@ -456,7 +460,15 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
           <BarFillBonus $widthPercent={bonusWidthPercent} />
         </BarTrack>
       )}
-      <BarPercentLabel>{Math.round(clampedTotal)}%</BarPercentLabel>
+      <BarPercentLabel>
+        <BasePercentText>{Math.round(isLakeMode ? clampedTotal : clampedBase)}%</BasePercentText>
+        {hasBonus && (
+          <>
+            <PercentJoiner>+</PercentJoiner>
+            <BonusPercentText>{Math.round(clampedBonus)}% 👆</BonusPercentText>
+          </>
+        )}
+      </BarPercentLabel>
     </BarRow>
   )
 }
@@ -487,7 +499,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // formatBitsInNearestUnit (the same binary B/KiB/MiB/… ladder the balance line above it already
   // renders in) rather than a bespoke bit-vs-Byte branch, so a large rate reads as "2 KiB/s" instead
   // of an unscaled "2048 B/s" — consistent short "B"/"KiB" unit symbols throughout, matching the
-  // pool's own Bandwidth figure's "/s" convention (see FooterText usage below) rather than the
+  // pool's own Bandwidth figure's "/s" convention rather than the
   // longer "bytes/sec" this used to spell out.
   const dataStreamRateText = !intro.byteCreated
     ? null
@@ -503,10 +515,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const dataStreamMultiplierCapped = visiblePoolCount >= 1 && (intro.dataStreamTapBonusPercent ?? 0) >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
   // Every size ever reached (plus the ladder's current offer) — continuous Storage section on
   // this same screen, ascending via getDiskSizesToShow.
-  const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
-  // Top-right of the Data Stream card (see TitleRow) — the whole Foundry's own full-disk count,
-  // across every size shown anywhere on the page.
-  const dataStreamDisksCount = getFullDisksCount(state, diskSizesToShow)
 
   // Starting the next disk's build stays on this page (the Byte Foundry's own core loop). Ranked
   // third in the forced priority order — see isProvisionDiskTurnAvailable. Every shown size's
@@ -517,6 +525,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
   const diskPoolBufferBits = getPoolBufferBits(state, diskPoolIndex)
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
+  const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
   const diskBuildInProgress = intro.diskBuild
   // The build cost is paid in diskPassesRequired passes of the disk's own face-value size each (N
@@ -635,13 +644,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
-            {storageRevealed && (
-              <DiskStatusText aria-label={`${dataStreamDisksCount} full disks`}>
-                💾 {dataStreamDisksCount}
-              </DiskStatusText>
-            )}
+            {dataStreamRateText && <SpeedText>⚡ {dataStreamRateText}</SpeedText>}
           </TitleRow>
-          <BalanceText>{formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}</BalanceText>
+          <BalanceText>
+            {formatCombinedBalance(
+              formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed),
+              formatMemoryCapacityValue(intro.capacity, intro.byteCreated),
+            )}{' '}
+            <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
+          </BalanceText>
           {intro.byteCreated && (
             <MultiplierBar
               basePercent={dataStreamBaseMultiplierPercent}
@@ -650,10 +661,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               ariaLabel="data stream fill-based speed multiplier"
             />
           )}
-          <FooterRow>
-            <FooterText>{dataStreamRateText && `⚡ ${dataStreamRateText}`}</FooterText>
-            <FooterText>🪣 {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}</FooterText>
-          </FooterRow>
           <VisuallyHidden
             role="progressbar"
             aria-label="data stream bit balance"
@@ -749,8 +756,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const poolReady = isDataLakePoolReady(state, poolIndex)
         const showLakeMode = poolBufferFull && poolReady
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
-        // Top-right of this pool's own tile (see TitleRow) — this pool's own full-disk count only.
-        const poolDisksCount = getFullDisksCount(state, poolSizes)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
         // currently offers (getDiskSize) — a single ladder spanning every pool, not a per-pool
@@ -762,7 +767,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
-            {/* Title/disks-status/bar/Bandwidth render INSIDE this same tappable button now (not a
+            {/* Title/Speed/bar/balance render INSIDE this same tappable button now (not a
                 separate header button above it — two buttons can't nest), so one tap both boosts
                 this pool's own multiplier bonus (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) and shows the full summary in one control. Expand/collapse moves to
@@ -789,11 +794,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
                   <span>Pool</span>
                 </SectionTitle>
-                <DiskStatusText aria-label={`pool ${poolIndex} ${poolDisksCount} full disks`}>
-                  💾 {poolDisksCount}
-                </DiskStatusText>
+                <SpeedText>⚡ {formatDiskSize(poolBandwidth)}/s</SpeedText>
               </TitleRow>
-              <PoolBalanceText bits={poolBufferBits} isFull={poolBufferFull} />
+              <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} />
               <MultiplierBar
                 basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
                 bonusPercent={poolTapBonusPercent}
@@ -805,10 +808,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 }
                 mode={showLakeMode ? 'lake' : 'multiplier'}
               />
-              <FooterRow>
-                <FooterText>⚡ {formatDiskSize(poolBandwidth)}/s</FooterText>
-                <FooterText>🪣 {formatDiskSize(poolBufferCapacity)}</FooterText>
-              </FooterRow>
               <VisuallyHidden
                 role="progressbar"
                 aria-label={`pool ${poolIndex} memory buffer`}

@@ -316,27 +316,25 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      that file) — a bar that grows and shrinks from the MIDDLE: `FILL_MULTIPLIER_TAP_CAP_PERCENT`
      (200%) fills the full track width, 0% is a zero-width point at dead center — rendered INSIDE
      the same tappable tile (`FillableStatCard`) for both the Data Stream and every pool, as its own
-     full-width row BELOW the tile's balance, with its own rounded percent readout on a row below
-     the bar itself (`BarPercentLabel`). This replaced an earlier
+     full-width row BELOW the tile's combined balance/capacity line, with its own rounded percent
+     readout on a row below the bar itself (`BarPercentLabel`). The normal percentage is accent
+     blue; while a tap bonus is active the readout appends a neutral `+` and a yellow
+     `NN% 👆`. This replaced an earlier
      corner needle-speedometer (a half-circle dial sweeping 0%→100%→200% with a percent readout
      beneath it, itself replacing a still-earlier full-width linear two-tone bar) — the dial took too
      much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
-     `mode="multiplier"`, two layers share the bar's own center point: an OUTER layer (accent color)
-     sized to the TOTAL (fill + tap bonus) reading, and a narrower INNER layer (`theme.color.warn` —
-     the existing gold/caution token, the closest semantic stand-in for orange) sized to just the
-     tap-bonus portion, nested in the middle of the outer layer — a live tap bonus therefore reads as
-     a highlighted band right in the bar's own middle, pushing the outer (base) edges outward on both
-     sides as it grows and pulling them back toward center as the bonus decays. The bar keeps the old
+     `mode="multiplier"`, the normal accent-blue fill represents only the base fill multiplier. A
+     live tap bonus renders as its own yellow, center-growing bar directly below it and disappears
+     at zero. The bar keeps the old
      dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`
      contract (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still
      screen-reader-visible as a progress indicator and every test asserting on that contract is
      unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
      target (`FillableStatCard` rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own
-     `TitleRow` (title left, current full-disk count right — `getFullDisksCount`) renders as the
-     FIRST line inside that same button, the buffer balance alone (bigger, centered) as the second,
-     the `MultiplierBar` (with its own percent readout below it) as the third, and a `FooterRow`
-     (Bandwidth left half, Capacity right half) as the fourth — the identical four-line-in-one-button
-     structure the Data Stream's own tile uses. Expand/collapse lives on a separate, slim
+     `TitleRow` (title left, Speed/Bandwidth right) renders as the first line inside that same
+     button; disk status/count is omitted. The second line combines balance and capacity in the
+     centered `balance / capacity-unit` form, followed by the centered `MultiplierBar`. This is the
+     same structure the Data Stream's own tile uses. Expand/collapse lives on a separate, slim
      `ExpandToggleButton` (a plain
      ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a
      `<button>` can't nest inside another `<button>` (the same constraint `ComputePage`'s own
@@ -1211,13 +1209,15 @@ meaningfully denominate in yet — a fractional Byte reads worse than the raw co
 small), then B/KiB/MiB/…/QiB by 1024 each step once it does, extending `TIER_DEFINITIONS`' own
 `KB`..`QB` symbols with an "i" (pool Memory Capacity end bounds are evenly divisible by
 `BITS_PER_BYTE`, so this never loses precision at the Byte boundary). Capacity always renders in its
-own unit (picked off `capacity` itself). The balance (shown separately, in `BalanceText`, from
-Capacity's own `FooterRow` figure — see "Fill-based Speed/Bandwidth multiplier" above) shares that
+own unit (picked off `capacity` itself). The balance and Capacity share one centered `BalanceText`
+line — see "Fill-based Speed/Bandwidth multiplier" above. The balance shares that
 SAME unit as long as doing so wouldn't floor it to a nonzero fraction below 1 (e.g. "0.488 KiB") — a
 balance never reads in a coarser unit than its own Buffer. When it WOULD floor below 1 in the shared
 unit, the balance instead self-sizes into its own finer unit (`getMemoryUnit` applied to the balance
 itself, the same self-sizing `formatBitsInNearestUnit` already uses below) — e.g. "30.031 KiB"
-alongside a "1 MiB" capacity, rather than a bare "0.488 KiB" fraction. Only when even that
+alongside a "1 MiB" capacity, rather than a bare "0.488 KiB" fraction. The balance suffix is omitted
+before the slash only when both sides use the same unit; a distinct finer unit remains explicit.
+Only when even that
 self-sized unit still floors below 1 — a genuinely sub-Byte balance, since neither unit ladder
 defines anything smaller than a whole Byte — does it fall back to a raw `"N bit(s)"` count instead
 (`formatMemoryBalanceValue` in `ByteFoundryPage/index.jsx`; see `docs/DESIGN_HISTORY.md` for both the

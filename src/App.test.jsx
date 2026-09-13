@@ -2764,7 +2764,7 @@ test('Data Stream still renders raw bits (not a fractional Byte) before the Byte
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('5 bits')
+  expect(section.querySelector('p')).toHaveTextContent('5 / 8 bits')
   expect(section).toHaveTextContent('8 bits')
   expect(section).not.toHaveTextContent(/\d+(?:\.\d+)? B\b/)
 })
@@ -2781,7 +2781,7 @@ test('Data Stream renders bits/Buffer scaled into the same appropriate binary un
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('48.828 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('48.828 / 97.656 KiB')
   expect(section).toHaveTextContent('97.656 KiB')
 })
 
@@ -2803,7 +2803,7 @@ test('Data Stream balance floors the binary-unit conversion instead of rounding,
   expect(balanceBar.closest('[aria-label="data stream bit balance"]') || balanceBar).toHaveAttribute('aria-valuenow', String(bits))
   // Flooring: the balance itself must not also read "97.656 KiB" (which would mean it rounded up
   // to match the full capacity reading).
-  expect(section.querySelector('p')).not.toHaveTextContent('97.656 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('96.679 / 97.656 KiB')
 })
 
 test('Data Stream balance self-sizes into its own finer unit rather than falling back to raw bits when it would floor below 1 in the capacity-shared unit', () => {
@@ -2819,7 +2819,7 @@ test('Data Stream balance self-sizes into its own finer unit rather than falling
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB')
+  expect(section.querySelector('p')).toHaveTextContent('30.031 KiB / 1 MiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -2830,7 +2830,7 @@ test('Data Stream balance still falls back to raw bits when genuinely below 1 By
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const section = balanceBar.closest('section')
-  expect(section.querySelector('p')).toHaveTextContent('4 bits')
+  expect(section.querySelector('p')).toHaveTextContent('4 bits / 1 MiB')
   expect(section).toHaveTextContent('1 MiB')
 })
 
@@ -2844,7 +2844,7 @@ test('Data Stream balance shows a stable, non-trimmed decimal digit count — a 
   render(<App />)
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 MiB')
+  expect(balanceBar.closest('section').querySelector('p')).toHaveTextContent('5.600 / 100 MiB')
 })
 
 test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decimal digit count', () => {
@@ -2858,7 +2858,7 @@ test('a pool\'s own Memory buffer balance also shows a stable, non-trimmed decim
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(pool1.querySelector('p')).toHaveTextContent('5.600 KB')
+  expect(pool1.querySelector('p')).toHaveTextContent('5.600 / 100 KB')
 })
 
 test('Data Stream balance drops its padded trailing zeros once it has been full for more than 1 second', () => {
@@ -2875,10 +2875,10 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.000 B')
+  expect(balanceText()).toHaveTextContent('500.000 / 500 B')
 
   act(() => { vi.advanceTimersByTime(1000) })
-  expect(balanceText()).toHaveTextContent('500 B')
+  expect(balanceText()).toHaveTextContent('500 / 500 B')
 
   unmount()
   vi.useRealTimers()
@@ -2914,16 +2914,16 @@ test('a pool\'s own Memory buffer balance also drops its padded trailing zeros o
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const balanceText = () => pool1.querySelector('p')
-  expect(balanceText()).toHaveTextContent(formatDiskSizeStable(poolBufferCapacity))
+  expect(balanceText()).toHaveTextContent('1.000 / 1 KB')
 
   await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
-  expect(balanceText()).toHaveTextContent(formatDiskSize(poolBufferCapacity))
+  expect(balanceText()).toHaveTextContent('1 / 1 KB')
 
   unmount()
   vi.useRealTimers()
 })
 
-test('the top-right disk-status figure sums full disks per section — the whole Foundry for Data Stream, just that pool\'s own sizes for a pool card', () => {
+test('Speed and Bandwidth render at the top-right, with disk status removed entirely', () => {
   seedIntroState({
     bits: 0,
     capacity: 1024 * 1024 * BITS_PER_BYTE, // big enough for pool 2's own card to render once unlocked below
@@ -2939,32 +2939,26 @@ test('the top-right disk-status figure sums full disks per section — the whole
   render(<App />)
 
   const dataStreamSection = screen.getByRole('progressbar', { name: /data stream bit balance/i }).closest('section')
-  expect(within(dataStreamSection).getByLabelText('9 full disks')).toHaveTextContent('💾 9')
+  expect(within(dataStreamSection).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByLabelText('pool 1 5 full disks')).toHaveTextContent('💾 5')
+  expect(within(pool1).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool2 = screen.getByRole('region', { name: 'pool 2' })
-  expect(within(pool2).getByLabelText('pool 2 4 full disks')).toHaveTextContent('💾 4')
-})
-
-test('the disk-status figure is omitted before Storage is revealed', () => {
-  seedIntroState({ bits: 0, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
-  render(<App />)
-
+  expect(within(pool2).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
   expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
+  expect(screen.queryByText(/💾/)).not.toBeInTheDocument()
 })
 
-test('Pool footer row pairs the pool\'s own Bandwidth with its Capacity across the bottom row\'s two halves', () => {
+test('Pool balance and Capacity share one precisely centered line', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
-  const bandwidthText = within(pool1).getByText(/\/s$/)
-  const footerRow = bandwidthText.parentElement
-  expect(footerRow.children).toHaveLength(2)
-  expect(footerRow.children[1]).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 1)))
+  const balance = pool1.querySelector('p')
+  expect(balance).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`)
+  expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
 test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200%)', () => {
@@ -3054,6 +3048,8 @@ test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplie
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
+  expect(screen.getByRole('button', { name: /tap pool 1 memory/i }))
+    .toHaveTextContent(`${FILL_MULTIPLIER_MAX_PERCENT}%+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
   expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
   // The Data Stream's own tap bonus bar never appears from a pool tap.
@@ -3259,9 +3255,9 @@ describe('Byte Foundry Storage', () => {
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
     expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
-    expect(pool1.querySelector('p')).toHaveTextContent(formatDiskSize(getPoolBufferBits(savedState, 1)))
+    expect(pool1.querySelector('p')).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`)
     expect(pool1).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 1)))
-    expect(pool2.querySelector('p')).toHaveTextContent(formatDiskSize(getPoolBufferBits(savedState, 2)))
+    expect(pool2.querySelector('p')).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 2))}`)
     expect(pool2).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 2)))
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
