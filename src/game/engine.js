@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_MILESTONE_STEP, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_TIER_LABELS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BANDWIDTH_COST_MULTIPLIER, INTRO_BYTE_BASE_RATE, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_MIN_TICK_SPEED_SECONDS, INTRO_PRODUCTION_MULTIPLIER_STEP, INTRO_STARTING_CAPACITY, INTRO_STARTING_TICK_SPEED_SECONDS, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -232,19 +232,18 @@ export const createInitialGameState = () => ({
   // prestigeSpeedBonusUnlocked/autoScaleUp), the Scale Up multiplier itself doesn't survive a real
   // Prestige and has to be rebuilt from scratch each Prestige cycle.
   scaleUpCount: 0,
-  // Per-tier Scale Up counts let a claim boost only the tiers that were already unlocked.
+  // Per-tier Scale Up counts let a claim boost its target tier and every earlier tier.
   scaleUpTierCounts: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, 0])),
   // RUN-SCOPED index into TIER_DEFINITIONS that Scale Up currently targets (see
   // getScaleUpTargetTier/getScaleUpRequirement/scaleUpGame) — starts at 0 (the first tier) and
-  // climbs by exactly 1 on every successful activation, regardless of how far tiers have
-  // separately unlocked via ordinary play (see isTierUnlocked): a deferred Scale Up (Auto Scale Up
+  // climbs by exactly 1 on every successful activation. A deferred Scale Up (Auto Scale Up
   // off, or just not clicked) simply becomes available the moment its current target tier's own
   // level — reset to 1 the last time Scale Up fired, or still whatever it organically grew to if
   // Scale Up hasn't fired even once this cycle — climbs past the requirement, so nothing is ever
   // permanently missed by waiting. Deliberately NOT clamped to TIER_DEFINITIONS.length - 1: once it
   // reaches that boundary (the last tier), it keeps climbing past it while getScaleUpTargetTier
-  // remains clamped to the final tier and getScaleUpRequirement stays at its fresh three-level
-  // requirement after every reset. Reset to 0 by
+  // remains clamped to the final tier and getScaleUpRequirement advances 3, 6, 9, and so on.
+  // Reset to 0 by
   // a real Prestige/Overclock, same as scaleUpCount and everUnlockedTierIds below — all three
   // relock/re-earn from scratch once every tier needs re-reaching.
   scaleUpTargetTierIndex: 0,
@@ -252,7 +251,7 @@ export const createInitialGameState = () => ({
   // soft reset, claimable once the last tier's own level passes getOverclockRequirement(overclockCount)
   // (level 5 initially, then three more than the last claimed level; a claim jumps straight to the last tier's current level,
   // so falling behind doesn't require claiming every intermediate level). Permanently multiplies the
-  // (Money-funded) global tickspeed multiplier's own regular AND milestone per-level steps by
+  // (Money-funded) global tickspeed multiplier's single uniform per-level step by
   // getOverclockMultiplier(overclockCount) — see getGlobalTickspeedProductionMultiplier — compounding
   // OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per level, not a separate multiplier stacked
   // alongside it. Unlike scaleUpCount just above, this is NOT reset by an ordinary Scale Up
@@ -262,8 +261,8 @@ export const createInitialGameState = () => ({
   // (never itself — see overclockGame).
   overclockCount: 0,
   // Permanent GLOBAL flag, false = not yet bought: whether Prestige Points have been spent to
-  // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame) before the
-  // final-tier target; claims remain manual there so Overclock can be reached. Never reset by prestige or by Scale Up itself, like
+  // make eligible Scale Ups trigger automatically (see buyAutoScaleUp/tickGame), including the
+  // final tier. Its 3/6/9 cadence leaves Overclock reachable at level 5. Never reset by prestige or by Scale Up itself, like
   // smartAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked above.
   autoScaleUp: false,
   // Permanent GLOBAL flag, false = not yet bought: whether the 30 PP Compute auto-Boost unlock
@@ -293,17 +292,9 @@ export const createInitialGameState = () => ({
   // prestigeGame and scaleUpGame (same as prestige.xp, the currency that funds it) — never reset by
   // consumeXpForLastTierTickspeed itself, though (it only ever grows within a run).
   lastTierXpConsumed: 0,
-  // Permanent per-tier flag: whether isTierUnlocked's live condition (own owned > 0, or the
-  // previous tier's owned >= getPurchaseBlockSize(state)) has ever been satisfied for this tier — latched true forever the
-  // moment that happens (see latchEverUnlockedTiers, called from buyTier and tickGame) and read by
-  // isTierUnlocked as an additional, permanent way to stay unlocked. tier01 starts true (always
-  // unlocked, see isTierUnlocked); every other tier starts false. Exists so a tier that's already
-  // been reached doesn't disappear from the UI again if its own or its predecessor's `owned` count
-  // is later reset by something narrower than a full Prestige/Overclock (see
-  // consumeXpForLastTierTickspeed) — unlike `owned` itself, this flag is never reset by an ordinary
-  // Scale Up (see scaleUpGame: unlocking one more tier permanently, keeping every tier unlocked so
-  // far, is Scale Up's whole point) — only by a real Prestige or Overclock, both of which still
-  // fully relock every tier beyond the first, same as before this flag existed.
+  // Run-scoped record of tiers earned through successful Scale Up claims. A recorded tier
+  // re-reveals after its predecessor reaches raw level 2; tier01 starts recorded because it is
+  // always available. Real Prestige and Overclock reset this progression.
   everUnlockedTierIds: TIER_DEFINITIONS.reduce((acc, tier, index) => ({
     ...acc,
     [tier.id]: index === 0,
@@ -918,50 +909,13 @@ export const getGlobalTickspeedMultiplierCost = currentLevel =>
 export const isGlobalTickspeedMultiplierUnlocked = state =>
   (state.owned[TIER_DEFINITIONS[1].id] ?? 0) >= 1 || (state.globalTickspeedMultiplier ?? null) !== null
 
-// Counts how many milestone levels the global tickspeed multiplier has reached by `lvl`. Milestone
-// spacing starts at 10 (levels 10, 20, …, 100 — 10 milestones by level 100) and multiplies by 10
-// every time `lvl` crosses into the next power-of-ten range: spacing becomes 100 from level 100 to
-// 1000 (milestones at 200, 300, …, 1000 — 9 more), then 1000 from 1000 to 10000 (9 more), and so on
-// indefinitely — level 100 itself is only counted once (as the last milestone of the 10-spacing
-// range), not again as the first of the 100-spacing range.
-const countGlobalTickspeedMilestones = lvl => {
-  if (lvl <= 0) return 0
-  let count = 0
-  let phaseStart = 0
-  let phaseEnd = 100
-  let spacing = 10
-  // Bounded by roughly log10(lvl) iterations — cheap even for very large levels.
-  while (true) {
-    count += Math.floor((Math.min(lvl, phaseEnd) - phaseStart) / spacing)
-    if (lvl <= phaseEnd) return count
-    phaseStart = phaseEnd
-    spacing *= 10
-    phaseEnd *= 10
-  }
-}
-
-// The speed multiplier every tier gets from the global tickspeed multiplier: unlike the per-tier
-// tickspeed multiplier (where level 1 is a bonus-free baseline gated behind a separate PP unlock),
-// buying this global track directly grants its effect — every REGULAR level compounds
-// GLOBAL_TICKSPEED_PRODUCTION_STEP (1%), except a milestone level (see countGlobalTickspeedMilestones
-// above) compounds GLOBAL_TICKSPEED_MILESTONE_STEP (10%) instead, for that one level only — still
-// fully multiplicative, not additive. `null` (never bought) is treated as level 0, i.e. no bonus at
-// all (×1), regardless of overclockCount — there's no level for a boosted step to compound over yet.
-// `overclockCount` (see getOverclockMultiplier/"Overclock" in docs/ECONOMY_REFERENCE.md) permanently
-// raises BOTH the regular and milestone steps here, multiplicatively — each claimed Overclock level
-// multiplies both steps by getOverclockMultiplier's own (1 + OVERCLOCK_MULTIPLIER_STEP) factor, so a
-// level already bought before a claim retroactively compounds at the new, higher rate from then on,
-// same as every other level. Defaults to 0 so existing callers that haven't been updated to pass it
-// still get the pre-Overclock baseline rate rather than throwing — but every real call site in this
-// codebase passes it explicitly.
+// The speed multiplier every tier gets from Clock Speed. Every level compounds the same base
+// production step, scaled by the permanent Overclock multiplier. Clock Speed milestones are UI and
+// progression markers only; they do not change this formula.
 export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0) => {
   const lvl = clampNonNegative(level ?? 0)
-  const milestoneLevels = countGlobalTickspeedMilestones(lvl)
-  const regularLevels = lvl - milestoneLevels
-  const overclockFactor = getOverclockMultiplier(overclockCount)
-  const regularStep = GLOBAL_TICKSPEED_PRODUCTION_STEP * overclockFactor
-  const milestoneStep = GLOBAL_TICKSPEED_MILESTONE_STEP * overclockFactor
-  return (1 + regularStep) ** regularLevels * (1 + milestoneStep) ** milestoneLevels
+  const step = GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
+  return (1 + step) ** lvl
 }
 
 // Whether the last tier's Money-funded tickspeed multiplier is currently replaced by the
@@ -1358,17 +1312,17 @@ const isScaleUpTargetingLastTier = state =>
 
 // The tier Scale Up's own requirement (see getScaleUpRequirement below) is currently measured
 // against: state.scaleUpTargetTierIndex directly, clamped to the last tier once reached (there's no
-// tier past it to keep targeting). Every tier up to and including this one is already unlocked by
-// the time it's targeted — either because reaching this activation's own predecessor requirement
-// already unlocked it live (see isTierUnlocked), or because scaleUpGame carries everUnlockedTierIds
-// through unchanged rather than wiping it, keeping it unlocked permanently either way.
+// tier past it to keep targeting). Successful earlier Scale Up claims record each target before it
+// becomes current; ordinary predecessor progress alone never records a first-time tier.
 export const getScaleUpTargetTier = state => TIER_DEFINITIONS[getClampedScaleUpTargetTierIndex(state)]
 
-// Scale Up always requires level 3 on its current target. Before the final tier this reveals the
-// next tier; at the final tier each reset starts another fresh three-level climb.
+// Scale Up requires level 3 before the final tier. At the final tier, each successful claim
+// advances the next requirement by three levels: 3, 6, 9, ….
 export const getScaleUpRequirement = state => {
   if (!isScaleUpTargetingLastTier(state)) return TIER_UNLOCK_PREV_LEVEL_REQUIREMENT
-  return SCALE_UP_FINAL_TIER_REQUIREMENT_STEP
+  const finalTierClaimNumber = clampNonNegative(state.scaleUpTargetTierIndex ?? 0)
+    - (TIER_DEFINITIONS.length - 1) + 1
+  return SCALE_UP_FINAL_TIER_REQUIREMENT_STEP * finalTierClaimNumber
 }
 
 // The first Overclock requires last-tier level 5. Later uses require at least three levels more
@@ -1377,8 +1331,8 @@ export const getOverclockRequirement = overclockCount =>
   clampNonNegative(overclockCount) === 0 ? 5 : clampNonNegative(overclockCount) + OVERCLOCK_REQUIREMENT_STEP
 
 // Overclock's own growth factor: compounds OVERCLOCK_MULTIPLIER_STEP (10%, i.e. ×1.1) per claimed
-// level. Folded directly into getGlobalTickspeedProductionMultiplier above — it multiplies BOTH the
-// (Money-funded) global tickspeed multiplier's regular and milestone per-level steps, so Overclock
+// level. Folded directly into getGlobalTickspeedProductionMultiplier above — it scales the
+// (Money-funded) global tickspeed multiplier's single per-level step, so Overclock
 // still has zero effect while that track itself is at level 0/not yet bought (there's no level for
 // the boosted step to compound over yet), same as before Overclock existed.
 export const getOverclockMultiplier = overclockCount =>
@@ -1421,40 +1375,16 @@ export const isProductionFrozen = state =>
 // tier's level 1 and level 2 completions.
 export const TIER_UNLOCK_PREV_LEVEL_REQUIREMENT = 3
 
-// First tier is always unlocked; each subsequent tier unlocks once the tier below has fully
-// purchased two levels (reached purchaseLevels >= TIER_UNLOCK_PREV_LEVEL_REQUIREMENT — see above).
-// Already-owned tiers stay unlocked so older saves remain playable after rule changes; a tier that
-// has ever satisfied this live condition also stays unlocked forever via the permanent
-// everUnlockedTierIds flag (see latchEverUnlockedTiers), even if `owned`/`purchaseLevels` is later
-// reset by something narrower than a full Prestige/Scale Up (see consumeXpForLastTierTickspeed).
+// First tier is always unlocked. A later tier is first recorded only by a successful Scale Up.
+// Within subsequent reset runs, recorded tiers re-reveal after their predecessor reaches raw level
+// 2; an owned tier remains visible for old-save compatibility.
 export const isTierUnlocked = state => tier => {
   const tierIndex = (TIER_INDEX_BY_ID[tier.id] ?? -1)
   if (tierIndex === 0) return true
-  if (state.everUnlockedTierIds?.[tier.id]) return true
-  if ((state.owned[tier.id] ?? 0) > 0) return true
+  if ((state.owned[tier.id] ?? 0) > 0 || (state.purchaseLevels?.[tier.id] ?? 1) > 1) return true
+  if (!state.everUnlockedTierIds?.[tier.id]) return false
   const prevTier = TIER_DEFINITIONS[tierIndex - 1]
-  return (state.purchaseLevels?.[prevTier.id] ?? 1) >= TIER_UNLOCK_PREV_LEVEL_REQUIREMENT
-}
-
-// Latches everUnlockedTierIds permanently true for any tier whose isTierUnlocked live condition
-// (own owned > 0, or the previous tier having fully purchased two levels) is currently satisfied
-// but not yet flagged — called from buyTier and tickGame right after `owned`/`purchaseLevels`
-// changes, so the flag catches up the same tick/purchase a tier first becomes reachable. Returns
-// the same state reference if nothing newly qualifies (the common case), matching every other
-// engine function's no-op convention.
-const latchEverUnlockedTiers = state => {
-  const previous = state.everUnlockedTierIds ?? {}
-  let changed = false
-  const next = { ...previous }
-  TIER_DEFINITIONS.forEach((tier, index) => {
-    if (index === 0 || next[tier.id]) return
-    const prevTier = TIER_DEFINITIONS[index - 1]
-    if ((state.owned[tier.id] ?? 0) > 0 || (state.purchaseLevels?.[prevTier.id] ?? 1) >= TIER_UNLOCK_PREV_LEVEL_REQUIREMENT) {
-      next[tier.id] = true
-      changed = true
-    }
-  })
-  return changed ? { ...state, everUnlockedTierIds: next } : state
+  return (state.purchaseLevels?.[prevTier.id] ?? 1) >= 2
 }
 
 // Money's order of magnitude, floored (money < 1 has no positive exponent, so reads as 0).
@@ -1843,7 +1773,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     }
   })
 
-  const producedState = latchEverUnlockedTiers({
+  const producedState = {
     ...stateAfterAutobuyers,
     resources: newResources,
     owned: newOwned,
@@ -1858,7 +1788,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     ...(autoPrestigeActive ? {
       autoPrestigeAttemptBudget: (stateAfterAutobuyers.autoPrestigeAttemptBudget ?? 0) + getAutoPrestigeAttemptRate(autoPrestigeLevel) * elapsedSeconds,
     } : {}),
-  })
+  }
 
   // Only a tier whose tierTickspeedAutobuyer is unlocked (see applyAutobuyerMilestones)
   // self-upgrades its own tickspeed multiplier level one step per tick whenever affordable — no
@@ -1905,17 +1835,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     : stateAfterGlobalTickspeedAutobuyer
 
   // If Auto Scale Up is bought (see buyAutoScaleUp), trigger a Scale Up automatically the instant
-  // it's eligible — no manual click needed. scaleUpGame re-validates eligibility internally (the
-  // last tier must have reached 10 purchases, and production must not be frozen), so this is a
+  // it's eligible — no manual click needed. scaleUpGame re-validates the current target's raw-level
+  // requirement (level 3 before the final tier, then 3/6/9/…) and the production freeze, so this is a
   // plain edge-triggered call, same convention as the autobuyer-automation loop above, not a
   // rate-accumulating budget — Scale Up has no cadence to throttle, unlike Auto-Prestige. Gated on
   // autoScaleUpEnabled (see setAutoScaleUpEnabled) — paused behaves exactly as if autoScaleUp were
   // still false, for automation purposes only; the manual Scale Up button is unaffected.
-  // Stop at the final tier so Auto Scale Up cannot repeatedly reset its level-3 progress before
-  // the player can reach the higher, deliberately manual Overclock requirement.
+  // Final-tier requirements advance 3/6/9/…, so the level-3 automatic claim still leaves the
+  // level-5 Overclock window open before the next automatic Scale Up at level 6.
   const stateAfterScaleUp = stateAfterAutoPrestigeAutobuyer.autoScaleUp
     && (stateAfterAutoPrestigeAutobuyer.autoScaleUpEnabled ?? true)
-    && !isScaleUpTargetingLastTier(stateAfterAutoPrestigeAutobuyer)
     ? scaleUpGame(stateAfterAutoPrestigeAutobuyer)
     : stateAfterAutoPrestigeAutobuyer
 
@@ -2031,9 +1960,7 @@ export const buyTier = tierId => state => {
     },
   }
 
-  // A purchase can be the very first thing that satisfies a tier's (or its successor's) unlock
-  // condition — latch that permanently too (see latchEverUnlockedTiers/isTierUnlocked).
-  return latchEverUnlockedTiers(nextState)
+  return nextState
 }
 
 // Buys up to `quantity` units of a tier, capped at the current level's boundary so every unit
@@ -2084,7 +2011,7 @@ export const buyTierQuantity = (tierId, quantity) => state => {
     },
   }
 
-  return latchEverUnlockedTiers(nextState)
+  return nextState
 }
 
 // --- Byte Foundry (pre-game intro) --- state lives in state.intro (see createInitialGameState
@@ -2123,7 +2050,7 @@ const grantTierUnits = (tierId, quantity) => state => {
     purchaseLevelProgress: { ...state.purchaseLevelProgress, [tierId]: newProgress },
   }
 
-  return latchEverUnlockedTiers(result)
+  return result
 }
 
 // The Byte generator's current bits/sec, whether or not it's been built yet: how much
@@ -5797,7 +5724,7 @@ export const buyGlobalTickspeedMultiplier = state => {
 // re-accumulating scaleUpCount on its own. everUnlockedTierIds, by contrast, is
 // NOT carried over — it resets to the fresh initial default same as owned/purchased, so a real
 // Prestige still relocks every
-// tier beyond the first exactly as it always has (see isTierUnlocked/latchEverUnlockedTiers) —
+// tier beyond the first exactly as it always has (see isTierUnlocked) —
 // this flag exists only to stop consumeXpForLastTierTickspeed's narrower reset from relocking
 // tiers, not to change what Prestige/Scale Up themselves do.
 
@@ -6265,16 +6192,13 @@ export const unpinMuseumEntry = entryId => state => {
 
 // A more frequent soft-reset than real Prestige, available well before Money reaches PRESTIGE_THRESHOLD:
 // once the current scale-up target tier (see getScaleUpTargetTier) reaches getScaleUpRequirement(state)'s
-// target LEVEL — a flat level 3, including repeated final-tier claims — resets
+// target level — level 3 before the final tier, then 3/6/9/… there — resets
 // resources/owned/purchased (and every other per-run
 // field, including every tier's own tickspeed level, purchase level/progress, and the global
 // tickspeed multiplier, both back to not-yet-bought — same reset prestigeGame now does) back to a
-// fresh game exactly like createInitialGameState, but permanently doubles production for each tier
-// already unlocked before the claim (see getTierScaleUpMultiplier) and — unlike
-// prestigeGame/overclockGame — carries `everUnlockedTierIds`
-// through unchanged instead of wiping it (see below), so every tier unlocked so far, PLUS the one
-// that reaching this activation's target level just permanently unlocked (same live threshold as
-// isTierUnlocked), stays unlocked through the reset. Autobuyer unlock/smartAutobuyer/
+// fresh game exactly like createInitialGameState, but permanently doubles the current target and
+// every earlier tier (see getTierScaleUpMultiplier). The successful claim records its successor in
+// `everUnlockedTierIds`; reaching the predecessor threshold alone never records a tier. Autobuyer unlock/smartAutobuyer/
 // tierTickspeedAutobuyer/autoPrestige/prestigeSpeedBonusUnlocked/autoScaleUp/autoGlobalTickspeed
 // (the *automation toggles*, as opposed to the global tickspeed multiplier's own level) carry over
 // unchanged — so if the global tickspeed Autobuyer was already bought, tickGame simply starts
@@ -6286,10 +6210,8 @@ export const unpinMuseumEntry = entryId => state => {
 // investment along with everything else XP-funded. Resetting every tier's level back to 1 also
 // resets getPurchaseBlockSize back down to DEFAULT_PURCHASE_BLOCK_SIZE for every tier, undoing any
 // in-run growth.
-// `everUnlockedTierIds` is carried over unchanged (see above) — a deliberate departure from
-// prestigeGame/overclockGame, which both still fully relock every tier beyond the first; Scale Up's
-// whole point is to trade away this cycle's progress for one more permanently-reachable tier plus the
-// stacking production bonus, not to relock what's already been reached. `scaleUpTargetTierIndex`
+// Existing `everUnlockedTierIds` records are preserved and the successful claim records its target
+// plus successor (when one exists). Prestige/Overclock still reset this progression. `scaleUpTargetTierIndex`
 // simply increments by 1 unconditionally (see its own comment in createInitialGameState) — no
 // separate phase check needed, since getScaleUpRequirement already reads however far past the last
 // tier it's climbed directly. Unlike prestigeGame, `prestige.points`/`count` are passed through
@@ -6310,18 +6232,17 @@ export const scaleUpGame = state => {
 
   const initial = createInitialGameState()
   const targetTierIndex = getClampedScaleUpTargetTierIndex(state)
-  const successorTier = TIER_DEFINITIONS[targetTierIndex + 1]
-  const hasProgressBeyondSuccessor = successorTier && (
-    (state.owned?.[successorTier.id] ?? 0) > 0 ||
-    TIER_DEFINITIONS.slice(targetTierIndex + 2).some(isTierUnlocked(state))
-  )
-  const newlyRevealedTierId = hasProgressBeyondSuccessor ? null : successorTier?.id
-  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map(tier => [
+  const scaleUpTierCounts = Object.fromEntries(TIER_DEFINITIONS.map((tier, index) => [
     tier.id,
-    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (
-      isTierUnlocked(state)(tier) && tier.id !== newlyRevealedTierId ? 1 : 0
-    ),
+    (state.scaleUpTierCounts?.[tier.id] ?? 0) + (index <= targetTierIndex ? 1 : 0),
   ]))
+  const everUnlockedTierIds = {
+    ...(state.everUnlockedTierIds ?? initial.everUnlockedTierIds),
+    [targetTier.id]: true,
+    ...(TIER_DEFINITIONS[targetTierIndex + 1]
+      ? { [TIER_DEFINITIONS[targetTierIndex + 1].id]: true }
+      : {}),
+  }
   return {
     ...initial,
     // Unlike prestigeGame (which resets the Data Stream balance every cycle but keeps the
@@ -6349,10 +6270,8 @@ export const scaleUpGame = state => {
     autoGlobalTickspeedEnabled: state.autoGlobalTickspeedEnabled ?? initial.autoGlobalTickspeedEnabled,
     // lastTierXpConsumed is NOT carried over — it resets to 0 (initial.lastTierXpConsumed) along
     // with prestige.xp below.
-    // everUnlockedTierIds IS carried over unchanged here (see this function's own comment above) —
-    // the one deliberate departure from prestigeGame/overclockGame's reset shape: Scale Up unlocks
-    // one more tier permanently rather than relocking what's already been reached.
-    everUnlockedTierIds: state.everUnlockedTierIds ?? initial.everUnlockedTierIds,
+    // Preserve prior records and add the target/successor earned by this successful claim.
+    everUnlockedTierIds,
     // Museum is permanent per save — Scale Up must not wipe prestige history/pins.
     prestigeMuseum: state.prestigeMuseum ?? initial.prestigeMuseum,
     // Era ascension progress (era count, banked Eons, purchased hyperscalers, Eon upgrade levels)
@@ -6400,8 +6319,8 @@ export const scaleUpGame = state => {
 // player who claims late (last claimed at level 5, last tier now at level 8) catches up to level 8
 // in one claim instead of needing intermediate claims. This is always at least a +3 gain, since the
 // eligibility check above guarantees lastTierLevel >= overclockCount + 3. Overclock's reward
-// (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's own regular and
-// milestone steps, see getEffectiveTierTickSpeedSeconds) is keyed off this same overclockCount.
+// (getOverclockMultiplier — folded into getGlobalTickspeedProductionMultiplier's single uniform
+// per-level step, see getEffectiveTierTickSpeedSeconds) is keyed off this same overclockCount.
 // `autoScaleUp` (the automation toggle deciding whether Scale Up
 // fires automatically) is unaffected by wiping scaleUpCount — it's still carried over permanently
 // below, so it simply starts re-accumulating scaleUpCount from 0 on the next cycle, same as after a
@@ -6468,9 +6387,9 @@ export const overclockGame = state => {
 }
 
 // One-time PP cost to permanently automate Scale Up (see AUTO_SCALE_UP_COST) — once bought,
-// tickGame calls scaleUpGame automatically every tick before the final-tier target, re-validating
-// eligibility internally (see getScaleUpTargetTier/getScaleUpRequirement); final-tier Scale Up
-// remains manual so automation cannot starve Overclock's higher gate. A no-op if already bought, if there aren't
+// tickGame calls scaleUpGame automatically every tick, including at the final-tier target,
+// re-validating eligibility internally. Final-tier requirements advance 3/6/9/…, leaving the
+// level-5 Overclock window between the first two automatic claims. A no-op if already bought, if there aren't
 // enough unspent points, or while production is frozen — same convention as
 // buyPrestigeSpeedBonus/buySmartAutobuyer.
 export const buyAutoScaleUp = state => {
