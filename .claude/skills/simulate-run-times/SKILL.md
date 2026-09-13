@@ -41,7 +41,7 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   too (`getVisibleStoragePoolCount` — the same capacity-threshold-AND-disk-build-unlocked gate
   `ByteFoundryPage` uses to decide which pool cards actually render a Memory tile; a merely
   disk-build-unlocked pool with no card on screen yet isn't tappable by a real player, so the bot
-  must not tap it either) — the fill-based Speed/Bandwidth multiplier — `FILL_MULTIPLIER_*` in
+  must not tap it either) — the fill-based multiplier — `FILL_MULTIPLIER_*` in
   `layers.js` — is independent per Data Stream/pool, so an attentive player keeps every VISIBLE one
   of them boosted, not just the Data Stream tile; Combine into a Byte when affordable. Byte Foundry
   funds Byte Factory pull-based and fully automatically now (`tickDiskPull`/
@@ -52,8 +52,8 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   Memory → Kilobytes until the gate opens; the convert-before-pull ordering that used to matter for
   avoiding a Foundry-gate softlock is now an engine-level fact (`tickDiskPull` runs at the very end
   of `tickGame`'s own pipeline, after `tickIntroAutoInvest`), not something bot strategy can
-  influence either way. After unlock: Disk Fill → Invest → Disk Build → **queue Capacity** when
-  Invest can't take the next spend (or while climbing to conversion unlock) →
+  influence either way. After unlock: Disk Fill → Disk Build → **queue the Data Stream upgrade**
+  when the Buffer isn't full yet →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
   → convert → **Data Lake Booster buys** (`buyBooster`, funded only from that lake's own banked
   units — outside the forced priority order entirely, always available the instant affordable) →

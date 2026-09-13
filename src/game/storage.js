@@ -304,8 +304,8 @@ export const buildResetByteFoundryConfirmMessage = () => {
   return (
     `Reset Byte Foundry on "${name}"?\n\n` +
     `Use this if Capacity (or Storage / Compute) went too far.\n\n` +
-    `Erased: Data Stream Buffer, pool Memory Capacity, Combine / Speed (Invest) progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
-    `Convenience: Combine, Speed (Invest), and Provision Disk all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity remains on its doubling ladder up to the active pool ceiling.\n\n` +
+    `Erased: Data Stream Buffer, pool Memory Capacity, Data Stream upgrade progress, all Disks/Storage, and all Compute. Multipliers restart from scratch.\n\n` +
+    `Convenience: Combine, Upgrade Data Stream, and Provision Disk all auto-press again up to your pre-reset highs as soon as each is affordable — you do not need to click them. Capacity remains on its doubling ladder up to the active pool ceiling.\n\n` +
     `Also kept: Byte Factory, Prestige Points / count / upgrades, and (if already unlocked) access to the main game this cycle.\n\n` +
     `Other save slots and your Supporter unlock (if any) stay.\n\n` +
     `This cannot be undone.`
@@ -510,6 +510,21 @@ const mergeState = saved => {
     ...savedClean
   } = saved
   const { dataLakes, pendingComputeGrants } = mergeDataLakes(fresh.intro.dataLakes, saved.intro?.dataLakes)
+  // Speed is now derived from Capacity (see getIntroProductionRate in engine.js) — the previously
+  // independent Speed upgrade track (tickSpeedSeconds/productionMultiplier/milestone claims, plus
+  // its compute-sacrifice funding fields) no longer exists, so its saved values are stripped
+  // rather than carried forward as dead keys; Capacity itself already encodes the full purchased
+  // progression. productionAccumulator likewise — production is continuous, not batched.
+  const {
+    tickSpeedSeconds: _legacyTickSpeed,
+    productionMultiplier: _legacyProductionMultiplier,
+    productionAccumulator: _legacyProductionAccumulator,
+    productionMilestoneTier: _legacyMilestoneTier,
+    productionMilestoneTierClaims: _legacyMilestoneTierClaims,
+    computeFundedBandwidthClaims: _legacyComputeFundedClaims,
+    computeBandwidthSacrificeIndex: _legacySacrificeIndex,
+    ...savedIntroClean
+  } = saved.intro ?? {}
 
   return normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
@@ -559,7 +574,7 @@ const mergeState = saved => {
     },
     intro: applyPendingComputeGrants({
       ...fresh.intro,
-      ...(saved.intro ?? {}),
+      ...savedIntroClean,
       dataLakes,
     }, pendingComputeGrants),
     computeFlops: {

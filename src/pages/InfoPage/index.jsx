@@ -34,9 +34,9 @@ import {
   FILL_MULTIPLIER_MAX_PERCENT,
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
+  FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_CAP_PERCENT,
   FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND,
-  INTRO_BANDWIDTH_COST_MULTIPLIER,
   INTRO_BYTE_COMBINE_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   DISK_ARRAY_LADDER_CAP,
@@ -44,7 +44,6 @@ import {
   DISK_CACHE_BLOCK_COUNT,
   DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER,
   INTRO_DISK_UNLOCK_CAPACITY,
-  INTRO_PRODUCTION_MULTIPLIER_STEP,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
   TIER_DEFINITIONS,
   TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP,
@@ -136,11 +135,10 @@ const InfoPage = () => {
   const firstTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[0].id)
   const lastTierAutobuyerMilestone = getAutobuyerUnlockMilestone(TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id)
   const firstTierTickspeedAutobuyerMilestone = getTierTickspeedAutobuyerMilestone(TIER_DEFINITIONS[0].id)
-  const scaleUpFirstRequirement = TIER_UNLOCK_PREV_LEVEL_REQUIREMENT
-  const overclockFirstRequirement = getOverclockRequirement(0)
+  const scaleUpReRevealCompletedLevels = TIER_UNLOCK_PREV_LEVEL_REQUIREMENT - 1
+  const overclockFirstRequirement = getOverclockRequirement({})
   const lastTierName = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].name
   const firstTierName = TIER_DEFINITIONS[0].name
-  const secondTierName = TIER_DEFINITIONS[1].name
 
   return (
     <RootDiv>
@@ -198,19 +196,18 @@ const InfoPage = () => {
             {FILL_MULTIPLIER_MIN_PERCENT}% once completely full. Tapping the Data Stream (once
             Storage pools are revealed at 1 KiB) or a pool’s own Memory tile adds{' '}
             +{FILL_MULTIPLIER_TAP_BONUS_PERCENT}% to that one Data Stream/pool’s own multiplier,
-            decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The combined
-            total (base multiplier plus any live tap bonus) is capped at{' '}
-            {FILL_MULTIPLIER_TAP_CAP_PERCENT}% — the speedometer gauge in each card’s top-right
-            corner shows this, with the tap bonus portion extending past the base needle position in
-            a distinct color.
+            decaying back down at {FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND}%/sec. The tap
+            bonus is its own 0–{FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% value shown as a separate
+            yellow bar directly below the blue base-multiplier bar (visible only while it’s above
+            0); the combined total (base multiplier plus any live tap bonus) is capped at{' '}
+            {FILL_MULTIPLIER_TAP_CAP_PERCENT}%.
           </li>
           <li>
-            <strong>Speed ×2</strong> (Invest) spends Data Stream bits on an independent cost
-            ladder, stepped ×{INTRO_BANDWIDTH_COST_MULTIPLIER} per tier, for permanently
-            ×{INTRO_PRODUCTION_MULTIPLIER_STEP} pool Memory Speed (doesn’t require a full Buffer).
-            When that bit cost exceeds Buffer, you can instead sacrifice {COMPUTE_ENTITY_CAP} of
-            the next Compute tier (Cores → … → Megacomputers, then wrapping back to Cores) for the
-            same ×2 — separate from auto-merge sacrifices.
+            <strong>Upgrade Data Stream</strong> is the single Data Stream upgrade: it costs your
+            current Capacity in bits (draining a full Buffer) and doubles Capacity each purchase.
+            Speed is derived from Capacity — never upgraded separately — at{' '}
+            √(Capacity in Bytes) per second on even doublings, alternating ×1.5 and ×4/3 growth
+            (exactly ×2 every two upgrades).
           </li>
           <li>
             <strong>Transfer blocks</strong> convert Data Stream bits into free {firstTierName} at
@@ -237,7 +234,7 @@ const InfoPage = () => {
         <h3>Forced priority</h3>
         <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
         <ul>
-          <li>Disk Fill → Speed/Invest → Provision Disk → Compute Boost</li>
+          <li>Disk Fill → Provision Disk → Compute Boost / Upgrade Data Stream</li>
         </ul>
       </Section>
 
@@ -493,15 +490,15 @@ const InfoPage = () => {
         </ul>
       </Section>
 
-      <Section aria-label="clock speed section">
-        <h2>Clock Speed</h2>
+      <Section aria-label="latency section">
+        <h2>Latency</h2>
         <ul>
           <li>
             Spend Bytes to permanently speed up every tier’s production ticks by another 1% at once —
             more frequent deliveries, not bigger ones.
           </li>
-          <li>Each level costs another power of ten (10 B, 100 B, 1,000 B, …).</li>
-          <li>Unlocks once you own {secondTierName}.</li>
+          <li>Each level costs another exact power of ten (10 B, 100 B, 1,000 B, …).</li>
+          <li>Unlocks once {firstTierName} completes its first level.</li>
           <li>
             Kilobytes produce Bytes; there’s also a per-tier tickspeed track on each unlocked tier
             row, funded from that tier’s own resource.
@@ -513,20 +510,20 @@ const InfoPage = () => {
         <h2>Scale Up</h2>
         <ul>
           <li>
-            Reach displayed level {scaleUpFirstRequirement} on the tier Scale Up is currently
+            Reach 3 completed levels on the tier Scale Up is currently
             working through — starting with {firstTierName} — to trigger a Scale Up.
           </li>
           <li>
             Resets tiers and resources and records the next tier. Recorded tiers reappear after
-            their predecessor reaches level 2; first-time reveals happen only on a successful Scale Up.
+            their predecessor reaches {scaleUpReRevealCompletedLevels} completed levels; first-time reveals happen only on a successful Scale Up.
           </li>
           <li>
             Permanently doubles production for every tier already unlocked when you claim it.
             Each tier stacks its own bonus (×2, ×4, ×8, …); a newly revealed tier starts at ×1.
           </li>
           <li>
-            Each tier first needs level {scaleUpFirstRequirement}. At {lastTierName}, requirements
-            continue 3, 6, 9, and so on.
+            Each claim needs a completed-level multiple of 3 — 3, 6, 9, 12, and so on,
+            counting every Scale Up claimed this cycle, on whatever tier is currently targeted.
           </li>
           <li>Byte Foundry state (including Memory) is untouched — this is an intra-cycle soft reset.</li>
         </ul>
@@ -536,7 +533,7 @@ const InfoPage = () => {
         <h2>Overclock</h2>
         <ul>
           <li>
-            Reach the required level on {lastTierName} to claim an Overclock level.
+            Reach the required completed-level count on {lastTierName} to claim an Overclock.
           </li>
           <li>
             Resets tiers and resources like Scale Up (keeps unlocked autobuyers and Prestige Points).
@@ -545,16 +542,17 @@ const InfoPage = () => {
             Also wipes Scale Up’s stacking bonus back to zero.
           </li>
           <li>
-            In exchange, permanently multiplies Clock Speed’s per-level rate by ×1.1 each
-            claim (1% → 1.1% → 1.21% → …), Clock Speed milestones remain progression markers but add no separate bonus.
+            In exchange, permanently multiplies Latency’s per-level rate by ×1.1 for each
+            completed level banked (1% → 1.1% → 1.21% → …).
           </li>
           <li>
-            First claim needs level {overclockFirstRequirement}; each later claim needs three more
-            levels than the last.
+            First claim needs {overclockFirstRequirement} completed levels — a minimum only; you
+            may keep climbing first. Each later claim needs three more completed levels than the
+            count the previous claim was actually taken at.
           </li>
           <li>
-            Claiming jumps straight to whatever level {lastTierName} has already reached — you don’t
-            have to claim every intermediate level one at a time.
+            Claiming banks all completed levels already reached — claiming 3 levels then 3 more
+            gives exactly the same benefit as claiming 6 at once, so claim whenever you like.
           </li>
         </ul>
       </Section>

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
+  purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
+  level compounds the same Overclock-scaled 1% step.
+- **Completed levels now multiply production by ×1.1** (was ×2), compounding per completed level.
+- **Tier tickspeed upgrades now give +1% per level** (was +10%).
+- **Scale Up requirements are based on the target tier's completed levels** — completed-level
+  multiples of 3 (3, 6, 9, 12, … by Scale Up count), separate from tier re-reveal. A tier already
+  unlocked by a previous Scale Up within the same Overclock re-reveals at 2 completed predecessor
+  levels. The Scale Up button names the required tier, shows completed-level progress, and displays
+  "Unlock TB" when the claim will reveal Terabytes.
+- **Overclock requirements are completed levels of the final tier**: first available at 5 completed
+  levels, then at the previous claim's completed-level count + 3 (dynamic, not a fixed ladder). A
+  claim banks the whole completed-level count, so claiming 3 + 3 equals claiming 6.
+- **The final-tier XP-funded tickspeed boost unlocks after the first Scale Up of the final tier**
+  (the 10th Scale Up today) rather than on reveal alone.
+- **Byte Foundry Speed ×2 (Invest) and Capacity ×2 are consolidated into a single "Upgrade Data
+  Stream" button** (no icon): cost = current capacity, each upgrade doubles capacity, and Speed is
+  derived from capacity — `sqrt(capacityBytes)` B/s at even log2 exponents, the mean of the
+  neighbouring even-exponent speeds at odd ones (×1.5/×4/3 alternating, ×2 per two upgrades). Upgrade
+  Data Stream is now the lowest-priority Foundry action.
+- **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
+  tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
+  and continuous with transparent tracks.
+
+
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
 - Added `focus-visible` outline styles to TierNameTrigger and other interactive components.

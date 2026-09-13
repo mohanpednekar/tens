@@ -46,7 +46,7 @@ const withIntro = (introOverrides = {}) => {
 
 const lastTierId = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1].id
 
-/** Invest (Bandwidth) available, Sacrifice blocked — a normal-level Foundry cue. */
+/** Upgrade Data Stream available — a normal-level Foundry cue. */
 const investReadyIntro = {
   bits: INTRO_STARTING_CAPACITY,
   capacity: INTRO_STARTING_CAPACITY,
@@ -180,7 +180,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).foundry).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Foundry at high when Invest is available on a full Memory balance', () => {
+  it('lights Foundry at high when Upgrade Data Stream is available on a full Memory balance', () => {
     const state = withIntro(investReadyIntro)
     expect(hasFoundryAttention(state)).toBe(true)
     expect(getNavAttention(state).foundry).toBe(ATTENTION_HIGH)
@@ -247,9 +247,8 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      // scaleUpTargetTierIndex at the last tier's own index puts getScaleUpRequirement into its
-      // phase-2 formula: a flat 3 for the first activation once there (see getScaleUpRequirement).
-      purchaseLevels: { [lastTierId]: 3 },
+      // The first Scale Up needs 3 completed levels (raw purchaseLevels 4).
+      purchaseLevels: { [lastTierId]: 4 },
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
       scaleUpCount: 0,
     }
@@ -262,7 +261,7 @@ describe('navAttention', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      purchaseLevels: { [lastTierId]: 5 },
+      purchaseLevels: { [lastTierId]: 6 }, // 5 completed levels
       everUnlockedTierIds: { [lastTierId]: true },
       overclockCount: 0,
       // Scale Up still targets tier01 in this state, so its untouched level keeps Scale Up
@@ -298,12 +297,13 @@ describe('navAttention', () => {
     expect(hasAffordablePpUpgrade(state)).toBe(false)
   })
 
-  it('lights Factory when Clock Speed is affordable from the Bytes pool', () => {
-    const tier02 = TIER_DEFINITIONS[1]
+  it('lights Factory when Latency is affordable from the Bytes pool', () => {
+    const tier01 = TIER_DEFINITIONS[0]
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      owned: { [tier02.id]: 1 },
+      // Latency unlocks once level 1 of the first tier completes (purchaseLevels advances to 2).
+      purchaseLevels: { [tier01.id]: 2 },
       resources: {
         ...createInitialGameState().resources,
         [MONEY_ID]: 0,
@@ -316,7 +316,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('does not treat Clock Speed as affordable when only Bits cover the cost', () => {
+  it('does not treat Latency as affordable when only Bits cover the cost', () => {
     const tier02 = TIER_DEFINITIONS[1]
     const state = {
       ...createInitialGameState(),

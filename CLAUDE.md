@@ -524,7 +524,7 @@ src/
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage; Data Stream + every DiskArrayRow as continuous
-                               sections (no second-level tabs). Speed ×2 (Invest) and Capacity ×2
+                               sections (no second-level tabs). A single "Upgrade Data Stream" action
                                sit in the Data Stream section; pool Memory values are derived
                                from the shared Data Stream and its moving Capacity ceiling
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
@@ -800,7 +800,7 @@ Strict three-layer separation:
    `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
-   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Clock Speed, Scale Up,
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Latency, Scale Up,
    Overclock, Tier Autobuyers, Milestones, Prestige, Era ascension). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
@@ -816,7 +816,7 @@ Strict three-layer separation:
     Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Provision Disk
+    Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Data Stream / Provision Disk
     convenience-auto up to prior highs; Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
@@ -920,8 +920,10 @@ the tier immediately below it, cascading production down the ladder; `tier01` (K
 case where cost is still Bits but production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`,
 displayed as whole `B`) and mirrors the same amount × `BITS_PER_BYTE` into Bits (`MONEY_ID`) so
 MoneyHero / Prestige / tier Buys keep moving (see `docs/DESIGN_HISTORY.md` for the #430 incident
-this mirror fixed). **Clock Speed** (the global tickspeed multiplier on MainPage,
-formerly "Tickspeed") is funded from that Bytes pool — initial activation costs **10 Bytes** — not Bits.
+this mirror fixed). **Latency** (the global tickspeed multiplier on MainPage,
+formerly "Tickspeed"/"Clock Speed") is funded from that Bytes pool — initial activation costs
+**10 Bytes** — not Bits. It unlocks once level 1 of the first tier (tier01) is purchased; there are
+no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
 the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` is true (permanent
@@ -963,15 +965,18 @@ and only clamps it when necessary, and Era ascension keeps the permanent generat
 and the permanent `mainGameUnlocked` latch, but resets Capacity itself to `INTRO_STARTING_CAPACITY`
 with the rest of the Foundry (`buildEraIntroReset`) — Capacity has to be rebuilt from scratch each
 Era, but Factory access itself never goes away again once earned.
-Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
-restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
-Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
+Production and storage grow via a single **Upgrade Data Stream** action: it requires a full
+Buffer, drains it (cost = current capacity), and doubles `intro.capacity` — Capacity is the only
+purchased progression variable. The displayed Speed is purely *derived* from Capacity
+(`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd
+powers the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3
+growth, exactly ×2 per two upgrades. Plus —
 once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
 Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
-actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk >
-Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
+actions are ranked in a fixed **forced priority order** — Disk Fill > Provision Disk >
+Compute Boost > Upgrade Data Stream — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. An always-on auto-convert
 (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
 units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
@@ -1104,11 +1109,15 @@ formula/gate a past iteration may already have tried and rejected (e.g. the `<=`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
 Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and
-all earlier tiers, while the newly recorded successor begins at ×1. Tiers are first recorded only by
-a successful Scale Up; after a reset, recorded tiers re-reveal when their predecessor reaches level
-2. Final-tier requirements continue 3, 6, 9, …, so Auto Scale Up can remain active: its level-3 claim
-leaves Overclock available at level 5 before the next Scale Up at 6. Clock Speed compounds the same
-Overclock-scaled 1% step at every level; milestones add no separate production bonus.
+all earlier tiers, while the newly recorded successor begins at ×1. Requirements are based on the
+target tier's **completed levels** (`purchaseLevels − 1`): `getScaleUpRequirement` = 3 ×
+(scaleUpCount + 1) — 3, 6, 9, 12, … completed levels for successive Scale Ups. This is separate from
+the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
+same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
+Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at
+(the completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
+not a fixed 5/8/11/14 ladder. Latency compounds the same Overclock-scaled 1% step at every level;
+milestones add no separate production bonus.
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
