@@ -1103,11 +1103,12 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles every tier that was
-already unlocked before that claim, while a newly revealed successor begins at ×1. Its current
-target always requires level 3, including repeated final-tier claims. Auto Scale Up deliberately
-stops at the final-tier target so it cannot reset that tier before the player reaches Overclock's
-manual requirement: level 5 for the first claim, then three levels beyond the previous claim.
+Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and
+all earlier tiers, while the newly recorded successor begins at ×1. Tiers are first recorded only by
+a successful Scale Up; after a reset, recorded tiers re-reveal when their predecessor reaches level
+2. Final-tier requirements continue 3, 6, 9, …, so Auto Scale Up can remain active: its level-3 claim
+leaves Overclock available at level 5 before the next Scale Up at 6. Clock Speed compounds the same
+Overclock-scaled 1% step at every level; milestones add no separate production bonus.
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
