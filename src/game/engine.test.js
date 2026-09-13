@@ -6058,65 +6058,18 @@ describe('getGlobalTickspeedProductionMultiplier', () => {
     expect(getGlobalTickspeedProductionMultiplier(null)).toBe(1)
   })
 
-  it('compounds the regular 1% step below the first milestone, same as before milestones existed', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1)).toBeCloseTo(1.01)
-    expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
+  it('compounds the same 1% step at every level, including milestone levels', () => {
+    for (const level of [1, 9, 10, 15, 20, 100, 200, 1000, 2000]) {
+      expect(getGlobalTickspeedProductionMultiplier(level)).toBeCloseTo(1.01 ** level)
+    }
   })
 
-  it('compounds the milestone 10% step instead of the regular 1% step at the first milestone (level 10)', () => {
-    // 9 regular levels (1-9) at 1% each, then level 10 (the milestone) at 10% instead of 1%.
-    expect(getGlobalTickspeedProductionMultiplier(10)).toBeCloseTo(1.01 ** 9 * 1.10)
+  it('scales that single per-level step by Overclock', () => {
+    const boostedStep = 0.01 * 1.1 ** 5
+    expect(getGlobalTickspeedProductionMultiplier(10, 5)).toBeCloseTo((1 + boostedStep) ** 10)
   })
 
-  it('resumes the regular 1% step after a milestone, on top of what came before', () => {
-    // Levels 11-15 are regular (1% each), on top of the level-10 milestone.
-    expect(getGlobalTickspeedProductionMultiplier(15)).toBeCloseTo(1.01 ** 9 * 1.10 * 1.01 ** 5)
-  })
-
-  it('compounds a second milestone step at the next 10-spaced milestone (level 20)', () => {
-    expect(getGlobalTickspeedProductionMultiplier(20)).toBeCloseTo(1.01 ** 18 * 1.10 ** 2)
-  })
-
-  it('compounds 10 milestone steps and 90 regular steps by level 100', () => {
-    expect(getGlobalTickspeedProductionMultiplier(100)).toBeCloseTo(1.01 ** 90 * 1.10 ** 10)
-  })
-
-  it('milestone spacing widens to every 100 levels beyond level 100 — no new milestone until level 200', () => {
-    expect(getGlobalTickspeedProductionMultiplier(101)).toBeCloseTo(1.01 ** 91 * 1.10 ** 10)
-    expect(getGlobalTickspeedProductionMultiplier(199)).toBeCloseTo(1.01 ** 189 * 1.10 ** 10)
-    expect(getGlobalTickspeedProductionMultiplier(200)).toBeCloseTo(1.01 ** 189 * 1.10 ** 11)
-  })
-
-  it('compounds 19 milestone steps and 981 regular steps by level 1000', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1000)).toBeCloseTo(1.01 ** 981 * 1.10 ** 19)
-  })
-
-  it('milestone spacing widens again to every 1000 levels beyond level 1000', () => {
-    expect(getGlobalTickspeedProductionMultiplier(1999)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 19)
-    expect(getGlobalTickspeedProductionMultiplier(2000)).toBeCloseTo(1.01 ** 1980 * 1.10 ** 20)
-  })
-
-  it('defaults to no Overclock boost (the pre-Overclock 1% regular step) when overclockCount is omitted', () => {
-    expect(getGlobalTickspeedProductionMultiplier(9)).toBeCloseTo(1.01 ** 9)
-  })
-
-  it('multiplies the REGULAR step by getOverclockMultiplier(overclockCount) once overclockCount > 0', () => {
-    // overclockCount 5 -> getOverclockMultiplier(5) = 1.1^5 = 1.61051, so the regular step becomes
-    // 0.01 * 1.61051 = 0.0161051 (1.61051%) instead of the flat 1%.
-    const boostedRegularStep = 0.01 * 1.1 ** 5
-    expect(getGlobalTickspeedProductionMultiplier(9, 5)).toBeCloseTo((1 + boostedRegularStep) ** 9)
-  })
-
-  it('multiplies the MILESTONE step by the same Overclock factor, not just the regular step', () => {
-    const overclockFactor = 1.1 ** 5
-    const boostedRegularStep = 0.01 * overclockFactor
-    const boostedMilestoneStep = 0.10 * overclockFactor
-    // Level 10 = 9 regular levels (boosted) + 1 milestone level (also boosted).
-    expect(getGlobalTickspeedProductionMultiplier(10, 5))
-      .toBeCloseTo((1 + boostedRegularStep) ** 9 * (1 + boostedMilestoneStep))
-  })
-
-  it('is still 1 (no bonus) at level 0 regardless of overclockCount', () => {
+  it('is still 1 at level 0 regardless of overclockCount', () => {
     expect(getGlobalTickspeedProductionMultiplier(0, 5)).toBe(1)
     expect(getGlobalTickspeedProductionMultiplier(null, 5)).toBe(1)
   })
@@ -6370,11 +6323,11 @@ describe('getScaleUpRequirement', () => {
     expect(getScaleUpRequirement(state)).toBe(3)
   })
 
-  it('stays at 3 after every final-tier Scale Up', () => {
+  it('increases by 3 after every final-tier Scale Up', () => {
     const lastIndex = TIER_DEFINITIONS.length - 1
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 })).toBe(3)
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 })).toBe(3)
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 3 })).toBe(3)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex })).toBe(3)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 })).toBe(6)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 })).toBe(9)
   })
 
   it('treats a negative scaleUpTargetTierIndex as 0 (the flat per-tier requirement)', () => {
@@ -6437,16 +6390,16 @@ describe('isTierUnlocked', () => {
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
   })
 
-  it('unlocks tier 1 when tier 0 has fully purchased two levels (level 3)', () => {
+  it('does not first reveal tier 1 merely when tier 0 reaches level 3', () => {
     const state = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 3)
-    expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
+    expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(false)
   })
 
-  it('unlocks tier 2 only after tier 1 has fully purchased two levels (level 3)', () => {
+  it('does not first reveal tier 2 merely when tier 1 reaches level 3', () => {
     const lockedState = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[1].id, 2)
     const unlockedState = withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[1].id, 3)
     expect(isTierUnlocked(lockedState)(TIER_DEFINITIONS[2])).toBe(false)
-    expect(isTierUnlocked(unlockedState)(TIER_DEFINITIONS[2])).toBe(true)
+    expect(isTierUnlocked(unlockedState)(TIER_DEFINITIONS[2])).toBe(false)
   })
 
   it('keeps an already-owned tier unlocked for older saves', () => {
@@ -6454,11 +6407,11 @@ describe('isTierUnlocked', () => {
     expect(isTierUnlocked(state)(TIER_DEFINITIONS[1])).toBe(true)
   })
 
-  it('stays unlocked via the permanent everUnlockedTierIds flag even if both its own and its predecessor\'s owned are 0', () => {
-    const state = withEverUnlockedTierIds(createInitialGameState(), TIER_DEFINITIONS[2].id, true)
-    expect(state.owned[TIER_DEFINITIONS[2].id]).toBe(0)
-    expect(state.owned[TIER_DEFINITIONS[1].id]).toBe(0)
-    expect(isTierUnlocked(state)(TIER_DEFINITIONS[2])).toBe(true)
+  it('re-reveals a recorded tier only after its predecessor reaches level 2', () => {
+    const recorded = withEverUnlockedTierIds(createInitialGameState(), TIER_DEFINITIONS[2].id, true)
+    expect(isTierUnlocked(recorded)(TIER_DEFINITIONS[2])).toBe(false)
+    const revealed = withPurchaseLevel(recorded, TIER_DEFINITIONS[1].id, 2)
+    expect(isTierUnlocked(revealed)(TIER_DEFINITIONS[2])).toBe(true)
   })
 
   it('stays locked when everUnlockedTierIds is false and neither live condition is met', () => {
@@ -6567,8 +6520,8 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   })
 
   it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
-    // Level 10 = 9 regular 1% levels compounded, then the level-10 milestone at 10% instead of 1%.
-    const globalMultiplier = 1.01 ** 9 * 1.10
+    // Level 10 uses the same compounded 1% step as every other level.
+    const globalMultiplier = 1.01 ** 10
     const state = withGlobalTickspeedMultiplier(createInitialGameState(), 10)
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / globalMultiplier)
     // Megabytes' own base tickspeed is 2s (tier index 1 → tierIndex + 1), so the same global
@@ -6579,7 +6532,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   it('stacks both multiplicatively, not additively', () => {
     // Per-tier level 2 → ×1.1, global level 10 (1.01^9 * 1.10 ≈ ×1.2031) → combined, not simply
     // additive.
-    const globalMultiplier = 1.01 ** 9 * 1.10
+    const globalMultiplier = 1.01 ** 10
     const state = withGlobalTickspeedMultiplier(
       withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
       10
@@ -6841,7 +6794,7 @@ describe('buyTier', () => {
   it('an unlocked higher tier is purchasable directly with the base currency', () => {
     const cost = getTierCost(thousandsTier, 1, 8)
     const state = withMoney(
-      withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3),
+      withEverUnlockedTierIds(withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 2), thousandsTier.id, true),
       cost
     )
     const after = buyTier(thousandsTier.id)(state)
@@ -6917,7 +6870,7 @@ describe('buyTier', () => {
     expect(isLastTierTickspeedXpUnlocked(after)).toBe(false)
   })
 
-  it('permanently latches everUnlockedTierIds for a tier the instant it becomes newly buyable', () => {
+  it('does not record everUnlockedTierIds merely when a predecessor reaches level 3', () => {
     // Completing tensTier's 2nd level (owned 15 → 16, purchaseLevels 2 → 3) unlocks thousandsTier —
     // confirm the permanent flag is set the same instant, not just the live two-full-levels condition.
     const state = withMoney(
@@ -6932,7 +6885,7 @@ describe('buyTier', () => {
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(16)
     expect(after.purchaseLevels[tensTier.id]).toBe(3)
-    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
   })
 
   it('leaves everUnlockedTierIds unchanged when the purchase does not cross any tier\'s unlock threshold', () => {
@@ -6966,7 +6919,7 @@ describe('buyTier', () => {
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(1)
   })
 
-  it('still latches a newly-reached tier\'s everUnlockedTierIds when that field is missing from state entirely', () => {
+  it('does not synthesize everUnlockedTierIds when the field is missing', () => {
     const state = {
       resources: { [MONEY_ID]: getTierCost(tensTier, 2) },
       owned: { [tensTier.id]: 15 },
@@ -6977,7 +6930,7 @@ describe('buyTier', () => {
     const after = buyTier(tensTier.id)(state)
     expect(after.owned[tensTier.id]).toBe(16)
     expect(after.purchaseLevels[tensTier.id]).toBe(3)
-    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+    expect(after.everUnlockedTierIds?.[thousandsTier.id]).not.toBe(true)
   })
 })
 
@@ -7103,7 +7056,7 @@ describe('tickGame', () => {
     expect(after.resources[MONEY_ID]).toBe(state.resources[MONEY_ID])
   })
 
-  it('permanently latches everUnlockedTierIds for a tier the instant passive production (not a manual buy) first gives it any owned', () => {
+  it('keeps an owned tier visible for compatibility without recording it', () => {
     // Bootstrap owned generators on the 3rd tier directly (simulating an already-unlocked tier),
     // with thousandsTier (2nd tier) starting at 0 owned and not yet flagged. The 3rd tier's own
     // production credits thousandsTier's owned/resources (producesResourceId chains down one
@@ -7115,7 +7068,7 @@ describe('tickGame', () => {
     expect(state.everUnlockedTierIds[thousandsTier.id]).toBe(false)
     const after = tickGame(getTierBaseTickSpeedSeconds(megabytesTier.id))(state)
     expect(after.owned[thousandsTier.id]).toBeGreaterThan(0)
-    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
+    expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(false)
   })
 
   it('freezes entirely (returns the same state object) once Money reaches PRESTIGE_THRESHOLD', () => {
@@ -7576,7 +7529,7 @@ describe('tickGame', () => {
     const state = withAutobuyer(
       withAutobuyer(
         withMoney(
-          withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 3),
+          withEverUnlockedTierIds(withPurchaseLevel(withOwned(createInitialGameState(), tensTier.id, 16), tensTier.id, 2), thousandsTier.id, true),
           1_000_000
         ),
         tensTier.id
@@ -7756,7 +7709,7 @@ describe('tickGame', () => {
       0
     )
     const after = tickGame(100)(state)
-    expect(after.resources[BYTES_ID]).toBe(1200)
+    expect(after.resources[BYTES_ID]).toBe(1100)
   })
 
   it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier — both speed up the same delivery frequency together', () => {
@@ -7771,7 +7724,7 @@ describe('tickGame', () => {
       10
     )
     const after = tickGame(100)(state)
-    expect(after.resources[BYTES_ID]).toBe(1320)
+    expect(after.resources[BYTES_ID]).toBe(1210)
   })
 
   it('automatically triggers Scale Up when Auto Scale Up is bought and the first tier is eligible', () => {
@@ -7784,15 +7737,17 @@ describe('tickGame', () => {
     expect(after.purchaseLevels[firstTier.id]).toBe(1)
   })
 
-  it('leaves final-tier Scale Up manual so Auto Scale Up cannot block an Overclock climb', () => {
+  it('claims final-tier level 3 automatically, then waits for level 6 so Overclock remains available at level 5', () => {
     const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
     const state = withAutoScaleUp(withPurchaseLevel({
       ...createInitialGameState(),
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
     }, lastTier.id, 3))
     const after = tickGame(1)(state)
-    expect(after.scaleUpCount).toBe(0)
-    expect(after.purchaseLevels[lastTier.id]).toBe(3)
+    expect(after.scaleUpCount).toBe(1)
+    expect(after.purchaseLevels[lastTier.id]).toBe(1)
+    expect(getScaleUpRequirement(after)).toBe(6)
+    expect(getOverclockRequirement(after.overclockCount)).toBe(5)
   })
 
   it('does not trigger Scale Up automatically when the first tier is not yet eligible', () => {
@@ -9030,21 +8985,35 @@ describe('scaleUpGame', () => {
     expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[1].id)).toBe(1)
   })
 
-  it('is available after each fresh three-level climb once every tier is unlocked', () => {
+  it('builds the expected cumulative multiplier staircase at the first final-tier claim', () => {
+    const counts = Object.fromEntries(TIER_DEFINITIONS.map((tier, index) => [tier.id, 9 - index]))
+    const state = {
+      ...eligibleState(),
+      scaleUpCount: 9,
+      scaleUpTierCounts: counts,
+      everUnlockedTierIds: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
+    }
+    const after = scaleUpGame(state)
+    expect(TIER_DEFINITIONS.map(tier => getTierScaleUpMultiplier(after, tier.id)))
+      .toEqual([1024, 512, 256, 128, 64, 32, 16, 8, 4, 2])
+  })
+
+  it('requires the next three-level increment after a final-tier claim', () => {
     const level3 = withPurchaseLevel(
       { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1 },
-      lastTier.id, 3
+      lastTier.id, 5
     )
-    const after = scaleUpGame(level3)
-    expect(after.scaleUpTargetTierIndex).toBe(lastIndex + 2)
+    expect(scaleUpGame(level3)).toBe(level3)
+    const level6 = withPurchaseLevel(level3, lastTier.id, 6)
+    expect(scaleUpGame(level6).scaleUpTargetTierIndex).toBe(lastIndex + 2)
   })
 
   it('stacks across repeated activations', () => {
-    // The final-tier requirement remains the flat level 3 after repeated activations.
+    // The final-tier requirement remains the next 3-level increment after repeated activations.
     const state = {
       ...withPurchaseLevel(
         { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 },
-        lastTier.id, 3
+        lastTier.id, 9
       ),
       scaleUpCount: 2,
     }
@@ -9053,7 +9022,7 @@ describe('scaleUpGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(lastIndex + 3)
   })
 
-  it('leaves a tier ahead of the current target permanently unlocked (everUnlockedTierIds carried over) even though its level resets', () => {
+  it('preserves a recorded tier ahead of the current target but re-reveals it only after its predecessor reaches level 2', () => {
     // scaleUpTargetTierIndex stays at its default (0, targeting the first tier) even though the
     // third tier already separately unlocked via ordinary play (e.g. an earlier session that never
     // fired Scale Up) — firing Scale Up off the first tier's own level must not disturb that.
@@ -9070,8 +9039,10 @@ describe('scaleUpGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(1)
     expect(after.purchaseLevels[thirdTier.id]).toBe(1)
     expect(after.everUnlockedTierIds[thirdTier.id]).toBe(true)
-    expect(isTierUnlocked(after)(thirdTier)).toBe(true)
-    expect(getTierScaleUpMultiplier(after, thirdTier.id)).toBe(2)
+    expect(isTierUnlocked(after)(thirdTier)).toBe(false)
+    const revealed = withPurchaseLevel(after, TIER_DEFINITIONS[1].id, 2)
+    expect(isTierUnlocked(revealed)(thirdTier)).toBe(true)
+    expect(getTierScaleUpMultiplier(after, thirdTier.id)).toBe(1)
   })
 
   it('resets money to the starting amount', () => {
@@ -9276,7 +9247,7 @@ describe('scaleUpGame', () => {
     const after = scaleUpGame(state)
     expect(after.owned[thousandsTier.id]).toBe(0)
     expect(after.everUnlockedTierIds[thousandsTier.id]).toBe(true)
-    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
   })
 
   it('falls back to fresh-state defaults for every permanent automation flag when the incoming state predates them entirely', () => {
@@ -9322,7 +9293,7 @@ describe('scaleUpGame', () => {
     expect(after.scaleUpTargetTierIndex).toBe(1)
   })
 
-  it('boosts the successor too when progress beyond it proves it was unlocked before a lagging Scale Up claim', () => {
+  it('boosts only the current target prefix even when a legacy save recorded tiers ahead', () => {
     const state = {
       ...withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 3),
       everUnlockedTierIds: {
@@ -9333,8 +9304,8 @@ describe('scaleUpGame', () => {
     }
     const after = scaleUpGame(state)
     expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[0].id)).toBe(2)
-    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[1].id)).toBe(2)
-    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(2)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[1].id)).toBe(1)
+    expect(getTierScaleUpMultiplier(after, TIER_DEFINITIONS[2].id)).toBe(1)
   })
 
   it('keeps overclockCount permanently across an ordinary Scale Up', () => {
@@ -9993,8 +9964,8 @@ describe('consumeXpForLastTierTickspeed', () => {
     const after = consumeXpForLastTierTickspeed(20)(state)
     expect(after.owned[megabytesTier.id]).toBe(0)
     expect(after.owned[thousandsTier.id]).toBe(0)
-    expect(isTierUnlocked(after)(megabytesTier)).toBe(true)
-    expect(isTierUnlocked(after)(thousandsTier)).toBe(true)
+    expect(isTierUnlocked(after)(megabytesTier)).toBe(false)
+    expect(isTierUnlocked(after)(thousandsTier)).toBe(false)
   })
 
   it('does not touch the last tier\'s own owned/resources/purchased counts', () => {
