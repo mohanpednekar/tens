@@ -1009,7 +1009,10 @@ a pool specifically, once that pool's buffer is full AND its Data Lake is ready 
 (`isDataLakePoolReady`), the same bar switches `mode="lake"` to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
-itself). Full formula/UI detail,
+itself). The title row places Speed/Bandwidth at top-right and omits disk counts; balance and
+capacity share a centered `balance / capacity-unit` line. The normal bar and percentage are blue;
+an active tap bonus adds a separate centered yellow bar and a neutral-plus/yellow `NN% 👆` suffix.
+Full formula/UI detail,
 including the tap-bonus headroom clamping and the lake-mode handoff, is in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or
