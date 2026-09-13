@@ -604,7 +604,7 @@ not at the bottom"):
 - **Owned vs. level.** `Owned` (current amount, drives production) is its own figure. `Purchased`
   (lifetime buy count, still incremented on every purchase for display/back-compat purposes, but no
   longer used to derive cost/production scaling — see docs/ECONOMY_REFERENCE.md) has no separate cell.
-  A tier's **level** and its progress toward completing it are tracked directly in state
+  A tier's current-level cursor and its progress toward completing it are tracked directly in state
   (`state.purchaseLevels[tierId]`, 1-indexed, and `state.purchaseLevelProgress[tierId]`, see
   docs/ECONOMY_REFERENCE.md) rather than derived from `purchased` via division — completing a level means
   buying `getPurchaseBlockSize(state)` pieces of it (a value that can grow over a run, see "Economy
@@ -614,8 +614,8 @@ not at the bottom"):
   currently affordable) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
   rather than centered — this keeps the progress text starting at the same x position across every
   tier row regardless of the cost string's length. This deliberately doesn't show the level number
-  itself (unlike an earlier `Lv.{level} ({progress}/{blockSize})` version) — level is still available
-  via the `aria-label` (a `(level N, X of Y purchased)` suffix in words) and the row's Details
+  itself (unlike an earlier `Lv.{level} ({progress}/{blockSize})` version) — the zero-indexed count
+  of completed levels is still available via the `aria-label` and the row's Details
   disclosure; the button text is purely "how close is the current level," echoing the even earlier
   pre-level-system `{purchased}+{affordable}` convention (see `docs/DESIGN_HISTORY.md`) now expressed
   as a fraction of the current block size instead of a raw lifetime count. The cost label itself
@@ -974,9 +974,10 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    small secondary `PauseToggleButton` (`variant="ghost"`, `aria-pressed`-driven) beside its badge/level
    text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
    icon-only, `$dimmed`-while-inactive `PpUpgradeBadge` convention as category 1 above (no written
-   "Active"/"Paused" anywhere). Auto Scale Up also dims and exposes an accessible "suspended at
-   final tier" status while its engine guard leaves final-tier claims manual for Overclock. Auto-
-   Prestige's `Lv.N (every ~Xs)` line gets its own `✦`
+   "Active"/"Paused" anywhere). Auto Scale Up remains active at the final tier, where requirements
+   progress through raw levels 3, 6, 9, and so on; the automatic level-3 claim leaves Overclock
+   available at level 5 before the next automatic Scale Up at level 6. Auto-Prestige's
+   `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
 3. **Production Bonuses** — currently just **Production speed bonus**; the whole category is omitted
@@ -1096,13 +1097,16 @@ mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purel
 redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
 (see "Prestige and the Googol freeze" below).
 
+Player-facing purchase levels on both reset cards are zero-indexed completed-level counts: the UI
+subtracts one from the engine's one-based current-level cursor and from its eligibility requirement.
+
 `OverclockCard` — same orange-accented `StatCard` shape as `ScaleUpCard`'s cyan — is gated on
 `lastTierUnlocked` (the last tier having ever been unlocked), via its own `overclockEverRevealed`
 `everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
 match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
-— e.g. `⚡ 2.14%/lvl · Lv.8/8` — `actions.overclock` on click, where `{nextStep}` is the regular-step
+— e.g. `⚡ 2.14%/lvl · Lv.7/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
 claim past the bare minimum requirement, not just `overclockCount + 3`), formatted as a percentage by
@@ -1110,13 +1114,9 @@ reusing `formatGlobalTickspeedBonusPercent`'s trimmed-decimal formatting (passin
 it were a multiplier, since that function already computes `(multiplier - 1) * 100`). Overclock's
 reward is folded into the Tickspeed upgrade's own per-level rate, not a separate multiplier — see
 `getOverclockMultiplier`/`getGlobalTickspeedProductionMultiplier` in engine.js.
-Unlike `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDisplay}`, this
-level/requirement pair is rendered from the *raw* `state.purchaseLevels[lastTier.id]`/
-`getOverclockRequirement(overclockCount)` values directly — no -1 "completed blocks" display offset —
-so the numbers Overclock's own requirement produces show exactly as `engine.js` computes them,
-matching the same raw level number the last tier's own Details disclosure already shows, rather than
-introducing a second, differently-offset "level" reading for the same underlying value; see
-`getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
+Like `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDisplay}`, this pair
+uses the completed-level display offset while eligibility continues to use the raw engine values;
+see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
 docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Scale Up gets
 one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
 deliberate, occasional decision reached via this card, not a frequent one-tap action.

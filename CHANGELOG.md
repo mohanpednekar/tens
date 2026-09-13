@@ -20,11 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
 
 ### Added
-- **Scale Up now boosts only tiers already unlocked when it is used**; the newly revealed tier
-  starts without that multiplier. At the final tier it remains available after every three levels.
-  Auto Scale Up pauses there so it cannot prevent an Overclock climb, and its status now makes that
-  suspension explicit. Overclock now first unlocks at level 5 and requires at least three more
-  levels after each use.
+- **Factory purchase levels now start at 0 and count completed levels** in tier details, accessible
+  buy labels, Scale Up progress, and Overclock progress instead of exposing the engine's one-based
+  cursor for the level currently being purchased.
+- **Scale Up now records tiers only when a claim succeeds**, re-reveals recorded tiers at predecessor
+  level 2, and stacks cumulative per-tier multipliers. Final-tier requirements progress 3 → 6 → 9,
+  letting Auto Scale Up remain active while Overclock stays reachable at level 5. Clock Speed
+  milestones no longer add a bonus.
 - **Scale Up and Overclock cards are more compact**, with reduced card/button padding, heading
   margins, and spacing between and within the two soft-reset controls.
 - **A dedicated Data Lake pool-fill tile** — a small fillable element inside each Data Lake block
