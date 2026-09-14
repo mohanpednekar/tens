@@ -2346,22 +2346,30 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   return getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
 }
 
+// The raw Capacity derivation for a given raw Data Stream capacity value (in bits), with no
+// visibility gate — getStoragePoolCapacity (below) calls this with the LIVE state.intro.capacity
+// plus a visibility early-return; getPoolBufferClampCeilingBits (below) calls this with a
+// SYNTHETIC capacity value instead (see there for why).
+const getStoragePoolCapacityAtRawCapacity = (rawCapacityBits, poolIndex) => {
+  // Capacity is the decade-power equivalent (getDecadePowerEquivalentBits) of the shared Memory
+  // doubling count, clamped to this pool's own window. It does not scale down when higher pools
+  // unlock, so pool 1 stays capped at 100 KB (SI) once maxed — see POOL_CAPACITY_SI_STEP in
+  // layers.js.
+  const rawCapacity = getDecadePowerEquivalentBits(rawCapacityBits ?? 0)
+  const floorBits = poolIndex === 1
+    ? getStoragePoolMemoryBounds(1).startBits
+    : getStoragePoolMemoryBounds(poolIndex - 1).endBits
+  const ceilingBits = getStoragePoolMemoryBounds(poolIndex).endBits
+  return Math.min(Math.max(rawCapacity, floorBits), ceilingBits)
+}
+
 export const getStoragePoolCapacity = (state, poolIndex) => {
   // Locked or invalid pools return 0 — this is a sentinel rather than a usable Capacity. Keyed on
   // getVisibleStoragePoolCount (Capacity-only), same as getStoragePoolBandwidth above: a pool's own
   // derived Capacity comes alive the instant the SHARED Data Stream Capacity crosses that pool's
   // own threshold, independent of disk-build progress.
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return 0
-  // Capacity is the decade-power equivalent (getDecadePowerEquivalentBits) of the shared Memory
-  // doubling count, clamped to this pool's own window. It does not scale down when higher pools
-  // unlock, so pool 1 stays capped at 100 KB (SI) once maxed — see POOL_CAPACITY_SI_STEP in
-  // layers.js.
-  const rawCapacity = getDecadePowerEquivalentBits(state.intro?.capacity ?? 0)
-  const floorBits = poolIndex === 1
-    ? getStoragePoolMemoryBounds(1).startBits
-    : getStoragePoolMemoryBounds(poolIndex - 1).endBits
-  const ceilingBits = getStoragePoolMemoryBounds(poolIndex).endBits
-  return Math.min(Math.max(rawCapacity, floorBits), ceilingBits)
+  return getStoragePoolCapacityAtRawCapacity(state.intro?.capacity ?? 0, poolIndex)
 }
 
 // Each pool's own small local buffer (intro.poolBuffers) is sized as a fraction of that pool's
@@ -2380,21 +2388,37 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
 // than available all at once.
 export const getPoolBufferCapacity = (state, poolIndex) => getStoragePoolCapacity(state, poolIndex)
 
-// A pool's own TRUE structural ceiling, regardless of current Capacity-visibility —
-// getPoolBufferCapacity (and getStoragePoolCapacity underneath it) return 0 for a pool that isn't
-// yet Capacity-visible, which is correct for "how much can this pool's buffer actively grow toward
-// right now" but WRONG as a clamp ceiling for a legacy value the pool might already be holding (a
-// save from before Capacity-only pool liveness existed could have a disk-build-unlocked pool's
-// buffer/cache sitting there under the old getUnlockedStoragePoolCount-based eligibility, well
-// before its own Capacity threshold is crossed) — clamping such a value to 0 would needlessly
-// destroy real, permanent progress rather than just bounding it until the pool naturally becomes
-// visible. Used by normalizePoolMemoryCapacity's migration clamp and tickDiskAutoFill's read-cache
-// self-heal refund, both of which can touch a not-yet-visible pool's buffer. See
-// docs/DESIGN_HISTORY.md.
+// A pool's own ENTRY-CAPACITY ceiling, regardless of Capacity-visibility — getPoolBufferCapacity
+// (and getStoragePoolCapacity underneath it) return 0 for a pool that isn't yet Capacity-visible,
+// which is correct for "how much can this pool's buffer actively grow toward right now" but WRONG
+// as a clamp ceiling for a legacy value the pool might already be holding (a save from before
+// Capacity-only pool liveness existed could have a disk-build-unlocked pool's buffer/cache sitting
+// there under the old getUnlockedStoragePoolCount-based eligibility, well before its own Capacity
+// threshold is crossed) — clamping such a value to 0 would needlessly destroy real, permanent
+// progress rather than just bounding it until the pool naturally becomes visible.
+//
+// For a VISIBLE pool this is just its live getPoolBufferCapacity, same as always. For a HIDDEN one,
+// clamping against the LIVE state.intro.capacity (via getStoragePoolCapacityAtRawCapacity) would be
+// wrong in the other direction: intro.capacity only ever grows in ×2 doublings from a
+// power-of-two-bytes starting value (see upgradePoolCapacity), so it always lands exactly on every
+// pool's own getPoolCapacityUnlockThresholdBits on the way up — a hidden pool's eventual Capacity
+// the MOMENT it first becomes visible is therefore a FIXED value, deterministic from poolIndex
+// alone, not a moving target that tracks however far below threshold the current (much lower)
+// capacity happens to sit right now. Passing the live capacity through the raw formula while it's
+// still far below threshold would floor to that pool's own previous-pool-end floorBits — often
+// LOWER than the pool's real entry Capacity — needlessly truncating a legitimate legacy
+// buffer/cache refund that would fit fine once the pool is actually revealed. So this instead
+// evaluates the same raw formula at the SYNTHETIC capacity value the pool will have at that
+// crossing (getPoolCapacityUnlockThresholdBits(poolIndex)), giving the exact number the pool will
+// read the instant it's revealed — never below it (nothing to truncate unnecessarily) and never
+// above it either (once the pool is actually visible, getPoolBufferCapacity's own live-capacity
+// value takes over and can climb higher from there, same as any other pool).
+// Used by normalizePoolMemoryCapacity's migration clamp and tickDiskAutoFill's read-cache self-heal
+// refund, both of which can touch a not-yet-visible pool's buffer. See docs/DESIGN_HISTORY.md.
 const getPoolBufferClampCeilingBits = (state, poolIndex) =>
   poolIndex <= getVisibleStoragePoolCount(state)
     ? getPoolBufferCapacity(state, poolIndex)
-    : getStoragePoolMemoryBounds(poolIndex).endBits
+    : getStoragePoolCapacityAtRawCapacity(getPoolCapacityUnlockThresholdBits(poolIndex), poolIndex)
 
 export const getPoolBufferBits = (state, poolIndex) =>
   state.intro?.poolBuffers?.[poolIndex] ?? 0

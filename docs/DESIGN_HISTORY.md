@@ -7954,3 +7954,62 @@ assertions; fixed by seeding realistic Capacity (`INTRO_CAPACITY_CAP_BITS`) alon
 `normalizePoolMemoryCapacity` clamps a not-yet-visible pool's buffer to its absolute ceiling; the
 self-heal refund clamps the same way. `engine.test.js`: 1255/1255. Full `yarn test`: 1778/1778.
 `yarn build` succeeds.
+
+### A fourth Codex round: the "absolute ceiling" clamp itself was too high
+
+The very fix above — clamping a hidden pool's legacy buffer to its own absolute
+`getStoragePoolMemoryBounds(poolIndex).endBits` — was itself flagged on the next Codex round as
+wrong in the SAME direction the original bug was: too permissive. Concrete example from the finding:
+a legitimate old pool-2 save carries a ~100 KB buffer and a full 1 MB read cache while pool 2 is
+still hidden; `tickDiskAutoFill` refunds the cache, producing a ~1.1 MB buffer, comfortably under
+pool 2's absolute ceiling (800,000,000 bits ≈ 100 MB) so nothing clamps it. The very next Capacity
+doubling then reveals pool 2 — but with a current derived Capacity of only ~1 MB (8,000,000 bits),
+not the 100 MB absolute bound. Nothing re-clamps at that reveal transition (`tickPoolBufferFill`'s
+room formula only ever tops up, never subtracts excess, and `normalizePoolMemoryCapacity` only runs
+at load time), so the buffer sits ~100× over its own pool's real live ceiling, fully spendable,
+indefinitely.
+
+**Why the absolute bound was wrong.** `getPoolBufferClampCeilingBits`'s whole job is to answer "how
+much can this pool legitimately hold before it's revealed" — and a pool's own Capacity, once
+revealed, is **never** its absolute structural maximum; it's whatever the shared Data Stream
+doubling count currently derives to (via `getDecadePowerEquivalentBits`), same as any other visible
+pool. The absolute endBits value is only reachable after many further Capacity doublings past the
+pool's own reveal point. Clamping to it left a 100×-plus gap for exactly the kind of stale
+over-large balance the original finding was about — the earlier fix addressed "unclamped forever"
+but not "clamped to the wrong ceiling."
+
+**A tempting but also-wrong alternative:** clamp against the pool's Capacity derived from the LIVE
+`state.intro.capacity`, fed through the same ungated formula, while the pool is still hidden. This
+looks like it should work but breaks the other way — `getStoragePoolCapacityAtRawCapacity`'s own
+`floorBits` (a pool's own floor is the PREVIOUS pool's end bound) means that formula never returns
+less than the previous pool's ceiling even when current capacity is nowhere near this pool's own
+threshold. A hidden pool 2 evaluated at, say, pool 1's own just-crossed threshold would floor to
+pool 1's end bound (800,000 bits) — far BELOW pool 2's real eventual entry Capacity (8,000,000 bits)
+— wrongly truncating a legitimate large legacy buffer/cache refund that would fit fine once pool 2
+is actually revealed. Confirmed by an existing regression test (`tickDiskAutoFill` self-healing a
+full pool-2-sized read cache against a hidden pool with the game's own untouched default starting
+Capacity) failing under this approach: an 8,000,000-bit refund got truncated to 800,000.
+
+**The actual fix: a pool's Capacity the moment it's first revealed is a FIXED, deterministic value —
+not a moving target.** `intro.capacity` only ever changes via `upgradePoolCapacity`'s plain `×2`
+doubling, starting from a power-of-two-Bytes value (`INTRO_STARTING_CAPACITY`) — so on its way up it
+always lands EXACTLY on every pool's own `getPoolCapacityUnlockThresholdBits` (also a power of two in
+Bytes), never overshooting past one threshold to a higher one in a single step. That means the
+Capacity a hidden pool WILL have the instant it's revealed is fully determined by `poolIndex` alone:
+it's whatever `getStoragePoolCapacityAtRawCapacity` (the shared, now-extracted raw derivation
+`getStoragePoolCapacity` itself calls after its own visibility gate) evaluates to when handed that
+pool's own unlock threshold as the capacity input — its "entry Capacity." `getPoolBufferClampCeilingBits`
+now returns exactly that for a hidden pool (its live `getPoolBufferCapacity` unchanged for a visible
+one), landing between the two wrong extremes: never truncates a legitimate legacy value below what
+the pool will actually support once revealed (unlike the live-capacity attempt), and never leaves a
+stale balance sitting above what the pool will actually read at that moment (unlike the absolute-bound
+attempt) — no separate re-clamp-on-reveal step is needed, since the ceiling a hidden pool clamps
+against already IS its own future entry value.
+
+**Verification.** Rewrote both existing "clamp a not-yet-visible pool" tests
+(`normalizePoolMemoryCapacity`, `tickDiskAutoFill`'s self-heal refund) to assert against the new
+entry-Capacity value instead of the absolute bound; added a new regression test seeding a hidden pool
+2's legacy buffer while current Capacity sits at pool 1's own (much lower) threshold, confirming the
+clamp still lands on pool 2's fixed, higher entry Capacity rather than a value derived from today's
+low current Capacity — exactly the failure mode the "live capacity" alternative above hit.
+`engine.test.js`: 1256/1256. Full `yarn test`: 1779/1779. `yarn build` succeeds.

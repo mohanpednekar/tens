@@ -1079,21 +1079,54 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     expect(normalizePoolMemoryCapacity(state)).toBe(state)
   })
 
-  it('normalizePoolMemoryCapacity clamps a NOT-YET-Capacity-visible pool\'s legacy buffer to its own absolute ceiling, rather than leaving it unclamped (see docs/DESIGN_HISTORY.md)', () => {
+  it('normalizePoolMemoryCapacity clamps a NOT-YET-Capacity-visible pool\'s legacy buffer to its own ENTRY-CAPACITY ceiling, not its eventual absolute maximum (see docs/DESIGN_HISTORY.md)', () => {
     // A save from before pool liveness moved to Capacity-only could carry a legitimate pool 2
     // buffer (under the old disk-build-based eligibility) while Capacity hasn't yet crossed pool
     // 2's own visibility threshold — getVisibleStoragePoolCount(state) === 1 here, so pool 2 isn't
-    // "visible" at all, and the naive fix (skip clamping invisible pools) would leave an
-    // over-structural-ceiling value fully spendable forever.
-    const pool2Ceiling = getStoragePoolMemoryBounds(2).endBits
+    // "visible" at all. The clamp must land on what pool 2's own Capacity will compute to the
+    // MOMENT it's revealed (its "entry Capacity" — the same ungated formula getStoragePoolCapacity
+    // uses once visible, evaluated at pool 2's own unlock threshold, since intro.capacity only ever
+    // grows in doublings and so always lands exactly on that threshold on the way up), not its
+    // far-larger absolute structural ceiling (getStoragePoolMemoryBounds(2).endBits) — clamping to
+    // the absolute bound would leave the buffer sitting well above what the pool will actually read
+    // the instant it becomes visible, with nothing left to re-clamp it at that transition.
+    const pool2AbsoluteCeiling = getStoragePoolMemoryBounds(2).endBits
+    const capacity = getPoolCapacityUnlockThresholdBits(2) - 1 // one bit short of pool 2's own threshold
+    // AT pool 2's own unlock threshold so getStoragePoolCapacity's own visibility gate doesn't zero
+    // it out — giving the exact value ("entry Capacity") pool 2 will read the instant it's revealed.
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { byteCreated: true, capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
-      capacity: getPoolCapacityUnlockThresholdBits(2) - 1, // one bit short of pool 2's own threshold
-      poolBuffers: { 2: pool2Ceiling * 2 }, // twice its true structural ceiling
+      capacity,
+      poolBuffers: { 2: pool2AbsoluteCeiling * 2 }, // far beyond even the absolute structural ceiling
     })
     expect(getVisibleStoragePoolCount(state)).toBe(1)
     const after = normalizePoolMemoryCapacity(state)
-    expect(after.intro.poolBuffers[2]).toBe(pool2Ceiling)
+    expect(after.intro.poolBuffers[2]).toBeLessThan(pool2AbsoluteCeiling)
+    expect(after.intro.poolBuffers[2]).toBe(pool2EntryCapacityCeiling)
+  })
+
+  it('normalizePoolMemoryCapacity clamps a hidden pool\'s legacy buffer to the SAME entry-Capacity ceiling even when current Capacity sits far BELOW that pool\'s own threshold, not a lower value derived from today\'s low Capacity', () => {
+    // The clamp ceiling must be pool 2's fixed entry Capacity — what it will read the MOMENT it's
+    // revealed — regardless of how far below its own threshold intro.capacity currently sits. An
+    // earlier, rejected fix attempt fed the LIVE (far-below-threshold) capacity straight through the
+    // ungated Capacity formula, which floors to pool 1's own end bound (a much LOWER value than
+    // pool 2's real, higher entry Capacity) whenever capacity is this low — wrongly truncating a
+    // legitimate legacy buffer that would fit fine once pool 2 is actually revealed.
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { byteCreated: true, capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: getPoolCapacityUnlockThresholdBits(1), // pool 1 only just became visible — far below pool 2's own threshold
+      poolBuffers: { 2: pool2EntryCapacityCeiling - 1 }, // a legitimate legacy buffer just under pool 2's real entry Capacity
+    })
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    expect(normalizePoolMemoryCapacity(state)).toBe(state) // no truncation — already within the correct ceiling
   })
 
   it('normalizePoolMemoryCapacity clamps a Data Lake capacityLevel saved past the new, shorter ladder\'s array bounds', () => {
@@ -3596,21 +3629,29 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
   })
 
-  it('clamps a read-cache self-heal refund into a NOT-YET-Capacity-visible pool\'s buffer against that pool\'s own absolute ceiling (see docs/DESIGN_HISTORY.md)', () => {
+  it('clamps a read-cache self-heal refund into a NOT-YET-Capacity-visible pool\'s buffer against its own ENTRY-CAPACITY ceiling, not its eventual absolute maximum (see docs/DESIGN_HISTORY.md)', () => {
     const pool2SmallestSize = getDataLakeUnitBits(2)
-    const pool2Ceiling = getStoragePoolMemoryBounds(2).endBits
+    const pool2AbsoluteCeiling = getStoragePoolMemoryBounds(2).endBits
+    const capacity = getPoolCapacityUnlockThresholdBits(2) - 1 // pool 2 not yet Capacity-visible
+    // AT pool 2's own unlock threshold so getStoragePoolCapacity's own visibility gate doesn't zero
+    // it out — giving the exact value ("entry Capacity") pool 2 will read the instant it's revealed.
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
     const state = withIntro(createInitialGameState(), {
-      capacity: getPoolCapacityUnlockThresholdBits(2) - 1, // pool 2 not yet Capacity-visible
+      capacity,
       disksBuiltTotal: { [pool2SmallestSize]: 1 },
-      // A pre-existing buffer already sitting near pool 2's own ceiling, plus a stale cache that
-      // would otherwise refund it well past that ceiling.
-      poolBuffers: { 2: pool2Ceiling - 1 },
-      diskCache: { [pool2SmallestSize]: pool2Ceiling },
+      // A pre-existing buffer already sitting near pool 2's own entry-capacity ceiling, plus a
+      // stale cache that would otherwise refund it well past even the absolute structural ceiling.
+      poolBuffers: { 2: pool2EntryCapacityCeiling - 1 },
+      diskCache: { [pool2SmallestSize]: pool2AbsoluteCeiling },
     })
     expect(getVisibleStoragePoolCount(state)).toBe(1)
     const after = tickDiskAutoFill(0)(state)
     expect(after.intro.diskCache?.[pool2SmallestSize] ?? 0).toBe(0)
-    expect(after.intro.poolBuffers[2]).toBe(pool2Ceiling)
+    expect(after.intro.poolBuffers[2]).toBeLessThan(pool2AbsoluteCeiling)
+    expect(after.intro.poolBuffers[2]).toBe(pool2EntryCapacityCeiling)
   })
 
   it('does NOT refund a full read cache staged before any disk of that size was built — eager pre-fill makes this legitimate, not stale', () => {

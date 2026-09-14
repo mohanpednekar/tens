@@ -73,6 +73,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **A legacy save's Storage pool buffer is now clamped to its true ceiling during migration even
   when that pool isn't yet Capacity-visible**, and a read-cache self-heal refund can no longer push a
   buffer back over that same ceiling.
+- **That same not-yet-visible-pool buffer clamp now uses the pool's own fixed "entry Capacity"**
+  (what it will read the moment it's revealed) rather than its far-larger absolute structural
+  maximum — the previous clamp still let a legacy buffer sit well above what the pool would actually
+  support once revealed, with nothing left to correct it at that transition.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
