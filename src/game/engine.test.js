@@ -955,6 +955,24 @@ describe('combineIntroByte', () => {
 // Capacity upgrade needs nothing more than a full Buffer now that Speed is derived from Capacity.
 const noOtherUpgradesLeft = { byteCreated: true }
 
+// The smallest ACTUAL doubling-reachable intro.capacity value at which the final pool's own derived
+// Capacity (getStoragePoolCapacity) reaches that pool's own end bound — i.e. the true value
+// isMemoryCapacityAtCap requires. Not simply getStoragePoolMemoryBounds(finalPoolIndex).endBits
+// itself: that raw arithmetic value isn't generally an exact doubling-sequence value, and
+// getDecadePowerEquivalentBits' log2-step-based derivation can floor to a full decade below it for
+// an off-lattice input (see docs/DESIGN_HISTORY.md) — mirrors how every other capacity ceiling in
+// this suite (e.g. INTRO_CAPACITY_CAP_BITS) is itself an exact doubling-sequence value, not a raw
+// formula result.
+const getFinalPoolCapacityCapBits = () => {
+  const finalPoolIndex = getStoragePoolCount()
+  const finalEndBits = getStoragePoolMemoryBounds(finalPoolIndex).endBits
+  let probeCapacity = INTRO_STARTING_CAPACITY
+  while (getStoragePoolCapacity(withIntro(createInitialGameState(), { capacity: probeCapacity }), finalPoolIndex) < finalEndBits) {
+    probeCapacity *= INTRO_CAPACITY_DOUBLING_STEP
+  }
+  return probeCapacity
+}
+
 // getDiskSize's own real-Byte-accurate ladder — a fresh cycle's smallest disk is 8000 bits (1 KB),
 // matching tier01's own level-1 per-unit cost (1000 Bits) expressed in bits via BITS_PER_BYTE.
 const FIRST_DISK_SIZE = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE
@@ -967,9 +985,18 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
-  it('stays false at the pool end bound with a full balance', () => {
+  it('stays available past pool 1\'s own end bound — the true cap is the FINAL pool\'s own ceiling, not any one pool along the way', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
+    })
+    expect(isMemoryCapacityAtCap(state)).toBe(false)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+  })
+
+  it('stops only once Capacity reaches the FINAL pool\'s own end bound', () => {
+    const finalCapBits = getFinalPoolCapacityCapBits()
+    const state = withIntro(createInitialGameState(), {
+      bits: finalCapBits, capacity: finalCapBits, ...noOtherUpgradesLeft,
     })
     expect(isMemoryCapacityAtCap(state)).toBe(true)
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
@@ -1005,9 +1032,12 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
 })
 
 describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
-  it('is false below the pool end bound and true at/above it', () => {
+  it('is false below the FINAL pool\'s own end bound and true at/above it — independent of any earlier pool\'s own ceiling', () => {
+    const finalCapBits = getFinalPoolCapacityCapBits()
     expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_STARTING_CAPACITY }))).toBe(false)
-    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS }))).toBe(true)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS }))).toBe(false)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: finalCapBits / INTRO_CAPACITY_DOUBLING_STEP }))).toBe(false)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: finalCapBits }))).toBe(true)
   })
 
   it('normalizePoolMemoryCapacity does not raise capacity to the end bound', () => {
@@ -1167,14 +1197,15 @@ describe('pickIntroCapacityMilestone', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('is a no-op at the pool end bound', () => {
+  it('is a no-op at the FINAL pool\'s own end bound', () => {
+    const finalCapBits = getFinalPoolCapacityCapBits()
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
+      bits: finalCapBits, capacity: finalCapBits, ...noOtherUpgradesLeft,
     })
     const after = pickIntroCapacityMilestone(state)
     expect(after).toBe(state)
-    expect(after.intro.bits).toBe(INTRO_CAPACITY_CAP_BITS)
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.bits).toBe(finalCapBits)
+    expect(after.intro.capacity).toBe(finalCapBits)
   })
 
   it('doubles plainly through 64 Bytes too — no SI-clean deviation for intro.capacity itself (it also drives the Data Stream tile\'s own binary display; see docs/DESIGN_HISTORY.md)', () => {
@@ -1194,7 +1225,9 @@ describe('pickIntroCapacityMilestone', () => {
     expect(after.intro.capacity).toBe(8 * 2 ** 17) // raw doubles plainly, unclamped...
     expect(after.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS) // ...now past the pool's own ceiling
     expect(getStoragePoolCapacity(after, 1)).toBe(INTRO_CAPACITY_CAP_BITS) // the pool's own derived value still clamps there
-    expect(isMemoryCapacityAtCap(after)).toBe(true)
+    // The true cap is the FINAL pool's own end bound, not pool 1's — raw capacity keeps growing
+    // past pool 1's ceiling toward further pools' own thresholds, so the upgrade stays available.
+    expect(isMemoryCapacityAtCap(after)).toBe(false)
   })
 })
 
@@ -1441,7 +1474,12 @@ describe('storage pools', () => {
     expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw value
   })
 
-  it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
+  it('is unaffected by disk-build progress — the true cap depends purely on Capacity vs. the FINAL pool\'s own ceiling', () => {
+    // Pool 1's own ceiling is nowhere near the true final cap (the last pool's own end bound), so
+    // the upgrade stays available at this Capacity regardless of how many disks have been built —
+    // isMemoryCapacityAtCap must never re-couple to disk-build progress (see docs/DESIGN_HISTORY.md
+    // for the incident this guards against).
+    const noDisksBuilt = withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS, disksBuiltTotal: {} })
     const pool1Complete = withIntro(createInitialGameState(), {
       capacity: INTRO_CAPACITY_CAP_BITS,
       disksBuiltTotal: {
@@ -1450,7 +1488,7 @@ describe('storage pools', () => {
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(isMemoryCapacityAtCap(withIntro(pool1Complete, { disksBuiltTotal: {} }))).toBe(true)
+    expect(isMemoryCapacityAtCap(noDisksBuilt)).toBe(false)
     expect(getUnlockedStoragePoolCount(pool1Complete)).toBe(2)
     expect(isMemoryCapacityAtCap(pool1Complete)).toBe(false)
   })
@@ -1816,8 +1854,8 @@ describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('refuses to queue once pool 1 is already at its capacity end bound', () => {
-    const state = withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  it('refuses to queue once Capacity is already at the FINAL pool\'s own end bound', () => {
+    const state = withIntro(createInitialGameState(), { capacity: getFinalPoolCapacityCapBits(), byteCreated: true })
     expect(queueIntroCapacityUpgrade(state)).toBe(state)
   })
 })

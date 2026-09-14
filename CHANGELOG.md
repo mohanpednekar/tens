@@ -53,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   its fill used to include whatever the pool buffer happened to be holding for unrelated reasons
   (e.g. read cache fill), implying progress before the player had engaged the build at all.
 
-
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
 - Added `focus-visible` outline styles to TierNameTrigger and other interactive components.

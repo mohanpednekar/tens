@@ -182,8 +182,9 @@ though both share the same `N = round(log2(raw / 1 Byte))` doubling-step calcula
 floating-point drift from chained purchases/boosts) — `sqrt(pool Capacity in Bytes)` is only a
 guideline for the bandwidth's bounds, not the formula, though it still caps the real ceiling once a
 pool's own fixed Capacity can't keep up with an ever-growing rate. `isMemoryCapacityAtCap`
-(the purchase-availability gate) compares the pool's own derived Capacity to its ceiling, not the raw
-value. Two earlier, reverted attempts shared one raw value between both displays instead — see
+(the purchase-availability gate) compares the FINAL pool's own derived Capacity to its ceiling, not
+the raw value — deliberately the last pool always, not the highest currently-unlocked/visible one,
+so Capacity growth is never re-capped by any one pool's own progress. Two earlier, reverted attempts shared one raw value between both displays instead — see
 docs/DESIGN_HISTORY.md (also home to the acknowledged, minor Compute merge/boost pacing consequence
 of `intro.capacity` no longer clamping to a pool ceiling — `getCoreEarnTimeSeconds` deliberately
 still reads the raw value). Storage pools 1–10 are derived views over this one generator: each

@@ -7715,3 +7715,49 @@ threshold). `App.test.jsx`'s `MultiplierBar` lake-mode tests were updated the sa
 succeeds. This changes pacing (pools become live earlier, independent of build progress; Upgrade
 Data Stream no longer waits its turn) enough to warrant a `simulate-run-times` re-run — see that
 skill's own published output for updated ideal-run figures.
+
+### `isMemoryCapacityAtCap` silently re-coupled Capacity growth to disk-build progress, making the pool-liveness decoupling above unreachable
+
+Adversarial review of the pool-liveness feature above caught that its headline claim — "pool
+liveness is now purely Capacity-based, decoupled from disk-build progress" — was not actually true
+in any state reachable through real play. `isMemoryCapacityAtCap` (the gate on `upgradePoolCapacity`/
+`isPoolCapacityUpgradeAvailable`) still compared the highest DISK-BUILD-unlocked pool's own derived
+Capacity against THAT pool's own end bound (`getUnlockedStoragePoolCount`, untouched by the feature
+above). Since every pool's own end bound sits well below the NEXT pool's own Capacity-visibility
+threshold (verified directly: pool 1's end bound is 800,000 bits vs. pool 2's own visibility
+threshold of 8,388,608 bits — roughly 10x higher), `intro.capacity` could never actually grow far
+enough to cross a further pool's threshold before that pool's disk array had ALSO been fully built
+(which is the only thing that raises the disk-build-unlocked ceiling). `getVisibleStoragePoolCount`
+could therefore never exceed `getUnlockedStoragePoolCount` in any reachable game state — the
+capacity-only liveness gate was correctly implemented and correctly wired into every consumer, but
+the upstream growth mechanism feeding it was still leashed to the very disk-build chain the whole
+feature was meant to escape.
+
+**Fix.** `isMemoryCapacityAtCap` now always compares the FINAL pool's (`getStoragePoolCount()`,
+unconditionally — never the highest unlocked/visible pool) own derived Capacity against ITS end
+bound. `getStoragePoolCapacity` already returns `0` for a pool whose own Capacity threshold hasn't
+been reached (regardless of disk-build state), so this is safe: the cap simply reads `false` (not
+yet reached) for every pool short of the very last, then genuinely gates once Capacity has grown
+enough to reach the final pool's own ceiling — an enormous, but finite, value (`8 × 10³²` bits at 10
+pools). Capacity growth is now truly independent of disk-build progress across its ENTIRE range, not
+just in the narrow band this bug happened to leave reachable.
+
+**Test fallout.** Every existing test that asserted `isMemoryCapacityAtCap`/
+`isMemoryCapacityUpgradeAvailable`/`pickIntroCapacityMilestone`/`queueIntroCapacityUpgrade` behavior
+at `INTRO_CAPACITY_CAP_BITS` (pool 1's own end-bound alias) had encoded the OLD, buggy assumption
+that this value was itself "the cap" — under the fix it manifestly isn't (it's ~10^27 times smaller
+than the true final cap), so each was either changed to assert the upgrade STAYS available at that
+point, or rewritten against a new `getFinalPoolCapacityCapBits()` test helper that searches forward
+by actual doubling steps (`INTRO_CAPACITY_DOUBLING_STEP`) from `INTRO_STARTING_CAPACITY` until
+`getStoragePoolCapacity` for the final pool reaches its own end bound — deliberately NOT the raw
+`getStoragePoolMemoryBounds(finalPoolIndex).endBits` arithmetic value directly, since that value
+isn't generally reachable by the actual capacity-doubling sequence and `getDecadePowerEquivalentBits`
+can floor a full decade short of it for an off-lattice input (the same "must be an actually-reachable
+doubling value, not a raw formula result" property every other capacity-ceiling constant in this
+suite, e.g. `INTRO_CAPACITY_CAP_BITS` itself, already relies on).
+
+**Verification.** `engine.test.js`: 1248/1248 (four tests updated, one new). Full `yarn test`:
+1770/1770. `yarn build` succeeds. This is a substantial pacing change — Capacity (and therefore every
+pool's own liveness) can now grow far ahead of disk-build progress for an attentive player — so
+`simulate-run-times` needs re-running and republishing again on top of the run already published for
+the pool-liveness feature itself.

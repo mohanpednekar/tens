@@ -2833,16 +2833,21 @@ export const isPoolCapacityUpgradeAvailable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
-// The moving ceiling is reached once the highest unlocked pool's OWN derived SI-clean Capacity
-// (getStoragePoolCapacity) is at or above that pool's end bound — not the raw intro.capacity
-// value, which now keeps doubling past that point (see upgradePoolCapacity) until a new pool
-// unlocks and raises the ceiling again. This intentionally differs from the historical pre-#506
-// "halt before the next doubling would exceed the cap" check: the current ladder clamps at the
-// ceiling instead of stopping early.
+// The true ceiling is the FINAL pool's own end bound — not the highest DISK-BUILD-unlocked pool's
+// (a disk-build-based ceiling here would silently re-couple Capacity growth to disk-build progress,
+// defeating the whole point of pool liveness being Capacity-only: capacity could then never actually
+// outrun disk-build, since a pool's own ceiling always sits below the NEXT pool's own visibility
+// threshold — see docs/DESIGN_HISTORY.md for the incident this fixes). `getStoragePoolCapacity`
+// already returns 0 for a pool whose own Capacity threshold (getVisibleStoragePoolCount) hasn't been
+// reached yet, so comparing against the FINAL pool unconditionally is safe: the check simply reads
+// false (not yet at cap) for every pool short of the last, then compares the final pool's own
+// derived SI-clean Capacity against its own end bound once Capacity has grown enough to reach it.
+// Raw intro.capacity keeps doubling past any one pool's own ceiling (see upgradePoolCapacity) all
+// the way to the very last pool's — nothing about disk-build progress anywhere factors in.
 export const isMemoryCapacityAtCap = state => {
-  const unlockedCount = getUnlockedStoragePoolCount(state)
-  const { endBits } = getStoragePoolMemoryBounds(unlockedCount)
-  return getStoragePoolCapacity(state, unlockedCount) >= endBits
+  const finalPoolIndex = getStoragePoolCount()
+  const { endBits } = getStoragePoolMemoryBounds(finalPoolIndex)
+  return getStoragePoolCapacity(state, finalPoolIndex) >= endBits
 }
 
 // Upgrade Data Stream is NOT part of the forced priority order at all — unlike every other
@@ -2861,9 +2866,9 @@ export const isMemoryCapacityUpgradeAvailable = state => isPoolCapacityUpgradeAv
 // binary-denominated (see "Economy model" in CLAUDE.md). Speed follows automatically, derived from
 // the new capacity (see getIntroProductionRate). Each storage pool derives its OWN
 // SI-clean Capacity from this raw doubling count instead (getStoragePoolCapacity/
-// getSiCleanEquivalentBits), clamped to that pool's own window there — so the "moving ceiling of the
-// highest unlocked pool" is enforced by isMemoryCapacityAtCap gating availability (via the
-// pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
+// getSiCleanEquivalentBits), clamped to that pool's own window there — so the true ceiling (the
+// FINAL pool's own end bound — see isMemoryCapacityAtCap) is enforced by gating availability (via
+// the pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
 export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
