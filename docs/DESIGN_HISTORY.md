@@ -1,5 +1,13 @@
 # Design history & rationale
 
+### First ten Scale Ups standardized at three completed levels — 2026-09-13
+
+The first ten Scale Ups now each require 3 completed levels of their current target, which is the
+last tier unlocked by the Scale Up ladder. This restores one consistent threshold while the claims
+walk across all ten tiers; only subsequent claims against the already-claimed final tier escalate
+to 6, 9, 12, and so on. It supersedes the brief `3 × (scaleUpCount + 1)` behavior, which accidentally
+made each newly unlocked tier demand three more completed levels than its predecessor.
+
 ### Scale Up tier-scoped boosts and three-level reset cadence — 2026-09-10
 
 Scale Up now doubles only the tiers that were unlocked before the claim. The tier revealed by that

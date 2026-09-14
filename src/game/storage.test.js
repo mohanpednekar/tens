@@ -455,8 +455,7 @@ describe('schema merge on load', () => {
     const state = {
       ...createInitialGameState(),
       intro: {
-        bits: 5, productionAccumulator: 0.2, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true, tickSpeedSeconds: 0.5,
-        productionMultiplier: 2, productionMilestoneTier: 1, productionMilestoneTierClaims: 1,
+        bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true,
         mainGameUnlocked: false,
         capacityUpgradeQueued: false,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
@@ -484,7 +483,6 @@ describe('schema merge on load', () => {
         computeCloudsMergeRemainingSeconds: 0, computeDatacentersMergeRemainingSeconds: 0,
         computeSupercomputersMergeRemainingSeconds: 0,
         computeBoostType: null, computeBoostTierIndex: null, computeBoostStacks: 0, computeBoostRemainingSeconds: 0,
-        computeFundedBandwidthClaims: 0, computeBandwidthSacrificeIndex: 0,
         foundryResetCaps: null,
         dataLakes: createInitialGameState().intro.dataLakes,
         dataStreamTapBonusPercent: 0,
@@ -807,10 +805,10 @@ describe('supporter unlock + save slots', () => {
     expect(message).toMatch(/capacity/i)
     expect(message).toMatch(/convenience/i)
     expect(message).toMatch(/auto-press/i)
-    expect(message).toMatch(/speed/i)
-    expect(message).toMatch(/invest/i)
+    expect(message).toMatch(/data stream upgrade/i)
     expect(message).toMatch(/data stream/i)
     expect(message).not.toMatch(/bandwidth progress/i)
+    expect(message).not.toMatch(/\binvest\b/i)
     expect(message).toMatch(/disks\/storage/i)
     expect(message).toMatch(/compute/i)
     expect(message).toMatch(/also kept:\s*byte factory\b/i)
