@@ -217,7 +217,10 @@ today goes straight from idle to the disk existing, in the same click, with no m
 rendered**: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
-a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active
+a single pass's cost against the pool's SPENDABLE buffer (its own read cache's reservation,
+`getPoolCacheReservationBits`, excluded — mirrors `isProvisionDiskAvailable`'s own engine-side
+check, so the UI's affordability reading never credits bits the cache itself has first claim on), no
+build already in progress, the ladder not yet exhausted for every currently-active
 pool, OR while a redeemable Disk Fill — the only higher-priority action, see
 "Forced priority order" in docs/ECONOMY_REFERENCE.md; Upgrade Data Stream itself sits outside the
 order and never blocks Provision Disk — is currently available),
@@ -242,10 +245,15 @@ totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixe
 fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
 idle, `0` until `diskBuildEngaged` (`diskPassesCollected > 0 || intro.diskBuildQueued` — i.e. the
 player has actually clicked at least once), THEN
-`((passesCollected * diskSize + min(diskPoolBufferBits, diskSize)) / diskCost) * 100` (already-
-collected passes count as permanent progress, plus however much of the CURRENT buffer counts toward
-the next pass, so the bar climbs smoothly between clicks rather than jumping only once a whole pass
-fires) — the button's own existence already signals eligibility, so it deliberately does NOT preview
+`((passesCollected * diskSize + min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100`
+(`diskPoolSpendableBufferBits = diskPoolBufferBits - getPoolCacheReservationBits`, the SAME
+spendable amount `isProvisionDiskAvailable`/`provisionDisk` themselves check/spend against — the raw
+buffer alone would let the bar advance on bits the very next cache-fill tick is about to consume
+instead, making displayed progress regress or promise a pass that never actually lands; see
+`docs/DESIGN_HISTORY.md`) — already-
+collected passes count as permanent progress, plus however much of the CURRENT spendable buffer
+counts toward the next pass, so the bar climbs smoothly between clicks rather than jumping only once
+a whole pass fires — the button's own existence already signals eligibility, so it deliberately does NOT preview
 a fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read-cache
 fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`. Paired
 with a hidden

@@ -51,6 +51,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **The Provision Disk button no longer previews progress before it has ever been clicked** —
   its fill used to include whatever the pool buffer happened to be holding for unrelated reasons
   (e.g. read cache fill), implying progress before the player had engaged the build at all.
+- **Storage pool Capacity growth no longer silently caps at the highest disk-build-unlocked pool's
+  own ceiling** — it now grows all the way to the final pool's own ceiling, genuinely independent of
+  disk-build progress (the bug this fixes had made the Capacity-only pool-liveness change above
+  unreachable in practice).
+- **A Data Lake's manual `💧 Fill` no longer overspends or underfunds** when a disk slot already has
+  partial progress banked, or when the next Booster needs fewer units than the currently-open slot's
+  own sub-size (a ×10/×100 slot can only ever complete as a whole) — it now spends exactly what's
+  needed. The Fill button also no longer appears once a lake has no open slot left at its current
+  capacity level (previously a dead click until the next capacity level unlocked).
+- **The Provision Disk button's progress/availability now excludes the pool's own read-cache
+  reservation**, matching the engine's own spendable-buffer check, so displayed progress can no
+  longer advance on bits the next cache-fill tick was about to consume.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

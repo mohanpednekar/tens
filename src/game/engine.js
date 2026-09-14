@@ -4400,6 +4400,38 @@ export const buyBooster = tierIndex => state => {
   }
 }
 
+// The minimum additional bits this pool's own buffer must supply — on top of whatever partial
+// fillBits progress is already banked toward the currently-open disk slot — to guarantee at least
+// `neededUnits` more units deposited. NOT a naive `neededUnits * unitBits`: a slot only ever
+// deposits its own WHOLE sub-size at once (1, 10, or 100 — see fillDataLakeDisks), never a partial
+// amount, so reaching even 1 more needed unit still requires completing the ENTIRE currently-open
+// slot at its own full cost whenever that slot's own sub-size exceeds neededUnits (e.g. an open
+// ×100 slot with only 1 more unit needed for the next Booster) — walks forward slot-by-slot,
+// mirroring fillDataLakeDisks' own loop, rather than assuming a constant bits-per-unit exchange
+// rate that only actually holds at whole-slot boundaries. Returns null once the lake has no further
+// open slot at its current capacity level (manual fill can do nothing more there) — see
+// docs/DESIGN_HISTORY.md for the overspend/dead-button bugs this fixes.
+const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
+  const lake = getDataLakeTier(state, tierIndex)
+  const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
+  const unitBits = getDataLakeUnitBits(tierIndex)
+  let depositedUnits = lake?.depositedUnits ?? 0
+  let fillBits = lake?.fillBits ?? 0
+  let openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
+  if (openSubSize === null) return null
+  let unitsGained = 0
+  let bitsNeeded = 0
+  while (unitsGained < neededUnits && openSubSize !== null) {
+    const slotSizeBits = unitBits * openSubSize
+    bitsNeeded += slotSizeBits - fillBits
+    fillBits = 0
+    depositedUnits += openSubSize
+    unitsGained += openSubSize
+    openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
+  }
+  return bitsNeeded
+}
+
 // A lake fills MANUALLY, capped at just enough for its own next Booster, until its matching
 // Storage pool is entirely complete (isStoragePoolFullyBuilt — every one of that pool's three
 // ladder sizes fully built); tickPoolBufferFill's own automatic overflow only starts feeding it
@@ -4413,22 +4445,28 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   if (!isDataLakePoolReady(state, tierIndex)) return false
   const neededUnits = Math.max(0, getBoosterPurchaseCost(tierIndex)(state) - getDataLakeDepositedUnits(tierIndex)(state))
   if (neededUnits <= 0) return false // already enough banked for the next Booster
+  // No open slot left at the lake's current capacity level — manual fill (and a click on it) would
+  // be a dead no-op until the corresponding Storage array unlocks the next capacity level (Scale
+  // Out) — hide the button rather than offering a click that silently does nothing.
+  if (getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits) === null) return false
   return getPoolBufferBits(state, tierIndex) >= getDataLakeUnitBits(tierIndex)
 }
 
-// Converts up to `neededUnits` worth of this pool's own buffer into lake deposits in one shot —
-// never more than the next Booster actually needs, and never more than the buffer actually holds.
-// Outside the forced priority order entirely, same as buyBooster — always available the instant
-// isDataLakeManualFillAvailable says so.
+// Spends exactly getDataLakeManualFillBitsNeeded's own precise amount — never more than the next
+// Booster actually needs (accounting for any partial fillBits progress already banked, not a naive
+// per-unit estimate — see that function's own doc comment) — capped at whatever the buffer actually
+// holds, in which case the spend still only ever makes real, permanent progress toward completing
+// the currently-open slot (fillDataLakeDisks itself banks a partial spend in fillBits; nothing is
+// ever lost). Outside the forced priority order entirely, same as buyBooster — always available the
+// instant isDataLakeManualFillAvailable says so.
 export const fillDataLakeManually = tierIndex => state => {
   if (!isDataLakeManualFillAvailable(state, tierIndex)) return state
-  const unitBits = getDataLakeUnitBits(tierIndex)
   const neededUnits = Math.max(0, getBoosterPurchaseCost(tierIndex)(state) - getDataLakeDepositedUnits(tierIndex)(state))
+  const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
+  if (bitsNeeded === null || bitsNeeded <= 0) return state
   const bufferBits = getPoolBufferBits(state, tierIndex)
-  const affordableUnits = Math.floor(bufferBits / unitBits)
-  const unitsToFill = Math.min(neededUnits, affordableUnits)
-  if (unitsToFill <= 0) return state
-  const spendBits = unitsToFill * unitBits
+  const spendBits = Math.min(bitsNeeded, bufferBits)
+  if (spendBits <= 0) return state
   const filled = fillDataLakeDisks(state, state.intro.dataLakes, tierIndex, spendBits)
   if (!filled) return state
   const { unconsumedBits, ...lakeUpdate } = filled

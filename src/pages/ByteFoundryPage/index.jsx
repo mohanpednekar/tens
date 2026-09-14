@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -524,6 +524,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskPassesRequired = getDiskProvisionPassesRequired(state, diskSize)
   const diskPoolIndex = getPoolIndexForDiskSize(diskSize)
   const diskPoolBufferBits = getPoolBufferBits(state, diskPoolIndex)
+  // The read cache always gets first claim on the buffer (getPoolCacheReservationBits) — mirror
+  // that same reservation here so the UI's own affordability/progress readings never credit bits
+  // that isProvisionDiskAvailable/provisionDisk themselves treat as unavailable to spend.
+  const diskPoolSpendableBufferBits = Math.max(0, diskPoolBufferBits - getPoolCacheReservationBits(state, diskPoolIndex))
   const diskLadderExhausted = isDiskLadderExhaustedForActivePools(state)
   const diskSizesToShow = storageRevealed ? getDiskSizesToShow(state) : []
   const canStartDiskBuild = isProvisionDiskTurnAvailable(state)
@@ -531,8 +535,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // The build cost is paid in diskPassesRequired passes of the disk's own face-value size each (N
   // for the array's Nth disk, capped at DISK_BUILD_COST_MULTIPLIER — see provisionDisk/
   // getDiskProvisionPassesRequired in game/engine) — "blocked by priority" now only needs a single
-  // pass's worth in the buffer, not the whole cost, to be a real (if lower-priority) option.
-  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
+  // pass's worth in the SPENDABLE buffer (cache reservation excluded), not the whole cost, to be a
+  // real (if lower-priority) option.
+  const diskBuildBlockedByPriority = !diskLadderExhausted && diskPoolSpendableBufferBits >= diskSize && !canStartDiskBuild && !diskBuildInProgress
   // Clamped at diskPassesRequired: a save carrying a diskProvisionPasses value banked under an
   // earlier flat-multiplier version of this ladder (now exceeding a smaller ordinal's own
   // requirement) would otherwise display a nonsensical "N/M" with N > M until the engine's own
@@ -554,9 +559,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       : !diskBuildEngaged
         ? 0
         // Already-collected passes are permanent progress; whatever's currently sitting in the
-        // buffer (up to one more pass' worth) counts toward the next one, so the bar keeps moving
-        // smoothly between clicks rather than jumping only once a whole pass fires.
-        : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolBufferBits, diskSize)) / diskCost) * 100)
+        // SPENDABLE buffer (cache reservation excluded — up to one more pass' worth) counts toward
+        // the next one, so the bar keeps moving smoothly between clicks rather than jumping only
+        // once a whole pass fires, and never advances on bits the next cache-fill tick would
+        // actually consume instead.
+        : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity

@@ -694,12 +694,13 @@ Strict three-layer separation:
    conversion and Queued Capacity each tick; `getPoolBufferCapacity` equals the pool's own Capacity
    exactly, so a full buffer can always fund one `provisionDisk` funding pass of even that pool's
    largest disk). One `PoolCard` renders per VISIBLE pool
-   (`getVisibleStoragePoolCount` — the smaller of the disk-build-based unlock count
-   (`isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only and keep
-   driving the disk ladder/read-cache/`tickPoolBufferFill` eligibility) and the capacity-threshold
-   reveal count (`getPoolCapacityUnlockThresholdBits`) — deliberately two separate gates; see
-   `docs/DESIGN_HISTORY.md`'s "Pool cards gated on a capacity threshold too" entry for why folding the
-   capacity check into that shared unlock primitive directly was tried first and reverted), only the
+   (`getVisibleStoragePoolCount` — PURE Capacity-based: `intro.capacity` reaching a pool's own
+   `getPoolCapacityUnlockThresholdBits`, pool 1 always counted, with NO disk-build dependency —
+   deliberately independent of `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay
+   disk-build-only and instead drive the disk ladder's own progression (which size Provision Disk
+   currently offers); see "Pool liveness is Capacity-only" below and
+   `docs/DESIGN_HISTORY.md`'s "Pool cards gated on a capacity threshold too" entry for why folding
+   the two into one shared primitive was tried once already and reverted), only the
    largest expanded by default. `components/DataLakePanel` (`bare`, `tierIndex={poolIndex}`) is
    embedded per pool below that pool's own `components/DiskArrayRow`s (cache above disks) inside the
    same expanded disclosure — see `docs/DESIGN_HISTORY.md`'s "Pool titles simplified to `<symbol>`
@@ -1227,7 +1228,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1769 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1773 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

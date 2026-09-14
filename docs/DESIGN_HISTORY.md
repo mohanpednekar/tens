@@ -7783,3 +7783,68 @@ suite, e.g. `INTRO_CAPACITY_CAP_BITS` itself, already relies on).
 pool's own liveness) can now grow far ahead of disk-build progress for an attentive player — so
 `simulate-run-times` needs re-running and republishing again on top of the run already published for
 the pool-liveness feature itself.
+
+### Four bot-review findings on the pool-liveness/Data-Lake PR: manual-fill overspend, a dead Fill button, a stale doc paragraph, and a UI/engine buffer mismatch
+
+A `chatgpt-codex-connector` review on the pool-liveness/Data-Lake-manual-fill PR caught four real
+issues, all verified and fixed in the same round.
+
+**1. `fillDataLakeManually` could spend nearly double the "just enough" amount it promised.** It
+computed the spend as `neededUnits * getDataLakeUnitBits(tierIndex)`, ignoring any partial
+`fillBits` progress already banked toward the currently-open disk slot. Concretely: a lake sitting
+at 7,999 of 8,000 bits toward its first unit, needing only 1 more unit for the next Booster, would
+spend a WHOLE additional `unitBits` (8,000) from the buffer to deposit that 1 unit — not the 1 bit
+actually still needed — draining the buffer far more aggressively than "just enough" implied (the
+excess wasn't lost — `fillDataLakeDisks` correctly carries it forward as progress toward the NEXT
+unit — but it violated the manual-fill design's own stated minimalism).
+
+**2. The inverse bug, worse: a slot that deposits MULTIPLE units at once (a ×10 or ×100 sub-size)
+could never be funded by the naive formula at all if `neededUnits` was smaller than that sub-size.**
+A lake's disk squares only ever complete in their own WHOLE sub-size (1, 10, or 100 units) —
+there's no such thing as "half of a ×100 slot." If only 1 more unit is needed for the next Booster
+but the currently-open slot is a ×100 one, completing even that 1 unit requires paying the ENTIRE
+slot's own cost (100 × `unitBits`) — the old `neededUnits * unitBits` formula would have supplied
+only 1 unit's worth, funding nothing (the slot never completes on a partial spend), silently
+stalling manual fill with no error and no visible progress.
+
+**3. `DataLakePanel`'s `💧 Fill` button could render as clickable when it could do nothing at all.**
+`isDataLakeManualFillAvailable` never checked whether the lake had any OPEN slot left at its current
+capacity level — once fully maxed there (e.g. a 10-unit lake after Booster #10, its next cost
+already past capacity), every click was a silent no-op until the corresponding Storage array
+unlocked the next capacity level via Scale Out.
+
+**Fix.** A new private `getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)` walks
+forward slot-by-slot from the lake's current `depositedUnits`/`fillBits` (mirroring
+`fillDataLakeDisks`' own loop) to compute the EXACT number of additional bits needed — crediting
+existing partial `fillBits` progress, and correctly paying a larger slot's own full cost whenever
+its sub-size exceeds `neededUnits` (that spend deposits MORE than `neededUnits`, which is fine and
+expected — a lake can't deposit less than a whole slot at a time). Returns `null` once the lake has
+no open slot left at its current capacity level; both `isDataLakeManualFillAvailable` (hides the
+button in that case, fixing #3) and `fillDataLakeManually` (spends exactly
+`min(bitsNeeded, bufferBits)`, fixing #1 and #2) now use it instead of the naive per-unit multiply.
+
+**4. `CLAUDE.md` still carried the PRE-this-feature description of `getVisibleStoragePoolCount`**
+("the smaller of the disk-build-based unlock count... and the capacity-threshold reveal count") in
+its `PoolCard` rendering paragraph — directly contradicting the "Pool liveness is Capacity-only"
+section added later in the same file. Left uncorrected, a later session reading only that earlier
+paragraph could re-implement or "preserve" the wrong, superseded invariant. Fixed to describe the
+actual, pure-Capacity-based function and point at the correct section.
+
+**5. `ByteFoundryPage`'s own Provision Disk affordability/progress calculations (`diskBuildBlockedByPriority`,
+`diskBuildProgress`) still read the pool's RAW buffer, not the SPENDABLE amount `isProvisionDiskAvailable`/
+`provisionDisk` themselves check/spend against (`getPoolCacheReservationBits`-adjusted)** — a
+mismatch introduced when the read-cache-priority fix (see the "Read cache starved by Provision Disk"
+entry above) changed the ENGINE side but not this UI computation. While the read cache is still
+incomplete, the progress bar could advance on bits the very next cache-fill tick was about to
+consume instead, showing progress that would then regress, or implying a pass was about to land that
+never actually would. Fixed: both computations now subtract `getPoolCacheReservationBits` from the
+raw buffer first, via a new `diskPoolSpendableBufferBits`.
+
+**Verification.** Two new regression tests for the manual-fill fix (`engine.test.js`, "manual fill
+before pool completion" describe block): one proving a partial-fillBits scenario spends only the 1
+bit actually still needed rather than a whole extra unit, one proving a larger open slot's own FULL
+cost is paid when its sub-size exceeds what's needed, and one proving the button hides once the lake
+has no open slot left. `engine.test.js`: 1251/1251. Full `yarn test`: 1773/1773. `yarn build`
+succeeds. Pure bug fixes to a not-yet-merged PR's own new mechanism — no economy constant/formula
+outside this feature changed, so no additional `simulate-run-times` re-run beyond the one already
+pending for the pool-liveness feature itself.

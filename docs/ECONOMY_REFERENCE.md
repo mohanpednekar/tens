@@ -865,12 +865,26 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    only once complete does it switch to filling AUTOMATICALLY from that pool's buffer overflow.
    `isDataLakeManualFillAvailable(state, tierIndex)` requires `isDataLakePoolReady` AND
    `!isStoragePoolFullyBuilt`, at least one more unit needed for the next Booster
-   (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), and at least one full unit's worth of
-   bits (`getDataLakeUnitBits(tierIndex)`) sitting in the pool's own buffer. `fillDataLakeManually`
-   spends directly from that pool's buffer — the SAME source `tickPoolBufferFill`'s overflow branch
-   would otherwise use — converting `min(unitsStillNeeded, floor(bufferBits / unitBits))` whole units
-   via the same `fillDataLakeDisks` deposit helper the automatic path uses, so the disk-square
-   breakdown stays exact either way. `tickPoolBufferFill`'s automatic overflow branch now requires
+   (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), an OPEN disk slot still available at
+   the lake's current capacity level (see `getDataLakeManualFillBitsNeeded` below — a lake fully
+   maxed at its own capacity level has nothing left for manual fill to do until the matching Storage
+   array unlocks the next level via Scale Out, so the button hides rather than offering a dead
+   click), and at least one full unit's worth of bits (`getDataLakeUnitBits(tierIndex)`) sitting in
+   the pool's own buffer. `fillDataLakeManually` spends directly from that pool's buffer — the SAME
+   source `tickPoolBufferFill`'s overflow branch would otherwise use — via
+   `getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)`: a private helper that walks
+   forward slot-by-slot (mirroring `fillDataLakeDisks`' own loop) to find the EXACT number of
+   additional bits needed, accounting for whatever partial `fillBits` progress is already banked
+   toward the currently-open slot — deliberately NOT a naive `neededUnits *
+   getDataLakeUnitBits(tierIndex)` estimate, since a slot only ever deposits its own WHOLE sub-size
+   at once (1, 10, or 100): reaching even 1 more needed unit still requires paying that ENTIRE open
+   slot's own full cost whenever its sub-size exceeds `neededUnits` (e.g. an open ×100 slot with
+   only 1 more unit needed), and the naive per-unit estimate both overspent when partial progress
+   already covered most of a smaller slot and could underpay (funding nothing at all) against a
+   larger one — see `docs/DESIGN_HISTORY.md`. The actual spend is `min(bitsNeeded, bufferBits)`,
+   passed through the same `fillDataLakeDisks` deposit helper the automatic path uses, so the
+   disk-square breakdown stays exact either way and an underfunded spend still banks real, permanent
+   `fillBits` progress rather than losing anything. `tickPoolBufferFill`'s automatic overflow branch now requires
    `isStoragePoolFullyBuilt(state, poolIndex)` in addition to `isDataLakePoolReady` (previously just
    the latter) — so a pool that has built its ×1 disk but not yet its ×10/×100 sizes only ever fills
    its lake through the manual `💧 Fill` button (`DataLakePanel`), never automatically. Like Buy,
