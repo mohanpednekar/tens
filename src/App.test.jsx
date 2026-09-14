@@ -1019,7 +1019,7 @@ test('the Scale Up button is disabled below the first tier\'s required level (3)
   render(<App />)
 
   expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeDisabled()
 })
 
 test('the Scale Up button is enabled once the first tier reaches the required level (3)', () => {
@@ -1029,7 +1029,7 @@ test('the Scale Up button is enabled once the first tier reaches the required le
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeEnabled()
 })
 
 test('the second Scale Up targets the next tier, at the same flat level requirement — not one more level of the same tier', () => {
@@ -1040,7 +1040,7 @@ test('the second Scale Up targets the next tier, at the same flat level requirem
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })
+  const button = screen.getByRole('button', { name: /scale up \(requires megabytes level 3/i })
   expect(button).toBeDisabled()
   expect(screen.queryByRole('button', { name: /scale up \(requires kilobytes/i })).not.toBeInTheDocument()
 })
@@ -1054,7 +1054,7 @@ test('once every tier is unlocked, each Scale Up requires a fresh three-level cl
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 2/i })
+  const button = screen.getByRole('button', { name: /scale up \(requires quettabytes level 3/i })
   expect(button).toBeEnabled()
 })
 
@@ -1068,7 +1068,7 @@ test('the Scale Up button shows its per-claim ×2 effect and requirement progres
 
   // The action always doubles currently unlocked tiers, regardless of prior activation count.
   expect(screen.getByRole('button', {
-    name: /scale up \(requires kilobytes level 2\) — doubles production for tiers unlocked so far/i,
+    name: /scale up \(requires kilobytes level 3\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
   expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · Lv.1/2')
 })
@@ -1104,7 +1104,7 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
 
   // The top panel's own Scale Up button is a separate element doing something else entirely
   // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
-  const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires quettabytes level 2/i })
+  const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires quettabytes level 3/i })
   expect(panelScaleUpButton).not.toBe(rowXpButton)
 })
 
@@ -1117,7 +1117,7 @@ test('clicking Scale Up once eligible resets resources but advances the target t
   })
   render(<App />)
 
-  const scaleUpButton = screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })
+  const scaleUpButton = screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })
   expect(scaleUpButton).toBeEnabled()
 
   await user.click(scaleUpButton)
@@ -1126,7 +1126,7 @@ test('clicking Scale Up once eligible resets resources but advances the target t
   // Scale Up resets owned/purchaseLevels for every tier and advances the target to the next tier
   // (Megabytes), at the same flat level-3 (displayed level 2) requirement.
   expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 3/i })).toBeDisabled()
 })
 
 test('Scale Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {
@@ -1144,7 +1144,7 @@ test('Scale Up resets the global tickspeed multiplier level back to not-yet-boug
   // the description stays in the DOM (and toHaveTextContent-visible) even while collapsed.
   expect(screen.getByLabelText(/^global clock speed panel$/i)).toHaveTextContent(/lv\.2/i)
 
-  await user.click(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i }))
+  await user.click(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i }))
 
   // Scale Up also resets tier02's owned count to 0, so the card's initial-unlock condition
   // (owning tier02) is no longer met either — with the level reset too, the card reverts all the
@@ -1161,7 +1161,7 @@ test('the Scale Up button is disabled once production freezes at a googol', () =
   })
   render(<App />)
 
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeDisabled()
 })
 
 test('no Auto Scale Up control appears during the first run, even with the last tier unlocked', () => {
@@ -1458,7 +1458,7 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
 
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
   // Still eligible (purchaseLevels.tier01 untouched) since Auto Scale Up starts paused.
-  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 2/i })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires kilobytes level 3/i })).toBeEnabled()
 
   // The pause toggle lives on the PP Upgrades page; the tick timer itself keeps running
   // regardless of which view is currently rendered.
@@ -1470,7 +1470,7 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   // Scale Up fired automatically once resumed — resources reset and the target tier advances to
   // Megabytes, at the same flat level-3 (displayed level 2) requirement.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 2/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires megabytes level 3/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
