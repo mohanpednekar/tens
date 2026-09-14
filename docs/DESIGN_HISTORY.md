@@ -1,5 +1,24 @@
 # Design history & rationale
 
+### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
+
+The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the
+per-tier `TICKSPEED_PRODUCTION_STEP` from `0.1` to `0.01` — matching Latency's own
+`GLOBAL_TICKSPEED_PRODUCTION_STEP` (1%) — and documented it explicitly in `CHANGELOG.md`
+("Tier tickspeed upgrades now give +1% per level (was +10%)"). The maintainer asked for this
+reverted directly: the per-tier ladder (`getTickspeedProductionMultiplier`,
+`buyTickspeedMultiplier`) is a separate, much cheaper, per-tier lever from Latency's own Bytes-funded
+global track (`getGlobalTickspeedProductionMultiplier`), and the two were never meant to share a
+step size — Latency stays at 1% (its own `GLOBAL_TICKSPEED_PRODUCTION_STEP`, unaffected by this
+revert), only the per-tier constant moved back to `0.1`. Several stale player-facing/doc strings
+still said "10%" throughout the codebase even while the constant read `0.01` (`MainPage`'s own
+"+1% faster ticks"/"the next level makes it 1% more" button copy, `docs/MAINPAGE_REFERENCE.md`,
+`docs/ECONOMY_REFERENCE.md`, and multiple `engine.test.js`/`App.test.jsx` assertions/comments) —
+those are the tell that this drop was likely swept in unintentionally alongside the Latency-focused
+rename rather than a deliberate, isolated choice. This reversion also fixes all of those back to
+10%, and drops the now-superseded `CHANGELOG.md` bullet entirely (the corresponding
+[Unreleased] entry hadn't shipped yet, so there's no net change left to document once reverted).
+
 ### First ten Scale Ups standardized at three completed levels — 2026-09-13
 
 The first ten Scale Ups now each require 3 completed levels of their current target, which is the

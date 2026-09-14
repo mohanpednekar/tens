@@ -622,8 +622,8 @@ export const PRESTIGE_SPEED_BONUS_UNLOCK_COST = 10000
 // AUTOBUYER_UNLOCK_BASE_COST below) no longer reuses it.
 export const TICKSPEED_MULTIPLIER_BASE_EXPONENT = 10
 // Each tickspeed multiplier level compounds a tier's
-// production by another 1% (see engine.js's getTickspeedProductionMultiplier).
-export const TICKSPEED_PRODUCTION_STEP = 0.01
+// production by another 10% (see engine.js's getTickspeedProductionMultiplier).
+export const TICKSPEED_PRODUCTION_STEP = 0.1
 // Historical per-tier PP-cost formula (see engine.js's getAutobuyerUnlockCost) — no longer an
 // actual purchase (a tier's autobuyer now unlocks automatically at a prestige-count milestone
 // instead, see AUTOBUYER_UNLOCK_MILESTONE_START below), kept only as the pricing benchmark

@@ -540,14 +540,14 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
   })
   render(<App />)
 
-  // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.0201
-  // speed bonus (1% per level now) shortens how often a delivery lands, it never inflates the
+  // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
+  // speed bonus (10% per level) shortens how often a delivery lands, it never inflates the
   // amount, so this still reads +5 B.
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
   // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
   // automation icon and percentage badge are removed from the tier row" below) — it's still
   // available in the tickspeed button's own title tooltip and the row's Details disclosure.
-  expect(screen.getByTitle(/tickspeed multiplier level 3 \(\+2% faster ticks\)/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 3 \(\+21% faster ticks\)/i)).toBeInTheDocument()
 })
 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
