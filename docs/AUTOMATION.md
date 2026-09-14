@@ -134,6 +134,16 @@ small issue if no merged PR exists; either way it dedupes against a prior run's 
 run URL before posting again. `deploy.yml` itself is never touched — it's on the protected/denied
 file list below — so surfacing the failure to a human is the full extent of what this step does.
 
+**Backlog/milestone hygiene is also deterministic and unconditional.** Two more plain-bash steps —
+`Backlog issue hygiene` (`scripts/backlog-issue-hygiene.sh`, which also runs
+`scripts/epic-407-issue-hygiene.sh`) and `Sync release milestones`
+(`scripts/sync-release-milestones.sh`) — run every invocation, independent of the guard step's
+`skip` output, the same posture as the deploy-failure step above: no judgment call is needed for
+closing shipped issues, unblocking ready work, or keeping milestone assignments in sync, so a
+script suffices and it shouldn't silently stop just because the 5-PR ceiling skipped that run's
+Claude task. Both authenticate with `GH_AUTOMATION_PAT` and are idempotent, so running them twice
+daily (rather than on a separate housekeeping-only schedule) is harmless.
+
 **Concurrency.** A top-level `concurrency: { group: autonomous-maintenance, cancel-in-progress: false
 }` block ensures no two runs of this workflow ever execute at once — a second trigger (e.g. a manual
 `workflow_dispatch` from the dormancy watchdog firing while a scheduled cron run is still in progress)

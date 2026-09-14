@@ -240,6 +240,31 @@ jobs:
             fi
           fi
 
+      - name: Backlog issue hygiene
+        # Deterministic (no Claude invocation) and unconditional — runs every scheduled invocation
+        # regardless of the 5-PR ceiling, same posture as "Surface a broken deploy.yml run" above.
+        # Idempotent, so running it every twice-daily pass rather than gating it behind a separate
+        # housekeeping mode is a deliberate simplification, not a schedule change.
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          if [ ! -x scripts/backlog-issue-hygiene.sh ]; then
+            echo "::warning::scripts/backlog-issue-hygiene.sh missing or not executable — skipping backlog hygiene."
+            exit 0
+          fi
+          scripts/backlog-issue-hygiene.sh
+
+      - name: Sync release milestones
+        # Deterministic and unconditional, same rationale as "Backlog issue hygiene" above.
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          if [ ! -x scripts/sync-release-milestones.sh ]; then
+            echo "::warning::scripts/sync-release-milestones.sh missing or not executable — skipping."
+            exit 0
+          fi
+          scripts/sync-release-milestones.sh
+
       - name: Enable Corepack
         if: steps.guard.outputs.skip != 'true'
         run: corepack enable

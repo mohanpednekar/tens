@@ -264,7 +264,7 @@ assign player-facing feature/economy issues to a milestone for the next planned 
 and infrastructure `claude-task` issues typically stay off a versioned milestone. `v0.6.0`
 (UI-revamp chain #138/#139/#140) has fully shipped; the current next-release milestone is `v0.7.0`,
 targeting Era ascension (`#407` / `#411–#414`, in progress). `scripts/sync-release-milestones.sh`
-keeps milestones and assignments idempotent on housekeeping runs.
+keeps milestones and assignments idempotent, running on every `autonomous-maintenance.yml` invocation.
 
 ## Automation workflows
 
@@ -611,8 +611,8 @@ scripts/
   enable-auto-merge-if-eligible.sh ← marks a PR ready + enables GitHub auto-merge once it's
                                adversarial-APPROVEd and low-risk (see "Pull requests" above)
   backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent GitHub issue-hygiene sweeps
-                               (close shipped/stray issues, unblock/label ready work) run on
-                               housekeeping passes — see docs/AUTOMATION.md
+                               (close shipped/stray issues, unblock/label ready work) run on every
+                               `autonomous-maintenance.yml` invocation — see docs/AUTOMATION.md
   sync-release-milestones.sh ← idempotent GitHub Milestone create/assign for player-facing tracks
                                (see "GitHub Milestones" below)
 public/
