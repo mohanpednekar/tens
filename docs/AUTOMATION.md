@@ -37,14 +37,8 @@ unlimited. The real constraint is agent usage quota:
   the earlier fixed-cap approach — and its `25→40→50` retuning history, now historical — was
   replaced. `autonomous-pr-followup.yml` keeps its own fixed `--max-turns 30` cap, unaffected by
   this change.
-- **Cursor** (`CURSOR_API_KEY`, Cursor Pro quota): soft guidance is roughly **~1% of Cursor Pro
-  quota per session** for every Cursor session (interactive, development automation, and
-  housekeeping alike — not planning-only), not a hard limit — size one small coherent unit of work,
-  file non-trivial findings instead of half-implementing, and still reserve overhead for
-  test/commit/push/PR. Development slots may run larger Phase A tasks when needed, but should still
-  prefer staying near that soft target when a smaller slice is viable.
 
-Both engines are naturally self-limited further by the PR-dedup guard (below), which caps
+The engine is naturally self-limited further by the PR-dedup guard (below), which caps
 concurrently-open autonomous PRs.
 
 ### Orchestration model
@@ -73,9 +67,8 @@ transparency, conflict-avoidance sequencing) that have guided this model.
 ### Scheduled maintenance (`autonomous-maintenance.yml`)
 
 Runs twice daily at **9:00am and 9:00pm IST** (cron `30 3,15 * * *` UTC — IST is UTC+5:30;
-plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. The twice-daily cadence
-is deliberately offset from `cursor-autonomous-maintenance.yml`'s IST slots so the two engines
-never wake at the same instant. Each run does exactly one unit of work, chosen in three phases —
+plus manual `workflow_dispatch`) via `anthropics/claude-code-action@v1`. Each run does exactly
+one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a transient
@@ -141,6 +134,16 @@ small issue if no merged PR exists; either way it dedupes against a prior run's 
 run URL before posting again. `deploy.yml` itself is never touched — it's on the protected/denied
 file list below — so surfacing the failure to a human is the full extent of what this step does.
 
+**Backlog/milestone hygiene is also deterministic and unconditional.** Two more plain-bash steps —
+`Backlog issue hygiene` (`scripts/backlog-issue-hygiene.sh`, which also runs
+`scripts/epic-407-issue-hygiene.sh`) and `Sync release milestones`
+(`scripts/sync-release-milestones.sh`) — run every invocation, independent of the guard step's
+`skip` output, the same posture as the deploy-failure step above: no judgment call is needed for
+closing shipped issues, unblocking ready work, or keeping milestone assignments in sync, so a
+script suffices and it shouldn't silently stop just because the 5-PR ceiling skipped that run's
+Claude task. Both authenticate with `GH_AUTOMATION_PAT` and are idempotent, so running them twice
+daily (rather than on a separate housekeeping-only schedule) is harmless.
+
 **Concurrency.** A top-level `concurrency: { group: autonomous-maintenance, cancel-in-progress: false
 }` block ensures no two runs of this workflow ever execute at once — a second trigger (e.g. a manual
 `workflow_dispatch` from the dormancy watchdog firing while a scheduled cron run is still in progress)
@@ -157,11 +160,6 @@ agent usage quota is:
   rolling 5-hour usage window is likely still available and roughly sizes the task against a soft
   ~50% target, using elapsed turns/time during the run as the practical signal once underway, and
   reserving ~15-20% of that self-estimated budget for test + commit + push + PR-open overhead.
-- **Cursor** (`cursor-autonomous-maintenance.yml` and every other Cursor session): soft guidance
-  of roughly **~1% of Cursor Pro quota per session** (not a hard limit; not planning-only). Prefer
-  one small coherent unit; file non-trivial findings instead of half-implementing; still reserve
-  overhead for test/commit/push/PR. Development slots may take a larger Phase A slice when needed,
-  but should prefer staying near that soft target when a smaller slice is viable.
 
 If a task looks too large even after buffering, the run scopes down rather than risking a runaway:
 a Phase A task lands its largest coherent, test-covered *slice* first (PR body says
@@ -290,7 +288,7 @@ surfaced by the deterministic deploy-failure step above). It also never edits it
 (runaway self-modification ban).
 
 **Watched workflows** (by `name:`): Autonomous maintenance, Autonomous PR follow-up, Auto-merge on
-approval, Dependabot PR follow-up, Cursor autonomous maintenance, Cursor PR follow-up. Trigger is
+approval, Dependabot PR follow-up. Trigger is
 `workflow_run: [completed]`, filtered in-job to `conclusion == 'failure'`.
 
 **Guard:** skips when a `claude/self-heal-<workflow-slug>-*` PR is already open for the same
@@ -315,14 +313,14 @@ duplicate-PR or budget guards; never `gh run rerun`s the failed run.
 Three independent paths, any of which calls `gh pr merge --auto --merge` to enable GitHub's native
 auto-merge (merge commit — must match the Main ruleset's `allowed_merge_methods`, which is
 `merge` + `rebase` only; `--squash` is rejected and makes every PR look unmergeable to anything
-that defaults to squash, including Cursor's merge UI — see issue #343):
+that defaults to squash — see issue #343):
 
 1. **On human approval** (`pull_request_review: submitted`) — if the review is an approval from the
    repo owner or a collaborator/member, auto-merge is enabled unconditionally, any PR, any size.
    Repo-wide, not just autonomous PRs.
 2. **On green checks, without waiting for approval** (`check_suite: completed`, conclusion `success`)
    — for PRs on our own automation's branches only (`claude/auto-*`, `claude/self-heal-*`,
-   `claude/heal-main-*`, `cursor/auto-*`, `cursor/heal-main-*`, `dependabot/*`; never a fork),
+   `claude/heal-main-*`, `dependabot/*`; never a fork),
    auto-merge is enabled immediately once the diff meets a conservative "low risk" bar (shared
    implementation: `scripts/pr-low-risk-eligible.sh` / `scripts/enable-auto-merge-if-eligible.sh`):
    the whole diff touches only `CLAUDE.md`/`*.test.js`/`*.test.jsx` (docs/tests-only), OR total
@@ -360,123 +358,6 @@ session):
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
   entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
   checklist until confirmed done).
-
-### Cursor-powered successor engine
-
-The Claude-side workflows above (scheduled maintenance, autonomous PR follow-up, Dependabot PR
-follow-up, and auto-merge) run the **Claude** engine where an agent is involved
-(`anthropics/claude-code-action` + a `CLAUDE_CODE_OAUTH_TOKEN`; `pr-auto-merge.yml` is plain shell).
-The plan is for the **Cursor CLI** (`cursor-agent -p`) to eventually replace that engine — but not
-immediately. Two additional workflows implement the Cursor side and are designed to coexist safely
-with the Claude ones during the transition:
-
-- **`cursor-autonomous-maintenance.yml`** — the Cursor twin of `autonomous-maintenance.yml`. Same
-  Phase 0/A/B orchestration, same `claude-task` backlog, same hard constraints — its guard step and
-  prompt are deliberately thin, pointing the agent at `CLAUDE.md` and this file as the authoritative
-  spec (with a single `claude/` → `cursor/` branch-prefix substitution) rather than restating the whole
-  phase machine, so it can't drift out of sync with the Claude copy. Schedule is five IST wall-clock
-  slots (GitHub Actions cron is UTC; IST = UTC+5:30), plus `workflow_dispatch` with a `mode` input:
-  - **Development** (Phase 0/A/B, same as Claude): 6:30am / 11:30am / 4:30pm / 9:30pm IST
-    (`0 1,6,11,16 * * *` UTC).
-  - **Housekeeping / planning** (1:30am IST, `0 20 * * *` UTC, **and on every `push` to
-    `main`** — i.e. whenever a PR merges or main otherwise advances): meta + pipeline health —
-    security first (fix immediately when safe/small), workflow/CI failures, conflicted PRs
-    (auto-merge-enabled first), CLAUDE.md/docs vs code consistency (fix trivial drift, file
-    non-trivial), backlog plan/replan, and optional process improvement (self-edit of this
-    workflow, or filing one gap-analysis issue). Post-merge (`push` to main) runs always sweep
-    **all** open non-fork PRs (conflicts after main moved, failing checks, stalled auto-merge,
-    drafts that should be ready) — not only `claude/auto-*` / `cursor/auto-*`. Triggered via
-    `push` to `main` (not `pull_request` closed) so the workflow YAML always comes from the
-    default-branch tip. Does **not** implement Phase A feature tasks. Does **not** skip for the
-    5-PR ceiling (unblocking is the point of the overnight / post-merge sweep). Soft budget
-    guidance is the same as every other Cursor session: roughly **~1% of Cursor Pro quota**
-    (not a hard limit — see Budget discipline). The two crons must stay separate so
-    `github.event.schedule` can select the mode; folding them into one cron would silently drop
-    the split. Checklist (one unit of work, priority order):
-    1. **Security (immediate)** — critical/high Dependabot alerts (and any other confirmed
-       vulnerability): fix when a safe small bump fits the soft budget; else file `priority:high`
-       `claude-task` (and a heal PR if a minimal fix is still landable). Prefer an in-flight
-       Dependabot PR / `@dependabot rebase` over duplicating work. Never dismiss alerts via the API.
-    2. **Workflow / CI failures** — red `ci.yml` on `main`, or failing checks on open non-fork PRs:
-       trivial → fix (`cursor/heal-main-*` for broken main); non-trivial → file `claude-task` with
-       run URL / notes. Never fake green.
-    3. **Conflicted / stalled open PRs (all open PRs)** — auto-merge-enabled first; real conflict
-       resolution after main moves; never force-push / push to main / merge or approve own PR.
-       Post-merge triggers prioritize this sweep across every open non-fork PR.
-    4. **Spec vs implementation** — CLAUDE.md / overlapping AGENTS.md / `docs/*_REFERENCE.md` vs
-       live source (signatures, constants, state shape, test counts, nav/mechanic summaries).
-       Trivial drift → fix; larger mismatch → file, don't guess.
-    5. **Backlog plan/replan** — stale specs, Blocked-by, size/priority labels, duplicates
-       (comments / labels / replacement issues only). On housekeeping runs, the workflow also
-       runs `scripts/backlog-issue-hygiene.sh` and `scripts/sync-release-milestones.sh`
-       deterministically before the agent step — do not duplicate that work unless a step failed.
-    6. **Process improvement (optional)** — self-edit of `cursor-autonomous-maintenance.yml` only,
-       or one gap-analysis + `claude-task` issue.
-
-    Triage: **trivial** = confident fix within the ~1% soft quota; **non-trivial** = file and stop;
-    **security** = always immediate (fix or high-priority file in the same run).
-- **`cursor-pr-followup.yml`** — the Cursor twin of `autonomous-pr-followup.yml`, with identical event
-  handling and security posture (pwn-request actor gating, fork refusal, SHA-pinned checkout), scoped to
-  `cursor/auto-*` branches only. The Claude follow-up stays scoped to `claude/auto-*`, so the two never
-  act on the same PR.
-
-**Engine differences.** The Cursor CLI has no `--allowedTools` flag; tool permissions come from a
-`~/.cursor/cli-config.json` written at the start of each run, whose `deny` list (deny beats `--force`)
-protects every workflow file the run must not touch — the maintenance twin may edit only *itself* during
-the Phase B self-improvement task; the follow-up twin denies all of `.github/workflows/**`. The agent
-runs `cursor-agent -p "<prompt>" --force --output-format text`; `--force` runs non-interactively while
-the deny list still blocks the protected paths. Model selection is via the optional `CURSOR_MODEL`
-repo/org **variable** (not a secret) — unset means the account default.
-
-**Coexistence (current state).** While both engines are live, the Cursor maintenance guard step counts
-both `claude/auto-*` and `cursor/auto-*` open PRs toward the shared 5-PR ceiling and treats a task
-covered by either prefix as in flight, so the two engines never double-pick the same `claude-task`.
-`pr-auto-merge.yml`'s approval-free low-risk path recognizes `cursor/auto-*` and `cursor/heal-main-*`
-(Path 2); `scripts/pr-low-risk-eligible.sh` also accepts broader `cursor/heal-*` for Path 3
-(post-adversarial APPROVE). Both sit alongside the `claude/*` prefixes. The Cursor
-maintenance twin does **not** duplicate the deterministic "Surface a broken deploy.yml run" step — the
-Claude workflow already owns that, and duplicating it would double-post.
-
-**Inert until opted into.** Every **agent** step in both Cursor workflows is gated on the `CURSOR_API_KEY`
-repo secret being present (surfaced into an `if:`-usable boolean via a `secrets.CURSOR_API_KEY != ''`
-env expression, since `if:` can't read secrets directly). With no secret set, compose-prompt and
-cursor-agent steps skip cleanly: merging these workflows spends no Cursor quota until a maintainer
-opts in. **Exception:** the deterministic `scripts/backlog-issue-hygiene.sh` step on housekeeping
-runs still executes when `GH_AUTOMATION_PAT` is set (issue close/label/comment only; no agent).
-
-**One additional one-time prerequisite** (beyond the three above):
-- The `CURSOR_API_KEY` repo secret — a Cursor API key (ideally from a **service account**, so the
-  automation isn't tied to a personal login), generated from the Cursor dashboard and added via
-  `gh secret set CURSOR_API_KEY --repo <owner>/<repo>` or repo Settings → Secrets and variables →
-  Actions. Optionally also set a `CURSOR_MODEL` **variable** to pin a model.
-
-**Cursor Cloud Agent GitHub access (interactive sessions).** Cloud Agent VMs use a GitHub App
-integration token (`ghs_*`) that **cannot** write issues (403 on comment/label/close). This is
-separate from `GH_AUTOMATION_PAT` (GHA only). To let interactive Cloud Agents run `gh issue …`
-from the VM, add the same fine-grained PAT (Issues read/write) to **Cursor Dashboard → Cloud
-Agents → Secrets** as **`GH_TOKEN`** — `gh` reads it automatically. Without it, issue-only
-hygiene runs deterministically in housekeeping GHA via `scripts/backlog-issue-hygiene.sh`
-(`GH_AUTOMATION_PAT`-authenticated), or from a maintainer's local `gh` session.
-
-| Runtime | Token location | Issue write |
-|---------|----------------|-------------|
-| GitHub Actions (Claude/Cursor workflows) | `GH_AUTOMATION_PAT` repo secret → `GH_TOKEN` env | Yes |
-| Cursor Cloud Agent (interactive) | `GH_TOKEN` Cloud Agents secret | Yes (when secret set) |
-| Cursor Cloud Agent (default) | GitHub App integration | No (403) |
-
-**Staged cutover (Cursor replaces Claude).** The intended path, in order:
-1. **Coexist (now):** merge the Cursor workflows. They stay inert until `CURSOR_API_KEY` is added; the
-   Claude engine remains the active default.
-2. **Enable + verify:** add `CURSOR_API_KEY`. Both engines now run; the coordination above keeps them
-   from colliding. Watch a few Cursor `workflow_dispatch` runs and their PRs to confirm parity.
-3. **Retire Claude:** once satisfied, disable the Claude engine — comment out (or remove) the
-   `schedule:` in `autonomous-maintenance.yml` and, when fully confident, delete
-   `autonomous-maintenance.yml` + `autonomous-pr-followup.yml`. Editing/removing those files still
-   needs owner review via `.github/CODEOWNERS` (once branch protection requires it — see #62); the
-   automation PAT itself has `Workflows: write` and can push workflow-touching commits. After Claude
-   is gone, the coexistence coordination in the Cursor guard step becomes a harmless no-op (no
-   `claude/auto-*` PRs will exist), so it can be simplified out later if desired but doesn't have to
-   be.
 
 ### PR review & testing cadence
 

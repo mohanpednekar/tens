@@ -336,53 +336,19 @@ Applies to every session, not just automation:
 
 - **Claude:** self-estimate remaining 5-hour Claude usage window and target roughly **half** of it
   per session (soft).
-- **Cursor:** soft guidance of roughly **~1% of Cursor Pro quota per session** for every Cursor
-  session (not planning-only); prefer one small coherent unit and file non-trivial findings instead
-  of half-implementing.
 
 See `CLAUDE.md`'s "Budget discipline" paragraph and `docs/AUTOMATION.md` Cost implications for the
 full soft-target/overshoot/partial-slice policy — not restated here to avoid drift between the two
 copies.
 
-## Cursor Cloud GitHub access
+## Automation engine
 
-Interactive **Cursor Cloud Agent** runs authenticate `gh` with a GitHub App integration
-(`ghs_*`) that **cannot** comment on, label, or close issues (403 on those REST endpoints).
-Unattended GitHub Actions workflows use the `GH_AUTOMATION_PAT` repo secret instead and
-work normally.
-
-To let Cloud Agents perform issue hygiene (comments, labels, closes) from the VM:
-
-1. Create or reuse a fine-grained PAT with **Issues: read/write** (same scope as
-   `GH_AUTOMATION_PAT`; Contents + Pull requests if the agent also pushes branches).
-2. Add it in **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`** (exact name —
-   `gh` reads this env var automatically).
-3. Re-run the agent session; verify with `gh issue comment` on a test issue or run
-   `scripts/backlog-issue-hygiene.sh --dry-run`.
-
-Without `GH_TOKEN`, land issue-only changes via a housekeeping GHA run (deterministic step in
-`cursor-autonomous-maintenance.yml`) or a maintainer's local `gh` session.
-
-## Automation engines (Claude now, Cursor successor)
-
-The unattended pipeline currently runs the **Claude** engine (`autonomous-maintenance.yml` +
+The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml` +
 `autonomous-pr-followup.yml` + `dependabot-pr-followup.yml` + `pr-auto-merge.yml` +
-`automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved). Two
-twin workflows — `cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` — run the same
-orchestration on the **Cursor CLI** (`cursor-agent -p`) and are intended to eventually replace the
-Claude engine, but not immediately: both coexist for now. The Cursor twins share the `claude-task`
-backlog and the same `CLAUDE.md`/`docs/AUTOMATION.md` spec, open work on `cursor/*` branches,
-authenticate with a `CURSOR_API_KEY` repo secret (optional `CURSOR_MODEL` variable), and are **inert
-until that secret is added**. While both are live, the Cursor guard counts both engines' `*/auto-*`
-PRs so they never double-pick, and `pr-auto-merge.yml` recognizes `cursor/*` branches too. Cursor
-runs five IST slots/day (including a 1:30am housekeeping/planning run: security-first, CI failures,
-conflicts, spec drift, backlog, process) and the same housekeeping sweep on every push to `main`;
-Claude runs twice daily at 9:00am/9:00pm IST. All Cursor sessions share the ~1% Cursor Pro soft
-quota guidance (see Budget discipline). `automation-self-heal.yml` watches orchestration-workflow
-failures and opens draft `claude/self-heal-*` fixes or `automation-failure` issues (see
-`docs/AUTOMATION.md`).
-Full design + staged cutover: `docs/AUTOMATION.md`'s "Cursor-powered successor engine" section
-(authoritative: `CLAUDE.md`).
+`automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved), on
+`claude/*` branches, twice daily at 9:00am/9:00pm IST. `automation-self-heal.yml` watches
+orchestration-workflow failures and opens draft `claude/self-heal-*` fixes or `automation-failure`
+issues (see `docs/AUTOMATION.md`).
 
 ## Reliability: cron dormancy
 

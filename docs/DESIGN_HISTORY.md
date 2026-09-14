@@ -1367,6 +1367,23 @@ flag), even when the same PR was clean and merged fine from the GitHub app via �
 commit.” Fix: switch automation to `--merge`, document the alignment in `docs/AUTOMATION.md`, and
 optionally re-enable Squash in the ruleset if Cursor’s UI should keep using squash (tracking #343).
 
+### Cursor-powered successor engine removed (never enabled) — 2026-09-14
+
+The dual-engine plan described above and in the retired "Cursor-powered successor engine" section
+of `docs/AUTOMATION.md` — `cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` running the
+Cursor CLI (`cursor-agent -p`) as a coexisting, eventually-replacing twin of the Claude engine — was
+removed rather than pursued further. The `CURSOR_API_KEY` secret needed to activate it was never
+added, so the two workflows had sat fully inert (no run ever spent Cursor quota) since they were
+merged. Removed along with the workflow files: the `cursor/*` branch-prefix carve-outs in
+`pr-auto-merge.yml` / `scripts/pr-low-risk-eligible.sh`, the Cursor entry in
+`automation-self-heal.yml`'s watched-workflow list, and the "Cursor Cloud Agent" `gh` GitHub-App-token
+workaround for interactive sessions (also never exercised in practice). `AGENTS.md` keeps its
+general "other AI tools may also read this file" framing (Codex, Cursor, or any future coding agent)
+since that's a statement about the AGENTS.md convention itself, not about this repo's own retired
+automation engine. Nothing here is reusable for a hypothetical future non-Claude engine beyond that
+framing — a real second engine would need its own branch-prefix/eligibility/watch wiring reintroduced
+at that time, matching this repo's "don't design for hypothetical future requirements" convention.
+
 ## Architecture / MainPage UI decisions
 
 The following records *why* specific MainPage/component behaviors were built the way they were —
