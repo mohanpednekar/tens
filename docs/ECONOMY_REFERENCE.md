@@ -1752,7 +1752,7 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
   `getAutobuyerUnlockCost` (above) no longer reuses this ladder; it has its own much smaller, independent
   PP formula.
 - `getTickspeedProductionMultiplier(level) = (1 + TICKSPEED_PRODUCTION_STEP) ** (level - 1)`
-  (`TICKSPEED_PRODUCTION_STEP = 0.01`) — level 1 is baseline ×1; `null`/level ≤ 1 also treated as ×1. Despite
+  (`TICKSPEED_PRODUCTION_STEP = 0.1`) — level 1 is baseline ×1; `null`/level ≤ 1 also treated as ×1. Despite
   its name, this factor is no longer multiplied directly into a production credit — see
   `getEffectiveTierTickSpeedSeconds` below, which divides it into the tier's base tickspeed instead.
 - `buyTickspeedMultiplier(tierId)` spends the tier's own resource to raise `tickspeedLevels[tierId]` by

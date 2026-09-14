@@ -848,7 +848,7 @@ purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {sym
 icon (matching the tier tickspeed autobuyer's own icon-only status badge on the PP Upgrades page)
 identifies the button as the tickspeed control; no separate icon marks the marginal effect, since
 it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10% step) and
-implied by the button itself — `aria-label`/`title` still spell out the full "+1% faster ticks"
+implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster ticks"
 sentence for assistive tech; the button's `title` is the only place on this page the cumulative
 speed bonus (as opposed to the fixed marginal step) is shown at all — an earlier version also
 carried a compact `⚙ +N%`/`⚙ 2x` badge beside the tier name, removed as one automation icon too

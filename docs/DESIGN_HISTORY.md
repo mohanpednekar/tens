@@ -1,5 +1,27 @@
 # Design history & rationale
 
+### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
+
+The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the
+per-tier `TICKSPEED_PRODUCTION_STEP` from `0.1` to `0.01` — matching Latency's own
+`GLOBAL_TICKSPEED_PRODUCTION_STEP` (1%) — and documented it explicitly in `CHANGELOG.md`
+("Tier tickspeed upgrades now give +1% per level (was +10%)"). The maintainer asked for this
+reverted directly: the per-tier ladder (`getTickspeedProductionMultiplier`,
+`buyTickspeedMultiplier`) is a separate, much cheaper, per-tier lever from Latency's own Bytes-funded
+global track (`getGlobalTickspeedProductionMultiplier`), and the two were never meant to share a
+step size — Latency stays at 1% (its own `GLOBAL_TICKSPEED_PRODUCTION_STEP`, unaffected by this
+revert), only the per-tier constant moved back to `0.1`. `docs/ECONOMY_REFERENCE.md` still had a
+stale "10%" mention left over in its formula writeup even while the constant itself read `0.01` —
+contradicting another spot in the same doc that already correctly said `0.1` — the tell that the
+drop to `0.01` was likely swept in unintentionally alongside the Latency-focused rename rather than
+a deliberate, isolated choice. Separately, `MainPage`'s own "+1% faster ticks"/"the next level makes
+it 1% more" button copy and `docs/MAINPAGE_REFERENCE.md` correctly matched the then-current `0.01`
+constant, and — along with several `engine.test.js`/`App.test.jsx` assertions/comments pinned to the
+same value — only became stale strings needing an update *because of* this reversion back to `0.1`,
+not evidence of the original drop. This reversion fixes both categories back to 10%, and drops the
+now-superseded `CHANGELOG.md` bullet entirely (the corresponding [Unreleased] entry hadn't shipped
+yet, so there's no net change left to document once reverted).
+
 ### First ten Scale Ups standardized at three completed levels — 2026-09-13
 
 The first ten Scale Ups now each require 3 completed levels of their current target, which is the

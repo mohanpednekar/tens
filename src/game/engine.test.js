@@ -5845,10 +5845,10 @@ describe('getTickspeedProductionMultiplier', () => {
     expect(getTickspeedProductionMultiplier(null)).toBe(1)
   })
 
-  it('compounds by 1% per level above 1', () => {
-    expect(getTickspeedProductionMultiplier(2)).toBeCloseTo(1.01)
-    expect(getTickspeedProductionMultiplier(3)).toBeCloseTo(1.0201)
-    expect(getTickspeedProductionMultiplier(4)).toBeCloseTo(1.030301)
+  it('compounds by 10% per level above 1', () => {
+    expect(getTickspeedProductionMultiplier(2)).toBeCloseTo(1.1)
+    expect(getTickspeedProductionMultiplier(3)).toBeCloseTo(1.21)
+    expect(getTickspeedProductionMultiplier(4)).toBeCloseTo(1.331)
   })
 })
 
@@ -6338,7 +6338,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
 
   it('shrinks by the per-tier tickspeed multiplier', () => {
     const state = withTickspeedLevel(createInitialGameState(), tensTier.id, 3)
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.0201)
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / 1.21)
   })
 
   it('shrinks by the global tickspeed multiplier too, applied to every tier', () => {
@@ -6352,14 +6352,14 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
   })
 
   it('stacks both multiplicatively, not additively', () => {
-    // Per-tier level 2 → ×1.01, global level 10 (1.01^10 ≈ ×1.1046) → combined, not simply
+    // Per-tier level 2 → ×1.1, global level 10 (1.01^10 ≈ ×1.1046) → combined, not simply
     // additive.
     const globalMultiplier = 1.01 ** 10
     const state = withGlobalTickspeedMultiplier(
       withTickspeedLevel(createInitialGameState(), tensTier.id, 2),
       10
     )
-    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.01 * globalMultiplier))
+    expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id)).toBeCloseTo(1 / (1.1 * globalMultiplier))
   })
 
   it('uses the XP-funded multiplier for the last tier once unlocked, ignoring its (stale) tickspeedLevels entry', () => {
@@ -6432,7 +6432,7 @@ describe('getEffectiveTierTickSpeedSeconds', () => {
     )
     const boostedRegularStep = 0.01 * 1.1 ** 5
     expect(getEffectiveTierTickSpeedSeconds(state, tensTier.id))
-      .toBeCloseTo(1 / (1.01 * (1 + boostedRegularStep) ** 9))
+      .toBeCloseTo(1 / (1.1 * (1 + boostedRegularStep) ** 9))
   })
 
   it('falls back to 0 Overclock levels (no bonus) when overclockCount is missing from state entirely', () => {
@@ -6498,10 +6498,10 @@ describe('getTierProductionProgressPercent', () => {
   })
 
   it('measures against the shrunk effective tickspeed once a tier has a tickspeed multiplier level', () => {
-    // Level 2 → ×1.01 effective speed (see getEffectiveTierTickSpeedSeconds), so the period shrinks
-    // from 1s to 1/1.01s — half of that banked is 50% of the way there.
+    // Level 2 → ×1.1 effective speed (see getEffectiveTierTickSpeedSeconds), so the period shrinks
+    // from 1s to 1/1.1s — half of that banked is 50% of the way there.
     const state = withTickspeedLevel(
-      { tierProductionAccumulators: { [tensTier.id]: (1 / 1.01) / 2 } },
+      { tierProductionAccumulators: { [tensTier.id]: (1 / 1.1) / 2 } },
       tensTier.id,
       2
     )
@@ -7509,8 +7509,8 @@ describe('tickGame', () => {
 
   it('fires more delivery ticks within a fixed elapsed window at a higher tickspeed level, without changing the per-tick amount', () => {
     // Over a fixed 1000-second window, the baseline (level 1, 1s period) delivers 1000 batches of
-    // 10 = 10000 total; level 3 (×1.0201 speed now — 1% per level, see TICKSPEED_PRODUCTION_STEP)
-    // delivers floor(1000 × 1.0201) = 1020 batches of the same 10 each = 10200 total — the same
+    // 10 = 10000 total; level 3 (×1.21 speed — 10% per level, see TICKSPEED_PRODUCTION_STEP)
+    // delivers floor(1000 × 1.21) = 1210 batches of the same 10 each = 12100 total — the same
     // economy bonus arrived at via more (not bigger) deliveries.
     const baseline = withMoney(withOwned(createInitialGameState(), tensTier.id, 10), 0)
     expect(tickGame(1000)(baseline).resources[BYTES_ID]).toBe(10000)
@@ -7519,7 +7519,7 @@ describe('tickGame', () => {
       withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 3),
       0
     )
-    expect(tickGame(1000)(sped).resources[BYTES_ID]).toBe(10200)
+    expect(tickGame(1000)(sped).resources[BYTES_ID]).toBe(12100)
   })
 
   it('speeds up every tier\'s delivery frequency at once via the global tickspeed multiplier, without changing the per-tick amount', () => {
@@ -7538,9 +7538,9 @@ describe('tickGame', () => {
   })
 
   it('stacks the global tickspeed multiplier multiplicatively with the per-tier tickspeed multiplier — both speed up the same delivery frequency together', () => {
-    // Per-tier level 2 → ×1.01 (1% per level now), global level 10 → 1.01^10 ≈ ×1.1046 →
-    // combined ≈ ×1.1157, not simply additive. Over a 100-second window against tensTier's 1s
-    // base period: floor(100 × 1.1157 / 1) = 111 batches of 10 each = 1110.
+    // Per-tier level 2 → ×1.1 (10% per level), global level 10 → 1.01^10 ≈ ×1.1046 →
+    // combined ≈ ×1.2151, not simply additive. Over a 100-second window against tensTier's 1s
+    // base period: floor(100 × 1.2151 / 1) = 121 batches of 10 each = 1210.
     const state = withGlobalTickspeedMultiplier(
       withMoney(
         withTickspeedLevel(withOwned(createInitialGameState(), tensTier.id, 10), tensTier.id, 2),
@@ -7549,7 +7549,7 @@ describe('tickGame', () => {
       10
     )
     const after = tickGame(100)(state)
-    expect(after.resources[BYTES_ID]).toBe(1110)
+    expect(after.resources[BYTES_ID]).toBe(1210)
   })
 
   it('automatically triggers Scale Up when Auto Scale Up is bought and the first tier is eligible', () => {
