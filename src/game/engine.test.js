@@ -10827,17 +10827,32 @@ describe('Data Lakes', () => {
       expect(isBoosterPurchaseAvailable(after, 1)).toBe(true)
     })
 
-    it('caps at whatever the buffer can actually afford when that\'s less than what the next Booster needs', () => {
-      // Booster #2 costs 2 units, but the buffer only holds 1 unit's worth.
-      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1), {
+    it('caps at whatever the buffer can actually afford when that\'s less than what the next Booster needs, as long as further progress at the SAME capacity level can still reach it', () => {
+      // Booster #3 costs 3 units; capacity level 1 holds up to 10, so partial progress toward 3
+      // stays genuine, reachable progress — never a spend a same-level Scale Out could erase.
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 2), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 2, capacityLevel: 1, boostersUnlocked: true } },
+      })
+      expect(getBoosterPurchaseCost(1)(state)).toBe(3)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(2) // only what the buffer could afford
+      expect(after.intro.poolBuffers[1]).toBe(0)
+      expect(isBoosterPurchaseAvailable(after, 1)).toBe(false) // still short of the 3 needed
+    })
+
+    it('refuses to fill at all when the next Booster\'s cost can never be reached at the lake\'s current capacity level — that spend would be irrecoverably erased by the Scale Out required to progress (see docs/DESIGN_HISTORY.md)', () => {
+      // Booster #2 costs 2 units, but capacity level 0 caps the lake at 1 unit total — filling to
+      // that 1-unit max still wouldn't afford Booster #2, and doubleDataLakeCapacity resets
+      // depositedUnits/fillBits to 0 on every Scale Out, so that spend would be pure waste.
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
         disksBuiltTotal: { [kb1]: 1 },
         dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 1, boostersUnlocked: true } },
       })
+      expect(getDataLakeCapacity(state, 1)).toBe(1)
       expect(getBoosterPurchaseCost(1)(state)).toBe(2)
-      const after = fillDataLakeManually(1)(state)
-      expect(getDataLakeDepositedUnits(1)(after)).toBe(1) // only what the buffer could afford
-      expect(after.intro.poolBuffers[1]).toBe(0)
-      expect(isBoosterPurchaseAvailable(after, 1)).toBe(false) // still short of the 2 needed
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+      expect(fillDataLakeManually(1)(state)).toBe(state)
     })
 
     it('spends only the bits still needed to complete the currently-open slot when partial progress is already banked — not a naive whole-unit spend (see docs/DESIGN_HISTORY.md)', () => {

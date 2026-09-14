@@ -865,11 +865,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    only once complete does it switch to filling AUTOMATICALLY from that pool's buffer overflow.
    `isDataLakeManualFillAvailable(state, tierIndex)` requires `isDataLakePoolReady` AND
    `!isStoragePoolFullyBuilt`, at least one more unit needed for the next Booster
-   (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), an OPEN disk slot still available at
-   the lake's current capacity level (see `getDataLakeManualFillBitsNeeded` below — a lake fully
-   maxed at its own capacity level has nothing left for manual fill to do until the matching Storage
-   array unlocks the next level via Scale Out, so the button hides rather than offering a dead
-   click), and at least one full unit's worth of bits (`getDataLakeUnitBits(tierIndex)`) sitting in
+   (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), that the next Booster's cost is
+   actually REACHABLE at the lake's current capacity level (see `getDataLakeManualFillBitsNeeded`
+   below — a lake fully maxed at its own capacity level has nothing left for manual fill to do until
+   the matching Storage array unlocks the next level via Scale Out, so the button hides rather than
+   offering a dead click; the SAME hide applies when every remaining slot at this level, even fully
+   completed, still wouldn't reach the Booster's cost — filling toward an unreachable target would
+   only be erased the moment Scale Out fires, since `doubleDataLakeCapacity` resets both
+   `depositedUnits` and `fillBits` to 0 rather than carrying banked units into the new level), and at
+   least one full unit's worth of bits (`getDataLakeUnitBits(tierIndex)`) sitting in
    the pool's own buffer. `fillDataLakeManually` spends directly from that pool's buffer — the SAME
    source `tickPoolBufferFill`'s overflow branch would otherwise use — via
    `getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)`: a private helper that walks

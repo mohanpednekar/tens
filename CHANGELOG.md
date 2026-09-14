@@ -59,7 +59,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   partial progress banked, or when the next Booster needs fewer units than the currently-open slot's
   own sub-size (a ×10/×100 slot can only ever complete as a whole) — it now spends exactly what's
   needed. The Fill button also no longer appears once a lake has no open slot left at its current
-  capacity level (previously a dead click until the next capacity level unlocked).
+  capacity level, or once filling every remaining slot at that level still couldn't afford the next
+  Booster (either case was previously a dead click, or a spend that Scale Out would immediately
+  erase, until the next capacity level unlocked).
 - **The Provision Disk button's progress/availability now excludes the pool's own read-cache
   reservation**, matching the engine's own spendable-buffer check, so displayed progress can no
   longer advance on bits the next cache-fill tick was about to consume.

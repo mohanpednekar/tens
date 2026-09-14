@@ -7848,3 +7848,34 @@ has no open slot left. `engine.test.js`: 1251/1251. Full `yarn test`: 1773/1773.
 succeeds. Pure bug fixes to a not-yet-merged PR's own new mechanism — no economy constant/formula
 outside this feature changed, so no additional `simulate-run-times` re-run beyond the one already
 pending for the pool-liveness feature itself.
+
+### `getDataLakeManualFillBitsNeeded` could offer a fill that Scale Out would immediately erase
+
+A follow-up Codex finding on the same PR, on the very fix above: `getDataLakeManualFillBitsNeeded`'s
+forward-walking loop could exit with `unitsGained < neededUnits` — i.e. even completing every
+remaining slot at the lake's CURRENT capacity level still wouldn't reach the next Booster's cost —
+and still returned the (insufficient) `bitsNeeded` accumulated so far, rather than signaling
+"unreachable." The common trigger: buying Booster #1 while a lake is still capped at capacity level
+0 (1 unit total) — Booster #2 costs 2, which that level can never hold. `isDataLakeManualFillAvailable`
+would still offer the Fill button, and clicking it would spend real buffer bits to fill the lake to
+its own 1-unit max — genuine, permanent-feeling progress that in fact accomplishes nothing, since
+`doubleDataLakeCapacity` (the required Scale Out to progress at all) resets BOTH `depositedUnits`
+and `fillBits` to 0 on every level-up rather than carrying banked units forward. The spent bits
+were therefore not merely "not yet enough" but irrecoverably gone the moment Scale Out fired.
+
+**Fix.** `getDataLakeManualFillBitsNeeded` now returns `null` (same "manual fill can do nothing
+useful here" signal the "no open slot at all" case already used) whenever the loop exhausts every
+open slot at the current capacity level without reaching `neededUnits` — not just when there was no
+open slot to begin with. This is a strictly narrower condition than the earlier fix: an OPEN slot
+existing isn't enough on its own; filling all the way through every remaining slot must actually be
+enough to satisfy the Booster's own cost, or the button stays hidden and the buffer is left
+untouched for whatever else needs it (Provision Disk, tapping toward automatic overflow once the
+pool completes).
+
+**Verification.** One existing test ("caps at whatever the buffer can actually afford...") had
+unknowingly encoded this exact trap as its own seed scenario (capacity level 0, Booster costing 2) —
+rewritten to use capacity level 1 (room for 10 units) instead, where partial progress toward a
+3-unit-cost Booster genuinely IS safe, reachable progress rather than a dead end. A new test asserts
+the trap scenario itself is now correctly refused (`isDataLakeManualFillAvailable` false,
+`fillDataLakeManually` a same-reference no-op). `engine.test.js`: 1252/1252. Full `yarn test`:
+1774/1774. `yarn build` succeeds.

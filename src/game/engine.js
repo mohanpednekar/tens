@@ -4409,8 +4409,14 @@ export const buyBooster = tierIndex => state => {
 // ×100 slot with only 1 more unit needed for the next Booster) — walks forward slot-by-slot,
 // mirroring fillDataLakeDisks' own loop, rather than assuming a constant bits-per-unit exchange
 // rate that only actually holds at whole-slot boundaries. Returns null once the lake has no further
-// open slot at its current capacity level (manual fill can do nothing more there) — see
-// docs/DESIGN_HISTORY.md for the overspend/dead-button bugs this fixes.
+// open slot at its current capacity level (manual fill can do nothing more there) — INCLUDING when
+// every remaining slot at this level, even fully completed, still wouldn't reach `neededUnits`: a
+// spend that only fills the lake to its own current-level max without actually affording the next
+// Booster would be irrecoverably lost the moment the required Scale Out (capacity level-up) fires —
+// doubleDataLakeCapacity resets both depositedUnits and fillBits to 0, it does NOT carry banked
+// units forward into the new capacity level — so offering that spend at all would be a trap, not
+// genuine (if incomplete) progress. See docs/DESIGN_HISTORY.md for the overspend/dead-button/
+// wasted-spend bugs this fixes.
 const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
   const lake = getDataLakeTier(state, tierIndex)
   const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
@@ -4429,7 +4435,7 @@ const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
     unitsGained += openSubSize
     openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
   }
-  return bitsNeeded
+  return unitsGained < neededUnits ? null : bitsNeeded
 }
 
 // A lake fills MANUALLY, capped at just enough for its own next Booster, until its matching
