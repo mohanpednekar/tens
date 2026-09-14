@@ -83,10 +83,11 @@ sections) and the thin `StoragePage` wrapper render this detail identically.
 
 ## `ByteFoundryPage` pool layout
 
-`ByteFoundryPage` keeps one shared Data Stream section containing Speed ×2, Capacity ×2, and the
+`ByteFoundryPage` keeps one shared Data Stream section containing the "Upgrade Data Stream" action and the
 common Provision Disk control. It renders one derived `PoolCard` per VISIBLE storage pool
-(`getVisibleStoragePoolCount` — disk-build progress AND the Data Stream's own raw Capacity having
-crossed that pool's `getPoolCapacityUnlockThresholdBits`, in ascending order, `aria-label="pool N"`),
+(`getVisibleStoragePoolCount` — PURE Capacity-based: the Data Stream's own raw Capacity crossing
+that pool's `getPoolCapacityUnlockThresholdBits`, with NO disk-build dependency; see "Pool liveness
+is Capacity-only" in CLAUDE.md, in ascending order, `aria-label="pool N"`),
 titled "`<symbol>` Pool" (e.g. "KB Pool" — no index number or tier name), all inside one
 `FillableStatCard` tap tile (the same component the Data Stream card's own tile uses): a `TitleRow`
 (title top-left, that pool's own current full-disk count top-right), then the Memory buffer balance

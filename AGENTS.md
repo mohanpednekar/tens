@@ -254,8 +254,10 @@ needs the pool's smallest ×1 array, 1→2 the middle ×10, 2→3 the largest ×
 lake's own escalating Booster cost or to "the lake is full," both superseded), draining whatever it
 currently holds — independent of every other action's own availability, same as Booster purchases
 above, not arbitrated against the forced priority order at all. The UI repurposes one button
-between Buy and Upgrade, unconditionally preferring Upgrade whenever its own array-completion gate
-is met. A save
+between Buy and Upgrade, preferring Buy whenever it's genuinely affordable (even with Upgrade also
+available — Upgrade's own drain-on-claim cost would otherwise silently redirect a Fill-funded
+Booster purchase into a capacity level-up with no way to Buy first) and falling back to Upgrade only
+once Buy isn't an option. A save
 carrying a `capacityLevel` from an older, longer ladder — or written under the earlier
 deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
 load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.

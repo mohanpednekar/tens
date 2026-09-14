@@ -115,9 +115,10 @@ Disk-deposit-funded Booster mechanic, and before that a manual "Claim Core" butt
 mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section).
 
 **Storage pools render as their own `PoolCard`s.** Each VISIBLE Storage pool
-(`getVisibleStoragePoolCount(state)` — the smaller of how many pools have a real disk built and how
-many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
+(`getVisibleStoragePoolCount(state)` — PURE Capacity-based: how many pools' own capacity-unlock
+threshold the Data Stream's raw Capacity has reached, with NO disk-build dependency — see "Pool
+liveness is Capacity-only" in CLAUDE.md and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section)
+renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
 balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard`
