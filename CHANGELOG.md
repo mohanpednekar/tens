@@ -65,6 +65,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **The Provision Disk button's progress/availability now excludes the pool's own read-cache
   reservation**, matching the engine's own spendable-buffer check, so displayed progress can no
   longer advance on bits the next cache-fill tick was about to consume.
+- **A capacity-visible pool's own read cache now always has a Storage row to render against**, even
+  before the disk-provisioning chain reaches that pool.
+- **Data Lake Buy now wins its shared action slot over Scale Out whenever it's actually affordable**
+  (e.g. right after a manual Fill), instead of Scale Out unconditionally hiding it and draining the
+  fresh deposit on the next click.
+- **A legacy save's Storage pool buffer is now clamped to its true ceiling during migration even
+  when that pool isn't yet Capacity-visible**, and a read-cache self-heal refund can no longer push a
+  buffer back over that same ceiling.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

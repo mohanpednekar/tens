@@ -3735,19 +3735,34 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Upgrade claims the action slot over Buy whenever its own array is complete — no longer gated by the forced priority order', () => {
-    // Upgrade is available (the KB pool's ×1 array is fully built) and, since
-    // isDataLakeCapacityDoublingTurnAvailable is no longer part of the forced priority order (Speed
-    // ×2/Bandwidth is left available here, unlike the "capacity can be increased" test above, which
-    // neutralizes it — Upgrade is unaffected either way), it's immediately clickable regardless.
-    // Buy would also be genuinely affordable here (1 unit banked, first Booster costs 1), but
-    // Upgrade still takes the one shared slot — see DataLakePanel's own ternary.
+  test('Buy claims the action slot over Upgrade whenever it is actually affordable, even with the array complete — a manually-filled deposit meant for a Booster is never silently redirected into a forced Scale Out', () => {
+    // Upgrade is ALSO available here (the KB pool's ×1 array is fully built), but Buy wins the one
+    // shared slot since it's genuinely affordable (1 unit banked, first Booster costs 1) — see
+    // DataLakePanel's own ternary and docs/DESIGN_HISTORY.md for the bug this prevents.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
+    expect(buyButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
+  })
+
+  test('Upgrade claims the action slot when its own array is complete but Buy is not yet affordable', () => {
+    // No units banked at all — Buy could never be affordable, so Upgrade (array complete) takes
+    // the one shared slot, same as before this Buy-first reordering.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
     })
     render(<App />)
     openStorage()

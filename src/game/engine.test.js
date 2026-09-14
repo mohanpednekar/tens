@@ -1079,6 +1079,23 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     expect(normalizePoolMemoryCapacity(state)).toBe(state)
   })
 
+  it('normalizePoolMemoryCapacity clamps a NOT-YET-Capacity-visible pool\'s legacy buffer to its own absolute ceiling, rather than leaving it unclamped (see docs/DESIGN_HISTORY.md)', () => {
+    // A save from before pool liveness moved to Capacity-only could carry a legitimate pool 2
+    // buffer (under the old disk-build-based eligibility) while Capacity hasn't yet crossed pool
+    // 2's own visibility threshold — getVisibleStoragePoolCount(state) === 1 here, so pool 2 isn't
+    // "visible" at all, and the naive fix (skip clamping invisible pools) would leave an
+    // over-structural-ceiling value fully spendable forever.
+    const pool2Ceiling = getStoragePoolMemoryBounds(2).endBits
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: getPoolCapacityUnlockThresholdBits(2) - 1, // one bit short of pool 2's own threshold
+      poolBuffers: { 2: pool2Ceiling * 2 }, // twice its true structural ceiling
+    })
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.poolBuffers[2]).toBe(pool2Ceiling)
+  })
+
   it('normalizePoolMemoryCapacity clamps a Data Lake capacityLevel saved past the new, shorter ladder\'s array bounds', () => {
     // The Data Lake capacity ladder narrowed from 11 SI-clean levels (0-10) to 4 decade-power ones
     // (0-3) — a save written under the old ladder could carry a capacityLevel of, say, 7, which
@@ -3003,6 +3020,17 @@ describe('getDiskSizesToShow', () => {
     expect(getDiskSize(state)).toBe(level2Size)
     expect(getDiskSizesToShow(state)).toEqual([FIRST_DISK_SIZE, level2Size])
   })
+
+  it('includes a capacity-visible pool\'s own smallest size even though the disk-provisioning chain hasn\'t reached it yet, so its own cache activity (tickDiskAutoFill pre-fills/consumes it purely on Capacity liveness) always has a row to render against', () => {
+    const pool2SmallestSize = getDataLakeUnitBits(2)
+    const state = withIntro(createInitialGameState(), {
+      capacity: getPoolCapacityUnlockThresholdBits(2), // pool 2 live via Capacity alone
+      // No disksBuiltTotal at all — pool 1 hasn't even started, let alone completed.
+    })
+    expect(getUnlockedStoragePoolCount(state)).toBe(1) // disk-provisioning chain hasn't reached pool 2
+    expect(getVisibleStoragePoolCount(state)).toBe(2) // but pool 2 is already Capacity-live
+    expect(getDiskSizesToShow(state)).toContain(pool2SmallestSize)
+  })
 })
 
 describe('getRelevantDiskSizesForFoundry', () => {
@@ -3530,6 +3558,10 @@ describe('tickDiskAutoFill', () => {
   it('self-heals a save carrying a stale read cache for a size that is no longer read-cache-eligible, refunding it to its own pool buffer', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      // High enough that pool 1's own buffer ceiling covers the refund — the refund is clamped
+      // against getPoolBufferClampCeilingBits, and a fresh cycle's tiny starting Capacity would
+      // otherwise truncate it, which isn't what this test is about (see docs/DESIGN_HISTORY.md).
+      capacity: INTRO_CAPACITY_CAP_BITS,
       disksBuiltTotal: { [level2Size]: 1 },
       // A save from before only the smallest size kept a read cache could still carry one here.
       diskCache: { [level2Size]: level2Size },
@@ -3542,6 +3574,8 @@ describe('tickDiskAutoFill', () => {
   it('self-heals a save carrying a stale in-flight read-cache flush for a now-ineligible size, dropping it without touching its pool buffer', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      // High enough that pool 1's own buffer ceiling covers the refund — see the sibling test above.
+      capacity: INTRO_CAPACITY_CAP_BITS,
       disksBuiltTotal: { [level2Size]: 1 },
       // A save from before only the smallest size kept a read cache could still carry a full cache
       // mid-flush into an empty disk at this now-ineligible size.
@@ -3560,6 +3594,23 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.poolBuffers[1]).toBe(level2Size)
     // No disk was ever credited from this stale, now-abandoned flush.
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
+  })
+
+  it('clamps a read-cache self-heal refund into a NOT-YET-Capacity-visible pool\'s buffer against that pool\'s own absolute ceiling (see docs/DESIGN_HISTORY.md)', () => {
+    const pool2SmallestSize = getDataLakeUnitBits(2)
+    const pool2Ceiling = getStoragePoolMemoryBounds(2).endBits
+    const state = withIntro(createInitialGameState(), {
+      capacity: getPoolCapacityUnlockThresholdBits(2) - 1, // pool 2 not yet Capacity-visible
+      disksBuiltTotal: { [pool2SmallestSize]: 1 },
+      // A pre-existing buffer already sitting near pool 2's own ceiling, plus a stale cache that
+      // would otherwise refund it well past that ceiling.
+      poolBuffers: { 2: pool2Ceiling - 1 },
+      diskCache: { [pool2SmallestSize]: pool2Ceiling },
+    })
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    const after = tickDiskAutoFill(0)(state)
+    expect(after.intro.diskCache?.[pool2SmallestSize] ?? 0).toBe(0)
+    expect(after.intro.poolBuffers[2]).toBe(pool2Ceiling)
   })
 
   it('does NOT refund a full read cache staged before any disk of that size was built — eager pre-fill makes this legitimate, not stale', () => {

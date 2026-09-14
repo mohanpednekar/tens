@@ -2380,6 +2380,22 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
 // than available all at once.
 export const getPoolBufferCapacity = (state, poolIndex) => getStoragePoolCapacity(state, poolIndex)
 
+// A pool's own TRUE structural ceiling, regardless of current Capacity-visibility —
+// getPoolBufferCapacity (and getStoragePoolCapacity underneath it) return 0 for a pool that isn't
+// yet Capacity-visible, which is correct for "how much can this pool's buffer actively grow toward
+// right now" but WRONG as a clamp ceiling for a legacy value the pool might already be holding (a
+// save from before Capacity-only pool liveness existed could have a disk-build-unlocked pool's
+// buffer/cache sitting there under the old getUnlockedStoragePoolCount-based eligibility, well
+// before its own Capacity threshold is crossed) — clamping such a value to 0 would needlessly
+// destroy real, permanent progress rather than just bounding it until the pool naturally becomes
+// visible. Used by normalizePoolMemoryCapacity's migration clamp and tickDiskAutoFill's read-cache
+// self-heal refund, both of which can touch a not-yet-visible pool's buffer. See
+// docs/DESIGN_HISTORY.md.
+const getPoolBufferClampCeilingBits = (state, poolIndex) =>
+  poolIndex <= getVisibleStoragePoolCount(state)
+    ? getPoolBufferCapacity(state, poolIndex)
+    : getStoragePoolMemoryBounds(poolIndex).endBits
+
 export const getPoolBufferBits = (state, poolIndex) =>
   state.intro?.poolBuffers?.[poolIndex] ?? 0
 
@@ -2617,21 +2633,24 @@ export const normalizePoolMemoryCapacity = state => {
     changed = true
     nextIntro.capacity = capacity
   }
-  // Clamp each unlocked pool's own buffer down to its CURRENT Capacity ceiling. A save written
-  // before the pool Capacity formula moved from the finer SI-clean sequence to the coarser
-  // decade-power one (see docs/DESIGN_HISTORY.md) can carry a poolBuffers entry above the new,
-  // lower ceiling — tickPoolBufferFill's own room = Math.max(0, capacity - current) only ever
-  // stops TOPPING UP an over-capacity buffer, it never brings the excess back down, so without
-  // this clamp that excess stays fully spendable on Provision Disk even though the pool card
-  // displays a lower cap.
+  // Clamp EVERY pool's own buffer (not just currently Capacity-visible ones — see
+  // getPoolBufferClampCeilingBits) down to its own ceiling. A save written before the pool Capacity
+  // formula moved from the finer SI-clean sequence to the coarser decade-power one (see
+  // docs/DESIGN_HISTORY.md), OR before pool liveness moved from disk-build-based to Capacity-only,
+  // can carry a poolBuffers entry above the new ceiling — tickPoolBufferFill's own room =
+  // Math.max(0, capacity - current) only ever stops TOPPING UP an over-capacity buffer, it never
+  // brings the excess back down, so without this clamp that excess stays fully spendable on
+  // Provision Disk even though the pool card displays a lower cap (or, for a not-yet-visible pool,
+  // shows no card at all).
   const stateForBufferClamp = { ...state, intro: nextIntro }
-  const unlockedCount = getVisibleStoragePoolCount(stateForBufferClamp)
-  if (unlockedCount >= 1 && nextIntro.poolBuffers) {
+  if (nextIntro.poolBuffers) {
     const poolBuffers = { ...nextIntro.poolBuffers }
     let buffersChanged = false
-    for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
+    for (const poolIndexStr of Object.keys(poolBuffers)) {
+      const poolIndex = Number(poolIndexStr)
+      if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getStoragePoolCount()) continue
       const current = poolBuffers[poolIndex] ?? 0
-      const cap = getPoolBufferCapacity(stateForBufferClamp, poolIndex)
+      const cap = getPoolBufferClampCeilingBits(stateForBufferClamp, poolIndex)
       const floored = Math.max(current, 0)
       const clamped = Math.min(floored, cap)
       if (clamped !== current) {
@@ -3328,21 +3347,31 @@ export const formatCacheSize = bits => formatMemoryAmount(bits, getBitUnit(bits)
 
 // Every Disk size worth showing (ByteFoundryPage's own brief per-size summary, StoragePage's full
 // per-size squares rows): every size ever built, any size still held (a save/seed could hold disks
-// without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), plus whatever's
-// currently offered (even at 0 built, so its row/goal is visible before the first one is built) —
-// ascending, so rows read smallest-to-largest.
+// without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), whatever's
+// currently offered (even at 0 built, so its row/goal is visible before the first one is built),
+// PLUS each capacity-visible pool's own smallest (read-cache-eligible) size — a pool can go
+// Capacity-live well ahead of the disk-provisioning chain reaching it (see "Pool liveness is
+// Capacity-only"), and `tickDiskAutoFill` already pre-fills/consumes that pool's own read cache the
+// instant it's visible, regardless of disk-build progress; without this, that cache activity (a
+// buffer visibly draining, a tier level advancing via `tickDiskLevelOneCachePull`) would have no
+// row to render against — see docs/DESIGN_HISTORY.md. Ascending, so rows read smallest-to-largest.
 export const getDiskSizesToShow = state => {
   const disksBuiltTotal = state.intro?.disksBuiltTotal ?? {}
   const disks = state.intro?.disks ?? {}
   const currentSize = getDiskSize(state)
+  const visiblePoolSmallestSizes = []
+  for (let poolIndex = 1; poolIndex <= getVisibleStoragePoolCount(state); poolIndex += 1) {
+    visiblePoolSmallestSizes.push(getDataLakeUnitBits(poolIndex))
+  }
   return [
     ...new Set([
       ...Object.keys(disksBuiltTotal).map(Number),
       ...Object.keys(disks).map(Number),
       currentSize,
+      ...visiblePoolSmallestSizes,
     ]),
   ]
-    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (disks[size] ?? 0) > 0 || size === currentSize)
+    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (disks[size] ?? 0) > 0 || size === currentSize || visiblePoolSmallestSizes.includes(size))
     .sort((a, b) => a - b)
 }
 
@@ -3813,7 +3842,15 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     const size = Number(sizeStr)
     if (isCacheStillEligible(size)) continue
     const poolIndex = getPoolIndexForDiskSize(size)
-    if (poolIndex) poolBuffers[poolIndex] = getPoolBufferBitsLocal(poolIndex) + diskCache[size]
+    // Clamped against the pool's own ceiling (getPoolBufferClampCeilingBits, visibility-aware) so
+    // this refund can never push a buffer past what it could ever validly hold — see
+    // docs/DESIGN_HISTORY.md for the over-cap migration bug this guards against.
+    if (poolIndex) {
+      poolBuffers[poolIndex] = Math.min(
+        getPoolBufferBitsLocal(poolIndex) + diskCache[size],
+        getPoolBufferClampCeilingBits(state, poolIndex),
+      )
+    }
     const { [size]: _removedCache, ...restCache } = diskCache
     diskCache = restCache
     changed = true

@@ -7879,3 +7879,78 @@ rewritten to use capacity level 1 (room for 10 units) instead, where partial pro
 the trap scenario itself is now correctly refused (`isDataLakeManualFillAvailable` false,
 `fillDataLakeManually` a same-reference no-op). `engine.test.js`: 1252/1252. Full `yarn test`:
 1774/1774. `yarn build` succeeds.
+
+### A third Codex round: invisible cache activity, a stale Fill tooltip, a Buy button hidden behind Scale Out, and an unclamped legacy-save buffer
+
+A third `chatgpt-codex-connector` round on the same PR caught four more issues, all in the same
+pool-liveness/Data-Lake feature area.
+
+**1. A capacity-visible pool's own read cache could be actively filling/draining with no UI row to
+show it.** `tickDiskAutoFill`'s read-cache eligibility is keyed on `getVisibleStoragePoolCount`
+(Capacity-only), so a pool can go live and start pre-filling its own smallest-size read cache well
+before the disk-provisioning chain (`getUnlockedStoragePoolCount`) reaches it — that's the whole
+point of the feature. But `ByteFoundryPage`'s rendered rows came from `getDiskSizesToShow`, which
+only ever included sizes ever built/held plus the CURRENT disk-ladder offer (a single size, always
+lagging behind a Capacity-only-live later pool) — so that pool's own cache could visibly drain a
+buffer and even advance a Factory tier level (via `tickDiskLevelOneCachePull`) with no `DiskArrayRow`
+anywhere to explain why.
+
+**Fix.** `getDiskSizesToShow` now also includes every capacity-visible pool's own smallest
+(read-cache-eligible) size, via the same `getDataLakeUnitBits` lookup `tickDiskAutoFill` itself
+already uses to decide eligibility. This only affects which rows RENDER — `getDiskSize` (what
+Provision Disk actually targets) is a wholly separate, disk-build-only computation untouched by this
+change, so a pool's cache becomes visible without making that size provisionable ahead of the
+disk-build chain reaching it.
+
+**2. The Fill button's tooltip described the wrong completion condition.** It said filling becomes
+automatic "once every `{unitBits}` disk in this pool is built" — but `tickPoolBufferFill`'s
+automatic branch actually requires `isStoragePoolFullyBuilt`: ALL THREE of a pool's ladder sizes
+(×1/×10/×100), not just the smallest. A player who finished only the smallest array could read this
+tooltip, stop manually clicking Fill, and watch the lake stall through the next two arrays. Fixed to
+describe the whole pool.
+
+**3. Fill could bank real progress that a forced Scale Out would then discard, with no way to Buy
+first.** `DataLakePanel`'s single shared action slot used a pure `upgradeAvailable ? ScaleOut :
+unlocked ? Buy : StatusText` ternary — Upgrade unconditionally won whenever its own capacity-level
+array was complete, even if Buy was ALSO genuinely affordable (e.g. from a fresh manual Fill).
+Before manual fill existed this was harmless (nothing funded the lake pre-completion, so Buy was
+never actually affordable at that exact moment); the new Fill mechanic makes it a real trap:
+`doubleDataLakeCapacity` drains "whatever the lake currently holds" as its own cost, so a Fill-funded
+Booster the player wanted to buy could be silently redirected into a capacity level-up instead, with
+auto-buy off by default and no way to click Buy at all while Scale Out owns the slot.
+
+**Fix.** Buy now wins the slot whenever it's genuinely affordable (`canBuy`), even with Upgrade also
+available; Upgrade only claims the slot once Buy isn't an option. One existing test that had
+literally been titled around the old "Upgrade always wins" behavior was renamed and its assertions
+flipped; a new test covers the case Upgrade should still win (nothing banked for Buy yet).
+
+**4. A legacy save's over-cap buffer could survive migration entirely, and a read-cache self-heal
+refund could recreate the same over-cap state going forward.** `normalizePoolMemoryCapacity`'s
+pool-buffer clamp only iterated pools up to `getVisibleStoragePoolCount` — deliberately, to skip
+pools this feature doesn't consider "live" yet. But a save from BEFORE this feature existed could
+have a disk-build-unlocked pool (under the old `getUnlockedStoragePoolCount`-based eligibility)
+already holding a real buffer, at a moment where that pool's Capacity hasn't yet crossed its own NEW
+visibility threshold — the clamp skipped it entirely, leaving any excess permanently unclamped and
+fully spendable. Separately, `tickDiskAutoFill`'s own read-cache self-heal (refunding a
+now-ineligible cache back into its pool's buffer — see "Read cache pre-fills on pool unlock" above)
+had NO ceiling check at all, so even a correctly-migrated buffer could be pushed back over cap the
+very next tick by a refund.
+
+**Fix.** A new `getPoolBufferClampCeilingBits(state, poolIndex)` returns the pool's TRUE structural
+ceiling regardless of visibility: `getPoolBufferCapacity` (the live, visibility-gated derived value)
+for a currently-visible pool, or the pool's own absolute `getStoragePoolMemoryBounds(poolIndex).endBits`
+for one that isn't visible yet — deliberately NOT `getPoolBufferCapacity` for an invisible pool
+(which reads 0, and would needlessly destroy real, permanent legacy progress rather than just
+bounding it). `normalizePoolMemoryCapacity`'s clamp loop now iterates every pool actually PRESENT in
+`poolBuffers` (not just visible ones) using this ceiling, and `tickDiskAutoFill`'s self-heal refund
+is clamped against it too, so neither migration nor an ordinary tick can ever leave a buffer above
+what it could structurally ever hold.
+
+**Verification.** Two existing `tickDiskAutoFill` self-heal tests had (unrelatedly) seeded a fresh
+cycle's tiny starting Capacity against a much larger refund amount — an internally-inconsistent
+scenario the new ceiling clamp correctly caught and truncated, breaking those tests' own unrelated
+assertions; fixed by seeding realistic Capacity (`INTRO_CAPACITY_CAP_BITS`) alongside. New tests:
+`getDiskSizesToShow` includes a Capacity-visible-but-disk-build-behind pool's own smallest size;
+`normalizePoolMemoryCapacity` clamps a not-yet-visible pool's buffer to its absolute ceiling; the
+self-heal refund clamps the same way. `engine.test.js`: 1255/1255. Full `yarn test`: 1778/1778.
+`yarn build` succeeds.
