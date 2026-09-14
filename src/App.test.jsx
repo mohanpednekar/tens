@@ -3306,7 +3306,12 @@ describe('Byte Foundry Storage', () => {
     // exactly one pass's worth (currentBankSize), so the click collects the first pass and
     // auto-arms the queue for the rest rather than finishing the whole disk at once.
     // capacity: currentBankCost keeps pool 1 unlocked and the buffer's ceiling well above it.
-    seedIntroState({ bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true })
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test seeds.
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
@@ -3460,7 +3465,11 @@ describe('Byte Foundry Storage', () => {
       poolBuffers: { 1: currentBankSize },
       capacity: BITS_PER_BYTE * (2 ** 14),
       byteCreated: true,
-          })
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test seeds, since currentBankSize is also pool 1's
+      // own cache-eligible size.
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
     const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))

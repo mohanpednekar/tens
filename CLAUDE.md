@@ -759,7 +759,11 @@ Strict three-layer separation:
    needed the same manual "wait, then remember to click" babysitting every later pass had already
    stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
    their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
-   matter for the narrower "arm the queue before even the first pass is affordable" case. Every
+   matter for the narrower "arm the queue before even the first pass is affordable" case. Its
+   progress fill stays at 0 until the button is actually engaged (a pass collected, or the build
+   queued) — the button's own existence already signals eligibility, so it no longer previews a
+   fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read cache
+   fill) before the player has ever clicked it; see `docs/DESIGN_HISTORY.md`. Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
    capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
@@ -1052,7 +1056,9 @@ also arms the queue directly from that one click when the first pass isn't affor
 higher-priority action currently outranks it) — the button's own `disabled` prop no longer requires
 turn-availability, only that no build is actually in flight and the ladder isn't exhausted; see
 `docs/DESIGN_HISTORY.md` for the gap this closed. The smallest size per pool has an always-full **read
-cache** (8 blocks); every larger size
+cache** (8 blocks), which always gets first claim on that pool's own buffer over Provision Disk
+funding (`getPoolCacheReservationBits`, used by both `isProvisionDiskAvailable` and `provisionDisk`)
+so it keeps actively filling even while a build is queued — see `docs/DESIGN_HISTORY.md`; every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
 `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed
@@ -1234,7 +1240,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1777 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1758 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

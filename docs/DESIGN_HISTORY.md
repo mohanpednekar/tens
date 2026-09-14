@@ -7541,3 +7541,62 @@ seeded at a small, sub-conversion-threshold capacity (so `tickIntroAutoInvest` c
 read "500.000 B" immediately and "500 B" 1.5 real seconds later. `yarn test`: 1756/1756 green (+2).
 `yarn build` succeeds. Pure display formatting — no economy constant/formula changed, so
 `simulate-run-times` wasn't re-run.
+
+### Read cache starved by Provision Disk claiming each tick's fresh production first
+
+Player feedback: "Cache should be always active. Even when provisioning disks." The eager read-cache
+pre-fill (see the entry above) and Provision Disk's own pass-funding both draw from the SAME pool
+buffer, but `tickGame`'s pipeline runs `tickDiskAutoFill` (cache fill) BEFORE `tickPoolBufferFill`
+(that tick's own production top-up), then runs Provision Disk's queued continuation
+(`tickQueuedDiskBuild`, inside `tickStorage`) AFTER it — so cache fill only ever sees the buffer as
+it stood at the END of the PREVIOUS tick, while a queued Provision Disk build gets first claim on
+every tick's own fresh production the moment it lands. With a build queued (the common case once
+Provision Disk auto-arms `diskBuildQueued` on any partial fund), `provisionDisk` greedily collects a
+whole pass the instant one is affordable — for the pool's own smallest denomination, that's the exact
+same size the read cache needs — so the cache could sit starved near-empty for as long as a build
+stayed queued, the opposite of what eager pre-fill was reinstated to guarantee.
+
+**Fix.** A new `getPoolCacheReservationBits(state, poolIndex)` computes however many more bits that
+pool's own read cache (`isDiskReadCacheEligible`'s size, once the pool is currently unlocked — see
+`getUnlockedStoragePoolCount`) still needs to reach full, and both `isProvisionDiskAvailable` and
+`provisionDisk` now treat that amount as unavailable to spend: `getPoolBufferBits(...) - reserved`
+in place of the raw buffer figure. The cache therefore always gets first claim on its own pool's
+buffer over Provision Disk, not the reverse — the exact opposite priority from before. This is a
+BOUNDED reservation, not a new stall: it can reserve at most one cache's worth (`cacheSize`, the same
+order of magnitude as a single Provision Disk pass for that size), and drops to 0 the instant the
+cache reaches full, at which point provisioning proceeds exactly as it did before this fix. Applies
+equally whether a build is already queued or the player is about to click for the first time — the
+gate lives in `isProvisionDiskAvailable`/`provisionDisk` themselves, not in the click handler.
+
+**Verification.** New regression coverage plus updates to every existing `provisionDisk`/
+`isProvisionDiskAvailable`/`isProvisionDiskTurnAvailable`/`tickQueuedDiskBuild`/
+`tickFoundryResetConvenience` test that seeded a pool buffer at the pool's own smallest denomination
+(`FIRST_DISK_SIZE`) without an already-full `diskCache` for it — 18 tests total across
+`engine.test.js` and `App.test.jsx`, each fixed by seeding `diskCache: { [size]: size }` alongside
+the buffer, matching what eager pre-fill would have produced by the time a real player reaches that
+state. `yarn test` green. No economy constant/formula changed — only which claim on a pool's buffer
+wins a tie — so `simulate-run-times` wasn't re-run.
+
+### Provision Disk button no longer previews progress before the player has ever clicked it
+
+Player feedback: "Disk provisioning button should not show progress before clicking. The existence
+of the button is itself an indication of eligibility." The button's progress fill
+(`diskBuildProgress` in `ByteFoundryPage`) always included `Math.min(diskPoolBufferBits, diskSize)`
+— whatever currently sits in the pool's buffer — as partial credit toward the next pass, even before
+the player had ever clicked Provision Disk. Since that same buffer accumulates for entirely unrelated
+reasons (most visibly, the read cache pre-filling the instant a pool unlocks — see the entries
+above), the button could render a partially-filled bar the very first time it appeared on screen,
+implying progress the player never made.
+
+**Fix.** A new `diskBuildEngaged` flag (`diskPassesCollected > 0 || intro.diskBuildQueued` — true
+once a real pass has landed OR the build has been queued, either from a manual click) gates the
+buffer-based partial-credit term: `diskBuildProgress` reads a flat 0% until the player has actually
+engaged the build at least once, then behaves exactly as before (buffer contents count toward the
+next pass, so the bar keeps moving smoothly between clicks). The button's own enabled/disabled state
+was already correct — this only changes what its progress FILL shows before that first click.
+
+**Verification.** `yarn test` green (no dedicated new test — `diskBuildProgress` is presentational
+and not asserted against by name in the existing suite; behavior confirmed by reading the resulting
+render logic against `useTrimBalanceAfterFull`'s same "haven't engaged yet" pattern already proven
+correct elsewhere on this page). No economy constant/formula changed — pure UI presentation — so
+`simulate-run-times` wasn't re-run.

@@ -1529,6 +1529,10 @@ describe('pool buffers', () => {
       byteCreated: true,
       bits: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE),
       capacity: 4_000_000,
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test fills, since FIRST_DISK_SIZE is also pool 1's
+      // own cache-eligible size (see the "reserves the pool's own read cache" tests below).
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(isProvisionDiskAvailable(state)).toBe(false) // nothing in the pool buffer yet
     state = tickPoolBufferFill(1000)(state) // ample elapsed time to fully fund it at the pool's own capped rate
@@ -1617,6 +1621,10 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
       byteCreated: true,
       diskBuildQueued: true,
       poolBuffers: { 1: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) },
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer, since FIRST_DISK_SIZE is also pool 1's own
+      // cache-eligible size (see the "reserves the pool's own read cache" tests).
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = tickQueuedDiskBuild(state)
     expect(after.intro.diskBuildQueued).toBe(false)
@@ -1633,6 +1641,8 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
       diskBuildQueued: true,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       poolBuffers: { 1: FIRST_DISK_SIZE },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = tickQueuedDiskBuild(state)
     expect(after.intro.diskBuildQueued).toBe(true)
@@ -1709,6 +1719,8 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
       byteCreated: true,
       diskBuildQueued: true,
       poolBuffers: { 1: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = provisionDisk(state)
     expect(after.intro.diskBuildQueued).toBe(false)
@@ -1974,6 +1986,8 @@ describe('tickFoundryResetConvenience', () => {
       poolBuffers: { 1: getDiskCost(createInitialGameState(), size) + 10 },
       capacity: getDiskCost(createInitialGameState(), size) * 10,
       byteCreated: true,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [size]: size },
       foundryResetCaps: {
         byteCreated: true,
         disksBuiltTotal: { [String(size)]: 2 },
@@ -1995,6 +2009,8 @@ describe('tickFoundryResetConvenience', () => {
       disksBuiltTotal: { [String(size)]: 2 },
       capacity: getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10,
       byteCreated: true,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [size]: size },
       foundryResetCaps: {
         byteCreated: true,
         disksBuiltTotal: { [String(size)]: 2 },
@@ -2025,6 +2041,8 @@ describe('tickFoundryResetConvenience', () => {
       disksBuiltTotal: { [size]: 2 },
       capacity: capacityHeadroom,
       byteCreated: true,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [size]: size },
       foundryResetCaps: {
         byteCreated: true,
         disksBuiltTotal: { [String(size)]: 2 },
@@ -2168,7 +2186,10 @@ describe('isDiskFillAvailable', () => {
 
 describe('isProvisionDiskAvailable', () => {
   it('is true once the currently-offered disk size\'s build cost is affordable out of its own pool buffer', () => {
-    const state = withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE))
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
@@ -2176,7 +2197,10 @@ describe('isProvisionDiskAvailable', () => {
   // each (see provisionDisk) — only a single pass's worth needs to be affordable to start, not the
   // whole lump sum.
   it('is true with only a single pass\'s worth in the buffer, even though the full build cost isn\'t affordable yet', () => {
-    const state = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
@@ -2256,13 +2280,17 @@ describe('isComputeUpgradeAvailable', () => {
 
 describe('isProvisionDiskTurnAvailable', () => {
   it('matches isProvisionDiskAvailable with nothing ranked above it pending', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {})
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isProvisionDiskTurnAvailable(state)).toBe(true)
   })
 
   it('is false while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(isProvisionDiskTurnAvailable(state)).toBe(false)
   })
@@ -2285,7 +2313,13 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
   })
 
   it('is false while Provision Disk (higher priority) is currently available', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), computeReady)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      ...computeReady,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits — so Provision Disk
+      // itself stays available (otherwise the cache reservation alone would swallow the buffer, and
+      // this test would no longer be exercising the priority order it's named for).
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
@@ -2907,7 +2941,10 @@ describe('provisionDisk', () => {
   // before any Capacity upgrade.
 
   it('the array\'s very first disk needs just 1 pass — a fully-funded buffer completes it, and constructs the disk, in one call', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)))
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
@@ -2925,7 +2962,10 @@ describe('provisionDisk', () => {
   it('the array\'s 6th disk needs 6 passes — a fully-funded buffer completes all of them, and constructs the disk, in one call', () => {
     // 5 already built — this build is the 6th, needing 6 passes (getDiskProvisionPassesRequired).
     const withOrdinal = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
-    const state = withIntro(withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, FIRST_DISK_SIZE)))
+    const state = withIntro(withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
@@ -2957,6 +2997,8 @@ describe('provisionDisk', () => {
     // mid-funding (the array's very first disk needs just 1 pass and would complete immediately).
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
 
     const after = provisionDisk(state)
@@ -2974,6 +3016,8 @@ describe('provisionDisk', () => {
     // outstanding (and it stays mid-funding, unlike a build that only ever needed 3 or fewer).
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE * 3 + 10), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 4 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
 
     const after = provisionDisk(state)
@@ -2987,9 +3031,10 @@ describe('provisionDisk', () => {
     // 3 already built — this build is the 4th, needing 4 passes; 3 already banked leaves exactly one
     // more to land.
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
-
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 3 },
       diskProvisionPasses: { [FIRST_DISK_SIZE]: 3 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
 
     const after = provisionDisk(state)
@@ -3042,7 +3087,11 @@ describe('provisionDisk', () => {
   it('a disk can be fully funded across several separate calls as the pool buffer refills between them — no need to hold the whole cost at once', () => {
     // 5 already built — this build is the 6th, needing 6 passes, giving enough rounds to exercise
     // incremental funding meaningfully (the array's very first disk needs only 1).
-    let state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
+    let state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     for (let pass = 1; pass <= 6; pass += 1) {
       state = withPoolBuffer(state, FIRST_DISK_SIZE) // buffer refills to exactly one pass each round
       expect(state.intro.diskBuild).toBeNull()
@@ -4854,6 +4903,9 @@ describe('activateComputeBoost', () => {
   it('is a same-reference no-op while Provision Disk (higher priority) is currently available', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       computeCores: 1,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits — so Provision Disk
+      // itself stays available, matching this test's own name.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
@@ -4935,6 +4987,9 @@ describe('canStackComputeBoost / stackComputeBoost', () => {
   it('stackComputeBoost is a same-reference no-op while Provision Disk (higher priority) is currently available', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       computeCores: 1, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits — so Provision Disk
+      // itself stays available, matching this test's own name.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(stackComputeBoost(state)).toBe(state)
   })

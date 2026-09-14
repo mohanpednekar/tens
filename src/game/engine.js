@@ -2735,13 +2735,30 @@ export const isDiskFillAvailable = state =>
 // over-required diskProvisionPasses entry, e.g. left over from a since-lowered pass requirement):
 // without this, provisionDisk's own self-heal clamp (Math.max(0, passesRequired - alreadyCollected))
 // would be unreachable behind an empty buffer, since this gate runs before that clamp ever executes.
+// The pool's own read cache (its smallest denomination, once currently unlocked — see
+// isDiskReadCacheEligible/getUnlockedStoragePoolCount) always gets first claim on that pool's
+// shared buffer over Provision Disk funding: however many more bits it needs to reach full are
+// reserved and never counted as available to fund a provisioning pass, so the cache keeps actively
+// filling even while a build is queued/in flight, rather than being starved every tick by
+// provisioning claiming each tick's fresh production ahead of it (see
+// docs/DESIGN_HISTORY.md). Zero once the cache is already full (or the pool isn't currently
+// unlocked / has no cache-eligible size at all) — provisioning then draws on the buffer exactly as
+// before.
+export const getPoolCacheReservationBits = (state, poolIndex) => {
+  if (!poolIndex || poolIndex > getUnlockedStoragePoolCount(state)) return 0
+  const cacheSize = getDataLakeUnitBits(poolIndex)
+  const cached = state.intro?.diskCache?.[cacheSize] ?? 0
+  return Math.max(0, cacheSize - cached)
+}
+
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
   if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
   const poolIndex = getPoolIndexForDiskSize(size)
-  return getPoolBufferBits(state, poolIndex) >= size
+  const reserved = getPoolCacheReservationBits(state, poolIndex)
+  return getPoolBufferBits(state, poolIndex) - reserved >= size
 }
 
 // "Compute" — true once Compute Core conversion is unlocked and at least one brand-new boost
@@ -3316,8 +3333,11 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
   const passesRequired = getDiskProvisionPassesRequired(state, size)
   const passesRemaining = Math.max(0, passesRequired - alreadyCollected)
   const bufferBits = getPoolBufferBits(state, poolIndex)
+  // Never spends bits reserved for topping up this pool's own read cache — see
+  // getPoolCacheReservationBits — so the cache keeps filling ahead of provisioning, not the reverse.
+  const spendableBufferBits = Math.max(0, bufferBits - getPoolCacheReservationBits(state, poolIndex))
   // isProvisionDiskTurnAvailable already guarantees at least one whole pass is affordable.
-  const affordablePasses = Math.min(passesRemaining, Math.floor(bufferBits / size), maxPasses)
+  const affordablePasses = Math.min(passesRemaining, Math.floor(spendableBufferBits / size), maxPasses)
   const passesCollected = alreadyCollected + affordablePasses
   const poolBuffers = { ...state.intro.poolBuffers, [poolIndex]: bufferBits - affordablePasses * size }
 

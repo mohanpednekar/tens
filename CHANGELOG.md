@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   counts were removed, balance and Capacity now share one centered line, and active tap percentages
   use a neutral plus with a yellow percentage and tap icon.
 
+### Fixed
+- **A pool's own read cache now always gets first claim on that pool's buffer over Provision Disk
+  funding**, rather than the reverse — a queued Provision Disk build could previously starve the
+  read cache near-empty by claiming each tick's fresh production first.
+- **The Provision Disk button no longer previews progress before it has ever been clicked** —
+  its fill used to include whatever the pool buffer happened to be holding for unrelated reasons
+  (e.g. read cache fill), implying progress before the player had engaged the build at all.
+
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

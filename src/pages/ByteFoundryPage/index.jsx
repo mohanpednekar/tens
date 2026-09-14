@@ -541,14 +541,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // game/engine).
   const diskPassesCollected = Math.min(diskPassesRequired, getDiskProvisionPassesCollected(state, diskSize))
   const diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress
+  // The button's own existence already signals eligibility — no need to preview a fill from
+  // whatever the pool buffer happens to be holding (accumulated for unrelated reasons, e.g. cache
+  // fill) before the player has ever engaged this build. Progress only starts rendering once at
+  // least one real pass has been collected or the build has been queued (see
+  // handleProvisionDiskClick below) — i.e., the player has actually clicked at least once.
+  const diskBuildEngaged = diskPassesCollected > 0 || intro.diskBuildQueued
   const diskBuildProgress = diskBuildInProgress
     ? clampPercent(100 - (diskBuildInProgress.remainingSeconds / diskBuildInProgress.totalSeconds) * 100)
     : diskLadderExhausted
       ? 100
-      // Already-collected passes are permanent progress; whatever's currently sitting in the
-      // buffer (up to one more pass' worth) counts toward the next one, so the bar keeps moving
-      // smoothly between clicks rather than jumping only once a whole pass fires.
-      : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolBufferBits, diskSize)) / diskCost) * 100)
+      : !diskBuildEngaged
+        ? 0
+        // Already-collected passes are permanent progress; whatever's currently sitting in the
+        // buffer (up to one more pass' worth) counts toward the next one, so the bar keeps moving
+        // smoothly between clicks rather than jumping only once a whole pass fires.
+        : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeCost = intro.capacity
