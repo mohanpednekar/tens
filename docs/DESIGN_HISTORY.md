@@ -8041,3 +8041,53 @@ matching CLAUDE.md.
 
 **Verification.** Text-only changes (one UI tooltip string, two doc paragraphs) — no engine logic
 touched, so no new tests needed; `yarn test`: 1779/1779 (unchanged count). `yarn build` succeeds.
+
+### A sixth Codex round: the player-facing Guide and the pacing simulator hadn't caught up either
+
+A sixth `chatgpt-codex-connector` round, on the fifth round's commit, found the same kind of drift
+one level further out: not the developer-facing reference docs this time, but the in-game Guide
+(`InfoPage`, read by players) and the `simulate-run-times` skill's own bot strategy.
+
+**1. The Guide's Data Lakes section still described ONLY automatic overflow** — "each fed directly
+by that pool's own Memory buffer... overflows straight into that pool's own lake" — with no mention
+of the manual `💧 Fill` button the manual-then-automatic fill redesign (see the first round on this
+PR, above) had already shipped. A player reading the always-available Guide during the manual phase
+(before their pool's Storage array is entirely complete) would see no explanation of why the lake
+wasn't gaining automatically, and no pointer to the button that actually funds it during that phase.
+Fixed to describe the manual `💧 Fill` step (capped at the next Booster's cost, spent from the
+pool's own buffer) first, with automatic overflow following only once the pool is complete.
+
+**2. The Guide's "Forced priority" section still listed Upgrade Data Stream inside the priority
+chain** ("Disk Fill → Provision Disk → Compute Boost / Upgrade Data Stream") — but Upgrade Data
+Stream was deliberately pulled OUTSIDE that order entirely in an earlier round (see "Economy model"
+in CLAUDE.md: "this was a deliberate reversal of an earlier version that did rank it... per explicit
+request, the Data Stream's own growth should never wait on Storage"). Fixed to list Upgrade Data
+Stream, Data Lake Booster buys, and the Data Lake's own Capacity Upgrade as a separate line, outside
+the chain — matching CLAUDE.md and `docs/ECONOMY_REFERENCE.md`.
+
+**3. The pacing simulator's bot never called `fillDataLakeManually`.** `run-simulation.mjs`'s
+"ideal attentive player" bot imported and called `buyBooster` but never the manual-fill action —
+so for the ENTIRE phase between a pool's first built disk and that pool's Storage array being fully
+complete (which, depending on capacity-cap scenario, can be most or all of a simulated run), the bot
+modeled zero lake income and therefore zero Booster purchases and zero Compute progress from that
+source, since `tickPoolBufferFill`'s automatic overflow branch is also gated on
+`isStoragePoolFullyBuilt` and doesn't fire until then. Every simulation run and every published
+`ideal-run-strategy` snapshot since the manual-fill redesign shipped had been silently modeling a
+strictly worse-than-real bot for that whole phase, overstating run times and Compute scarcity.
+Fixed by adding a manual-fill loop (mirroring the existing Booster-buy loop's per-tier structure)
+immediately before the Booster-buy loop, so the bot fills every lake it can right up to its next
+Booster's cost before attempting to buy.
+
+**Why this wasn't caught by the fourth/fifth rounds' own doc sweeps:** those rounds specifically
+grepped for the RETIRED phrasings the code fix had just superseded ("moving end bound," "TRUE
+structural ceiling," "unconditionally prefers Scale Out," etc.) — a targeted diff-against-old-text
+check, not an exhaustive audit of every place in the repo that describes Data Lake fill behavior or
+lists the forced priority order. The Guide and the simulator both predate the ORIGINAL manual-fill
+feature (the very first round on this PR) and were never touched by ANY of rounds 1-5, since none of
+those rounds' own grep sweeps happened to include `src/pages/InfoPage/index.jsx` or
+`.claude/skills/simulate-run-times/*` in their search scope.
+
+**Verification.** `yarn test`: 1779/1779 (unchanged — no engine/test files touched). `yarn build`
+succeeds. Re-ran and published `simulate-run-times` per its own "when to re-run" rule (this changes
+the bot's own strategy) — see the run published alongside this commit on the `ideal-run-strategy`
+orphan branch for the corrected numbers.

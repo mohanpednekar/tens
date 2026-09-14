@@ -80,6 +80,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **The "Upgrade Data Stream" button's disabled tooltip no longer tells a maxed-out player to
   "resolve higher-priority actions"** — that action isn't gated by the forced priority order at all,
   so the message could never actually be true; it now says Capacity is already at its maximum.
+- **The Guide's Data Lakes section now describes the manual-then-automatic fill split** (a lake
+  fills only via the 💧 Fill button until its pool's Storage array is entirely complete, then
+  automatically from buffer overflow) instead of describing automatic overflow as the only path —
+  and its Forced priority section no longer lists Upgrade Data Stream as part of that chain.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

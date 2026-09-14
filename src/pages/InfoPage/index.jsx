@@ -234,7 +234,12 @@ const InfoPage = () => {
         <h3>Forced priority</h3>
         <p>When more than one upgrade is affordable, only the highest-ranked action is available:</p>
         <ul>
-          <li>Disk Fill → Provision Disk → Compute Boost / Upgrade Data Stream</li>
+          <li>Disk Fill → Provision Disk → Compute Boost</li>
+          <li>
+            <strong>Upgrade Data Stream</strong>, Data Lake Booster purchases, and the Data Lake's own
+            Capacity Upgrade sit OUTSIDE this order entirely — each is available purely on its own
+            eligibility, never disabled just because a higher-ranked action above is also available.
+          </li>
         </ul>
       </Section>
 
@@ -325,11 +330,16 @@ const InfoPage = () => {
         <h3>Data Lakes</h3>
         <ul>
           <li>
-            Ten permanent lakes (one per storage denomination, KB … QB), each fed directly by that
-            pool's own Memory buffer — whatever a pool can't put toward its fill-based multiplier
-            bonus (see Storage above) overflows straight into that pool's own lake, at a rate that
-            starts at {DATA_LAKE_OVERFLOW_MAX_PERCENT}% and tapers down as the lake's CURRENT disk
-            (the one actively filling — see below) fills up, resetting back toward{' '}
+            Ten permanent lakes (one per storage denomination, KB … QB), gated on that pool having
+            built at least one real disk. Until that pool's Storage array is entirely complete (all
+            three ×1/×10/×100 sizes fully built), the lake fills only MANUALLY, via a{' '}
+            <strong>💧 Fill</strong> button that spends directly from that pool's own Memory
+            buffer — capped at just enough for the lake's own next Booster, so a click never wastes a
+            deposit. Once the pool is entirely complete, filling switches to AUTOMATIC: whatever the
+            pool can't put toward its fill-based multiplier bonus (see Storage above) overflows
+            straight into that pool's own lake, at a rate that starts at{' '}
+            {DATA_LAKE_OVERFLOW_MAX_PERCENT}% and tapers down as the lake's CURRENT disk (the one
+            actively filling — see below) fills up, resetting back toward{' '}
             {DATA_LAKE_OVERFLOW_MAX_PERCENT}% every time that disk completes — never actually
             dropping all the way to {DATA_LAKE_OVERFLOW_MIN_PERCENT}%, so a disk always keeps
             filling rather than crawling forever. Disks are no longer deposited from Storage —

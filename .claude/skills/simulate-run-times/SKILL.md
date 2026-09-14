@@ -55,9 +55,11 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   influence either way. After unlock: Disk Fill → Disk Build → **queue the Data Stream upgrade**
   when the Buffer isn't full yet →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
-  → convert → **Data Lake Booster buys** (`buyBooster`, funded only from that lake's own banked
-  units — outside the forced priority order entirely, always available the instant affordable) →
-  Boosts. Does **not** enable permanent auto-merge.
+  → convert → **Data Lake manual Fill** (`fillDataLakeManually`, capped at the next Booster's cost —
+  a lake's only income source until its own pool's Storage array is entirely complete; automatic
+  overflow via `tickPoolBufferFill` takes over after that) → **Data Lake Booster buys** (`buyBooster`,
+  funded only from that lake's own banked units — outside the forced priority order entirely, always
+  available the instant affordable) → Boosts. Does **not** enable permanent auto-merge.
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
   arrays → more Data Lake deposits → more Booster purchases (and typically faster prestige). Early

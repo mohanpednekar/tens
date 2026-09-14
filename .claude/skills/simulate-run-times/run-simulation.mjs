@@ -17,6 +17,8 @@
 //       the very end of tickGame's own pipeline), not something this bot influences.
 //     - After unlock: Disk Fill → Disk Build → queue the Data Stream upgrade when the Buffer
 //       isn't full yet (fires on full Memory) → convert →
+//       Data Lake manual Fill (fillDataLakeManually, capped at the next Booster's cost — the only
+//       income source for a lake until its own pool's Storage array is entirely complete) →
 //       Data Lake Booster buys (buyBooster; funded only from that lake's own banked units — outside
 //       the forced priority order entirely, always available the instant affordable) → Boosts.
 //       Never enable permanent auto-merge.
@@ -63,6 +65,7 @@ import {
   consumeXpForLastTierTickspeed,
   convertIntroBitsToKilobytes,
   createInitialGameState,
+  fillDataLakeManually,
   formatCurrency,
   getLastTierXpTickspeedMinConsumption,
   getPurchaseBlockSize,
@@ -71,6 +74,7 @@ import {
   getTierSpendableAmount,
   getVisibleStoragePoolCount,
   isBoosterPurchaseAvailable,
+  isDataLakeManualFillAvailable,
   isProductionFrozen,
   isTierUnlocked,
   overclockGame,
@@ -205,12 +209,27 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     s = pickIntroCapacityMilestone(s)
   }
 
-  // Data Lake → Booster buys: each lake is fed continuously by its own matching Storage pool's
-  // buffer overflow (tickPoolBufferFill, inside tickGame); buyBooster spends only that lake's own
-  // banked units — no other resource involved, so (unlike Disk Fill/Speed/Provision Disk/Compute
-  // Boost) it's outside the forced priority order entirely and always available the instant
-  // affordable, with nothing else to skip it for. Prefer lower tiers first (Cores) so an instant
-  // Core can fund a Boost the same tick.
+  // Data Lake manual Fill: until a pool's Storage array is entirely complete
+  // (isStoragePoolFullyBuilt), its lake fills ONLY manually from that pool's own buffer, capped at
+  // just enough for the lake's own next Booster (fillDataLakeManually/isDataLakeManualFillAvailable)
+  // — tickPoolBufferFill's automatic overflow branch is gated on that same completion, so an
+  // attentive bot that skipped this would silently earn zero lake income (and buy zero Boosters)
+  // for that whole phase, understating run times. Outside the forced priority order, same as Buy.
+  for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
+    for (let i = 0; i < 16; i += 1) {
+      if (!isDataLakeManualFillAvailable(s, tierIndex)) break
+      const next = fillDataLakeManually(tierIndex)(s)
+      if (next === s) break
+      s = next
+    }
+  }
+
+  // Data Lake → Booster buys: once a pool is complete, its lake is fed continuously by that pool's
+  // buffer overflow (tickPoolBufferFill, inside tickGame) on top of the manual fills above;
+  // buyBooster spends only that lake's own banked units — no other resource involved, so (unlike
+  // Disk Fill/Speed/Provision Disk/Compute Boost) it's outside the forced priority order entirely
+  // and always available the instant affordable, with nothing else to skip it for. Prefer lower
+  // tiers first (Cores) so an instant Core can fund a Boost the same tick.
   for (let i = 0; i < 16; i += 1) {
     let bought = false
     for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
@@ -636,7 +655,7 @@ Published by \`publish-strategy.sh\` — **do not merge** that branch into \`mai
 Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-times/SKILL.md\` on the code branches):
 
 1. **Foundry gate:** Tap / Combine; convert Memory → Kilobytes until the gate opens. Byte Foundry pulls a matching permanent Disk into tier01 automatically and unconditionally, every tick (\`tickDiskPull\`) — nothing to pause or redeem by hand.
-2. **After unlock:** Disk Fill → Disk Build → **queue the Data Stream upgrade** when the Buffer isn't full yet → convert → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop growing capacity once the listed Memory capacity is reached.
+2. **After unlock:** Disk Fill → Disk Build → **queue the Data Stream upgrade** when the Buffer isn't full yet → convert → **Data Lake manual Fill** (\`fillDataLakeManually\`, capped at the next Booster's cost — a lake's only income until its own pool's Storage array is entirely complete) → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop growing capacity once the listed Memory capacity is reached.
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Scale Up first while advancing through the tier ladder (flat level 3); at the final-tier target, skip Scale Up and keep climbing until Overclock fires so its level-5 gate is reachable.
