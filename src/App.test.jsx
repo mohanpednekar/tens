@@ -563,12 +563,12 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+1% faster ticks\) for 10 QB/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 QB/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
 
-  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+1% faster ticks\)/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
 test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.1', () => {
@@ -2250,7 +2250,7 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
 
   expect(screen.getByRole('button', { name: /pause ronnabytes's tickspeed autobuyer/i })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
-  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+1% faster ticks\)/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()
