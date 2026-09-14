@@ -4284,20 +4284,68 @@ export const isBoosterPurchaseAvailable = (state, tierIndex) =>
   isDataLakeBoosterUnlocked(state, tierIndex) &&
   getDataLakeDepositedUnits(tierIndex)(state) >= getBoosterPurchaseCost(tierIndex)(state)
 
-// Buys one Booster instantly, funded ONLY from this lake's own banked units — no other resource
+// Optimized O(1) mathematical calculation for bulk Booster purchases
+const getBoosterBulkPurchase = (deposited, capacity, currentPurchased, isMaxed) => {
+  let mathQ = 0;
+  let mathCost = 0;
+
+  if (isMaxed) {
+    let k1 = Math.max(0, capacity - currentPurchased);
+    let S1 = k1 * currentPurchased + (k1 * (k1 + 1)) / 2;
+
+    if (deposited < S1) {
+      mathQ = Math.floor((-(2 * currentPurchased + 1) + Math.sqrt(Math.pow(2 * currentPurchased + 1, 2) + 8 * deposited)) / 2);
+      mathCost = mathQ * currentPurchased + (mathQ * (mathQ + 1)) / 2;
+    } else {
+      let remD = deposited - S1;
+      let k2 = Math.floor(remD / capacity);
+      mathQ = k1 + k2;
+      mathCost = S1 + k2 * capacity;
+    }
+  } else {
+      mathQ = Math.floor((-(2 * currentPurchased + 1) + Math.sqrt(Math.pow(2 * currentPurchased + 1, 2) + 8 * deposited)) / 2);
+      mathCost = mathQ * currentPurchased + (mathQ * (mathQ + 1)) / 2;
+  }
+  return { quantity: mathQ, cost: mathCost };
+}
+
+// Buys up to `quantity` Boosters instantly, funded ONLY from this lake's own banked units — no other resource
 // involved, so (unlike Disk Fill/Speed/Provision Disk/Compute Boost) this isn't part of the forced
 // priority order at all; it's always available the instant it's affordable. Resets fillBits to 0 —
 // whichever disk was mid-fill before the spend may no longer be the lake's own open slot afterward
 // (see getDataLakeCurrentFillSubSize), so any in-progress fill on it is discarded rather than left
 // pointing at a slot that may no longer be the one actually open.
-export const buyBooster = tierIndex => state => {
-  if (!isBoosterPurchaseAvailable(state, tierIndex)) return state
+export const buyBooster = (tierIndex, quantity = 1) => state => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake || !isDataLakeBoosterUnlocked(state, tierIndex)) return state
+
+  const currentPurchased = lake.purchased ?? 0
+  const capacity = getDataLakeCapacity(state, tierIndex)
+  const isMaxed = isDataLakeCapacityMaxed(state, tierIndex)
+
+  const affordableMath = getBoosterBulkPurchase(lake.depositedUnits ?? 0, capacity, currentPurchased, isMaxed)
+
+  const buyQuantity = Math.min(quantity, affordableMath.quantity)
+  if (buyQuantity <= 0) return state
+
+  // Re-calculate cost for exact quantity
+  let actualCost = 0;
+  if (isMaxed) {
+    let k1 = Math.min(buyQuantity, Math.max(0, capacity - currentPurchased));
+    actualCost += k1 * currentPurchased + (k1 * (k1 + 1)) / 2;
+    let k2 = buyQuantity - k1;
+    if (k2 > 0) {
+      actualCost += k2 * capacity;
+    }
+  } else {
+    actualCost = buyQuantity * currentPurchased + (buyQuantity * (buyQuantity + 1)) / 2;
+  }
+
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field) return state
-  const lake = getDataLakeTier(state, tierIndex)
-  const cost = getBoosterPurchaseCost(tierIndex)(state)
-  const purchased = (lake.purchased ?? 0) + 1
-  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field)
+
+  const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, buyQuantity)
+
   return {
     ...state,
     intro: {
@@ -4307,9 +4355,9 @@ export const buyBooster = tierIndex => state => {
         ...state.intro.dataLakes,
         [tierIndex]: {
           ...lake,
-          depositedUnits: (lake.depositedUnits ?? 0) - cost,
+          depositedUnits: (lake.depositedUnits ?? 0) - actualCost,
           fillBits: 0,
-          purchased,
+          purchased: currentPurchased + buyQuantity,
         },
       },
     },
@@ -4342,11 +4390,8 @@ export const tickDataLakeAutoBuy = state => {
   let nextState = state
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     if (!isDataLakeAutoBuyEnabled(nextState, tierIndex)) continue
-    let bought = buyBooster(tierIndex)(nextState)
-    while (bought !== nextState) {
-      nextState = bought
-      bought = buyBooster(tierIndex)(nextState)
-    }
+    // ⚡ Bolt Optimization: Use O(1) bulk purchase instead of O(N) while loop
+    nextState = buyBooster(tierIndex, Number.MAX_SAFE_INTEGER)(nextState)
   }
   return nextState
 }
@@ -4358,11 +4403,11 @@ export const tickDataLakeAutoBuy = state => {
 // all 3, then earning 5 more now correctly reads 8 lifetime-earned, not 5 (the old `max()` approach
 // re-derived "lifetime" from the CURRENT balance, which drops right back down every time Cores get
 // spent, silently forgetting everything earned before the most recent spend and potentially
-const latchComputeMergePageIfNeeded = (intro, tierIndex, field) => {
-  const nextCount = (intro[field] ?? 0) + 1
+const latchComputeMergePageIfNeeded = (intro, tierIndex, field, quantity = 1) => {
+  const nextCount = (intro[field] ?? 0) + quantity
   const updates = { [field]: nextCount }
   if (tierIndex === 1) {
-    updates.computeCoresEverEarned = (intro.computeCoresEverEarned ?? 0) + 1
+    updates.computeCoresEverEarned = (intro.computeCoresEverEarned ?? 0) + quantity
     updates.computeMergePageUnlocked =
       (intro.computeMergePageUnlocked ?? false) || updates.computeCoresEverEarned >= COMPUTE_CORES_PER_NODE
   }
