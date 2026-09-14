@@ -1073,8 +1073,8 @@ redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button way
 
 Player-facing purchase levels on both reset cards are zero-indexed **completed-level** counts: the
 UI subtracts one from the engine's one-based current-level cursor, and both requirements are
-expressed in completed levels — Scale Up requires completed-level multiples of 3 (3, 6, 9, … by
-`scaleUpCount`), Overclock requires the final tier's completed levels to reach the dynamic
+expressed in completed levels — Scale Up requires 3 levels for each tier's first claim, then 6, 9,
+12, … on repeated final-tier claims; Overclock requires the final tier's completed levels to reach the dynamic
 `getOverclockRequirement` (5 first, then last-claimed + 3).
 
 `OverclockCard` — same orange-accented `StatCard` shape as `ScaleUpCard`'s cyan — is gated on

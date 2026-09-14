@@ -1113,8 +1113,9 @@ bank-redeemability check, the flat vs. dynamic transfer cost).
 
 Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and
 all earlier tiers, while the newly recorded successor begins at ×1. Requirements are based on the
-target tier's **completed levels** (`purchaseLevels − 1`): `getScaleUpRequirement` = 3 ×
-(scaleUpCount + 1) — 3, 6, 9, 12, … completed levels for successive Scale Ups. This is separate from
+target tier's **completed levels** (`purchaseLevels − 1`): each of the first ten Scale Ups requires
+3 completed levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 12, ….
+This is separate from
 the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at

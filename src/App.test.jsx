@@ -1032,28 +1032,28 @@ test('the Scale Up button is enabled once the first tier completes 3 levels', ()
   expect(screen.getByRole('button', { name: /scale up \(requires 3 completed kilobytes levels/i })).toBeEnabled()
 })
 
-test('the second Scale Up targets the next tier, at the next completed-level multiple (6) — not one more level of the same tier', () => {
+test('the second Scale Up targets the next tier and still requires 3 completed levels', () => {
   seedMainGameState({
     resources: { base: 10 },
-    purchaseLevels: { tier01: 4, tier02: 3 }, // Megabytes at 2 completed — still short of 6
+    purchaseLevels: { tier01: 4, tier02: 3 }, // Megabytes at 2 completed — still short of 3
     scaleUpTargetTierIndex: 1,
     scaleUpCount: 1,
   })
   render(<App />)
 
-  const button = screen.getByRole('button', { name: /scale up \(requires 6 completed megabytes levels/i })
+  const button = screen.getByRole('button', { name: /scale up \(requires 3 completed megabytes levels/i })
   expect(button).toBeDisabled()
   expect(screen.queryByRole('button', { name: /scale up \(requires .*kilobytes/i })).not.toBeInTheDocument()
 })
 
-test('after the first final-tier Scale Up, the next requirement advances to 6 completed levels', () => {
+test('after the tenth Scale Up claims the final tier, the next requirement advances to 6 completed levels', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier09: 10 },
     everUnlockedTierIds: { tier01: true, tier10: true },
     purchaseLevels: { tier09: 3, tier10: 7 }, // 6 completed — meets the second claim's requirement
     scaleUpTargetTierIndex: 10,
-    scaleUpCount: 1,
+    scaleUpCount: 10,
   })
   render(<App />)
 
@@ -1146,9 +1146,9 @@ test('clicking Scale Up once eligible resets resources but advances the target t
 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
   // Scale Up resets owned/purchaseLevels for every tier and advances the target to the next tier
-  // (Megabytes), whose completed-level requirement is the next multiple of 3.
+  // (Megabytes), whose first-claim requirement remains 3 completed levels.
   expect(screen.getByLabelText(/^scale up panel$/i)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /scale up \(requires 6 completed megabytes levels/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires 3 completed megabytes levels/i })).toBeDisabled()
 })
 
 test('Scale Up resets the global tickspeed multiplier level back to not-yet-bought', async () => {

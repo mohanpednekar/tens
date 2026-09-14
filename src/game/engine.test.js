@@ -5959,18 +5959,23 @@ describe('getScaleUpTargetTier', () => {
   })
 })
 
-// getScaleUpRequirement returns a COMPLETED-LEVELS target for the current scale-up target tier —
-// 3, 6, 9, 12, … (SCALE_UP_FINAL_TIER_REQUIREMENT_STEP x scaleUpCount+1), independent of which
-// tier is being targeted.
+// getScaleUpRequirement returns a COMPLETED-LEVELS target for the current scale-up target tier.
+// Every tier's first claim requires 3; repeated final-tier claims then advance 6, 9, 12, ….
 describe('getScaleUpRequirement', () => {
   it('is 3 completed levels on a fresh game', () => {
     expect(getScaleUpRequirement(createInitialGameState())).toBe(3)
   })
 
-  it('grows by 3 per prior Scale Up regardless of the current target tier', () => {
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 1 })).toBe(6)
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 2 })).toBe(9)
-    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 7, scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 2 })).toBe(24)
+  it('stays at 3 while the first claim walks through all ten tiers', () => {
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 1 })).toBe(3)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 7, scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 2 })).toBe(3)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 9, scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1 })).toBe(3)
+  })
+
+  it('grows by 3 for repeated final-tier claims after the first ten Scale Ups', () => {
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 10 })).toBe(6)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 11 })).toBe(9)
+    expect(getScaleUpRequirement({ ...createInitialGameState(), scaleUpCount: 12 })).toBe(12)
   })
 
   it('treats a missing or negative scaleUpCount as 0', () => {
@@ -7400,9 +7405,10 @@ describe('tickGame', () => {
     const state = withAutoScaleUp(withPurchaseLevel({
       ...createInitialGameState(),
       scaleUpTargetTierIndex: TIER_DEFINITIONS.length - 1,
+      scaleUpCount: TIER_DEFINITIONS.length - 1,
     }, lastTier.id, 4)) // 3 completed levels — meets the first Scale Up's requirement
     const after = tickGame(1)(state)
-    expect(after.scaleUpCount).toBe(1)
+    expect(after.scaleUpCount).toBe(TIER_DEFINITIONS.length)
     expect(after.purchaseLevels[lastTier.id]).toBe(1)
     expect(getScaleUpRequirement(after)).toBe(6)
     expect(getOverclockRequirement(after)).toBe(5)
@@ -8594,7 +8600,7 @@ describe('prestigeGame', () => {
 describe('scaleUpGame', () => {
   const lastTier = TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]
   const lastIndex = TIER_DEFINITIONS.length - 1
-  // getScaleUpRequirement is a COMPLETED-LEVELS count now (3, 6, 9, …), so eligibility means
+  // getScaleUpRequirement is a COMPLETED-LEVELS count, so eligibility means
   // purchaseLevels - 1 >= the requirement — 3 completed levels = raw purchaseLevels 4. Most tests
   // below exercise scaleUpGame's own reset behavior once eligible, not the eligibility formula
   // itself (see the getScaleUpRequirement describe block above for that).
@@ -8604,10 +8610,10 @@ describe('scaleUpGame', () => {
   )
 
   it('does nothing when the target tier is below the required completed-level count', () => {
-    // purchaseLevels 4 = 3 completed levels — one short of the 6 a second Scale Up requires.
+    // purchaseLevels 3 = 2 completed levels — one short of the 3 an early Scale Up requires.
     const state = withPurchaseLevel(
       { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex, scaleUpCount: 1 },
-      lastTier.id, 4
+      lastTier.id, 3
     )
     expect(scaleUpGame(state)).toBe(state)
   })
@@ -8635,11 +8641,11 @@ describe('scaleUpGame', () => {
 
   it('builds the expected cumulative multiplier staircase at the first final-tier claim', () => {
     const counts = Object.fromEntries(TIER_DEFINITIONS.map((tier, index) => [tier.id, 9 - index]))
-    // scaleUpCount 9 -> requirement 30 completed levels (raw purchaseLevels 31).
+    // scaleUpCount 9 is the tenth tier's first claim -> 3 completed levels (raw level 4).
     const state = {
       ...withPurchaseLevel(
         { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex },
-        lastTier.id, 31
+        lastTier.id, 4
       ),
       scaleUpCount: 9,
       scaleUpTierCounts: counts,
@@ -8650,11 +8656,11 @@ describe('scaleUpGame', () => {
       .toEqual([1024, 512, 256, 128, 64, 32, 16, 8, 4, 2])
   })
 
-  it('requires the next three-completed-level increment after a claim', () => {
-    // Second Scale Up needs 6 completed levels (raw purchaseLevels 7): at 5 completed (raw 6) it's
+  it('requires the next three-completed-level increment after all tiers receive a claim', () => {
+    // The eleventh Scale Up needs 6 completed levels (raw purchaseLevels 7): at 5 completed it's
     // still a no-op; at 6 it fires.
     const level5 = withPurchaseLevel(
-      { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1, scaleUpCount: 1 },
+      { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 1, scaleUpCount: 10 },
       lastTier.id, 6
     )
     expect(scaleUpGame(level5)).toBe(level5)
@@ -8663,16 +8669,16 @@ describe('scaleUpGame', () => {
   })
 
   it('stacks across repeated activations', () => {
-    // The final-tier requirement remains the next 3-level increment after repeated activations.
+    // The final-tier requirement continues advancing after the first ten activations.
     const state = {
       ...withPurchaseLevel(
         { ...createInitialGameState(), scaleUpTargetTierIndex: lastIndex + 2 },
         lastTier.id, 10
       ),
-      scaleUpCount: 2,
+      scaleUpCount: 11,
     }
     const after = scaleUpGame(state)
-    expect(after.scaleUpCount).toBe(3)
+    expect(after.scaleUpCount).toBe(12)
     expect(after.scaleUpTargetTierIndex).toBe(lastIndex + 3)
   })
 
