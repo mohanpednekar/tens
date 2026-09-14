@@ -2,8 +2,8 @@
 # Idempotent GitHub backlog hygiene: close shipped issues, unblock ready work, label
 # actionable items, and run epic-specific hygiene scripts.
 #
-# Requires `gh` authenticated with Issues read/write (unset invalid GH_TOKEN so the
-# Cursor/install token is used — see docs/AUTOMATION.md).
+# Requires `gh` authenticated with Issues read/write (GH_AUTOMATION_PAT in GHA, or a
+# maintainer's local `gh` session — see docs/AUTOMATION.md).
 #
 # Usage: backlog-issue-hygiene.sh [--dry-run]
 #
