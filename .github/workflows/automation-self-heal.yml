@@ -12,8 +12,6 @@ on:
       - Autonomous PR follow-up
       - Auto-merge on approval
       - Dependabot PR follow-up
-      - Cursor autonomous maintenance
-      - Cursor PR follow-up
     types:
       - completed
 
@@ -57,8 +55,6 @@ jobs:
             "Autonomous PR follow-up") slug="autonomous-pr-followup"; file=".github/workflows/autonomous-pr-followup.yml" ;;
             "Auto-merge on approval") slug="pr-auto-merge"; file=".github/workflows/pr-auto-merge.yml" ;;
             "Dependabot PR follow-up") slug="dependabot-pr-followup"; file=".github/workflows/dependabot-pr-followup.yml" ;;
-            "Cursor autonomous maintenance") slug="cursor-autonomous-maintenance"; file=".github/workflows/cursor-autonomous-maintenance.yml" ;;
-            "Cursor PR follow-up") slug="cursor-pr-followup"; file=".github/workflows/cursor-pr-followup.yml" ;;
             *)
               echo "Unrecognized workflow name '$RUN_NAME'; skipping."
               echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -191,9 +187,9 @@ jobs:
                - Push and open a **draft** PR against main explaining the diagnosis and fix.
                  Use `gh pr create --draft`. Never push to main, never self-merge, never approve.
                - Do NOT re-introduce a fixed `--max-turns` cap on
-                 `autonomous-maintenance.yml` / `cursor-autonomous-maintenance.yml` (those use
-                 dynamic budget targeting). Raising `--max-turns` is only valid for workflows
-                 that still have a fixed cap (e.g. autonomous-pr-followup).
+                 `autonomous-maintenance.yml` (it uses dynamic budget targeting). Raising
+                 `--max-turns` is only valid for workflows that still have a fixed cap (e.g.
+                 autonomous-pr-followup).
 
             2. **Transient/infra failure** (GitHub API 5xx, runner/network blip, something the
                logs show already succeeded on an automatic retry). Claude-side 429 / 5xx

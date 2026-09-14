@@ -205,18 +205,6 @@ useful when reviewing/tightening an existing issue's spec before it's picked bac
 
 ## Issue tracking for interactive sessions
 
-### Cursor Cloud GitHub access
-
-Interactive **Cursor Cloud Agent** VMs authenticate `gh` via a GitHub App integration that
-returns **403** on issue comments, labels, and closes. Unattended workflows use
-`GH_AUTOMATION_PAT` and are unaffected.
-
-**Fix:** add a fine-grained PAT (Issues read/write; same scopes as `GH_AUTOMATION_PAT` when
-the agent also pushes) to **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`**.
-`gh` picks it up automatically. Without it, issue hygiene must run via GHA (see
-`scripts/backlog-issue-hygiene.sh` on housekeeping runs in
-`cursor-autonomous-maintenance.yml`) or a maintainer's local session.
-
 **Maintainer checklist (#62).** Issue #62 ("Maintainer Action Items") is pinned at the top of the
 Issues tab via GitHub's native pinned-issues feature and deliberately carries **no labels** — it is
 not a `claude-task` work item for the automation to implement, only a standing manual setup checklist
@@ -304,31 +292,11 @@ workflow self-improvement, gap analysis).
 `dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
 itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
 `main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
-or on green checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the
+or on green checks alone for our own automation's branches (`claude/*`) when the
 diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
-workflows (Claude + Cursor maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
+workflows (maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
 runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
 issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
-
-**Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
-`cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones
-above but run the **Cursor CLI** (`cursor-agent -p`) instead of `anthropics/claude-code-action`. The
-plan is for Cursor to eventually replace the Claude engine, but not immediately: for now both coexist,
-and the Claude workflows remain the active default. The Cursor twins share the same `claude-task`
-backlog, the same `CLAUDE.md`/`docs/AUTOMATION.md` spec, and the same `GH_AUTOMATION_PAT`, but open
-their work on `cursor/*` branches (never `claude/*`) and authenticate the agent with a `CURSOR_API_KEY`
-repo secret. Every agent step is gated on that secret existing, so the files are **inert until a
-maintainer adds `CURSOR_API_KEY`** — merging them spends nothing and changes no behavior until then.
-While both engines are live, the maintenance twin's guard step counts both `claude/auto-*` and
-`cursor/auto-*` PRs toward the shared 5-PR ceiling and treats a task covered by either as in flight, so
-the two never double-pick; its schedule is five IST wall-clock slots (four development + one
-dedicated 1:30am IST housekeeping/planning run for security / CI failures / conflicted PRs /
-spec-vs-implementation checks / backlog planning / process improvement, plus the same
-housekeeping sweep on every push to `main`), offset from the Claude
-twice-daily cron. See `docs/AUTOMATION.md`'s
-"Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
-setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
-Claude workflows).
 
 **Budget discipline applies to every session, not just automation.**
 
@@ -336,10 +304,6 @@ Claude workflows).
   available and aim to keep that session's work at or under roughly **50%** of a full window,
   recalculated fresh each time. Soft target, not a hard limit (a modest overshoot from estimation
   inaccuracy or unknown concurrent usage is expected, not a failure).
-- **Cursor (Pro quota):** soft guidance is roughly **~1% of Cursor Pro quota per session** for
-  every Cursor session (interactive, development automation, and housekeeping alike — not
-  planning-only). Prefer one small coherent unit; file non-trivial findings instead of
-  half-implementing. Not a hard limit.
 
 If a task looks too large even after buffering, land the largest coherent, test-covered slice first
 (`Part of #N` instead of `Closes #N`, plus a comment on what remains) rather than risking a runaway
