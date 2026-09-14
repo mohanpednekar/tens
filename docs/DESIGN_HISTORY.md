@@ -8013,3 +8013,31 @@ entry-Capacity value instead of the absolute bound; added a new regression test 
 clamp still lands on pool 2's fixed, higher entry Capacity rather than a value derived from today's
 low current Capacity — exactly the failure mode the "live capacity" alternative above hit.
 `engine.test.js`: 1256/1256. Full `yarn test`: 1779/1779. `yarn build` succeeds.
+
+### A fifth Codex round: three doc/UI-text stragglers left by the earlier fix rounds
+
+A fifth `chatgpt-codex-connector` round, on the commit containing the entry-Capacity fix above, caught
+three small stragglers — no engine logic changes, just text that had fallen behind code fixed in
+earlier rounds on this same PR.
+
+**1. An impossible-to-follow tooltip.** `ByteFoundryPage`'s "Upgrade Data Stream" button, when
+disabled with a full Buffer, told the player to "Resolve higher-priority actions before upgrading the
+Data Stream" — but `isMemoryCapacityUpgradeAvailable` is deliberately NOT part of the forced priority
+order at all (see "Upgrade Data Stream itself sits OUTSIDE this order entirely" above) — its only
+gate is `isPoolCapacityUpgradeAvailable`. With a full Buffer and `byteCreated` true (the only state
+this button renders under), the sole remaining reason that predicate can be false is
+`isMemoryCapacityAtCap`. The tooltip was telling players to do something that could never actually
+unblock the button. Fixed to say Capacity is already at its maximum.
+
+**2 & 3. Two reference docs still described the pre-`isMemoryCapacityAtCap`-fix and
+pre-Buy-precedence-fix behavior**, even though CLAUDE.md and AGENTS.md had already been updated for
+both in earlier rounds on this PR: `docs/ECONOMY_REFERENCE.md`'s Byte Foundry walkthrough still said
+the Capacity doubling ladder ran "up to the active pool's moving end bound
+(`getStoragePoolMemoryBounds(1).endBits`)" — i.e. pool 1's own bound specifically — rather than the
+FINAL pool's; `docs/MAINPAGE_REFERENCE.md`'s Data Lake action-row description still said the shared
+button slot "unconditionally prefer[s] Scale Out," describing the OLD behavior the Buy-precedence fix
+(see the third Codex round above) had already reversed. Fixed both to describe current behavior,
+matching CLAUDE.md.
+
+**Verification.** Text-only changes (one UI tooltip string, two doc paragraphs) — no engine logic
+touched, so no new tests needed; `yarn test`: 1779/1779 (unchanged count). `yarn build` succeeds.

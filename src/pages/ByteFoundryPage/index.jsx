@@ -716,7 +716,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     ? 'The Data Stream Buffer is full; drain it to double Capacity'
                     : intro.bits < intro.capacity
                       ? 'Fill the Data Stream Buffer completely before upgrading the Data Stream'
-                      : 'Resolve higher-priority actions before upgrading the Data Stream'
+                      : 'Capacity is already at its maximum'
                 }
                 type="button"
                 variant={capacityUpgradeAvailable ? 'prestige' : 'neutral'}

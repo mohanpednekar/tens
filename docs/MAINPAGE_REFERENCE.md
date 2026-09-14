@@ -322,10 +322,14 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes, unconditionally preferring Scale Out whenever `isDataLakeCapacityDoublingAvailable`
-is true — Scale Out is never merely disabled-but-visible any more, and no longer arbitrated against
-Buy via the forced priority order at all (removed — see `docs/DESIGN_HISTORY.md`; array completion,
-independent of every other action's availability, is now Scale Out's only gate): "⚡ Scale Out"
+between two modes: Buy wins the slot whenever it's genuinely affordable (`canBuy`), even with Scale
+Out also available (e.g. right after a manual 💧 Fill deposit) — Scale Out only claims the slot once
+Buy isn't an option, so a Fill-funded Booster purchase the player wanted to make can no longer be
+silently redirected into a capacity level-up instead (see `docs/DESIGN_HISTORY.md`). Neither button
+is arbitrated against the other via the forced priority order at all (removed — see
+`docs/DESIGN_HISTORY.md`; array completion, independent of every other action's availability, is
+Scale Out's own gate, same as Buy's own affordability check) — Scale Out is never merely
+disabled-but-visible any more: "⚡ Scale Out"
 (`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the

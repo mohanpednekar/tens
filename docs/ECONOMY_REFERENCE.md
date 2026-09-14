@@ -167,10 +167,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    tapping to be the primary action.
 2. Once `bits` reaches `INTRO_BYTE_COMBINE_COST` (8) and `byteCreated` is still false, **Combine into a
    Byte** (`combineIntroByte`) is a one-time action: consumes those 8 bits, sets `byteCreated: true`,
-   and keeps Buffer (`intro.capacity`) on the shared Capacity doubling ladder up to the active pool's
-   moving end bound
-   (`getStoragePoolMemoryBounds(1).endBits` = `INTRO_CAPACITY_CAP_BITS`, a clean SI 1 MB — see
-   point 4 below) — creating the
+   and keeps Buffer (`intro.capacity`) on the shared Capacity doubling ladder up to the FINAL pool's
+   own end bound (`isMemoryCapacityAtCap` — `getStoragePoolMemoryBounds(getStoragePoolCount()).endBits`,
+   unconditionally the last pool, never any one pool's own — see "Pool liveness is Capacity-only" in
+   CLAUDE.md and point 4 below for why this must stay final-pool-only rather than any earlier pool's
+   own bound, e.g. `getStoragePoolMemoryBounds(1).endBits` = `INTRO_CAPACITY_CAP_BITS`) — creating the
    single persistent Byte generator (a flag, not a counter — there is only ever one, and it's
    permanent — see above). Mid-Sacrifice-ladder saves from before #506 are normalized on load via
    `normalizePoolMemoryCapacity`.

@@ -77,6 +77,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (what it will read the moment it's revealed) rather than its far-larger absolute structural
   maximum — the previous clamp still let a legacy buffer sit well above what the pool would actually
   support once revealed, with nothing left to correct it at that transition.
+- **The "Upgrade Data Stream" button's disabled tooltip no longer tells a maxed-out player to
+  "resolve higher-priority actions"** — that action isn't gated by the forced priority order at all,
+  so the message could never actually be true; it now says Capacity is already at its maximum.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

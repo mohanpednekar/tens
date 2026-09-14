@@ -490,7 +490,9 @@ src/
                                same as MainPage; Data Stream + every DiskArrayRow as continuous
                                sections (no second-level tabs). A single "Upgrade Data Stream" action
                                sit in the Data Stream section; pool Memory values are derived
-                               from the shared Data Stream and its moving Capacity ceiling
+                               from the shared Data Stream's own Capacity, which keeps doubling up to
+                               the FINAL pool's own end bound (`isMemoryCapacityAtCap`), not any one
+                               pool's own — see "Pool liveness is Capacity-only" below
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
