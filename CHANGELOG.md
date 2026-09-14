@@ -84,6 +84,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   fills only via the 💧 Fill button until its pool's Storage array is entirely complete, then
   automatically from buffer overflow) instead of describing automatic overflow as the only path —
   and its Forced priority section no longer lists Upgrade Data Stream as part of that chain.
+- **A Data Lake's 💧 Fill button no longer stays hidden when only a fraction of a base unit is
+  actually needed to complete the currently-open slot** — it previously required a FULL unit's worth
+  banked in the pool's own buffer even when the slot needed far less (e.g. 1 bit, with the rest
+  already banked as partial progress), forcing a wait for an entire extra unit that was never
+  actually required.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

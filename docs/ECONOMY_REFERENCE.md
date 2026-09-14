@@ -873,10 +873,14 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    offering a dead click; the SAME hide applies when every remaining slot at this level, even fully
    completed, still wouldn't reach the Booster's cost — filling toward an unreachable target would
    only be erased the moment Scale Out fires, since `doubleDataLakeCapacity` resets both
-   `depositedUnits` and `fillBits` to 0 rather than carrying banked units into the new level), and at
-   least one full unit's worth of bits (`getDataLakeUnitBits(tierIndex)`) sitting in
-   the pool's own buffer. `fillDataLakeManually` spends directly from that pool's buffer — the SAME
-   source `tickPoolBufferFill`'s overflow branch would otherwise use — via
+   `depositedUnits` and `fillBits` to 0 rather than carrying banked units into the new level), and
+   the pool's own buffer holding at least `Math.min(bitsNeeded, getDataLakeUnitBits(tierIndex))` —
+   normally a full unit's worth as the minimum before offering a click, EXCEPT when the currently-open
+   slot already has enough partial `fillBits` progress banked that completing it needs less than a
+   full unit (in which case that smaller exact remainder is the real threshold, not an unfulfillable
+   full-unit demand the slot no longer needs — see `docs/DESIGN_HISTORY.md`). `fillDataLakeManually`
+   spends directly from that pool's buffer — the SAME source `tickPoolBufferFill`'s overflow branch
+   would otherwise use — via
    `getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)`: a private helper that walks
    forward slot-by-slot (mirroring `fillDataLakeDisks`' own loop) to find the EXACT number of
    additional bits needed, accounting for whatever partial `fillBits` progress is already banked
@@ -1555,7 +1559,8 @@ compute ladder entities, `intro.foundryResetCaps`), ordinary Factory cycle (same
 `prestige.points`/`count`/`prestigeDoublePpLevel` → 0, `computeFlops.owned` → 0,
 `computeFlops.cumulativeBoost` fresh. Keeps `intro.byteCreated` if already combined, but resets
 `intro.capacity` to `INTRO_STARTING_CAPACITY` with the rest of the Foundry reset; the Capacity ×2
-ladder remains available up to the active highest-unlocked-pool end bound. Does NOT reset
+ladder remains available up to the FINAL pool's own end bound (`isMemoryCapacityAtCap`), same as any
+other cycle — not any one pool's own. Does NOT reset
 `intro.mainGameUnlocked` (the gate — see `latchMainGameUnlocked` above) — a much bigger reset than an
 ordinary Prestige, but still never re-gates the main game once it's ever been revealed.
 
@@ -2157,7 +2162,7 @@ progress, per-size `disksBuiltTotal`, and Capacity itself for merge compatibilit
 `tickFoundryResetConvenience` (from `tickGame`, after Disk auto-fill) then auto-presses Combine,
    bit-funded Speed / Invest, and Provision Disk whenever their normal turn gates allow, capped at those
 highs — Combine leaves Capacity on its doubling ladder; Capacity ×2 remains available up to the
-active highest-unlocked-pool end bound. Its own Provision Disk call passes `provisionDisk` an
+FINAL pool's own end bound (`isMemoryCapacityAtCap`), not any one pool's own. Its own Provision Disk call passes `provisionDisk` an
 explicit `maxPasses` (via `getDiskReplayPassAllowance`) whenever the currently-offered size sits
 exactly at its own `foundryResetCaps` boundary — a fully pre-earned run of completed disks, now
 partially paid toward the next one — so a buffer that can afford more than the cap allows (e.g.
@@ -2864,7 +2869,7 @@ purchases were manual or automatic.
 - `INTRO_CAPACITY_DOUBLING_STEP = 2` — Capacity ×2 doubling multiplier per purchase; `upgradePoolCapacity` multiplies `intro.capacity` by this directly, unclamped (no longer capped to a pool's own end bound — see "Pool Memory Capacity" above). Deliberately plain binary doubling, since `intro.capacity` also drives the Data Stream tile's own binary display; each Storage pool derives its OWN decade-power Capacity from this same doubling count separately (`getStoragePoolCapacity`/`getDecadePowerEquivalentBits`, see `POOL_CAPACITY_SI_STEP` below and `docs/DESIGN_HISTORY.md` for the two earlier, reverted attempts at sharing one raw value between both displays)
 - `getNextSiDoubledValue(bits)` — the next term in the SI-clean switchover sequence 1, 2, 4, 8, …, 64, 125, 250, 500, 1000, … Bytes (doubles normally except once per decade of ten doublings, where a value's mantissa — after stripping factors of 1000 — lands on exactly 64, and it goes to 125 instead of 128). Exported and directly tested as the reference definition of the sequence, but NOT what `getStoragePoolBandwidth` actually calls at runtime — iterating it N times drifts at very large N (its own mantissa-stripping check loses reliability well past `Number.MAX_SAFE_INTEGER`, reachable within a single Era at pool 8+), so it instead uses a private closed-form helper (`getSiCleanEquivalentBits`: `SI_CLEAN_LOCAL_SEQUENCE[N % 10] * 1000 ** floor(N / 10)`) that's exact for any reachable N; `getStoragePoolCapacity` doesn't use this sequence at all any more — see its own `getDecadePowerEquivalentBits` in "Pool Memory Capacity" above and `docs/DESIGN_HISTORY.md`
 - `POOL_CAPACITY_SI_STEP = 1000` — the base each pool's own Capacity end bound is a power of (`(BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** (poolIndex + 1)) / DISK_BUILD_COST_MULTIPLIER`), so pool boundaries land on clean SI values (pool 1 → 100 KB, pool 2 → 100 MB, pool 3 → 100 GB, …) rather than the binary powers a raw doubling ladder would naturally produce — see `docs/DESIGN_HISTORY.md` for the derivation. Divided by `DISK_BUILD_COST_MULTIPLIER` (10x smaller than a plain power of `POOL_CAPACITY_SI_STEP` would give) since a pool's buffer only ever needs to hold one Provision Disk funding pass (the disk's own face value), not the disk's whole build cost — see "Disks" below
-- `INTRO_CAPACITY_CAP_BITS = 800,000` (exactly 100 KB SI) — documented pool-1 Capacity ceiling alias; `getStoragePoolMemoryBounds` is authoritative and the active ceiling moves as pools unlock
+- `INTRO_CAPACITY_CAP_BITS = 800,000` (exactly 100 KB SI) — documented pool-1 Capacity ceiling alias ONLY, not the live cap on Capacity growth itself; `getStoragePoolMemoryBounds` is authoritative for any pool's own bound, and the actual growth ceiling (`isMemoryCapacityAtCap`) is unconditionally the FINAL pool's own end bound, not pool 1's or any other single pool's
 - `MEMORY_BINARY_UNIT_STEP = 1024` — Data Stream CARD's own balance/Buffer binary display-unit ladder step (`getMemoryUnit`) — `1 KiB = 1024 Bytes`; Disks/Data Lake/caches (and, since `POOL_CAPACITY_SI_STEP`, each pool's own Capacity end bound VALUE) stay on the SI (1000-based) scale — this step now governs display rounding on the Data Stream card only, not where a pool's Capacity ceiling itself lands
 - `INTRO_BYTE_BASE_RATE = 1` — retained legacy constant; the Byte generator's rate is now derived from Capacity (`getDataStreamSpeedBytesPerSecond`), and delivery is continuous
 - `INTRO_BYTE_COMBINE_COST = INTRO_STARTING_CAPACITY` (8) — one-time cost, in bits, to combine the first 8 tapped bits into the Byte generator

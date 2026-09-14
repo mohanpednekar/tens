@@ -4515,8 +4515,16 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   // No open slot left at the lake's current capacity level — manual fill (and a click on it) would
   // be a dead no-op until the corresponding Storage array unlocks the next capacity level (Scale
   // Out) — hide the button rather than offering a click that silently does nothing.
-  if (getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits) === null) return false
-  return getPoolBufferBits(state, tierIndex) >= getDataLakeUnitBits(tierIndex)
+  const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
+  if (bitsNeeded === null) return false
+  // Require at least a full unit's worth banked before offering Fill — same minimum threshold as
+  // before, avoiding a click that only makes imperceptible progress on a mostly-empty open slot —
+  // UNLESS the slot's own remaining requirement (bitsNeeded) is already smaller than a full unit
+  // (a slot with partial fillBits progress sitting just short of completion): in that case the
+  // smaller, exact remaining amount is the real threshold, since a click completing the slot with
+  // however few bits are actually left is genuine progress, not something to hide behind a full
+  // unit's worth that the open slot no longer even needs. See docs/DESIGN_HISTORY.md.
+  return getPoolBufferBits(state, tierIndex) >= Math.min(bitsNeeded, getDataLakeUnitBits(tierIndex))
 }
 
 // Spends exactly getDataLakeManualFillBitsNeeded's own precise amount — never more than the next

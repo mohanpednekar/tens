@@ -8091,3 +8091,74 @@ those rounds' own grep sweeps happened to include `src/pages/InfoPage/index.jsx`
 succeeds. Re-ran and published `simulate-run-times` per its own "when to re-run" rule (this changes
 the bot's own strategy) — see the run published alongside this commit on the `ideal-run-strategy`
 orphan branch for the corrected numbers.
+
+### A seventh Codex round: a real engine bug, and the simulator's own "hard cap" had gone stale too
+
+A seventh `chatgpt-codex-connector` round, on the sixth round's commit, caught one genuine engine
+correctness bug (not just doc/text drift this time) plus two more instances of the same "moving
+ceiling" staleness pattern the fourth/fifth/sixth rounds had already been chasing down.
+
+**1. `isDataLakeManualFillAvailable` required a FULL unit's worth banked even when the currently-open
+slot needed far less to complete.** Its threshold was `getPoolBufferBits(state, tierIndex) >=
+getDataLakeUnitBits(tierIndex)` — always a whole unit, regardless of what
+`getDataLakeManualFillBitsNeeded` (computed one line earlier, for the null/no-open-slot check) said
+was ACTUALLY needed. A slot sitting at `fillBits === unitBits - 1` (all but 1 bit already banked from
+earlier automatic overflow or a prior manual fill) needs only 1 more bit to complete — but with only
+that 1 bit in the pool's own buffer, the old check demanded a full extra `unitBits` before showing
+the button at all, hiding a genuine, fully-affordable click behind a threshold the open slot no
+longer needed. On a higher pool (MB/GB-scale `unitBits`), this could force a real wait for an entire
+extra unit's worth of production just to spend the final few bits of an already-mostly-complete slot.
+
+**Fix.** Reuse the already-computed `bitsNeeded` (from `getDataLakeManualFillBitsNeeded`) and compare
+the buffer against `Math.min(bitsNeeded, unitBits)` instead of unconditionally `unitBits` — preserves
+the original "at least a whole unit" minimum for a genuinely empty/fresh slot (where `bitsNeeded` is
+itself a whole multiple of `unitBits`, so the `Math.min` is a no-op), while correctly relaxing to the
+smaller, exact remaining requirement once a slot is close enough to completion that finishing it
+needs less than a full unit. `fillDataLakeManually` itself needed no change — it already spends
+exactly `getDataLakeManualFillBitsNeeded`'s own precise amount, so once the gate correctly opens, the
+existing spend logic was already right.
+
+**Verification.** New regression test: seeds a pool buffer with exactly 1 bit and a lake at
+`fillBits: unitBits - 1`, asserting `isDataLakeManualFillAvailable` is now `true` (previously `false`
+under the old whole-unit threshold) and that the resulting fill correctly completes the unit and
+drains the buffer to 0. `engine.test.js`: 1258/1258.
+
+**2. Two more places still described a "moving" per-pool Capacity ceiling, missed by the
+fourth/fifth/sixth rounds' own targeted greps.** `docs/ECONOMY_REFERENCE.md` had THREE more live
+references (its `eraGame` reset section, its `tickFoundryResetConvenience` replay section, and
+`INTRO_CAPACITY_CAP_BITS`'s own constant-table row) still saying Capacity remains available "up to
+the active highest-unlocked-pool end bound" / "the active ceiling moves as pools unlock" — the exact
+superseded model `isMemoryCapacityAtCap`'s final-pool-only fix (see the fourth round above) retired.
+Each targeted grep sweep in the earlier rounds searched for the SPECIFIC retired phrase each fix had
+just introduced (e.g. "TRUE structural ceiling"), not a general audit for every synonym of "the
+ceiling moves/tracks the active pool" scattered across a 3,000+ line reference doc — these three had
+different wording than what any prior round happened to grep for, so they survived every sweep so
+far. Fixed all three to say the FINAL pool's own end bound, unconditionally.
+
+**3. The pacing simulator's own capacity-cap sweep still modeled the SAME superseded "pool 1 is the
+hard cap" assumption `isMemoryCapacityAtCap`'s fix had already retired at the engine level.**
+`run-simulation.mjs`'s default `--capacity-cap` sweep used `INTRO_CAPACITY_CAP_BITS` (pool 1's own
+~800,000-bit bound) as its "hard cap" scenario, with a comment claiming it "behaves identically to
+`unlimited`" — true under the OLD per-pool-ceiling gating, but no longer true now that
+`isMemoryCapacityAtCap` only ever consults the FINAL pool's own end bound (~8e32 bits at 10 pools):
+under real, current rules, an `unlimited` run can keep growing capacity, unlocking more pools/lakes/
+Cores, far past where the stale sweep entry artificially froze it — so the sweep was quietly
+comparing two materially different scenarios under a false "these are the same" label, and never
+actually exercised the real structural hard cap at all.
+
+**Fix.** Replaced the sweep's "hard cap" entry with the TRUE final-pool bound
+(`getStoragePoolMemoryBounds(getStoragePoolCount())` — `DATA_LAKE_TIER_COUNT` pools, already imported
+in this file), restoring the "== unlimited" claim to being actually true again: that bound is so
+astronomically large that no realistic run (or even this script's own `MAX_TICKS` ceiling) ever gets
+remotely close to it, so freezing growth there produces identical results to `unlimited` in practice
+— verified directly: re-running `--capacity-cap` after the fix shows the "true hard cap" and
+`unlimited` rows producing byte-for-byte identical End Capacity/Foundry/Main/Total/Cores/Disks
+figures, where before the fix the sweep's stale entry would have frozen far short of what `unlimited`
+actually reaches. Also fixed a floating-point display artifact this astronomically large bound
+exposed in `formatCapacityLabel` (`bytes / 1e9` printing as `"1.0000000000000001e+23 GB"` instead of
+a clean `"1e+23 GB"`) by rounding through `toPrecision(6)` before display.
+
+**Verification.** `yarn test`: 1780/1780. `yarn build` succeeds. Re-ran and published
+`simulate-run-times` (this changes both the sweep's own scenario definitions and, via the manual-fill
+engine fix above, potentially lake income) — see the run published on `ideal-run-strategy` alongside
+this commit.

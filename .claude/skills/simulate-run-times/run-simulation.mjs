@@ -93,11 +93,11 @@ import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_BOOST_TIER_FIELDS,
   DATA_LAKE_TIER_COUNT,
-  INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   MONEY_ID,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   TIER_DEFINITIONS,
+  getStoragePoolMemoryBounds,
 } from '../../../src/game/layers.js'
 
 // Matches useIncrementalGame.js — "buy as many as fit the current cost-block".
@@ -105,23 +105,35 @@ const BUY_QUANTITY = Number.MAX_SAFE_INTEGER
 const MAX_TICKS = 5_000_000
 
 // Memory display uses BITS_PER_BYTE × 1000^n (B/KB/MB/…) — same as formatBitsInNearestUnit.
-// Default capacity-cap sweep: freeze Sacrifice at these bit values (plus unlimited growth). Pool 1's
-// generator has a hard ceiling (INTRO_CAPACITY_CAP_BITS) that real Sacrifice can never grow past —
-// so a sweep point at or above that hard cap behaves identically to `unlimited`. Under Data Lakes,
-// higher capacity unlocks larger Disk arrays → more lake deposits → more Booster purchases; early
-// stop at the Compute-unlock floor is Storage-poor (fewer disks/cores), not "Compute-favoring".
+// The TRUE structural ceiling on Capacity growth is the FINAL pool's own end bound
+// (isMemoryCapacityAtCap in engine.js consults getStoragePoolCount() — DATA_LAKE_TIER_COUNT here —
+// unconditionally, never any earlier pool's own bound). This is astronomically large (~8e32 bits at
+// 10 pools) — real Sacrifice can in principle grow all the way to it, but never gets remotely close
+// within any realistic run (or even this script's own MAX_TICKS ceiling below), so a sweep point AT
+// this true hard cap behaves identically to `unlimited` in practice. NOT INTRO_CAPACITY_CAP_BITS
+// (pool 1's own, far smaller bound) — that used to double as a meaningful "real hard cap" before
+// Capacity growth was decoupled from disk-build progress, but is now just an arbitrary earlier
+// artificial stop this sweep's own `capacityCapBits` option imposes, no longer equivalent to
+// unlimited growth (see docs/DESIGN_HISTORY.md). Under Data Lakes, higher capacity unlocks larger
+// Disk arrays → more lake deposits → more Booster purchases; early stop at the Compute-unlock floor
+// is Storage-poor (fewer disks/cores), not "Compute-favoring".
+const TRUE_HARD_CAP_BITS = getStoragePoolMemoryBounds(DATA_LAKE_TIER_COUNT).endBits
 const DEFAULT_CAPACITY_CAPS_BITS = [
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, // stop early at the Compute-unlock floor (Storage-poor)
-  INTRO_CAPACITY_CAP_BITS, // grow to pool 1's hard cap (Storage-rich, == unlimited)
-  null, // unlimited — same result as the hard cap under real Sacrifice
+  TRUE_HARD_CAP_BITS, // grow to the final pool's own true structural cap (Storage-rich, == unlimited)
+  null, // unlimited — same result as the true hard cap under real Sacrifice
 ]
 
 function formatCapacityLabel(capacityBits) {
   if (capacityBits == null) return 'unlimited'
   const bytes = capacityBits / 8
-  if (bytes >= 1e9) return `${bytes / 1e9} GB (${capacityBits} bits)`
-  if (bytes >= 1e6) return `${bytes / 1e6} MB (${capacityBits} bits)`
-  if (bytes >= 1e3) return `${bytes / 1e3} KB (${capacityBits} bits)`
+  // toPrecision(6) + parseFloat strips the floating-point noise a raw division can produce at very
+  // large magnitudes (e.g. the final pool's own ~8e32-bit true hard cap) — plain `bytes / 1e9` can
+  // print as "1.0000000000000001e+23" instead of a clean "1e+23".
+  const round = value => parseFloat(value.toPrecision(6))
+  if (bytes >= 1e9) return `${round(bytes / 1e9)} GB (${capacityBits} bits)`
+  if (bytes >= 1e6) return `${round(bytes / 1e6)} MB (${capacityBits} bits)`
+  if (bytes >= 1e3) return `${round(bytes / 1e3)} KB (${capacityBits} bits)`
   return `${capacityBits} bits`
 }
 

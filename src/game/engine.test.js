@@ -10960,6 +10960,19 @@ describe('Data Lakes', () => {
       expect(after.intro.poolBuffers[1]).toBe(kb1 * 5 - 1)
     })
 
+    it('is AVAILABLE with less than one whole unit banked when the currently-open slot needs even less than that to complete — the "at least a full unit" minimum only applies to a fresh, empty slot (see docs/DESIGN_HISTORY.md)', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), 1), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), fillBits: kb1 - 1 } },
+      })
+      // Only 1 bit banked in the buffer — far less than a whole unitBits — but the open slot already
+      // has all but 1 bit of progress, so that lone bit is genuinely enough to complete it.
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+      expect(after.intro.poolBuffers[1]).toBe(0)
+    })
+
     it('completes an ENTIRE larger open slot (and its own full cost) when its sub-size exceeds what the next Booster alone needs', () => {
       // Deposited units already fill every ×1 and ×10 slot at capacity level 3 (10 + 90 = 100
       // units), so the next open slot is a ×100 one — completing even 1 more needed unit requires

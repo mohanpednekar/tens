@@ -63,11 +63,16 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
 - **Memory capacity cap (`--capacity-cap`):** climb Capacity normally until Memory reaches the
   listed bit value, then **stop Sacrificing / queueing Capacity**. Higher caps unlock larger Disk
   arrays → more Data Lake deposits → more Booster purchases (and typically faster prestige). Early
-  stop at `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` is Storage-poor under Data Lakes. Pool 1's generator
-  has its own hard ceiling (`INTRO_CAPACITY_CAP_BITS`, `layers.js`) that real Sacrifice can never
-  grow past regardless of this flag, so a requested cap at or above that value behaves identically
-  to `unlimited`. Default sweep: early-stop floor / hard cap / `unlimited`. Reports end capacity,
-  cores ever earned, and disks built alongside Foundry / Main / total times.
+  stop at `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` is Storage-poor under Data Lakes. The TRUE structural
+  ceiling on Capacity growth (`isMemoryCapacityAtCap` in `engine.js`) is the FINAL pool's own end
+  bound (`getStoragePoolMemoryBounds(getStoragePoolCount())`, ~8e32 bits at 10 pools) — real
+  Sacrifice can in principle grow all the way there, but never gets remotely close within any
+  realistic run, so a requested cap at or above that true hard cap behaves identically to
+  `unlimited` in practice. `INTRO_CAPACITY_CAP_BITS` (pool 1's own, far smaller bound) is NOT this
+  ceiling — Capacity growth is decoupled from disk-build progress, so that value is just an
+  arbitrary earlier stop point, not equivalent to unlimited growth (see `docs/DESIGN_HISTORY.md`).
+  Default sweep: early-stop floor / true hard cap / `unlimited`. Reports end capacity, cores ever
+  earned, and disks built alongside Foundry / Main / total times.
 - **Autobuyers wherever applicable:** tiers whose `autobuyers[tierId]` is non-null (from
   `applyAutobuyerMilestones` keyed on `prestige.count` — 1 prestige for tier01, …, 10 for tier10)
   are left to `tickGame`'s autobuyer loop with the real `BUY_QUANTITY = Number.MAX_SAFE_INTEGER`
