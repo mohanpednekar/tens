@@ -5,7 +5,7 @@ import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 // Drop __proto__/constructor at parse time so localStorage/Dev JSON cannot pollute merges.
 const safeJsonParse = jsonString =>
   JSON.parse(jsonString, (key, value) => {
-    if (key === '__proto__' || key === 'constructor') return undefined
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return undefined
     return value
   })
 
@@ -684,7 +684,7 @@ const isPlainObject = value =>
 // same as before.
 const mergeStateForDevWrite = (base, parsed) =>
   Object.keys(parsed).reduce((acc, key) => {
-    if (key === '__proto__' || key === 'constructor') return acc
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return acc
     const parsedValue = parsed[key]
     const baseValue = base[key]
     acc[key] = isPlainObject(parsedValue) && isPlainObject(baseValue)
