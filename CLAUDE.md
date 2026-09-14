@@ -713,17 +713,10 @@ Strict three-layer separation:
    "Provision Disk moved back inside its pool card" entry for why it moved there from the shared Data
    Stream section. Each disk array shows every size from `getDiskSizesToShow`, all
    `DISK_ARRAY_LADDER_CAP` (10) slots in one unbroken row. The "queue next build" pin-icon toggle was
-   removed from the UI, but `intro.diskBuildQueued`/`tickQueuedDiskBuild` are unconditionally wired
-   into `tickGame`'s own tick pipeline and live: `provisionDisk` auto-arms `diskBuildQueued` itself
-   whenever a click only partially funds a disk's current pass, so the remaining passes fire
-   themselves as the pool buffer refills, no further click needed (see "Economy model" below). The
-   button's own click handler now also calls `queueDiskBuild` directly whenever it isn't
-   turn-available (underfunded for even a first pass, or outranked by a higher-priority action) —
-   previously the button stayed disabled until a whole pass was already banked, so the FIRST pass
-   needed the same manual "wait, then remember to click" babysitting every later pass had already
-   stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
-   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
-   matter for the narrower "arm the queue before even the first pass is affordable" case. Every
+   removed from the UI, but the underlying auto-arming queue it drove stays fully wired and live —
+   see the "Disks" entry under "Economy model" below for how a click arms it;
+   `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as their own UI
+   control, same posture as Capacity's own `queueIntroCapacityUpgrade`. Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
    capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
@@ -1084,8 +1077,8 @@ the re-reveal mechanic: after a reset, a tier already unlocked by a previous Sca
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at
 (the completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
-not a fixed 5/8/11/14 ladder. Latency compounds the same Overclock-scaled 1% step at every level;
-milestones add no separate production bonus.
+not a fixed 5/8/11/14 ladder (Latency's own Overclock-scaled 1% step is described under "Economy
+model" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
@@ -1198,7 +1191,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1777 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1758 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
