@@ -10,14 +10,17 @@ reverted directly: the per-tier ladder (`getTickspeedProductionMultiplier`,
 `buyTickspeedMultiplier`) is a separate, much cheaper, per-tier lever from Latency's own Bytes-funded
 global track (`getGlobalTickspeedProductionMultiplier`), and the two were never meant to share a
 step size — Latency stays at 1% (its own `GLOBAL_TICKSPEED_PRODUCTION_STEP`, unaffected by this
-revert), only the per-tier constant moved back to `0.1`. Several stale player-facing/doc strings
-still said "10%" throughout the codebase even while the constant read `0.01` (`MainPage`'s own
-"+1% faster ticks"/"the next level makes it 1% more" button copy, `docs/MAINPAGE_REFERENCE.md`,
-`docs/ECONOMY_REFERENCE.md`, and multiple `engine.test.js`/`App.test.jsx` assertions/comments) —
-those are the tell that this drop was likely swept in unintentionally alongside the Latency-focused
-rename rather than a deliberate, isolated choice. This reversion also fixes all of those back to
-10%, and drops the now-superseded `CHANGELOG.md` bullet entirely (the corresponding
-[Unreleased] entry hadn't shipped yet, so there's no net change left to document once reverted).
+revert), only the per-tier constant moved back to `0.1`. `docs/ECONOMY_REFERENCE.md` still had a
+stale "10%" mention left over in its formula writeup even while the constant itself read `0.01` —
+contradicting another spot in the same doc that already correctly said `0.1` — the tell that the
+drop to `0.01` was likely swept in unintentionally alongside the Latency-focused rename rather than
+a deliberate, isolated choice. Separately, `MainPage`'s own "+1% faster ticks"/"the next level makes
+it 1% more" button copy and `docs/MAINPAGE_REFERENCE.md` correctly matched the then-current `0.01`
+constant, and — along with several `engine.test.js`/`App.test.jsx` assertions/comments pinned to the
+same value — only became stale strings needing an update *because of* this reversion back to `0.1`,
+not evidence of the original drop. This reversion fixes both categories back to 10%, and drops the
+now-superseded `CHANGELOG.md` bullet entirely (the corresponding [Unreleased] entry hadn't shipped
+yet, so there's no net change left to document once reverted).
 
 ### First ten Scale Ups standardized at three completed levels — 2026-09-13
 
