@@ -136,9 +136,11 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 `ByteFoundryPage` is a separate pre-game tap-to-earn screen every fresh save must pass through once
 — a one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes
 onward) is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary
-units — Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via
-**Speed ×2** (Invest) and **Capacity ×2**; a separate fill-based multiplier (never the displayed
-Speed/Bandwidth figures themselves) scales the real delivery rate by buffer fullness and recent taps.
+units — Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single **Upgrade Data Stream** action
+(cost = current capacity, doubles `intro.capacity`; displayed Speed is *derived* from capacity via
+`getDataStreamSpeedBytesPerSecond`, not purchased); a separate fill-based multiplier (never the
+displayed Speed/Bandwidth figures themselves) scales the real delivery rate by buffer fullness and
+recent taps.
 Disks (`StoragePage`) fill and pull into Factory automatically, with no manual redeem step, and each
 Storage pool's overflow feeds its own Data Lake automatically too — but Boosters, which spend banked
 Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), are a manual
