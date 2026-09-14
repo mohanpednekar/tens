@@ -1078,17 +1078,18 @@ test('a Scale Up that will reveal TB says so explicitly — "Unlock TB" on the b
 test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, and completed-level requirement progress on itself', () => {
   seedMainGameState({
     resources: { base: 10 },
-    purchaseLevels: { tier01: 2 }, // 1 completed of the 9 the third Scale Up requires
+    purchaseLevels: { tier01: 2 }, // 1 completed of the 3 the third Scale Up requires
     scaleUpCount: 2,
   })
   render(<App />)
 
   // The action always doubles currently unlocked tiers, regardless of prior activation count;
-  // the requirement is named in COMPLETED levels of the current target tier.
+  // the requirement is named in COMPLETED levels of the current target tier — still the flat 3
+  // every one of the first ten claims uses (see getScaleUpRequirement).
   expect(screen.getByRole('button', {
-    name: /scale up \(requires 9 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
+    name: /scale up \(requires 3 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · KB 1/9')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · KB 1/3')
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
@@ -1514,9 +1515,10 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Scale Up fired automatically once resumed — resources reset and the target tier advances to
-  // Megabytes, whose requirement is the next completed-level multiple (6).
+  // Megabytes, whose requirement is the same flat 3 completed levels every one of the first ten
+  // claims uses (see getScaleUpRequirement).
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /scale up \(requires 6 completed megabytes levels/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires 3 completed megabytes levels/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
