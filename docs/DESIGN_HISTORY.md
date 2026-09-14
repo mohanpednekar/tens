@@ -7568,14 +7568,17 @@ cache reaches full, at which point provisioning proceeds exactly as it did befor
 equally whether a build is already queued or the player is about to click for the first time — the
 gate lives in `isProvisionDiskAvailable`/`provisionDisk` themselves, not in the click handler.
 
-**Verification.** New regression coverage plus updates to every existing `provisionDisk`/
-`isProvisionDiskAvailable`/`isProvisionDiskTurnAvailable`/`tickQueuedDiskBuild`/
-`tickFoundryResetConvenience` test that seeded a pool buffer at the pool's own smallest denomination
-(`FIRST_DISK_SIZE`) without an already-full `diskCache` for it — 18 tests total across
-`engine.test.js` and `App.test.jsx`, each fixed by seeding `diskCache: { [size]: size }` alongside
-the buffer, matching what eager pre-fill would have produced by the time a real player reaches that
-state. `yarn test` green. No economy constant/formula changed — only which claim on a pool's buffer
-wins a tie — so `simulate-run-times` wasn't re-run.
+**Verification.** Updates to every existing `provisionDisk`/`isProvisionDiskAvailable`/
+`isProvisionDiskTurnAvailable`/`tickQueuedDiskBuild`/`tickFoundryResetConvenience` test that seeded a
+pool buffer at the pool's own smallest denomination (`FIRST_DISK_SIZE`) without an already-full
+`diskCache` for it, each fixed by seeding `diskCache: { [size]: size }` alongside the buffer,
+matching what eager pre-fill would have produced by the time a real player reaches that state — these
+neutralizing seeds were the only coverage this change initially landed with; no test exercised
+`getPoolCacheReservationBits` directly (an adversarial-review finding on this PR, addressed in a
+follow-up commit that added a dedicated `describe('isProvisionDiskAvailable')` test covering the
+empty/partial/full-cache and locked-pool cases explicitly). `yarn test` green. No economy
+constant/formula changed — only which claim on a pool's buffer wins a tie — so `simulate-run-times`
+wasn't re-run.
 
 ### Provision Disk button no longer previews progress before the player has ever clicked it
 
@@ -7600,3 +7603,98 @@ and not asserted against by name in the existing suite; behavior confirmed by re
 render logic against `useTrimBalanceAfterFull`'s same "haven't engaged yet" pattern already proven
 correct elsewhere on this page). No economy constant/formula changed — pure UI presentation — so
 `simulate-run-times` wasn't re-run.
+
+### Pool liveness decoupled from disk-build progress; Data Lakes fill manually before their pool completes
+
+Player request (verbatim): "The Data lake should fill only manually (just enough to buy next
+booster) until the pool is complete and automatically once the pool is complete. The data lake
+status shall never gate storage pool or the data stream upgrades. Actually, the data stream upgrades
+shall not be gated by anything at all. Once data stream reaches a required capacity, the
+corresponding storage pool shall be unlocked with its own cache also unlocked and usable. However,
+to provision a disk, all possible disks of all smaller sizes must be already provisioned. So the
+disk prerequisites are pool to pool. Pool prerequisite is just the data stream capacity threshold."
+
+Before this change, a Storage pool's own "liveness" (buffer active, Bandwidth nonzero, read cache
+usable) was driven by `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` — disk-BUILD progress:
+pool N+1 only came alive once pool N had built at least one disk of its own smallest size
+(`isDataLakePoolReady`'s own gate). This conflated two genuinely separate ideas the player was
+asking to split apart: (1) a pool being ALIVE at all — should depend only on the Data Stream's own
+Capacity crossing that pool's threshold — and (2) which disk SIZE Provision Disk currently offers —
+which genuinely does need the "all smaller sizes already provisioned" pool-to-pool chain, since a
+pool's disk ladder can't skip ahead of the pool feeding it. `getVisibleStoragePoolCount` already
+existed as a capacity-based count, but only as the MIN against the disk-build count, for pool-CARD
+visibility alone (see "Pool cards gated on a capacity threshold too" above) — every other liveness
+consumer (`getStoragePoolBandwidth`, `getStoragePoolCapacity`, `tapPoolBuffer`,
+`tickPoolBufferFill`'s loop bound, the read-cache eligibility check, `getPoolCacheReservationBits`)
+still read the disk-build-only count.
+
+**Why not fold the two into one shared primitive again?** Tried once already, for the narrower
+card-visibility case, and reverted after a 28+20 test-failure blast radius (see "Pool cards gated on
+a capacity threshold too" above) — `isStoragePoolUnlocked` has too many OTHER consumers
+(`getMaxActiveDiskLadderStep`, `isMemoryCapacityAtCap`'s growth ceiling, Data Lake pacing) that
+genuinely need the disk-build-only semantics and would break if it started reading Capacity instead.
+This time the fix goes the other direction: instead of touching `isStoragePoolUnlocked` at all, a new
+`isStoragePoolFullyBuilt(state, poolIndex)` (true once a pool's three ladder sizes are ALL fully
+built) becomes the disk-provisioning pool-to-pool gate (`isStoragePoolUnlocked` now just checks
+`poolIndex === 1 || isStoragePoolFullyBuilt(state, poolIndex - 1)`), while `getVisibleStoragePoolCount`
+becomes PURE Capacity-based and takes over as the one true liveness gate everywhere buffer/Bandwidth/
+cache/Data-Lake-overflow eligibility is checked — with pool 1 special-cased to always count (`let
+count = 1`, looping from poolIndex 2), since a large body of pre-existing tests/mechanics assume pool
+1 is always reachable at any capacity, and the real gameplay effect is nil either way (`isStorageUnlocked`'s
+own separate top-level reveal gate already prevents pool 1 from mattering below its own real
+threshold, "1 KiB," regardless of this special case).
+
+**Upgrade Data Stream ungated entirely.** `isMemoryCapacityUpgradeAvailable` dropped its
+`!isDiskFillAvailable(state) && !isProvisionDiskAvailable(state)` conjuncts — it's now simply
+`isPoolCapacityUpgradeAvailable(state)`. This was a deliberate reversal of the forced priority order's
+own design (Upgrade Data Stream previously ranked LOWEST, below Disk Fill/Provision Disk/Compute) per
+the player's explicit "the data stream upgrades shall not be gated by anything at all." Disk Fill >
+Provision Disk > Compute remains the forced order for those three; Upgrade Data Stream, Data Lake
+Booster purchases, and Data Lake manual fill (below) all now sit outside it.
+
+**Data Lake manual-vs-automatic fill split.** A new `isDataLakeManualFillAvailable`/
+`fillDataLakeManually` pair lets a lake top up MANUALLY from its own pool's buffer — capped at
+exactly what the next Booster still needs — once `isDataLakePoolReady` but before
+`isStoragePoolFullyBuilt`; `tickPoolBufferFill`'s existing automatic overflow branch now ALSO
+requires `isStoragePoolFullyBuilt`, so a lake only ever drains its pool's buffer automatically once
+the pool is genuinely done. Manual fill reuses the same `fillDataLakeDisks` deposit helper the
+automatic path already used, so the disk-square breakdown stays exact either way, and — like Buy —
+sits entirely outside the forced priority order. `DataLakePanel` renders it as a `💧 Fill` button
+alongside Buy/Upgrade.
+
+**Two follow-on fixes this same round.** (1) `tapIntroBit`'s tap-mode reveal switch had been using
+`getVisibleStoragePoolCount(state) >= 1` as a proxy for "has Storage been revealed" — this broke once
+pool 1 was hardcoded to always count (the check became permanently true); fixed to check
+`isStorageUnlocked(state)` directly, the pre-existing, semantically-correct predicate for that exact
+question. (2) `ByteFoundryPage`'s `MultiplierBar` lake-mode switch (`poolReady`) needed
+`isStoragePoolFullyBuilt` added alongside its existing `isDataLakePoolReady` check, so it doesn't show
+a misleading "incoming overflow rate" reading during the manual-fill-only phase, when no automatic
+overflow is actually happening yet.
+
+**A pre-existing test's exact scenario became provably impossible to reconstruct.** One
+`engine.test.js` test ("keeps lower-pool bandwidth and capacity fixed…") relied on pool 2 being
+disk-build-"unlocked" while sitting at a LOW raw capacity, reading the SAME decade-power-clamped
+value as pool 1. Under pure-capacity liveness this is a genuine contradiction — worked out via
+decade-exponent arithmetic (the test's target decade requires a doubling-count N in {17,18,19}; pool
+2's own capacity threshold requires N≥20 — no overlapping N exists). Rather than force an artificial
+substitute, the test was rewritten to assert the actually-more-valuable NEW invariant this feature
+introduces directly: a pool that's disk-build-complete (satisfies the pool-to-pool provisioning
+chain) still reads 0 Bandwidth/Capacity until it SEPARATELY crosses its own Capacity threshold, then
+becomes nonzero once it does — proving the two chains are genuinely independent, not just
+differently-computed versions of the same fact.
+
+**Verification.** `engine.test.js`: 1247 tests passing (0 failing), including a new
+`isStoragePoolFullyBuilt`/pool-liveness-independence test, a dedicated `getPoolCacheReservationBits`
+test (see the entry above), an `isMemoryCapacityUpgradeAvailable` ungating test, and a new
+`describe('manual fill before pool completion')` block (6 tests covering
+`isDataLakeManualFillAvailable`/`fillDataLakeManually`'s availability/capping/exhaustion). Several
+existing Data Lake tests needed re-seeding once automatic overflow started requiring
+`isStoragePoolFullyBuilt` rather than just `isDataLakePoolReady` (seeding a fully-built pool 1, all
+three ladder sizes at `DISK_ARRAY_LADDER_CAP`, instead of just one disk) — including catching one
+test helper whose seeded `capacity` accidentally exceeded pool 2's OWN capacity threshold once pool 2
+became capacity-gated, leaking unrelated buffer activity into it (diagnosed via an unexpected
+`poolBuffers.2` entry in a state diff, fixed by lowering the seeded capacity below pool 2's
+threshold). `App.test.jsx`'s `MultiplierBar` lake-mode tests were updated the same way. `yarn build`
+succeeds. This changes pacing (pools become live earlier, independent of build progress; Upgrade
+Data Stream no longer waits its turn) enough to warrant a `simulate-run-times` re-run — see that
+skill's own published output for updated ideal-run figures.

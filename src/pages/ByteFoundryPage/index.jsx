@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -604,7 +604,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               : diskBuildQueued
                 ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
                 : diskBuildBlockedByPriority
-                  ? 'Take Speed (or redeem a full Disk) first — click to queue this build so it fires itself the instant it is your turn'
+                  ? 'Redeem a full Disk first — click to queue this build so it fires itself the instant it is your turn'
                   : `Not enough banked yet for the next pass (${diskPassesCollected}/${diskPassesRequired} collected) — click to queue this build so it fires itself as the buffer fills`
       }
       type="button"
@@ -760,8 +760,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // start) would otherwise switch the bar to "lake" mode and show a constant nonzero
         // "incoming rate" that can never actually turn into real progress — the exact
         // stalled-tile-shown-as-active misrepresentation Devin Review flagged for LakePoolTile,
-        // just on this page's own bar instead.
-        const poolReady = isDataLakePoolReady(state, poolIndex)
+        // just on this page's own bar instead. isStoragePoolFullyBuilt is required too, for the
+        // exact same reason: AUTOMATIC overflow (what this rate reading describes) only starts once
+        // the pool is entirely complete — before that, the lake fills manually only (see
+        // isDataLakeManualFillAvailable in engine.js), so showing an "incoming rate" here would be
+        // just as misleading as it would be for a pool that's never built a disk at all.
+        const poolReady = isDataLakePoolReady(state, poolIndex) && isStoragePoolFullyBuilt(state, poolIndex)
         const showLakeMode = poolBufferFull && poolReady
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex

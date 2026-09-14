@@ -123,7 +123,14 @@ per size" shape `DiskArrayRow` uses for Storage — a lake disk just fills and c
 pull-eligibility distinction to render — the one currently-open slot shows a live left-to-right fill toward its
 own full size, but only once `isDataLakePoolReady` (same gate as `LakePoolTile` above, and for the
 same reason — otherwise a legacy save's residual `fillBits` would render this square as actively
-filling); before that it renders as an ordinary empty slot; then an actions row with ONE repurposed button: once the Storage array corresponding
+filling); before that it renders as an ordinary empty slot; then an actions row. Before the pool corresponding
+to this lake is entirely complete (`!isStoragePoolFullyBuilt`), whenever `isDataLakeManualFillAvailable`
+holds (the lake is ready, its own pool isn't yet fully built, at least one more unit is still needed
+for the next Booster, and the pool's own buffer holds at least one unit's worth of bits) a `💧 Fill`
+button appears — `actions.fillDataLakeManually(tierIndex)` draws directly from that pool's own buffer
+(the same source automatic overflow would otherwise use) to top up toward the next Booster, capped at
+exactly what's still needed; outside the forced priority order entirely, same as Buy. See CLAUDE.md's
+"Data Lakes" (manual vs. automatic fill) for the full mechanic. Then ONE repurposed button: once the Storage array corresponding
 to the lake's CURRENT capacity level is fully built (`isDataLakeCapacityDoublingAvailable` — the
 pool's smallest ×1 array for level 0→1, middle ×10 for 1→2, largest ×100 for 2→3 — not the lake's
 own Booster cost any more), an "⚡ Scale Out" button (disabled until the forced-priority chain allows

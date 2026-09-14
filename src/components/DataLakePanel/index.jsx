@@ -20,6 +20,7 @@ import {
   isDataLakeBoosterUnlocked,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
+  isDataLakeManualFillAvailable,
   isDataLakePoolReady,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
@@ -262,6 +263,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const poolReady = isDataLakePoolReady(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         const autoBuyEnabled = isDataLakeAutoBuyEnabled(state, tierIndex)
+        // Before this pool is entirely complete, the lake fills MANUALLY only, capped at just
+        // enough for its own next Booster — tickPoolBufferFill's automatic overflow doesn't start
+        // feeding it until then (see isStoragePoolFullyBuilt in engine.js). Outside the forced
+        // priority order, same as Buy — always clickable the instant it's available.
+        const canFillManually = isDataLakeManualFillAvailable(state, tierIndex)
 
         return (
           <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
@@ -357,6 +363,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
             />
 
             <LakeActionsRow>
+              {canFillManually && (
+                <ActionButton
+                  aria-label={`fill the ${label} Data Lake toward its next Booster`}
+                  onClick={() => actions.fillDataLakeManually(tierIndex)}
+                  title={`Draws from this pool's own buffer to top up toward the next ${boosterLabel} (${nextCostSize}) — automatic once every ${formatDiskSize(unitBits)} disk in this pool is built`}
+                  type="button"
+                  variant="info"
+                >
+                  <ButtonContent>💧 Fill</ButtonContent>
+                </ActionButton>
+              )}
               {/* Upgrade claims the slot whenever it's available — no longer any "available but
                   not its turn" window to arbitrate against Buy, since isDataLakeCapacityDoublingAvailable
                   is no longer part of the forced priority order (see its own doc comment in

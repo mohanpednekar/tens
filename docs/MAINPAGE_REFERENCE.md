@@ -218,11 +218,12 @@ rendered**: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
 a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active
-pool, OR while a redeemable Disk Fill/an affordable Speed claim — both higher priority, see
-"Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
+pool, OR while a redeemable Disk Fill — the only higher-priority action, see
+"Forced priority order" in docs/ECONOMY_REFERENCE.md; Upgrade Data Stream itself sits outside the
+order and never blocks Provision Disk — is currently available),
 `variant={canStartDiskBuild ? 'info' : 'neutral'}`,
-`title` either naming which higher-priority action to take first (`"Take Speed (or redeem a full
-Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
+`title` either naming which higher-priority action to take first (`"Redeem a full Disk first"`, when
+`diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
 corresponding tier is currently at its required level (`diskRedeemTierName`, from
 `getDiskRedeemTierName(state, diskSize)`) — `"Costs
 {cost}, paid in {passesRequired} pass(es) of {size} each ({passesCollected}/
@@ -239,10 +240,15 @@ completing all three arrays in an earlier pool unlocks the next pool (see
 (`diskBuildProgress`) reads differently in each state: mid-provision, `100 - (remainingSeconds /
 totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
 fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
-idle, `((passesCollected * diskSize + min(diskPoolBufferBits, diskSize)) / diskCost) * 100` (already-
+idle, `0` until `diskBuildEngaged` (`diskPassesCollected > 0 || intro.diskBuildQueued` — i.e. the
+player has actually clicked at least once), THEN
+`((passesCollected * diskSize + min(diskPoolBufferBits, diskSize)) / diskCost) * 100` (already-
 collected passes count as permanent progress, plus however much of the CURRENT buffer counts toward
 the next pass, so the bar climbs smoothly between clicks rather than jumping only once a whole pass
-fires), paired with a hidden
+fires) — the button's own existence already signals eligibility, so it deliberately does NOT preview
+a fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read-cache
+fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`. Paired
+with a hidden
 `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are

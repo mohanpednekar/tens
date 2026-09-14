@@ -129,9 +129,14 @@ claim, a queued upgrade firing, a save load, a Dev Mode edit) AND synchronously 
 `upgradePoolCapacity` itself (so a manual Capacity ×2 claim reveals the main game in the exact same
 render, with no tick lag at all). `convertIntroBitsToKilobytes`/`tickIntroAutoInvest` (below) no
 longer touch `mainGameUnlocked` at all — the trigger moved entirely to this capacity threshold,
-which is deliberately the SAME one `isStorageUnlocked`/`getVisibleStoragePoolCount` already use to
-reveal pool 1's card and switch the tap into fill-multiplier-bonus mode (point 4a below), so all
-three happen simultaneously. `prestigeGame` and `buildEraIntroReset` (Era ascension) both now carry
+which is deliberately the SAME one `isStorageUnlocked` uses to switch the tap into fill-multiplier-
+bonus mode (point 4a below) and pool 1's own `getPoolCapacityUnlockThresholdBits(1)` uses to reveal
+its card (`getVisibleStoragePoolCount`), so all three happen simultaneously — see "Pool liveness is
+Capacity-only" below for why the tap-mode switch reads `isStorageUnlocked` directly rather than
+`getVisibleStoragePoolCount(state) >= 1` (the two are only EQUAL at pool 1's own threshold; for pool
+2+, `getVisibleStoragePoolCount` can already be >= 1 well before `isStorageUnlocked` would need
+checking again, since pool 1 alone already satisfies it). `prestigeGame` and `buildEraIntroReset`
+(Era ascension) both now carry
 `mainGameUnlocked` forward from `state` unchanged (`state.intro?.mainGameUnlocked ??
 initial.intro.mainGameUnlocked`) instead of resetting it — the same "preserve if already true"
 pattern `resetByteFoundry` already used (see its own table row) and `computeMergePageUnlocked`
@@ -141,8 +146,10 @@ Nothing here ever fully "freezes" — there is no `completed`-style flag, and no
 Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
 
 **The loop:**
-1. **Tap** (`tapIntroBit`) — behavior depends on whether Storage pools are revealed yet
-   (`getVisibleStoragePoolCount(state) >= 1`, i.e. Buffer/pool Memory Capacity has reached 1 KiB).
+1. **Tap** (`tapIntroBit`) — behavior depends on whether Storage itself has been revealed yet
+   (`isStorageUnlocked(state)`, i.e. Buffer/pool Memory Capacity has reached 1 KiB — NOT
+   `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would
+   satisfy regardless of actual Capacity; see "Pool liveness is Capacity-only" below).
    **Before that reveal**, a tap adds `getIntroProductionRate(intro)` bits — "one second's worth" at
    the Byte's *current* rate, not a flat 1 — to `state.intro.bits` (Data Stream balance), capped at
    `state.intro.capacity` (Buffer — `INTRO_STARTING_CAPACITY`, 8 bits = 1 Byte, initially). Before the
@@ -352,10 +359,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    even-exponent speeds at odd ones — alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades
    (64 KiB → 256 B/s, 128 KiB → 384, 256 KiB → 512, 512 KiB → 768, 1 MiB → 1 KiB/s, …).
    `getIntroProductionRate(intro)` returns that derived speed × `BITS_PER_BYTE` bits/sec — the
-   displayed rate `tickIntroProduction` feeds `getDataStreamEffectMultiplier` into. Ranked LAST in
-   the forced priority order (below Disk Fill, Provision Disk, and Compute — see "Forced priority
-   order" below): `isMemoryCapacityUpgradeAvailable(state)` is its gate — a full Buffer, not
-   mid-build, and no higher-priority action currently available.
+   displayed rate `tickIntroProduction` feeds `getDataStreamEffectMultiplier` into. **Sits OUTSIDE
+   the forced priority order entirely** (see "Forced priority order" below) — a deliberate reversal
+   of an earlier version that ranked it last, behind Disk Fill/Provision Disk/Compute; see
+   `docs/DESIGN_HISTORY.md`. `isMemoryCapacityUpgradeAvailable(state)` is simply
+   `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and not already at cap —
+   with no dependency on any other action's own availability.
 6. **`ByteFoundryPage` no longer renders any manual transfer-block UI** (removed — see
    `docs/DESIGN_HISTORY.md`): the always-on auto-convert below (`tickIntroAutoInvest`) is now the
    sole path from Data Stream bits to `tier01` units, with no click required and no per-cycle cap.
@@ -503,7 +512,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    this size's own build cost is affordable. Unlike the `isStorageUnlocked` reveal gate above,
    `provisionDisk` itself has never required that threshold — only the nav button's own reveal does
    — so `isProvisionDiskAvailable` (the base predicate, ignoring priority) checks only `!diskBuild &&
-   at least one pass (size bits) affordable` — not the full cost.
+   at least one pass (size bits) affordable` — not the full cost. "Affordable" is against the
+   buffer's SPENDABLE remainder, not its raw balance: `getPoolCacheReservationBits(state, poolIndex)`
+   (however many bits the pool's own read cache still needs to reach full) is subtracted first, so
+   the read cache always keeps first claim over Provision Disk funding and can keep actively filling
+   even while a build is queued — both `isProvisionDiskAvailable` and `provisionDisk` itself apply
+   this same reservation before checking/spending against the buffer; see `docs/DESIGN_HISTORY.md`.
 
    **Pool buffers.** Every bit-costing Storage action for a pool — Provision Disk's own build cost
    above, and the read-cache fill-from-Memory pass below — spends from that pool's own small local
@@ -783,11 +797,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the bar
    switches from the fill-based multiplier reading to this lake overflow rate (`mode="lake"`,
    rendered in `theme.color.info`) once that pool's own Memory buffer is completely full AND
-   `isDataLakePoolReady` — both, not the buffer alone, since `tickPoolBufferFill`'s overflow branch
-   won't credit a lake that isn't ready either, and switching modes purely on buffer fullness would
-   show a nonzero "incoming rate" for a pool whose lake can never actually receive it (an
-   adversarial-review finding on the PR that introduced `isDataLakePoolReady` — see
-   `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one. The lake's own accumulated
+   `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes ALL fully
+   built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself won't credit a
+   lake until both those conditions hold (see "manual vs. automatic fill" below), and switching
+   modes purely on buffer fullness would show a nonzero "incoming rate" for a pool whose lake can
+   never actually receive it (an adversarial-review finding on the PR that introduced
+   `isDataLakePoolReady` — see `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one. The lake's own accumulated
    fill LEVEL (as opposed to this overflow RATE) has its own separate always-visible bar below the
    Memory buffer tile, likewise reading 0 until `isDataLakePoolReady` rather than any residual
    fill a legacy save's lake might already hold.
@@ -835,7 +850,25 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    (`isDataLakePoolReady` — `disksBuiltTotal[that pool's own ×1 size] > 0`), not on the lake's own
    fill progress — `tickPoolBufferFill`'s overflow branch itself won't feed a lake until this is
    true, so a pool with a completely full Memory buffer but zero built disks banks nothing into its
-   lake (the reserved production stays as ordinary Bits that tick instead). `isDataLakeBoosterUnlocked`
+   lake (the reserved production stays as ordinary Bits that tick instead).
+
+   **Manual vs. automatic fill.** A lake fills MANUALLY, capped at just enough for its own next
+   Booster, until its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt(state,
+   poolIndex)` — every one of that pool's three ladder sizes fully built at `DISK_ARRAY_LADDER_CAP`);
+   only once complete does it switch to filling AUTOMATICALLY from that pool's buffer overflow.
+   `isDataLakeManualFillAvailable(state, tierIndex)` requires `isDataLakePoolReady` AND
+   `!isStoragePoolFullyBuilt`, at least one more unit needed for the next Booster
+   (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), and at least one full unit's worth of
+   bits (`getDataLakeUnitBits(tierIndex)`) sitting in the pool's own buffer. `fillDataLakeManually`
+   spends directly from that pool's buffer — the SAME source `tickPoolBufferFill`'s overflow branch
+   would otherwise use — converting `min(unitsStillNeeded, floor(bufferBits / unitBits))` whole units
+   via the same `fillDataLakeDisks` deposit helper the automatic path uses, so the disk-square
+   breakdown stays exact either way. `tickPoolBufferFill`'s automatic overflow branch now requires
+   `isStoragePoolFullyBuilt(state, poolIndex)` in addition to `isDataLakePoolReady` (previously just
+   the latter) — so a pool that has built its ×1 disk but not yet its ×10/×100 sizes only ever fills
+   its lake through the manual `💧 Fill` button (`DataLakePanel`), never automatically. Like Buy,
+   `isDataLakeManualFillAvailable`/`fillDataLakeManually` sit entirely OUTSIDE the forced priority
+   order — arbitrated purely on their own eligibility. `isDataLakeBoosterUnlocked`
    follows the SAME condition: Boosters become buyable the instant a disk exists for that pool, not
    once the lake ITSELF has ever completed a disk (an earlier design — the very first disk the lake
    completed, always its own ×1 slot since fill order is smallest-first, permanently latched a
@@ -1155,8 +1188,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    with no refund) once down to the last remaining stack (`=== 1`) — see the Reclaim/Forfeit
    paragraph above and `docs/DESIGN_HISTORY.md` for why these two were made mutually exclusive
    rather than Reclaim staying visible-but-disabled at 1 stack. THEN, below the whole effects section, come the tier rows themselves — clicking one arms
-   the presets above it. Ranked fourth in the forced priority order
-   (below Disk Fill/Speed/Provision Disk — see "Forced priority order" below):
+   the presets above it. Ranked lowest in the forced priority order
+   (below Disk Fill/Provision Disk — see "Forced priority order" below; Upgrade Data Stream sits
+   outside the order entirely and never blocks or is blocked by Compute):
    `isComputeBoostTurnAvailable(state, boostType, tierIndex)`/`isStackComputeBoostTurnAvailable(state)`
    are `activateComputeBoost`/`stackComputeBoost`'s own actual gates, a no-op whenever something
    ranked above Compute is currently available even if the mechanical (`canActivateComputeBoost`/
@@ -1172,7 +1206,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" section for the render-level detail).
 
 **Forced priority order.** The recurring "upgrade" actions above — Disk Fill (step 8) >
-Provision Disk (step 8) > Compute (step 10) > Upgrade Data Stream (step 5) — are ranked in a fixed
+Provision Disk (step 8) > Compute (step 10) — are ranked in a fixed
 order. Whenever ANY action ranked above a given
 one is currently available, that lower one is disabled, both in the UI (its button shows disabled,
 with a tooltip) and in the engine reducer itself (a defensive no-op — same "engine re-validates"
@@ -1187,11 +1221,15 @@ prop. Combine into a Byte (a one-off bootstrap step) sits outside this forced or
 does the ten-tier merge chain (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter
 → Supercomputer → Megacomputer) — every `mergeCompute*Into*` function gates only on `canMerge`
 (enough of the input entity, room under `COMPUTE_ENTITY_CAP` on the output), never on whether a
-higher-ranked action is currently available. `isMemoryCapacityUpgradeAvailable` (`isPoolCapacityUpgradeAvailable && !isDiskFillAvailable &&
-!isProvisionDiskAvailable`) is the consolidated Upgrade Data Stream's own gate — the
-lowest-priority action in the order. Disk Fill itself (`isDiskFillAvailable`,
+higher-ranked action is currently available. **`isMemoryCapacityUpgradeAvailable` (Upgrade Data
+Stream) also sits entirely OUTSIDE this order** — it's simply `isPoolCapacityUpgradeAvailable(state)`,
+with no dependency on `isDiskFillAvailable`/`isProvisionDiskAvailable` at all, so the Data Stream's
+own growth never waits on Storage or Compute; this is a deliberate reversal of an earlier version
+that ranked it lowest in the chain — see `docs/DESIGN_HISTORY.md`. Data Lake Booster purchases
+(`buyBooster`) and manual Data Lake fill (`fillDataLakeManually`) are likewise outside the order,
+arbitrated purely on their own eligibility. Disk Fill itself (`isDiskFillAvailable`,
 and the fully-automatic `tickDiskPull`/`tickDiskLevelOneCachePull` reducers it gates) is never
-blocked by anything — top priority, unaffected by the other three.
+blocked by anything — top priority, unaffected by Provision Disk or Compute.
 
 Both `convertIntroBitsToKilobytes` and `tickIntroAutoInvest` grant free tier units via an internal
 `grantTierUnits(tierId, quantity)` helper (not exported) — it mirrors `buyTier`'s
@@ -2586,19 +2624,22 @@ purchases were manual or automatic.
 | `getPoolEffectMultiplier` | `(state, poolIndex) → number` | `getPoolMultiplierPercent(...) / 100` — the real scale factor `tickPoolBufferFill` multiplies that pool's per-tick transfer by |
 | `tapPoolBuffer` | `poolIndex → state → state` | Adds `min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - getPoolMultiplierPercent(...))` to `intro.poolTapBonusPercents[poolIndex]` only — clamped to the cap's remaining headroom rather than always the flat 5, so a tap close to the cap can't bank a hidden excess. No-op for a locked/invalid pool, once that pool's own buffer is already full, or once `getPoolMultiplierPercent` already reads at/above `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200) |
 | `tickFillMultiplierDecay` | `elapsedSeconds → state → state` | Decays `intro.dataStreamTapBonusPercent` and every entry of `intro.poolTapBonusPercents` by `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND * elapsedSeconds`, floored at 0. Run once per tick (`tickGame`), ahead of `tickIntroProduction`/`tickPoolBufferFill` |
-| `tapIntroBit` | `state → state` | Byte Foundry: before Storage pools are revealed at 1 KiB (`getVisibleStoragePoolCount(state) >= 1`), adds `getIntroProductionRate(intro)` bits to `intro.bits` — "one second's worth" at the current rate, not a flat 1 — capped at `intro.capacity`. Once revealed, this direct-credit effect is REPLACED: adds `min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - getDataStreamMultiplierPercent(intro))` to `intro.dataStreamTapBonusPercent` instead (see point 4a above) — clamped to the cap's remaining headroom rather than always the flat 5, so a tap close to the cap can't bank a hidden excess — crediting no bits — no-op once `getDataStreamMultiplierPercent` already reads at/above `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200), in addition to the full-Buffer no-op both modes share. Never freezes |
+| `tapIntroBit` | `state → state` | Byte Foundry: before Storage itself is revealed at 1 KiB (`isStorageUnlocked(state)` — NOT `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would satisfy regardless of actual Capacity), adds `getIntroProductionRate(intro)` bits to `intro.bits` — "one second's worth" at the current rate, not a flat 1 — capped at `intro.capacity`. Once revealed, this direct-credit effect is REPLACED: adds `min(FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT - getDataStreamMultiplierPercent(intro))` to `intro.dataStreamTapBonusPercent` instead (see point 4a above) — clamped to the cap's remaining headroom rather than always the flat 5, so a tap close to the cap can't bank a hidden excess — crediting no bits — no-op once `getDataStreamMultiplierPercent` already reads at/above `FILL_MULTIPLIER_TAP_CAP_PERCENT` (200), in addition to the full-Buffer no-op both modes share. Never freezes |
 | `combineIntroByte` | `state → state` | Byte Foundry: one-time — consumes `INTRO_BYTE_COMBINE_COST` (8) bits, sets `intro.byteCreated = true`. No-op once already created or below cost |
 | `isDiskFillAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer), ranked HIGHEST: true whenever any built Disk, of any size, is currently pull-eligible right now (`isDiskPullEligible` — full, matching its tier's current level, AND that level at zero progress; deliberately does NOT fire for a disk that's merely `isDiskRedeemable` but blocked by partial level progress, since that disk isn't going anywhere this tick regardless). Never itself blocked by anything below it in the order |
 | `isDiskPullEligible` | `(state, capacityBits) → bool` | Byte Foundry Disks: the base "is there something to pull right now" check both `isDiskFillAvailable` and `pullDiskForCurrentLevel` share — true only when a disk of that size is currently FULL, that size's array isn't mid-build, its fixed corresponding tier is currently at exactly the required level (`isDiskRedeemable`), **and** that level's own `purchaseLevelProgress` is exactly `0` — a disk only ever funds a level from a clean, zero-progress start |
 | `isBitFundedBandwidthAvailable` | `state → bool` | Bit-cost Invest affordable and claims remain |
-| `isProvisionDiskAvailable` | `state → bool` | Byte Foundry forced-priority base predicate for the common Provision Disk operation: no in-flight `intro.diskBuild`, active ladder remains, and that size's own pool buffer covers at least ONE funding pass (`size` bits) — not the current ordinal's own whole `getDiskCost` |
+| `isProvisionDiskAvailable` | `state → bool` | Byte Foundry forced-priority base predicate for the common Provision Disk operation: no in-flight `intro.diskBuild`, active ladder remains, and that size's own pool buffer — MINUS `getPoolCacheReservationBits` (see its own row below), so the read cache always keeps first claim — covers at least ONE funding pass (`size` bits) — not the current ordinal's own whole `getDiskCost` |
+| `getPoolCacheReservationBits` | `(state, poolIndex) → bits` | Byte Foundry Disks: however many more bits that pool's own smallest-size read cache still needs to reach full (8 blocks) — subtracted from `getPoolBufferBits` before checking/spending against it in both `isProvisionDiskAvailable` and `provisionDisk`, so the cache keeps actively filling (via `tickDiskAutoFill`) even while a Provision Disk build is queued, rather than Provision Disk claiming the whole buffer first. `0` for a locked/invalid pool or once the cache is already full |
 | `isProvisionDiskTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `isProvisionDiskAvailable(state) && !isDiskFillAvailable(state)` — `provisionDisk`'s own gate |
 | `isComputeUpgradeAvailable` | `state → bool` | Byte Foundry forced-priority base predicate (not a reducer): `isComputeCoreConversionUnlocked(state)` AND (`canStackComputeBoost(state)` OR — while no boost is active — some `(boostType, tierIndex)` combo across all `COMPUTE_BOOST_TIER_FIELDS` is currently activatable via `canActivateComputeBoost`) — issue #326 |
 | `isComputeBoostTurnAvailable` | `(state, boostType, tierIndex) → bool` | Byte Foundry forced-priority composite (not a reducer): `canActivateComputeBoost(state, boostType, tierIndex) && !isDiskFillAvailable(state) && !isProvisionDiskAvailable(state)` — `activateComputeBoost`'s own actual gate |
 | `isStackComputeBoostTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): `canStackComputeBoost(state) && !isDiskFillAvailable(state) && !isProvisionDiskAvailable(state)` — `stackComputeBoost`'s own actual gate |
 | `isComputeUpgradeTurnAvailable` | `state → bool` | Byte Foundry forced-priority composite (not a reducer): true if `isStackComputeBoostTurnAvailable(state)`, or `isComputeBoostTurnAvailable(state, boostType, tierIndex)` for any preset/tier combo — used to gate ComputePage's own nav entry point |
-| `isMemoryCapacityUpgradeAvailable` | `state → bool` | Consolidated **Upgrade Data Stream** predicate (lowest forced priority): `isPoolCapacityUpgradeAvailable && !isDiskFillAvailable && !isProvisionDiskAvailable` — a full Buffer, not mid-build; drains the Buffer (cost = current capacity) and doubles `intro.capacity` |
-| `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, unlockedCount) >= getStoragePoolMemoryBounds(unlockedCount).endBits` (`unlockedCount = getUnlockedStoragePoolCount(state)`) — compares the pool's own decade-power DERIVED Capacity, not raw `intro.capacity`, since the raw value is no longer clamped to any pool ceiling |
+| `isMemoryCapacityUpgradeAvailable` | `state → bool` | **Upgrade Data Stream** predicate: simply `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and not already at cap. Sits OUTSIDE the forced priority order entirely (no dependency on `isDiskFillAvailable`/`isProvisionDiskAvailable` — a deliberate reversal of an earlier version that did depend on them, see `docs/DESIGN_HISTORY.md`); drains the Buffer (cost = current capacity) and doubles `intro.capacity` |
+| `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, unlockedCount) >= getStoragePoolMemoryBounds(unlockedCount).endBits` (`unlockedCount = getUnlockedStoragePoolCount(state)` — disk-build-only count, unaffected by pool liveness) — compares the pool's own decade-power DERIVED Capacity, not raw `intro.capacity`, since the raw value is no longer clamped to any pool ceiling |
+| `getVisibleStoragePoolCount` | `state → number` | Pure Capacity-based pool LIVENESS count — pool 1 always counts; pool N (N ≥ 2) counts once `intro.capacity >= getPoolCapacityUnlockThresholdBits(N)`, regardless of disk-build progress. Drives pool-card visibility, `getStoragePoolBandwidth`/`getStoragePoolCapacity`, `tapPoolBuffer`, `tickPoolBufferFill`'s loop bound, `normalizePoolMemoryCapacity`'s buffer clamp, `tickDiskAutoFill`'s read-cache eligibility, and `getPoolCacheReservationBits`. Deliberately INDEPENDENT of `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` (disk-build-only, unchanged) — see "Pool liveness is Capacity-only" in CLAUDE.md and `docs/DESIGN_HISTORY.md` for why a shared primitive was tried once and reverted |
+| `isStoragePoolFullyBuilt` | `(state, poolIndex) → bool` | True once every one of that pool's three ladder sizes (×1/×10/×100) has all `DISK_ARRAY_LADDER_CAP` (10) disks built. Drives BOTH the disk-provisioning pool-to-pool chain (`isStoragePoolUnlocked(state, poolIndex+1)` requires `isStoragePoolFullyBuilt(state, poolIndex)`) AND the Data Lake manual-vs-automatic fill split (see "Data Lakes" above) |
 | `normalizePoolMemoryCapacity` | `state → state` | Clears legacy queued Capacity state and sanitizes a missing/negative `intro.capacity` to a floor of 0 (does not clamp `intro.capacity` to any pool boundary — only `getStoragePoolCapacity`'s own derived value does that). Also runs on every load: clamps each unlocked pool's `intro.poolBuffers` entry down to that pool's current `getPoolBufferCapacity` if a save predates the decade-power Capacity formula and now sits above it, and clamps each `intro.dataLakes[tier].capacityLevel` down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if a save predates the Data Lake ladder's own narrowing (prevents an out-of-bounds `DATA_LAKE_CAPACITY_BY_LEVEL` read) — then also clamps that lake's own `depositedUnits` down to whatever capacity the (possibly just-clamped) level allows, resetting `fillBits` to 0 alongside. Also auto-arms `intro.diskBuildQueued` when the currently-offered disk size has a genuine partial `intro.diskProvisionPasses` entry (a save from before `provisionDisk`'s own auto-arm existed) with no build in progress and the flag not already set — but only when `getDiskReplayPassAllowance` says that size isn't sitting exactly at an active `foundryResetCaps` ceiling, so reloading mid-Reset-Byte-Foundry-replay can't resume funding past what the replay was ever entitled to hand out for free. Marks `intro.diskBuildQueuedByReplay` true only when this specific arm is cap-restricted (a finite allowance), so `tickQueuedDiskBuild`'s own provenance check keeps enforcing it |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Per-pool SI Capacity windows (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
 | `getStoragePoolCapacity` | `(state, poolIndex) → bits` | A pool's own decade-power Capacity — `getDecadePowerEquivalentBits(intro.capacity)` (private helper), then clamps to that pool's `getStoragePoolMemoryBounds` window. `0` for a locked/invalid pool |
@@ -2806,7 +2847,7 @@ purchases were manual or automatic.
 - `FILL_MULTIPLIER_TAP_BONUS_PERCENT = 5` — how much a manual tap on the Data Stream (post-reveal) or a pool's own Memory buffer adds to that one Data Stream/pool's own decaying bonus (`tapIntroBit`/`tapPoolBuffer`)
 - `FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND = 1` — how fast that bonus decays back toward the fill-based value alone (`tickFillMultiplierDecay`)
 - `FILL_MULTIPLIER_TAP_CAP_PERCENT = 200` — hard ceiling on the CUMULATIVE fill-based + tap-bonus total (not the bonus alone) — `getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` clamp there; `tapIntroBit`/`tapPoolBuffer` no-op once already at this cap
-- `INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` (8192) — capacity threshold ("1 KiB" in Memory's own binary display scale — `getMemoryUnit`, distinct from a Disk's own SI-scaled size, `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible — a later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own 8000-bit gate, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and pool 1's card reveal simultaneously — and, as a result, also exactly the threshold `getVisibleStoragePoolCount(state) >= 1` crosses, so Storage's reveal and the fill-based-multiplier tap mode (point 4a above) now switch on at the same moment
+- `INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` (8192) — capacity threshold ("1 KiB" in Memory's own binary display scale — `getMemoryUnit`, distinct from a Disk's own SI-scaled size, `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible (`isStorageUnlocked`) — a later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own 8000-bit gate, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and pool 1's card reveal simultaneously, and exactly the threshold `tapIntroBit`'s reveal-mode switch checks via `isStorageUnlocked(state)` directly — NOT `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would satisfy well before this threshold (see "Pool liveness is Capacity-only" in CLAUDE.md) — so Storage's reveal and the fill-based-multiplier tap mode (point 4a above) still switch on at the same moment, just via the correct predicate
 - `DISK_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Disks: the CAP on how many `size`-bit funding passes a single disk can ever require (`getDiskProvisionPassesRequired`) — the array's Nth disk needs N passes, capped here at its last (10th); an earlier version paid every disk this many passes flat, regardless of ordinal (see `docs/DESIGN_HISTORY.md`)
 - `DISK_ARRAY_LADDER_CAP = 10` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits, purely for display (`formatCacheSize`) — the pool's smallest size's cache also funds its own tier's level 1 automatically in bulk units, not by these display blocks (see `tickDiskLevelOneCachePull`)

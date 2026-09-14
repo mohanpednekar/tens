@@ -28,7 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Stream" button** (no icon): cost = current capacity, each upgrade doubles capacity, and Speed is
   derived from capacity — `sqrt(capacityBytes)` B/s at even log2 exponents, the mean of the
   neighbouring even-exponent speeds at odd ones (×1.5/×4/3 alternating, ×2 per two upgrades). Upgrade
-  Data Stream is now the lowest-priority Foundry action.
+  Data Stream is not gated by the forced priority order at all — it never waits on Disk Fill,
+  Provision Disk, or Compute.
+- **A Storage pool's liveness (buffer, Bandwidth, read cache) now depends only on the Data Stream's
+  own Capacity reaching that pool's threshold**, independent of how much has actually been built in
+  any earlier pool. Provisioning a disk still requires every smaller size, in every earlier pool, to
+  already be fully built — that pool-to-pool disk-build chain is unchanged and separate from pool
+  liveness.
+- **A Data Lake now fills manually** — capped at exactly what its next Booster still needs, via a new
+  `💧 Fill` button that draws from its own pool's buffer — **until that pool is entirely built**, at
+  which point it switches to filling automatically from the pool's buffer overflow as before.
 - **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
   tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
   and continuous with transparent tracks.

@@ -2982,12 +2982,14 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
-  // disksBuiltTotal seeded so isDataLakePoolReady(state, 1) is true — the bar only switches to
-  // lake mode once this pool's own lake can actually be fed (see the "buffer full but no disk
-  // built yet" test below for the not-ready case this transition is gated against).
+  // disksBuiltTotal seeded so the pool is entirely COMPLETE (isStoragePoolFullyBuilt) — the bar
+  // only switches to lake mode once AUTOMATIC overflow can actually feed this pool's own lake
+  // (see the "buffer full but no disk built yet" and "ready but not yet complete" tests below for
+  // the two not-yet-automatic cases this transition is gated against).
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 },
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
   })
   render(<App />)
 
@@ -3018,6 +3020,22 @@ test('the pool bar stays in fill-based-multiplier mode (never switches to the Da
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+})
+
+test('the pool bar also stays in fill-based-multiplier mode while the pool has built one disk (isDataLakePoolReady) but is not yet entirely complete — AUTOMATIC overflow, what this bar describes, has not started yet either', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 }, // ready, but far from complete
   })
   render(<App />)
 
