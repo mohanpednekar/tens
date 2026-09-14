@@ -41,18 +41,17 @@ that structure.
 `DataStreamCard` holds a single `FillableStatCard`
 — deliberately a plain `styled.div`, not `styled(StatCard)` (nesting a second card inside
 `DataStreamCard` would double-box the same region) — containing everything for that section (title,
-disk status, bar, balance, and footer figures) as one control, so the whole thing reads (and, once
+Speed, combined balance/capacity, and bars) as one control, so the whole thing reads (and, once
 interactive, taps) as one piece rather than a separate header sitting above a boxed balance tile.
-Its first line is a `TitleRow` — the same title-top-left/current-disks-status-top-right layout
-every section on this page uses (see CLAUDE.md's UI conventions): a "Data Stream" `SectionTitle`
-and, once Storage is revealed, a `DiskStatusText` showing the Foundry's own total full-disk count
-(`getFullDisksCount`, e.g. "💾 12" — every size shown anywhere on the page, summed). An earlier
+Its first line is a `TitleRow`: a "Data Stream" `SectionTitle` at top-left and live Speed at
+top-right. Disk status/count is not shown. An earlier
 iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
 inside it — merged together per player feedback that the two read as disconnected pieces. Its
 second line applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
-toward Capacity the same visual way every button on this page already does, and shows the balance
-ALONE in a bigger, centered `BalanceText` (`formatMemoryBalanceValue`, see "Numbers are formatted"
+toward Capacity the same visual way every button on this page already does, and shows balance and
+capacity together in a bigger, centered `BalanceText` (`balance / capacity-unit`, using
+`formatMemoryBalanceValue`; see "Numbers are formatted"
 below — `useTrimBalanceAfterFull` switches it to the ordinary trimmed form once `isFull` has held
 continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
@@ -62,13 +61,11 @@ denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extend
 `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
 compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
 percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
-took too much vertical space. A fourth line, a `FooterRow` (a 2-column grid), splits
-the production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
+took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
-on the left half, and the Capacity figure (`🪣 ` + `formatMemoryCapacityValue`, the same unit `BalanceText`
-picked) on the right half, each centered within its own half; there's no segmented block-bar rate
-meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
+appears in the title row rather than a footer; Capacity appears in the centered balance line. There
+is no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
 itself started carrying the fill-multiplier reading). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is
 implicit in the Data Stream balance itself — there's no separate manual transfer UI any more (see
@@ -93,37 +90,19 @@ fill, so a second meter on the tap button would just duplicate it; its `backgrou
 used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
-INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a `MilestonesRow` (`display: flex`, each child button
-`flex: 1`) holds BOTH of Data Stream's own recurring milestone actions side by side — not a single
-button — replacing the earlier paired Sacrifice+Invest row. Each renders its own two-line
-`MilestoneButtonContent` (`display: flex; flex-direction: column`, a plain local wrapper — NOT
-`components/Button`'s own `ButtonContent`, which only ever lays out a single icon+label row) instead
-of a single inline label: a short symbol/label/multiplier line on top, and its own cost — what
-activating it actually spends — on a second `MilestoneCostLine` below, in smaller/muted text, rather
-than crammed inline in parentheses. "Speed ×2" (was Bandwidth / Invest for Double Production; top
-line `⚡ Speed ×2`; cost line `formatBitsInNearestUnit(investCost)` — or, once a Compute Boost can
-fund it instead (`isComputeFundedBandwidthAvailable`), `{COMPUTE_ENTITY_CAP} {computeBandwidthLabel}`
-— live/dynamic information worth keeping visible even in the shortened label; `aria-label="invest
-bits for double production"` (or, compute-funded, `"sacrifice {COMPUTE_ENTITY_CAP}
-{computeBandwidthLabel} for double production"`) carries the full description — cost
-`getIntroProductionMilestoneCost(intro.productionMilestoneTier)`
-— `disabled={!canInvest}` where `canInvest = isBandwidthTurnAvailable(state)`: `intro.productionMilestoneTierClaims <
-getIntroProductionMilestoneMaxClaims(tier)`, no currently-redeemable Disk Fill
-outranks it (see "Forced priority order" in docs/ECONOMY_REFERENCE.md), and it is either compute-funded (when the bit cost exceeds Capacity) or `bits >=` the (bits-denominated) cost; this cost is entirely
-independent of `capacity`, so the button is frequently enabled well before Buffer is full — see
-docs/ECONOMY_REFERENCE.md's "Byte
-Foundry") — paired with a hidden `role="progressbar"`
-(`aria-label="byte foundry speed progress"`, max set to the Speed cost in bits, not
-`capacity`), matching `MainPage`'s own Buy/Upgrade button convention below. Beside it, "Capacity ×2"
-(top line `🪣 Capacity ×2` — the bucket icon reused from the Capacity footer figure, replacing an
-earlier 🧠 brain icon that was already doing double duty for the unrelated "Smart" autobuyer concept
-elsewhere in the app, see docs/DESIGN_HISTORY.md; cost line `formatBitsInNearestUnit(capacity)`;
-`aria-label="double Memory
-Capacity"`; `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
-isMemoryCapacityUpgradeAvailable(state)`) requires a full Buffer, drains it, and doubles Capacity up
-to `INTRO_CAPACITY_CAP_BITS` (the active highest-unlocked-pool's end bound, though the raw Capacity multiplier tracks past this limit silently) — it carries no
-`role="progressbar"` of its own, since its own gating (a full Buffer) is already visible on the Data
-Stream tile above.
+INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
+(`aria-label="upgrade data stream"`, no icon) consolidates the former paired Speed ×2 (Invest) and
+Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
+button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
+`intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from Capacity,
+never purchased — `getDataStreamSpeedBytesPerSecond(capacityBits)` returns `sqrt(capacityBytes)`
+B/s at even `log2` exponents and the arithmetic mean of the two neighbouring even-exponent speeds at
+odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
+derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
+after-upgrade preview. `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
+isMemoryCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and no higher-priority
+action (Disk Fill, Provision Disk, Compute) currently available — Upgrade Data Stream is now the
+LOWEST-priority action in the forced order (see "Forced priority order" in docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
@@ -140,21 +119,17 @@ mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" 
 many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
 docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
-NOT one continuous card shared across pools or with Data Stream. A pool's own title/disks-status,
-balance, bar, and footer figures all render INSIDE the SAME tappable `FillableStatCard`
+NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
+balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard`
 `<button>` (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
 `disabled={poolBufferFull || poolMultiplierCapped}`) — a `TitleRow` is the button's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
-or tier name in the visible text) on the left, and that pool's own current full-disk count
-(`getFullDisksCount`, e.g. "💾 3") on the right. Its second line is the Memory buffer balance ALONE
-(`formatDiskSize(bufferBits)`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
+or tier name in the visible text) on the left, and Bandwidth on the right. Its second line is the
+Memory buffer balance and Capacity (`balance / capacity-unit`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
 above. Its third line, below the balance, is the pool's own `MultiplierBar` (switching to
 `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow —
 see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
-bar itself. Its fourth line is a `FooterRow` splitting that pool's own
-Bandwidth figure (`` `⚡ ${formatDiskSize(poolBandwidth)}/s` ``, left half) and its Capacity
-(`🪣 ` + `formatDiskSize(bufferCapacity)`, right half) — the same ⚡/🪣 icons the Data Stream card's
-own `FooterRow` uses, for the same rate/capacity concepts. Only ONE pool is expanded at a time by default — the
+bar itself. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,
@@ -867,7 +842,7 @@ purchase-attempt frequency (that rate is flat). Visible text is `⚙ {cost} {sym
 icon (matching the tier tickspeed autobuyer's own icon-only status badge on the PP Upgrades page)
 identifies the button as the tickspeed control; no separate icon marks the marginal effect, since
 it's always exactly `TICKSPEED_PRODUCTION_STEP` (every level adds the same fixed 10% step) and
-implied by the button itself — `aria-label`/`title` still spell out the full "+10% faster ticks"
+implied by the button itself — `aria-label`/`title` still spell out the full "+1% faster ticks"
 sentence for assistive tech; the button's `title` is the only place on this page the cumulative
 speed bonus (as opposed to the fixed marginal step) is shown at all — an earlier version also
 carried a compact `⚙ +N%`/`⚙ 2x` badge beside the tier name, removed as one automation icon too
@@ -975,8 +950,7 @@ purchases costs one card's worth of chrome, not *N*. Three categories, in order:
    text — Tickspeed Autobuyer's, Auto Scale Up's, and the Auto-Prestige Autobuyer's badge is the same
    icon-only, `$dimmed`-while-inactive `PpUpgradeBadge` convention as category 1 above (no written
    "Active"/"Paused" anywhere). Auto Scale Up remains active at the final tier, where requirements
-   progress through raw levels 3, 6, 9, and so on; the automatic level-3 claim leaves Overclock
-   available at level 5 before the next automatic Scale Up at level 6. Auto-Prestige's
+   progress through completed levels 3, 6, 9, and so on. Auto-Prestige's
    `Lv.N (every ~Xs)` line gets its own `✦`
    `PpUpgradeBadge` prefix, dimmed the same way while paused, in place of the text it used to append —
    see "Pause/resume for the global automations" above for the underlying `...Enabled` fields/setters.
@@ -1097,15 +1071,24 @@ mirror this pattern (via a `prestigeCardEverRevealed` flag) was removed as purel
 redundant with the `TopPrestigeBar`/`FullScreenOverlay`/PP-display-as-button ways to trigger Prestige
 (see "Prestige and the Googol freeze" below).
 
-Player-facing purchase levels on both reset cards are zero-indexed completed-level counts: the UI
-subtracts one from the engine's one-based current-level cursor and from its eligibility requirement.
+Player-facing purchase levels on both reset cards are zero-indexed **completed-level** counts: the
+UI subtracts one from the engine's one-based current-level cursor, and both requirements are
+expressed in completed levels — Scale Up requires 3 levels for each tier's first claim, then 6, 9,
+12, … on repeated final-tier claims; Overclock requires the final tier's completed levels to reach the dynamic
+`getOverclockRequirement` (5 first, then last-claimed + 3).
 
 `OverclockCard` — same orange-accented `StatCard` shape as `ScaleUpCard`'s cyan — is gated on
 `lastTierUnlocked` (the last tier having ever been unlocked), via its own `overclockEverRevealed`
 `everRevealed`-flag, latched permanently true and reset only on a full Reset — unlike `ScaleUpCard`,
 which carries no such gate at all (see above); Overclock's own gate is unaffected by Scale Up's
 redesign, still sitting purely on the last tier reaching a level. `OverclockButton` (sized to
-match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl · Lv.{level}/{requirement}`
+match `ScaleUpButton`/the tier rows' own Buy/tickspeed buttons) reads `⚡ {nextStep}%/lvl ·
+{lastTier.symbol} {completed}/{required}` — completed levels of the final tier vs. this cycle's
+requirement — with an `aria-label` of `Overclock (requires {required} completed {lastTier.name}
+levels) — …`. `ScaleUpButton` similarly reads `×2 · {targetTier.symbol} {completed}/{required}`
+plus a `· Unlock TB` suffix when the current target's successor is the Terabytes tier, with
+`aria-label` `Scale Up (requires {required} completed {targetTier.name} levels) — doubles production
+for tiers unlocked so far[ and unlocks TB]`
 — e.g. `⚡ 2.14%/lvl · Lv.7/7` — `actions.overclock` on click, where `{nextStep}` is the regular-step
 percentage a claim right now would raise the Tickspeed upgrade to: `1 + GLOBAL_TICKSPEED_PRODUCTION_STEP *
 getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))` (accounting for a catch-up
