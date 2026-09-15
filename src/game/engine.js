@@ -464,8 +464,9 @@ export const createInitialGameState = () => ({
     diskBuild: null,
     // PERMANENT — { [capacityBits]: passes collected so far } toward the CURRENT ladder offer's
     // build cost (see provisionDisk) — funding is paid in getDiskProvisionPassesRequired(state,
-    // size) installments of the disk's own face-value size each (N for the array's Nth disk, capped
-    // at DISK_BUILD_COST_MULTIPLIER (10)), rather than the full cost in one lump sum, so a pool's
+    // size) installments of the disk's own face-value size each (N for the array's Nth disk, up to
+    // 9 — DISK_ARRAY_LADDER_CAP — in practice; DISK_BUILD_COST_MULTIPLIER's defensive 10 no longer
+    // reached), rather than the full cost in one lump sum, so a pool's
     // buffer only ever needs to hold one pass at a time. Keyed by size (not a single scalar) for the
     // same "per-size map" shape disks/disksBuiltTotal/diskCache use, though only ever one size is
     // actively accumulating passes at a time (getDiskSize's single-size ladder). Cleared for that
@@ -3334,8 +3335,9 @@ export const getDiskProvisionPassesRequired = (state, size) =>
   Math.min(DISK_BUILD_COST_MULTIPLIER, (state.intro?.disksBuiltTotal?.[size] ?? 0) + 1)
 
 // A disk's one-time build (construction) cost — getDiskProvisionPassesRequired(state, capacityBits)
-// passes of its own face value each: the array's first disk costs just 1x, its last still costs
-// DISK_BUILD_COST_MULTIPLIER (10)x, same as every disk used to cost flat (see
+// passes of its own face value each: the array's first disk costs just 1x, its last (9th,
+// DISK_ARRAY_LADDER_CAP) costs 9x — not DISK_BUILD_COST_MULTIPLIER's defensive 10x, and not the
+// flat figure every disk used to cost regardless of ordinal either (see
 // docs/DESIGN_HISTORY.md). No further BITS_PER_BYTE conversion is needed here — capacityBits (from
 // getDiskSize) is already Byte-accurate. This cost only ever pays for the empty container itself —
 // it is NOT what fills it (see tickDiskAutoFill).
@@ -3526,7 +3528,7 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
 // for why); `provisionDisk` itself now auto-arms this same flag for a build already begun (see
 // there), so this standalone action only matters for the narrower "queue up before the first pass
 // is even affordable" case. Especially useful there since a size's array never advances the disk
-// ladder until DISK_ARRAY_LADDER_CAP (10) builds have completed at that size — up to 10 separate
+// ladder until DISK_ARRAY_LADDER_CAP (9) builds have completed at that size — up to 9 separate
 // affordability instants to catch by hand otherwise, one per disk.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
@@ -4351,17 +4353,22 @@ const decomposeDataLakeUnits = total => {
   return { disks, remainderUnits: remainder }
 }
 
-// The most units disks alone can ever represent (9 + 90 + 900 = 999, see DATA_LAKE_SUB_SIZE_DISK_
-// CAPS in layers.js) — one short of the maxed level's own 1,000 capacity. decomposeDataLakeUnits
-// must never be asked to decompose a total above this: with every sub-size cap already tightened
-// to 9, only 999 of a level's own possible 1,000 units are representable as whole disk squares —
-// the last one comes from the lake's own retained fill buffer instead (see
-// getDataLakeNextFillSubSize below), the same way a Storage array's own cache — not a 10th disk
-// square — supplies its own last unit. Every caller that decomposes a lake's own total (rather
-// than an already-bounded per-level capacity) clamps to this first.
-const DATA_LAKE_MAX_REPRESENTABLE_UNITS = DATA_LAKE_SUB_SIZES.reduce(
-  (sum, subSize, index) => sum + subSize * DATA_LAKE_SUB_SIZE_DISK_CAPS[index], 0,
-)
+// The most units this LEVEL's own disk slots alone can ever represent — sum of subSize × its own
+// slot count (e.g. level 1's {1:9,10:0,100:0} → 9; level 3's {1:9,10:9,100:9} → 999) — always
+// exactly 1 short of that level's own DATA_LAKE_CAPACITY_BY_LEVEL capacity (0, 9, 99, 999 vs. 1,
+// 10, 100, 1,000): the last unit at EVERY level comes from the lake's own retained fill buffer
+// instead (see getDataLakeNextFillSubSize below), the same way a Storage array's own cache — not a
+// 10th disk square — supplies its own last unit. decomposeDataLakeUnits must never be asked to
+// decompose a depositedUnits total above this for the CURRENT level: at a non-max level, a total
+// exactly at (or beyond) that level's own capacity would otherwise decompose onto a sub-size this
+// level hasn't unlocked yet (e.g. capacity 10 at level 1 decomposing to "1 ×10 disk, 0 ×1 disks" —
+// decomposeDataLakeUnits's own residue-preserving algorithm, correct for its general contract, but
+// wrong once compared against a slotCounts that hasn't opened that ×10 slot at all), which read as
+// still having an OPEN ×1 slot instead of correctly reporting the level as maxed — a real bug
+// caught in adversarial review before merge, letting depositedUnits grow unboundedly past a
+// non-max level's own capacity via ordinary fill. See docs/DESIGN_HISTORY.md.
+const getDataLakeSlotRepresentableUnits = slotCounts =>
+  DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize * (slotCounts[subSize] ?? 0), 0)
 
 // Max disks per sub-size a lake could ever hold AT ITS CURRENT capacity level — every sub-size
 // SMALLER than the current level is fully maxed (its own DATA_LAKE_SUB_SIZE_DISK_CAPS slots), the
@@ -4385,26 +4392,33 @@ export const getDataLakeDiskSlotCounts = (state, tierIndex) => {
 }
 
 // Whole completed disks per sub-size, purely derived from the lake's own deposited total (clamped
-// to DATA_LAKE_MAX_REPRESENTABLE_UNITS — a maxed lake's own last unit lives in its fill buffer, not
-// as a disk square, see above) — same "no separate ledger" posture the earlier deposit-based design
-// already had: a Booster purchase spends real deposited units, so the disk breakdown just
-// re-derives smaller the next time it's read (see buyBooster below).
-export const getDataLakeDiskCounts = (state, tierIndex) =>
-  decomposeDataLakeUnits(Math.min(getDataLakeTier(state, tierIndex)?.depositedUnits ?? 0, DATA_LAKE_MAX_REPRESENTABLE_UNITS)).disks
+// to what THIS LEVEL's own slots can represent — getDataLakeSlotRepresentableUnits — a maxed
+// lake's own last unit lives in its fill buffer, not as a disk square, see above) — same "no
+// separate ledger" posture the earlier deposit-based design already had: a Booster purchase spends
+// real deposited units, so the disk breakdown just re-derives smaller the next time it's read (see
+// buyBooster below).
+export const getDataLakeDiskCounts = (state, tierIndex) => {
+  const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
+  const deposited = getDataLakeTier(state, tierIndex)?.depositedUnits ?? 0
+  return decomposeDataLakeUnits(Math.min(deposited, getDataLakeSlotRepresentableUnits(slotCounts))).disks
+}
 
 // The sub-size of whichever DISK is next to fill (see fillDataLakeDisks below) — the smallest
 // sub-size not yet at its own current-level slot cap — or null once every disk slot at this
 // capacity level is already full (the lake's disks alone are completely maxed for their current
 // level — see getDataLakeNextFillSubSize below for the level's own final, disk-less unit).
+// depositedUnits is clamped to THIS LEVEL's own slot-representable max before decomposing — see
+// getDataLakeSlotRepresentableUnits's own doc comment for why a flat/global clamp doesn't work here.
 const getDataLakeOpenSubSize = (depositedUnits, slotCounts) => {
-  const disks = decomposeDataLakeUnits(Math.min(depositedUnits, DATA_LAKE_MAX_REPRESENTABLE_UNITS)).disks
+  const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+  const disks = decomposeDataLakeUnits(Math.min(depositedUnits, representable)).disks
   return DATA_LAKE_SUB_SIZES.find(subSize => (disks[subSize] ?? 0) < (slotCounts[subSize] ?? 0)) ?? null
 }
 
 // The sub-size of whatever fills next — a real disk (getDataLakeOpenSubSize) while one's still
 // open, or, once every disk slot at this capacity level is full but the level's own capacity isn't
-// fully reached yet (only possible at the max level, whose 1,000 capacity sits exactly 1 unit above
-// DATA_LAKE_MAX_REPRESENTABLE_UNITS' own 999), a final virtual ×1 "slot" — filled through the exact
+// fully reached yet (true at EVERY level, not just the max one — see
+// getDataLakeSlotRepresentableUnits), a final virtual ×1 "slot" — filled through the exact
 // same fillBits mechanism as any real disk, just with no disk square of its own to show for it
 // (mirroring how a Storage array's own always-full cache isn't drawn as one of its numbered disk
 // squares either — see docs/DESIGN_HISTORY.md). Returns null once depositedUnits has genuinely

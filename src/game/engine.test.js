@@ -10347,21 +10347,23 @@ describe('Data Lakes', () => {
       expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 1000), 1)).toEqual({ 1: 9, 10: 9, 100: 9 })
     })
 
-    it('never strands units off the natural growth lattice with zero leftover (regression — a naive smallest-first-maxed-out greedy could leave real, spendable units unrepresented by any disk square once an arbitrary Booster spend, not a whole-disk multiple, landed depositedUnits off-lattice — confirmed by simulation: total=85 at capacityLevel 1 naively decomposed to {1:10,10:7} with 5 units unaccounted for, when {1:5,10:8} represents the same 85 exactly)', () => {
-      // capacityLevel 1: caps {1: 10, 10: 9} (100 hasn't opened yet).
-      const level1 = withLakeLevel(createInitialGameState(), 1, 1)
-      expect(getDataLakeDiskCounts(withLakeDeposited(level1, 1, 85), 1)).toEqual({ 1: 5, 10: 8, 100: 0 })
+    it('never strands units off the natural growth lattice with zero leftover, up to what the current level\'s own disk slots can represent (regression — a naive smallest-first-maxed-out greedy could leave real, spendable units unrepresented by any disk square once an arbitrary Booster spend, not a whole-disk multiple, landed depositedUnits off-lattice — confirmed by simulation: total=85 at capacityLevel 2 naively decomposed to {1:9,10:7} with 5 units unaccounted for, when {1:5,10:8} represents the same 85 exactly)', () => {
+      // capacityLevel 2: caps {1: 9, 10: 9} (100 hasn't opened yet) — representable up to 99.
+      const level2 = withLakeLevel(createInitialGameState(), 1, 2)
+      expect(getDataLakeDiskCounts(withLakeDeposited(level2, 1, 85), 1)).toEqual({ 1: 5, 10: 8, 100: 0 })
       // capacityLevel 3 (max, all three denominations active): total=905 needs 0 tens (not 9) so
       // hundreds can reach its own natural value of 9 — a value the smallest-first-only greedy
-      // cannot reach at all, since 895 (what's left after maxing ones at 10) isn't a multiple of 10.
+      // cannot reach at all, since 895 (what's left after maxing ones at 9) isn't a multiple of 10.
       const level3 = withLakeLevel(createInitialGameState(), 1, 3)
       expect(getDataLakeDiskCounts(withLakeDeposited(level3, 1, 905), 1)).toEqual({ 1: 5, 10: 0, 100: 9 })
-      // Every value in a representative sample from 0 up to each level's own capacity must
+      // Every value in a representative sample from 0 up to what THIS LEVEL's own disk slots can
+      // represent (9, 99, 999 — one short of the level's own full capacity; the level's own last
+      // unit lives in the buffer, not a disk square, see getDataLakeSlotRepresentableUnits) must
       // decompose with zero leftover units and the sum of (count × size) exactly matching the
       // input — the real invariant this whole mechanic depends on.
-      for (const [level, capacity] of [[0, 1], [1, 10], [2, 100], [3, 1000]]) {
+      for (const [level, representable] of [[0, 0], [1, 9], [2, 99], [3, 999]]) {
         const state = withLakeLevel(createInitialGameState(), 1, level)
-        for (let total = 0; total <= capacity; total += Math.max(1, Math.floor(capacity / 37))) {
+        for (let total = 0; total <= representable; total += Math.max(1, Math.floor((representable || 1) / 37))) {
           const counts = getDataLakeDiskCounts(withLakeDeposited(state, 1, total), 1)
           const represented = counts[1] * 1 + counts[10] * 10 + counts[100] * 100
           expect(represented).toBe(total)
@@ -10397,6 +10399,21 @@ describe('Data Lakes', () => {
       const level0 = withLakeLevel(createInitialGameState(), 1, 0)
       expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level0, 1, 0), 1)).toBe(1)
       expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level0, 1, 1), 1)).toBe(null)
+    })
+
+    // Regression: an earlier version of getDataLakeOpenSubSize decomposed depositedUnits through
+    // the flat, level-UNAWARE decomposeDataLakeUnits algorithm — at exactly a NON-max level's own
+    // capacity (10 at level 1, 100 at level 2, both reachable via ordinary fill since a level's own
+    // final unit is buffer-sourced, not disk-sourced), that algorithm redistributes the total onto
+    // a sub-size the level hasn't unlocked yet (e.g. 10 -> "1 x10 disk, 0 x1 disks"), which read as
+    // a still-open x1 slot instead of the level being fully maxed — letting depositedUnits grow
+    // unboundedly past its own declared capacity. Caught by adversarial review before merge, not by
+    // a test — this test is that missing coverage.
+    it('reports the level fully maxed (null) exactly AT a non-max level\'s own capacity, at every level, not just the top one (regression)', () => {
+      const level1 = withLakeLevel(createInitialGameState(), 1, 1) // capacity 10
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level1, 1, 10), 1)).toBe(null)
+      const level2 = withLakeLevel(createInitialGameState(), 1, 2) // capacity 100
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level2, 1, 100), 1)).toBe(null)
     })
   })
 
@@ -10443,6 +10460,33 @@ describe('Data Lakes', () => {
       // Only the 1 unit (kb1 bits) the lake could actually hold ever left intro.bits — everything
       // beyond that survives, rather than vanishing.
       expect(after.intro.bits).toBe(1_000_000 - kb1)
+    })
+
+    // Regression: an earlier version of getDataLakeOpenSubSize decomposed depositedUnits through
+    // the flat, level-UNAWARE decomposeDataLakeUnits algorithm — at exactly a NON-max level's own
+    // capacity (10 at level 1, 100 at level 2, both reachable via ordinary fill since a level's own
+    // final unit is buffer-sourced, not disk-sourced), that algorithm redistributes the total onto
+    // a sub-size the level hasn't unlocked yet (e.g. 10 -> "1 x10 disk, 0 x1 disks"), which read as
+    // a still-open x1 slot instead of the level being fully maxed — letting depositedUnits grow
+    // unboundedly past its own declared capacity via ordinary overflow, tick after tick. Caught by
+    // adversarial review before merge, not by a test — this is that missing coverage, exercised
+    // through the real public tickPoolBufferFill pipeline (not the private fillDataLakeDisks).
+    it('never lets depositedUnits exceed a non-max level\'s own capacity, however much overflow arrives, across many ticks (regression)', () => {
+      const level1 = fullBufferState({
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          // 9 ones already built (the level's own real-disk max) — the buffer's own final unit is
+          // next; capacity is 10 at level 1.
+          1: { capacityLevel: 1, depositedUnits: 9, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 },
+        },
+      })
+      let state = level1
+      for (let i = 0; i < 20; i += 1) {
+        state = tickPoolBufferFill(1)(state) // 2,000 bits/sec each tick — vastly more than 1 unit needs
+      }
+      expect(getDataLakeDepositedUnits(1)(state)).toBe(10) // capped exactly at capacity, never beyond
+      expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(null) // correctly reads as fully maxed
+      expect(getDataLakeFillBits(state, 1)).toBe(0)
     })
 
     it('feeds the matching Data Lake at the plain, un-tapered reserved rate once the pool\'s own buffer has no more room — no artificial slowdown, same posture Storage\'s own disk provisioning already uses', () => {

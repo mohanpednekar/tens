@@ -1077,7 +1077,7 @@ removed, see `docs/DESIGN_HISTORY.md`). Each sub-size is capped at `DATA_LAKE_SU
 (9/9/9, not a flat 10/10/10 — mirroring `DISK_ARRAY_LADDER_CAP`'s own 9), one unit short of each
 level's own capacity (1/10/100/1,000) — the level's own last unit fills through the lake's own
 retained fill buffer instead of a disk square, the same way a Storage array's cache substitutes for
-its own 10th disk (`getDataLakeNextFillSubSize`/`DATA_LAKE_MAX_REPRESENTABLE_UNITS`); a mixed-radix
+its own 10th disk (`getDataLakeNextFillSubSize`/`getDataLakeSlotRepresentableUnits`); a mixed-radix
 decomposition (`decomposeDataLakeUnits`) keeps the visible disk-square breakdown always exact with no
 leftover. Capacity is a purchasable decade-power ladder (1/10/100/1,000 units, capped at level 3),
 advancing only once the CORRESPONDING Storage array size is fully built. **Buying Boosters**
@@ -1248,7 +1248,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1780 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1782 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

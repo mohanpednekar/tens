@@ -8302,7 +8302,42 @@ adjacent capacity's) now ALWAYS dedupes for a Storage pool, since balance and ca
 the same fixed unit unconditionally — before this change the two could independently land on
 different auto-picked units for a small balance next to a much larger capacity.
 
-**Verification.** `yarn test`: 1780/1780 (two dedicated taper-regression tests were retired since the
-mechanic they guarded no longer exists; the rest were updated in place for the new 9/9/9 shapes and
-values, not skipped). `docs/ECONOMY_REFERENCE.md`, `CLAUDE.md`, and `AGENTS.md` updated in the same
-commit per this repo's own documentation convention.
+**A second bug, more severe, was caught by adversarial review after this PR's first push: the
+non-max-level capacity cap wasn't actually enforced.** `getDataLakeOpenSubSize` decomposed
+`depositedUnits` through the flat, level-UNAWARE `decomposeDataLakeUnits` algorithm, then compared
+each sub-size's disk count against the level-aware `slotCounts` from the rewritten
+`getDataLakeDiskSlotCounts` above — a mismatch between the two. At exactly a NON-max level's own
+capacity (10 at level 1, 100 at level 2 — both reachable via ordinary fill, since a level's own
+final unit is buffer-sourced, not disk-sourced), `decomposeDataLakeUnits` redistributes the total
+onto a sub-size that level hasn't unlocked at all (e.g. capacity 10 at level 1 decomposing to "1
+×10 disk, 0 ×1 disks" — correct for that function's own general, level-unaware contract, but wrong
+once compared against a `slotCounts` that has zero ×10 slots at level 1), which read as a
+still-open ×1 slot rather than the level being fully maxed. The result: `depositedUnits` grew
+UNBOUNDEDLY past a non-max level's own declared capacity via ordinary automatic overflow or manual
+fill — verified live through the real `tickPoolBufferFill` engine function, not just by inspection
+— letting a player bank (and spend on Boosters) far more units than a level-1 or level-2 lake
+should ever hold, and rendering a misleadingly under-filled `DataLakePanel` at the exact boundary.
+The bug was asymmetric: level 0 (capacity 1, no real disk slots at all) and the max level's own
+1,000-unit boundary were both accidentally safe (the latter only because the unrelated 999-unit
+decompose clamp happened to intervene) — only levels 1 and 2 were actually affected, but every lake
+passes through both on its way to level 3. Root cause: the same `Math.min(depositedUnits, N)` clamp
+this PR already needed for the max-level 999 case was applied with the wrong, GLOBAL `N` everywhere
+except the (already correctly level-gated) `getDataLakeDiskSlotCounts` derivation itself — the
+`getDataLakeOpenSubSize`/`getDataLakeDiskCounts` clamp needed to be level-aware too. Fixed by
+replacing the flat `DATA_LAKE_MAX_REPRESENTABLE_UNITS` constant with
+`getDataLakeSlotRepresentableUnits(slotCounts)` — the CURRENT level's own slots summed (9 at level
+1, 99 at level 2, 999 at level 3, matching the old flat constant exactly at the max level, which is
+why level 3's own tests still passed even with the bug present) — used consistently by both
+functions. No test in the original diff exercised `depositedUnits` exactly at a non-max level's own
+capacity; two were added covering it (a direct boundary check and a live multi-tick
+`tickPoolBufferFill` regression proving the cap actually holds under real, repeated overflow), and
+the pre-existing off-lattice decomposition test (which had used capacityLevel 1 with a total of 85
+— already exceeding level 1's own 10-unit capacity even under the ORIGINAL 10/9/9 caps, so always a
+somewhat synthetic scenario) moved to capacityLevel 2, whose own 99-unit representable range
+genuinely fits it.
+
+**Verification.** `yarn test`: 1782/1782 (two dedicated taper-regression tests were retired since
+the mechanic they guarded no longer exists; two new regression tests were added for the
+capacity-cap bug above; the rest were updated in place for the new 9/9/9 shapes and values, not
+skipped). `docs/ECONOMY_REFERENCE.md`, `CLAUDE.md`, and `AGENTS.md` updated in the same commit per
+this repo's own documentation convention.
