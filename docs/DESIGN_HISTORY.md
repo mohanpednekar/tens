@@ -8121,7 +8121,7 @@ existing spend logic was already right.
 **Verification.** New regression test: seeds a pool buffer with exactly 1 bit and a lake at
 `fillBits: unitBits - 1`, asserting `isDataLakeManualFillAvailable` is now `true` (previously `false`
 under the old whole-unit threshold) and that the resulting fill correctly completes the unit and
-drains the buffer to 0. `engine.test.js`: 1258/1258.
+drains the buffer to 0. `engine.test.js`: 1257/1257.
 
 **2. Two more places still described a "moving" per-pool Capacity ceiling, missed by the
 fourth/fifth/sixth rounds' own targeted greps.** `docs/ECONOMY_REFERENCE.md` had THREE more live
