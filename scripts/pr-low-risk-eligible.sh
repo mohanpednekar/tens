@@ -2,7 +2,7 @@
 # Shared low-risk eligibility for approval-free auto-merge.
 #
 # Same bar as docs/AUTOMATION.md / pr-auto-merge.yml:
-#   - bot-authored branch prefixes only (claude/*, cursor/*, dependabot/*)
+#   - bot-authored branch prefixes only (claude/*, dependabot/*)
 #   - never a fork (isCrossRepository)
 #   - never touches .github/workflows/
 #   - docs/tests-only (CLAUDE.md / *.test.js / *.test.jsx), OR total lines ≤ 50,
@@ -14,7 +14,7 @@
 #
 # pr.json shape (stdin / --from-json):
 #   {
-#     "branch": "cursor/auto-…",
+#     "branch": "claude/auto-…",
 #     "title": "…",
 #     "isCrossRepository": false,
 #     "additions": 12,
@@ -78,7 +78,7 @@ if [ -z "$branch" ]; then
 fi
 
 case "$branch" in
-  claude/auto-*|claude/self-heal-*|claude/heal-main-*|cursor/auto-*|cursor/heal-*|dependabot/*) ;;
+  claude/auto-*|claude/self-heal-*|claude/heal-main-*|dependabot/*) ;;
   *)
     echo "not a bot-authored branch ($branch)"
     exit 1

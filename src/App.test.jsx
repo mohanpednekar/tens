@@ -540,14 +540,14 @@ test('a tickspeed multiplier level speeds up delivery frequency, not the amount 
   })
   render(<App />)
 
-  // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.0201
-  // speed bonus (1% per level now) shortens how often a delivery lands, it never inflates the
+  // The displayed production figure is the raw per-delivery amount (owned) — level 3's ×1.21
+  // speed bonus (10% per level) shortens how often a delivery lands, it never inflates the
   // amount, so this still reads +5 B.
   expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+5 B')
   // The cumulative speed bonus no longer shows as a badge on the row itself (see "the
   // automation icon and percentage badge are removed from the tier row" below) — it's still
   // available in the tickspeed button's own title tooltip and the row's Details disclosure.
-  expect(screen.getByTitle(/tickspeed multiplier level 3 \(\+2% faster ticks\)/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 3 \(\+21% faster ticks\)/i)).toBeInTheDocument()
 })
 
 test('the tier tickspeed multiplier button is buyable even when that tier\'s autobuyer has never been unlocked', async () => {
@@ -563,12 +563,12 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   })
   render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+1% faster ticks\) for 10 QB/i })
+  const upgradeButton = screen.getByRole('button', { name: /tickspeed multiplier \(\+10% faster ticks\) for 10 QB/i })
   expect(upgradeButton).toBeEnabled()
 
   await user.click(upgradeButton)
 
-  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+1% faster ticks\)/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
 test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.1', () => {
@@ -1078,17 +1078,18 @@ test('a Scale Up that will reveal TB says so explicitly — "Unlock TB" on the b
 test('the Scale Up button shows its per-claim ×2 effect, which tier it needs, and completed-level requirement progress on itself', () => {
   seedMainGameState({
     resources: { base: 10 },
-    purchaseLevels: { tier01: 2 }, // 1 completed of the 9 the third Scale Up requires
+    purchaseLevels: { tier01: 2 }, // 1 completed of the 3 the third Scale Up requires
     scaleUpCount: 2,
   })
   render(<App />)
 
   // The action always doubles currently unlocked tiers, regardless of prior activation count;
-  // the requirement is named in COMPLETED levels of the current target tier.
+  // the requirement is named in COMPLETED levels of the current target tier — still the flat 3
+  // every one of the first ten claims uses (see getScaleUpRequirement).
   expect(screen.getByRole('button', {
-    name: /scale up \(requires 9 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
+    name: /scale up \(requires 3 completed kilobytes levels\) — doubles production for tiers unlocked so far/i,
   })).toBeInTheDocument()
-  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · KB 1/9')
+  expect(screen.getByLabelText(/^scale up panel$/i)).toHaveTextContent('⏩ ×2 · KB 1/3')
 })
 
 test('the scale up and overclock panels render below the tier list, not above it', () => {
@@ -1514,9 +1515,10 @@ test('pausing Auto Scale Up via its toggle stops it from firing automatically, e
   act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
   // Scale Up fired automatically once resumed — resources reset and the target tier advances to
-  // Megabytes, whose requirement is the next completed-level multiple (6).
+  // Megabytes, whose requirement is the same flat 3 completed levels every one of the first ten
+  // claims uses (see getScaleUpRequirement).
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('1 b')
-  expect(screen.getByRole('button', { name: /scale up \(requires 6 completed megabytes levels/i })).toBeDisabled()
+  expect(screen.getByRole('button', { name: /scale up \(requires 3 completed megabytes levels/i })).toBeDisabled()
 
   unmount()
   vi.useRealTimers()
@@ -2250,7 +2252,7 @@ test('pausing a tier\'s tickspeed autobuyer via its PP Upgrades toggle stops it 
 
   expect(screen.getByRole('button', { name: /pause ronnabytes's tickspeed autobuyer/i })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: /^factory$/i }))
-  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+1% faster ticks\)/i)).toBeInTheDocument()
+  expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 
   unmount()
   vi.useRealTimers()

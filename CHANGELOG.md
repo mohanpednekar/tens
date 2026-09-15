@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
   level compounds the same Overclock-scaled 1% step.
 - **Completed levels now multiply production by ×1.1** (was ×2), compounding per completed level.
-- **Tier tickspeed upgrades now give +1% per level** (was +10%).
 - **Scale Up requirements are based on the target tier's completed levels** — each of the first ten
   Scale Ups requires 3 completed levels on its target (the last unlocked tier), then repeated
   final-tier claims require 6, 9, 12, … completed levels. This remains separate from tier re-reveal. A tier already
@@ -804,12 +803,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.
-- **Cursor housekeeping / planning run** now checks security (fix immediately when safe),
-  workflow/CI failures, PR conflicts, and CLAUDE.md/docs vs code consistency; auto-fixes trivial
-  findings and files `claude-task` issues for non-trivial ones. Soft budget guidance of ~1% of
-  Cursor Pro quota applies to **every** Cursor session (not planning-only). The same housekeeping
-  sweep also runs on every **push to `main`** (typically a merged PR), checking **all** open
-  non-fork PRs for conflicts, failing checks, and stalled auto-merge.
 - **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk
