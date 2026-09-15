@@ -717,9 +717,10 @@ Strict three-layer separation:
    Stream section. Each disk array shows every size from `getDiskSizesToShow`, all
    `DISK_ARRAY_LADDER_CAP` (9) slots in one unbroken row. The "queue next build" pin-icon toggle was
    removed from the UI, but the underlying auto-arming queue it drove stays fully wired and live —
-   see the "Disks" entry under "Economy model" below for how a click arms it and what the button's
-   own progress fill shows; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not
-   exposed as their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade`. Every
+   see the "Disks" entry under "Economy model" below for how a click arms it, and
+   `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section for what the button's own progress
+   fill shows; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
+   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade`. Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases, its
    own capacity Upgrade, and Upgrade Data Stream itself are the three exceptions, each arbitrated

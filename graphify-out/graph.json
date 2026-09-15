@@ -12876,7 +12876,7 @@
       "node_kind": "heading",
       "norm_label": "capacitor foundation (in progress \u2014 #70)",
       "source_file": "CLAUDE.md",
-      "source_location": "L1173"
+      "source_location": "L1174"
     },
     {
       "id": "claude_commands",
@@ -12900,7 +12900,7 @@
       "node_kind": "heading",
       "norm_label": "dev mode",
       "source_file": "CLAUDE.md",
-      "source_location": "L789"
+      "source_location": "L790"
     },
     {
       "id": "claude_economy_model",
@@ -12912,7 +12912,7 @@
       "node_kind": "heading",
       "norm_label": "economy model",
       "source_file": "CLAUDE.md",
-      "source_location": "L875"
+      "source_location": "L876"
     },
     {
       "id": "claude_funding",
@@ -12924,7 +12924,7 @@
       "node_kind": "heading",
       "norm_label": "funding",
       "source_file": "CLAUDE.md",
-      "source_location": "L1186"
+      "source_location": "L1187"
     },
     {
       "id": "claude_graphify",
@@ -12936,7 +12936,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L1307"
+      "source_location": "L1308"
     },
     {
       "id": "claude_interactive_session_startup",
@@ -12960,7 +12960,7 @@
       "node_kind": "heading",
       "norm_label": "license",
       "source_file": "CLAUDE.md",
-      "source_location": "L1193"
+      "source_location": "L1194"
     },
     {
       "id": "claude_md_claude_claude",
@@ -12984,7 +12984,7 @@
       "node_kind": "heading",
       "norm_label": "path aliases",
       "source_file": "CLAUDE.md",
-      "source_location": "L1140"
+      "source_location": "L1141"
     },
     {
       "id": "claude_project",
@@ -13020,7 +13020,7 @@
       "node_kind": "heading",
       "norm_label": "pwa support",
       "source_file": "CLAUDE.md",
-      "source_location": "L1162"
+      "source_location": "L1163"
     },
     {
       "id": "claude_repo_layout",
@@ -13044,7 +13044,7 @@
       "node_kind": "heading",
       "norm_label": "security notes",
       "source_file": "CLAUDE.md",
-      "source_location": "L1297"
+      "source_location": "L1298"
     },
     {
       "id": "claude_tech_stack",
@@ -13068,7 +13068,7 @@
       "node_kind": "heading",
       "norm_label": "theming",
       "source_file": "CLAUDE.md",
-      "source_location": "L1147"
+      "source_location": "L1148"
     },
     {
       "id": "src_game_layers_era_eligibility_pp",
@@ -18929,7 +18929,7 @@
       "node_kind": "heading",
       "norm_label": "end-to-end testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1263"
+      "source_location": "L1264"
     },
     {
       "id": "claude_testing",
@@ -18941,7 +18941,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1205"
+      "source_location": "L1206"
     },
     {
       "id": "claude_github_milestones_release_grouping",
@@ -49462,7 +49462,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1140",
+      "source_location": "L1141",
       "weight": 1.0
     },
     {
@@ -49473,7 +49473,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1147",
+      "source_location": "L1148",
       "weight": 1.0
     },
     {
@@ -49484,7 +49484,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1162",
+      "source_location": "L1163",
       "weight": 1.0
     },
     {
@@ -49495,7 +49495,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1186",
+      "source_location": "L1187",
       "weight": 1.0
     },
     {
@@ -49506,7 +49506,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1193",
+      "source_location": "L1194",
       "weight": 1.0
     },
     {
@@ -49517,7 +49517,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1205",
+      "source_location": "L1206",
       "weight": 1.0
     },
     {
@@ -49528,7 +49528,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1297",
+      "source_location": "L1298",
       "weight": 1.0
     },
     {
@@ -49539,7 +49539,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1307",
+      "source_location": "L1308",
       "weight": 1.0
     },
     {
@@ -49649,7 +49649,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L789",
+      "source_location": "L790",
       "weight": 1.0
     },
     {
@@ -49660,7 +49660,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L875",
+      "source_location": "L876",
       "weight": 1.0
     },
     {
@@ -49693,7 +49693,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1173",
+      "source_location": "L1174",
       "weight": 1.0
     },
     {
@@ -50782,7 +50782,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1263",
+      "source_location": "L1264",
       "weight": 1.0
     },
     {
@@ -66090,5 +66090,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e488ecf0e33d56ffab6686c0338a964ac7337ff0"
+  "built_at_commit": "03a22eb38c083fc3c504c3bfead5064fd49093d9"
 }
