@@ -89,8 +89,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   banked in the pool's own buffer even when the slot needed far less (e.g. 1 bit, with the rest
   already banked as partial progress), forcing a wait for an entire extra unit that was never
   actually required.
-
-### Fixed
 - **The final tier's XP-funded tickspeed ("🧬 XP") button/autobuyer no longer fires while that
   tier's own owned count is 0.** Previously it stayed clickable (and the tier tickspeed autobuyer
   kept auto-firing it) purely on a one-time-per-cycle "ever Scale Up'd onto this tier" latch, with

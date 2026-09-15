@@ -1131,6 +1131,29 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
   expect(panelScaleUpButton).not.toBe(rowXpButton)
 })
 
+test('the last tier row keeps showing the XP-consume button but disables it once that tier\'s own owned count is 0', () => {
+  seedMainGameState({
+    resources: { base: 12345 },
+    owned: { tier09: 10, tier10: 0 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
+    // Still XP-unlocked (a successful Scale Up onto Quettabytes already landed this cycle) even
+    // though its own owned count has since dropped to 0 — the row must keep showing the
+    // XP-consume control rather than falling back to the Money-funded one, but the button itself
+    // has nothing left to speed up and must disable (see consumeXpForLastTierTickspeed's matching
+    // engine-level guard).
+    scaleUpTierCounts: { tier10: 1 },
+    prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
+  })
+  render(<App />)
+
+  const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
+  const rowXpButton = within(quettabytesLayer).getByRole('button', {
+    name: /consume 37 xp for .* quettabytes tickspeed/i,
+  })
+  expect(rowXpButton).toHaveTextContent('🧬')
+  expect(rowXpButton).toBeDisabled()
+})
+
 test('clicking Scale Up once eligible resets resources but advances the target to the next tier', async () => {
   const user = userEvent.setup()
 

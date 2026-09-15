@@ -5590,10 +5590,11 @@ export const buyTickspeedMultiplier = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
-  // The last tier's Money-funded tickspeed ladder is replaced by the XP-funded one while the
-  // player currently owns >= 10 of that tier (see isLastTierTickspeedXpUnlocked/
-  // consumeXpForLastTierTickspeed) — this button has nothing to do for that tier for as long as
-  // that holds, reverting to normal once owned drops back below 10 (e.g. after a Prestige/Scale Up).
+  // The last tier's Money-funded tickspeed ladder is replaced by the XP-funded one once it has
+  // ever been the target of a successful Scale Up this cycle (see isLastTierTickspeedXpUnlocked —
+  // a scaleUpTierCounts-based latch, NOT a live owned check — and consumeXpForLastTierTickspeed) —
+  // this button has nothing to do for that tier for as long as that holds, reverting to normal
+  // only once a Prestige/Overclock resets scaleUpTierCounts, not merely from owned dropping.
   if (tierId === getLastTierId() && isLastTierTickspeedXpUnlocked(state)) return state
   const currentLevel = state.tickspeedLevels?.[tierId] ?? 1
 
@@ -6474,10 +6475,12 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // Spends XP to compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own
 // tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — durable within the
 // current run (never decays or reverts on its own), but reset to 0 by prestigeGame/scaleUpGame
-// along with prestige.xp itself, same as every other run-scoped field. Only
-// available while isLastTierTickspeedXpUnlocked (the last tier currently owns >=
-// getPurchaseBlockSize(state)), which is when it's currently replacing that tier's Money-funded
-// tickspeed button (see buyTickspeedMultiplier). Every successful consumption, no
+// along with prestige.xp itself, same as every other run-scoped field. Only available while
+// isLastTierTickspeedXpUnlocked (a scaleUpTierCounts-based latch — the last tier has EVER been
+// the target of a successful Scale Up this cycle, NOT a live owned check), which is when it's
+// currently replacing that tier's Money-funded tickspeed button (see buyTickspeedMultiplier) —
+// AND while the last tier's own current `owned` is > 0 (see the guard below; with nothing owned
+// there, there's nothing left to speed up). Every successful consumption, no
 // matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
 // sync, `resources`) counts back to 0 — the current *quantity* of each of those tiers, not their
 // `purchased` lifetime count or their purchaseLevels/purchaseLevelProgress (cost/level progress is
@@ -6487,8 +6490,9 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // own delivery frequency. A single consumption must be at least
 // getLastTierXpTickspeedMinConsumption(xpConsumed so far) — see LAST_TIER_XP_TICKSPEED_MIN_
 // CONSUMPTION_PERCENT in layers.js — so it can't trickle in one XP at a time forever. A no-op if
-// not yet unlocked, if amount isn't a positive integer, if amount is below that minimum, if there
-// isn't enough unspent XP, or while production is frozen.
+// not yet unlocked, if the last tier's own owned count is 0, if amount isn't a positive integer,
+// if amount is below that minimum, if there isn't enough unspent XP, or while production is
+// frozen.
 export const consumeXpForLastTierTickspeed = amount => state => {
   if (isProductionFrozen(state)) return state
   if (!isLastTierTickspeedXpUnlocked(state)) return state

@@ -8066,7 +8066,7 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier('does_not_exist')(state)).toBe(state)
   })
 
-  it('is a no-op for the last tier while its tickspeed is XP-unlocked (owned >= 10), even with plenty of the tier\'s own resource', () => {
+  it('is a no-op for the last tier while its tickspeed is XP-unlocked (a successful Scale Up onto it this cycle, not an owned threshold), even with plenty of the tier\'s own resource', () => {
     const state = withResource(
       withLastTierTickspeedXpUnlocked(unlockedLastTierState()),
       lastTier.id,
@@ -8075,7 +8075,7 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
-  it('resumes working for the last tier once owned drops back below 10 (XP tickspeed disengaged)', () => {
+  it('works normally for the last tier when it was never XP-unlocked this cycle (no Scale Up onto it yet), regardless of its owned count', () => {
     const state = withResource(
       withOwned(unlockedLastTierState(), lastTier.id, 1),
       lastTier.id,
