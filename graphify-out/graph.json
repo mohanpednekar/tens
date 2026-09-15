@@ -7018,7 +7018,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_tier_by_id",
       "source_file": "src/game/layers.js",
-      "source_location": "L769"
+      "source_location": "L771"
     },
     {
       "id": "src_game_layers_compute_flops_tier_index_by_id",
@@ -7029,7 +7029,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_tier_index_by_id",
       "source_file": "src/game/layers.js",
-      "source_location": "L772"
+      "source_location": "L774"
     },
     {
       "id": "src_game_layers_compute_merge_boundaries",
@@ -7117,7 +7117,7 @@
       "file_type": "code",
       "norm_label": "flops_autobuyer_era_start",
       "source_file": "src/game/layers.js",
-      "source_location": "L780"
+      "source_location": "L782"
     },
     {
       "id": "src_game_layers_flops_autobuyer_era_step",
@@ -7128,7 +7128,7 @@
       "file_type": "code",
       "norm_label": "flops_autobuyer_era_step",
       "source_file": "src/game/layers.js",
-      "source_location": "L781"
+      "source_location": "L783"
     },
     {
       "id": "src_game_layers_global_tickspeed_production_step",
@@ -7161,7 +7161,7 @@
       "file_type": "code",
       "norm_label": "hyperscaler_efficiency_rate_bonus_per_level",
       "source_file": "src/game/layers.js",
-      "source_location": "L786"
+      "source_location": "L788"
     },
     {
       "id": "src_game_layers_hyperscaler_eon_cost_base",
@@ -7172,7 +7172,7 @@
       "file_type": "code",
       "norm_label": "hyperscaler_eon_cost_base",
       "source_file": "src/game/layers.js",
-      "source_location": "L783"
+      "source_location": "L785"
     },
     {
       "id": "src_game_layers_hyperscaler_eon_cost_multiplier",
@@ -7183,7 +7183,7 @@
       "file_type": "code",
       "norm_label": "hyperscaler_eon_cost_multiplier",
       "source_file": "src/game/layers.js",
-      "source_location": "L784"
+      "source_location": "L786"
     },
     {
       "id": "src_game_layers_intro_byte_base_rate",
@@ -7216,7 +7216,7 @@
       "file_type": "code",
       "norm_label": "last_tier_xp_tickspeed_min_consumption_floor",
       "source_file": "src/game/layers.js",
-      "source_location": "L741"
+      "source_location": "L743"
     },
     {
       "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_percent",
@@ -7227,7 +7227,7 @@
       "file_type": "code",
       "norm_label": "last_tier_xp_tickspeed_min_consumption_percent",
       "source_file": "src/game/layers.js",
-      "source_location": "L736"
+      "source_location": "L738"
     },
     {
       "id": "src_game_layers_last_tier_xp_tickspeed_step",
@@ -7238,7 +7238,7 @@
       "file_type": "code",
       "norm_label": "last_tier_xp_tickspeed_step",
       "source_file": "src/game/layers.js",
-      "source_location": "L730"
+      "source_location": "L732"
     },
     {
       "id": "src_game_layers_max_offline_seconds",
@@ -8171,7 +8171,7 @@
       "file_type": "code",
       "norm_label": "era_eligibility_pp",
       "source_file": "src/game/layers.js",
-      "source_location": "L778"
+      "source_location": "L780"
     },
     {
       "id": "src_pages_milestonespage_index",
@@ -8674,7 +8674,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_last_tier_cost_pp",
       "source_file": "src/game/layers.js",
-      "source_location": "L748"
+      "source_location": "L750"
     },
     {
       "id": "src_game_layers_compute_merge_core_earn_multiplier",
@@ -8762,7 +8762,7 @@
       "file_type": "code",
       "norm_label": "eon_amplifier_award_per_level",
       "source_file": "src/game/layers.js",
-      "source_location": "L788"
+      "source_location": "L790"
     },
     {
       "id": "src_game_layers_fill_multiplier_tap_decay_percent_per_second",
@@ -11366,7 +11366,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_boost_rate_per_unit_per_sec",
       "source_file": "src/game/layers.js",
-      "source_location": "L752"
+      "source_location": "L754"
     },
     {
       "id": "src_game_layers_compute_flops_first_tier_cost_pp",
@@ -11377,7 +11377,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_first_tier_cost_pp",
       "source_file": "src/game/layers.js",
-      "source_location": "L747"
+      "source_location": "L749"
     },
     {
       "id": "src_pages_computeflopspage_index",
@@ -17072,7 +17072,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_reveal_pp",
       "source_file": "src/game/layers.js",
-      "source_location": "L746"
+      "source_location": "L748"
     },
     {
       "id": "src_game_layers_compute_merge_ratio",
@@ -18818,7 +18818,7 @@
       "file_type": "code",
       "norm_label": "compute_flops_tier_definitions",
       "source_file": "src/game/layers.js",
-      "source_location": "L757"
+      "source_location": "L759"
     },
     {
       "id": "src_game_layers_tier_definitions",
@@ -60794,7 +60794,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L730",
+      "source_location": "L732",
       "weight": 1.0
     },
     {
@@ -60805,7 +60805,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L736",
+      "source_location": "L738",
       "weight": 1.0
     },
     {
@@ -60816,7 +60816,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L741",
+      "source_location": "L743",
       "weight": 1.0
     },
     {
@@ -60827,7 +60827,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L746",
+      "source_location": "L748",
       "weight": 1.0
     },
     {
@@ -60838,7 +60838,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L747",
+      "source_location": "L749",
       "weight": 1.0
     },
     {
@@ -60849,7 +60849,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L748",
+      "source_location": "L750",
       "weight": 1.0
     },
     {
@@ -60860,7 +60860,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L752",
+      "source_location": "L754",
       "weight": 1.0
     },
     {
@@ -60871,7 +60871,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L757",
+      "source_location": "L759",
       "weight": 1.0
     },
     {
@@ -60887,17 +60887,6 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_compute_flops_tier_by_id",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/game/layers.js",
-      "source_location": "L769",
-      "weight": 1.0
-    },
-    {
-      "source": "src_game_layers",
       "target": "src_game_layers_money_starting_amount",
       "relation": "contains",
       "_origin": "ast",
@@ -60909,24 +60898,24 @@
     },
     {
       "source": "src_game_layers",
+      "target": "src_game_layers_compute_flops_tier_by_id",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/game/layers.js",
+      "source_location": "L771",
+      "weight": 1.0
+    },
+    {
+      "source": "src_game_layers",
       "target": "src_game_layers_compute_flops_tier_index_by_id",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L772",
-      "weight": 1.0
-    },
-    {
-      "source": "src_game_layers",
-      "target": "src_game_layers_era_eligibility_pp",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/game/layers.js",
-      "source_location": "L778",
+      "source_location": "L774",
       "weight": 1.0
     },
     {
@@ -60942,7 +60931,7 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_flops_autobuyer_era_start",
+      "target": "src_game_layers_era_eligibility_pp",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60953,18 +60942,18 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_flops_autobuyer_era_step",
+      "target": "src_game_layers_flops_autobuyer_era_start",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L781",
+      "source_location": "L782",
       "weight": 1.0
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_hyperscaler_eon_cost_base",
+      "target": "src_game_layers_flops_autobuyer_era_step",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60975,18 +60964,18 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_hyperscaler_eon_cost_multiplier",
+      "target": "src_game_layers_hyperscaler_eon_cost_base",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
-      "source_location": "L784",
+      "source_location": "L785",
       "weight": 1.0
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_hyperscaler_efficiency_rate_bonus_per_level",
+      "target": "src_game_layers_hyperscaler_eon_cost_multiplier",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -60997,13 +60986,24 @@
     },
     {
       "source": "src_game_layers",
-      "target": "src_game_layers_eon_amplifier_award_per_level",
+      "target": "src_game_layers_hyperscaler_efficiency_rate_bonus_per_level",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/game/layers.js",
       "source_location": "L788",
+      "weight": 1.0
+    },
+    {
+      "source": "src_game_layers",
+      "target": "src_game_layers_eon_amplifier_award_per_level",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/game/layers.js",
+      "source_location": "L790",
       "weight": 1.0
     },
     {
@@ -65839,5 +65839,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "62eb2ecdf6e35f47b47e56a23c865238307210ef"
+  "built_at_commit": "1acee450d976c7d31af5fe54e15975c2dd64f737"
 }

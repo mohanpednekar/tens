@@ -719,14 +719,16 @@ export const TICKSPEED_AUTOBUYER_COST = 10
 // well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
 // allTiersFullyAutomated — a genuinely late-game convenience, not an early one.
 export const AUTO_PRESTIGE_AUTOBUYER_COST = 100
-// Whenever the last tier's currently-owned count is >= 10, its Money-funded tickspeed multiplier
-// (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
-// XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/
+// Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
+// isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), its
+// Money-funded tickspeed multiplier (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier
+// above) is replaced by an XP-funded one instead (see engine.js's
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — each XP ever consumed this way
 // compounds another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own delivery frequency,
-// permanently (this accumulated bonus is never lost, even while owned dips below 10 and the
-// mechanic is temporarily disengaged). "Last tier" (not a hardcoded tier id) so this stays correct
-// if TIER_DEFINITIONS ever grows a new final entry.
+// permanently (this accumulated bonus is never lost, even while the last tier's own owned count
+// dips to 0 and consumeXpForLastTierTickspeed's own guard pauses further consumption — it doesn't
+// disengage the unlock itself; only a Prestige/Overclock does that). "Last tier" (not a hardcoded
+// tier id) so this stays correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
