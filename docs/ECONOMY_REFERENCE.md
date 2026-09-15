@@ -615,7 +615,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    stranded 100 KB disk is still required to build 1 MB for the NEXT Factory tier's own first level;
    see `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts — refusing a
    stranded source outright first, then refusing a stranded target, each permanently starved a
-   different part of the ladder). Collect runs `DISK_ARRAY_LADDER_CAP` (9) timed segments — a
+   different part of the ladder). Collect runs `DISK_LADDER_SIZE_MULTIPLIER` (10 — the source→target
+   SIZE RATIO, NOT `DISK_ARRAY_LADDER_CAP` above, a different constant since it dropped to 9 — see
+   `canStartDiskWriteCacheMerge`'s own doc comment in `engine.js`) timed segments — a
    CACHE filling FROM Disks — each segment's own duration = that source disk's own size ÷
    (`getIntroProductionRate` × `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5)
    (`getDiskWriteCacheSegmentSeconds`); each completed segment empties one
@@ -624,13 +626,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Factory redemption can ever have over the same physical disk (the Factory gets first crack at a
    disk it could pull THIS tick); this is temporary — collection resumes the moment that claim
    clears, whether the source becomes "too early" or stranded. `isDiskWriteCacheCollectPaused` is
-   the UI-facing read of this same pause state. **Flush never pauses**. Once `DISK_ARRAY_LADDER_CAP` (9) segments are collected, flush
+   the UI-facing read of this same pause state. **Flush never pauses**. Once `DISK_LADDER_SIZE_MULTIPLIER` (10) segments are collected, flush
    runs — a DISK filling FROM a cache, same rate class the read-cache flush above uses — for the
    target's own size ÷ (`getIntroProductionRate` × `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2)
    (`getDiskWriteCacheFlushSeconds` — deliberately independent of a fresh disk's own 1x-bandwidth
    funding pace (see `provisionDisk`); refilling an already-built empty container from cache is a
    pure bandwidth-limited transfer, not a build), then credits one full
-   disk at N+1 and clears the write cache. `DISK_ARRAY_LADDER_CAP` (9) segments of one source disk each sum to exactly one
+   disk at N+1 and clears the write cache. `DISK_LADDER_SIZE_MULTIPLIER` (10) segments of one source disk each sum to exactly one
    target's own size, but the collect phase (`CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER`, 5) and the
    flush phase (`DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER`, 2) are deliberately paced at different
    rates — collecting an already-built disk's contents into the write cache is a faster bulk

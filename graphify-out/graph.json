@@ -13213,7 +13213,7 @@
       "node_kind": "heading",
       "norm_label": "constants (`src/game/layers.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2841"
+      "source_location": "L2843"
     },
     {
       "id": "docs_economy_reference_economy_model_reference",
@@ -13237,7 +13237,7 @@
       "node_kind": "heading",
       "norm_label": "game state shape",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2207"
+      "source_location": "L2209"
     },
     {
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
@@ -13249,7 +13249,7 @@
       "node_kind": "heading",
       "norm_label": "key engine functions (`src/game/engine.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2655"
+      "source_location": "L2657"
     },
     {
       "id": "docs_economy_reference_offline_progress",
@@ -13261,7 +13261,7 @@
       "node_kind": "heading",
       "norm_label": "offline progress",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1438"
+      "source_location": "L1440"
     },
     {
       "id": "docs_economy_reference_overclock",
@@ -13273,7 +13273,7 @@
       "node_kind": "heading",
       "norm_label": "overclock",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2071"
+      "source_location": "L2073"
     },
     {
       "id": "docs_economy_reference_pp_compute_flops",
@@ -13285,7 +13285,7 @@
       "node_kind": "heading",
       "norm_label": "pp compute (flops)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1500"
+      "source_location": "L1502"
     },
     {
       "id": "docs_economy_reference_prestige_and_the_googol_freeze",
@@ -13297,7 +13297,7 @@
       "node_kind": "heading",
       "norm_label": "prestige and the googol freeze",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1948"
+      "source_location": "L1950"
     },
     {
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
@@ -13309,7 +13309,7 @@
       "node_kind": "heading",
       "norm_label": "prestige info is hidden until first prestige",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2154"
+      "source_location": "L2156"
     },
     {
       "id": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -13321,7 +13321,7 @@
       "node_kind": "heading",
       "norm_label": "prestige points, autobuyer unlock, and the tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1541"
+      "source_location": "L1543"
     },
     {
       "id": "docs_economy_reference_reset",
@@ -13333,7 +13333,7 @@
       "node_kind": "heading",
       "norm_label": "reset",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2173"
+      "source_location": "L2175"
     },
     {
       "id": "docs_economy_reference_scale_up",
@@ -13345,7 +13345,7 @@
       "node_kind": "heading",
       "norm_label": "scale up",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1992"
+      "source_location": "L1994"
     },
     {
       "id": "docs_economy_reference_the_configurable_purchase_block_size_and_tier_levels",
@@ -16133,7 +16133,7 @@
       "node_kind": "heading",
       "norm_label": "era ascension and eons (#407)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1559"
+      "source_location": "L1561"
     },
     {
       "id": "docs_economy_reference_multiplier_overflow_safety",
@@ -16145,7 +16145,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier overflow safety",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1931"
+      "source_location": "L1933"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_per_tier_automations",
@@ -16157,7 +16157,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for per-tier automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1739"
+      "source_location": "L1741"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_the_global_automations",
@@ -16169,7 +16169,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for the global automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1714"
+      "source_location": "L1716"
     },
     {
       "id": "docs_economy_reference_the_global_tickspeed_multiplier",
@@ -16181,7 +16181,7 @@
       "node_kind": "heading",
       "norm_label": "the global tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1801"
+      "source_location": "L1803"
     },
     {
       "id": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
@@ -16193,7 +16193,7 @@
       "node_kind": "heading",
       "norm_label": "the last tier's xp-funded tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1837"
+      "source_location": "L1839"
     },
     {
       "id": "docs_economy_reference_tickspeed_multiplier",
@@ -16205,7 +16205,7 @@
       "node_kind": "heading",
       "norm_label": "tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1771"
+      "source_location": "L1773"
     },
     {
       "id": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
@@ -16217,7 +16217,7 @@
       "node_kind": "heading",
       "norm_label": "tier autobuyer/tier-tickspeed-autobuyer milestones",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1678"
+      "source_location": "L1680"
     },
     {
       "id": "scripts_generate_pwa_icons",
@@ -18361,7 +18361,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier outcomes are floored",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1401"
+      "source_location": "L1403"
     },
     {
       "id": "docs_economy_reference_production_figure_tick_progress_ring_removed",
@@ -18373,7 +18373,7 @@
       "node_kind": "heading",
       "norm_label": "production figure (tick-progress ring removed)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1424"
+      "source_location": "L1426"
     },
     {
       "id": "docs_economy_reference_tier_production_tickspeed",
@@ -18385,7 +18385,7 @@
       "node_kind": "heading",
       "norm_label": "tier production tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1357"
+      "source_location": "L1359"
     },
     {
       "id": "github_copilot_instructions",
@@ -53037,7 +53037,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1357",
+      "source_location": "L1359",
       "weight": 1.0
     },
     {
@@ -53048,7 +53048,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1438",
+      "source_location": "L1440",
       "weight": 1.0
     },
     {
@@ -53059,7 +53059,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1500",
+      "source_location": "L1502",
       "weight": 1.0
     },
     {
@@ -53070,7 +53070,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1541",
+      "source_location": "L1543",
       "weight": 1.0
     },
     {
@@ -53081,7 +53081,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1559",
+      "source_location": "L1561",
       "weight": 1.0
     },
     {
@@ -53092,7 +53092,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1948",
+      "source_location": "L1950",
       "weight": 1.0
     },
     {
@@ -53103,7 +53103,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1992",
+      "source_location": "L1994",
       "weight": 1.0
     },
     {
@@ -53114,7 +53114,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2071",
+      "source_location": "L2073",
       "weight": 1.0
     },
     {
@@ -53125,7 +53125,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2154",
+      "source_location": "L2156",
       "weight": 1.0
     },
     {
@@ -53136,7 +53136,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2173",
+      "source_location": "L2175",
       "weight": 1.0
     },
     {
@@ -53147,7 +53147,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2207",
+      "source_location": "L2209",
       "weight": 1.0
     },
     {
@@ -53158,7 +53158,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2655",
+      "source_location": "L2657",
       "weight": 1.0
     },
     {
@@ -53169,7 +53169,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2841",
+      "source_location": "L2843",
       "weight": 1.0
     },
     {
@@ -53213,7 +53213,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1678",
+      "source_location": "L1680",
       "weight": 1.0
     },
     {
@@ -53224,7 +53224,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1714",
+      "source_location": "L1716",
       "weight": 1.0
     },
     {
@@ -53235,7 +53235,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1739",
+      "source_location": "L1741",
       "weight": 1.0
     },
     {
@@ -53246,7 +53246,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1771",
+      "source_location": "L1773",
       "weight": 1.0
     },
     {
@@ -53257,7 +53257,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1801",
+      "source_location": "L1803",
       "weight": 1.0
     },
     {
@@ -53268,7 +53268,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1837",
+      "source_location": "L1839",
       "weight": 1.0
     },
     {
@@ -53279,7 +53279,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1931",
+      "source_location": "L1933",
       "weight": 1.0
     },
     {
@@ -53290,7 +53290,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1401",
+      "source_location": "L1403",
       "weight": 1.0
     },
     {
@@ -53301,7 +53301,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1424",
+      "source_location": "L1426",
       "weight": 1.0
     },
     {
@@ -66079,5 +66079,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0390aed3d0f25749bb13d9ba11abc96dc3e2ba38"
+  "built_at_commit": "31cb0fa2c8fd9d40f820f89f921aa927c75782fc"
 }
