@@ -1823,13 +1823,17 @@ were removed outright rather than replaced. Overclock scales this one shared ste
 
 #### The last tier's XP-funded tickspeed
 
-Whenever the **last tier** (`TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]` — read structurally, not
-hardcoded to `tier10`, so this stays correct if a future tier is ever appended) currently has **>=
-`getPurchaseBlockSize(state)` owned** (a full level), its own Money-funded tickspeed multiplier (see
-"Tickspeed multiplier" above) is replaced by an XP-funded one instead — the last tier has no
-`buyTickspeedMultiplier` button of its own for as long as that holds. XP (`prestige.xp`) is otherwise
-absent from the UI (see "Prestige Points, autobuyer unlock, and the tickspeed multiplier" below) — this
-is its one purpose.
+Once the **last tier** (`TIER_DEFINITIONS[TIER_DEFINITIONS.length - 1]` — read structurally, not
+hardcoded to `tier10`, so this stays correct if a future tier is ever appended) has ever been the
+target of a successful Scale Up this cycle (see `isLastTierTickspeedXpUnlocked` just below — a
+one-time-per-cycle latch, NOT a live read of current owned), its own Money-funded tickspeed
+multiplier (see "Tickspeed multiplier" above) is replaced by an XP-funded one instead for the rest
+of the cycle — the last tier has no `buyTickspeedMultiplier` button of its own for as long as that
+holds, regardless of its owned count fluctuating afterward. Actually *consuming* XP still requires
+the last tier's own current `owned` to be > 0 (see `consumeXpForLastTierTickspeed` below) — with
+nothing owned there's nothing to speed up, so both the manual button and its autobuyer no-op rather
+than wiping every other tier for no benefit. XP (`prestige.xp`) is otherwise absent from the UI (see
+"Prestige Points, autobuyer unlock, and the tickspeed multiplier" below) — this is its one purpose.
 
 - `isLastTierTickspeedXpUnlocked(state) = (state.scaleUpTierCounts?.[lastTier.id] ?? 0) >= 1` —
   the last tier must have been the target of a successful Scale Up at least once this cycle
@@ -1842,8 +1846,10 @@ is its one purpose.
   spent via `consumeXpForLastTierTickspeed` within the current run. Reset to 0 by both Prestige and
   Scale Up (same as `prestige.xp`, the currency that funds it — see `prestigeGame`/`scaleUpGame`
   below) — never reset by `consumeXpForLastTierTickspeed` itself (it only ever grows within a run) —
-  so the bonus it drives survives the mechanic being temporarily disengaged (owned dropping below a
-  full level) and later re-engaged within the same run, but not a Prestige/Scale Up.
+  so the bonus it drives survives the last tier's own owned count temporarily dropping to 0 (which
+  just pauses further consumption, per the guard below, without disengaging the unlock itself or
+  losing the multiplier already earned) and later climbing back up within the same run, but not a
+  Prestige/Scale Up.
 - `getLastTierXpTickspeedMultiplier(xpConsumed) = (1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed`
   (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — the same multiplicative, compounding form every other
   tier's own `(1 + TICKSPEED_PRODUCTION_STEP) ** (level - 1)` tickspeed multiplier uses, just keyed
@@ -1867,40 +1873,47 @@ is its one purpose.
   second-to-last tier's current *quantity* and the shared currency, not their `purchased` lifetime
   count ("level"). `purchased` is left completely untouched everywhere, including on the last tier
   itself — cost epochs and `getPurchaseMilestoneMultiplier` production bonuses are unaffected; the
-  last tier's own `owned`/`resources` are untouched too. A no-op if not yet unlocked, if `amount`
-  isn't a positive integer, if `amount` is below `getLastTierXpTickspeedMinConsumption`, if there
-  isn't enough unspent XP, or while production is frozen.
+  last tier's own `owned`/`resources` are untouched too. A no-op if not yet unlocked, if the last
+  tier's own current `owned` count is 0 (nothing left to speed up, so spending XP here would only
+  wipe every other tier for no benefit — a real dead-end this guard was added to prevent, see
+  `docs/DESIGN_HISTORY.md`), if `amount` isn't a positive integer, if `amount` is below
+  `getLastTierXpTickspeedMinConsumption`, if there isn't enough unspent XP, or while production is
+  frozen.
 - `buyTickspeedMultiplier(lastTierId)` is a no-op for as long as `isLastTierTickspeedXpUnlocked` holds
-  — there's nothing for that button to do for the last tier while it does. It resumes working normally
-  the moment owned drops back below a full level (e.g. after a Prestige/Scale Up).
+  — there's nothing for that button to do for the last tier while it does. Since that check is a
+  one-time-per-cycle latch (`scaleUpTierCounts`, see above), NOT a live read of the last tier's
+  current `owned` count, this stays a no-op even after the last tier's own owned count later drops
+  (e.g. from a `consumeXpForLastTierTickspeed` call) — only a Prestige/Overclock (which reset
+  `scaleUpTierCounts`) bring the Money-funded button back.
 - **Automation:** `tickGame`'s per-tier tickspeed self-upgrade loop (see `tierTickspeedAutobuyer`)
   repurposes the last tier's bought `tierTickspeedAutobuyer` flag once `isLastTierTickspeedXpUnlocked`
   is true — instead of calling the now-inert `buyTickspeedMultiplier(lastTierId)`, it calls
   `consumeXpForLastTierTickspeed(state.prestige.xp)` each tick, spending the tier's entire current XP
-  balance — this automation is now the *only* way this mechanic ever fires; see "MainPage" below for
-  why there's no manual trigger for it any more. This means a
-  `tierTickspeedAutobuyer` flag bought *before* reaching XP-unlock — originally for its non-destructive
-  Money-funded purpose — starts triggering automatic, periodic resets of every other tier's `owned`/
-  `resources` and the Money balance the moment the last tier crosses the XP-unlock threshold; this
-  trade-off is deliberate (no separate opt-in/confirmation for the automated path). Before
-  `isLastTierTickspeedXpUnlocked`, the flag drives the ordinary `buyTickspeedMultiplier` auto-upgrade
-  exactly as it does for every other tier — this only changes behavior once the threshold is crossed,
-  and reverts the moment owned drops back below a full level.
+  balance — the same action the manual `🧬 XP` button on `MainPage` (see below) calls on click. This
+  means a `tierTickspeedAutobuyer` flag bought *before* reaching XP-unlock — originally for its
+  non-destructive Money-funded purpose — starts triggering automatic, periodic resets of every other
+  tier's `owned`/`resources` and the Money balance the moment the last tier crosses the XP-unlock
+  threshold (each firing still requires the last tier's own `owned` to be > 0, per the guard above —
+  it can't fire against an empty last tier); this trade-off is deliberate (no separate opt-in/
+  confirmation for the automated path). Before `isLastTierTickspeedXpUnlocked`, the flag drives the
+  ordinary `buyTickspeedMultiplier` auto-upgrade exactly as it does for every other tier — this only
+  changes behavior once the threshold is crossed, and only reverts on a Prestige/Overclock (which
+  reset `scaleUpTierCounts`), not merely from owned dropping.
 - **MainPage**: while `isLastTierTickspeedXpUnlocked(state)`, the last tier's row swaps its normal
-  `⚙ {cost} {symbol}` Money-funded tickspeed button for a quick-access **Scale Up** button
-  (`⏩ ×2`, `actions.scaleUp`) in the same grid slot — not a manual XP-consume control any more (an
-  earlier version showed `🧬 {current unspent XP} XP` here, spending the player's entire current XP
-  balance on click; that manual trigger was removed in favor of surfacing Scale Up in this slot instead,
-  since reaching a full last-tier level is also exactly when Scale Up tends to become available). The
-  underlying mechanic still fires — but now *only* via the tier tickspeed autobuyer (see "Automation"
-  above), which spends the player's entire current XP balance each tick the same way the old manual
-  button used to on click. `actions.consumeXpForLastTierTickspeed` remains a valid hook action (still
-  callable, still fully engine-tested) — `MainPage` just no longer wires a button to it. The row's
-  existing `⚙ +N%` badge and Details disclosure both still automatically reflect the XP-funded
-  multiplier while engaged (they read `tickspeedMultiplier`, which the row computes from
+  `⚙ {cost} {symbol}` Money-funded tickspeed button for a manual `🧬 {current unspent XP} XP`
+  button (`handleConsumeLastTierXp`, behind a `window.confirm`), calling
+  `actions.consumeXpForLastTierTickspeed(lastTierXpBalance)` — spending the player's entire current
+  XP balance in one action, same as the tier tickspeed autobuyer's automatic firing (see
+  "Automation" above). The button is disabled whenever the last tier's own current `owned` is 0
+  (see `consumeXpForLastTierTickspeed`'s matching guard above) — with nothing left to speed up,
+  clicking it would only wipe every other tier's `owned`/`resources` and Bits for no benefit — as
+  well as while unspent XP is below `getLastTierXpTickspeedMinConsumption` or production is frozen.
+  Its title/tooltip explains which of those is currently blocking it. The row's existing `⚙ +N%`
+  badge and Details disclosure both still automatically reflect the XP-funded multiplier while
+  engaged (they read `tickspeedMultiplier`, which the row computes from
   `getLastTierXpTickspeedMultiplier` instead of `getTickspeedProductionMultiplier` in this case); the
   Details disclosure additionally lists the current unspent XP balance and the minimum the next
-  (automatic) consumption needs, under an "XP Tickspeed" line.
+  consumption needs, under an "XP Tickspeed" line.
 
 #### Multiplier overflow safety
 
@@ -2742,7 +2755,7 @@ purchases were manual or automatic.
 | `buyTier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`; otherwise validates unlock + affordability, deducts cost, increments `owned`/`purchased` by 1; used internally by `buyTierQuantity`, not called directly by the UI |
 | `buyTierQuantity` | `(tierId, quantity) → state → state` | Buys up to `quantity` units (capped at the cost-block boundary via `getTierBulkQuantity`), stopping early if a unit becomes unaffordable; used both by the manual "Buy" button (always `quantity` `Number.MAX_SAFE_INTEGER`, see `useIncrementalGame`'s `BUY_QUANTITY`) and by `tickGame`'s autobuyer loop — the two purchase paths are identical, a tier's tickspeed multiplier level has no effect on how much a purchase costs or how many units it grants |
 | `applyAutobuyerMilestones` | `state → state` | For every tier whose `getAutobuyerUnlockMilestone(tierId)`/`getTierTickspeedAutobuyerMilestone(tierId)` is met by `state.prestige.count` and isn't already unlocked, sets `autobuyers[tierId] = 1` and/or `tierTickspeedAutobuyer[tierId] = true` — no PP spent, no cost check at all. Never revokes anything already unlocked; returns the same state reference if nothing newly qualifies. Called from `prestigeGame` (right after incrementing `count`) |
-| `buyTickspeedMultiplier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen` or if the tier itself isn't unlocked yet (`isTierUnlocked`) — no autobuyer-unlock prerequisite at all; otherwise upgrades `tickspeedLevels[tierId]` from N to N+1 — always by spending the tier's own resource via `getTickspeedMultiplierCost(tierId, N + 1)`. Each level speeds up that tier's own delivery frequency by another 10% (via `getTickspeedProductionMultiplier`, divided into `getEffectiveTierTickSpeedSeconds` — see "Tier production tickspeed" in CLAUDE.md), without changing the amount delivered per batch, how often the autobuyer attempts a purchase, how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op until at least 1 would remain afterward; the MainPage tickspeed button's `disabled` state mirrors this same `+ 1` threshold. Also called automatically by `tickGame` for every tier whose tier tickspeed autobuyer is unlocked (`tierTickspeedAutobuyer[tier.id]`, via `applyAutobuyerMilestones`) — **except the last tier once `isLastTierTickspeedXpUnlocked` holds**, where `tickGame` calls `consumeXpForLastTierTickspeed` instead of this function (see "The last tier's XP-funded tickspeed" in CLAUDE.md); manually clicking this button for the last tier while that holds is still simply a no-op, resuming once owned drops back below a full level |
+| `buyTickspeedMultiplier` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen` or if the tier itself isn't unlocked yet (`isTierUnlocked`) — no autobuyer-unlock prerequisite at all; otherwise upgrades `tickspeedLevels[tierId]` from N to N+1 — always by spending the tier's own resource via `getTickspeedMultiplierCost(tierId, N + 1)`. Each level speeds up that tier's own delivery frequency by another 10% (via `getTickspeedProductionMultiplier`, divided into `getEffectiveTierTickSpeedSeconds` — see "Tier production tickspeed" in CLAUDE.md), without changing the amount delivered per batch, how often the autobuyer attempts a purchase, how each individual purchase is paid for/batched, or manual Buy. Since `resources[tierId]` and `owned[tierId]` move together, a call requires `available >= cost + 1`, not just `available >= cost` — paying the exact cost would zero out the tier's own generator count (and its production), so the last unit is reserved and the call is a no-op until at least 1 would remain afterward; the MainPage tickspeed button's `disabled` state mirrors this same `+ 1` threshold. Also called automatically by `tickGame` for every tier whose tier tickspeed autobuyer is unlocked (`tierTickspeedAutobuyer[tier.id]`, via `applyAutobuyerMilestones`) — **except the last tier once `isLastTierTickspeedXpUnlocked` holds**, where `tickGame` calls `consumeXpForLastTierTickspeed` instead of this function (see "The last tier's XP-funded tickspeed" in CLAUDE.md); manually clicking this button for the last tier while that holds is still simply a no-op — this only resumes once a Prestige/Overclock resets `scaleUpTierCounts`, not merely from owned dropping |
 | `buyPrestigeSpeedBonus` | `state → state` | Returns the same state if `isProductionFrozen`, if `prestigeSpeedBonusUnlocked` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `PRESTIGE_SPEED_BONUS_UNLOCK_COST` PP and permanently sets `prestigeSpeedBonusUnlocked = true`, activating `getPrestigeProductionMultiplier`'s passive bonus in `tickGame` |
 | `buySmartAutobuyer` | `(tierId) → state → state` | Returns the same state if `isProductionFrozen`, if the tier's autobuyer isn't unlocked yet (`autobuyers[tierId] == null`), if already smart, or if there aren't enough unspent Prestige Points; otherwise spends `getSmartAutobuyerCost(tierId)` PP and permanently sets `smartAutobuyer[tierId] = true` |
 | `buyAutoPrestige` | `state → state` | Returns the same state if `isProductionFrozen` or if there aren't enough unspent Prestige Points for the next level; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getAutoPrestigeCost(currentLevel)` — a single global upgrade track, not per-tier |
@@ -2796,10 +2809,10 @@ purchases were manual or automatic.
 | `getPrestigeProgressPercent` | `money → number` | `getMoneyExponent(money) / log10(GOOGOL) * 100`, rounded and clamped to `[0, 100]` — GOOGOL is exponent 100, so this reads as a whole percent equal to the money exponent itself |
 | `getNextBytePowerProgressFraction` | `moneyBits → number` | Progress `0–1` toward the next power-of-ten Bytes: `(moneyBits / BITS_PER_BYTE) / 10^(floor(log10(bytes))+1)`, clamped to `[0, 1]` — MainPage's 8-segment bar under MoneyHero (each segment = 12.5%) |
 | `getEffectiveTierTickSpeedSeconds` | `(state, tierId) → number` | `getTierBaseTickSpeedSeconds(tierId) / (tickspeedMultiplier × getGlobalTickspeedProductionMultiplier(globalTickspeedMultiplier, overclockCount))` — a tier's actual production period once both tickspeed multipliers have shrunk it; always `<=` the base value, since both multipliers are always `>= 1`. `tickspeedMultiplier` is `getTickspeedProductionMultiplier(tickspeedLevels[tierId])` normally, or — for the last tier while `isLastTierTickspeedXpUnlocked` — `getLastTierXpTickspeedMultiplier(lastTierXpConsumed)` instead (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Overclock has no separate third factor here — its effect is already folded into the global tickspeed multiplier itself via that function's own `overclockCount` parameter (see "Overclock" below). If the division result is non-finite or <= 0 (a sufficiently large multiplier overflowing to `Infinity` in double-precision float — reachable in principle within a single run before the next Prestige/Scale Up resets `lastTierXpConsumed` — would otherwise divide the period down to exactly 0), returns `MIN_EFFECTIVE_TIER_TICK_SPEED_SECONDS` (`1e-9`, module-private in `engine.js`) instead — a pure numerical-safety floor, not a balance constant; see "Multiplier overflow safety" below for why an unguarded 0 period corrupts state. Used by both `tickGame` and `getTierProductionProgressPercent` so the two never disagree about what "one period" means for a tier |
-| `isLastTierTickspeedXpUnlocked` | `state → bool` | `owned[lastTierId] >= getPurchaseBlockSize(state)` — a live check against the last tier's current owned count reaching one full level's worth (not a stored/latched flag) — a lighter-weight threshold than `isTierUnlocked`'s own two-level requirement for the tier below it, since this gates an XP bonus rather than revealing a new tier; whether the last tier's Money-funded tickspeed multiplier is currently replaced by the XP-funded one. Turns back off the moment owned drops below that threshold (e.g. a Prestige/Scale Up reset), then back on again once bought back up to it |
+| `isLastTierTickspeedXpUnlocked` | `state → bool` | `(scaleUpTierCounts[lastTierId] ?? 0) >= 1` — whether the last tier has EVER been the target of a successful Scale Up this cycle (a one-time-per-cycle latch, not a live read of its current owned count); once true it stays true for the rest of the cycle, replacing the last tier's Money-funded tickspeed multiplier with the XP-funded one regardless of how the last tier's own owned count fluctuates afterward. Only turns back off once a Prestige/Overclock resets `scaleUpTierCounts` |
 | `getLastTierXpTickspeedMultiplier` | `xpConsumed → number` | `(1 + LAST_TIER_XP_TICKSPEED_STEP) ** xpConsumed` (`LAST_TIER_XP_TICKSPEED_STEP = 0.01`) — compounds 1% per cumulative XP ever consumed via `consumeXpForLastTierTickspeed`, the same multiplicative form every other tier's own tickspeed multiplier uses (37 XP consumed = `1.01^37` ≈ ×1.446, not a flat +37%) |
 | `getLastTierXpTickspeedMinConsumption` | `xpConsumed → number` | `max(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, ceil(LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT * xpConsumed))` (`LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1`, floor `= 1`) — the minimum a single `consumeXpForLastTierTickspeed` call may spend, growing alongside the cumulative XP already consumed this way |
-| `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not currently `isLastTierTickspeedXpUnlocked`, if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 plus the Money balance (`resources[MONEY_ID]`) to 0 — `purchased` and the last tier's own `owned`/`resources` are untouched (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Called both manually (the "🧬 {XP} XP" button, always passing the tier's entire current XP balance) and automatically by `tickGame`, once per tick, for a tier whose `tierTickspeedAutobuyer` flag is bought while `isLastTierTickspeedXpUnlocked` holds — same self-no-op behavior either way |
+| `consumeXpForLastTierTickspeed` | `amount → state → state` | Returns the same state if `isProductionFrozen`, if not currently `isLastTierTickspeedXpUnlocked`, if the last tier's own current `owned` is 0 (nothing left to speed up), if `amount` isn't a positive integer, if it's below `getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)`, or if there isn't enough unspent XP; otherwise spends `amount` from `prestige.xp`, adds it to `lastTierXpConsumed`, and resets every tier *except the last one*'s `owned` (and matching `resources`) count to 0 plus the Money balance (`resources[MONEY_ID]`) to 0 — `purchased` and the last tier's own `owned`/`resources` are untouched (see "The last tier's XP-funded tickspeed" in CLAUDE.md). Called both manually (the "🧬 {XP} XP" button, always passing the tier's entire current XP balance) and automatically by `tickGame`, once per tick, for a tier whose `tierTickspeedAutobuyer` flag is bought while `isLastTierTickspeedXpUnlocked` holds — same self-no-op behavior either way |
 | `getTierProductionProgressPercent` | `(state, tierId, previousAccumulator?, elapsedSeconds = 1) → number` | `state.tierProductionAccumulators[tierId] / getEffectiveTierTickSpeedSeconds(state, tierId) * 100`, rounded and clamped to `[0, 100]` — how far that tier's accumulator has filled toward its next delivery. If the optional `previousAccumulator` crosses the tier's effective tickspeed once `elapsedSeconds` is added (with the same `TICK_ACCUMULATION_EPSILON` tolerance `tickGame` uses), returns 100 instead. `elapsedSeconds` defaults to `1`. Currently unused by `MainPage` |
 | `formatAmount` | `value → string` | Locale-formatted integer below `EXPONENTIAL_NOTATION_THRESHOLD` (1,000,000); scientific notation at/above, exponent marker lowercased to `e` (e.g. `6.5e13` — `Intl.NumberFormat`'s scientific notation always renders an uppercase `E` with no formatting option to override it, so a shared `formatScientific` helper lowercases it after formatting) — used for non-money amounts (owned/purchased counts, and per-tier per-tick production amounts, except a tier producing the base currency which uses `formatCurrency` instead so the row stays consistent with every other Money display) |
 | `formatCurrency` | `value → string` | Full comma-grouped string below `EXPONENTIAL_NOTATION_THRESHOLD`, suffixed with `RESOURCE_SYMBOL(MONEY_ID)` (`b`), floored (never rounds up); exponential notation at/above the same threshold, same lowercase-`e` exponent marker as `formatAmount` (e.g. `6.5e13 b`) — EXCEPT when the exponential-range mantissa is exactly `BITS_PER_BYTE` (8), an exact whole-Byte figure at a clean power of ten (e.g. `8e6` bits = `1e6` Bytes exactly), which renders converted to Bytes instead (`1e6 B`, `RESOURCE_SYMBOL(BYTES_ID)`) rather than the arbitrary-looking bit count — `PRESTIGE_THRESHOLD` (`8e100`) is a real live example. Used for every Money amount (costs, production rates, the Prestige-threshold overlay), except `MainPage`'s own headline balance readout once it grows large enough — see `formatMoneyBalance` below. See `docs/DESIGN_HISTORY.md` |
@@ -2860,7 +2873,7 @@ purchases were manual or automatic.
 - `AUTO_SCALE_UP_COST = 20` — one-time PP cost to permanently automate Scale Up (see `buyAutoScaleUp`) — cheaper than `PRESTIGE_SPEED_BONUS_UNLOCK_COST`/`AUTO_PRESTIGE_COST` since Scale Up fires far more often, but pricier than `TICKSPEED_AUTOBUYER_COST` below, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade than Scale Up
 - `TICKSPEED_AUTOBUYER_COST = 10` — one-time PP cost to permanently automate the (Money-funded) global tickspeed multiplier (see `buyTickspeedAutobuyer`) — the cheapest of all four global PP automation unlocks, since the global tickspeed multiplier it automates is a much smaller, earlier-game upgrade (unlocked as soon as the second tier is owned) than what any of the other three automate
 - `AUTO_PRESTIGE_AUTOBUYER_COST = 100` — one-time PP cost to permanently automate RE-LEVELING Auto-Prestige itself (see `buyAutoPrestigeAutobuyer`) — a "meta-automation" (it automates re-buying an already-PP-funded track, not a Money-funded one like the two costs above), only ever useful once Auto-Prestige has already been activated once, so priced below `AUTO_PRESTIGE_COST`'s own initial-activation cost (the clicks it saves are already rare, since each Auto-Prestige level doubles in cost) but well above `AUTO_SCALE_UP_COST`/`TICKSPEED_AUTOBUYER_COST` above, since this row is gated behind `allTiersFullyAutomated` — a genuinely late-game convenience, not an early one
-- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier while it currently has >= `getPurchaseBlockSize(state)` owned; both the XP spent and the bonus it drives reset to 0 on Prestige/Scale Up (see "The last tier's XP-funded tickspeed" above)
+- `LAST_TIER_XP_TICKSPEED_STEP = 0.01` — each XP consumed via `consumeXpForLastTierTickspeed` within the current run compounds another 1% into the last tier's own delivery frequency (see `getLastTierXpTickspeedMultiplier`) — the mechanic that replaces that tier's Money-funded tickspeed multiplier once it has ever been the target of a successful Scale Up this cycle (`isLastTierTickspeedXpUnlocked`); both the XP spent and the bonus it drives reset to 0 on Prestige/Scale Up (see "The last tier's XP-funded tickspeed" above)
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT = 0.1` — a single `consumeXpForLastTierTickspeed` call must spend at least this fraction of the XP already consumed this way (see `getLastTierXpTickspeedMinConsumption`), so repeat consumptions can't trickle in one XP at a time forever
 - `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR = 1` — the practical minimum consumption before any XP has been consumed this way, since `LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT` alone computes 0 at that point
 

@@ -869,24 +869,24 @@ many for a row already carrying the tier's autobuyer state (see "Unit autobuyer 
 cumulative figure is still in the row's own Details disclosure (see "Tier row details disclosure"
 below).
 
-Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
-level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
-tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by a quick-access **Scale Up** button instead (`⏩ ×2`, `actions.scaleUp` — the same
-action `ScaleUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
-the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
-the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
-this slot used to show — reaching a full last-tier level is also exactly when Scale Up tends to be
-close, so this reuses the slot for the more actionable control. The underlying XP-funded tickspeed
-mechanic keeps running unattended: it's still spent automatically once per tick by the tier tickspeed
-autobuyer (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
-its current unspent-XP balance/next-consumption minimum still show in the row's Details disclosure (as
-an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The Details
-disclosure keeps working unchanged for the last tier otherwise, still reading the XP-funded
-multiplier instead of the Money-funded one. This is a live check, not a one-time unlock: a
-Prestige/Scale Up resets the last tier's owned count to 0 along with every other tier's, which reverts
-this slot back to the normal Money-funded button until the player buys back up to a full level — see
-"The last tier's XP-funded tickspeed" below for why.
+Once the **last tier** has ever been the target of a successful Scale Up this cycle
+(`isLastTierTickspeedXpUnlocked` — a `scaleUpTierCounts`-based latch, NOT a live read of its
+current owned count, see docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), this
+Money-funded `UpgradeButton` is replaced — in the same grid slot, for the rest of the cycle — by
+the manual XP-consume button instead (`🧬 {current unspent XP} XP`,
+`actions.consumeXpForLastTierTickspeed`, behind a `window.confirm`). It's disabled whenever the
+last tier's own current owned count is 0 (nothing left to speed up — see
+`consumeXpForLastTierTickspeed`'s matching engine-level guard), unspent XP is below
+`getLastTierXpTickspeedMinConsumption`, or production is frozen; its `title` explains which. The
+same underlying action also fires automatically once per tick via the tier tickspeed autobuyer once
+bought (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
+its current unspent-XP balance/next-consumption minimum also show in the row's Details disclosure
+(as an "XP Tickspeed" line). The Details disclosure keeps working unchanged for the last tier
+otherwise, still reading the XP-funded multiplier instead of the Money-funded one. Only a
+Prestige/Overclock (which reset `scaleUpTierCounts`) reverts this slot back to the normal
+Money-funded button — the last tier's owned count merely dropping (e.g. from a Scale Up on an
+earlier tier, or from consuming XP itself) does NOT revert it, only disables the button — see "The
+last tier's XP-funded tickspeed" below for why.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
 `TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
@@ -1119,9 +1119,10 @@ reward is folded into the Tickspeed upgrade's own per-level rate, not a separate
 Like `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDisplay}`, this pair
 uses the completed-level display offset while eligibility continues to use the raw engine values;
 see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
-docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Scale Up gets
-one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
-deliberate, occasional decision reached via this card, not a frequent one-tap action.
+docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button — Overclock is meant
+to be a deliberate, occasional decision reached via this card, not a frequent one-tap action (unlike
+the last tier's own row, which does grow a dedicated XP-consume tickspeed button once XP-unlocked —
+see "Tickspeed multiplier" above — but that's a different action entirely, not a Scale Up shortcut).
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a

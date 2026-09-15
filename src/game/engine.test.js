@@ -433,18 +433,21 @@ const withAutoPrestigeAutobuyerEnabled = (state, enabled) => ({
   autoPrestigeAutobuyerEnabled: enabled,
 })
 
-// isLastTierTickspeedXpUnlocked is a live check against the last tier's current owned count vs.
-// the current (dynamic) block size (see engine.js) — this helper ensures that's satisfied by
-// raising owned to at least that block size if it isn't already there, without clobbering a test's
-// own higher value for it.
 // The XP-funded last-tier boost unlocks once the last tier's first Scale Up lands (see
 // isLastTierTickspeedXpUnlocked) — this helper expresses exactly that condition, not a proxy.
+// consumeXpForLastTierTickspeed also requires the last tier to currently own at least 1 (see its
+// own guard in engine.js — spending XP to speed up a tier with nothing left to speed up would
+// just wipe every other tier for no benefit), so this helper also raises owned to at least 1 if
+// it isn't already there, without clobbering a test's own higher value for it.
 const withLastTierTickspeedXpUnlocked = (state, unlocked = true) => ({
   ...state,
   scaleUpTierCounts: {
     ...state.scaleUpTierCounts,
     [lastTier.id]: unlocked ? Math.max(state.scaleUpTierCounts?.[lastTier.id] ?? 0, 1) : 0,
   },
+  owned: unlocked
+    ? { ...state.owned, [lastTier.id]: Math.max(state.owned?.[lastTier.id] ?? 0, 1) }
+    : state.owned,
 })
 
 const withLastTierXpConsumed = (state, amount) => ({
@@ -8063,7 +8066,7 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier('does_not_exist')(state)).toBe(state)
   })
 
-  it('is a no-op for the last tier while its tickspeed is XP-unlocked (owned >= 10), even with plenty of the tier\'s own resource', () => {
+  it('is a no-op for the last tier while its tickspeed is XP-unlocked (a successful Scale Up onto it this cycle, not an owned threshold), even with plenty of the tier\'s own resource', () => {
     const state = withResource(
       withLastTierTickspeedXpUnlocked(unlockedLastTierState()),
       lastTier.id,
@@ -8072,7 +8075,7 @@ describe('buyTickspeedMultiplier', () => {
     expect(buyTickspeedMultiplier(lastTier.id)(state)).toBe(state)
   })
 
-  it('resumes working for the last tier once owned drops back below 10 (XP tickspeed disengaged)', () => {
+  it('works normally for the last tier when it was never XP-unlocked this cycle (no Scale Up onto it yet), regardless of its owned count', () => {
     const state = withResource(
       withOwned(unlockedLastTierState(), lastTier.id, 1),
       lastTier.id,
@@ -9861,6 +9864,16 @@ describe('getLastTierXpTickspeedMinConsumption', () => {
 describe('consumeXpForLastTierTickspeed', () => {
   it('returns the same state when not yet unlocked, regardless of available XP', () => {
     const state = withXP(createInitialGameState(), 100)
+    expect(consumeXpForLastTierTickspeed(50)(state)).toBe(state)
+  })
+
+  it('returns the same state when unlocked but the last tier currently owns 0 — nothing left to speed up, so it refuses rather than wiping every other tier for no benefit', () => {
+    const state = withOwned(
+      withXP(withLastTierTickspeedXpUnlocked(createInitialGameState()), 100),
+      lastTier.id,
+      0
+    )
+    expect(isLastTierTickspeedXpUnlocked(state)).toBe(true)
     expect(consumeXpForLastTierTickspeed(50)(state)).toBe(state)
   })
 
