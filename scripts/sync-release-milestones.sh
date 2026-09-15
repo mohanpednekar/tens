@@ -3,8 +3,8 @@
 # Creates/updates version milestones and assigns the Era (#407) and UI-revamp
 # (#138–#140) issue groups. Safe to rerun on every housekeeping pass.
 #
-# Requires `gh` with Issues read/write (GH_AUTOMATION_PAT in GHA, GH_TOKEN in
-# Cursor Cloud Agents — see docs/AUTOMATION.md).
+# Requires `gh` with Issues read/write (GH_AUTOMATION_PAT in GHA, or a maintainer's
+# local `gh` session — see docs/AUTOMATION.md).
 #
 # Usage: sync-release-milestones.sh [--dry-run]
 #

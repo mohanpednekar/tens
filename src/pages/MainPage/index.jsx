@@ -1595,7 +1595,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
           const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
-          const tickspeedLabel = `Tickspeed multiplier (+1% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
+          const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
           // title for assistive tech. The block progress ("5+3/8" — how many of the current
@@ -1716,7 +1716,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   variant="success"
                   disabled={!canUpgradeTickspeed}
                   onClick={() => actions.buyTickspeedMultiplier(tier.id)}
-                  title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 1% more`}
+                  title={`Tickspeed multiplier level ${tickspeedLevel} (${tickspeedBonusLabel} faster ticks) — the next level makes it 10% more`}
                   $progress={tickspeedProgressPercent}
                   $pulse={canUpgradeTickspeed}
                 >

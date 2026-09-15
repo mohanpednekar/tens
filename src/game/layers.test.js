@@ -251,8 +251,8 @@ describe('constants', () => {
     expect(TICKSPEED_MULTIPLIER_BASE_EXPONENT).toBe(10)
   })
 
-  it('TICKSPEED_PRODUCTION_STEP is 0.01 (1% production per tickspeed level)', () => {
-    expect(TICKSPEED_PRODUCTION_STEP).toBe(0.01)
+  it('TICKSPEED_PRODUCTION_STEP is 0.1 (10% production per tickspeed level)', () => {
+    expect(TICKSPEED_PRODUCTION_STEP).toBe(0.1)
   })
 
   it('SMART_AUTOBUYER_COST_MULTIPLIER is 10 (smart costs 10x the unlock cost)', () => {
