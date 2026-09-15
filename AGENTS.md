@@ -203,7 +203,8 @@ operation (the persisted `intro.diskBuild` field intentionally retains its histo
 targets the next disk size and renders INSIDE the pool card matching that size (not standalone in
 the Data Stream section), with a fallback copy below the Data Stream card for the rare case where
 the disk ladder has outrun the last currently-visible pool card. Its cost is paid in N passes of the disk's own face-value size each — N for the array's Nth disk
-(1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER` (10) for its last) rather than a flat count
+(1 for its first, up to 9 for its last — `DISK_ARRAY_LADDER_CAP` (9), not `DISK_BUILD_COST_MULTIPLIER`'s
+10, which is no longer actually reached) rather than a flat count
 for every disk — (`intro.diskProvisionPasses`) rather than as one lump sum, so a pool's buffer only
 ever needs to hold one pass at a time; only once every required pass lands does the real timed build
 start, and a manual click that doesn't finish it in one call auto-arms a queue so the remaining

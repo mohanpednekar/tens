@@ -8365,3 +8365,40 @@ not skipped). `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/C
 and `CLAUDE.md` updated in the same commit per this repo's own documentation convention (`AGENTS.md`
 needed no further change beyond its initial resync — its own condensed level of detail doesn't cover
 the write-cache mechanic).
+
+**A fourth review round (Codex, on the PR after it was marked ready for review) found one more real
+bug plus four doc/UI staleness gaps.** The bug: a save written before `DISK_ARRAY_LADDER_CAP` dropped
+from 10 to 9 could carry `disksBuiltTotal[size] === 9` with `diskProvisionPasses[size] > 0` — partial
+funding toward what used to be that size's 10th disk. Under the new cap, `getDiskSize` reads that
+array as already complete at 9 and will never return `size` again, so those already-paid passes would
+sit forever as dead, unreachable state — real currency the player spent, with nothing to show for it.
+Fixed in `normalizePoolMemoryCapacity` (run on every load): any `diskProvisionPasses[size]` entry
+where `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP` now gets refunded — its bit-value (`passes ×
+size`) added to that size's owning pool's own buffer, capped at `getPoolBufferClampCeilingBits` same
+as every other over-buffer-capacity source, never manufactured past it — and the stale entry is
+cleared. This can only ever fire once per affected save; live play never reaches that exact
+combination, since `provisionDisk` already clears a size's passes the instant its final pass lands.
+Two regression tests cover it (the refund itself, and the ceiling clamp on an oversized one).
+
+The four staleness gaps: (1) the root `AGENTS.md` still said the array's last disk was capped at
+`DISK_BUILD_COST_MULTIPLIER` (10) for its cost, left over from before this same PR's own `CLAUDE.md`
+edit — fixed to `DISK_ARRAY_LADDER_CAP` (9), while its own Data Lakes paragraph (already updated
+earlier in this PR) was untouched. (2) `DataLakePanel`'s `LakePoolTile` labeled the "virtual final
+unit" fallback (`getDataLakeNextFillSubSize` supplying a level's own last unit from the lake's
+retained buffer once every real disk slot is full) the same as an ordinary disk fill — "fills the
+next `<size>` disk" — even though no new disk square is being created at that point; fixed by
+detecting `hasOpenDiskSlot` (whether any sub-size still has an unfilled real slot) and switching the
+tile's aria-label/title/visible label to a distinct "tops up its own retained buffer toward capacity"
+phrasing whenever it doesn't. (3) The in-game Guide (`InfoPage`) still described the old taper
+mechanic (a rate starting at `DATA_LAKE_OVERFLOW_MAX_PERCENT`% and decaying toward
+`DATA_LAKE_OVERFLOW_MIN_PERCENT`% as the current disk fills) even though the taper itself was removed
+earlier in this same PR in favor of a flat available-rate fill — fixed, along with dropping the two
+now-unused percent constants from `InfoPage`'s own imports. (4) The committed Graphify report was
+built from an ancestor commit that predated this PR's final documentation-correction commits —
+regenerated via `graphify update .` in the same commit as the fixes above, so the committed map
+matches the tree it describes.
+
+**Verification (round 4 addendum).** `yarn test`: 1786/1786 (three new tests — the orphaned-passes
+refund, its ceiling clamp, and a no-op check for in-progress passes on the currently-offered size).
+`AGENTS.md`, `src/pages/InfoPage/index.jsx`, `docs/ECONOMY_REFERENCE.md`, and
+`docs/COMPONENTS_REFERENCE.md` updated in the same commit; `graphify-out/` regenerated.

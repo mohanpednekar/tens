@@ -2688,6 +2688,49 @@ export const normalizePoolMemoryCapacity = state => {
       nextIntro.poolBuffers = poolBuffers
     }
   }
+  // A save written before this size's array cap dropped from 10 to 9 disks
+  // (DISK_ARRAY_LADDER_CAP — see docs/DESIGN_HISTORY.md) can carry disksBuiltTotal[size] === 9 with
+  // diskProvisionPasses[size] > 0: partial funding toward what used to be that size's 10th disk.
+  // Under the new cap that array already reads as complete at 9 (getDiskSize/provisionDisk will
+  // never look at this size again), so without this those already-spent passes would sit forever as
+  // dead state — bits the player genuinely paid, gone with nothing to show for them. Refund their
+  // bit-value into the owning pool's own buffer (capped at that pool's ceiling, same as any other
+  // over-buffer-capacity source — never manufactured past it) and clear the stale entry. This can
+  // only ever fire once per affected save: live play never reaches builtTotal[size] >=
+  // DISK_ARRAY_LADDER_CAP with a nonzero diskProvisionPasses[size] at the same time (provisionDisk
+  // clears that size's passes the instant its final pass lands).
+  if (nextIntro.diskProvisionPasses) {
+    const builtTotal = nextIntro.disksBuiltTotal ?? {}
+    const diskProvisionPasses = { ...nextIntro.diskProvisionPasses }
+    const poolBuffers = { ...(nextIntro.poolBuffers ?? {}) }
+    let orphanedPassesChanged = false
+    let refundedBuffersChanged = false
+    for (const sizeKey of Object.keys(diskProvisionPasses)) {
+      const size = Number(sizeKey)
+      const passes = diskProvisionPasses[sizeKey] ?? 0
+      if (!(passes > 0) || (builtTotal[size] ?? 0) < DISK_ARRAY_LADDER_CAP) continue
+      const poolIndex = getPoolIndexForDiskSize(size)
+      if (poolIndex) {
+        const ceiling = getPoolBufferClampCeilingBits({ ...state, intro: { ...nextIntro, poolBuffers } }, poolIndex)
+        const current = poolBuffers[poolIndex] ?? 0
+        const refunded = Math.min(ceiling, current + passes * size)
+        if (refunded !== current) {
+          poolBuffers[poolIndex] = refunded
+          refundedBuffersChanged = true
+        }
+      }
+      delete diskProvisionPasses[sizeKey]
+      orphanedPassesChanged = true
+    }
+    if (orphanedPassesChanged) {
+      changed = true
+      nextIntro.diskProvisionPasses = diskProvisionPasses
+    }
+    if (refundedBuffersChanged) {
+      changed = true
+      nextIntro.poolBuffers = poolBuffers
+    }
+  }
   // Clamp each Data Lake's own capacityLevel into [0, DATA_LAKE_CAPACITY_MAX_LEVEL] and to a whole
   // integer. A save written before that ladder narrowed from 11 SI-clean levels to 4 decade-power
   // ones (see docs/DESIGN_HISTORY.md) could carry a capacityLevel past the new, shorter

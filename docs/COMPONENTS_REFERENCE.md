@@ -117,7 +117,12 @@ funded Booster it's produced so far (e.g. "3× Cores"); then a dedicated `LakePo
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
 reading a static "Locked · 0 / `<size>`" before `isDataLakePoolReady` rather than being absent, so
 the section never jumps from showing nothing to already mid-fill with no visible history in between
-(see `docs/DESIGN_HISTORY.md`). Deliberately keyed off `isDataLakePoolReady`, NOT
+(see `docs/DESIGN_HISTORY.md`). Once every real disk slot at the current level is already full but
+`currentFillSubSize` still reads non-null (`getDataLakeNextFillSubSize`'s own "virtual final unit"
+fallback — the level's own last unit, filled through the lake's retained buffer with no disk square
+of its own), the tile switches to a distinct "buffer" label/aria-text ("tops up its own retained
+buffer toward capacity") instead of claiming to fill "the next `<size>` disk" — there is no such
+disk left to fill at that point. Deliberately keyed off `isDataLakePoolReady`, NOT
 `isDataLakeBoosterUnlocked` — the latter's old-save-compatibility fallback can read true (correctly
 keeping Boosters purchasable) for a pool that has never built a real disk, where this tile would
 otherwise show live-looking fill data the engine can never actually advance; then one row of disk squares

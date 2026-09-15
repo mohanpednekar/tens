@@ -104,6 +104,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no check that the tier currently owns anything — so it could wipe every other tier's owned
   quantity and Bits back to 0 for a tickspeed bonus with nothing left to apply it to, a real
   dead-end a player could get stuck in.
+- **A save with partial funding toward a disk array's since-removed 10th disk (from before the
+  9-disks-per-size change above) no longer loses that spent currency on load** — it's now refunded
+  into that size's own pool buffer, capped at the pool's own ceiling, instead of sitting forever as
+  unreachable state.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.

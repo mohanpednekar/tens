@@ -1134,6 +1134,64 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     expect(normalizePoolMemoryCapacity(state)).toBe(state) // no truncation — already within the correct ceiling
   })
 
+  it('normalizePoolMemoryCapacity refunds and clears orphaned passes toward a since-removed 10th disk (DISK_ARRAY_LADDER_CAP dropped 10 → 9 — regression)', () => {
+    // A save written before DISK_ARRAY_LADDER_CAP dropped from 10 to 9 could have 9 disks already
+    // built at a size, with diskProvisionPasses partway toward what used to be that size's 10th
+    // disk. Under the new cap that array already reads as complete at 9 — getDiskSize will never
+    // return this size again — so without a refund, those already-spent passes (real currency the
+    // player paid) would sit forever as dead state with nothing to show for them.
+    const size1KB = getDiskLadderSizeBits(1)
+    const poolIndex = getPoolIndexForDiskSize(size1KB)
+    const passes = 4
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: BITS_PER_BYTE * (2 ** 20), // deep enough that pool 1's buffer ceiling isn't limiting
+      disksBuiltTotal: { [size1KB]: DISK_ARRAY_LADDER_CAP },
+      diskProvisionPasses: { [size1KB]: passes },
+      poolBuffers: { [poolIndex]: 0 },
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskProvisionPasses[size1KB]).toBeUndefined()
+    expect(after.intro.poolBuffers[poolIndex]).toBe(passes * size1KB)
+    // getDiskSize has already moved past this size — the refund can't be re-spent on a disk this
+    // size will never offer again, only banked toward whatever the ladder currently offers instead.
+    expect(getDiskSize(after)).not.toBe(size1KB)
+  })
+
+  it('normalizePoolMemoryCapacity caps an orphaned-tenth-disk refund at the pool buffer\'s own ceiling rather than manufacturing bits past it', () => {
+    // Pool 2's own smallest disk size (ladder step 4 — each pool spans 3 ladder steps, ×1/×10/×100)
+    // is vastly larger than pool 2's ENTRY-CAPACITY ceiling while pool 2 itself stays hidden
+    // (Capacity only just past pool 1's own threshold) — an easy way to force the refund to exceed
+    // the ceiling regardless of exact disk-size constants.
+    const pool2SmallestSize = getDiskLadderSizeBits(4)
+    const poolIndex = getPoolIndexForDiskSize(pool2SmallestSize)
+    expect(poolIndex).toBe(2)
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { byteCreated: true, capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: getPoolCapacityUnlockThresholdBits(1), // pool 2 stays hidden
+      disksBuiltTotal: { [pool2SmallestSize]: DISK_ARRAY_LADDER_CAP },
+      diskProvisionPasses: { [pool2SmallestSize]: DISK_ARRAY_LADDER_CAP },
+      poolBuffers: { [poolIndex]: 0 },
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskProvisionPasses[pool2SmallestSize]).toBeUndefined()
+    expect(after.intro.poolBuffers[poolIndex]).toBe(pool2EntryCapacityCeiling)
+  })
+
+  it('normalizePoolMemoryCapacity leaves in-progress diskProvisionPasses for the CURRENTLY offered (not-yet-complete) size untouched', () => {
+    const currentSize = getDiskSize(createInitialGameState())
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskProvisionPasses: { [currentSize]: 1 }, // partial funding toward a size well below DISK_ARRAY_LADDER_CAP
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskProvisionPasses[currentSize]).toBe(1)
+  })
+
   it('normalizePoolMemoryCapacity clamps a Data Lake capacityLevel saved past the new, shorter ladder\'s array bounds', () => {
     // The Data Lake capacity ladder narrowed from 11 SI-clean levels (0-10) to 4 decade-power ones
     // (0-3) — a save written under the old ladder could carry a capacityLevel of, say, 7, which

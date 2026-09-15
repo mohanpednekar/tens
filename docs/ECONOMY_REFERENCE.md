@@ -529,6 +529,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    even while a build is queued — both `isProvisionDiskAvailable` and `provisionDisk` itself apply
    this same reservation before checking/spending against the buffer; see `docs/DESIGN_HISTORY.md`.
 
+   **Migration — orphaned tenth-disk passes.** A save written before `DISK_ARRAY_LADDER_CAP` dropped
+   from 10 to 9 (see `docs/DESIGN_HISTORY.md`) can carry `disksBuiltTotal[size] === 9` with
+   `diskProvisionPasses[size] > 0` — partial funding toward what used to be that size's 10th disk.
+   Under the new cap that array already reads as complete at 9, so `getDiskSize` will never return
+   `size` again and those passes would otherwise sit forever as dead state — bits the player already
+   spent, with nothing to show for them. `normalizePoolMemoryCapacity` (run on every load) detects
+   any `diskProvisionPasses[size]` entry where `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP`,
+   refunds its bit-value (`passes × size`) into that size's owning pool's own buffer — capped at
+   `getPoolBufferClampCeilingBits`, same as any other over-buffer-capacity source, never
+   manufactured past it — and clears the stale entry. This can only ever fire once per affected
+   save: live play never reaches that combination (`provisionDisk` clears a size's passes the
+   instant its final pass lands), so it's purely a one-time migration for pre-existing saves.
+
    **Pool buffers.** Every bit-costing Storage action for a pool — Provision Disk's own build cost
    above, and the read-cache fill-from-Memory pass below — spends from that pool's own small local
    buffer (`intro.poolBuffers[poolIndex]`), never the shared Data Stream Buffer (`intro.bits`)
