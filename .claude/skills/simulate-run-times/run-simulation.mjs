@@ -5,18 +5,18 @@
 // Bot strategy (ideal attentive player, held constant across runs):
 //   Foundry (every tick):
 //     - Tap Memory when not full; tap every unlocked pool's own local buffer too (the fill-based
-//       Speed/Bandwidth multiplier — FILL_MULTIPLIER_* in layers.js — is independent per Data
+//       multiplier — FILL_MULTIPLIER_* in layers.js — is independent per Data
 //       Stream/pool, so an attentive player keeps every one of them boosted, not just the Data
 //       Stream tile); Combine into a Byte when affordable.
 //     - Byte Foundry funds Byte Factory pull-based and fully automatically now (tickDiskPull /
 //       tickDiskLevelOneCachePull, unconditional inside tickGame every tick, no autobuyer gate —
 //       issue #571) — there is nothing left for this bot to pause or redeem manually.
-//     - While mainGameUnlocked is false: skip Disk Fill/Build, Invest/Sacrifice as gated, and
-//       convert Memory → Kilobytes until the gate opens. The convert-before-pull ordering that
+//     - While mainGameUnlocked is false: skip Disk Fill/Build, queue the Data Stream upgrade as
+//       gated, and convert Memory → Kilobytes until the gate opens. The convert-before-pull ordering that
 //       used to matter for avoiding a softlock is now an engine-level fact (tickDiskPull runs at
 //       the very end of tickGame's own pipeline), not something this bot influences.
-//     - After unlock: Disk Fill → Invest → Disk Build → queue Capacity when Invest can't take the
-//       next spend (fires on full Memory, erases Compute tokens, then Sacrifices) → convert →
+//     - After unlock: Disk Fill → Disk Build → queue the Data Stream upgrade when the Buffer
+//       isn't full yet (fires on full Memory) → convert →
 //       Data Lake Booster buys (buyBooster; funded only from that lake's own banked units — outside
 //       the forced priority order entirely, always available the instant affordable) → Boosts.
 //       Never enable permanent auto-merge.
@@ -70,13 +70,11 @@ import {
   getTierBulkQuantity,
   getTierSpendableAmount,
   getVisibleStoragePoolCount,
-  isBandwidthAvailable,
   isBoosterPurchaseAvailable,
   isProductionFrozen,
   isTierUnlocked,
   overclockGame,
   pickIntroCapacityMilestone,
-  pickIntroProductionMilestone,
   prestigeGame,
   queueIntroCapacityUpgrade,
   scaleUpGame,
@@ -93,7 +91,6 @@ import {
   DATA_LAKE_TIER_COUNT,
   INTRO_CAPACITY_CAP_BITS,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
-  INTRO_CONVERSION_UNLOCK_CAPACITY,
   MONEY_ID,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   TIER_DEFINITIONS,
@@ -132,7 +129,7 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
   let s = state
 
   s = tapIntroBit(s)
-  // Fill-based Speed/Bandwidth multiplier (FILL_MULTIPLIER_* in layers.js): tapping keeps a
+  // Fill-based multiplier (FILL_MULTIPLIER_* in layers.js): tapping keeps a
   // Buffer's own multiplier boosted above its natural fill-based value. tapIntroBit above already
   // covers the Data Stream; each pool's own local buffer needs its own tap too, since a pool's own
   // multiplier is entirely independent of the Data Stream's — an attentive player taps every
@@ -163,12 +160,10 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
       if (next === s) break
       s = next
     }
-    s = pickIntroProductionMilestone(s)
     if (
       canGrowCapacity &&
       !(s.intro.capacityUpgradeQueued ?? false) &&
-      s.intro.bits < s.intro.capacity &&
-      (!isBandwidthAvailable(s) || s.intro.capacity < INTRO_CONVERSION_UNLOCK_CAPACITY)
+      s.intro.bits < s.intro.capacity
     ) {
       s = queueIntroCapacityUpgrade(s)
     }
@@ -184,19 +179,16 @@ function actFoundry(state, { capacityCapBits = null } = {}) {
     return s
   }
 
-  s = pickIntroProductionMilestone(s)
   s = provisionDisk(s)
 
-  // Queue Capacity before the bar is full when Invest can't take the next Memory spend (or while
-  // still climbing to the conversion unlock) — tickQueuedCapacityUpgrade / tickGame then fires it
-  // on full Memory, erasing all Compute tokens as the queued-Sacrifice penalty.
-  // Under a capacity cap, stop queueing/Sacrificing once the cap is reached so Disk ladder size
-  // (and thus Data Lake deposit throughput) stays fixed for the Storage vs Compute tradeoff sweep.
+  // Queue the Data Stream upgrade before the bar is full — tickQueuedCapacityUpgrade / tickGame
+  // then fires it on full Memory.
+  // Under a capacity cap, stop queueing once the cap is reached so Disk ladder size (and thus Data
+  // Lake deposit throughput) stays fixed for the Storage vs Compute tradeoff sweep.
   if (
     canGrowCapacity &&
     !(s.intro.capacityUpgradeQueued ?? false) &&
-    s.intro.bits < s.intro.capacity &&
-    (!isBandwidthAvailable(s) || s.intro.capacity < INTRO_CONVERSION_UNLOCK_CAPACITY)
+    s.intro.bits < s.intro.capacity
   ) {
     s = queueIntroCapacityUpgrade(s)
   }
@@ -315,9 +307,9 @@ function actTickspeed(state) {
 
 function actSoftResets(state) {
   // Scale-Up-first preserves ladder progress before the final target. Once the target reaches the
-  // last tier, however, its flat level-3 requirement would reset that tier before Overclock's
-  // level-5 requirement can ever be reached. Mirror Auto Scale Up's final-tier pause by deferring
-  // Scale Up there and letting the simulation continue climbing until Overclock fires.
+  // last tier, a further Scale Up claim would reset that tier before Overclock's completed-level
+  // requirement can be reached. Mirror Auto Scale Up's final-tier pause by deferring Scale Up
+  // there and letting the simulation continue climbing until Overclock fires.
   if ((state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1) {
     return overclockGame(state)
   }
@@ -514,7 +506,7 @@ if (runCapacitySweep || onlyCapacity) {
   emit('## Memory capacity-cap sweep (Storage vs Compute)')
   emit('')
   emit(
-    'Freeze Sacrifice once Memory capacity reaches each listed bit value (climb normally until then).',
+    'Freeze Data Stream capacity growth once Memory capacity reaches each listed bit value (climb normally until then).',
   )
   emit(
     'Higher caps unlock larger Disk arrays → more Data Lake deposits → more Booster purchases',
@@ -644,7 +636,7 @@ Published by \`publish-strategy.sh\` — **do not merge** that branch into \`mai
 Ideal attentive player (authoritative detail: \`.claude/skills/simulate-run-times/SKILL.md\` on the code branches):
 
 1. **Foundry gate:** Tap / Combine; convert Memory → Kilobytes until the gate opens. Byte Foundry pulls a matching permanent Disk into tier01 automatically and unconditionally, every tick (\`tickDiskPull\`) — nothing to pause or redeem by hand.
-2. **After unlock:** Disk Fill → Invest → Disk Build → **queue Capacity** when Invest cannot take the next spend (or while climbing to conversion unlock) → queued fire erases Compute tokens then Sacrifices → convert → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop Sacrificing once the listed Memory capacity is reached.
+2. **After unlock:** Disk Fill → Disk Build → **queue the Data Stream upgrade** when the Buffer isn't full yet → convert → **Data Lake Booster buys** (\`buyBooster\`; funded only from that lake's own banked units — outside the forced priority order entirely, always available the instant affordable) → Boosts. Never enable permanent auto-merge. Under \`--capacity-cap\`, stop growing capacity once the listed Memory capacity is reached.
 3. **Factory:** Autobuyers when unlocked; manual \`buyTierQuantity\` when an autobuyer would stall on a full cost-block.
 4. **Tickspeed:** Buy global + per-tier tickspeed whenever affordable; dump run XP into last-tier XP tickspeed.
 5. **Soft resets:** Scale Up first while advancing through the tier ladder (flat level 3); at the final-tier target, skip Scale Up and keep climbing until Overclock fires so its level-5 gate is reachable.
