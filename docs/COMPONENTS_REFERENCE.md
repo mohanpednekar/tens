@@ -51,12 +51,16 @@ a flush to disk) renders a proportional `CacheFillIndicator` overlay growing lef
 colored while filling, info-colored while flushing — so the fill level itself is always visible, not
 just the full/empty extremes (`title` also reads e.g. "Filling from Memory (40%)" once partially
 filled). Then an optional **write cache** progress row when
-`intro.diskWriteCache[size]` is active (10 segmented squares while collecting from the source size
-below; solid bar draining left-to-right while flushing — collect pauses on tier match, flush never
-does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle disk strip that **always** keeps all ten
+`intro.diskWriteCache[size]` is active (`DISK_LADDER_SIZE_MULTIPLIER` (10) segmented squares while
+collecting from the source size below — the actual source→target SIZE RATIO, NOT
+`DISK_ARRAY_LADDER_CAP` below, a different constant since it dropped to 9 (see
+`canStartDiskWriteCacheMerge`'s own doc comment in `engine.js`); solid bar draining left-to-right
+while flushing — collect pauses on tier match, flush never
+does), then a fixed `DISK_ARRAY_LADDER_CAP`-circle (9) disk strip that **always** keeps all 9
 circles on one unbroken row at every viewport (circles flex-shrink together — never wraps to a
-second row), each labeled inside at `0.65rem` with the array's Byte-scale
-face size (`formatDiskSize` — e.g. `1 KB`). No external array header and no `"Cache"` / `"Disks"`
+second row), each labeled inside at `0.65rem` with a BARE number, no unit
+(`formatDiskSizeBare` — the surrounding pool card already establishes the scale; e.g. `1`, not
+`1 KB`). No external array header and no `"Cache"` / `"Disks"`
 row titles — shapes plus in-cell labels carry identity; built/full counts stay visual. A full disk
 about to be auto-pulled this tick (`isDiskPullEligible` — full, matching its tier's current level,
 and that level at zero progress) renders `$pullEligible` (good/green, pulsing, `aria-label="…disk
@@ -119,7 +123,11 @@ keeping Boosters purchasable) for a pool that has never built a real disk, where
 otherwise show live-looking fill data the engine can never actually advance; then one row of disk squares
 (`LakeSquare`, capped at `max-width: 2.5rem` so a lone square at a fresh capacity level doesn't
 stretch to fill the whole row) per sub-size present at the lake's current capacity level (×1/×10/×100,
-smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 10/9/9), the same "one unbroken row
+smallest first, each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` — 9/9/9, one unit short of that
+level's own capacity; the level's own last unit fills through the lake's own retained buffer instead
+of a disk square, see `getDataLakeNextFillSubSize` in `engine.js`), each labeled inside with a BARE
+number, no unit (`formatDiskSizeBare`, same convention `DiskArrayRow`'s own `DiskSquare` uses) — the
+same "one unbroken row
 per size" shape `DiskArrayRow` uses for Storage — a lake disk just fills and completes, with no
 pull-eligibility distinction to render — the one currently-open slot shows a live left-to-right fill toward its
 own full size, but only once `isDataLakePoolReady` (same gate as `LakePoolTile` above, and for the
@@ -137,7 +145,10 @@ pool's smallest ×1 array for level 0→1, middle ×10 for 1→2, largest ×100 
 own Booster cost any more), an "⚡ Scale Out" button (disabled until the forced-priority chain allows
 it, HIDDEN rather than merely disabled before that array is complete); otherwise, once the lake is
 unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one real disk,
-not the lake's own fill progress), a `🎯 <next Booster cost>` Buy button (disabled until affordable)
+not the lake's own fill progress), a `🎯 <next Booster cost>` Buy button (cost/capacity figures
+render via `formatDiskSizeInPoolUnit` — this lake's own FIXED unit, e.g. always "KB" for the KB
+lake, never auto-converting up even past 1000x — rather than `formatDiskSize`'s auto-nearest-unit
+pick, since a maxed lake's own capacity legitimately reaches that boundary) (disabled until affordable)
 plus an Auto/Manual toggle for `autoBuyEnabled` — the two button modes are **no longer guaranteed
 mutually exclusive** (that held only under the old cost-based Upgrade condition — see
 `docs/DESIGN_HISTORY.md`), so `DataLakePanel` shows only one, preferring BUY whenever it's genuinely

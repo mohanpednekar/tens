@@ -8336,8 +8336,32 @@ the pre-existing off-lattice decomposition test (which had used capacityLevel 1 
 somewhat synthetic scenario) moved to capacityLevel 2, whose own 99-unit representable range
 genuinely fits it.
 
-**Verification.** `yarn test`: 1782/1782 (two dedicated taper-regression tests were retired since
-the mechanic they guarded no longer exists; two new regression tests were added for the
-capacity-cap bug above; the rest were updated in place for the new 9/9/9 shapes and values, not
-skipped). `docs/ECONOMY_REFERENCE.md`, `CLAUDE.md`, and `AGENTS.md` updated in the same commit per
-this repo's own documentation convention.
+**A third bug, unrelated to Data Lakes, was caught in the same review round: the write-cache
+upward-merge mechanic silently started manufacturing value.** `tickDiskWriteCache` (the mechanic
+that folds a completed array's disks upward into the next size — e.g. 1 KB disks into a 10 KB
+disk) reused `DISK_ARRAY_LADDER_CAP` for its own "how many source-disk segments complete a merge"
+threshold, alongside its correct, separate use as the "is the source array full enough to start"
+eligibility gate. Before this PR, `DISK_ARRAY_LADDER_CAP` and `DISK_LADDER_SIZE_MULTIPLIER` (the
+actual source→target size ratio, still 10) happened to be equal, so reusing one constant for both
+concepts was invisible — 10 segments of one source disk each exactly summed to one target disk's
+own 10x-larger value. Dropping `DISK_ARRAY_LADDER_CAP` to 9 broke that coincidence: the merge kept
+requiring only 9 segments (per the same shared constant) to flush, but the target disk it produced
+was still worth 10x the source size — manufacturing 1 sourceSize-unit of value out of nothing on
+EVERY upward merge, at every tier boundary, for every pool, indefinitely. Fixed by decoupling the
+two: the collect/flush segment-count threshold (`getDiskWriteCacheSegmentFill`/
+`getDiskWriteCacheFlushFill`/`isDiskWriteCacheCollectPaused`/`tickDiskWriteCache`'s own two
+threshold checks) now uses `DISK_LADDER_SIZE_MULTIPLIER`, while `canStartDiskWriteCacheMerge`'s own
+"source array is completely full" eligibility check correctly keeps `DISK_ARRAY_LADDER_CAP` — two
+genuinely different concepts that must never share one constant again, documented explicitly at
+both call sites this time. `DiskArrayRow`'s own write-cache segment-strip rendering (segment count,
+the collecting-vs-flushing threshold, the flush bar's own aspect ratio) needed the identical split.
+A dedicated regression test verifies a merge needs exactly 10 segments, not 9, to flush.
+
+**Verification.** `yarn test`: 1783/1783 (two dedicated taper-regression tests were retired since
+the mechanic they guarded no longer exists; four new regression tests were added — two for the
+capacity-cap bug and one for the write-cache value-conservation bug above, plus one more from an
+earlier fix in this same round; the rest were updated in place for the new 9/9/9 shapes and values,
+not skipped). `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/COMPONENTS_REFERENCE.md`,
+and `CLAUDE.md` updated in the same commit per this repo's own documentation convention (`AGENTS.md`
+needed no further change beyond its initial resync — its own condensed level of detail doesn't cover
+the write-cache mechanic).

@@ -278,6 +278,8 @@ import {
   getBoosterPurchaseCost,
   getDiskLadderStep,
   getDiskWriteCacheMerge,
+  getDiskWriteCacheSegmentFill,
+  getDiskWriteCacheFlushFill,
   isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
   tickGame,
@@ -3871,11 +3873,13 @@ describe('tickDiskWriteCache', () => {
     // At the starting capacity both pools' bandwidth is the raw 1 B/s derived rate = 8 bits/sec.
     expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
     expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
-    // 10 source-disk segments sum to exactly one target's own size, but the two multipliers are
-    // deliberately different rates (5x collect vs. 2x flush — see the doc comment on
-    // getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster overall
-    // than the flush phase, not equal to it.
-    expect(merge.segmentTotalSeconds * DISK_ARRAY_LADDER_CAP).toBeLessThan(merge.flushTotalSeconds)
+    // DISK_LADDER_SIZE_MULTIPLIER (10) source-disk segments sum to exactly one target's own size —
+    // NOT DISK_ARRAY_LADDER_CAP (9, the array-full eligibility gate above, a different constant
+    // since it dropped from 10 to 9 — see canStartDiskWriteCacheMerge's own doc comment) — but the
+    // two multipliers are deliberately different rates (5x collect vs. 2x flush — see the doc
+    // comment on getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster
+    // overall than the flush phase, not equal to it.
+    expect(merge.segmentTotalSeconds * DISK_LADDER_SIZE_MULTIPLIER).toBeLessThan(merge.flushTotalSeconds)
   })
 
   it('scales a freshly-started merge\'s timings with Byte Foundry production rate', () => {
@@ -3918,9 +3922,43 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
+  // Regression: the write cache's own collect/flush threshold used to reuse DISK_ARRAY_LADDER_CAP
+  // (the array-full ELIGIBILITY gate — how many disks make a full array) for the SEGMENT COUNT too
+  // (how many source-disk segments a merge collects before flushing) — these happened to be equal
+  // (both 10) before DISK_ARRAY_LADDER_CAP dropped to 9, at which point reusing it for the segment
+  // count would have manufactured 1 sourceSize-unit of value out of nothing per merge (9 segments
+  // of sourceSize flushed into 1 targetSize disk worth 10x sourceSize). The segment count must stay
+  // tied to DISK_LADDER_SIZE_MULTIPLIER (10, the actual source->target size ratio) regardless of
+  // how many disks an array can physically hold at once. Caught by adversarial review before merge.
+  it('needs DISK_LADDER_SIZE_MULTIPLIER (10) segments to flush, not DISK_ARRAY_LADDER_CAP (9) — conserves value across the merge (regression)', () => {
+    const almostDone = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
+      disks: { [level2Size]: 1 }, // one more full disk on hand, ready for a final segment
+      diskWriteCache: {
+        [level3Size]: {
+          sourceSize: level2Size,
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER - 1, // 9 of 10 — NOT yet flush-eligible
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    expect(getDiskWriteCacheFlushFill(getDiskWriteCacheMerge(almostDone, level3Size))).toBe(0) // still collecting
+    const afterNinthSegment = tickDiskWriteCache(1)(almostDone)
+    const merge = getDiskWriteCacheMerge(afterNinthSegment, level3Size)
+    // The 10th segment lands and the flush phase arms itself in the same tick — collect is DONE
+    // (getDiskWriteCacheSegmentFill reads 0 — nothing left to collect) and the flush countdown
+    // starts fresh at its own full duration.
+    expect(merge.segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
+    expect(getDiskWriteCacheSegmentFill(merge)).toBe(0)
+    expect(merge.flushRemainingSeconds).toBe(merge.flushTotalSeconds)
+  })
+
   it('pauses collect while the source size has an active tier claim, and resumes once the tier instead moves past it into stranded territory — a stranded source still has real, permanent value', () => {
     const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
@@ -3959,7 +3997,7 @@ describe('tickDiskWriteCache', () => {
       diskWriteCache: {
         [level2Size]: {
           sourceSize: FIRST_DISK_SIZE,
-          segmentsCollected: DISK_ARRAY_LADDER_CAP,
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
           segmentRemainingSeconds: 0,
           segmentTotalSeconds: 1,
           flushRemainingSeconds: 0,
@@ -4020,7 +4058,7 @@ describe('tickDiskWriteCache', () => {
 
   it('resumes collection once the source becomes stranded mid-merge — progress already collected stays banked and collection continues using the stranded source', () => {
     const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
     // 1 segment already collected while tier01 was still at the required level 1; tier01 has since
     // advanced to level 2, stranding the rest of this merge's own source size.
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
@@ -4046,7 +4084,7 @@ describe('tickDiskWriteCache', () => {
 
   it('KEEPS collecting once the TARGET becomes stranded mid-merge too — a doubly-stranded merge still banks real, permanent progress (regression for the over-restriction a Devin Review finding on PR #603 caught: blocking here broke a still-useful further chain)', () => {
     const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
     // 1 segment already collected while tier01 sat exactly at level2Size's own required level (2);
     // tier01 has since advanced to level 3, stranding level2Size itself (the merge's TARGET) too.
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {

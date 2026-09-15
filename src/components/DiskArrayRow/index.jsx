@@ -14,7 +14,7 @@ import {
   isDiskStrandedByAdvancedTier,
   isDiskWriteCacheCollectPaused,
 } from 'game/engine'
-import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT } from 'game/layers'
+import { DISK_ARRAY_LADDER_CAP, DISK_CACHE_BLOCK_COUNT, DISK_LADDER_SIZE_MULTIPLIER } from 'game/layers'
 import styled, { keyframes } from 'styled-components'
 
 // One size's Cache+Disks strip: size identity lives INSIDE each cell (bit-scale on cache
@@ -160,8 +160,12 @@ const CacheFillIndicator = styled.div`
   pointer-events: none;
 `
 
-// Write cache — per-array upward merge buffer (empty at rest). Collect shows DISK_ARRAY_LADDER_CAP
-// segments; once full the same bar renders solid and drains left-to-right during flush.
+// Write cache — per-array upward merge buffer (empty at rest). Collect shows
+// DISK_LADDER_SIZE_MULTIPLIER (10) segments — the source→target SIZE RATIO, NOT
+// DISK_ARRAY_LADDER_CAP (9, the disk squares' own array-full count below): 10 segments of one
+// source disk each conserve exactly one target disk's own value; once full the same bar renders
+// solid and drains left-to-right during flush. See canStartDiskWriteCacheMerge's own doc comment
+// in engine.js for why these two constants must stay distinct.
 const WriteCacheRow = styled.div`
   display: flex;
   flex-wrap: nowrap;
@@ -172,11 +176,11 @@ const WriteCacheRow = styled.div`
 const WriteCacheSegment = styled.div`
   flex: 1 1 1.2rem;
   min-width: 0;
-  /* The single full-width flush bar ($flushBar) spans roughly DISK_ARRAY_LADDER_CAP collecting
-     segments' combined width — aspect-ratio: 1 there would square that whole width into a giant
-     block instead of a thin bar, so it uses that same ratio instead to land back near one
+  /* The single full-width flush bar ($flushBar) spans roughly DISK_LADDER_SIZE_MULTIPLIER
+     collecting segments' combined width — aspect-ratio: 1 there would square that whole width into
+     a giant block instead of a thin bar, so it uses that same ratio instead to land back near one
      segment's own height. */
-  aspect-ratio: ${props => (props.$flushBar ? DISK_ARRAY_LADDER_CAP : 1)};
+  aspect-ratio: ${props => (props.$flushBar ? DISK_LADDER_SIZE_MULTIPLIER : 1)};
   border-radius: ${props => props.theme.radius.sm};
   border: 1.5px solid ${props =>
     props.$active ? props.theme.color.accent : props.theme.color.surfaceSunken};
@@ -233,8 +237,8 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
   const writeCollectPaused = writeMerge ? isDiskWriteCacheCollectPaused(state, size) : false
   const writeCollectFill = writeMerge ? getDiskWriteCacheSegmentFill(writeMerge) : 0
   const writeFlushFill = writeMerge ? getDiskWriteCacheFlushFill(writeMerge) : 0
-  const writeCollecting = writeMerge && writeMerge.segmentsCollected < DISK_ARRAY_LADDER_CAP
-  const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_ARRAY_LADDER_CAP
+  const writeCollecting = writeMerge && writeMerge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER
+  const writeFlushing = writeMerge && writeMerge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER
   const readFlush = getDiskReadCacheFlush(state, size)
   const readFlushing = Boolean(readFlush)
   const readFlushPaused = readFlushing && isDiskReadCacheFlushPaused(state, size)
@@ -314,7 +318,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
           aria-valuenow={Math.round((writeFlushing ? writeFlushFill : writeCollectFill) * 100)}
         >
           {writeCollecting ? (
-            Array.from({ length: DISK_ARRAY_LADDER_CAP }, (_, index) => {
+            Array.from({ length: DISK_LADDER_SIZE_MULTIPLIER }, (_, index) => {
               const filledSegments = writeMerge.segmentsCollected
               const partial = getDiskWriteCacheSegmentFill(writeMerge)
               const isFilled = index < filledSegments

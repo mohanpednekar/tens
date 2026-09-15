@@ -163,19 +163,21 @@ visible label always tracks
 `10^(n-1)`): 8000 bits/"1
 KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
 8,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too — and only advances
-once `DISK_ARRAY_LADDER_CAP` (10) disks have ever been built at the current size (`disksBuiltTotal`,
+once `DISK_ARRAY_LADDER_CAP` (9 — the array's own cache substitutes for what would have been a
+10th disk) disks have ever been built at the current size (`disksBuiltTotal`,
 a cumulative, never-decremented count), decoupled from tier01's own CURRENT price. The build cost
 (`getDiskCost(state, capacityBits)`) is `capacityBits * getDiskProvisionPassesRequired(state,
-capacityBits)` — N for the array's Nth disk (1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER`
-(10) for its last), not a flat count for every disk regardless of ordinal: a real 1 KB/8000-bit
-array's first disk costs 8,000 bits ("1 KB"), its last (10th) still costs 80,000 bits ("10 KB") — the
-same flat figure every disk in the array used to cost (see docs/DESIGN_HISTORY.md). No separate
+capacityBits)` — N for the array's Nth disk (1 for its first, up to 9 for its last;
+`DISK_BUILD_COST_MULTIPLIER`'s defensive 10 no longer reached), not a flat count for every disk
+regardless of ordinal: a real 1 KB/8000-bit array's first disk costs 8,000 bits ("1 KB"), its last
+(9th) costs 72,000 bits ("9 KB") — not the flat figure every disk in the array used to cost (see
+docs/DESIGN_HISTORY.md). No separate
 `BITS_PER_BYTE` factor is needed here now that `capacityBits` is already Byte-accurate (an earlier,
 buggy "kilobit"-scaled version of this ladder needed one — see docs/DESIGN_HISTORY.md).
 
 Below Build, every size from `getDiskSizesToShow(state)` renders a full interactive
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
-not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
+not behind a Storage tab. Each disk strip always shows all `DISK_ARRAY_LADDER_CAP` (9) slots in one unbroken row.
 
 Provisioning a disk's cost is no longer paid in one lump sum —
 `provisionDisk` (`actions.provisionDisk`) collects the cost in `getDiskProvisionPassesRequired(state,
@@ -454,8 +456,10 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
   fill while a read-cache-to-disk flush is draining it. `aria-label` is the plain `"<size> cache
   block N"` (or `"… flushing to disk"` mid-flush); `title` explains the fill/flush state only.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
-  (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
-  strip that **always** keeps all ten circles on one unbroken row (circles flex-shrink; never wraps
+  (9) `DiskSquare`s — each labeled inside with a BARE number, no unit (`formatDiskSizeBare` — the
+  surrounding pool card already establishes the scale; `aria-label`/`title` keep the full
+  unit-suffixed `formatDiskSize` form) — a fixed-length
+  strip that **always** keeps all 9 circles on one unbroken row (circles flex-shrink; never wraps
   on mobile); in-cell labels use `0.65rem` font:
   **full** (leftmost), split into a full disk about to be auto-pulled THIS TICK
   (`isDiskPullEligible` — matching its tier's current level at zero progress) rendering

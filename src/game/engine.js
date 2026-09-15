@@ -3622,13 +3622,13 @@ export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
 
 export const getDiskWriteCacheSegmentFill = merge => {
-  if (!merge || merge.segmentsCollected >= DISK_ARRAY_LADDER_CAP) return 0
+  if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return 0
   if (merge.segmentTotalSeconds <= 0) return 0
   return 1 - merge.segmentRemainingSeconds / merge.segmentTotalSeconds
 }
 
 export const getDiskWriteCacheFlushFill = merge => {
-  if (!merge || merge.segmentsCollected < DISK_ARRAY_LADDER_CAP) return 0
+  if (!merge || merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) return 0
   if (merge.flushTotalSeconds <= 0) return 0
   return 1 - merge.flushRemainingSeconds / merge.flushTotalSeconds
 }
@@ -3645,7 +3645,7 @@ export const getDiskWriteCacheFlushFill = merge => {
 // rounds of over-restriction (source-stranded, then target-stranded) this reverts.
 export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
   const merge = getDiskWriteCacheMerge(state, targetSize)
-  if (!merge || merge.segmentsCollected >= DISK_ARRAY_LADDER_CAP) return false
+  if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return false
   return isDiskRedeemable(state, merge.sourceSize)
 }
 
@@ -3666,6 +3666,13 @@ export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
 const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
   if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
+  // Only starts once the SOURCE array is entirely full (DISK_ARRAY_LADDER_CAP, 9) — a different
+  // constant from the COLLECT phase's own segment count below (DISK_LADDER_SIZE_MULTIPLIER, 10):
+  // this one gates ELIGIBILITY ("don't start draining this array upward until it's completely
+  // built"), while the segment count must equal the actual source→target SIZE RATIO for the merge
+  // to conserve value (10 segments of sourceSize sum to exactly one targetSize disk). The two
+  // happened to share one value before DISK_ARRAY_LADDER_CAP dropped to 9; conflating them again
+  // would silently manufacture 1 sourceSize-unit of value per merge. See docs/DESIGN_HISTORY.md.
   if ((state.intro.disks?.[sourceSize] ?? 0) < DISK_ARRAY_LADDER_CAP) return false
   if ((state.intro.disksBuiltTotal?.[targetSize] ?? 0) <= 0) return false
   return (state.intro.disksBuiltTotal[targetSize] ?? 0) > (state.intro.disks?.[targetSize] ?? 0)
@@ -3744,7 +3751,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
 
-    if (merge.segmentsCollected < DISK_ARRAY_LADDER_CAP) {
+    if (merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
       // Shares isDiskWriteCacheCollectPaused's own rule (see its doc comment above): pause ONLY
       // while the source has an active tier claim (temporary — Factory gets first crack at a disk
@@ -3770,7 +3777,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 
       disks = decrementFullDiskCount(disks, merge.sourceSize)
       const segmentsCollected = merge.segmentsCollected + 1
-      if (segmentsCollected >= DISK_ARRAY_LADDER_CAP) {
+      if (segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) {
         diskWriteCache[targetSize] = {
           ...merge,
           segmentsCollected,
