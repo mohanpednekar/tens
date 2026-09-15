@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -2982,7 +2982,9 @@ test('Pool balance and Capacity share one precisely centered line', () => {
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const balance = pool1.querySelector('p')
-  expect(balance).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`)
+  // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
+  // always dedupes the balance's own unit suffix, leaving just the bare number.
+  expect(balance).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
   expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
@@ -3210,31 +3212,31 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
-    // 9 already built — this is the array's 10th (last) disk at this size, still costing the flat
-    // DISK_BUILD_COST_MULTIPLIER-times figure every disk used to cost regardless of ordinal (see
-    // getDiskProvisionPassesRequired in game/engine) — chosen so the cost meaningfully differs from
-    // the disk's own "1 KB" face size, unlike the array's first disk (which now costs just 1x, the
-    // same figure as its own size).
+    // 8 already built — this is the array's 9th (last, DISK_ARRAY_LADDER_CAP) disk at this size,
+    // costing 9x its own face value (getDiskProvisionPassesRequired scales by ordinal — the array's
+    // own cache substitutes for what would have been a 10th disk, see docs/DESIGN_HISTORY.md) —
+    // chosen so the cost meaningfully differs from the disk's own "1 KB" face size, unlike the
+    // array's first disk (which costs just 1x, the same figure as its own size).
     seedIntroState({
       bits: currentBankCost, capacity: currentBankCost, byteCreated: true ,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
     })
     render(<App />)
 
-    // currentBankCost is 80,000 bits = 10,000 Bytes — "10 KB" in the Disk's own SI scale
-    // (getDiskCost = diskSize * DISK_BUILD_COST_MULTIPLIER for this, the array's last disk), shown
-    // as "10 KB" rather than Memory's binary scale ("9.765 KiB") or the raw "80,000" bit count — a
-    // Disk's build cost is a Disk-denominated amount, so it renders on the same SI scale as the
-    // Disk's own size right next to it, not Memory's binary Sacrifice-ladder scale.
+    // The last disk's cost is 9 * 8,000 bits = 72,000 bits = 9,000 Bytes — "9 KB" in the Disk's own
+    // SI scale, shown as "9 KB" rather than Memory's binary scale or a raw bit count — a Disk's
+    // build cost is a Disk-denominated amount, so it renders on the same SI scale as the Disk's own
+    // size right next to it, not Memory's binary Sacrifice-ladder scale.
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent('10 KB')
-    expect(buildButton).not.toHaveTextContent('80,000')
+    expect(buildButton).toHaveTextContent('9 KB')
+    expect(buildButton).not.toHaveTextContent('72,000')
   })
 
   test('Provision Disk shows the pass count up front (0/N) for a multi-pass disk, even before the first pass is collected', () => {
-    // 9 already built — this build is the array's 10th (last) disk, needing 10 passes
-    // (getDiskProvisionPassesRequired) — before this fix the idle label only showed the total cost,
-    // giving no hint that funding it takes multiple passes until after the first click landed one.
+    // 8 already built — this build is the array's 9th (last, DISK_ARRAY_LADDER_CAP) disk, needing 9
+    // passes (getDiskProvisionPassesRequired) — before this fix the idle label only showed the
+    // total cost, giving no hint that funding it takes multiple passes until after the first click
+    // landed one.
     seedIntroState({
       bits: 0, capacity: currentBankCost, byteCreated: true ,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
@@ -3242,7 +3244,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent('0/10')
+    expect(buildButton).toHaveTextContent('0/9')
   })
 
   test('Provision Disk omits the pass count for a single-pass disk — nothing to clarify', () => {
@@ -3298,10 +3300,12 @@ describe('Byte Foundry Storage', () => {
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
     expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
-    expect(pool1.querySelector('p')).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`)
-    expect(pool1).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 1)))
-    expect(pool2.querySelector('p')).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 2))}`)
-    expect(pool2).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 2)))
+    // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
+    // always dedupes the balance's own unit suffix, leaving just the bare number.
+    expect(pool1.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
+    expect(pool1).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1))
+    expect(pool2.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2)}`)
+    expect(pool2).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2))
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 mb disks$/i })).toBeInTheDocument()
@@ -3384,7 +3388,7 @@ describe('Byte Foundry Storage', () => {
     expect(diskGroup).toBeInTheDocument()
     expect(cacheGroup).toBeInTheDocument()
     expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
@@ -3403,14 +3407,15 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
-    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale). Scoped to the
-    // disk/cache groups themselves (see the test above for why).
+    // labeled "1 Kb" (bit-scale); each disk circle shows a bare "1" (no unit — the surrounding pool
+    // card already establishes the KB scale, see formatDiskSizeBare). Scoped to the disk/cache
+    // groups themselves (see the test above for why).
     const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
     const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
     expect(diskGroup).toBeInTheDocument()
     expect(cacheGroup).toBeInTheDocument()
     expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
   test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
@@ -3432,8 +3437,8 @@ describe('Byte Foundry Storage', () => {
     // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
     // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
     expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()

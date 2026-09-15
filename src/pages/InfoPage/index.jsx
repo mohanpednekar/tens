@@ -26,8 +26,6 @@ import {
   CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER,
   CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER,
   DATA_LAKE_CAPACITY_BY_LEVEL,
-  DATA_LAKE_OVERFLOW_MAX_PERCENT,
-  DATA_LAKE_OVERFLOW_MIN_PERCENT,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
   EON_AMPLIFIER_AWARD_PER_LEVEL,
   ERA_ELIGIBILITY_PP,
@@ -337,19 +335,17 @@ const InfoPage = () => {
             buffer — capped at just enough for the lake's own next Booster, so a click never wastes a
             deposit. Once the pool is entirely complete, filling switches to AUTOMATIC: whatever the
             pool can't put toward its fill-based multiplier bonus (see Storage above) overflows
-            straight into that pool's own lake, at a rate that starts at{' '}
-            {DATA_LAKE_OVERFLOW_MAX_PERCENT}% and tapers down as the lake's CURRENT disk (the one
-            actively filling — see below) fills up, resetting back toward{' '}
-            {DATA_LAKE_OVERFLOW_MAX_PERCENT}% every time that disk completes — never actually
-            dropping all the way to {DATA_LAKE_OVERFLOW_MIN_PERCENT}%, so a disk always keeps
-            filling rather than crawling forever. Disks are no longer deposited from Storage —
-            Data Lakes have their own separate disk ladder now.
+            straight into that pool's own lake, at the plain available rate — no taper, the same
+            posture Storage's own disk provisioning uses. Disks are no longer deposited from
+            Storage — Data Lakes have their own separate disk ladder now.
           </li>
           <li>
             A lake fills its own disks smallest-size-first (×1, then ×10, then ×100 of that lake's
-            denomination), showing each completed disk as a filled square — the same disk-array
-            visual Storage pools use — with the currently-filling disk's own progress bar being
-            exactly what drives the overflow rate above.
+            denomination), one at a time, showing each completed disk as a filled square — the same
+            disk-array visual Storage pools use. Each sub-size caps one short of that level's own
+            capacity ({DATA_LAKE_SUB_SIZE_DISK_CAPS.join('/')}, not a flat 10/10/10) — a level's own
+            last unit fills through the lake's own retained buffer instead of a disk square, the
+            same way a Storage array's own cache substitutes for its would-be 10th disk.
           </li>
           <li>
             A lake holds at most {DATA_LAKE_SUB_SIZE_DISK_CAPS[0]} of its ×1 disks and{' '}

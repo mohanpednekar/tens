@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
+  own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
+  economically substitutes for the missing 10th unit. A Data Lake's overflow fill no longer tapers
+  its rate down as the currently-filling disk nears completion — it now fills at the plain available
+  rate, one disk at a time, the same posture Storage's own disk provisioning already uses. A Storage
+  pool's or Data Lake's own balance/capacity now always renders in that pool's/lake's own fixed unit
+  (e.g. a maxed KB Data Lake reads "1000 KB", never auto-converting to "1 MB"), and a Disk's own
+  visible size label is now a bare number with no unit suffix (the surrounding pool/lake card already
+  establishes the scale).
 - **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
   purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
   level compounds the same Overclock-scaled 1% step.
@@ -95,6 +104,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   no check that the tier currently owns anything — so it could wipe every other tier's owned
   quantity and Bits back to 0 for a tickspeed bonus with nothing left to apply it to, a real
   dead-end a player could get stuck in.
+- **A save with partial funding toward a disk array's since-removed 10th disk (from before the
+  9-disks-per-size change above) no longer loses that spent currency on load** — it's now refunded
+  into that size's own pool buffer, capped at the pool's own ceiling, instead of sitting forever as
+  unreachable state.
 
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
@@ -359,7 +372,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
   cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
   so stretching it to the full row width also stretched it to that same width in height. It now
-  uses `DISK_ARRAY_LADDER_CAP` as its aspect ratio instead, landing back near one segment's own
+  uses `DISK_LADDER_SIZE_MULTIPLIER` as its aspect ratio instead, landing back near one segment's own
   height.
 - **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
   least one Flops tier (previously hardcoded off).

@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeInPoolUnitStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -318,10 +318,12 @@ const useTrimBalanceAfterFull = isFull => {
 // A pool's own Memory balance, as its own tiny component (rather than inline in the pool-card
 // loop below) purely so useTrimBalanceAfterFull gets its own hook instance per pool — a hook
 // can't be called a variable number of times inside a single component's own render.
-const PoolBalanceText = ({ bits, capacityBits, isFull }) => {
+const PoolBalanceText = ({ bits, capacityBits, isFull, poolIndex }) => {
   const trimmed = useTrimBalanceAfterFull(isFull)
-  const balance = trimmed ? formatDiskSize(bits) : formatDiskSizeStable(bits)
-  const capacity = formatDiskSize(capacityBits)
+  // Fixed to this pool's own unit (never auto-converting up to the next one) — see
+  // formatDiskSizeInPoolUnit's own doc comment in engine.js.
+  const balance = trimmed ? formatDiskSizeInPoolUnit(bits, poolIndex) : formatDiskSizeInPoolUnitStable(bits, poolIndex)
+  const capacity = formatDiskSizeInPoolUnit(capacityBits, poolIndex)
   return (
     <BalanceText>
       {formatCombinedBalance(balance, capacity)} <BalanceSeparator>/</BalanceSeparator> {capacity}
@@ -815,7 +817,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 </SectionTitle>
                 <SpeedText>⚡ {formatDiskSize(poolBandwidth)}/s</SpeedText>
               </TitleRow>
-              <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} />
+              <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
               <MultiplierBar
                 basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
                 bonusPercent={poolTapBonusPercent}

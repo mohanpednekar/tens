@@ -278,12 +278,14 @@ import {
   getBoosterPurchaseCost,
   getDiskLadderStep,
   getDiskWriteCacheMerge,
+  getDiskWriteCacheSegmentFill,
+  getDiskWriteCacheFlushFill,
   isDiskReadCacheFlushPaused,
   isDiskWriteCacheCollectPaused,
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1130,6 +1132,64 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     expect(getVisibleStoragePoolCount(state)).toBe(1)
     expect(normalizePoolMemoryCapacity(state)).toBe(state) // no truncation — already within the correct ceiling
+  })
+
+  it('normalizePoolMemoryCapacity refunds and clears orphaned passes toward a since-removed 10th disk (DISK_ARRAY_LADDER_CAP dropped 10 → 9 — regression)', () => {
+    // A save written before DISK_ARRAY_LADDER_CAP dropped from 10 to 9 could have 9 disks already
+    // built at a size, with diskProvisionPasses partway toward what used to be that size's 10th
+    // disk. Under the new cap that array already reads as complete at 9 — getDiskSize will never
+    // return this size again — so without a refund, those already-spent passes (real currency the
+    // player paid) would sit forever as dead state with nothing to show for them.
+    const size1KB = getDiskLadderSizeBits(1)
+    const poolIndex = getPoolIndexForDiskSize(size1KB)
+    const passes = 4
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: BITS_PER_BYTE * (2 ** 20), // deep enough that pool 1's buffer ceiling isn't limiting
+      disksBuiltTotal: { [size1KB]: DISK_ARRAY_LADDER_CAP },
+      diskProvisionPasses: { [size1KB]: passes },
+      poolBuffers: { [poolIndex]: 0 },
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskProvisionPasses[size1KB]).toBeUndefined()
+    expect(after.intro.poolBuffers[poolIndex]).toBe(passes * size1KB)
+    // getDiskSize has already moved past this size — the refund can't be re-spent on a disk this
+    // size will never offer again, only banked toward whatever the ladder currently offers instead.
+    expect(getDiskSize(after)).not.toBe(size1KB)
+  })
+
+  it('normalizePoolMemoryCapacity caps an orphaned-tenth-disk refund at the pool buffer\'s own ceiling rather than manufacturing bits past it', () => {
+    // Pool 2's own smallest disk size (ladder step 4 — each pool spans 3 ladder steps, ×1/×10/×100)
+    // is vastly larger than pool 2's ENTRY-CAPACITY ceiling while pool 2 itself stays hidden
+    // (Capacity only just past pool 1's own threshold) — an easy way to force the refund to exceed
+    // the ceiling regardless of exact disk-size constants.
+    const pool2SmallestSize = getDiskLadderSizeBits(4)
+    const poolIndex = getPoolIndexForDiskSize(pool2SmallestSize)
+    expect(poolIndex).toBe(2)
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { byteCreated: true, capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: getPoolCapacityUnlockThresholdBits(1), // pool 2 stays hidden
+      disksBuiltTotal: { [pool2SmallestSize]: DISK_ARRAY_LADDER_CAP },
+      diskProvisionPasses: { [pool2SmallestSize]: DISK_ARRAY_LADDER_CAP },
+      poolBuffers: { [poolIndex]: 0 },
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskProvisionPasses[pool2SmallestSize]).toBeUndefined()
+    expect(after.intro.poolBuffers[poolIndex]).toBe(pool2EntryCapacityCeiling)
+  })
+
+  it('normalizePoolMemoryCapacity leaves in-progress diskProvisionPasses for the CURRENTLY offered (not-yet-complete) size untouched', () => {
+    const currentSize = getDiskSize(createInitialGameState())
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      diskProvisionPasses: { [currentSize]: 1 }, // partial funding toward a size well below DISK_ARRAY_LADDER_CAP
+    })
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.diskProvisionPasses[currentSize]).toBe(1)
   })
 
   it('normalizePoolMemoryCapacity clamps a Data Lake capacityLevel saved past the new, shorter ladder\'s array bounds', () => {
@@ -3871,11 +3931,13 @@ describe('tickDiskWriteCache', () => {
     // At the starting capacity both pools' bandwidth is the raw 1 B/s derived rate = 8 bits/sec.
     expect(merge.flushTotalSeconds).toBe(level2Size / DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
     expect(merge.segmentTotalSeconds).toBe(FIRST_DISK_SIZE / CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER / getStoragePoolBandwidth(state, 1))
-    // 10 source-disk segments sum to exactly one target's own size, but the two multipliers are
-    // deliberately different rates (5x collect vs. 2x flush — see the doc comment on
-    // getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster overall
-    // than the flush phase, not equal to it.
-    expect(merge.segmentTotalSeconds * DISK_ARRAY_LADDER_CAP).toBeLessThan(merge.flushTotalSeconds)
+    // DISK_LADDER_SIZE_MULTIPLIER (10) source-disk segments sum to exactly one target's own size —
+    // NOT DISK_ARRAY_LADDER_CAP (9, the array-full eligibility gate above, a different constant
+    // since it dropped from 10 to 9 — see canStartDiskWriteCacheMerge's own doc comment) — but the
+    // two multipliers are deliberately different rates (5x collect vs. 2x flush — see the doc
+    // comment on getDiskWriteCacheSegmentSeconds in engine.js), so the full collect phase is faster
+    // overall than the flush phase, not equal to it.
+    expect(merge.segmentTotalSeconds * DISK_LADDER_SIZE_MULTIPLIER).toBeLessThan(merge.flushTotalSeconds)
   })
 
   it('scales a freshly-started merge\'s timings with Byte Foundry production rate', () => {
@@ -3918,9 +3980,43 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[level2Size]).toBe(DISK_ARRAY_LADDER_CAP - 1)
   })
 
+  // Regression: the write cache's own collect/flush threshold used to reuse DISK_ARRAY_LADDER_CAP
+  // (the array-full ELIGIBILITY gate — how many disks make a full array) for the SEGMENT COUNT too
+  // (how many source-disk segments a merge collects before flushing) — these happened to be equal
+  // (both 10) before DISK_ARRAY_LADDER_CAP dropped to 9, at which point reusing it for the segment
+  // count would have manufactured 1 sourceSize-unit of value out of nothing per merge (9 segments
+  // of sourceSize flushed into 1 targetSize disk worth 10x sourceSize). The segment count must stay
+  // tied to DISK_LADDER_SIZE_MULTIPLIER (10, the actual source->target size ratio) regardless of
+  // how many disks an array can physically hold at once. Caught by adversarial review before merge.
+  it('needs DISK_LADDER_SIZE_MULTIPLIER (10) segments to flush, not DISK_ARRAY_LADDER_CAP (9) — conserves value across the merge (regression)', () => {
+    const almostDone = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level2Size]: DISK_ARRAY_LADDER_CAP, [level3Size]: 1 },
+      disks: { [level2Size]: 1 }, // one more full disk on hand, ready for a final segment
+      diskWriteCache: {
+        [level3Size]: {
+          sourceSize: level2Size,
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER - 1, // 9 of 10 — NOT yet flush-eligible
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    expect(getDiskWriteCacheFlushFill(getDiskWriteCacheMerge(almostDone, level3Size))).toBe(0) // still collecting
+    const afterNinthSegment = tickDiskWriteCache(1)(almostDone)
+    const merge = getDiskWriteCacheMerge(afterNinthSegment, level3Size)
+    // The 10th segment lands and the flush phase arms itself in the same tick — collect is DONE
+    // (getDiskWriteCacheSegmentFill reads 0 — nothing left to collect) and the flush countdown
+    // starts fresh at its own full duration.
+    expect(merge.segmentsCollected).toBe(DISK_LADDER_SIZE_MULTIPLIER)
+    expect(getDiskWriteCacheSegmentFill(merge)).toBe(0)
+    expect(merge.flushRemainingSeconds).toBe(merge.flushTotalSeconds)
+  })
+
   it('pauses collect while the source size has an active tier claim, and resumes once the tier instead moves past it into stranded territory — a stranded source still has real, permanent value', () => {
     const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
     const state = withIntro(createInitialGameState(), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP, [level2Size]: 1 },
       disks: { [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP },
@@ -3959,7 +4055,7 @@ describe('tickDiskWriteCache', () => {
       diskWriteCache: {
         [level2Size]: {
           sourceSize: FIRST_DISK_SIZE,
-          segmentsCollected: DISK_ARRAY_LADDER_CAP,
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
           segmentRemainingSeconds: 0,
           segmentTotalSeconds: 1,
           flushRemainingSeconds: 0,
@@ -4020,7 +4116,7 @@ describe('tickDiskWriteCache', () => {
 
   it('resumes collection once the source becomes stranded mid-merge — progress already collected stays banked and collection continues using the stranded source', () => {
     const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
     // 1 segment already collected while tier01 was still at the required level 1; tier01 has since
     // advanced to level 2, stranding the rest of this merge's own source size.
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 2), {
@@ -4046,7 +4142,7 @@ describe('tickDiskWriteCache', () => {
 
   it('KEEPS collecting once the TARGET becomes stranded mid-merge too — a doubly-stranded merge still banks real, permanent progress (regression for the over-restriction a Devin Review finding on PR #603 caught: blocking here broke a still-useful further chain)', () => {
     const flushTotalSeconds = 10
-    const segmentTotalSeconds = flushTotalSeconds / DISK_ARRAY_LADDER_CAP
+    const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
     // 1 segment already collected while tier01 sat exactly at level2Size's own required level (2);
     // tier01 has since advanced to level 3, stranding level2Size itself (the merge's TARGET) too.
     const state = withIntro(withPurchaseLevel(createInitialGameState(), tensTier.id, 3), {
@@ -10323,43 +10419,47 @@ describe('Data Lakes', () => {
       },
     })
 
-    it('slot counts grow 1 -> 10/0/0 -> 10/9/0 -> 10/9/9 as capacityLevel advances 0 -> 1 -> 2 -> 3, always summing to that level\'s own capacity', () => {
+    it('slot counts grow 0/0/0 -> 9/0/0 -> 9/9/0 -> 9/9/9 as capacityLevel advances 0 -> 1 -> 2 -> 3 — every sub-size smaller than the current level fully maxed, the rest at 0; each level\'s own capacity sits exactly 1 unit above what these slots sum to (the lake\'s own fill buffer supplies that last unit — see getDataLakeNextFillSubSize)', () => {
       const base = createInitialGameState()
-      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 0), 1)).toEqual({ 1: 1, 10: 0, 100: 0 })
-      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 1), 1)).toEqual({ 1: 10, 10: 0, 100: 0 })
-      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 2), 1)).toEqual({ 1: 10, 10: 9, 100: 0 })
-      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 3), 1)).toEqual({ 1: 10, 10: 9, 100: 9 })
-      // 10x1 + 9x10 + 9x100 = 1,000 exactly — the maxed level's own capacity, no leftover/overlap.
-      expect(10 * 1 + 9 * 10 + 9 * 100).toBe(1000)
+      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 0), 1)).toEqual({ 1: 0, 10: 0, 100: 0 })
+      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 1), 1)).toEqual({ 1: 9, 10: 0, 100: 0 })
+      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 2), 1)).toEqual({ 1: 9, 10: 9, 100: 0 })
+      expect(getDataLakeDiskSlotCounts(withLakeLevel(base, 1, 3), 1)).toEqual({ 1: 9, 10: 9, 100: 9 })
+      // 9x1 + 9x10 + 9x100 = 999 — one short of the maxed level's own 1,000 capacity.
+      expect(9 * 1 + 9 * 10 + 9 * 100).toBe(999)
     })
 
     it('getDataLakeDiskCounts fills smallest sub-size first, only spilling into the next size once the smaller one is maxed', () => {
       const state = withLakeLevel(createInitialGameState(), 1, 3) // capacity 1,000, full slot set available
       expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 0), 1)).toEqual({ 1: 0, 10: 0, 100: 0 })
       expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 5), 1)).toEqual({ 1: 5, 10: 0, 100: 0 })
-      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 10), 1)).toEqual({ 1: 10, 10: 0, 100: 0 })
-      // 10 ones (=10) + 6 tens (=60) = 70.
-      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 70), 1)).toEqual({ 1: 10, 10: 6, 100: 0 })
-      // 10 ones + 9 tens (=100) + 3 hundreds (=300) = 400.
-      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 400), 1)).toEqual({ 1: 10, 10: 9, 100: 3 })
-      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 1000), 1)).toEqual({ 1: 10, 10: 9, 100: 9 })
+      // 9 ones is the sub-size's own cap — the 10th unit redistributes onto a ×10 disk instead
+      // (see decomposeDataLakeUnits's own residue-preserving algorithm).
+      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 10), 1)).toEqual({ 1: 0, 10: 1, 100: 0 })
+      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 70), 1)).toEqual({ 1: 0, 10: 7, 100: 0 })
+      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 400), 1)).toEqual({ 1: 0, 10: 0, 100: 4 })
+      // depositedUnits is clamped to DATA_LAKE_MAX_REPRESENTABLE_UNITS (999) for this breakdown —
+      // the level's own 1,000th unit lives in the lake's fill buffer, not as a disk square.
+      expect(getDataLakeDiskCounts(withLakeDeposited(state, 1, 1000), 1)).toEqual({ 1: 9, 10: 9, 100: 9 })
     })
 
-    it('never strands units off the natural growth lattice with zero leftover (regression — a naive smallest-first-maxed-out greedy could leave real, spendable units unrepresented by any disk square once an arbitrary Booster spend, not a whole-disk multiple, landed depositedUnits off-lattice — confirmed by simulation: total=85 at capacityLevel 1 naively decomposed to {1:10,10:7} with 5 units unaccounted for, when {1:5,10:8} represents the same 85 exactly)', () => {
-      // capacityLevel 1: caps {1: 10, 10: 9} (100 hasn't opened yet).
-      const level1 = withLakeLevel(createInitialGameState(), 1, 1)
-      expect(getDataLakeDiskCounts(withLakeDeposited(level1, 1, 85), 1)).toEqual({ 1: 5, 10: 8, 100: 0 })
+    it('never strands units off the natural growth lattice with zero leftover, up to what the current level\'s own disk slots can represent (regression — a naive smallest-first-maxed-out greedy could leave real, spendable units unrepresented by any disk square once an arbitrary Booster spend, not a whole-disk multiple, landed depositedUnits off-lattice — confirmed by simulation: total=85 at capacityLevel 2 naively decomposed to {1:9,10:7} with 5 units unaccounted for, when {1:5,10:8} represents the same 85 exactly)', () => {
+      // capacityLevel 2: caps {1: 9, 10: 9} (100 hasn't opened yet) — representable up to 99.
+      const level2 = withLakeLevel(createInitialGameState(), 1, 2)
+      expect(getDataLakeDiskCounts(withLakeDeposited(level2, 1, 85), 1)).toEqual({ 1: 5, 10: 8, 100: 0 })
       // capacityLevel 3 (max, all three denominations active): total=905 needs 0 tens (not 9) so
       // hundreds can reach its own natural value of 9 — a value the smallest-first-only greedy
-      // cannot reach at all, since 895 (what's left after maxing ones at 10) isn't a multiple of 10.
+      // cannot reach at all, since 895 (what's left after maxing ones at 9) isn't a multiple of 10.
       const level3 = withLakeLevel(createInitialGameState(), 1, 3)
       expect(getDataLakeDiskCounts(withLakeDeposited(level3, 1, 905), 1)).toEqual({ 1: 5, 10: 0, 100: 9 })
-      // Every value in a representative sample from 0 up to each level's own capacity must
+      // Every value in a representative sample from 0 up to what THIS LEVEL's own disk slots can
+      // represent (9, 99, 999 — one short of the level's own full capacity; the level's own last
+      // unit lives in the buffer, not a disk square, see getDataLakeSlotRepresentableUnits) must
       // decompose with zero leftover units and the sum of (count × size) exactly matching the
       // input — the real invariant this whole mechanic depends on.
-      for (const [level, capacity] of [[0, 1], [1, 10], [2, 100], [3, 1000]]) {
+      for (const [level, representable] of [[0, 0], [1, 9], [2, 99], [3, 999]]) {
         const state = withLakeLevel(createInitialGameState(), 1, level)
-        for (let total = 0; total <= capacity; total += Math.max(1, Math.floor(capacity / 37))) {
+        for (let total = 0; total <= representable; total += Math.max(1, Math.floor((representable || 1) / 37))) {
           const counts = getDataLakeDiskCounts(withLakeDeposited(state, 1, total), 1)
           const represented = counts[1] * 1 + counts[10] * 10 + counts[100] * 100
           expect(represented).toBe(total)
@@ -10381,15 +10481,35 @@ describe('Data Lakes', () => {
       expect(represented).toBe(85)
     })
 
-    it('getDataLakeCurrentFillSubSize is the smallest not-yet-maxed sub-size, or null once fully maxed at the current level', () => {
+    it('getDataLakeCurrentFillSubSize is the smallest not-yet-maxed DISK sub-size, the level\'s own final buffer-sourced unit (sub-size 1, no disk square) once every real disk slot is full, or null once the level\'s own capacity is fully reached', () => {
       const state = withLakeLevel(createInitialGameState(), 1, 3)
       expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 0), 1)).toBe(1)
-      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 10), 1)).toBe(10)
-      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 100), 1)).toBe(100)
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 9), 1)).toBe(10) // 9 ones maxed
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 99), 1)).toBe(100) // 9 ones + 9 tens maxed
+      // Every real disk slot full (9+90+900=999) but the level's own capacity (1,000) isn't reached
+      // yet — the final unit fills through the buffer, sub-size 1 again, no disk square of its own.
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 999), 1)).toBe(1)
       expect(getDataLakeCurrentFillSubSize(withLakeDeposited(state, 1, 1000), 1)).toBe(null)
-      // A fresh level-0 lake (capacity 1) is maxed the instant its single ×1 slot fills.
+      // A fresh level-0 lake (capacity 1, no disk slots at all) fills its lone unit entirely via the
+      // buffer, and is maxed the instant that unit lands.
       const level0 = withLakeLevel(createInitialGameState(), 1, 0)
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level0, 1, 0), 1)).toBe(1)
       expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level0, 1, 1), 1)).toBe(null)
+    })
+
+    // Regression: an earlier version of getDataLakeOpenSubSize decomposed depositedUnits through
+    // the flat, level-UNAWARE decomposeDataLakeUnits algorithm — at exactly a NON-max level's own
+    // capacity (10 at level 1, 100 at level 2, both reachable via ordinary fill since a level's own
+    // final unit is buffer-sourced, not disk-sourced), that algorithm redistributes the total onto
+    // a sub-size the level hasn't unlocked yet (e.g. 10 -> "1 x10 disk, 0 x1 disks"), which read as
+    // a still-open x1 slot instead of the level being fully maxed — letting depositedUnits grow
+    // unboundedly past its own declared capacity. Caught by adversarial review before merge, not by
+    // a test — this test is that missing coverage.
+    it('reports the level fully maxed (null) exactly AT a non-max level\'s own capacity, at every level, not just the top one (regression)', () => {
+      const level1 = withLakeLevel(createInitialGameState(), 1, 1) // capacity 10
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level1, 1, 10), 1)).toBe(null)
+      const level2 = withLakeLevel(createInitialGameState(), 1, 2) // capacity 100
+      expect(getDataLakeCurrentFillSubSize(withLakeDeposited(level2, 1, 100), 1)).toBe(null)
     })
   })
 
@@ -10438,39 +10558,58 @@ describe('Data Lakes', () => {
       expect(after.intro.bits).toBe(1_000_000 - kb1)
     })
 
-    it('feeds the matching Data Lake once the pool\'s own buffer has no more room, STARTING at DATA_LAKE_OVERFLOW_MAX_PERCENT of the pool\'s reserved rate while the lake is empty and tapering continuously from there', () => {
+    // Regression: an earlier version of getDataLakeOpenSubSize decomposed depositedUnits through
+    // the flat, level-UNAWARE decomposeDataLakeUnits algorithm — at exactly a NON-max level's own
+    // capacity (10 at level 1, 100 at level 2, both reachable via ordinary fill since a level's own
+    // final unit is buffer-sourced, not disk-sourced), that algorithm redistributes the total onto
+    // a sub-size the level hasn't unlocked yet (e.g. 10 -> "1 x10 disk, 0 x1 disks"), which read as
+    // a still-open x1 slot instead of the level being fully maxed — letting depositedUnits grow
+    // unboundedly past its own declared capacity via ordinary overflow, tick after tick. Caught by
+    // adversarial review before merge, not by a test — this is that missing coverage, exercised
+    // through the real public tickPoolBufferFill pipeline (not the private fillDataLakeDisks).
+    it('never lets depositedUnits exceed a non-max level\'s own capacity, however much overflow arrives, across many ticks (regression)', () => {
+      const level1 = fullBufferState({
+        dataLakes: {
+          ...createInitialGameState().intro.dataLakes,
+          // 9 ones already built (the level's own real-disk max) — the buffer's own final unit is
+          // next; capacity is 10 at level 1.
+          1: { capacityLevel: 1, depositedUnits: 9, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 },
+        },
+      })
+      let state = level1
+      for (let i = 0; i < 20; i += 1) {
+        state = tickPoolBufferFill(1)(state) // 2,000 bits/sec each tick — vastly more than 1 unit needs
+      }
+      expect(getDataLakeDepositedUnits(1)(state)).toBe(10) // capped exactly at capacity, never beyond
+      expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(null) // correctly reads as fully maxed
+      expect(getDataLakeFillBits(state, 1)).toBe(0)
+    })
+
+    it('feeds the matching Data Lake at the plain, un-tapered reserved rate once the pool\'s own buffer has no more room — no artificial slowdown, same posture Storage\'s own disk provisioning already uses', () => {
       const state = fullBufferState()
-      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // the instantaneous rate at 0 fill
+      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // "receiving" indicator
       const after = tickPoolBufferFill(1)(state) // 1s elapsed, 2,000 bits/sec reserved for pool 1
       expect(after.intro.poolBuffers[1]).toBe(800_000) // untouched — buffer was already full
-      // The rate isn't flat across the whole second — it's the exact closed-form solution to
-      // dx/dt = fillRate * rateFraction(x/L), which continuously DECREASES as fillBits rises, so
-      // the total delivered is LESS than a naive flat-MAX_PERCENT estimate (2000*50%=1000) would
-      // suggest: x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L = 2000*0.5/8000 =
-      // 0.125/sec, so fillBits(1) = 8000*(1-exp(-0.125)) ≈ 940.02 (see docs/DESIGN_HISTORY.md).
-      const expectedOverflow = 8000 * (1 - Math.exp(-0.125))
-      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(expectedOverflow, 6)
-      expect(after.intro.bits).toBeCloseTo(1_000_000 - expectedOverflow, 6)
+      expect(getDataLakeFillBits(after, 1)).toBe(2000)
+      expect(after.intro.bits).toBe(1_000_000 - 2000)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(0) // not a whole unit yet
     })
 
     it('completes the lake\'s first (×1) disk once enough overflow accumulates, latching boostersUnlocked permanently', () => {
       const state = fullBufferState()
-      // The exact closed-form time to fill one disk from empty: ln(10)/0.125 ≈ 18.42s in the
-      // exponential-taper regime to reach 90% fill (where the completion floor takes over — see
-      // the "floors the overflow rate" regression above), then 8s more at the floored rate (the
-      // remaining 800 bits / (2000 x 5%) = 800/100) to finish the last 10% — not a flat
-      // "unitBits1 / (fillRate x MAX_PERCENT)" estimate, since the rate isn't constant across the
-      // fill. Overshoot well past that ~26.42s total so float precision in the boundary comparison
-      // can't leave a tiny residual — a level-0 lake's capacity is exactly 1 unit, so completing
-      // this ONE disk maxes the whole lake regardless of how much leftover time this tick still
-      // has, and fillDataLakeDisks resets fillBits to exactly 0 once maxed either way.
+      // At the flat 2,000 bits/sec reserved rate, one 8,000-bit (×1) disk takes exactly 4s — a
+      // level-0 lake's capacity is exactly 1 unit, so completing this ONE disk maxes the whole lake
+      // regardless of how much leftover time this tick still has, and fillDataLakeDisks resets
+      // fillBits to exactly 0 once maxed either way.
       const after = tickPoolBufferFill(35)(state)
       expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
       expect(getDataLakeFillBits(after, 1)).toBe(0)
       expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
       // A fresh lake's level-0 capacity is exactly 1 unit — completing it maxes the lake out.
       expect(getDataLakeCurrentFillSubSize(after, 1)).toBe(null)
+      // The unconsumed remainder of this tick's overflow (31s x 2,000 bits/sec - 8,000) survives as
+      // ordinary Bits rather than being destroyed once the lake maxes out mid-tick.
+      expect(after.intro.bits).toBe(1_000_000 - 8000)
     })
 
     it('a lake already maxed at its current capacity level stops absorbing overflow — same-reference no-op for that pool', () => {
@@ -10487,12 +10626,12 @@ describe('Data Lakes', () => {
       expect(tickPoolBufferFill(5)(state)).toBe(state)
     })
 
-    it('getDataLakeCurrentDiskFillFraction/getDataLakeOverflowRatePercent track ONLY the disk currently being filled, not the lake\'s overall total', () => {
+    it('getDataLakeCurrentDiskFillFraction tracks ONLY the disk currently being filled, not the lake\'s overall total; getDataLakeOverflowRatePercent is a plain binary receiving/not-receiving indicator', () => {
       const withCurrentFill = depositedUnits => withIntro(createInitialGameState(), {
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
-          // capacityLevel 1 => capacity 10, slot counts {1: 10, 10: 0, 100: 0} — with depositedUnits
-          // below 10, the current open slot is always a ×1 disk, sized exactly unitBits1.
+          // capacityLevel 1 => capacity 10, slot counts {1: 9, 10: 0, 100: 0} — with depositedUnits
+          // below 9, the current open slot is always a ×1 disk, sized exactly unitBits1.
           1: { capacityLevel: 1, depositedUnits, fillBits: unitBits1 * 0.5, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 },
         },
       })
@@ -10503,17 +10642,14 @@ describe('Data Lakes', () => {
       const partial = withCurrentFill(3)
       expect(getDataLakeCurrentDiskFillFraction(empty, 1)).toBeCloseTo(0.5)
       expect(getDataLakeCurrentDiskFillFraction(partial, 1)).toBeCloseTo(0.5)
-      const expectedRate = DATA_LAKE_OVERFLOW_MAX_PERCENT - 0.5 * (DATA_LAKE_OVERFLOW_MAX_PERCENT - DATA_LAKE_OVERFLOW_MIN_PERCENT)
-      expect(getDataLakeOverflowRatePercent(empty, 1)).toBeCloseTo(expectedRate)
-      expect(getDataLakeOverflowRatePercent(partial, 1)).toBeCloseTo(expectedRate)
+      expect(getDataLakeOverflowRatePercent(empty, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT)
+      expect(getDataLakeOverflowRatePercent(partial, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT)
       expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty disk
 
-      // Once maxed at the current level (no open slot left), the rate reads MIN_PERCENT (0) — NOT
-      // the completion floor — since nothing this rate could ever apply to has anywhere left to go
-      // (fillDataLakeDisks itself no-ops once maxed regardless of rate), and the pool gauge reads
-      // this function directly for its own display label — a nonzero "N% incoming" reading on an
-      // already-full lake would be actively misleading, not merely an unreachable edge case (see
-      // getDataLakeOverflowRatePercent's own comment / docs/DESIGN_HISTORY.md).
+      // Once maxed at the current level (no open slot left), the rate reads MIN_PERCENT (0) —
+      // nothing this rate could ever apply to has anywhere left to go (fillDataLakeDisks itself
+      // no-ops once maxed regardless of rate), and the pool gauge reads this function directly for
+      // its own display label.
       const maxed = withIntro(createInitialGameState(), {
         dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 } },
       })
@@ -10522,38 +10658,7 @@ describe('Data Lakes', () => {
       expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_MIN_PERCENT)
     })
 
-    it('floors the overflow rate so a nearly-complete disk keeps making real forward progress instead of asymptotically stalling short of completion (regression — a pure proportional taper toward 0% at full never actually reaches full, and gets permanently stuck in floating point once the remaining gap rounds to nothing; confirmed by simulation before this fix: fillBits froze at 7999.999999992724/8000 after 442,746 ticks and never moved again)', () => {
-      const tinyRemainingGap = 0.08 // leaves the taper's own UNFLOORED rate at a negligible ~0.0005%
-      const state = fullBufferState({
-        dataLakes: {
-          ...createInitialGameState().intro.dataLakes,
-          1: { capacityLevel: 1, depositedUnits: 0, fillBits: unitBits1 - tinyRemainingGap, boostersUnlocked: false, autoBuyEnabled: false, purchased: 0 },
-        },
-      })
-      expect(getDataLakeOverflowRatePercent(state, 1)).toBe(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT)
-      // A single ordinary tick at the floored rate (2,000 bits/sec x 1s x 5% = 100 bits/sec)
-      // delivers 100 bits — vastly more than the 0.08-bit gap — so the disk actually completes,
-      // unlike the unfloored formula, which would deliver only a tiny fraction of that this same
-      // tick and asymptotically approach (never reach) the remaining gap.
-      const after = tickPoolBufferFill(1)(state)
-      expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
-      // The remaining ~0.9992s of this tick (after the ~0.0008s needed to close the 0.08-bit gap at
-      // the floored 100 bits/sec) goes toward the NEXT disk (capacityLevel 1 still has 9 more ×1
-      // slots open), starting at its own fresh MAX_PERCENT rate (50%, since it just opened empty)
-      // and continuously DECREASING as that disk's own fill rises — the exact closed-form solution
-      // to dx/dt = fillRate * rateFraction(x/L), not a single rate sampled once and held flat for
-      // the whole ~0.9992s (which would overestimate the fill, since the true rate keeps dropping
-      // the whole time). x* = L when MIN_PERCENT is 0, decayRate = fillRate*(MAX-MIN)/L =
-      // 2000*0.5/8000 = 0.125/sec, so fillBits(t) = 8000*(1 - exp(-0.125*t)); at t≈0.9992s that's
-      // still well short of the 90%-fill threshold where the completion floor would take over, so
-      // the whole remaining interval stays in this exponential regime (see docs/DESIGN_HISTORY.md).
-      const expectedRemainingTime = 1 - 0.08 / 100
-      const expectedFillBits = 8000 * (1 - Math.exp(-0.125 * expectedRemainingTime))
-      expect(getDataLakeFillBits(after, 1)).toBeCloseTo(expectedFillBits, 1)
-      expect(isDataLakeBoosterUnlocked(after, 1)).toBe(true)
-    })
-
-    it('is associative — splitting the same total elapsedSeconds into many small ticks produces the SAME lake fill as one big tick (regression — Devin finding: holding one rate flat across a whole partial-disk segment made tickPoolBufferFill non-associative, so live small-tick play and offline 1-second-increment replay could reach different results for the same total elapsed time)', () => {
+    it('is associative — splitting the same total elapsedSeconds into many small ticks produces the SAME lake fill as one big tick (a flat, un-tapered rate is trivially associative, but this guards against a future regression reintroducing a per-segment rate that isn\'t)', () => {
       const wholeState = fullBufferState()
       const wholeAfter = tickPoolBufferFill(2)(wholeState)
 
@@ -10987,18 +11092,18 @@ describe('Data Lakes', () => {
     })
 
     it('completes an ENTIRE larger open slot (and its own full cost) when its sub-size exceeds what the next Booster alone needs', () => {
-      // Deposited units already fill every ×1 and ×10 slot at capacity level 3 (10 + 90 = 100
-      // units), so the next open slot is a ×100 one — completing even 1 more needed unit requires
-      // paying that slot's own full cost, not a naive 1-unit's worth.
+      // Deposited units already fill every ×1 and ×10 slot at capacity level 3 (9 + 90 = 99 units,
+      // each sub-size's own 9-disk cap), so the next open slot is a ×100 one — completing even 1
+      // more needed unit requires paying that slot's own full cost, not a naive 1-unit's worth.
       const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 200), {
         disksBuiltTotal: { [kb1]: 1 },
-        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), depositedUnits: 100, purchased: 100, capacityLevel: 3, boostersUnlocked: true } },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), depositedUnits: 99, purchased: 100, capacityLevel: 3, boostersUnlocked: true } },
       })
       expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(100)
-      expect(getBoosterPurchaseCost(1)(state)).toBe(101) // needs 1 more unit than the 100 already banked... but
+      expect(getBoosterPurchaseCost(1)(state)).toBe(101) // needs 2 more units than the 99 already banked... but
       const after = fillDataLakeManually(1)(state)
       // ...only a full ×100 slot completion can ever produce it, depositing 100 more units at once.
-      expect(getDataLakeDepositedUnits(1)(after)).toBe(200)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(199)
       expect(after.intro.poolBuffers[1]).toBe(kb1 * 200 - kb1 * 100)
     })
 

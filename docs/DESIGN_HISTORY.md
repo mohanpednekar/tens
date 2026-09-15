@@ -8203,3 +8203,202 @@ Several stale "reverts once owned drops below a full level" claims in `docs/ECON
 and a test helper's comment were corrected to describe the actual `scaleUpTierCounts`-based
 behavior while fixing this, so a future reader doesn't get misled the same way this investigation
 initially was.
+
+### Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit
+
+Requested directly by the maintainer: both a Storage pool's disk arrays and a Data Lake's own
+disk-square breakdown should build/hold 9 disks of each size instead of 10, with the pool's own
+always-full cache (Storage side) or the lake's own retained fill buffer (Lake side) economically
+substituting for the missing 10th unit — plus two display fixes and a simplification of the Data
+Lake's overflow-fill mechanic, bundled into the same change since they touch the same code paths.
+
+**9 disks, not 10.** `DISK_ARRAY_LADDER_CAP` (the number of disks that must ever be built at a size
+before the buildable ladder advances, and the same threshold `isStoragePoolFullyBuilt` gates a
+pool's own completion on) dropped from 10 to 9. Since `getDiskProvisionPassesRequired` scales a
+disk's cost by its own ordinal (capped at `DISK_BUILD_COST_MULTIPLIER`, still 10, now never actually
+reached), the array's last (9th) disk now costs 9x its face value instead of the old flat 10x — the
+array's own cache was already free and automatic before this change, so nothing about the cache
+itself needed to change; only the number of PAID disk containers per array shrank. Everything that
+already derived from `DISK_ARRAY_LADDER_CAP` (the disk ladder's own advance point, pool completion,
+Data Lake capacity-level-up eligibility via `isDataLakeCapacityDoublingAvailable`) picked up the new
+value automatically with no separate change needed — a single source of truth doing its job.
+
+**The Data Lake side needed more care, because its own capacity ladder (`DATA_LAKE_CAPACITY_BY_LEVEL`
+— 1, 10, 100, 1,000) is a set of exact power-of-10 boundaries that `DATA_LAKE_SUB_SIZE_DISK_CAPS`
+used to match precisely (10/9/9, summing to exactly 1,000) — dropping the ×1 cap to 9 (9/9/9, summing
+to 999) opens a 1-unit gap at EVERY level boundary, not just the top one** (0→1, 9→10, 99→100,
+999→1,000): each level's own capacity now sits exactly 1 unit above what its own disk slots can hold.
+The first implementation attempt derived `getDataLakeDiskSlotCounts` by decomposing the level's raw
+capacity value through the existing `decomposeDataLakeUnits` mixed-radix algorithm (the same helper
+that already turns an arbitrary `depositedUnits` total into a disk-square breakdown) — this was
+wrong: at an exact power-of-10 boundary, that algorithm's own residue-preserving logic prefers
+redistributing the WHOLE boundary onto a single higher-denomination disk (decomposing capacity 10
+into "1 ×10 disk, 0 ×1 disks") rather than "9 ×1 disks maxed, 1 more from the buffer" — exactly
+backwards from "the lake always fills the smallest disks first," which the maintainer explicitly
+called out as a requirement. Caught before merge by manually tracing the decompose algorithm against
+each level, not by a failing test (the naive version would have shipped a lake whose early levels
+show a single big disk instead of the intended smallest-first sequence). Fixed by deriving
+`getDataLakeDiskSlotCounts` directly and structurally instead: every sub-size SMALLER than the
+current level is fully maxed (`DATA_LAKE_SUB_SIZE_DISK_CAPS[index]`), the current level's own
+sub-size (and anything larger) has none yet. The level's own final unit — the 1-unit gap at every
+boundary — fills through the exact same `fillBits` mechanism as any real disk
+(`getDataLakeNextFillSubSize`'s fallback: once every real disk slot is full but `depositedUnits <
+capacity`, the open "slot" is a virtual ×1 unit with no disk square of its own), mirroring how a
+Storage array's own cache supplies its array's last unit rather than a 10th disk square — "analogous
+to storage pool with slight minimal difference," per the maintainer's own framing. A second, smaller
+fix was needed alongside this: `decomposeDataLakeUnits` itself must never be asked to decompose a
+total above `DATA_LAKE_MAX_REPRESENTABLE_UNITS` (999, the sum of the new 9/9/9 caps) — a maxed lake's
+`depositedUnits` can now legitimately reach 1,000 (999 real + the buffer's 1 virtual unit), and
+feeding 1,000 straight into the old decompose algorithm silently produced a broken breakdown (a
+`remainderUnits` of 100, not 1, since the algorithm's own correctness invariant only holds up to what
+its caps can represent) — every caller of `decomposeDataLakeUnits` on a lake's own total now clamps
+to this constant first, while `getDataLakeDiskSlotCounts` (a per-level cap, always ≤ 999) never needs
+the clamp.
+
+**Overflow-fill taper removed.** The maintainer's own framing ("the lake shall also use the same
+filling strategy... the lake bar shall always be filling the smallest disks only") was read as
+calling for the same "no artificial slowdown" posture Storage's own disk provisioning already has —
+the lake's overflow fill previously tapered its own effective rate down as the currently-filling
+disk approached completion (`DATA_LAKE_OVERFLOW_MAX_PERCENT` at empty, decaying via a closed-form
+exponential ODE toward `DATA_LAKE_OVERFLOW_MIN_PERCENT`, floored at
+`DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` to avoid an old asymptotic-stall bug — see this file's
+own "floors the overflow rate" entry above). Removed entirely in favor of a flat rate: overflow now
+fills whichever slot is currently open at the plain reserved `fillRate`, one slot at a time,
+re-evaluating which slot is open every time one completes — this deleted the taper's own ODE solver
+functions (`solveDataLakeDiskFillAfterSeconds`/`solveDataLakeDiskSecondsForBits`/
+`getDataLakeOverflowTaperShape`) and the now-unused `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT`
+constant outright, simplifying `applyDataLakeOverflow` considerably.
+`getDataLakeOverflowRatePercent` still exists (ByteFoundryPage's `MultiplierBar` reads it for its own
+`mode="lake"` bar), but now returns a plain binary "receiving/not-receiving" reading —
+`DATA_LAKE_OVERFLOW_MAX_PERCENT` while a slot is open, `DATA_LAKE_OVERFLOW_MIN_PERCENT` once fully
+maxed — keeping those two constants' own values (50/0) so the bar's width still doesn't jump at the
+fill-multiplier→lake-rate handoff, the same continuity property the taper version was built around.
+**A first pass at this rewrite of `applyDataLakeOverflow` introduced a real currency-destruction
+bug**, caught by the test suite rather than review: it collapsed the caller's own currency budget
+(`availableBits`, the pool's entire remaining `intro.bits`) and the fillRate-limited ceiling on how
+much a single call may actually deliver (`fillRate * availableSeconds`) into one `Math.min`'d value,
+so any of the caller's balance beyond what the rate could reach THIS call was silently treated as
+already spent and vanished from `intro.bits` outright (a `yarn test` run immediately turned up
+`after.intro.bits` reading 0 instead of the expected ~998,000). Fixed by tracking the two as
+genuinely separate budgets (`remainingBits`, only ever decremented by what's actually spent, and
+`spendableBits`, the rate ceiling for this call alone) — see `applyDataLakeOverflow`'s own doc
+comment for the invariant this preserves.
+
+**Display: bare disk labels, fixed-unit pool/lake balances.** Two related but independent display
+fixes rode along in the same change. First, a Disk's own visible size label (the small text painted
+inside each `DiskArrayRow`/`DataLakePanel` square) dropped its unit suffix — a bare number
+(`formatDiskSizeBare`) rather than e.g. "100 KB" — since the surrounding pool/lake card already
+names the scale (a "KB Pool" card's own disks are implicitly KB-denominated); aria-labels/tooltips
+keep the full unit-suffixed form for accessibility, only the visible glyph changed. Second, a Storage
+pool's or Data Lake's own balance/capacity figure now renders in that pool's/lake's own FIXED SI
+unit (`formatDiskSizeInPoolUnit`/`...Stable`) rather than `formatDiskSize`'s auto-nearest-unit pick —
+a maxed KB Data Lake's own capacity is exactly 1,000 KB, which the auto-picker would have converted
+to "1 MB" the instant this PR's own 9/9/9 cap change made that boundary reachable via a real
+`depositedUnits` value rather than only a display-computed one. An individual Disk's own size never
+needed this fix (it only ever spans 1-100x a pool's own unit, never the 1000x that would trigger the
+auto-picker's switchover) — only a pool's/lake's own running BALANCE or CAPACITY figure does.
+`ByteFoundryPage`'s `formatCombinedBalance` (dedupes a balance's own unit suffix when it matches the
+adjacent capacity's) now ALWAYS dedupes for a Storage pool, since balance and capacity are pinned to
+the same fixed unit unconditionally — before this change the two could independently land on
+different auto-picked units for a small balance next to a much larger capacity.
+
+**A second bug, more severe, was caught by adversarial review after this PR's first push: the
+non-max-level capacity cap wasn't actually enforced.** `getDataLakeOpenSubSize` decomposed
+`depositedUnits` through the flat, level-UNAWARE `decomposeDataLakeUnits` algorithm, then compared
+each sub-size's disk count against the level-aware `slotCounts` from the rewritten
+`getDataLakeDiskSlotCounts` above — a mismatch between the two. At exactly a NON-max level's own
+capacity (10 at level 1, 100 at level 2 — both reachable via ordinary fill, since a level's own
+final unit is buffer-sourced, not disk-sourced), `decomposeDataLakeUnits` redistributes the total
+onto a sub-size that level hasn't unlocked at all (e.g. capacity 10 at level 1 decomposing to "1
+×10 disk, 0 ×1 disks" — correct for that function's own general, level-unaware contract, but wrong
+once compared against a `slotCounts` that has zero ×10 slots at level 1), which read as a
+still-open ×1 slot rather than the level being fully maxed. The result: `depositedUnits` grew
+UNBOUNDEDLY past a non-max level's own declared capacity via ordinary automatic overflow or manual
+fill — verified live through the real `tickPoolBufferFill` engine function, not just by inspection
+— letting a player bank (and spend on Boosters) far more units than a level-1 or level-2 lake
+should ever hold, and rendering a misleadingly under-filled `DataLakePanel` at the exact boundary.
+The bug was asymmetric: level 0 (capacity 1, no real disk slots at all) and the max level's own
+1,000-unit boundary were both accidentally safe (the latter only because the unrelated 999-unit
+decompose clamp happened to intervene) — only levels 1 and 2 were actually affected, but every lake
+passes through both on its way to level 3. Root cause: the same `Math.min(depositedUnits, N)` clamp
+this PR already needed for the max-level 999 case was applied with the wrong, GLOBAL `N` everywhere
+except the (already correctly level-gated) `getDataLakeDiskSlotCounts` derivation itself — the
+`getDataLakeOpenSubSize`/`getDataLakeDiskCounts` clamp needed to be level-aware too. Fixed by
+replacing the flat `DATA_LAKE_MAX_REPRESENTABLE_UNITS` constant with
+`getDataLakeSlotRepresentableUnits(slotCounts)` — the CURRENT level's own slots summed (9 at level
+1, 99 at level 2, 999 at level 3, matching the old flat constant exactly at the max level, which is
+why level 3's own tests still passed even with the bug present) — used consistently by both
+functions. No test in the original diff exercised `depositedUnits` exactly at a non-max level's own
+capacity; two were added covering it (a direct boundary check and a live multi-tick
+`tickPoolBufferFill` regression proving the cap actually holds under real, repeated overflow), and
+the pre-existing off-lattice decomposition test (which had used capacityLevel 1 with a total of 85
+— already exceeding level 1's own 10-unit capacity even under the ORIGINAL 10/9/9 caps, so always a
+somewhat synthetic scenario) moved to capacityLevel 2, whose own 99-unit representable range
+genuinely fits it.
+
+**A third bug, unrelated to Data Lakes, was caught in the same review round: the write-cache
+upward-merge mechanic silently started manufacturing value.** `tickDiskWriteCache` (the mechanic
+that folds a completed array's disks upward into the next size — e.g. 1 KB disks into a 10 KB
+disk) reused `DISK_ARRAY_LADDER_CAP` for its own "how many source-disk segments complete a merge"
+threshold, alongside its correct, separate use as the "is the source array full enough to start"
+eligibility gate. Before this PR, `DISK_ARRAY_LADDER_CAP` and `DISK_LADDER_SIZE_MULTIPLIER` (the
+actual source→target size ratio, still 10) happened to be equal, so reusing one constant for both
+concepts was invisible — 10 segments of one source disk each exactly summed to one target disk's
+own 10x-larger value. Dropping `DISK_ARRAY_LADDER_CAP` to 9 broke that coincidence: the merge kept
+requiring only 9 segments (per the same shared constant) to flush, but the target disk it produced
+was still worth 10x the source size — manufacturing 1 sourceSize-unit of value out of nothing on
+EVERY upward merge, at every tier boundary, for every pool, indefinitely. Fixed by decoupling the
+two: the collect/flush segment-count threshold (`getDiskWriteCacheSegmentFill`/
+`getDiskWriteCacheFlushFill`/`isDiskWriteCacheCollectPaused`/`tickDiskWriteCache`'s own two
+threshold checks) now uses `DISK_LADDER_SIZE_MULTIPLIER`, while `canStartDiskWriteCacheMerge`'s own
+"source array is completely full" eligibility check correctly keeps `DISK_ARRAY_LADDER_CAP` — two
+genuinely different concepts that must never share one constant again, documented explicitly at
+both call sites this time. `DiskArrayRow`'s own write-cache segment-strip rendering (segment count,
+the collecting-vs-flushing threshold, the flush bar's own aspect ratio) needed the identical split.
+A dedicated regression test verifies a merge needs exactly 10 segments, not 9, to flush.
+
+**Verification.** `yarn test`: 1783/1783 (two dedicated taper-regression tests were retired since
+the mechanic they guarded no longer exists; four new regression tests were added — two for the
+capacity-cap bug and one for the write-cache value-conservation bug above, plus one more from an
+earlier fix in this same round; the rest were updated in place for the new 9/9/9 shapes and values,
+not skipped). `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`, `docs/COMPONENTS_REFERENCE.md`,
+and `CLAUDE.md` updated in the same commit per this repo's own documentation convention (`AGENTS.md`
+needed no further change beyond its initial resync — its own condensed level of detail doesn't cover
+the write-cache mechanic).
+
+**A fourth review round (Codex, on the PR after it was marked ready for review) found one more real
+bug plus four doc/UI staleness gaps.** The bug: a save written before `DISK_ARRAY_LADDER_CAP` dropped
+from 10 to 9 could carry `disksBuiltTotal[size] === 9` with `diskProvisionPasses[size] > 0` — partial
+funding toward what used to be that size's 10th disk. Under the new cap, `getDiskSize` reads that
+array as already complete at 9 and will never return `size` again, so those already-paid passes would
+sit forever as dead, unreachable state — real currency the player spent, with nothing to show for it.
+Fixed in `normalizePoolMemoryCapacity` (run on every load): any `diskProvisionPasses[size]` entry
+where `disksBuiltTotal[size] >= DISK_ARRAY_LADDER_CAP` now gets refunded — its bit-value (`passes ×
+size`) added to that size's owning pool's own buffer, capped at `getPoolBufferClampCeilingBits` same
+as every other over-buffer-capacity source, never manufactured past it — and the stale entry is
+cleared. This can only ever fire once per affected save; live play never reaches that exact
+combination, since `provisionDisk` already clears a size's passes the instant its final pass lands.
+Two regression tests cover it (the refund itself, and the ceiling clamp on an oversized one).
+
+The four staleness gaps: (1) the root `AGENTS.md` still said the array's last disk was capped at
+`DISK_BUILD_COST_MULTIPLIER` (10) for its cost, left over from before this same PR's own `CLAUDE.md`
+edit — fixed to `DISK_ARRAY_LADDER_CAP` (9), while its own Data Lakes paragraph (already updated
+earlier in this PR) was untouched. (2) `DataLakePanel`'s `LakePoolTile` labeled the "virtual final
+unit" fallback (`getDataLakeNextFillSubSize` supplying a level's own last unit from the lake's
+retained buffer once every real disk slot is full) the same as an ordinary disk fill — "fills the
+next `<size>` disk" — even though no new disk square is being created at that point; fixed by
+detecting `hasOpenDiskSlot` (whether any sub-size still has an unfilled real slot) and switching the
+tile's aria-label/title/visible label to a distinct "tops up its own retained buffer toward capacity"
+phrasing whenever it doesn't. (3) The in-game Guide (`InfoPage`) still described the old taper
+mechanic (a rate starting at `DATA_LAKE_OVERFLOW_MAX_PERCENT`% and decaying toward
+`DATA_LAKE_OVERFLOW_MIN_PERCENT`% as the current disk fills) even though the taper itself was removed
+earlier in this same PR in favor of a flat available-rate fill — fixed, along with dropping the two
+now-unused percent constants from `InfoPage`'s own imports. (4) The committed Graphify report was
+built from an ancestor commit that predated this PR's final documentation-correction commits —
+regenerated via `graphify update .` in the same commit as the fixes above, so the committed map
+matches the tree it describes.
+
+**Verification (round 4 addendum).** `yarn test`: 1786/1786 (three new tests — the orphaned-passes
+refund, its ceiling clamp, and a no-op check for in-progress passes on the currently-offered size).
+`AGENTS.md`, `src/pages/InfoPage/index.jsx`, `docs/ECONOMY_REFERENCE.md`, and
+`docs/COMPONENTS_REFERENCE.md` updated in the same commit; `graphify-out/` regenerated.
