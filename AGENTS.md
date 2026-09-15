@@ -138,7 +138,8 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 onward) is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary
 units — Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single **Upgrade Data Stream** action
 (cost = current capacity, doubles `intro.capacity`; displayed Speed is *derived* from capacity via
-`getDataStreamSpeedBytesPerSecond`, not purchased); a separate fill-based multiplier (never the
+`getDataStreamSpeedBytesPerSecond`, not purchased) — sits entirely OUTSIDE the forced priority order,
+never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based multiplier (never the
 displayed Speed/Bandwidth figures themselves) scales the real delivery rate by buffer fullness and
 recent taps.
 Disks (`StoragePage`) fill and pull into Factory automatically, with no manual redeem step, and each
@@ -181,8 +182,9 @@ though both share the same `N = round(log2(raw / 1 Byte))` doubling-step calcula
 floating-point drift from chained purchases/boosts) — `sqrt(pool Capacity in Bytes)` is only a
 guideline for the bandwidth's bounds, not the formula, though it still caps the real ceiling once a
 pool's own fixed Capacity can't keep up with an ever-growing rate. `isMemoryCapacityAtCap`
-(the purchase-availability gate) compares the pool's own derived Capacity to its ceiling, not the raw
-value. Two earlier, reverted attempts shared one raw value between both displays instead — see
+(the purchase-availability gate) compares the FINAL pool's own derived Capacity to its ceiling, not
+the raw value — deliberately the last pool always, not the highest currently-unlocked/visible one,
+so Capacity growth is never re-capped by any one pool's own progress. Two earlier, reverted attempts shared one raw value between both displays instead — see
 docs/DESIGN_HISTORY.md (also home to the acknowledged, minor Compute merge/boost pacing consequence
 of `intro.capacity` no longer clamping to a pool ceiling — `getCoreEarnTimeSeconds` deliberately
 still reads the raw value). Storage pools 1–10 are derived views over this one generator: each
@@ -233,7 +235,12 @@ lake-rate mode once the pool's buffer is full, see above), completing the lake's
 smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
 the maxed level's 1,000-unit capacity). A lake is gated on `isDataLakePoolReady` — its own matching
 Storage pool having built at least one real disk, not the lake's own fill progress (overflow itself
-won't feed a lake until then); Boosters become buyable the instant that's true
+won't feed a lake until then). **A lake fills MANUALLY, capped at exactly its next Booster's own
+cost, until its matching pool is entirely built (`isStoragePoolFullyBuilt`) — only then does it
+switch to filling AUTOMATICALLY** from the pool's buffer overflow as above; manual fill
+(`fillDataLakeManually`/`isDataLakeManualFillAvailable`, a `💧 Fill` button) draws from the same
+pool buffer overflow would use, outside the forced priority order same as Buy. Boosters become
+buyable the instant that's true
 (`isDataLakeBoosterUnlocked`, following the same condition — an older per-lake `boostersUnlocked`
 flag, latched on the lake's own first completed disk, is still read as a fallback for old-save
 compatibility only). `DataLakePanel`'s own pool-fill tile stays visible even before unlock, reading
@@ -247,8 +254,10 @@ needs the pool's smallest ×1 array, 1→2 the middle ×10, 2→3 the largest ×
 lake's own escalating Booster cost or to "the lake is full," both superseded), draining whatever it
 currently holds — independent of every other action's own availability, same as Booster purchases
 above, not arbitrated against the forced priority order at all. The UI repurposes one button
-between Buy and Upgrade, unconditionally preferring Upgrade whenever its own array-completion gate
-is met. A save
+between Buy and Upgrade, preferring Buy whenever it's genuinely affordable (even with Upgrade also
+available — Upgrade's own drain-on-claim cost would otherwise silently redirect a Fill-funded
+Booster purchase into a capacity level-up with no way to Buy first) and falling back to Upgrade only
+once Buy isn't an option. A save
 carrying a `capacityLevel` from an older, longer ladder — or written under the earlier
 deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
 load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.
@@ -265,12 +274,15 @@ An always-on auto-convert turns Data Stream bits into free `tier01` units at tie
 per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
 was removed) — it funds `tier01` purchases continuously, every cycle, but doesn't itself touch
 `intro.mainGameUnlocked` any more; that's `latchMainGameUnlocked`'s job (see above), keyed off
-Storage's own capacity threshold instead. Storage pool cards also require
-`intro.capacity` to reach 1024^N Bytes (1 KiB/1 MiB/1 GiB/…, `getPoolCapacityUnlockThresholdBits`)
-on top of their own disk-build condition before they render (`getVisibleStoragePoolCount`) — pool 1's
-own 1 KiB threshold is deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`,
-so the whole Storage section and pool 1's card reveal at the same instant, with pool 1 already
-showing a clean "1 KB" Capacity. A pool's own smallest size's read cache starts filling from Memory
+Storage's own capacity threshold instead. **Pool liveness (card visibility, active buffer/Bandwidth,
+usable read cache) is now purely Capacity-based** — `intro.capacity` reaching that pool's own
+1024^N-Bytes threshold (`getPoolCapacityUnlockThresholdBits`, `getVisibleStoragePoolCount`), pool 1
+always live — INDEPENDENT of disk-build progress, which instead drives a genuinely separate chain:
+provisioning a disk in pool N+1 still requires every disk of every smaller size in pool N to already
+be fully built (`isStoragePoolFullyBuilt`/`isStoragePoolUnlocked`). Pool 1's own 1 KiB threshold is
+deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`, so the whole Storage
+section and pool 1's card reveal at the same instant, with pool 1 already showing a clean "1 KB"
+Capacity. A pool's own smallest size's read cache starts filling from Memory
 the instant its pool unlocks — pre-filled ready to flush before any disk of that size has ever been
 built (reinstated; see docs/DESIGN_HISTORY.md). The generator, Disks, Data Lakes, and Compute
 Cores/Nodes are permanent across every real Prestige; so is `intro.mainGameUnlocked` itself, a

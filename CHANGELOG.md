@@ -27,7 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   Stream" button** (no icon): cost = current capacity, each upgrade doubles capacity, and Speed is
   derived from capacity — `sqrt(capacityBytes)` B/s at even log2 exponents, the mean of the
   neighbouring even-exponent speeds at odd ones (×1.5/×4/3 alternating, ×2 per two upgrades). Upgrade
-  Data Stream is now the lowest-priority Foundry action.
+  Data Stream is not gated by the forced priority order at all — it never waits on Disk Fill,
+  Provision Disk, or Compute.
+- **A Storage pool's liveness (buffer, Bandwidth, read cache) now depends only on the Data Stream's
+  own Capacity reaching that pool's threshold**, independent of how much has actually been built in
+  any earlier pool. Provisioning a disk still requires every smaller size, in every earlier pool, to
+  already be fully built — that pool-to-pool disk-build chain is unchanged and separate from pool
+  liveness.
+- **A Data Lake now fills manually** — capped at exactly what its next Booster still needs, via a new
+  `💧 Fill` button that draws from its own pool's buffer — **until that pool is entirely built**, at
+  which point it switches to filling automatically from the pool's buffer overflow as before.
 - **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
   tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
   and continuous with transparent tracks.
@@ -35,6 +44,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   counts were removed, balance and Capacity now share one centered line, and active tap percentages
   use a neutral plus with a yellow percentage and tap icon.
 
+### Fixed
+- **A pool's own read cache now always gets first claim on that pool's buffer over Provision Disk
+  funding**, rather than the reverse — a queued Provision Disk build could previously starve the
+  read cache near-empty by claiming each tick's fresh production first.
+- **The Provision Disk button no longer previews progress before it has ever been clicked** —
+  its fill used to include whatever the pool buffer happened to be holding for unrelated reasons
+  (e.g. read cache fill), implying progress before the player had engaged the build at all.
+- **Storage pool Capacity growth no longer silently caps at the highest disk-build-unlocked pool's
+  own ceiling** — it now grows all the way to the final pool's own ceiling, genuinely independent of
+  disk-build progress (the bug this fixes had made the Capacity-only pool-liveness change above
+  unreachable in practice).
+- **A Data Lake's manual `💧 Fill` no longer overspends or underfunds** when a disk slot already has
+  partial progress banked, or when the next Booster needs fewer units than the currently-open slot's
+  own sub-size (a ×10/×100 slot can only ever complete as a whole) — it now spends exactly what's
+  needed. The Fill button also no longer appears once a lake has no open slot left at its current
+  capacity level, or once filling every remaining slot at that level still couldn't afford the next
+  Booster (either case was previously a dead click, or a spend that Scale Out would immediately
+  erase, until the next capacity level unlocked).
+- **The Provision Disk button's progress/availability now excludes the pool's own read-cache
+  reservation**, matching the engine's own spendable-buffer check, so displayed progress can no
+  longer advance on bits the next cache-fill tick was about to consume.
+- **A capacity-visible pool's own read cache now always has a Storage row to render against**, even
+  before the disk-provisioning chain reaches that pool.
+- **Data Lake Buy now wins its shared action slot over Scale Out whenever it's actually affordable**
+  (e.g. right after a manual Fill), instead of Scale Out unconditionally hiding it and draining the
+  fresh deposit on the next click.
+- **A legacy save's Storage pool buffer is now clamped to its true ceiling during migration even
+  when that pool isn't yet Capacity-visible**, and a read-cache self-heal refund can no longer push a
+  buffer back over that same ceiling.
+- **That same not-yet-visible-pool buffer clamp now uses the pool's own fixed "entry Capacity"**
+  (what it will read the moment it's revealed) rather than its far-larger absolute structural
+  maximum — the previous clamp still let a legacy buffer sit well above what the pool would actually
+  support once revealed, with nothing left to correct it at that transition.
+- **The "Upgrade Data Stream" button's disabled tooltip no longer tells a maxed-out player to
+  "resolve higher-priority actions"** — that action isn't gated by the forced priority order at all,
+  so the message could never actually be true; it now says Capacity is already at its maximum.
+- **The Guide's Data Lakes section now describes the manual-then-automatic fill split** (a lake
+  fills only via the 💧 Fill button until its pool's Storage array is entirely complete, then
+  automatically from buffer overflow) instead of describing automatic overflow as the only path —
+  and its Forced priority section no longer lists Upgrade Data Stream as part of that chain.
+- **A Data Lake's 💧 Fill button no longer stays hidden when only a fraction of a base unit is
+  actually needed to complete the currently-open slot** — it previously required a FULL unit's worth
+  banked in the pool's own buffer even when the slot needed far less (e.g. 1 bit, with the rest
+  already banked as partial progress), forcing a wait for an entire extra unit that was never
+  actually required.
 
 ### Fixed
 - **The final tier's XP-funded tickspeed ("🧬 XP") button/autobuyer no longer fires while that

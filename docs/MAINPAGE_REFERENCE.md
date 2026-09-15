@@ -115,9 +115,10 @@ Disk-deposit-funded Booster mechanic, and before that a manual "Claim Core" butt
 mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section).
 
 **Storage pools render as their own `PoolCard`s.** Each VISIBLE Storage pool
-(`getVisibleStoragePoolCount(state)` — the smaller of how many pools have a real disk built and how
-many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
+(`getVisibleStoragePoolCount(state)` — PURE Capacity-based: how many pools' own capacity-unlock
+threshold the Data Stream's raw Capacity has reached, with NO disk-build dependency — see "Pool
+liveness is Capacity-only" in CLAUDE.md and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section)
+renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
 balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard`
@@ -217,12 +218,16 @@ today goes straight from idle to the disk existing, in the same click, with no m
 rendered**: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
-a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active
-pool, OR while a redeemable Disk Fill/an affordable Speed claim — both higher priority, see
-"Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
+a single pass's cost against the pool's SPENDABLE buffer (its own read cache's reservation,
+`getPoolCacheReservationBits`, excluded — mirrors `isProvisionDiskAvailable`'s own engine-side
+check, so the UI's affordability reading never credits bits the cache itself has first claim on), no
+build already in progress, the ladder not yet exhausted for every currently-active
+pool, OR while a redeemable Disk Fill — the only higher-priority action, see
+"Forced priority order" in docs/ECONOMY_REFERENCE.md; Upgrade Data Stream itself sits outside the
+order and never blocks Provision Disk — is currently available),
 `variant={canStartDiskBuild ? 'info' : 'neutral'}`,
-`title` either naming which higher-priority action to take first (`"Take Speed (or redeem a full
-Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
+`title` either naming which higher-priority action to take first (`"Redeem a full Disk first"`, when
+`diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
 corresponding tier is currently at its required level (`diskRedeemTierName`, from
 `getDiskRedeemTierName(state, diskSize)`) — `"Costs
 {cost}, paid in {passesRequired} pass(es) of {size} each ({passesCollected}/
@@ -239,10 +244,20 @@ completing all three arrays in an earlier pool unlocks the next pool (see
 (`diskBuildProgress`) reads differently in each state: mid-provision, `100 - (remainingSeconds /
 totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
 fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
-idle, `((passesCollected * diskSize + min(diskPoolBufferBits, diskSize)) / diskCost) * 100` (already-
-collected passes count as permanent progress, plus however much of the CURRENT buffer counts toward
-the next pass, so the bar climbs smoothly between clicks rather than jumping only once a whole pass
-fires), paired with a hidden
+idle, `0` until `diskBuildEngaged` (`diskPassesCollected > 0 || intro.diskBuildQueued` — i.e. the
+player has actually clicked at least once), THEN
+`((passesCollected * diskSize + min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100`
+(`diskPoolSpendableBufferBits = diskPoolBufferBits - getPoolCacheReservationBits`, the SAME
+spendable amount `isProvisionDiskAvailable`/`provisionDisk` themselves check/spend against — the raw
+buffer alone would let the bar advance on bits the very next cache-fill tick is about to consume
+instead, making displayed progress regress or promise a pass that never actually lands; see
+`docs/DESIGN_HISTORY.md`) — already-
+collected passes count as permanent progress, plus however much of the CURRENT spendable buffer
+counts toward the next pass, so the bar climbs smoothly between clicks rather than jumping only once
+a whole pass fires — the button's own existence already signals eligibility, so it deliberately does NOT preview
+a fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read-cache
+fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`. Paired
+with a hidden
 `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
@@ -307,10 +322,14 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes, unconditionally preferring Scale Out whenever `isDataLakeCapacityDoublingAvailable`
-is true — Scale Out is never merely disabled-but-visible any more, and no longer arbitrated against
-Buy via the forced priority order at all (removed — see `docs/DESIGN_HISTORY.md`; array completion,
-independent of every other action's availability, is now Scale Out's only gate): "⚡ Scale Out"
+between two modes: Buy wins the slot whenever it's genuinely affordable (`canBuy`), even with Scale
+Out also available (e.g. right after a manual 💧 Fill deposit) — Scale Out only claims the slot once
+Buy isn't an option, so a Fill-funded Booster purchase the player wanted to make can no longer be
+silently redirected into a capacity level-up instead (see `docs/DESIGN_HISTORY.md`). Neither button
+is arbitrated against the other via the forced priority order at all (removed — see
+`docs/DESIGN_HISTORY.md`; array completion, independent of every other action's availability, is
+Scale Out's own gate, same as Buy's own affordability check) — Scale Out is never merely
+disabled-but-visible any more: "⚡ Scale Out"
 (`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
