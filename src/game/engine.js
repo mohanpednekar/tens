@@ -6253,6 +6253,16 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   if (isProductionFrozen(state)) return state
   if (!isLastTierTickspeedXpUnlocked(state)) return state
 
+  const lastTierId = getLastTierId()
+  // isLastTierTickspeedXpUnlocked is a one-time-per-cycle latch (scaleUpTierCounts), not a live
+  // read of the last tier's current owned count — it stays true for the rest of the cycle even
+  // after the last tier's own owned count later drops to 0 (e.g. a Prestige/Scale Up on an
+  // EARLIER tier doesn't touch it, but nothing replenishes it either once spent). Without this
+  // guard, consuming XP while the last tier owns nothing would still wipe every other tier's
+  // owned/resources and the Bits balance for a tickspeed bonus with nothing left to apply it
+  // to — a pure, irreversible-feeling loss with no offsetting benefit. See docs/DESIGN_HISTORY.md.
+  if (clampNonNegative(state.owned?.[lastTierId]) <= 0) return state
+
   const safeAmount = Math.floor(clampNonNegative(amount))
   if (safeAmount <= 0) return state
 
@@ -6262,7 +6272,6 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   const availableXp = clampNonNegative(state.prestige.xp)
   if (safeAmount > availableXp) return state
 
-  const lastTierId = getLastTierId()
   const resetTierIds = TIER_DEFINITIONS
     .filter(tier => tier.id !== lastTierId)
     .map(tier => tier.id)

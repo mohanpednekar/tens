@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   use a neutral plus with a yellow percentage and tap icon.
 
 
+### Fixed
+- **The final tier's XP-funded tickspeed ("🧬 XP") button/autobuyer no longer fires while that
+  tier's own owned count is 0.** Previously it stayed clickable (and the tier tickspeed autobuyer
+  kept auto-firing it) purely on a one-time-per-cycle "ever Scale Up'd onto this tier" latch, with
+  no check that the tier currently owns anything — so it could wipe every other tier's owned
+  quantity and Bits back to 0 for a tickspeed bonus with nothing left to apply it to, a real
+  dead-end a player could get stuck in.
+
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
 - Added `focus-visible` outline styles to TierNameTrigger and other interactive components.

@@ -7580,3 +7580,44 @@ seeded at a small, sub-conversion-threshold capacity (so `tickIntroAutoInvest` c
 read "500.000 B" immediately and "500 B" 1.5 real seconds later. `yarn test`: 1756/1756 green (+2).
 `yarn build` succeeds. Pure display formatting — no economy constant/formula changed, so
 `simulate-run-times` wasn't re-run.
+
+### `consumeXpForLastTierTickspeed` gained an owned-count guard after a real softlock report
+
+A player reported that using the final tier's XP-funded tickspeed (the "🧬 XP" button) "wiped" the
+final tier's own units, leaving them stuck at 0 Bits / 0 owned on every tier with no way to recover
+even after a full day of offline progress. Investigation ruled out every other reset mechanism first
+(Scale Up, Auto-Prestige, Overclock, a real Prestige) — all of them also reset `scaleUpTierCounts`,
+which would have flipped the row back to the ordinary Money-funded tickspeed button; the player's
+screenshot still showed the XP-funded button active, which only `consumeXpForLastTierTickspeed`
+itself is consistent with. Three independent checks (the function's existing unit tests, a scripted
+engine-level repro, and an actual click through the real running app) all confirmed the function
+itself has never touched the last tier's own `owned`/`resources` — that exclusion was there from the
+function's original commit onward.
+
+The real bug was adjacent, not in that exclusion: `isLastTierTickspeedXpUnlocked` is a one-time-
+per-cycle latch (`scaleUpTierCounts[lastTier] >= 1`, "has this tier ever been Scale Up'd onto this
+cycle"), not a live read of the last tier's *current* owned count — despite several comments across
+`engine.js`, `MainPage`, `docs/ECONOMY_REFERENCE.md`, and even a test helper's own comment
+incorrectly describing it as owned-based (stale from an earlier design iteration; see the "from a
+permanent latch to a live owned >= 10 check" entry above, itself superseded by the current
+`scaleUpTierCounts` check without every description of it being updated). Once the mechanic is ever
+engaged in a cycle, it stays engaged for the rest of that cycle regardless of what happens to the
+last tier's own owned count afterward. Nothing gated *consumption* on the last tier still owning
+anything: a player could keep clicking (or the tier tickspeed autobuyer could keep auto-firing) with
+the last tier sitting at 0 owned, repeatedly wiping every other tier's `owned`/`resources` and Bits
+for a tickspeed bonus with nothing left to speed up — a real, reachable dead-end, not a hypothetical
+one, since the reporting player hit exactly it.
+
+**Fix:** `consumeXpForLastTierTickspeed` now also requires the last tier's own current `owned` to be
+> 0, returning the state unchanged (a no-op) otherwise — this protects both the manual button and
+the automatic per-tick consumption via one shared guard. `MainPage`'s `canConsumeLastTierXp` mirrors
+the same check so the button visibly disables (with an explanatory tooltip) rather than staying
+clickable with no effect. The button's own visibility (whether the row shows the XP-funded control
+at all vs. the ordinary Money-funded one) is intentionally untouched — per the player's explicit
+request, once engaged it should stay showing the XP-funded control for the rest of the cycle rather
+than flip back to Money-funded just because owned temporarily hit 0; only a Prestige/Overclock reset
+(via `scaleUpTierCounts`) does that, matching how the mechanic already behaved before this fix.
+Several stale "reverts once owned drops below a full level" claims in `docs/ECONOMY_REFERENCE.md`
+and a test helper's comment were corrected to describe the actual `scaleUpTierCounts`-based
+behavior while fixing this, so a future reader doesn't get misled the same way this investigation
+initially was.
