@@ -116,6 +116,8 @@ import {
   tickFillMultiplierDecay,
   getPoolCapacityUnlockThresholdBits,
   isStoragePoolUnlocked,
+  isStoragePoolFullyBuilt,
+  getPoolCacheReservationBits,
   getDiskSizesToShow,
   getRelevantDiskSizesForFoundry,
   getEffectiveTierTickSpeedSeconds,
@@ -190,6 +192,7 @@ import {
   isLastTierTickspeedXpUnlocked,
   isMemoryCapacityAtCap,
   isMemoryCapacityUpgradeAvailable,
+  isPoolCapacityUpgradeAvailable,
   isProductionFrozen,
   isUnboundedPrestigeUnlocked,
   isTierUnlocked,
@@ -257,6 +260,8 @@ import {
   isDataLakeCapacityMaxed,
   isDataLakeBoosterUnlocked,
   isDataLakePoolReady,
+  isDataLakeManualFillAvailable,
+  fillDataLakeManually,
   isDataLakeAutoBuyEnabled,
   isBoosterPurchaseAvailable,
   buyBooster,
@@ -950,6 +955,24 @@ describe('combineIntroByte', () => {
 // Capacity upgrade needs nothing more than a full Buffer now that Speed is derived from Capacity.
 const noOtherUpgradesLeft = { byteCreated: true }
 
+// The smallest ACTUAL doubling-reachable intro.capacity value at which the final pool's own derived
+// Capacity (getStoragePoolCapacity) reaches that pool's own end bound — i.e. the true value
+// isMemoryCapacityAtCap requires. Not simply getStoragePoolMemoryBounds(finalPoolIndex).endBits
+// itself: that raw arithmetic value isn't generally an exact doubling-sequence value, and
+// getDecadePowerEquivalentBits' log2-step-based derivation can floor to a full decade below it for
+// an off-lattice input (see docs/DESIGN_HISTORY.md) — mirrors how every other capacity ceiling in
+// this suite (e.g. INTRO_CAPACITY_CAP_BITS) is itself an exact doubling-sequence value, not a raw
+// formula result.
+const getFinalPoolCapacityCapBits = () => {
+  const finalPoolIndex = getStoragePoolCount()
+  const finalEndBits = getStoragePoolMemoryBounds(finalPoolIndex).endBits
+  let probeCapacity = INTRO_STARTING_CAPACITY
+  while (getStoragePoolCapacity(withIntro(createInitialGameState(), { capacity: probeCapacity }), finalPoolIndex) < finalEndBits) {
+    probeCapacity *= INTRO_CAPACITY_DOUBLING_STEP
+  }
+  return probeCapacity
+}
+
 // getDiskSize's own real-Byte-accurate ladder — a fresh cycle's smallest disk is 8000 bits (1 KB),
 // matching tier01's own level-1 per-unit cost (1000 Bits) expressed in bits via BITS_PER_BYTE.
 const FIRST_DISK_SIZE = getTierCost(TIER_DEFINITIONS[0], 1) * BITS_PER_BYTE
@@ -962,12 +985,35 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
-  it('stays false at the pool end bound with a full balance', () => {
+  it('stays available past pool 1\'s own end bound — the true cap is the FINAL pool\'s own ceiling, not any one pool along the way', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
     })
+    expect(isMemoryCapacityAtCap(state)).toBe(false)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
+  })
+
+  it('stops only once Capacity reaches the FINAL pool\'s own end bound', () => {
+    const finalCapBits = getFinalPoolCapacityCapBits()
+    const state = withIntro(createInitialGameState(), {
+      bits: finalCapBits, capacity: finalCapBits, ...noOtherUpgradesLeft,
+    })
     expect(isMemoryCapacityAtCap(state)).toBe(true)
     expect(isMemoryCapacityUpgradeAvailable(state)).toBe(false)
+  })
+
+  it('is available even while Disk Fill AND Provision Disk are BOTH currently available — Upgrade Data Stream is no longer part of the forced priority order at all', () => {
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      ...noOtherUpgradesLeft,
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      disks: { [FIRST_DISK_SIZE]: 1 }, // a full disk ready to pull — Disk Fill, the highest priority action
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    expect(isDiskFillAvailable(state)).toBe(true)
+    expect(isProvisionDiskAvailable(state)).toBe(true)
+    expect(isPoolCapacityUpgradeAvailable(state)).toBe(true)
+    expect(isMemoryCapacityUpgradeAvailable(state)).toBe(true)
   })
 
   it('is available with unspent Compute Cores because Capacity ×2 resets Compute tokens', () => {
@@ -986,9 +1032,12 @@ describe('isMemoryCapacityUpgradeAvailable', () => {
 })
 
 describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
-  it('is false below the pool end bound and true at/above it', () => {
+  it('is false below the FINAL pool\'s own end bound and true at/above it — independent of any earlier pool\'s own ceiling', () => {
+    const finalCapBits = getFinalPoolCapacityCapBits()
     expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_STARTING_CAPACITY }))).toBe(false)
-    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS }))).toBe(true)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS }))).toBe(false)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: finalCapBits / INTRO_CAPACITY_DOUBLING_STEP }))).toBe(false)
+    expect(isMemoryCapacityAtCap(withIntro(createInitialGameState(), { capacity: finalCapBits }))).toBe(true)
   })
 
   it('normalizePoolMemoryCapacity does not raise capacity to the end bound', () => {
@@ -1028,6 +1077,56 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
       poolBuffers: { 1: 50_000 },
     })
     expect(normalizePoolMemoryCapacity(state)).toBe(state)
+  })
+
+  it('normalizePoolMemoryCapacity clamps a NOT-YET-Capacity-visible pool\'s legacy buffer to its own ENTRY-CAPACITY ceiling, not its eventual absolute maximum (see docs/DESIGN_HISTORY.md)', () => {
+    // A save from before pool liveness moved to Capacity-only could carry a legitimate pool 2
+    // buffer (under the old disk-build-based eligibility) while Capacity hasn't yet crossed pool
+    // 2's own visibility threshold — getVisibleStoragePoolCount(state) === 1 here, so pool 2 isn't
+    // "visible" at all. The clamp must land on what pool 2's own Capacity will compute to the
+    // MOMENT it's revealed (its "entry Capacity" — the same ungated formula getStoragePoolCapacity
+    // uses once visible, evaluated at pool 2's own unlock threshold, since intro.capacity only ever
+    // grows in doublings and so always lands exactly on that threshold on the way up), not its
+    // far-larger absolute structural ceiling (getStoragePoolMemoryBounds(2).endBits) — clamping to
+    // the absolute bound would leave the buffer sitting well above what the pool will actually read
+    // the instant it becomes visible, with nothing left to re-clamp it at that transition.
+    const pool2AbsoluteCeiling = getStoragePoolMemoryBounds(2).endBits
+    const capacity = getPoolCapacityUnlockThresholdBits(2) - 1 // one bit short of pool 2's own threshold
+    // AT pool 2's own unlock threshold so getStoragePoolCapacity's own visibility gate doesn't zero
+    // it out — giving the exact value ("entry Capacity") pool 2 will read the instant it's revealed.
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { byteCreated: true, capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity,
+      poolBuffers: { 2: pool2AbsoluteCeiling * 2 }, // far beyond even the absolute structural ceiling
+    })
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    const after = normalizePoolMemoryCapacity(state)
+    expect(after.intro.poolBuffers[2]).toBeLessThan(pool2AbsoluteCeiling)
+    expect(after.intro.poolBuffers[2]).toBe(pool2EntryCapacityCeiling)
+  })
+
+  it('normalizePoolMemoryCapacity clamps a hidden pool\'s legacy buffer to the SAME entry-Capacity ceiling even when current Capacity sits far BELOW that pool\'s own threshold, not a lower value derived from today\'s low Capacity', () => {
+    // The clamp ceiling must be pool 2's fixed entry Capacity — what it will read the MOMENT it's
+    // revealed — regardless of how far below its own threshold intro.capacity currently sits. An
+    // earlier, rejected fix attempt fed the LIVE (far-below-threshold) capacity straight through the
+    // ungated Capacity formula, which floors to pool 1's own end bound (a much LOWER value than
+    // pool 2's real, higher entry Capacity) whenever capacity is this low — wrongly truncating a
+    // legitimate legacy buffer that would fit fine once pool 2 is actually revealed.
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { byteCreated: true, capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
+    const state = withIntro(createInitialGameState(), {
+      byteCreated: true,
+      capacity: getPoolCapacityUnlockThresholdBits(1), // pool 1 only just became visible — far below pool 2's own threshold
+      poolBuffers: { 2: pool2EntryCapacityCeiling - 1 }, // a legitimate legacy buffer just under pool 2's real entry Capacity
+    })
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    expect(normalizePoolMemoryCapacity(state)).toBe(state) // no truncation — already within the correct ceiling
   })
 
   it('normalizePoolMemoryCapacity clamps a Data Lake capacityLevel saved past the new, shorter ladder\'s array bounds', () => {
@@ -1148,14 +1247,15 @@ describe('pickIntroCapacityMilestone', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('is a no-op at the pool end bound', () => {
+  it('is a no-op at the FINAL pool\'s own end bound', () => {
+    const finalCapBits = getFinalPoolCapacityCapBits()
     const state = withIntro(createInitialGameState(), {
-      bits: INTRO_CAPACITY_CAP_BITS, capacity: INTRO_CAPACITY_CAP_BITS, ...noOtherUpgradesLeft,
+      bits: finalCapBits, capacity: finalCapBits, ...noOtherUpgradesLeft,
     })
     const after = pickIntroCapacityMilestone(state)
     expect(after).toBe(state)
-    expect(after.intro.bits).toBe(INTRO_CAPACITY_CAP_BITS)
-    expect(after.intro.capacity).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(after.intro.bits).toBe(finalCapBits)
+    expect(after.intro.capacity).toBe(finalCapBits)
   })
 
   it('doubles plainly through 64 Bytes too — no SI-clean deviation for intro.capacity itself (it also drives the Data Stream tile\'s own binary display; see docs/DESIGN_HISTORY.md)', () => {
@@ -1175,7 +1275,9 @@ describe('pickIntroCapacityMilestone', () => {
     expect(after.intro.capacity).toBe(8 * 2 ** 17) // raw doubles plainly, unclamped...
     expect(after.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS) // ...now past the pool's own ceiling
     expect(getStoragePoolCapacity(after, 1)).toBe(INTRO_CAPACITY_CAP_BITS) // the pool's own derived value still clamps there
-    expect(isMemoryCapacityAtCap(after)).toBe(true)
+    // The true cap is the FINAL pool's own end bound, not pool 1's — raw capacity keeps growing
+    // past pool 1's ceiling toward further pools' own thresholds, so the upgrade stays available.
+    expect(isMemoryCapacityAtCap(after)).toBe(false)
   })
 })
 
@@ -1349,26 +1451,34 @@ describe('storage pools', () => {
     expect(getVisibleStoragePoolCount(atThreshold)).toBe(2)
   })
 
-  it('keeps lower-pool bandwidth and capacity fixed without dividing by higher unlocked pools', () => {
+  it('a pool that is disk-build-complete still reads 0 Bandwidth/Capacity until ITS OWN Capacity threshold is separately crossed — pool LIVENESS and disk PROVISIONING are independent chains', () => {
+    // Pool 1 fully built (all 3 of its own ladder sizes) unlocks pool 2 for DISK PROVISIONING
+    // purposes (isStoragePoolUnlocked/getUnlockedStoragePoolCount) — but pool 2's own Bandwidth/
+    // Capacity (getStoragePoolBandwidth/getStoragePoolCapacity, both keyed on
+    // getVisibleStoragePoolCount) stay locked at 0 until the Data Stream's raw Capacity separately
+    // reaches pool 2's own threshold. "The disk prerequisites are pool to pool; pool prerequisite
+    // is just the Data Stream Capacity threshold" — the two were folded into one shared primitive
+    // once already and reverted (see docs/DESIGN_HISTORY.md); this is the regression that reversion
+    // guards against in the other direction.
     const state = withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 0,
-      // 17 doublings from the 1-Byte start — its decade-power pool equivalent
-      // (getDecadePowerEquivalentBits) is exactly 100,000 Bytes (800,000 bits), landing right
-      // at pool 1's own ceiling (INTRO_CAPACITY_CAP_BITS, 100 KB) / pool 2's own floor, so pool 2
-      // shows that derived value unclamped while pool 1 stays clamped at its own ceiling.
-      capacity: 1024 * 1024,
+      capacity: getPoolCapacityUnlockThresholdBits(2) - 1, // one bit short of pool 2's own threshold
       disksBuiltTotal: Object.fromEntries(
         [...Array(3)].map((_, index) => [getDiskLadderSizeBits(index + 1), DISK_ARRAY_LADDER_CAP]),
       ),
     })
-    // The shared derived rate (384 B/s = 3,072 bits/sec here) outgrows each pool's own
-    // sqrt(Capacity) bound, so both pools show the same SI-clean 250 B/s — neither pool's
-    // Bandwidth nor Capacity divides down just because a higher pool also exists.
-    expect(getStoragePoolBandwidth(state, 2)).toBe(getStoragePoolBandwidth(state, 1))
-    expect(getStoragePoolBandwidth(state, 1)).toBe(2_000)
-    expect(getStoragePoolCapacity(state, 2)).toBe(INTRO_CAPACITY_CAP_BITS)
+    expect(getUnlockedStoragePoolCount(state)).toBe(2) // pool 2 IS disk-provisioning-reachable
+    expect(getVisibleStoragePoolCount(state)).toBe(1) // but NOT yet live
+    expect(getStoragePoolBandwidth(state, 2)).toBe(0)
+    expect(getStoragePoolCapacity(state, 2)).toBe(0)
+    // Pool 1's own values are entirely unaffected by pool 2's disk-build progress.
     expect(getStoragePoolCapacity(state, 1)).toBe(INTRO_CAPACITY_CAP_BITS)
+
+    const afterThreshold = withIntro(state, { capacity: getPoolCapacityUnlockThresholdBits(2) })
+    expect(getVisibleStoragePoolCount(afterThreshold)).toBe(2)
+    expect(getStoragePoolBandwidth(afterThreshold, 2)).toBeGreaterThan(0)
+    expect(getStoragePoolCapacity(afterThreshold, 2)).toBeGreaterThan(0)
   })
 
   it('caps a pool\'s own Bandwidth at the square root of its own Capacity (in Bytes) once the production rate outgrows it', () => {
@@ -1414,7 +1524,12 @@ describe('storage pools', () => {
     expect(getStoragePoolBandwidth(state, 1)).toBe(2000) // 250 Bytes/sec (SI-clean), not the raw value
   })
 
-  it('moves the Data Stream Capacity ceiling forward when pool 2 unlocks', () => {
+  it('is unaffected by disk-build progress — the true cap depends purely on Capacity vs. the FINAL pool\'s own ceiling', () => {
+    // Pool 1's own ceiling is nowhere near the true final cap (the last pool's own end bound), so
+    // the upgrade stays available at this Capacity regardless of how many disks have been built —
+    // isMemoryCapacityAtCap must never re-couple to disk-build progress (see docs/DESIGN_HISTORY.md
+    // for the incident this guards against).
+    const noDisksBuilt = withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS, disksBuiltTotal: {} })
     const pool1Complete = withIntro(createInitialGameState(), {
       capacity: INTRO_CAPACITY_CAP_BITS,
       disksBuiltTotal: {
@@ -1423,7 +1538,7 @@ describe('storage pools', () => {
         [FIRST_DISK_SIZE * 100]: DISK_ARRAY_LADDER_CAP,
       },
     })
-    expect(isMemoryCapacityAtCap(withIntro(pool1Complete, { disksBuiltTotal: {} }))).toBe(true)
+    expect(isMemoryCapacityAtCap(noDisksBuilt)).toBe(false)
     expect(getUnlockedStoragePoolCount(pool1Complete)).toBe(2)
     expect(isMemoryCapacityAtCap(pool1Complete)).toBe(false)
   })
@@ -1471,8 +1586,14 @@ describe('pool buffers', () => {
       // 16 doublings from the 1-Byte start — its decade-power pool equivalent is exactly 10,000
       // Bytes (80,000 bits), deliberately below the seeded bits balance.
       capacity: 8 * 2 ** 16,
-      // The lake only accepts overflow once its own pool has built a real disk (isDataLakePoolReady).
-      disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 1 },
+      // Automatic overflow only feeds a lake once its own pool is entirely COMPLETE
+      // (isStoragePoolFullyBuilt) — every one of pool 1's three ladder sizes fully built, not
+      // merely isDataLakePoolReady's own single-disk gate.
+      disksBuiltTotal: {
+        [DISK_LADDER_BASE_SIZE_BITS]: DISK_ARRAY_LADDER_CAP,
+        [DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER]: DISK_ARRAY_LADDER_CAP,
+        [DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER ** 2]: DISK_ARRAY_LADDER_CAP,
+      },
     })
     const after = tickPoolBufferFill(1e6)(state) // ample elapsed time — room, not rate, binds
     const bufferCapacity = getPoolBufferCapacity(state, 1)
@@ -1529,6 +1650,10 @@ describe('pool buffers', () => {
       byteCreated: true,
       bits: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE),
       capacity: 4_000_000,
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test fills, since FIRST_DISK_SIZE is also pool 1's
+      // own cache-eligible size (see the "reserves the pool's own read cache" tests below).
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(isProvisionDiskAvailable(state)).toBe(false) // nothing in the pool buffer yet
     state = tickPoolBufferFill(1000)(state) // ample elapsed time to fully fund it at the pool's own capped rate
@@ -1617,6 +1742,10 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
       byteCreated: true,
       diskBuildQueued: true,
       poolBuffers: { 1: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) },
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer, since FIRST_DISK_SIZE is also pool 1's own
+      // cache-eligible size (see the "reserves the pool's own read cache" tests).
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = tickQueuedDiskBuild(state)
     expect(after.intro.diskBuildQueued).toBe(false)
@@ -1633,6 +1762,8 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
       diskBuildQueued: true,
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
       poolBuffers: { 1: FIRST_DISK_SIZE },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = tickQueuedDiskBuild(state)
     expect(after.intro.diskBuildQueued).toBe(true)
@@ -1709,6 +1840,8 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
       byteCreated: true,
       diskBuildQueued: true,
       poolBuffers: { 1: getDiskCost(createInitialGameState(), FIRST_DISK_SIZE) },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     const after = provisionDisk(state)
     expect(after.intro.diskBuildQueued).toBe(false)
@@ -1771,8 +1904,8 @@ describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('refuses to queue once pool 1 is already at its capacity end bound', () => {
-    const state = withIntro(createInitialGameState(), { capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true })
+  it('refuses to queue once Capacity is already at the FINAL pool\'s own end bound', () => {
+    const state = withIntro(createInitialGameState(), { capacity: getFinalPoolCapacityCapBits(), byteCreated: true })
     expect(queueIntroCapacityUpgrade(state)).toBe(state)
   })
 })
@@ -1974,6 +2107,8 @@ describe('tickFoundryResetConvenience', () => {
       poolBuffers: { 1: getDiskCost(createInitialGameState(), size) + 10 },
       capacity: getDiskCost(createInitialGameState(), size) * 10,
       byteCreated: true,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [size]: size },
       foundryResetCaps: {
         byteCreated: true,
         disksBuiltTotal: { [String(size)]: 2 },
@@ -1995,6 +2130,8 @@ describe('tickFoundryResetConvenience', () => {
       disksBuiltTotal: { [String(size)]: 2 },
       capacity: getDiskCost(withIntro(createInitialGameState(), { disksBuiltTotal: { [size]: 2 } }), size) * 10,
       byteCreated: true,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [size]: size },
       foundryResetCaps: {
         byteCreated: true,
         disksBuiltTotal: { [String(size)]: 2 },
@@ -2025,6 +2162,8 @@ describe('tickFoundryResetConvenience', () => {
       disksBuiltTotal: { [size]: 2 },
       capacity: capacityHeadroom,
       byteCreated: true,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [size]: size },
       foundryResetCaps: {
         byteCreated: true,
         disksBuiltTotal: { [String(size)]: 2 },
@@ -2168,7 +2307,10 @@ describe('isDiskFillAvailable', () => {
 
 describe('isProvisionDiskAvailable', () => {
   it('is true once the currently-offered disk size\'s build cost is affordable out of its own pool buffer', () => {
-    const state = withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE))
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
@@ -2176,13 +2318,52 @@ describe('isProvisionDiskAvailable', () => {
   // each (see provisionDisk) — only a single pass's worth needs to be affordable to start, not the
   // whole lump sum.
   it('is true with only a single pass\'s worth in the buffer, even though the full build cost isn\'t affordable yet', () => {
-    const state = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isProvisionDiskAvailable(state)).toBe(true)
   })
 
   it('is false below a single pass\'s cost (the disk\'s own face-value size)', () => {
     const state = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE - 1)
     expect(isProvisionDiskAvailable(state)).toBe(false)
+  })
+
+  it('getPoolCacheReservationBits reserves the pool\'s own read cache out of the buffer, blocking Provision Disk with an otherwise-affordable buffer', () => {
+    // Pool 1's own read cache size equals FIRST_DISK_SIZE (its smallest denomination) — with the
+    // cache completely EMPTY, the entire buffer is reserved for it, leaving nothing for Provision
+    // Disk even though the buffer alone would otherwise afford exactly one pass.
+    const emptyCache = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE)
+    expect(getPoolCacheReservationBits(emptyCache, 1)).toBe(FIRST_DISK_SIZE)
+    expect(isProvisionDiskAvailable(emptyCache)).toBe(false)
+
+    // With TWICE the buffer, one pass' worth remains available after the cache's own reservation.
+    const doubleBuffer = withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE * 2)
+    expect(isProvisionDiskAvailable(doubleBuffer)).toBe(true)
+    const after = provisionDisk(doubleBuffer)
+    expect(after.intro.disksBuiltTotal[FIRST_DISK_SIZE]).toBe(1)
+    // Only one pass' worth was spendable — the rest stayed reserved for the cache.
+    expect(after.intro.poolBuffers[1]).toBe(FIRST_DISK_SIZE)
+
+    // A partially-filled cache reserves only what's still missing, not the whole size again.
+    const partialCache = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE / 2 },
+    })
+    expect(getPoolCacheReservationBits(partialCache, 1)).toBe(FIRST_DISK_SIZE / 2)
+    expect(isProvisionDiskAvailable(partialCache)).toBe(false) // still short of one full pass + reservation
+
+    // A fully-topped-off cache reserves nothing at all — provisioning draws on the buffer exactly
+    // as if the reservation didn't exist.
+    const fullCache = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
+    expect(getPoolCacheReservationBits(fullCache, 1)).toBe(0)
+    expect(isProvisionDiskAvailable(fullCache)).toBe(true)
+
+    // 0 for a locked/invalid pool — nothing to reserve for a size that has no cache of its own.
+    expect(getPoolCacheReservationBits(createInitialGameState(), 0)).toBe(0)
+    expect(getPoolCacheReservationBits(createInitialGameState(), 99)).toBe(0)
   })
 
   it('a full pool buffer alone is not enough — a full shared Data Stream Buffer (intro.bits) does not fund Provision Disk any more', () => {
@@ -2256,13 +2437,17 @@ describe('isComputeUpgradeAvailable', () => {
 
 describe('isProvisionDiskTurnAvailable', () => {
   it('matches isProvisionDiskAvailable with nothing ranked above it pending', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {})
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isProvisionDiskTurnAvailable(state)).toBe(true)
   })
 
   it('is false while a Disk Fill (higher priority) is currently available', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       disks: { [FIRST_DISK_SIZE]: 1 },
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(isProvisionDiskTurnAvailable(state)).toBe(false)
   })
@@ -2285,7 +2470,13 @@ describe('isComputeBoostTurnAvailable / isComputeUpgradeTurnAvailable', () => {
   })
 
   it('is false while Provision Disk (higher priority) is currently available', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), computeReady)
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      ...computeReady,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits — so Provision Disk
+      // itself stays available (otherwise the cache reservation alone would swallow the buffer, and
+      // this test would no longer be exercising the priority order it's named for).
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     expect(isComputeBoostTurnAvailable(state, 'burst', 1)).toBe(false)
     expect(isComputeUpgradeTurnAvailable(state)).toBe(false)
   })
@@ -2862,6 +3053,17 @@ describe('getDiskSizesToShow', () => {
     expect(getDiskSize(state)).toBe(level2Size)
     expect(getDiskSizesToShow(state)).toEqual([FIRST_DISK_SIZE, level2Size])
   })
+
+  it('includes a capacity-visible pool\'s own smallest size even though the disk-provisioning chain hasn\'t reached it yet, so its own cache activity (tickDiskAutoFill pre-fills/consumes it purely on Capacity liveness) always has a row to render against', () => {
+    const pool2SmallestSize = getDataLakeUnitBits(2)
+    const state = withIntro(createInitialGameState(), {
+      capacity: getPoolCapacityUnlockThresholdBits(2), // pool 2 live via Capacity alone
+      // No disksBuiltTotal at all — pool 1 hasn't even started, let alone completed.
+    })
+    expect(getUnlockedStoragePoolCount(state)).toBe(1) // disk-provisioning chain hasn't reached pool 2
+    expect(getVisibleStoragePoolCount(state)).toBe(2) // but pool 2 is already Capacity-live
+    expect(getDiskSizesToShow(state)).toContain(pool2SmallestSize)
+  })
 })
 
 describe('getRelevantDiskSizesForFoundry', () => {
@@ -2907,7 +3109,10 @@ describe('provisionDisk', () => {
   // before any Capacity upgrade.
 
   it('the array\'s very first disk needs just 1 pass — a fully-funded buffer completes it, and constructs the disk, in one call', () => {
-    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)))
+    const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
@@ -2925,7 +3130,10 @@ describe('provisionDisk', () => {
   it('the array\'s 6th disk needs 6 passes — a fully-funded buffer completes all of them, and constructs the disk, in one call', () => {
     // 5 already built — this build is the 6th, needing 6 passes (getDiskProvisionPassesRequired).
     const withOrdinal = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
-    const state = withIntro(withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, FIRST_DISK_SIZE)))
+    const state = withIntro(withPoolBuffer(withOrdinal, getDiskCost(withOrdinal, FIRST_DISK_SIZE)), {
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
 
     const after = provisionDisk(state)
     expect(after.intro.poolBuffers[1]).toBe(0)
@@ -2957,6 +3165,8 @@ describe('provisionDisk', () => {
     // mid-funding (the array's very first disk needs just 1 pass and would complete immediately).
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 1 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
 
     const after = provisionDisk(state)
@@ -2974,6 +3184,8 @@ describe('provisionDisk', () => {
     // outstanding (and it stays mid-funding, unlike a build that only ever needed 3 or fewer).
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE * 3 + 10), {
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 4 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
 
     const after = provisionDisk(state)
@@ -2987,9 +3199,10 @@ describe('provisionDisk', () => {
     // 3 already built — this build is the 4th, needing 4 passes; 3 already banked leaves exactly one
     // more to land.
     const state = withIntro(withPoolBuffer(createInitialGameState(), FIRST_DISK_SIZE), {
-
       disksBuiltTotal: { [FIRST_DISK_SIZE]: 3 },
       diskProvisionPasses: { [FIRST_DISK_SIZE]: 3 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
 
     const after = provisionDisk(state)
@@ -3042,7 +3255,11 @@ describe('provisionDisk', () => {
   it('a disk can be fully funded across several separate calls as the pool buffer refills between them — no need to hold the whole cost at once', () => {
     // 5 already built — this build is the 6th, needing 6 passes, giving enough rounds to exercise
     // incremental funding meaningfully (the array's very first disk needs only 1).
-    let state = withIntro(createInitialGameState(), { disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 } })
+    let state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [FIRST_DISK_SIZE]: 5 },
+      // Pool 1's read cache already full — see getPoolCacheReservationBits.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
+    })
     for (let pass = 1; pass <= 6; pass += 1) {
       state = withPoolBuffer(state, FIRST_DISK_SIZE) // buffer refills to exactly one pass each round
       expect(state.intro.diskBuild).toBeNull()
@@ -3374,6 +3591,10 @@ describe('tickDiskAutoFill', () => {
   it('self-heals a save carrying a stale read cache for a size that is no longer read-cache-eligible, refunding it to its own pool buffer', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      // High enough that pool 1's own buffer ceiling covers the refund — the refund is clamped
+      // against getPoolBufferClampCeilingBits, and a fresh cycle's tiny starting Capacity would
+      // otherwise truncate it, which isn't what this test is about (see docs/DESIGN_HISTORY.md).
+      capacity: INTRO_CAPACITY_CAP_BITS,
       disksBuiltTotal: { [level2Size]: 1 },
       // A save from before only the smallest size kept a read cache could still carry one here.
       diskCache: { [level2Size]: level2Size },
@@ -3386,6 +3607,8 @@ describe('tickDiskAutoFill', () => {
   it('self-heals a save carrying a stale in-flight read-cache flush for a now-ineligible size, dropping it without touching its pool buffer', () => {
     const level2Size = getTierCost(tensTier, 2) * BITS_PER_BYTE
     const state = withIntro(createInitialGameState(), {
+      // High enough that pool 1's own buffer ceiling covers the refund — see the sibling test above.
+      capacity: INTRO_CAPACITY_CAP_BITS,
       disksBuiltTotal: { [level2Size]: 1 },
       // A save from before only the smallest size kept a read cache could still carry a full cache
       // mid-flush into an empty disk at this now-ineligible size.
@@ -3404,6 +3627,31 @@ describe('tickDiskAutoFill', () => {
     expect(after.intro.poolBuffers[1]).toBe(level2Size)
     // No disk was ever credited from this stale, now-abandoned flush.
     expect(after.intro.disks?.[level2Size] ?? 0).toBe(0)
+  })
+
+  it('clamps a read-cache self-heal refund into a NOT-YET-Capacity-visible pool\'s buffer against its own ENTRY-CAPACITY ceiling, not its eventual absolute maximum (see docs/DESIGN_HISTORY.md)', () => {
+    const pool2SmallestSize = getDataLakeUnitBits(2)
+    const pool2AbsoluteCeiling = getStoragePoolMemoryBounds(2).endBits
+    const capacity = getPoolCapacityUnlockThresholdBits(2) - 1 // pool 2 not yet Capacity-visible
+    // AT pool 2's own unlock threshold so getStoragePoolCapacity's own visibility gate doesn't zero
+    // it out — giving the exact value ("entry Capacity") pool 2 will read the instant it's revealed.
+    const pool2EntryCapacityCeiling = getStoragePoolCapacity(
+      withIntro(createInitialGameState(), { capacity: getPoolCapacityUnlockThresholdBits(2) }),
+      2,
+    )
+    const state = withIntro(createInitialGameState(), {
+      capacity,
+      disksBuiltTotal: { [pool2SmallestSize]: 1 },
+      // A pre-existing buffer already sitting near pool 2's own entry-capacity ceiling, plus a
+      // stale cache that would otherwise refund it well past even the absolute structural ceiling.
+      poolBuffers: { 2: pool2EntryCapacityCeiling - 1 },
+      diskCache: { [pool2SmallestSize]: pool2AbsoluteCeiling },
+    })
+    expect(getVisibleStoragePoolCount(state)).toBe(1)
+    const after = tickDiskAutoFill(0)(state)
+    expect(after.intro.diskCache?.[pool2SmallestSize] ?? 0).toBe(0)
+    expect(after.intro.poolBuffers[2]).toBeLessThan(pool2AbsoluteCeiling)
+    expect(after.intro.poolBuffers[2]).toBe(pool2EntryCapacityCeiling)
   })
 
   it('does NOT refund a full read cache staged before any disk of that size was built — eager pre-fill makes this legitimate, not stale', () => {
@@ -4854,6 +5102,9 @@ describe('activateComputeBoost', () => {
   it('is a same-reference no-op while Provision Disk (higher priority) is currently available', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       computeCores: 1,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits — so Provision Disk
+      // itself stays available, matching this test's own name.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(activateComputeBoost('burst', 1)(state)).toBe(state)
   })
@@ -4935,6 +5186,9 @@ describe('canStackComputeBoost / stackComputeBoost', () => {
   it('stackComputeBoost is a same-reference no-op while Provision Disk (higher priority) is currently available', () => {
     const state = withIntro(withPoolBuffer(createInitialGameState(), getDiskCost(createInitialGameState(), FIRST_DISK_SIZE)), {
       computeCores: 1, computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1,
+      // Pool 1's read cache already full — see getPoolCacheReservationBits — so Provision Disk
+      // itself stays available, matching this test's own name.
+      diskCache: { [FIRST_DISK_SIZE]: FIRST_DISK_SIZE },
     })
     expect(stackComputeBoost(state)).toBe(state)
   })
@@ -10133,15 +10387,22 @@ describe('Data Lakes', () => {
     // tickPoolBufferFill tests above for the same derivation. `poolBuffers: { 1: 800_000 }` seeds
     // that buffer already completely full, so every bit of pool 1's own reserved rate this tick is
     // overflow, none of it topping up the (already-full) buffer itself.
-    // A lake only feeds from overflow once its own pool has built at least one real disk
-    // (isDataLakePoolReady) — seeded here via disksBuiltTotal so every test below exercises the
-    // overflow MATH itself rather than that separate unlock gate (covered by its own describe block).
+    // A lake only feeds from overflow once its own pool is entirely COMPLETE — every one of its
+    // three ladder sizes fully built (isStoragePoolFullyBuilt) — not merely isDataLakePoolReady's
+    // own single-disk gate; before completion, a lake fills MANUALLY only (see
+    // isDataLakeManualFillAvailable/fillDataLakeManually). Seeded here via disksBuiltTotal so every
+    // test below exercises the overflow MATH itself rather than either separate unlock gate
+    // (covered by their own describe blocks).
     const fullBufferState = overrides => withIntro(createInitialGameState(), {
       byteCreated: true,
       bits: 1_000_000,
-      capacity: 32_000_000,
+      // Stays below pool 2's own Capacity threshold (8,388,608 bits) so ONLY pool 1 is live —
+      // otherwise pool 2 (disk-provisioning-reachable here too, since pool 1 is fully built) would
+      // also start reserving/spending intro.bits into its own buffer, defeating every test below's
+      // own pool-1-only isolation.
+      capacity: 5_000_000,
       poolBuffers: { 1: 800_000 },
-      disksBuiltTotal: { [kb1]: 1 },
+      disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
       ...overrides,
     })
 
@@ -10322,7 +10583,10 @@ describe('Data Lakes', () => {
       const state = withIntro(createInitialGameState(), {
         byteCreated: true,
         bits: 1_000_000,
-        capacity: 32_000_000,
+        // Stays below pool 2's own Capacity threshold (8,388,608 bits) so ONLY pool 1 is live —
+        // otherwise pool 2 would also start reserving/spending intro.bits into its own (here
+        // unseeded, so unconditionally room-having) buffer, defeating this test's own isolation.
+        capacity: 5_000_000,
         poolBuffers: { 1: 8_000_000 }, // already completely full
       })
       const after = tickPoolBufferFill(1000)(state)
@@ -10331,17 +10595,37 @@ describe('Data Lakes', () => {
       expect(getDataLakeFillBits(after, 1)).toBe(0)
     })
 
-    it('tickPoolBufferFill starts feeding the lake normally the very first tick a disk has been built', () => {
+    it('tickPoolBufferFill still leaves the lake untouched by AUTOMATIC overflow with only a single disk built — the pool must be entirely COMPLETE (isStoragePoolFullyBuilt), not merely isDataLakePoolReady\'s own single-disk gate — but the SAME single disk already makes manual filling available', () => {
       const state = withIntro(createInitialGameState(), {
         byteCreated: true,
         bits: 1_000_000,
-        capacity: 32_000_000,
+        capacity: 5_000_000, // see the test above — stays below pool 2's own threshold
         poolBuffers: { 1: 8_000_000 },
         disksBuiltTotal: { [kb1]: 1 },
       })
+      expect(isDataLakePoolReady(state, 1)).toBe(true)
+      expect(isStoragePoolFullyBuilt(state, 1)).toBe(false)
+      const after = tickPoolBufferFill(1000)(state)
+      expect(after.intro.bits).toBe(1_000_000) // automatic overflow still hasn't started
+      expect(getDataLakeFillBits(after, 1)).toBe(0)
+      // Manual fill, by contrast, IS already available — it only needs isDataLakePoolReady.
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+    })
+
+    it('tickPoolBufferFill starts feeding the lake AUTOMATICALLY the very first tick its own pool becomes entirely complete', () => {
+      const state = withIntro(createInitialGameState(), {
+        byteCreated: true,
+        bits: 1_000_000,
+        capacity: 5_000_000,
+        poolBuffers: { 1: 8_000_000 },
+        disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      })
+      expect(isStoragePoolFullyBuilt(state, 1)).toBe(true)
       const after = tickPoolBufferFill(1)(state)
       expect(after.intro.bits).toBeLessThan(1_000_000)
       expect(getDataLakeFillBits(after, 1)).toBeGreaterThan(0)
+      // Complete now — manual fill is no longer the way in; automatic overflow has taken over.
+      expect(isDataLakeManualFillAvailable(after, 1)).toBe(false)
     })
   })
 
@@ -10576,6 +10860,146 @@ describe('Data Lakes', () => {
       // Below the maxed capacity level, escalation is unaffected — this only kicks in once maxed.
       const notMaxed = withLake(createInitialGameState(), 1, { depositedUnits: 100, boostersUnlocked: true, capacityLevel: 2, purchased: 99 })
       expect(getBoosterPurchaseCost(1)(notMaxed)).toBe(100)
+    })
+  })
+
+  describe('manual fill before pool completion (see fillDataLakeManually/isDataLakeManualFillAvailable in engine.js)', () => {
+    it('is unavailable before the pool has ever built a real disk, even with plenty banked in its buffer', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {})
+      expect(isDataLakePoolReady(state, 1)).toBe(false)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+      expect(fillDataLakeManually(1)(state)).toBe(state)
+    })
+
+    it('is available once the pool has built one disk (isDataLakePoolReady) but is not yet entirely complete, with at least one unit\'s worth banked and more still needed for the next Booster', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: 1 }, // ready, but far from DISK_ARRAY_LADDER_CAP — pool not complete
+      })
+      expect(isStoragePoolFullyBuilt(state, 1)).toBe(false)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+    })
+
+    it('is unavailable once the pool is entirely complete — automatic overflow takes over instead', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP },
+      })
+      expect(isStoragePoolFullyBuilt(state, 1)).toBe(true)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+      expect(fillDataLakeManually(1)(state)).toBe(state)
+    })
+
+    it('is unavailable once already enough is banked for the next Booster — nothing left to manually top up', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), depositedUnits: 1, boostersUnlocked: true } },
+      })
+      // purchased defaults to 0, so the next Booster costs 1 — already exactly met.
+      expect(getBoosterPurchaseCost(1)(state)).toBe(1)
+      expect(getDataLakeDepositedUnits(1)(state)).toBe(1)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+    })
+
+    it('is unavailable with less than one whole unit banked in the pool\'s own buffer', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 - 1), {
+        disksBuiltTotal: { [kb1]: 1 },
+      })
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+      expect(fillDataLakeManually(1)(state)).toBe(state)
+    })
+
+    it('converts exactly enough units for the next Booster, spending only that much from the pool\'s own buffer', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: 1 },
+      })
+      const after = fillDataLakeManually(1)(state)
+      // Next Booster costs 1 (purchased defaults to 0) — exactly 1 unit converted, not the whole
+      // buffer's worth of 5.
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+      expect(after.intro.poolBuffers[1]).toBe(kb1 * 4)
+      expect(isBoosterPurchaseAvailable(after, 1)).toBe(true)
+    })
+
+    it('caps at whatever the buffer can actually afford when that\'s less than what the next Booster needs, as long as further progress at the SAME capacity level can still reach it', () => {
+      // Booster #3 costs 3 units; capacity level 1 holds up to 10, so partial progress toward 3
+      // stays genuine, reachable progress — never a spend a same-level Scale Out could erase.
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 2), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 2, capacityLevel: 1, boostersUnlocked: true } },
+      })
+      expect(getBoosterPurchaseCost(1)(state)).toBe(3)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(2) // only what the buffer could afford
+      expect(after.intro.poolBuffers[1]).toBe(0)
+      expect(isBoosterPurchaseAvailable(after, 1)).toBe(false) // still short of the 3 needed
+    })
+
+    it('refuses to fill at all when the next Booster\'s cost can never be reached at the lake\'s current capacity level — that spend would be irrecoverably erased by the Scale Out required to progress (see docs/DESIGN_HISTORY.md)', () => {
+      // Booster #2 costs 2 units, but capacity level 0 caps the lake at 1 unit total — filling to
+      // that 1-unit max still wouldn't afford Booster #2, and doubleDataLakeCapacity resets
+      // depositedUnits/fillBits to 0 on every Scale Out, so that spend would be pure waste.
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), purchased: 1, boostersUnlocked: true } },
+      })
+      expect(getDataLakeCapacity(state, 1)).toBe(1)
+      expect(getBoosterPurchaseCost(1)(state)).toBe(2)
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+      expect(fillDataLakeManually(1)(state)).toBe(state)
+    })
+
+    it('spends only the bits still needed to complete the currently-open slot when partial progress is already banked — not a naive whole-unit spend (see docs/DESIGN_HISTORY.md)', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), fillBits: kb1 - 1 } },
+      })
+      // Booster #1 costs 1 unit, and the currently-open slot already has all but 1 bit of progress
+      // banked toward it — completing it needs only that 1 bit, not a whole extra unitBits.
+      expect(getBoosterPurchaseCost(1)(state)).toBe(1)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+      expect(after.intro.poolBuffers[1]).toBe(kb1 * 5 - 1)
+    })
+
+    it('is AVAILABLE with less than one whole unit banked when the currently-open slot needs even less than that to complete — the "at least a full unit" minimum only applies to a fresh, empty slot (see docs/DESIGN_HISTORY.md)', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), 1), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), fillBits: kb1 - 1 } },
+      })
+      // Only 1 bit banked in the buffer — far less than a whole unitBits — but the open slot already
+      // has all but 1 bit of progress, so that lone bit is genuinely enough to complete it.
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(true)
+      const after = fillDataLakeManually(1)(state)
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+      expect(after.intro.poolBuffers[1]).toBe(0)
+    })
+
+    it('completes an ENTIRE larger open slot (and its own full cost) when its sub-size exceeds what the next Booster alone needs', () => {
+      // Deposited units already fill every ×1 and ×10 slot at capacity level 3 (10 + 90 = 100
+      // units), so the next open slot is a ×100 one — completing even 1 more needed unit requires
+      // paying that slot's own full cost, not a naive 1-unit's worth.
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 200), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), depositedUnits: 100, purchased: 100, capacityLevel: 3, boostersUnlocked: true } },
+      })
+      expect(getDataLakeCurrentFillSubSize(state, 1)).toBe(100)
+      expect(getBoosterPurchaseCost(1)(state)).toBe(101) // needs 1 more unit than the 100 already banked... but
+      const after = fillDataLakeManually(1)(state)
+      // ...only a full ×100 slot completion can ever produce it, depositing 100 more units at once.
+      expect(getDataLakeDepositedUnits(1)(after)).toBe(200)
+      expect(after.intro.poolBuffers[1]).toBe(kb1 * 200 - kb1 * 100)
+    })
+
+    it('is unavailable once the lake has no open slot left at its current capacity level, even with plenty banked in the buffer', () => {
+      const state = withIntro(withPoolBuffer(createInitialGameState(), kb1 * 5), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), depositedUnits: 1, purchased: 1, boostersUnlocked: true } },
+      })
+      // Capacity level 0 caps depositedUnits at 1 unit — already fully maxed there, so nothing more
+      // can be deposited until the matching Storage array unlocks the next capacity level.
+      expect(getDataLakeCapacity(state, 1)).toBe(1)
+      expect(getBoosterPurchaseCost(1)(state)).toBe(2) // needs 1 more unit than currently banked
+      expect(isDataLakeManualFillAvailable(state, 1)).toBe(false)
+      expect(fillDataLakeManually(1)(state)).toBe(state)
     })
   })
 

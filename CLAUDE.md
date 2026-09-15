@@ -490,7 +490,9 @@ src/
                                same as MainPage; Data Stream + every DiskArrayRow as continuous
                                sections (no second-level tabs). A single "Upgrade Data Stream" action
                                sit in the Data Stream section; pool Memory values are derived
-                               from the shared Data Stream and its moving Capacity ceiling
+                               from the shared Data Stream's own Capacity, which keeps doubling up to
+                               the FINAL pool's own end bound (`isMemoryCapacityAtCap`), not any one
+                               pool's own — see "Pool liveness is Capacity-only" below
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
                                Build stays on Foundry. Not a top-level AppNav destination
     ComputePage/index.jsx   ← Foundry Boosters screen (merge chain + Boost). Reached via AppNav
@@ -694,12 +696,13 @@ Strict three-layer separation:
    conversion and Queued Capacity each tick; `getPoolBufferCapacity` equals the pool's own Capacity
    exactly, so a full buffer can always fund one `provisionDisk` funding pass of even that pool's
    largest disk). One `PoolCard` renders per VISIBLE pool
-   (`getVisibleStoragePoolCount` — the smaller of the disk-build-based unlock count
-   (`isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay disk-build-only and keep
-   driving the disk ladder/read-cache/`tickPoolBufferFill` eligibility) and the capacity-threshold
-   reveal count (`getPoolCapacityUnlockThresholdBits`) — deliberately two separate gates; see
-   `docs/DESIGN_HISTORY.md`'s "Pool cards gated on a capacity threshold too" entry for why folding the
-   capacity check into that shared unlock primitive directly was tried first and reverted), only the
+   (`getVisibleStoragePoolCount` — PURE Capacity-based: `intro.capacity` reaching a pool's own
+   `getPoolCapacityUnlockThresholdBits`, pool 1 always counted, with NO disk-build dependency —
+   deliberately independent of `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount`, which stay
+   disk-build-only and instead drive the disk ladder's own progression (which size Provision Disk
+   currently offers); see "Pool liveness is Capacity-only" below and
+   `docs/DESIGN_HISTORY.md`'s "Pool cards gated on a capacity threshold too" entry for why folding
+   the two into one shared primitive was tried once already and reverted), only the
    largest expanded by default. `components/DataLakePanel` (`bare`, `tierIndex={poolIndex}`) is
    embedded per pool below that pool's own `components/DiskArrayRow`s (cache above disks) inside the
    same expanded disclosure — see `docs/DESIGN_HISTORY.md`'s "Pool titles simplified to `<symbol>`
@@ -723,10 +726,15 @@ Strict three-layer separation:
    needed the same manual "wait, then remember to click" babysitting every later pass had already
    stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
    their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
-   matter for the narrower "arm the queue before even the first pass is affordable" case. Every
+   matter for the narrower "arm the queue before even the first pass is affordable" case. Its
+   progress fill stays at 0 until the button is actually engaged (a pass collected, or the build
+   queued) — the button's own existence already signals eligibility, so it no longer previews a
+   fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read cache
+   fill) before the player has ever clicked it; see `docs/DESIGN_HISTORY.md`. Every
    action here or on either dedicated screen stays
-   gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases AND
-   capacity Upgrade are the two exceptions, arbitrated purely on their own eligibility instead. Full
+   gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases, its
+   own capacity Upgrade, and Upgrade Data Stream itself are the three exceptions, each arbitrated
+   purely on its own eligibility instead. Full
    field-by-field UI layout:
    `docs/MAINPAGE_REFERENCE.md`. Full mechanic/formula detail (Bandwidth cap derivation, buffer
    capacity math, fill-multiplier mechanic, disk ladder/build-pass formulas): `docs/ECONOMY_REFERENCE.md`.
@@ -940,8 +948,11 @@ once far enough along — Disks
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
 Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
 actions are ranked in a fixed **forced priority order** — Disk Fill > Provision Disk >
-Compute Boost > Upgrade Data Stream — so a lower-ranked action is disabled (both in the UI and in the engine
-reducer itself) whenever a higher one is currently available. An always-on auto-convert
+Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
+reducer itself) whenever a higher one is currently available. **Upgrade Data Stream itself sits
+OUTSIDE this order entirely** (`isMemoryCapacityUpgradeAvailable`) — the Data Stream's own growth
+never waits on Storage or Compute; this was a deliberate reversal of an earlier version that did
+rank it (lowest priority) — see `docs/DESIGN_HISTORY.md`. An always-on auto-convert
 (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
 units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
 cap — this funds tier01 purchases continuously, every cycle, forever, but neither function touches
@@ -969,8 +980,9 @@ real per-tick amount delivered into the buffer, boosted temporarily by tapping (
 hard-capped at 200% total). `ByteFoundryPage` shows it via a `MultiplierBar` — a compact bar that
 grows/shrinks from the middle (200% fills the full track width, 0% is a zero-width point at
 center), rendered below that section's own balance with its own percent readout below the bar; for
-a pool specifically, once that pool's buffer is full AND its Data Lake is ready to receive overflow
-(`isDataLakePoolReady`), the same bar switches `mode="lake"` to show that pool's Data Lake overflow
+a pool specifically, once that pool's buffer is full AND its Data Lake can actually receive
+AUTOMATIC overflow (`isDataLakePoolReady` AND `isStoragePoolFullyBuilt` — see "Data Lakes" below),
+the same bar switches `mode="lake"` to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
 itself). The title row places Speed/Bandwidth at top-right and omits disk counts; balance and
@@ -992,6 +1004,18 @@ instead of 128 past 64 B/s, repeating every decade). The Data Lake capacity ladd
 decade-power shape independently. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half of pool 1's
 end bound. Full formulas, the `getCoreEarnTimeSeconds` raw-`intro.capacity` pacing caveat, and every
 constant name are in `docs/ECONOMY_REFERENCE.md`.
+
+**Pool liveness is Capacity-only, independent of disk-build progress.** A pool becomes live —
+visible, with an active buffer/Bandwidth and a usable read cache — the instant `intro.capacity`
+reaches that pool's own `getPoolCapacityUnlockThresholdBits` (1024^N Bytes), via
+`getVisibleStoragePoolCount`, regardless of how much has actually been built in any earlier pool.
+This is entirely separate from `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` (disk-build-only
+— pool 1 always reachable, pool N+1 only once pool N's three ladder sizes are ALL fully built), which
+still drives the disk ladder's own progression (which size Provision Disk currently offers) and stays
+disk-build-only: "to provision a disk, all possible disks of all smaller sizes must already be
+provisioned — the disk prerequisites are pool to pool; the pool prerequisite is just the Data Stream
+Capacity threshold." Folding the two into one shared primitive was tried once already and reverted
+(a much wider blast radius than intended); see `docs/DESIGN_HISTORY.md`.
 
 **Disks** (`intro.disks`/`disksBuiltTotal`/`diskCache`/`diskWriteCache`/`diskBuild`/
 `diskProvisionPasses`/`diskBuildQueued`,
@@ -1016,7 +1040,9 @@ also arms the queue directly from that one click when the first pass isn't affor
 higher-priority action currently outranks it) — the button's own `disabled` prop no longer requires
 turn-availability, only that no build is actually in flight and the ladder isn't exhausted; see
 `docs/DESIGN_HISTORY.md` for the gap this closed. The smallest size per pool has an always-full **read
-cache** (8 blocks); every larger size
+cache** (8 blocks), which always gets first claim on that pool's own buffer over Provision Disk
+funding (`getPoolCacheReservationBits`, used by both `isProvisionDiskAvailable` and `provisionDisk`)
+so it keeps actively filling even while a build is queued — see `docs/DESIGN_HISTORY.md`; every larger size
 fills via **write cache** instead — both feed disks at their own bandwidth-multiplier rates. Byte
 Foundry funds Byte Factory **pull-based**: it has no proactive knowledge of tier state — every tick,
 `tickDiskPull` pulls one FULL, clean-slate (zero purchase-level progress) disk into its own fixed
@@ -1032,11 +1058,17 @@ all PERMANENT across every real Prestige. Full cost/timing formulas and the pull
 are in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
-`tickDataLakeAutoBuy` in `engine.js`) — ten permanent lakes (KB…QB), each fed continuously by its own
-matching Storage pool's buffer OVERFLOW once that buffer is full (`tickPoolBufferFill`'s overflow
-branch), fully decoupled from Disk builds themselves. A lake is gated on its pool having built at
-least one real disk (`isDataLakePoolReady`); before that, `DataLakePanel`'s fill tile reads a static
-"Locked" rather than live progress. Overflow fills the lake's own ×1/×10/×100 disks smallest-first at
+`tickDataLakeAutoBuy` in `engine.js`) — ten permanent lakes (KB…QB), fully decoupled from Disk builds
+themselves. A lake is gated on its pool having built at least one real disk (`isDataLakePoolReady`);
+before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than live progress. **A lake
+fills MANUALLY, capped at just enough for its own next Booster, until its matching Storage pool is
+entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's three ladder sizes fully
+built); only once complete does it fill AUTOMATICALLY** from that pool's buffer OVERFLOW
+(`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Manual fill
+(`fillDataLakeManually`/`isDataLakeManualFillAvailable`, a `💧 Fill` button in `DataLakePanel`) spends
+directly from that pool's own buffer — the same source overflow itself would use — up to however
+many units the next Booster still needs; outside the forced priority order, same as Buy. Overflow
+fills the lake's own ×1/×10/×100 disks smallest-first at
 a per-disk taper rate (50% empty → floored at 5% near completion, so it always finishes in bounded
 time — see `docs/DESIGN_HISTORY.md` for the unfloored version's stuck-forever incident); a mixed-radix
 decomposition (`decomposeDataLakeUnits`) keeps the visible disk-square breakdown always exact with no
@@ -1198,7 +1230,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1777 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1780 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

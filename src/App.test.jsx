@@ -2984,12 +2984,14 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
-  // disksBuiltTotal seeded so isDataLakePoolReady(state, 1) is true — the bar only switches to
-  // lake mode once this pool's own lake can actually be fed (see the "buffer full but no disk
-  // built yet" test below for the not-ready case this transition is gated against).
+  // disksBuiltTotal seeded so the pool is entirely COMPLETE (isStoragePoolFullyBuilt) — the bar
+  // only switches to lake mode once AUTOMATIC overflow can actually feed this pool's own lake
+  // (see the "buffer full but no disk built yet" and "ready but not yet complete" tests below for
+  // the two not-yet-automatic cases this transition is gated against).
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 },
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
   })
   render(<App />)
 
@@ -3020,6 +3022,22 @@ test('the pool bar stays in fill-based-multiplier mode (never switches to the Da
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+})
+
+test('the pool bar also stays in fill-based-multiplier mode while the pool has built one disk (isDataLakePoolReady) but is not yet entirely complete — AUTOMATIC overflow, what this bar describes, has not started yet either', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 }, // ready, but far from complete
   })
   render(<App />)
 
@@ -3308,7 +3326,12 @@ describe('Byte Foundry Storage', () => {
     // exactly one pass's worth (currentBankSize), so the click collects the first pass and
     // auto-arms the queue for the rest rather than finishing the whole disk at once.
     // capacity: currentBankCost keeps pool 1 unlocked and the buffer's ceiling well above it.
-    seedIntroState({ bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true })
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test seeds.
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
@@ -3462,7 +3485,11 @@ describe('Byte Foundry Storage', () => {
       poolBuffers: { 1: currentBankSize },
       capacity: BITS_PER_BYTE * (2 ** 14),
       byteCreated: true,
-          })
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test seeds, since currentBankSize is also pool 1's
+      // own cache-eligible size.
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
     const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
@@ -3708,19 +3735,34 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Upgrade claims the action slot over Buy whenever its own array is complete — no longer gated by the forced priority order', () => {
-    // Upgrade is available (the KB pool's ×1 array is fully built) and, since
-    // isDataLakeCapacityDoublingTurnAvailable is no longer part of the forced priority order (Speed
-    // ×2/Bandwidth is left available here, unlike the "capacity can be increased" test above, which
-    // neutralizes it — Upgrade is unaffected either way), it's immediately clickable regardless.
-    // Buy would also be genuinely affordable here (1 unit banked, first Booster costs 1), but
-    // Upgrade still takes the one shared slot — see DataLakePanel's own ternary.
+  test('Buy claims the action slot over Upgrade whenever it is actually affordable, even with the array complete — a manually-filled deposit meant for a Booster is never silently redirected into a forced Scale Out', () => {
+    // Upgrade is ALSO available here (the KB pool's ×1 array is fully built), but Buy wins the one
+    // shared slot since it's genuinely affordable (1 unit banked, first Booster costs 1) — see
+    // DataLakePanel's own ternary and docs/DESIGN_HISTORY.md for the bug this prevents.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
+    expect(buyButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
+  })
+
+  test('Upgrade claims the action slot when its own array is complete but Buy is not yet affordable', () => {
+    // No units banked at all — Buy could never be affordable, so Upgrade (array complete) takes
+    // the one shared slot, same as before this Buy-first reordering.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
     })
     render(<App />)
     openStorage()

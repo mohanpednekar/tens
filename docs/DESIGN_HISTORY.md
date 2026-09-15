@@ -7580,3 +7580,585 @@ seeded at a small, sub-conversion-threshold capacity (so `tickIntroAutoInvest` c
 read "500.000 B" immediately and "500 B" 1.5 real seconds later. `yarn test`: 1756/1756 green (+2).
 `yarn build` succeeds. Pure display formatting — no economy constant/formula changed, so
 `simulate-run-times` wasn't re-run.
+
+### Read cache starved by Provision Disk claiming each tick's fresh production first
+
+Player feedback: "Cache should be always active. Even when provisioning disks." The eager read-cache
+pre-fill (see the entry above) and Provision Disk's own pass-funding both draw from the SAME pool
+buffer, but `tickGame`'s pipeline runs `tickDiskAutoFill` (cache fill) BEFORE `tickPoolBufferFill`
+(that tick's own production top-up), then runs Provision Disk's queued continuation
+(`tickQueuedDiskBuild`, inside `tickStorage`) AFTER it — so cache fill only ever sees the buffer as
+it stood at the END of the PREVIOUS tick, while a queued Provision Disk build gets first claim on
+every tick's own fresh production the moment it lands. With a build queued (the common case once
+Provision Disk auto-arms `diskBuildQueued` on any partial fund), `provisionDisk` greedily collects a
+whole pass the instant one is affordable — for the pool's own smallest denomination, that's the exact
+same size the read cache needs — so the cache could sit starved near-empty for as long as a build
+stayed queued, the opposite of what eager pre-fill was reinstated to guarantee.
+
+**Fix.** A new `getPoolCacheReservationBits(state, poolIndex)` computes however many more bits that
+pool's own read cache (`isDiskReadCacheEligible`'s size, once the pool is currently unlocked — see
+`getUnlockedStoragePoolCount`) still needs to reach full, and both `isProvisionDiskAvailable` and
+`provisionDisk` now treat that amount as unavailable to spend: `getPoolBufferBits(...) - reserved`
+in place of the raw buffer figure. The cache therefore always gets first claim on its own pool's
+buffer over Provision Disk, not the reverse — the exact opposite priority from before. This is a
+BOUNDED reservation, not a new stall: it can reserve at most one cache's worth (`cacheSize`, the same
+order of magnitude as a single Provision Disk pass for that size), and drops to 0 the instant the
+cache reaches full, at which point provisioning proceeds exactly as it did before this fix. Applies
+equally whether a build is already queued or the player is about to click for the first time — the
+gate lives in `isProvisionDiskAvailable`/`provisionDisk` themselves, not in the click handler.
+
+**Verification.** Updates to every existing `provisionDisk`/`isProvisionDiskAvailable`/
+`isProvisionDiskTurnAvailable`/`tickQueuedDiskBuild`/`tickFoundryResetConvenience` test that seeded a
+pool buffer at the pool's own smallest denomination (`FIRST_DISK_SIZE`) without an already-full
+`diskCache` for it, each fixed by seeding `diskCache: { [size]: size }` alongside the buffer,
+matching what eager pre-fill would have produced by the time a real player reaches that state — these
+neutralizing seeds were the only coverage this change initially landed with; no test exercised
+`getPoolCacheReservationBits` directly (an adversarial-review finding on this PR, addressed in a
+follow-up commit that added a dedicated `describe('isProvisionDiskAvailable')` test covering the
+empty/partial/full-cache and locked-pool cases explicitly). `yarn test` green. No economy
+constant/formula changed — only which claim on a pool's buffer wins a tie — so `simulate-run-times`
+wasn't re-run.
+
+### Provision Disk button no longer previews progress before the player has ever clicked it
+
+Player feedback: "Disk provisioning button should not show progress before clicking. The existence
+of the button is itself an indication of eligibility." The button's progress fill
+(`diskBuildProgress` in `ByteFoundryPage`) always included `Math.min(diskPoolBufferBits, diskSize)`
+— whatever currently sits in the pool's buffer — as partial credit toward the next pass, even before
+the player had ever clicked Provision Disk. Since that same buffer accumulates for entirely unrelated
+reasons (most visibly, the read cache pre-filling the instant a pool unlocks — see the entries
+above), the button could render a partially-filled bar the very first time it appeared on screen,
+implying progress the player never made.
+
+**Fix.** A new `diskBuildEngaged` flag (`diskPassesCollected > 0 || intro.diskBuildQueued` — true
+once a real pass has landed OR the build has been queued, either from a manual click) gates the
+buffer-based partial-credit term: `diskBuildProgress` reads a flat 0% until the player has actually
+engaged the build at least once, then behaves exactly as before (buffer contents count toward the
+next pass, so the bar keeps moving smoothly between clicks). The button's own enabled/disabled state
+was already correct — this only changes what its progress FILL shows before that first click.
+
+**Verification.** `yarn test` green (no dedicated new test — `diskBuildProgress` is presentational
+and not asserted against by name in the existing suite; behavior confirmed by reading the resulting
+render logic against `useTrimBalanceAfterFull`'s same "haven't engaged yet" pattern already proven
+correct elsewhere on this page). No economy constant/formula changed — pure UI presentation — so
+`simulate-run-times` wasn't re-run.
+
+### Pool liveness decoupled from disk-build progress; Data Lakes fill manually before their pool completes
+
+Player request (verbatim): "The Data lake should fill only manually (just enough to buy next
+booster) until the pool is complete and automatically once the pool is complete. The data lake
+status shall never gate storage pool or the data stream upgrades. Actually, the data stream upgrades
+shall not be gated by anything at all. Once data stream reaches a required capacity, the
+corresponding storage pool shall be unlocked with its own cache also unlocked and usable. However,
+to provision a disk, all possible disks of all smaller sizes must be already provisioned. So the
+disk prerequisites are pool to pool. Pool prerequisite is just the data stream capacity threshold."
+
+Before this change, a Storage pool's own "liveness" (buffer active, Bandwidth nonzero, read cache
+usable) was driven by `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` — disk-BUILD progress:
+pool N+1 only came alive once pool N had built at least one disk of its own smallest size
+(`isDataLakePoolReady`'s own gate). This conflated two genuinely separate ideas the player was
+asking to split apart: (1) a pool being ALIVE at all — should depend only on the Data Stream's own
+Capacity crossing that pool's threshold — and (2) which disk SIZE Provision Disk currently offers —
+which genuinely does need the "all smaller sizes already provisioned" pool-to-pool chain, since a
+pool's disk ladder can't skip ahead of the pool feeding it. `getVisibleStoragePoolCount` already
+existed as a capacity-based count, but only as the MIN against the disk-build count, for pool-CARD
+visibility alone (see "Pool cards gated on a capacity threshold too" above) — every other liveness
+consumer (`getStoragePoolBandwidth`, `getStoragePoolCapacity`, `tapPoolBuffer`,
+`tickPoolBufferFill`'s loop bound, the read-cache eligibility check, `getPoolCacheReservationBits`)
+still read the disk-build-only count.
+
+**Why not fold the two into one shared primitive again?** Tried once already, for the narrower
+card-visibility case, and reverted after a 28+20 test-failure blast radius (see "Pool cards gated on
+a capacity threshold too" above) — `isStoragePoolUnlocked` has too many OTHER consumers
+(`getMaxActiveDiskLadderStep`, `isMemoryCapacityAtCap`'s growth ceiling, Data Lake pacing) that
+genuinely need the disk-build-only semantics and would break if it started reading Capacity instead.
+This time the fix goes the other direction: instead of touching `isStoragePoolUnlocked` at all, a new
+`isStoragePoolFullyBuilt(state, poolIndex)` (true once a pool's three ladder sizes are ALL fully
+built) becomes the disk-provisioning pool-to-pool gate (`isStoragePoolUnlocked` now just checks
+`poolIndex === 1 || isStoragePoolFullyBuilt(state, poolIndex - 1)`), while `getVisibleStoragePoolCount`
+becomes PURE Capacity-based and takes over as the one true liveness gate everywhere buffer/Bandwidth/
+cache/Data-Lake-overflow eligibility is checked — with pool 1 special-cased to always count (`let
+count = 1`, looping from poolIndex 2), since a large body of pre-existing tests/mechanics assume pool
+1 is always reachable at any capacity, and the real gameplay effect is nil either way (`isStorageUnlocked`'s
+own separate top-level reveal gate already prevents pool 1 from mattering below its own real
+threshold, "1 KiB," regardless of this special case).
+
+**Upgrade Data Stream ungated entirely.** `isMemoryCapacityUpgradeAvailable` dropped its
+`!isDiskFillAvailable(state) && !isProvisionDiskAvailable(state)` conjuncts — it's now simply
+`isPoolCapacityUpgradeAvailable(state)`. This was a deliberate reversal of the forced priority order's
+own design (Upgrade Data Stream previously ranked LOWEST, below Disk Fill/Provision Disk/Compute) per
+the player's explicit "the data stream upgrades shall not be gated by anything at all." Disk Fill >
+Provision Disk > Compute remains the forced order for those three; Upgrade Data Stream, Data Lake
+Booster purchases, and Data Lake manual fill (below) all now sit outside it.
+
+**Data Lake manual-vs-automatic fill split.** A new `isDataLakeManualFillAvailable`/
+`fillDataLakeManually` pair lets a lake top up MANUALLY from its own pool's buffer — capped at
+exactly what the next Booster still needs — once `isDataLakePoolReady` but before
+`isStoragePoolFullyBuilt`; `tickPoolBufferFill`'s existing automatic overflow branch now ALSO
+requires `isStoragePoolFullyBuilt`, so a lake only ever drains its pool's buffer automatically once
+the pool is genuinely done. Manual fill reuses the same `fillDataLakeDisks` deposit helper the
+automatic path already used, so the disk-square breakdown stays exact either way, and — like Buy —
+sits entirely outside the forced priority order. `DataLakePanel` renders it as a `💧 Fill` button
+alongside Buy/Upgrade.
+
+**Two follow-on fixes this same round.** (1) `tapIntroBit`'s tap-mode reveal switch had been using
+`getVisibleStoragePoolCount(state) >= 1` as a proxy for "has Storage been revealed" — this broke once
+pool 1 was hardcoded to always count (the check became permanently true); fixed to check
+`isStorageUnlocked(state)` directly, the pre-existing, semantically-correct predicate for that exact
+question. (2) `ByteFoundryPage`'s `MultiplierBar` lake-mode switch (`poolReady`) needed
+`isStoragePoolFullyBuilt` added alongside its existing `isDataLakePoolReady` check, so it doesn't show
+a misleading "incoming overflow rate" reading during the manual-fill-only phase, when no automatic
+overflow is actually happening yet.
+
+**A pre-existing test's exact scenario became provably impossible to reconstruct.** One
+`engine.test.js` test ("keeps lower-pool bandwidth and capacity fixed…") relied on pool 2 being
+disk-build-"unlocked" while sitting at a LOW raw capacity, reading the SAME decade-power-clamped
+value as pool 1. Under pure-capacity liveness this is a genuine contradiction — worked out via
+decade-exponent arithmetic (the test's target decade requires a doubling-count N in {17,18,19}; pool
+2's own capacity threshold requires N≥20 — no overlapping N exists). Rather than force an artificial
+substitute, the test was rewritten to assert the actually-more-valuable NEW invariant this feature
+introduces directly: a pool that's disk-build-complete (satisfies the pool-to-pool provisioning
+chain) still reads 0 Bandwidth/Capacity until it SEPARATELY crosses its own Capacity threshold, then
+becomes nonzero once it does — proving the two chains are genuinely independent, not just
+differently-computed versions of the same fact.
+
+**Verification.** `engine.test.js`: 1247 tests passing (0 failing), including a new
+`isStoragePoolFullyBuilt`/pool-liveness-independence test, a dedicated `getPoolCacheReservationBits`
+test (see the entry above), an `isMemoryCapacityUpgradeAvailable` ungating test, and a new
+`describe('manual fill before pool completion')` block (6 tests covering
+`isDataLakeManualFillAvailable`/`fillDataLakeManually`'s availability/capping/exhaustion). Several
+existing Data Lake tests needed re-seeding once automatic overflow started requiring
+`isStoragePoolFullyBuilt` rather than just `isDataLakePoolReady` (seeding a fully-built pool 1, all
+three ladder sizes at `DISK_ARRAY_LADDER_CAP`, instead of just one disk) — including catching one
+test helper whose seeded `capacity` accidentally exceeded pool 2's OWN capacity threshold once pool 2
+became capacity-gated, leaking unrelated buffer activity into it (diagnosed via an unexpected
+`poolBuffers.2` entry in a state diff, fixed by lowering the seeded capacity below pool 2's
+threshold). `App.test.jsx`'s `MultiplierBar` lake-mode tests were updated the same way. `yarn build`
+succeeds. This changes pacing (pools become live earlier, independent of build progress; Upgrade
+Data Stream no longer waits its turn) enough to warrant a `simulate-run-times` re-run — see that
+skill's own published output for updated ideal-run figures.
+
+### `isMemoryCapacityAtCap` silently re-coupled Capacity growth to disk-build progress, making the pool-liveness decoupling above unreachable
+
+Adversarial review of the pool-liveness feature above caught that its headline claim — "pool
+liveness is now purely Capacity-based, decoupled from disk-build progress" — was not actually true
+in any state reachable through real play. `isMemoryCapacityAtCap` (the gate on `upgradePoolCapacity`/
+`isPoolCapacityUpgradeAvailable`) still compared the highest DISK-BUILD-unlocked pool's own derived
+Capacity against THAT pool's own end bound (`getUnlockedStoragePoolCount`, untouched by the feature
+above). Since every pool's own end bound sits well below the NEXT pool's own Capacity-visibility
+threshold (verified directly: pool 1's end bound is 800,000 bits vs. pool 2's own visibility
+threshold of 8,388,608 bits — roughly 10x higher), `intro.capacity` could never actually grow far
+enough to cross a further pool's threshold before that pool's disk array had ALSO been fully built
+(which is the only thing that raises the disk-build-unlocked ceiling). `getVisibleStoragePoolCount`
+could therefore never exceed `getUnlockedStoragePoolCount` in any reachable game state — the
+capacity-only liveness gate was correctly implemented and correctly wired into every consumer, but
+the upstream growth mechanism feeding it was still leashed to the very disk-build chain the whole
+feature was meant to escape.
+
+**Fix.** `isMemoryCapacityAtCap` now always compares the FINAL pool's (`getStoragePoolCount()`,
+unconditionally — never the highest unlocked/visible pool) own derived Capacity against ITS end
+bound. `getStoragePoolCapacity` already returns `0` for a pool whose own Capacity threshold hasn't
+been reached (regardless of disk-build state), so this is safe: the cap simply reads `false` (not
+yet reached) for every pool short of the very last, then genuinely gates once Capacity has grown
+enough to reach the final pool's own ceiling — an enormous, but finite, value (`8 × 10³²` bits at 10
+pools). Capacity growth is now truly independent of disk-build progress across its ENTIRE range, not
+just in the narrow band this bug happened to leave reachable.
+
+**Test fallout.** Every existing test that asserted `isMemoryCapacityAtCap`/
+`isMemoryCapacityUpgradeAvailable`/`pickIntroCapacityMilestone`/`queueIntroCapacityUpgrade` behavior
+at `INTRO_CAPACITY_CAP_BITS` (pool 1's own end-bound alias) had encoded the OLD, buggy assumption
+that this value was itself "the cap" — under the fix it manifestly isn't (it's ~10^27 times smaller
+than the true final cap), so each was either changed to assert the upgrade STAYS available at that
+point, or rewritten against a new `getFinalPoolCapacityCapBits()` test helper that searches forward
+by actual doubling steps (`INTRO_CAPACITY_DOUBLING_STEP`) from `INTRO_STARTING_CAPACITY` until
+`getStoragePoolCapacity` for the final pool reaches its own end bound — deliberately NOT the raw
+`getStoragePoolMemoryBounds(finalPoolIndex).endBits` arithmetic value directly, since that value
+isn't generally reachable by the actual capacity-doubling sequence and `getDecadePowerEquivalentBits`
+can floor a full decade short of it for an off-lattice input (the same "must be an actually-reachable
+doubling value, not a raw formula result" property every other capacity-ceiling constant in this
+suite, e.g. `INTRO_CAPACITY_CAP_BITS` itself, already relies on).
+
+**Verification.** `engine.test.js`: 1248/1248 (four tests updated, one new). Full `yarn test`:
+1770/1770. `yarn build` succeeds. This is a substantial pacing change — Capacity (and therefore every
+pool's own liveness) can now grow far ahead of disk-build progress for an attentive player — so
+`simulate-run-times` needs re-running and republishing again on top of the run already published for
+the pool-liveness feature itself.
+
+### Four bot-review findings on the pool-liveness/Data-Lake PR: manual-fill overspend, a dead Fill button, a stale doc paragraph, and a UI/engine buffer mismatch
+
+A `chatgpt-codex-connector` review on the pool-liveness/Data-Lake-manual-fill PR caught four real
+issues, all verified and fixed in the same round.
+
+**1. `fillDataLakeManually` could spend nearly double the "just enough" amount it promised.** It
+computed the spend as `neededUnits * getDataLakeUnitBits(tierIndex)`, ignoring any partial
+`fillBits` progress already banked toward the currently-open disk slot. Concretely: a lake sitting
+at 7,999 of 8,000 bits toward its first unit, needing only 1 more unit for the next Booster, would
+spend a WHOLE additional `unitBits` (8,000) from the buffer to deposit that 1 unit — not the 1 bit
+actually still needed — draining the buffer far more aggressively than "just enough" implied (the
+excess wasn't lost — `fillDataLakeDisks` correctly carries it forward as progress toward the NEXT
+unit — but it violated the manual-fill design's own stated minimalism).
+
+**2. The inverse bug, worse: a slot that deposits MULTIPLE units at once (a ×10 or ×100 sub-size)
+could never be funded by the naive formula at all if `neededUnits` was smaller than that sub-size.**
+A lake's disk squares only ever complete in their own WHOLE sub-size (1, 10, or 100 units) —
+there's no such thing as "half of a ×100 slot." If only 1 more unit is needed for the next Booster
+but the currently-open slot is a ×100 one, completing even that 1 unit requires paying the ENTIRE
+slot's own cost (100 × `unitBits`) — the old `neededUnits * unitBits` formula would have supplied
+only 1 unit's worth, funding nothing (the slot never completes on a partial spend), silently
+stalling manual fill with no error and no visible progress.
+
+**3. `DataLakePanel`'s `💧 Fill` button could render as clickable when it could do nothing at all.**
+`isDataLakeManualFillAvailable` never checked whether the lake had any OPEN slot left at its current
+capacity level — once fully maxed there (e.g. a 10-unit lake after Booster #10, its next cost
+already past capacity), every click was a silent no-op until the corresponding Storage array
+unlocked the next capacity level via Scale Out.
+
+**Fix.** A new private `getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)` walks
+forward slot-by-slot from the lake's current `depositedUnits`/`fillBits` (mirroring
+`fillDataLakeDisks`' own loop) to compute the EXACT number of additional bits needed — crediting
+existing partial `fillBits` progress, and correctly paying a larger slot's own full cost whenever
+its sub-size exceeds `neededUnits` (that spend deposits MORE than `neededUnits`, which is fine and
+expected — a lake can't deposit less than a whole slot at a time). Returns `null` once the lake has
+no open slot left at its current capacity level; both `isDataLakeManualFillAvailable` (hides the
+button in that case, fixing #3) and `fillDataLakeManually` (spends exactly
+`min(bitsNeeded, bufferBits)`, fixing #1 and #2) now use it instead of the naive per-unit multiply.
+
+**4. `CLAUDE.md` still carried the PRE-this-feature description of `getVisibleStoragePoolCount`**
+("the smaller of the disk-build-based unlock count... and the capacity-threshold reveal count") in
+its `PoolCard` rendering paragraph — directly contradicting the "Pool liveness is Capacity-only"
+section added later in the same file. Left uncorrected, a later session reading only that earlier
+paragraph could re-implement or "preserve" the wrong, superseded invariant. Fixed to describe the
+actual, pure-Capacity-based function and point at the correct section.
+
+**5. `ByteFoundryPage`'s own Provision Disk affordability/progress calculations (`diskBuildBlockedByPriority`,
+`diskBuildProgress`) still read the pool's RAW buffer, not the SPENDABLE amount `isProvisionDiskAvailable`/
+`provisionDisk` themselves check/spend against (`getPoolCacheReservationBits`-adjusted)** — a
+mismatch introduced when the read-cache-priority fix (see the "Read cache starved by Provision Disk"
+entry above) changed the ENGINE side but not this UI computation. While the read cache is still
+incomplete, the progress bar could advance on bits the very next cache-fill tick was about to
+consume instead, showing progress that would then regress, or implying a pass was about to land that
+never actually would. Fixed: both computations now subtract `getPoolCacheReservationBits` from the
+raw buffer first, via a new `diskPoolSpendableBufferBits`.
+
+**Verification.** Two new regression tests for the manual-fill fix (`engine.test.js`, "manual fill
+before pool completion" describe block): one proving a partial-fillBits scenario spends only the 1
+bit actually still needed rather than a whole extra unit, one proving a larger open slot's own FULL
+cost is paid when its sub-size exceeds what's needed, and one proving the button hides once the lake
+has no open slot left. `engine.test.js`: 1251/1251. Full `yarn test`: 1773/1773. `yarn build`
+succeeds. Pure bug fixes to a not-yet-merged PR's own new mechanism — no economy constant/formula
+outside this feature changed, so no additional `simulate-run-times` re-run beyond the one already
+pending for the pool-liveness feature itself.
+
+### `getDataLakeManualFillBitsNeeded` could offer a fill that Scale Out would immediately erase
+
+A follow-up Codex finding on the same PR, on the very fix above: `getDataLakeManualFillBitsNeeded`'s
+forward-walking loop could exit with `unitsGained < neededUnits` — i.e. even completing every
+remaining slot at the lake's CURRENT capacity level still wouldn't reach the next Booster's cost —
+and still returned the (insufficient) `bitsNeeded` accumulated so far, rather than signaling
+"unreachable." The common trigger: buying Booster #1 while a lake is still capped at capacity level
+0 (1 unit total) — Booster #2 costs 2, which that level can never hold. `isDataLakeManualFillAvailable`
+would still offer the Fill button, and clicking it would spend real buffer bits to fill the lake to
+its own 1-unit max — genuine, permanent-feeling progress that in fact accomplishes nothing, since
+`doubleDataLakeCapacity` (the required Scale Out to progress at all) resets BOTH `depositedUnits`
+and `fillBits` to 0 on every level-up rather than carrying banked units forward. The spent bits
+were therefore not merely "not yet enough" but irrecoverably gone the moment Scale Out fired.
+
+**Fix.** `getDataLakeManualFillBitsNeeded` now returns `null` (same "manual fill can do nothing
+useful here" signal the "no open slot at all" case already used) whenever the loop exhausts every
+open slot at the current capacity level without reaching `neededUnits` — not just when there was no
+open slot to begin with. This is a strictly narrower condition than the earlier fix: an OPEN slot
+existing isn't enough on its own; filling all the way through every remaining slot must actually be
+enough to satisfy the Booster's own cost, or the button stays hidden and the buffer is left
+untouched for whatever else needs it (Provision Disk, tapping toward automatic overflow once the
+pool completes).
+
+**Verification.** One existing test ("caps at whatever the buffer can actually afford...") had
+unknowingly encoded this exact trap as its own seed scenario (capacity level 0, Booster costing 2) —
+rewritten to use capacity level 1 (room for 10 units) instead, where partial progress toward a
+3-unit-cost Booster genuinely IS safe, reachable progress rather than a dead end. A new test asserts
+the trap scenario itself is now correctly refused (`isDataLakeManualFillAvailable` false,
+`fillDataLakeManually` a same-reference no-op). `engine.test.js`: 1252/1252. Full `yarn test`:
+1774/1774. `yarn build` succeeds.
+
+### A third Codex round: invisible cache activity, a stale Fill tooltip, a Buy button hidden behind Scale Out, and an unclamped legacy-save buffer
+
+A third `chatgpt-codex-connector` round on the same PR caught four more issues, all in the same
+pool-liveness/Data-Lake feature area.
+
+**1. A capacity-visible pool's own read cache could be actively filling/draining with no UI row to
+show it.** `tickDiskAutoFill`'s read-cache eligibility is keyed on `getVisibleStoragePoolCount`
+(Capacity-only), so a pool can go live and start pre-filling its own smallest-size read cache well
+before the disk-provisioning chain (`getUnlockedStoragePoolCount`) reaches it — that's the whole
+point of the feature. But `ByteFoundryPage`'s rendered rows came from `getDiskSizesToShow`, which
+only ever included sizes ever built/held plus the CURRENT disk-ladder offer (a single size, always
+lagging behind a Capacity-only-live later pool) — so that pool's own cache could visibly drain a
+buffer and even advance a Factory tier level (via `tickDiskLevelOneCachePull`) with no `DiskArrayRow`
+anywhere to explain why.
+
+**Fix.** `getDiskSizesToShow` now also includes every capacity-visible pool's own smallest
+(read-cache-eligible) size, via the same `getDataLakeUnitBits` lookup `tickDiskAutoFill` itself
+already uses to decide eligibility. This only affects which rows RENDER — `getDiskSize` (what
+Provision Disk actually targets) is a wholly separate, disk-build-only computation untouched by this
+change, so a pool's cache becomes visible without making that size provisionable ahead of the
+disk-build chain reaching it.
+
+**2. The Fill button's tooltip described the wrong completion condition.** It said filling becomes
+automatic "once every `{unitBits}` disk in this pool is built" — but `tickPoolBufferFill`'s
+automatic branch actually requires `isStoragePoolFullyBuilt`: ALL THREE of a pool's ladder sizes
+(×1/×10/×100), not just the smallest. A player who finished only the smallest array could read this
+tooltip, stop manually clicking Fill, and watch the lake stall through the next two arrays. Fixed to
+describe the whole pool.
+
+**3. Fill could bank real progress that a forced Scale Out would then discard, with no way to Buy
+first.** `DataLakePanel`'s single shared action slot used a pure `upgradeAvailable ? ScaleOut :
+unlocked ? Buy : StatusText` ternary — Upgrade unconditionally won whenever its own capacity-level
+array was complete, even if Buy was ALSO genuinely affordable (e.g. from a fresh manual Fill).
+Before manual fill existed this was harmless (nothing funded the lake pre-completion, so Buy was
+never actually affordable at that exact moment); the new Fill mechanic makes it a real trap:
+`doubleDataLakeCapacity` drains "whatever the lake currently holds" as its own cost, so a Fill-funded
+Booster the player wanted to buy could be silently redirected into a capacity level-up instead, with
+auto-buy off by default and no way to click Buy at all while Scale Out owns the slot.
+
+**Fix.** Buy now wins the slot whenever it's genuinely affordable (`canBuy`), even with Upgrade also
+available; Upgrade only claims the slot once Buy isn't an option. One existing test that had
+literally been titled around the old "Upgrade always wins" behavior was renamed and its assertions
+flipped; a new test covers the case Upgrade should still win (nothing banked for Buy yet).
+
+**4. A legacy save's over-cap buffer could survive migration entirely, and a read-cache self-heal
+refund could recreate the same over-cap state going forward.** `normalizePoolMemoryCapacity`'s
+pool-buffer clamp only iterated pools up to `getVisibleStoragePoolCount` — deliberately, to skip
+pools this feature doesn't consider "live" yet. But a save from BEFORE this feature existed could
+have a disk-build-unlocked pool (under the old `getUnlockedStoragePoolCount`-based eligibility)
+already holding a real buffer, at a moment where that pool's Capacity hasn't yet crossed its own NEW
+visibility threshold — the clamp skipped it entirely, leaving any excess permanently unclamped and
+fully spendable. Separately, `tickDiskAutoFill`'s own read-cache self-heal (refunding a
+now-ineligible cache back into its pool's buffer — see "Read cache pre-fills on pool unlock" above)
+had NO ceiling check at all, so even a correctly-migrated buffer could be pushed back over cap the
+very next tick by a refund.
+
+**Fix.** A new `getPoolBufferClampCeilingBits(state, poolIndex)` returns the pool's TRUE structural
+ceiling regardless of visibility: `getPoolBufferCapacity` (the live, visibility-gated derived value)
+for a currently-visible pool, or the pool's own absolute `getStoragePoolMemoryBounds(poolIndex).endBits`
+for one that isn't visible yet — deliberately NOT `getPoolBufferCapacity` for an invisible pool
+(which reads 0, and would needlessly destroy real, permanent legacy progress rather than just
+bounding it). `normalizePoolMemoryCapacity`'s clamp loop now iterates every pool actually PRESENT in
+`poolBuffers` (not just visible ones) using this ceiling, and `tickDiskAutoFill`'s self-heal refund
+is clamped against it too, so neither migration nor an ordinary tick can ever leave a buffer above
+what it could structurally ever hold.
+
+**Verification.** Two existing `tickDiskAutoFill` self-heal tests had (unrelatedly) seeded a fresh
+cycle's tiny starting Capacity against a much larger refund amount — an internally-inconsistent
+scenario the new ceiling clamp correctly caught and truncated, breaking those tests' own unrelated
+assertions; fixed by seeding realistic Capacity (`INTRO_CAPACITY_CAP_BITS`) alongside. New tests:
+`getDiskSizesToShow` includes a Capacity-visible-but-disk-build-behind pool's own smallest size;
+`normalizePoolMemoryCapacity` clamps a not-yet-visible pool's buffer to its absolute ceiling; the
+self-heal refund clamps the same way. `engine.test.js`: 1255/1255. Full `yarn test`: 1778/1778.
+`yarn build` succeeds.
+
+### A fourth Codex round: the "absolute ceiling" clamp itself was too high
+
+The very fix above — clamping a hidden pool's legacy buffer to its own absolute
+`getStoragePoolMemoryBounds(poolIndex).endBits` — was itself flagged on the next Codex round as
+wrong in the SAME direction the original bug was: too permissive. Concrete example from the finding:
+a legitimate old pool-2 save carries a ~100 KB buffer and a full 1 MB read cache while pool 2 is
+still hidden; `tickDiskAutoFill` refunds the cache, producing a ~1.1 MB buffer, comfortably under
+pool 2's absolute ceiling (800,000,000 bits ≈ 100 MB) so nothing clamps it. The very next Capacity
+doubling then reveals pool 2 — but with a current derived Capacity of only ~1 MB (8,000,000 bits),
+not the 100 MB absolute bound. Nothing re-clamps at that reveal transition (`tickPoolBufferFill`'s
+room formula only ever tops up, never subtracts excess, and `normalizePoolMemoryCapacity` only runs
+at load time), so the buffer sits ~100× over its own pool's real live ceiling, fully spendable,
+indefinitely.
+
+**Why the absolute bound was wrong.** `getPoolBufferClampCeilingBits`'s whole job is to answer "how
+much can this pool legitimately hold before it's revealed" — and a pool's own Capacity, once
+revealed, is **never** its absolute structural maximum; it's whatever the shared Data Stream
+doubling count currently derives to (via `getDecadePowerEquivalentBits`), same as any other visible
+pool. The absolute endBits value is only reachable after many further Capacity doublings past the
+pool's own reveal point. Clamping to it left a 100×-plus gap for exactly the kind of stale
+over-large balance the original finding was about — the earlier fix addressed "unclamped forever"
+but not "clamped to the wrong ceiling."
+
+**A tempting but also-wrong alternative:** clamp against the pool's Capacity derived from the LIVE
+`state.intro.capacity`, fed through the same ungated formula, while the pool is still hidden. This
+looks like it should work but breaks the other way — `getStoragePoolCapacityAtRawCapacity`'s own
+`floorBits` (a pool's own floor is the PREVIOUS pool's end bound) means that formula never returns
+less than the previous pool's ceiling even when current capacity is nowhere near this pool's own
+threshold. A hidden pool 2 evaluated at, say, pool 1's own just-crossed threshold would floor to
+pool 1's end bound (800,000 bits) — far BELOW pool 2's real eventual entry Capacity (8,000,000 bits)
+— wrongly truncating a legitimate large legacy buffer/cache refund that would fit fine once pool 2
+is actually revealed. Confirmed by an existing regression test (`tickDiskAutoFill` self-healing a
+full pool-2-sized read cache against a hidden pool with the game's own untouched default starting
+Capacity) failing under this approach: an 8,000,000-bit refund got truncated to 800,000.
+
+**The actual fix: a pool's Capacity the moment it's first revealed is a FIXED, deterministic value —
+not a moving target.** `intro.capacity` only ever changes via `upgradePoolCapacity`'s plain `×2`
+doubling, starting from a power-of-two-Bytes value (`INTRO_STARTING_CAPACITY`) — so on its way up it
+always lands EXACTLY on every pool's own `getPoolCapacityUnlockThresholdBits` (also a power of two in
+Bytes), never overshooting past one threshold to a higher one in a single step. That means the
+Capacity a hidden pool WILL have the instant it's revealed is fully determined by `poolIndex` alone:
+it's whatever `getStoragePoolCapacityAtRawCapacity` (the shared, now-extracted raw derivation
+`getStoragePoolCapacity` itself calls after its own visibility gate) evaluates to when handed that
+pool's own unlock threshold as the capacity input — its "entry Capacity." `getPoolBufferClampCeilingBits`
+now returns exactly that for a hidden pool (its live `getPoolBufferCapacity` unchanged for a visible
+one), landing between the two wrong extremes: never truncates a legitimate legacy value below what
+the pool will actually support once revealed (unlike the live-capacity attempt), and never leaves a
+stale balance sitting above what the pool will actually read at that moment (unlike the absolute-bound
+attempt) — no separate re-clamp-on-reveal step is needed, since the ceiling a hidden pool clamps
+against already IS its own future entry value.
+
+**Verification.** Rewrote both existing "clamp a not-yet-visible pool" tests
+(`normalizePoolMemoryCapacity`, `tickDiskAutoFill`'s self-heal refund) to assert against the new
+entry-Capacity value instead of the absolute bound; added a new regression test seeding a hidden pool
+2's legacy buffer while current Capacity sits at pool 1's own (much lower) threshold, confirming the
+clamp still lands on pool 2's fixed, higher entry Capacity rather than a value derived from today's
+low current Capacity — exactly the failure mode the "live capacity" alternative above hit.
+`engine.test.js`: 1256/1256. Full `yarn test`: 1779/1779. `yarn build` succeeds.
+
+### A fifth Codex round: three doc/UI-text stragglers left by the earlier fix rounds
+
+A fifth `chatgpt-codex-connector` round, on the commit containing the entry-Capacity fix above, caught
+three small stragglers — no engine logic changes, just text that had fallen behind code fixed in
+earlier rounds on this same PR.
+
+**1. An impossible-to-follow tooltip.** `ByteFoundryPage`'s "Upgrade Data Stream" button, when
+disabled with a full Buffer, told the player to "Resolve higher-priority actions before upgrading the
+Data Stream" — but `isMemoryCapacityUpgradeAvailable` is deliberately NOT part of the forced priority
+order at all (see "Upgrade Data Stream itself sits OUTSIDE this order entirely" above) — its only
+gate is `isPoolCapacityUpgradeAvailable`. With a full Buffer and `byteCreated` true (the only state
+this button renders under), the sole remaining reason that predicate can be false is
+`isMemoryCapacityAtCap`. The tooltip was telling players to do something that could never actually
+unblock the button. Fixed to say Capacity is already at its maximum.
+
+**2 & 3. Two reference docs still described the pre-`isMemoryCapacityAtCap`-fix and
+pre-Buy-precedence-fix behavior**, even though CLAUDE.md and AGENTS.md had already been updated for
+both in earlier rounds on this PR: `docs/ECONOMY_REFERENCE.md`'s Byte Foundry walkthrough still said
+the Capacity doubling ladder ran "up to the active pool's moving end bound
+(`getStoragePoolMemoryBounds(1).endBits`)" — i.e. pool 1's own bound specifically — rather than the
+FINAL pool's; `docs/MAINPAGE_REFERENCE.md`'s Data Lake action-row description still said the shared
+button slot "unconditionally prefer[s] Scale Out," describing the OLD behavior the Buy-precedence fix
+(see the third Codex round above) had already reversed. Fixed both to describe current behavior,
+matching CLAUDE.md.
+
+**Verification.** Text-only changes (one UI tooltip string, two doc paragraphs) — no engine logic
+touched, so no new tests needed; `yarn test`: 1779/1779 (unchanged count). `yarn build` succeeds.
+
+### A sixth Codex round: the player-facing Guide and the pacing simulator hadn't caught up either
+
+A sixth `chatgpt-codex-connector` round, on the fifth round's commit, found the same kind of drift
+one level further out: not the developer-facing reference docs this time, but the in-game Guide
+(`InfoPage`, read by players) and the `simulate-run-times` skill's own bot strategy.
+
+**1. The Guide's Data Lakes section still described ONLY automatic overflow** — "each fed directly
+by that pool's own Memory buffer... overflows straight into that pool's own lake" — with no mention
+of the manual `💧 Fill` button the manual-then-automatic fill redesign (see the first round on this
+PR, above) had already shipped. A player reading the always-available Guide during the manual phase
+(before their pool's Storage array is entirely complete) would see no explanation of why the lake
+wasn't gaining automatically, and no pointer to the button that actually funds it during that phase.
+Fixed to describe the manual `💧 Fill` step (capped at the next Booster's cost, spent from the
+pool's own buffer) first, with automatic overflow following only once the pool is complete.
+
+**2. The Guide's "Forced priority" section still listed Upgrade Data Stream inside the priority
+chain** ("Disk Fill → Provision Disk → Compute Boost / Upgrade Data Stream") — but Upgrade Data
+Stream was deliberately pulled OUTSIDE that order entirely in an earlier round (see "Economy model"
+in CLAUDE.md: "this was a deliberate reversal of an earlier version that did rank it... per explicit
+request, the Data Stream's own growth should never wait on Storage"). Fixed to list Upgrade Data
+Stream, Data Lake Booster buys, and the Data Lake's own Capacity Upgrade as a separate line, outside
+the chain — matching CLAUDE.md and `docs/ECONOMY_REFERENCE.md`.
+
+**3. The pacing simulator's bot never called `fillDataLakeManually`.** `run-simulation.mjs`'s
+"ideal attentive player" bot imported and called `buyBooster` but never the manual-fill action —
+so for the ENTIRE phase between a pool's first built disk and that pool's Storage array being fully
+complete (which, depending on capacity-cap scenario, can be most or all of a simulated run), the bot
+modeled zero lake income and therefore zero Booster purchases and zero Compute progress from that
+source, since `tickPoolBufferFill`'s automatic overflow branch is also gated on
+`isStoragePoolFullyBuilt` and doesn't fire until then. Every simulation run and every published
+`ideal-run-strategy` snapshot since the manual-fill redesign shipped had been silently modeling a
+strictly worse-than-real bot for that whole phase, overstating run times and Compute scarcity.
+Fixed by adding a manual-fill loop (mirroring the existing Booster-buy loop's per-tier structure)
+immediately before the Booster-buy loop, so the bot fills every lake it can right up to its next
+Booster's cost before attempting to buy.
+
+**Why this wasn't caught by the fourth/fifth rounds' own doc sweeps:** those rounds specifically
+grepped for the RETIRED phrasings the code fix had just superseded ("moving end bound," "TRUE
+structural ceiling," "unconditionally prefers Scale Out," etc.) — a targeted diff-against-old-text
+check, not an exhaustive audit of every place in the repo that describes Data Lake fill behavior or
+lists the forced priority order. The Guide and the simulator both predate the ORIGINAL manual-fill
+feature (the very first round on this PR) and were never touched by ANY of rounds 1-5, since none of
+those rounds' own grep sweeps happened to include `src/pages/InfoPage/index.jsx` or
+`.claude/skills/simulate-run-times/*` in their search scope.
+
+**Verification.** `yarn test`: 1779/1779 (unchanged — no engine/test files touched). `yarn build`
+succeeds. Re-ran and published `simulate-run-times` per its own "when to re-run" rule (this changes
+the bot's own strategy) — see the run published alongside this commit on the `ideal-run-strategy`
+orphan branch for the corrected numbers.
+
+### A seventh Codex round: a real engine bug, and the simulator's own "hard cap" had gone stale too
+
+A seventh `chatgpt-codex-connector` round, on the sixth round's commit, caught one genuine engine
+correctness bug (not just doc/text drift this time) plus two more instances of the same "moving
+ceiling" staleness pattern the fourth/fifth/sixth rounds had already been chasing down.
+
+**1. `isDataLakeManualFillAvailable` required a FULL unit's worth banked even when the currently-open
+slot needed far less to complete.** Its threshold was `getPoolBufferBits(state, tierIndex) >=
+getDataLakeUnitBits(tierIndex)` — always a whole unit, regardless of what
+`getDataLakeManualFillBitsNeeded` (computed one line earlier, for the null/no-open-slot check) said
+was ACTUALLY needed. A slot sitting at `fillBits === unitBits - 1` (all but 1 bit already banked from
+earlier automatic overflow or a prior manual fill) needs only 1 more bit to complete — but with only
+that 1 bit in the pool's own buffer, the old check demanded a full extra `unitBits` before showing
+the button at all, hiding a genuine, fully-affordable click behind a threshold the open slot no
+longer needed. On a higher pool (MB/GB-scale `unitBits`), this could force a real wait for an entire
+extra unit's worth of production just to spend the final few bits of an already-mostly-complete slot.
+
+**Fix.** Reuse the already-computed `bitsNeeded` (from `getDataLakeManualFillBitsNeeded`) and compare
+the buffer against `Math.min(bitsNeeded, unitBits)` instead of unconditionally `unitBits` — preserves
+the original "at least a whole unit" minimum for a genuinely empty/fresh slot (where `bitsNeeded` is
+itself a whole multiple of `unitBits`, so the `Math.min` is a no-op), while correctly relaxing to the
+smaller, exact remaining requirement once a slot is close enough to completion that finishing it
+needs less than a full unit. `fillDataLakeManually` itself needed no change — it already spends
+exactly `getDataLakeManualFillBitsNeeded`'s own precise amount, so once the gate correctly opens, the
+existing spend logic was already right.
+
+**Verification.** New regression test: seeds a pool buffer with exactly 1 bit and a lake at
+`fillBits: unitBits - 1`, asserting `isDataLakeManualFillAvailable` is now `true` (previously `false`
+under the old whole-unit threshold) and that the resulting fill correctly completes the unit and
+drains the buffer to 0. `engine.test.js`: 1257/1257.
+
+**2. Two more places still described a "moving" per-pool Capacity ceiling, missed by the
+fourth/fifth/sixth rounds' own targeted greps.** `docs/ECONOMY_REFERENCE.md` had THREE more live
+references (its `eraGame` reset section, its `tickFoundryResetConvenience` replay section, and
+`INTRO_CAPACITY_CAP_BITS`'s own constant-table row) still saying Capacity remains available "up to
+the active highest-unlocked-pool end bound" / "the active ceiling moves as pools unlock" — the exact
+superseded model `isMemoryCapacityAtCap`'s final-pool-only fix (see the fourth round above) retired.
+Each targeted grep sweep in the earlier rounds searched for the SPECIFIC retired phrase each fix had
+just introduced (e.g. "TRUE structural ceiling"), not a general audit for every synonym of "the
+ceiling moves/tracks the active pool" scattered across a 3,000+ line reference doc — these three had
+different wording than what any prior round happened to grep for, so they survived every sweep so
+far. Fixed all three to say the FINAL pool's own end bound, unconditionally.
+
+**3. The pacing simulator's own capacity-cap sweep still modeled the SAME superseded "pool 1 is the
+hard cap" assumption `isMemoryCapacityAtCap`'s fix had already retired at the engine level.**
+`run-simulation.mjs`'s default `--capacity-cap` sweep used `INTRO_CAPACITY_CAP_BITS` (pool 1's own
+~800,000-bit bound) as its "hard cap" scenario, with a comment claiming it "behaves identically to
+`unlimited`" — true under the OLD per-pool-ceiling gating, but no longer true now that
+`isMemoryCapacityAtCap` only ever consults the FINAL pool's own end bound (~8e32 bits at 10 pools):
+under real, current rules, an `unlimited` run can keep growing capacity, unlocking more pools/lakes/
+Cores, far past where the stale sweep entry artificially froze it — so the sweep was quietly
+comparing two materially different scenarios under a false "these are the same" label, and never
+actually exercised the real structural hard cap at all.
+
+**Fix.** Replaced the sweep's "hard cap" entry with the TRUE final-pool bound
+(`getStoragePoolMemoryBounds(getStoragePoolCount())` — `DATA_LAKE_TIER_COUNT` pools, already imported
+in this file), restoring the "== unlimited" claim to being actually true again: that bound is so
+astronomically large that no realistic run (or even this script's own `MAX_TICKS` ceiling) ever gets
+remotely close to it, so freezing growth there produces identical results to `unlimited` in practice
+— verified directly: re-running `--capacity-cap` after the fix shows the "true hard cap" and
+`unlimited` rows producing byte-for-byte identical End Capacity/Foundry/Main/Total/Cores/Disks
+figures, where before the fix the sweep's stale entry would have frozen far short of what `unlimited`
+actually reaches. Also fixed a floating-point display artifact this astronomically large bound
+exposed in `formatCapacityLabel` (`bytes / 1e9` printing as `"1.0000000000000001e+23 GB"` instead of
+a clean `"1e+23 GB"`) by rounding through `toPrecision(6)` before display.
+
+**Verification.** `yarn test`: 1780/1780. `yarn build` succeeds. Re-ran and published
+`simulate-run-times` (this changes both the sweep's own scenario definitions and, via the manual-fill
+engine fix above, potentially lake income) — see the run published on `ideal-run-strategy` alongside
+this commit.
