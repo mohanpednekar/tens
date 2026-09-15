@@ -22,7 +22,7 @@ function run(payload) {
 describe('pr-low-risk-eligible.sh', () => {
   it('accepts a small bot-branch diff', () => {
     const r = run({
-      branch: 'cursor/auto-example',
+      branch: 'claude/auto-example',
       title: 'fix typo',
       isCrossRepository: false,
       additions: 10,
@@ -48,7 +48,7 @@ describe('pr-low-risk-eligible.sh', () => {
 
   it('rejects workflow touches even when small', () => {
     const r = run({
-      branch: 'cursor/auto-example',
+      branch: 'claude/auto-example',
       title: 'tweak ci',
       isCrossRepository: false,
       additions: 1,
@@ -72,7 +72,7 @@ describe('pr-low-risk-eligible.sh', () => {
     ).toBe(1);
     expect(
       run({
-        branch: 'cursor/auto-example',
+        branch: 'claude/auto-example',
         title: 'x',
         isCrossRepository: true,
         additions: 1,
@@ -82,9 +82,9 @@ describe('pr-low-risk-eligible.sh', () => {
     ).toBe(1);
   });
 
-  it('accepts cursor/heal-* housekeeping branches', () => {
+  it('accepts claude/heal-main-* housekeeping branches', () => {
     const r = run({
-      branch: 'cursor/heal-changelog-save-schema-version',
+      branch: 'claude/heal-main-changelog-save-schema-version',
       title: 'Fix CHANGELOG saveSchemaVersion drift',
       isCrossRepository: false,
       additions: 3,
@@ -120,7 +120,7 @@ describe('pr-low-risk-eligible.sh', () => {
 
   it('rejects a large non-docs bot PR that is not a Dependabot patch/minor', () => {
     const r = run({
-      branch: 'cursor/auto-example',
+      branch: 'claude/auto-example',
       title: 'refactor engine helpers',
       isCrossRepository: false,
       additions: 40,
@@ -136,7 +136,7 @@ describe('pr-low-risk-eligible.sh', () => {
     // AGENTS.md and CHANGELOG.md alone must not slip through on size alone.
     expect(
       run({
-        branch: 'cursor/auto-example',
+        branch: 'claude/auto-example',
         title: 'sync agents',
         isCrossRepository: false,
         additions: 80,

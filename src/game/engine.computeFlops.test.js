@@ -144,7 +144,7 @@ describe('Compute Flops screen', () => {
       ...state,
       purchaseLevels: {
         ...state.purchaseLevels,
-        tier01: 3,
+        tier01: 4, // 3 completed levels — meets the first Scale Up's requirement
       },
       scaleUpCount: 0,
     }

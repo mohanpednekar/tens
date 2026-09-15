@@ -205,18 +205,6 @@ useful when reviewing/tightening an existing issue's spec before it's picked bac
 
 ## Issue tracking for interactive sessions
 
-### Cursor Cloud GitHub access
-
-Interactive **Cursor Cloud Agent** VMs authenticate `gh` via a GitHub App integration that
-returns **403** on issue comments, labels, and closes. Unattended workflows use
-`GH_AUTOMATION_PAT` and are unaffected.
-
-**Fix:** add a fine-grained PAT (Issues read/write; same scopes as `GH_AUTOMATION_PAT` when
-the agent also pushes) to **Cursor Dashboard → Cloud Agents → Secrets** as **`GH_TOKEN`**.
-`gh` picks it up automatically. Without it, issue hygiene must run via GHA (see
-`scripts/backlog-issue-hygiene.sh` on housekeeping runs in
-`cursor-autonomous-maintenance.yml`) or a maintainer's local session.
-
 **Maintainer checklist (#62).** Issue #62 ("Maintainer Action Items") is pinned at the top of the
 Issues tab via GitHub's native pinned-issues feature and deliberately carries **no labels** — it is
 not a `claude-task` work item for the automation to implement, only a standing manual setup checklist
@@ -276,7 +264,7 @@ assign player-facing feature/economy issues to a milestone for the next planned 
 and infrastructure `claude-task` issues typically stay off a versioned milestone. `v0.6.0`
 (UI-revamp chain #138/#139/#140) has fully shipped; the current next-release milestone is `v0.7.0`,
 targeting Era ascension (`#407` / `#411–#414`, in progress). `scripts/sync-release-milestones.sh`
-keeps milestones and assignments idempotent on housekeeping runs.
+keeps milestones and assignments idempotent, running on every `autonomous-maintenance.yml` invocation.
 
 ## Automation workflows
 
@@ -304,31 +292,11 @@ workflow self-improvement, gap analysis).
 `dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
 itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
 `main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
-or on green checks alone for our own automation's branches (`claude/*` and `cursor/*`) when the
+or on green checks alone for our own automation's branches (`claude/*`) when the
 diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
-workflows (Claude + Cursor maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
+workflows (maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
 runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
 issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
-
-**Cursor-powered successor engine (coexists now, replaces Claude later).** Two additional workflows —
-`cursor-autonomous-maintenance.yml` and `cursor-pr-followup.yml` — mirror the two Claude-driven ones
-above but run the **Cursor CLI** (`cursor-agent -p`) instead of `anthropics/claude-code-action`. The
-plan is for Cursor to eventually replace the Claude engine, but not immediately: for now both coexist,
-and the Claude workflows remain the active default. The Cursor twins share the same `claude-task`
-backlog, the same `CLAUDE.md`/`docs/AUTOMATION.md` spec, and the same `GH_AUTOMATION_PAT`, but open
-their work on `cursor/*` branches (never `claude/*`) and authenticate the agent with a `CURSOR_API_KEY`
-repo secret. Every agent step is gated on that secret existing, so the files are **inert until a
-maintainer adds `CURSOR_API_KEY`** — merging them spends nothing and changes no behavior until then.
-While both engines are live, the maintenance twin's guard step counts both `claude/auto-*` and
-`cursor/auto-*` PRs toward the shared 5-PR ceiling and treats a task covered by either as in flight, so
-the two never double-pick; its schedule is five IST wall-clock slots (four development + one
-dedicated 1:30am IST housekeeping/planning run for security / CI failures / conflicted PRs /
-spec-vs-implementation checks / backlog planning / process improvement, plus the same
-housekeeping sweep on every push to `main`), offset from the Claude
-twice-daily cron. See `docs/AUTOMATION.md`'s
-"Cursor-powered successor engine" section for the full design, the `CURSOR_API_KEY`/`CURSOR_MODEL`
-setup, and the staged cutover (coexist → add the secret and verify a few Cursor runs → retire the
-Claude workflows).
 
 **Budget discipline applies to every session, not just automation.**
 
@@ -336,10 +304,6 @@ Claude workflows).
   available and aim to keep that session's work at or under roughly **50%** of a full window,
   recalculated fresh each time. Soft target, not a hard limit (a modest overshoot from estimation
   inaccuracy or unknown concurrent usage is expected, not a failure).
-- **Cursor (Pro quota):** soft guidance is roughly **~1% of Cursor Pro quota per session** for
-  every Cursor session (interactive, development automation, and housekeeping alike — not
-  planning-only). Prefer one small coherent unit; file non-trivial findings instead of
-  half-implementing. Not a hard limit.
 
 If a task looks too large even after buffering, land the largest coherent, test-covered slice first
 (`Part of #N` instead of `Closes #N`, plus a comment on what remains) rather than risking a runaway
@@ -524,7 +488,7 @@ src/
                                lives in App.jsx's shared AppNav. Receives the full `game` object
                                (`{ state, actions, ... }` from `useIncrementalGame`) as a prop,
                                same as MainPage; Data Stream + every DiskArrayRow as continuous
-                               sections (no second-level tabs). Speed ×2 (Invest) and Capacity ×2
+                               sections (no second-level tabs). A single "Upgrade Data Stream" action
                                sit in the Data Stream section; pool Memory values are derived
                                from the shared Data Stream and its moving Capacity ceiling
     StoragePage/index.jsx   ← thin reusable every-size DiskArrayRow wrapper (primary UI is Foundry);
@@ -647,8 +611,8 @@ scripts/
   enable-auto-merge-if-eligible.sh ← marks a PR ready + enables GitHub auto-merge once it's
                                adversarial-APPROVEd and low-risk (see "Pull requests" above)
   backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent GitHub issue-hygiene sweeps
-                               (close shipped/stray issues, unblock/label ready work) run on
-                               housekeeping passes — see docs/AUTOMATION.md
+                               (close shipped/stray issues, unblock/label ready work) run on every
+                               `autonomous-maintenance.yml` invocation — see docs/AUTOMATION.md
   sync-release-milestones.sh ← idempotent GitHub Milestone create/assign for player-facing tracks
                                (see "GitHub Milestones" below)
 public/
@@ -800,7 +764,7 @@ Strict three-layer separation:
    `docs/ECONOMY_REFERENCE.md`'s "PP Compute (Flops)" section.
 5. **`InfoPage/index.jsx`** — a separate, static Guide page holding every mechanic's evergreen
    explanation in short bullets/sub-headings (what used to be MainPage's click-to-expand
-   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Clock Speed, Scale Up,
+   `InfoDetails` disclosures — Overview, Byte Foundry, Storage, Boosters, Compute (Flops), Latency, Scale Up,
    Overclock, Tier Autobuyers, Milestones, Prestige, Era ascension). Numbers come from the same
    `engine.js`/`layers.js` constants the game uses, so they can't drift when those change.
    Reads no `useIncrementalGame` state at all — only pure constants/formulas — so nothing here
@@ -816,7 +780,7 @@ Strict three-layer separation:
     Supporter pack (unlock code / dummy checkout), multi-slot saves, Prestige museum, Era ascension
     (Eras/Eons display + confirm-guarded `actions.eraAscend()`), Appearance (theme preference), Ops
     dashboard, and Danger zone — Reset (full save wipe) and **Reset Byte Foundry** (Capacity /
-    Storage / Compute + upgrades wipe to scratch; Combine / Invest / Provision Disk
+    Storage / Compute + upgrades wipe to scratch; Combine / Upgrade Data Stream / Provision Disk
     convenience-auto up to prior highs; Factory + Prestige kept). Takes `{ game, onReset,
     onResetByteFoundry, themePreference = 'system', onThemePreferenceChange }` (`onReset`/
     `onResetByteFoundry` are the confirm-guarded callbacks owned by `App.jsx`). Pure renderer
@@ -920,8 +884,10 @@ the tier immediately below it, cascading production down the ladder; `tier01` (K
 case where cost is still Bits but production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`,
 displayed as whole `B`) and mirrors the same amount × `BITS_PER_BYTE` into Bits (`MONEY_ID`) so
 MoneyHero / Prestige / tier Buys keep moving (see `docs/DESIGN_HISTORY.md` for the #430 incident
-this mirror fixed). **Clock Speed** (the global tickspeed multiplier on MainPage,
-formerly "Tickspeed") is funded from that Bytes pool — initial activation costs **10 Bytes** — not Bits.
+this mirror fixed). **Latency** (the global tickspeed multiplier on MainPage,
+formerly "Tickspeed"/"Clock Speed") is funded from that Bytes pool — initial activation costs
+**10 Bytes** — not Bits. It unlocks once level 1 of the first tier (tier01) is purchased; there are
+no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD`
 (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," expressed in Bits since a Byte is 8 Bits) freezes
 the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)` is true (permanent
@@ -963,15 +929,18 @@ and only clamps it when necessary, and Era ascension keeps the permanent generat
 and the permanent `mainGameUnlocked` latch, but resets Capacity itself to `INTRO_STARTING_CAPACITY`
 with the rest of the Foundry (`buildEraIntroReset`) — Capacity has to be rebuilt from scratch each
 Era, but Factory access itself never goes away again once earned.
-Production grows via **Speed ×2** (Invest — own cost ladder stepped ×4 per tier) plus the
-restored **Capacity ×2** ladder. Capacity requires a full Buffer, drains it, doubles the shared Data
-Stream capacity, and stops at the moving ceiling of the highest unlocked pool. Plus —
+Production and storage grow via a single **Upgrade Data Stream** action: it requires a full
+Buffer, drains it (cost = current capacity), and doubles `intro.capacity` — Capacity is the only
+purchased progression variable. The displayed Speed is purely *derived* from Capacity
+(`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd
+powers the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3
+growth, exactly ×2 per two upgrades. Plus —
 once far enough along — Disks
 (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`, nav **Boosters**). A separate
 **PP Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) unlocks at 100 PP — see
 Architecture 4c above for its full tier/cost/persistence spec. Recurring "upgrade"
-actions are ranked in a fixed **forced priority order** — Disk Fill > Speed/Invest > Provision Disk >
-Compute Boost — so a lower-ranked action is disabled (both in the UI and in the engine
+actions are ranked in a fixed **forced priority order** — Disk Fill > Provision Disk >
+Compute Boost > Upgrade Data Stream — so a lower-ranked action is disabled (both in the UI and in the engine
 reducer itself) whenever a higher one is currently available. An always-on auto-convert
 (`convertIntroBitsToKilobytes`/`tickIntroAutoInvest`) turns Data Stream bits into free `tier01`
 units at tier01's own current per-unit cost every tick, with no manual UI trigger and no per-cycle
@@ -1004,7 +973,10 @@ a pool specifically, once that pool's buffer is full AND its Data Lake is ready 
 (`isDataLakePoolReady`), the same bar switches `mode="lake"` to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
-itself). Full formula/UI detail,
+itself). The title row places Speed/Bandwidth at top-right and omits disk counts; balance and
+capacity share a centered `balance / capacity-unit` line. The normal bar and percentage are blue;
+an active tap bonus adds a separate centered yellow bar and a neutral-plus/yellow `NN% 👆` suffix.
+Full formula/UI detail,
 including the tap-bonus headroom clamping and the lake-mode handoff, is in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or
@@ -1103,11 +1075,17 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles every tier that was
-already unlocked before that claim, while a newly revealed successor begins at ×1. Its current
-target always requires level 3, including repeated final-tier claims. Auto Scale Up deliberately
-stops at the final-tier target so it cannot reset that tier before the player reaches Overclock's
-manual requirement: level 5 for the first claim, then three levels beyond the previous claim.
+Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and
+all earlier tiers, while the newly recorded successor begins at ×1. Requirements are based on the
+target tier's **completed levels** (`purchaseLevels − 1`): each of the first ten Scale Ups requires
+3 completed levels on the last unlocked tier; repeated final-tier claims then require 6, 9, 12, ….
+This is separate from
+the re-reveal mechanic: after a reset, a tier already unlocked by a previous Scale Up within the
+same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
+Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at
+(the completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
+not a fixed 5/8/11/14 ladder. Latency compounds the same Overclock-scaled 1% step at every level;
+milestones add no separate production bonus.
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill

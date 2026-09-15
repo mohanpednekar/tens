@@ -1047,41 +1047,42 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const lastTierLevel = state.purchaseLevels?.[lastTier.id] ?? 1
   const lastTierUnlocked = isTierUnlocked(state)(lastTier)
 
-  // Scale Up: a more frequent soft-reset than Prestige, available well before Money reaches
-  // PRESTIGE_THRESHOLD (see scaleUpGame in engine.js) — once the current scale-up target tier (see
-  // getScaleUpTargetTier in engine.js: state.scaleUpTargetTierIndex into TIER_DEFINITIONS, an
-  // independent counter that only advances when Scale Up itself fires — NOT necessarily the
-  // highest tier unlocked so far, which can run ahead of it via ordinary play; clamped to the last
-  // tier once reached) reaches that cycle's requirement (getScaleUpRequirement(state): a flat
-  // level 3 for every target, including repeats on the last tier), it resets tiers/resources but
-  // permanently doubles production for every tier already unlocked before the claim (stacking per
-  // tier) AND keeps every tier unlocked so far, plus the one that reaching this level just
-  // permanently unlocked. Always shown (relevant from the very first cycle, well before the last
-  // tier itself exists) — unlike Overclock below, there's no progressive-disclosure gate here.
+  // Scale Up requires 3 completed levels on each tier's first claim, then final-tier requirements
+  // advance by 3 after all tiers have received one.
+  // counting every claim this cycle (see getScaleUpRequirement in engine.js) — recording the
+  // successor only when the claim succeeds. Recorded tiers re-reveal at 2 completed predecessor
+  // levels after a reset (see isTierUnlocked in engine.js).
   const scaleUpTargetTier = getScaleUpTargetTier(state)
   const scaleUpTargetTierLevel = state.purchaseLevels?.[scaleUpTargetTier.id] ?? 1
   const scaleUpCount = state.scaleUpCount ?? 0
   const scaleUpRequirement = getScaleUpRequirement(state)
-  // purchaseLevels/getScaleUpRequirement are internally 1-indexed so that "level 1" means "no
-  // completed block yet" (see CLAUDE.md's "purchase block size and tier levels"). Displayed to the
-  // player, that reads as an off-by-one — this subtracts 1 so the visible "Lv." instead counts
-  // completed blocks directly: Lv.1 after the first 8 purchases, Lv.2 after 16, etc.
-  const lastTierLevelDisplay = lastTierLevel - 1
-  const scaleUpTargetTierLevelDisplay = scaleUpTargetTierLevel - 1
-  const scaleUpRequirementDisplay = scaleUpRequirement - 1
+  // Purchase levels are player-facing counts of completed levels, so display the engine's
+  // one-based current-level cursor as a zero-based completed-level count. Scale Up's and
+  // Overclock's requirements are already expressed in completed levels — no -1 adjustment there.
+  const lastTierLevelDisplay = Math.max(0, lastTierLevel - 1)
+  const scaleUpTargetTierLevelDisplay = Math.max(0, scaleUpTargetTierLevel - 1)
+  const scaleUpRequirementDisplay = scaleUpRequirement
   const scaleUpProgressPercent = progressPercent(scaleUpTargetTierLevelDisplay, scaleUpRequirementDisplay)
-  const canScaleUp = !isFrozen && scaleUpTargetTierLevel >= scaleUpRequirement
+  const canScaleUp = !isFrozen && scaleUpTargetTierLevelDisplay >= scaleUpRequirement
+  // The successor tier a successful claim records/reveals (targetIndex + 1) — "Unlock TB" shows
+  // when the claim would reveal the Terabytes tier (see scaleUpGame in engine.js).
+  const scaleUpSuccessorTier = TIER_DEFINITIONS[TIER_DEFINITIONS.indexOf(scaleUpTargetTier) + 1] ?? null
+  const scaleUpUnlocksTB = scaleUpSuccessorTier?.symbol === 'TB'
 
-  // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own level
-  // reaches the next Overclock level — level 5 initially, then three beyond the last claimed level
-  // (see getOverclockRequirement/overclockGame in engine.js). Unlike Scale Up, claiming it also
+  // Overclock: a second, rarer soft-reset than Scale Up, claimable once the last tier's own
+  // COMPLETED-level count reaches the next Overclock requirement — 5 initially (a minimum only;
+  // the player may keep climbing first), then three more than the completed-level count the
+  // previous claim was actually taken at (see getOverclockRequirement/overclockGame in engine.js).
+  // Unlike Scale Up, claiming it also
   // wipes Scale Up's per-tier bonuses back to ×1 (scaleUpTierCounts resets) in exchange for
   // permanently multiplying BOTH the (Money-funded) global Tickspeed
-  // upgrade's regular and milestone per-level steps by getOverclockMultiplier(overclockCount)
-  // (×1.1 per level) — folded into that existing track's own compounding rate, not a separate
+  // upgrade's single per-level step by getOverclockMultiplier(overclockCount)
+  // (×1.1 per banked completed level) — folded into that existing track's own compounding rate,
+  // not a separate
   // multiplier stacked alongside it, so it has no effect until at least one Tickspeed level is
-  // bought. A claim jumps straight to the last tier's current level, so falling behind never
-  // requires claiming every intermediate level one at a time. Gated on the last tier having ever
+  // bought. A claim banks the last tier's current completed-level count on top of the running
+  // total (overclockCount), so how often the player claims never changes the eventual benefit.
+  // Gated on the last tier having ever
   // been unlocked (unlike Scale Up above, which is always shown), so it doesn't clutter the page
   // before tier10 first exists — but once shown, stays shown (in a disabled state once not
   // immediately actionable) rather than disappearing again the moment a successful Overclock claim
@@ -1091,22 +1092,19 @@ const MainPage = ({ game, focusNonce = 0 }) => {
     if (lastTierUnlocked) setOverclockEverRevealed(true)
   }, [lastTierUnlocked])
   const overclockCount = state.overclockCount ?? 0
-  const overclockRequirement = getOverclockRequirement(overclockCount)
+  const overclockRequirement = getOverclockRequirement(state)
+  const overclockRequirementDisplay = overclockRequirement
   // The current/next per-level step the global Tickspeed upgrade's own REGULAR levels compound at,
   // expressed as a "multiplier" (1 + step) purely so formatGlobalTickspeedBonusPercent's existing
   // (multiplier - 1) * 100 formatting can be reused directly — these are never applied as
   // standalone multipliers anywhere, only fed into getGlobalTickspeedProductionMultiplier below.
-  // The "next" value previews what claiming right now would jump the rate to — the last tier's own
-  // current level, per overclockGame's catch-up behavior, not just the minimum requirement.
+  // The "next" value previews what claiming right now would bank on top — the last tier's own
+  // current COMPLETED levels, since overclockGame banks them additively (claiming 3 then 3 levels
+  // compounds exactly like claiming 6 at once), not just the minimum requirement.
   const currentGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)
-  const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(Math.max(lastTierLevel, overclockRequirement))
-  // Unlike scaleUpRequirementDisplay above, this is NOT given the -1 "completed blocks" display
-  // offset — see getOverclockRequirement's own comment in engine.js: it's expressed as a raw level
-  // target so the number shown here matches the same raw purchaseLevels number the last tier's own
-  // Details disclosure already shows, rather than introducing a second, differently-offset "level"
-  // reading for the same underlying value.
-  const overclockProgressPercent = progressPercent(lastTierLevel, overclockRequirement)
-  const canOverclock = !isFrozen && lastTierLevel >= overclockRequirement
+  const nextGlobalTickspeedStepDisplay = 1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount + lastTierLevelDisplay)
+  const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
+  const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
   // Automates Scale Up (see buyAutoScaleUp in engine.js) — gated on !isFirstRun like every other
   // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
@@ -1117,18 +1115,11 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
   // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.
   const autoScaleUpEnabled = state.autoScaleUpEnabled ?? true
-  const autoScaleUpFinalTierSuspended = (state.scaleUpTargetTierIndex ?? 0) >= TIER_DEFINITIONS.length - 1
-  const autoScaleUpEffectivelyActive = autoScaleUpEnabled && !autoScaleUpFinalTierSuspended
-  const autoScaleUpStatusLabel = !autoScaleUpEnabled
-    ? 'Auto Scale Up paused'
-    : autoScaleUpFinalTierSuspended
-      ? 'Auto Scale Up suspended at final tier'
-      : 'Auto Scale Up active'
-  const autoScaleUpStatusTitle = !autoScaleUpEnabled
-    ? 'Auto Scale Up is currently paused — it will not trigger until resumed'
-    : autoScaleUpFinalTierSuspended
-      ? 'Auto Scale Up is suspended at the final tier — Scale Up is manual here so Overclock can be reached'
-      : "Scale Up now triggers automatically the instant it's eligible"
+  const autoScaleUpEffectivelyActive = autoScaleUpEnabled
+  const autoScaleUpStatusLabel = autoScaleUpEnabled ? 'Auto Scale Up active' : 'Auto Scale Up paused'
+  const autoScaleUpStatusTitle = autoScaleUpEnabled
+    ? "Scale Up now triggers automatically the instant it's eligible"
+    : 'Auto Scale Up is currently paused — it will not trigger until resumed'
 
   // Automates the (Money-funded) global tickspeed multiplier (see buyTickspeedAutobuyer in
   // engine.js) — once bought, tickGame upgrades it automatically whenever affordable, mirroring
@@ -1403,11 +1394,11 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               <li>
                 Scale Up: {scaleUpCount > 0
                   ? `${scaleUpCount} activation${scaleUpCount === 1 ? '' : 's'}; multiplier varies by tier`
-                  : `not yet activated (reach level ${formatAmount(scaleUpRequirementDisplay)} on ${scaleUpTargetTier.name})`}
+                  : `not yet activated (reach ${formatAmount(scaleUpRequirementDisplay)} completed levels on ${scaleUpTargetTier.name})`}
               </li>
               {globalTickspeedCardEverRevealed && (
                 <li>
-                  Clock Speed: {isGlobalTickspeedActive
+                  Latency: {isGlobalTickspeedActive
                     ? `${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier (Lv.${globalTickspeedLevel})`
                     : 'not yet active'}
                 </li>
@@ -1415,8 +1406,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
               {overclockEverRevealed && (
                 <li>
                   Overclock: {overclockCount > 0
-                    ? `Clock Speed's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level ${overclockCount}`
-                    : `not yet claimed (reach level ${formatAmount(overclockRequirement)} on ${lastTier.name})`}
+                    ? `Latency's per-level rate is now ${formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from ${formatAmount(overclockCount)} banked completed levels`
+                    : `not yet claimed (reach ${formatAmount(overclockRequirementDisplay)} completed levels on ${lastTier.name})`}
                 </li>
               )}
             </GlobalMultipliersList>
@@ -1474,9 +1465,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
       {view === 'game' && (<>
 
       {globalTickspeedCardEverRevealed && (
-        <GlobalTickspeedCard aria-label="global clock speed panel">
+        <GlobalTickspeedCard aria-label="global latency panel">
           <Disclosure onClick={collapseDisclosure}>
-            <summary><h2>Clock Speed</h2></summary>
+            <summary><h2>Latency</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
                 Lv.{globalTickspeedLevel} — {formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier.
@@ -1486,8 +1477,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           <Button
             aria-label={
               isGlobalTickspeedActive
-                ? `Upgrade Clock Speed for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
-                : `Enable Clock Speed for ${formatBytes(globalTickspeedCost)}`
+                ? `Upgrade Latency for ${formatBytes(globalTickspeedCost)} (currently ${formatBonusOrMultiplier(globalTickspeedMultiplier, { precise: true })} faster ticks on every tier)`
+                : `Enable Latency for ${formatBytes(globalTickspeedCost)}`
             }
             color={canBuyGlobalTickspeed ? '#3b82f6' : 'darkgrey'}
             disabled={!canBuyGlobalTickspeed}
@@ -1502,7 +1493,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             <ButtonLabel>{isGlobalTickspeedActive ? 'Upgrade' : 'Enable'} for {formatBytes(globalTickspeedCost)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
-              aria-label="Clock Speed progress"
+              aria-label="Latency progress"
               aria-valuenow={globalTickspeedProgressPercent}
               aria-valuemin={0}
               aria-valuemax={100}
@@ -1523,9 +1514,10 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // tracked directly in state (see engine.js's createInitialGameState/buyTier) rather than
           // derived from `purchased` via division — the block size a level requires can grow over
           // a run (see getPurchaseBlockSize below), so there's no fixed divisor to derive a level
-          // from after the fact. Drives both the Buy button's compact "Lv.N (x/8)" text and the
-          // cost-block progress fill.
+          // from after the fact. The completed-level count appears in accessible/detail text,
+          // while the compact Buy button shows cost-block progress.
           const tierLevel = state.purchaseLevels?.[tier.id] ?? 1
+          const completedLevels = Math.max(0, tierLevel - 1)
           const doneInBlock = state.purchaseLevelProgress?.[tier.id] ?? 0
           // Manual Buy always grabs as many units as are currently affordable, up to the current
           // level's cost block boundary (the former ×1/×10 "Bulk" toggle's default, now the only
@@ -1602,7 +1594,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
-          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (level ${formatAmount(tierLevel)}, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased)`
+          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
@@ -1678,7 +1670,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                       Effective tickspeed: every {formatRate(effectiveTickSpeed)}s (tier ×{formatRate(tickspeedMultiplier)}, global ×{formatRate(globalTickspeedMultiplier)})
                     </li>
                     <li>
-                      Level {formatAmount(tierLevel)} ({formatAmount(doneInBlock)}/{purchaseBlockSize} purchased) — purchase
+                      Completed levels: {formatAmount(completedLevels)} ({formatAmount(doneInBlock)}/{purchaseBlockSize} purchased toward the next) — purchase
                       milestone bonus: ×{formatRate(milestoneMultiplier)} from {formatAmount(purchased)} lifetime purchases
                     </li>
                     {tierScaleUpMultiplier > 1 && <li>Scale Up bonus: ×{formatRate(tierScaleUpMultiplier)}</li>}
@@ -1743,7 +1735,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                 variant="plain"
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id)}
-                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also doubles it`}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also multiplies it by ×1.1`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
@@ -1767,18 +1759,18 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         <ScaleUpCard aria-label="scale up panel">
           <h2>Scale Up</h2>
           <ScaleUpButton
-            aria-label={`Scale Up (requires ${scaleUpTargetTier.name} level ${scaleUpRequirementDisplay}) — doubles production for tiers unlocked so far`}
+            aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
             disabled={!canScaleUp}
             onClick={actions.scaleUp}
-            title="Resets tiers, doubles production for tiers unlocked so far, and unlocks the next tier"
+            title={`Resets tiers, doubles production for tiers unlocked so far${scaleUpSuccessorTier ? `, and unlocks ${scaleUpSuccessorTier.name}` : ''} — requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels`}
             type="button"
             $progress={scaleUpProgressPercent}
             $progressColor="#22d3ee"
             $pulse={canScaleUp}
           >
             <ButtonIcon>⏩ </ButtonIcon>
-            <ButtonLabel>×2{' · '}Lv.{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}</ButtonLabel>
+            <ButtonLabel>×2{' · '}{scaleUpTargetTier.symbol}{' '}{formatAmount(scaleUpTargetTierLevelDisplay)}/{formatAmount(scaleUpRequirementDisplay)}{scaleUpUnlocksTB ? ' · Unlock TB' : ''}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Scale Up progress"
@@ -1800,23 +1792,23 @@ const MainPage = ({ game, focusNonce = 0 }) => {
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>
-                Clock Speed's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from level {overclockCount}.
+                Latency's per-level rate is now {formatGlobalTickspeedBonusPercent(currentGlobalTickspeedStepDisplay)}% (was 1%) from {formatAmount(overclockCount)} banked completed levels.
               </MutedText>
             )}
           </Disclosure>
           <OverclockButton
-            aria-label={`Overclock (requires ${lastTier.name} level ${overclockRequirement}) — resets Scale Up's bonus and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            aria-label={`Overclock (requires ${overclockRequirementDisplay} completed ${lastTier.name} levels) — resets Scale Up's bonus and raises Latency's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
             color={canOverclock ? '#fb923c' : 'darkgrey'}
             disabled={!canOverclock}
             onClick={actions.overclock}
-            title={`Resets tiers (and Scale Up's bonus) and raises Clock Speed's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%`}
+            title={`Resets tiers (and Scale Up's bonus) and raises Latency's per-level rate to ${formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}% — requires ${overclockRequirementDisplay} completed ${lastTier.name} levels`}
             type="button"
             $progress={overclockProgressPercent}
             $progressColor="#fb923c"
             $pulse={canOverclock}
           >
             <ButtonIcon>⚡ </ButtonIcon>
-            <ButtonLabel>{formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%/lvl{' · '}Lv.{formatAmount(lastTierLevel)}/{formatAmount(overclockRequirement)}</ButtonLabel>
+            <ButtonLabel>{formatGlobalTickspeedBonusPercent(nextGlobalTickspeedStepDisplay)}%/lvl{' · '}{lastTier.symbol}{' '}{formatAmount(lastTierLevelDisplay)}/{formatAmount(overclockRequirementDisplay)}</ButtonLabel>
             <VisuallyHidden
               role="progressbar"
               aria-label="Overclock progress"
