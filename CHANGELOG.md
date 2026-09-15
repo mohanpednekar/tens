@@ -368,7 +368,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Write cache flush bar rendering as a giant square** — `DiskArrayRow`'s single full-width write
   cache flush bar inherited the same `aspect-ratio: 1` its 10 individual collecting segments use,
   so stretching it to the full row width also stretched it to that same width in height. It now
-  uses `DISK_ARRAY_LADDER_CAP` as its aspect ratio instead, landing back near one segment's own
+  uses `DISK_LADDER_SIZE_MULTIPLIER` as its aspect ratio instead, landing back near one segment's own
   height.
 - **Compute nav attention** — AppNav's Compute (Flops) dot now lights when spendable PP can buy at
   least one Flops tier (previously hardcoded off).
