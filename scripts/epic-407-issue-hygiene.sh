@@ -4,7 +4,7 @@
 # sub-issues so Phase A can pick them up.
 #
 # Requires `gh` authenticated with Issues read/write (GH_AUTOMATION_PAT in GHA,
-# or GH_TOKEN in Cursor Cloud Agents — see docs/AUTOMATION.md).
+# or a maintainer's local `gh` session — see docs/AUTOMATION.md).
 #
 # Usage: epic-407-issue-hygiene.sh [--dry-run]
 #
