@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
+  own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
+  economically substitutes for the missing 10th unit. A Data Lake's overflow fill no longer tapers
+  its rate down as the currently-filling disk nears completion — it now fills at the plain available
+  rate, one disk at a time, the same posture Storage's own disk provisioning already uses. A Storage
+  pool's or Data Lake's own balance/capacity now always renders in that pool's/lake's own fixed unit
+  (e.g. a maxed KB Data Lake reads "1000 KB", never auto-converting to "1 MB"), and a Disk's own
+  visible size label is now a bare number with no unit suffix (the surrounding pool/lake card already
+  establishes the scale).
 - **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
   purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
   level compounds the same Overclock-scaled 1% step.

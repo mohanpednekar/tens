@@ -3,6 +3,8 @@ import StatCard from 'components/StatCard'
 import {
   formatAmount,
   formatDiskSize,
+  formatDiskSizeBare,
+  formatDiskSizeInPoolUnit,
   getBoosterPurchaseCost,
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
@@ -225,8 +227,12 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
         // Deposited/capacity/next-cost are all abstract unit counts internally, but every figure
         // shown here converts through unitBits into the same Byte-scale currency Disks themselves
-        // display (formatDiskSize) — per "Data lake uses the same currency as disks" — rather than
-        // a bare unit count.
+        // display — per "Data lake uses the same currency as disks" — rather than a bare unit
+        // count. Capacity/cost figures use formatDiskSizeInPoolUnit (this lake's own FIXED unit,
+        // e.g. always "KB" for the KB lake) rather than formatDiskSize's auto-nearest-unit pick,
+        // since a maxed lake's own capacity (1,000 units) legitimately reaches 1000x this lake's
+        // own unit — formatDiskSize would misleadingly auto-convert that to the next unit up (e.g.
+        // "1 MB") instead of staying "1000 KB". See formatDiskSizeInPoolUnit's own doc comment.
         const unitBits = getDataLakeUnitBits(tierIndex)
         const capacity = getDataLakeCapacity(state, tierIndex)
         const maxed = isDataLakeCapacityMaxed(state, tierIndex)
@@ -236,8 +242,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // see docs/DESIGN_HISTORY.md). Only read while !maxed, so level + 1 always stays within
         // DATA_LAKE_CAPACITY_BY_LEVEL's bounds.
         const nextCapacity = !maxed && DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex) + 1]
-        const capacitySize = formatDiskSize(capacity * unitBits)
-        const nextCostSize = formatDiskSize(nextCost * unitBits)
+        const capacitySize = formatDiskSizeInPoolUnit(capacity * unitBits, tierIndex)
+        const nextCostSize = formatDiskSizeInPoolUnit(nextCost * unitBits, tierIndex)
 
         const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
         const diskCounts = getDataLakeDiskCounts(state, tierIndex)
@@ -329,6 +335,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               const slotSizeBits = unitBits * subSize
               const fillFraction = isFillingThisSize && slotSizeBits > 0 ? clampFraction(fillBits / slotSizeBits) : 0
               const sizeLabel = formatDiskSize(slotSizeBits)
+              const bareSizeLabel = formatDiskSizeBare(slotSizeBits)
               return (
                 <LakeSizeRow key={subSize} role="group" aria-label={`${label} lake ${sizeLabel} disks`}>
                   {Array.from({ length: totalSlots }, (_, index) => {
@@ -347,7 +354,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                         }
                       >
                         {isFilling && <LakeSquareFill $fill={fillFraction} />}
-                        <LakeSquareLabel>{sizeLabel}</LakeSquareLabel>
+                        <LakeSquareLabel>{bareSizeLabel}</LakeSquareLabel>
                       </LakeSquare>
                     )
                   })}
@@ -398,7 +405,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSize(nextCapacity * unitBits)} — unlocked by completing that array in Storage`}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
                   type="button"
                   variant="prestige"
                 >

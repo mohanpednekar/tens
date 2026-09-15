@@ -227,13 +227,13 @@ own read cache directly instead — never past level 1, never atop existing prog
 Cores/Nodes/Compute Boost
 (`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund Boosters, escalating cost (nth = n
 units) — fully decoupled from Storage Disks now: each lake is fed directly and continuously by its
-own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full),
-at a rate based on the ONE disk currently being filled, not the lake's overall total
-(`DATA_LAKE_OVERFLOW_MAX_PERCENT` 50% at that disk empty down to 0% as it's about to complete, then
-back to 50% once it completes and the next opens — the SAME `MultiplierBar` switching into its
-lake-rate mode once the pool's buffer is full, see above), completing the lake's ×1/×10/×100 disks
-smallest-first (capped 10/9/9 — `DATA_LAKE_SUB_SIZE_DISK_CAPS` — so the three sizes sum exactly to
-the maxed level's 1,000-unit capacity). A lake is gated on `isDataLakePoolReady` — its own matching
+own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full), at
+the plain available rate (no taper — same posture Storage's own disk provisioning uses), completing
+the lake's ×1/×10/×100 disks smallest-first, one at a time (capped 9/9/9 —
+`DATA_LAKE_SUB_SIZE_DISK_CAPS`, one unit short of each level's own 1/10/100/1,000-unit capacity —
+the level's own last unit fills via the lake's own retained buffer instead of a disk square,
+mirroring how a Storage array's cache substitutes for its own 10th disk). A lake is gated on
+`isDataLakePoolReady` — its own matching
 Storage pool having built at least one real disk, not the lake's own fill progress (overflow itself
 won't feed a lake until then). **A lake fills MANUALLY, capped at exactly its next Booster's own
 cost, until its matching pool is entirely built (`isStoragePoolFullyBuilt`) — only then does it

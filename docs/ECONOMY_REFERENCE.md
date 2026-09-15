@@ -226,7 +226,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      own 80,000-bit full `getDiskCost`) — deliberate, not coincidental, so a pool's buffer is always
      exactly far enough ahead to fund its own next disk's pass the moment `intro.capacity` crosses
      that threshold. This is the value
-     Storage pool cards (`PoolCard` in `ByteFoundryPage`) render, in **SI units** (`formatDiskSize`)
+     Storage pool cards (`PoolCard` in `ByteFoundryPage`) render, in **SI units** FIXED to that
+     pool's own unit (`formatDiskSizeInPoolUnit`, never `formatDiskSize`'s auto-nearest-unit pick)
      — e.g. 14 doublings from the 1-Byte start renders "16 KiB" on the Data Stream card but a plain
      "10 KB" on the pool card (10^4 Bytes, the decade step that doubling count falls into), not a
      finer "16 KB"/"16.384 KB" reading. See `docs/DESIGN_HISTORY.md` for the full account, including
@@ -455,7 +456,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER^(n-1)` for step 1, 2, 3, … (real,
    Byte-accurate bits — a real "1 KB" disk is 8000 bits; then 10 KB, 100 KB — see
    `getDiskLadderSizeBits` / issue #368), advancing to the next size once `DISK_ARRAY_LADDER_CAP`
-   (10) disks have *ever* been built at the current one, read from `disksBuiltTotal` (a cumulative
+   (9 — the array's own always-full cache substitutes for what would have been a 10th disk) disks
+   have *ever* been built at the current one, read from `disksBuiltTotal` (a cumulative
    counter `pullDiskForCurrentLevel` never decrements, so the ladder only ever advances; deliberately decoupled
    from `tier01`'s CURRENT level — see `docs/DESIGN_HISTORY.md`). An earlier ladder walked
    `tier01`'s level-cost sequence and skipped sizes whenever cost-epoch exponents jumped (100 KB →
@@ -472,12 +474,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    an earlier "kilobit"-scaled version of this ladder needed one, and priced a real 1 KB array's
    build cost wrong as a result — see `docs/DESIGN_HISTORY.md`). `getDiskProvisionPassesRequired`
    scales by ORDINAL, not a flat constant: `N` for the array's Nth disk (1 for its very first disk, 2
-   for its second, …), capped at `DISK_BUILD_COST_MULTIPLIER` (10) — since that cap equals
-   `DISK_ARRAY_LADDER_CAP`, the ordinal itself never actually exceeds it in play (the ladder always
-   advances to the next size once `DISK_ARRAY_LADDER_CAP` disks are built), so a real 1 KB (8000-bit)
-   array's FIRST disk costs just 8,000 bits ("1 KB") to build, its LAST (10th) still costs 80,000
-   bits ("10 KB") — the same flat figure every disk in the array used to cost regardless of ordinal
-   (see `docs/DESIGN_HISTORY.md`). That total is paid in `getDiskProvisionPassesRequired(state,
+   for its second, …), capped at `DISK_BUILD_COST_MULTIPLIER` (10) as a defensive guard — though
+   `DISK_ARRAY_LADDER_CAP` (9) means the ordinal itself never actually reaches it any more (the
+   ladder always advances to the next size once `DISK_ARRAY_LADDER_CAP` disks are built), so a real
+   1 KB (8000-bit) array's FIRST disk costs just 8,000 bits ("1 KB") to build, its LAST (9th) costs
+   72,000 bits ("9 KB") — the array's own cache economically substitutes for what would have been a
+   10th, most-expensive disk (see `docs/DESIGN_HISTORY.md`). That total is paid in `getDiskProvisionPassesRequired(state,
    size)` installments — "passes" — of exactly `size` bits each (`intro.diskProvisionPasses`,
    `getDiskProvisionPassesCollected`), rather than the whole cost in one lump sum: each call to
    `provisionDisk` collects as many WHOLE passes as the pool's own local buffer currently affords
@@ -752,87 +754,89 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    waiting.
 
    **Overflow fill** (`tickPoolBufferFill`'s own overflow branch, `fillDataLakeDisks`/
-   `getDataLakeOverflowRatePercent`/`getDataLakeCurrentDiskFillFraction` internally) — once a pool's
-   own local Memory buffer is completely full (`room <= 0` inside `tickPoolBufferFill`'s per-pool
-   loop), that pool's reserved share of the tick's rate (`fillRate * elapsedSeconds`, the exact same
-   reservation `tickPoolBufferFill` already computes for buffer-filling) has nowhere left to go.
-   Rather than wasting it, a percentage of it feeds that pool's own matching lake instead —
-   `poolIndex === tierIndex`, one lake per pool, the same 1:1 mapping the lake's own KB/MB/GB/…
-   naming already implies. That percentage is itself fill-based on the fraction of progress on the
-   ONE disk CURRENTLY being filled in that lake — NOT the lake's overall total
-   (`getDataLakeCurrentDiskFillFraction` — `fillBits / (unitBits × the current open sub-size)`),
-   mirroring the FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape:
-   `DATA_LAKE_OVERFLOW_MAX_PERCENT` (50) when that current disk is completely empty, linearly
-   tapering down toward `DATA_LAKE_OVERFLOW_MIN_PERCENT` (0) as it approaches completion — but
-   floored in practice at `DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT` (5): a rate literally
-   converging to 0 is a pure proportional decay toward the remaining gap, which mathematically never
-   reaches it (and gets permanently stuck in floating point once the remaining increment rounds to
-   nothing — see `docs/DESIGN_HISTORY.md`), so `getDataLakeOverflowRatePercent` never actually
-   returns below the floor while a disk is still genuinely open — then straight back up to 50 the
-   instant it completes and the next disk opens — a repeating per-disk taper, not one slow
-   lake-wide ramp. This taper is exactly LINEAR in fill fraction, which makes a single disk's own
-   fill an ordinary first-order linear ODE (`dx/dt = fillRate * rateFraction(x/L)`, x = fillBits,
-   L = the open disk's own slot size) with a closed-form solution: exponential decay toward an
-   equilibrium (which coincides with L itself, since `DATA_LAKE_OVERFLOW_MIN_PERCENT` is 0 — the
-   taper alone asymptotically approaches, but never reaches, 100% fill, exactly why the completion
-   floor above exists) while still above that floor, then plain constant-rate linear fill once the
-   taper drops to it. `solveDataLakeDiskFillAfterSeconds`/`solveDataLakeDiskSecondsForBits` (two
-   solvers — seconds→fill and fill→seconds, the latter used only when the available-Bits budget
-   binds before the time budget does) implement this exactly, via `getDataLakeOverflowTaperShape`'s
-   shared threshold/equilibrium/decay-rate constants so the two solvers can never disagree about
-   where one regime ends and the other begins. `tickPoolBufferFill`'s overflow branch (once a pool's
-   own local Memory buffer is completely full, `room <= 0`) hands its own reserved time/Bits budget
-   (the same `fillRate`/`elapsedSeconds` reservation `tickPoolBufferFill` already computes for
-   buffer-filling) to `applyDataLakeOverflow`, which walks that budget in bounded segments — at most
-   `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT` (`DATA_LAKE_SUB_SIZE_DISK_CAPS` summed, the most disk slots a
-   lake could ever hold, so the loop is provably bounded) — re-fetching which disk is currently open
-   and solving ITS OWN exact fill every time a disk completes, rather than sampling one rate up
-   front and reusing it for every disk a single tick's own overflow might go on to complete. This
-   makes a single disk's own fill mathematically exact and TICK-SIZE-INDEPENDENT: splitting the
-   same total `elapsedSeconds` into any number of smaller calls produces IDENTICAL results, not
-   just approximately close ones — an earlier version sampled one rate per disk-completion segment
-   and held it flat for that whole segment's own duration, which was correct only at a disk's
-   completion BOUNDARY, not within its own partial fill, whose true rate keeps decreasing
-   continuously as fillBits rises (verified to diverge from the tick-size-independent value by a
-   large, not rounding-error-scale, margin at realistic production rates — see
-   `docs/DESIGN_HISTORY.md`). `fillDataLakeDisks` also returns `unconsumedBits` per segment
-   (nonzero only when the lake becomes fully maxed partway through it), which `applyDataLakeOverflow`
-   folds into its own `remainingBits` return; `tickPoolBufferFill` credits that back to `intro.bits`
-   rather than assuming every offered bit was consumed, so an unconsumed excess (e.g. a huge
-   single-tick overflow against a small/fresh lake) survives as ordinary spendable Bits instead of
-   being destroyed. Deliberately independent of the pool's own fill-based Speed/Bandwidth
-   multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's value — even
-   though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the bar
-   switches from the fill-based multiplier reading to this lake overflow rate (`mode="lake"`,
-   rendered in `theme.color.info`) once that pool's own Memory buffer is completely full AND
-   `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes ALL fully
-   built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself won't credit a
-   lake until both those conditions hold (see "manual vs. automatic fill" below), and switching
-   modes purely on buffer fullness would show a nonzero "incoming rate" for a pool whose lake can
-   never actually receive it (an adversarial-review finding on the PR that introduced
-   `isDataLakePoolReady` — see `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one. The lake's own accumulated
-   fill LEVEL (as opposed to this overflow RATE) has its own separate always-visible bar below the
-   Memory buffer tile, likewise reading 0 until `isDataLakePoolReady` rather than any residual
-   fill a legacy save's lake might already hold.
+   `applyDataLakeOverflow` internally) — once a pool's own local Memory buffer is completely full
+   (`room <= 0` inside `tickPoolBufferFill`'s per-pool loop), that pool's reserved share of the
+   tick's rate (`fillRate * elapsedSeconds`, the exact same reservation `tickPoolBufferFill` already
+   computes for buffer-filling) has nowhere left to go. Rather than wasting it, ALL of it feeds that
+   pool's own matching lake instead — `poolIndex === tierIndex`, one lake per pool, the same 1:1
+   mapping the lake's own KB/MB/GB/… naming already implies — at the plain, un-tapered rate, no
+   artificial slowdown as the currently-filling disk nears completion. An earlier version tapered
+   this rate down (`DATA_LAKE_OVERFLOW_MAX_PERCENT` at an empty disk, down toward
+   `DATA_LAKE_OVERFLOW_MIN_PERCENT` near completion, via a closed-form exponential-decay ODE) —
+   removed in favor of the same "no taper" posture Storage's own disk provisioning already uses; see
+   `docs/DESIGN_HISTORY.md`. `getDataLakeOverflowRatePercent` now returns a plain binary
+   "receiving/not-receiving" reading (`DATA_LAKE_OVERFLOW_MAX_PERCENT` while this lake has anything
+   left to fill at its current capacity level, `DATA_LAKE_OVERFLOW_MIN_PERCENT` once fully maxed) —
+   these two constants remain solely so `ByteFoundryPage`'s `MultiplierBar` (below) doesn't jump at
+   the multiplier→lake handoff.
+
+   `tickPoolBufferFill`'s overflow branch hands its own reserved time/Bits budget (the same
+   `fillRate`/`elapsedSeconds` reservation it already computes for buffer-filling) to
+   `applyDataLakeOverflow`, which walks that budget in bounded segments — at most
+   `DATA_LAKE_OVERFLOW_SEGMENT_LIMIT` (`DATA_LAKE_SUB_SIZE_DISK_CAPS` summed plus 1 for the level's
+   own final buffer-sourced unit, so the loop is provably bounded) — re-fetching which slot is
+   currently open (`getDataLakeCurrentFillSubSize`, smallest sub-size first) every time one
+   completes, since a single large `availableBits` can complete several in one call. It tracks TWO
+   separate budgets: `remainingBits` is the caller's own currency balance (`intro.bits`), only ever
+   decremented by what's actually spent; `spendableBits` is the `fillRate * availableSeconds`
+   ceiling on how much this ONE call may deliver, independent of how large the caller's own balance
+   happens to be — conflating the two would silently discard whatever the rate couldn't reach this
+   call as if it had already been spent. `fillDataLakeDisks` also returns `unconsumedBits` per
+   segment (nonzero only when the lake becomes fully maxed partway through it), which
+   `applyDataLakeOverflow` folds into its own `remainingBits` return; `tickPoolBufferFill` credits
+   that back to `intro.bits` rather than assuming every offered bit was consumed, so an unconsumed
+   excess (e.g. a huge single-tick overflow against a small/fresh lake) survives as ordinary
+   spendable Bits instead of being destroyed. Deliberately independent of the pool's own fill-based
+   Speed/Bandwidth multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's
+   value — even though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the
+   bar switches from the fill-based multiplier reading to this lake overflow indicator
+   (`mode="lake"`, rendered in `theme.color.info`) once that pool's own Memory buffer is completely
+   full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
+   ALL fully built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself
+   won't credit a lake until both those conditions hold (see "manual vs. automatic fill" below), and
+   switching modes purely on buffer fullness would show a nonzero "incoming" reading for a pool
+   whose lake can never actually receive it (an adversarial-review finding on the PR that introduced
+   `isDataLakePoolReady` — see `docs/DESIGN_HISTORY.md`) — rather than compounding the two into one.
+   The lake's own accumulated fill LEVEL (as opposed to this overflow indicator) has its own
+   separate always-visible bar below the Memory buffer tile
+   (`getDataLakeCurrentDiskFillFraction`), likewise reading 0 until `isDataLakePoolReady` rather
+   than any residual fill a legacy save's lake might already hold.
 
    **Disk breakdown / fill order** (`decomposeDataLakeUnits`, `getDataLakeDiskCounts`/
    `getDataLakeDiskSlotCounts`/`getDataLakeCurrentFillSubSize`) — a lake's own banked total
    (`depositedUnits`, a whole-unit integer) decomposes into `DATA_LAKE_SUB_SIZES` (`[1, 10, 100]`)
    disk counts the same SMALLEST-denomination-FIRST way pool Capacity/Data Lake capacity ladders
-   already decompose (see below), each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` (`[10, 9, 9]` — see
-   layers.js for why not a flat `[10, 10, 10]`: `10×1 + 9×10 + 9×100 = 1,000` exactly, the maxed
-   level's own capacity, with no leftover/overlap the way a flat 10-per-size cap's incidental
-   1,110-unit sum would have). `decomposeDataLakeUnits` is a mixed-radix decomposition, not a purely
-   greedy one — smallest-first for every total the lake's own natural growth reaches, but once a
-   smaller denomination's own cap is genuinely binding it picks the largest count in that
-   denomination's residue class (mod the ×10 ratio to the next size) that still leaves an exact
-   multiple behind, guaranteeing zero leftover for ANY total up to the level's own capacity —
-   `buyBooster` spends an arbitrary (non-whole-disk) cost, so `depositedUnits` isn't limited to
-   naturally-reached values; a naive purely-greedy version stranded real, spendable units with no
-   square to show for them once a spend landed off that natural lattice (see
-   `docs/DESIGN_HISTORY.md`). Every ×1 slot fills before any ×10 slot, every ×10 before any ×100 —
-   `getDataLakeCurrentFillSubSize` is simply the smallest sub-size not yet at its own current-level
-   slot cap, or `null` once every slot at that level is full. `fillDataLakeDisks` accumulates
+   already decompose (see below), each capped per `DATA_LAKE_SUB_SIZE_DISK_CAPS` (`[9, 9, 9]` —
+   mirroring `DISK_ARRAY_LADDER_CAP`'s own 9, not a flat `[10, 10, 10]`: `9×1 + 9×10 + 9×100 = 999`,
+   one unit SHORT of the maxed level's own 1,000 capacity). `getDataLakeDiskSlotCounts` (how many
+   slots of each sub-size EXIST at the current capacity level) is derived directly, not by
+   decomposing the level's own raw capacity value: every sub-size SMALLER than the current level is
+   fully maxed (`DATA_LAKE_SUB_SIZE_DISK_CAPS[index]`), the current level's own sub-size (and
+   anything larger) has none yet — level 0 has no disk slots at all, level 1 has only ×1 (9), level
+   2 has ×1 and ×10 (9 each), level 3 (max) has all three (9 each). Decomposing the raw capacity
+   value through the general mixed-radix algorithm instead would, at an exact power-of-10 boundary,
+   prefer redistributing the WHOLE boundary onto a single higher-denomination disk (e.g. capacity 10
+   → "1 ×10 disk, 0 ×1 disks") rather than "9 ×1 disks maxed, 1 more from the buffer" — the opposite
+   of "always fills the smallest disks first." Every level's own capacity therefore sits exactly 1
+   unit above what its own disk slots sum to (0→1, 9→10, 99→100, 999→1,000) — that last unit fills
+   through the SAME `fillBits` mechanism as any disk (`getDataLakeNextFillSubSize`'s fallback: once
+   every real disk slot is full but `depositedUnits < capacity`, the open "slot" is a virtual ×1 unit
+   with no disk square of its own), mirroring how a Storage array's own always-full cache supplies
+   its array's own last unit rather than a 10th disk (`DATA_LAKE_MAX_REPRESENTABLE_UNITS`, 999, caps
+   what `getDataLakeDiskCounts`/`decomposeDataLakeUnits` are ever asked to decompose, so a maxed
+   lake's `depositedUnits` of 1,000 still renders as 999 real disks, the 1,000th living only in the
+   buffer). `decomposeDataLakeUnits` itself is a mixed-radix decomposition, not a purely greedy one —
+   smallest-first for every total the lake's own natural growth reaches, but once a smaller
+   denomination's own cap is genuinely binding it picks the largest count in that denomination's
+   residue class (mod the ×10 ratio to the next size) that still leaves an exact multiple behind,
+   guaranteeing zero leftover for ANY total up to `DATA_LAKE_MAX_REPRESENTABLE_UNITS` — `buyBooster`
+   spends an arbitrary (non-whole-disk) cost, so `depositedUnits` isn't limited to naturally-reached
+   values; a naive purely-greedy version stranded real, spendable units with no square to show for
+   them once a spend landed off that natural lattice (see `docs/DESIGN_HISTORY.md`). Every ×1 slot
+   fills before any ×10 slot, every ×10 before any ×100 — `getDataLakeCurrentFillSubSize`
+   (`getDataLakeNextFillSubSize` internally) is the smallest sub-size not yet at its own
+   current-level slot cap, the level's own final virtual unit once every real slot is full, or
+   `null` once the level's own capacity is genuinely reached. `fillDataLakeDisks` accumulates
    `overflowBits` into `lake.fillBits` (raw bits, progress toward completing the CURRENT open
    slot's own full size — `unitBits × subSize`) and, whenever that threshold is crossed, completes
    the disk (`depositedUnits += subSize`, `fillBits -=` that slot's size, carrying any overshoot
@@ -2683,7 +2687,7 @@ purchases were manual or automatic.
 | `isMemoryCapacityUpgradeAvailable` | `state → bool` | **Upgrade Data Stream** predicate: simply `isPoolCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and not already at cap. Sits OUTSIDE the forced priority order entirely (no dependency on `isDiskFillAvailable`/`isProvisionDiskAvailable` — a deliberate reversal of an earlier version that did depend on them, see `docs/DESIGN_HISTORY.md`); drains the Buffer (cost = current capacity) and doubles `intro.capacity` |
 | `isMemoryCapacityAtCap` | `state → bool` | `getStoragePoolCapacity(state, finalPoolIndex) >= getStoragePoolMemoryBounds(finalPoolIndex).endBits` (`finalPoolIndex = getStoragePoolCount()` — the LAST pool, unconditionally, never the highest disk-build-unlocked or capacity-visible pool) — compares the final pool's own decade-power DERIVED Capacity, not raw `intro.capacity`. Deliberately final-pool-only: gating on any earlier pool's own end bound would re-couple Capacity growth to that pool's own unlock state, capping it well before it could ever reach a LATER pool's own visibility threshold — see `docs/DESIGN_HISTORY.md` |
 | `getVisibleStoragePoolCount` | `state → number` | Pure Capacity-based pool LIVENESS count — pool 1 always counts; pool N (N ≥ 2) counts once `intro.capacity >= getPoolCapacityUnlockThresholdBits(N)`, regardless of disk-build progress. Drives pool-card visibility, `getStoragePoolBandwidth`/`getStoragePoolCapacity`, `tapPoolBuffer`, `tickPoolBufferFill`'s loop bound, `normalizePoolMemoryCapacity`'s buffer clamp, `tickDiskAutoFill`'s read-cache eligibility, and `getPoolCacheReservationBits`. Deliberately INDEPENDENT of `isStoragePoolUnlocked`/`getUnlockedStoragePoolCount` (disk-build-only, unchanged) — see "Pool liveness is Capacity-only" in CLAUDE.md and `docs/DESIGN_HISTORY.md` for why a shared primitive was tried once and reverted |
-| `isStoragePoolFullyBuilt` | `(state, poolIndex) → bool` | True once every one of that pool's three ladder sizes (×1/×10/×100) has all `DISK_ARRAY_LADDER_CAP` (10) disks built. Drives BOTH the disk-provisioning pool-to-pool chain (`isStoragePoolUnlocked(state, poolIndex+1)` requires `isStoragePoolFullyBuilt(state, poolIndex)`) AND the Data Lake manual-vs-automatic fill split (see "Data Lakes" above) |
+| `isStoragePoolFullyBuilt` | `(state, poolIndex) → bool` | True once every one of that pool's three ladder sizes (×1/×10/×100) has all `DISK_ARRAY_LADDER_CAP` (9) disks built. Drives BOTH the disk-provisioning pool-to-pool chain (`isStoragePoolUnlocked(state, poolIndex+1)` requires `isStoragePoolFullyBuilt(state, poolIndex)`) AND the Data Lake manual-vs-automatic fill split (see "Data Lakes" above) |
 | `normalizePoolMemoryCapacity` | `state → state` | Clears legacy queued Capacity state and sanitizes a missing/negative `intro.capacity` to a floor of 0 (does not clamp `intro.capacity` to any pool boundary — only `getStoragePoolCapacity`'s own derived value does that). Also runs on every load: clamps EVERY pool actually present in `intro.poolBuffers` — not just currently Capacity-visible ones — down to `getPoolBufferClampCeilingBits` (that pool's live `getPoolBufferCapacity` if visible, else its fixed "entry Capacity" — the same derivation evaluated at that pool's own `getPoolCapacityUnlockThresholdBits`, i.e. what it will read the MOMENT it becomes visible; a save from before Capacity-only pool liveness existed could hold a real buffer in a pool that isn't visible yet, and clamping it to 0 there would needlessly destroy legitimate progress rather than just bounding it — see `docs/DESIGN_HISTORY.md`), and clamps each `intro.dataLakes[tier].capacityLevel` down to `DATA_LAKE_CAPACITY_MAX_LEVEL` if a save predates the Data Lake ladder's own narrowing (prevents an out-of-bounds `DATA_LAKE_CAPACITY_BY_LEVEL` read) — then also clamps that lake's own `depositedUnits` down to whatever capacity the (possibly just-clamped) level allows, resetting `fillBits` to 0 alongside. Also auto-arms `intro.diskBuildQueued` when the currently-offered disk size has a genuine partial `intro.diskProvisionPasses` entry (a save from before `provisionDisk`'s own auto-arm existed) with no build in progress and the flag not already set — but only when `getDiskReplayPassAllowance` says that size isn't sitting exactly at an active `foundryResetCaps` ceiling, so reloading mid-Reset-Byte-Foundry-replay can't resume funding past what the replay was ever entitled to hand out for free. Marks `intro.diskBuildQueuedByReplay` true only when this specific arm is cap-restricted (a finite allowance), so `tickQueuedDiskBuild`'s own provenance check keeps enforcing it |
 | `getPoolBufferClampCeilingBits` | `(state, poolIndex) → bits` (private) | A pool's buffer ceiling regardless of Capacity-visibility: `getPoolBufferCapacity` for a currently-visible pool, else that pool's fixed "entry Capacity" — `getStoragePoolCapacityAtRawCapacity` (the shared, ungated derivation `getStoragePoolCapacity` itself calls after its own visibility check) evaluated at the SYNTHETIC capacity value `getPoolCapacityUnlockThresholdBits(poolIndex)`, i.e. exactly what that pool will read the moment it's revealed. Deliberately NOT the live `state.intro.capacity` fed through that same formula while still far below threshold — `intro.capacity` only ever grows in `×2` doublings from a power-of-two-Bytes start, so it always lands exactly on every pool's own unlock threshold on the way up, making that pool's entry Capacity a fixed value independent of how far below threshold the CURRENT capacity sits; using the live value instead would floor to the PREVIOUS pool's own end bound whenever capacity is still low, wrongly truncating a legitimate legacy balance that would fit fine once the pool is actually revealed. Also deliberately NOT the pool's absolute structural `getStoragePoolMemoryBounds(poolIndex).endBits` (an earlier, reverted version of this clamp) — see docs/DESIGN_HISTORY.md for the incident that caught both directions. Used by `normalizePoolMemoryCapacity`'s migration clamp and by `tickDiskAutoFill`'s read-cache self-heal refund — both can touch a not-yet-visible pool's buffer, and using the visibility-gated `getPoolBufferCapacity` (which reads 0 pre-visibility) there would wrongly destroy legitimate legacy progress instead of just bounding it |
 | `getStoragePoolMemoryBounds` | `(poolIndex?) → { startBits, endBits }` | Per-pool SI Capacity windows (`layers.js`); pool 1's end is the documented `INTRO_CAPACITY_CAP_BITS` alias |
@@ -2713,9 +2717,11 @@ purchases were manual or automatic.
 | `getDiskSize` | `state → number` | Walks the gapless Byte power-of-ten ladder and advances after each size's 10 built disks; the active limit is `getMaxActiveDiskLadderStep(state)`, which grows as derived pools unlock |
 | `isDiskLadderExhaustedForActivePools` | `state → bool` | True only when the largest size in pool 10 is fully built; completing earlier pools derives the next pool and extends the ladder |
 | `getDiskProvisionPassesRequired` | `(state, size) → number` | Byte Foundry Disks: passes required to fund the CURRENT disk at `size` — `N` for the array's Nth disk (1 for its first, 2 for its second, …), read from `disksBuiltTotal` at call time — the more passes required, the longer funding naturally takes at the pool's own rate, now the only time cost a build imposes (see `provisionDisk`) — capped at `DISK_BUILD_COST_MULTIPLIER` (10) |
-| `getDiskCost` | `(state, capacityBits) → number` | Byte Foundry Disks: `capacityBits * getDiskProvisionPassesRequired(state, capacityBits)`, already in bits (`capacityBits`, from `getDiskSize`, is already Byte-accurate — no further `BITS_PER_BYTE` conversion needed, unlike an earlier "kilobit"-scaled version of this ladder — see `docs/DESIGN_HISTORY.md`): a real 1 KB (8000-bit) array's first disk costs 8,000 bits, its last (10th) still costs 80,000 bits — the flat figure every disk used to cost regardless of ordinal (see `docs/DESIGN_HISTORY.md`). Pays only for the empty container — not what fills it. Paid in `getDiskProvisionPassesRequired(state, capacityBits)` installments (see `getDiskProvisionPassesCollected`/`provisionDisk` below), not all at once |
+| `getDiskCost` | `(state, capacityBits) → number` | Byte Foundry Disks: `capacityBits * getDiskProvisionPassesRequired(state, capacityBits)`, already in bits (`capacityBits`, from `getDiskSize`, is already Byte-accurate — no further `BITS_PER_BYTE` conversion needed, unlike an earlier "kilobit"-scaled version of this ladder — see `docs/DESIGN_HISTORY.md`): a real 1 KB (8000-bit) array's first disk costs 8,000 bits, its last (9th, `DISK_ARRAY_LADDER_CAP`) costs 72,000 bits — the array's own cache substitutes for what would have been a 10th, most-expensive disk (see `docs/DESIGN_HISTORY.md`). Pays only for the empty container — not what fills it. Paid in `getDiskProvisionPassesRequired(state, capacityBits)` installments (see `getDiskProvisionPassesCollected`/`provisionDisk` below), not all at once |
 | `getDiskProvisionPassesCollected` | `(state, size) → number` | Byte Foundry Disks: passes already paid (`intro.diskProvisionPasses[size] ?? 0`) toward the CURRENT ladder offer's build cost — each pass is exactly `size` bits, `getDiskProvisionPassesRequired(state, size)` passes fund the full `getDiskCost` total. Always 0 once funding completes and the disk is built |
 | `formatDiskSize` | `bits → string` | Byte Foundry Disks: an alias for the internal SI-only `formatBitsInNearestSiUnit` helper (**not** `formatBitsInNearestUnit`, which is binary-unit — Storage stays SI even though Memory Capacity moved to binary; see `docs/DESIGN_HISTORY.md`). Disk sizes are real, Byte-accurate bit counts, rendered on the same B/KB/MB/…/QB SI scale disks have always used — no separate "kilobit" formatting scale (see `docs/DESIGN_HISTORY.md` for that earlier bug and its fix) |
+| `formatDiskSizeBare` | `bits → string` | A Disk's own bare numeric size, no unit suffix — used only for the small in-square label (`DiskArrayRow`/`DataLakePanel`), where the surrounding pool/lake card already establishes the scale; aria-labels/tooltips keep using `formatDiskSize`'s own unit-suffixed form. Reuses `formatDiskSize`'s auto-nearest-unit pick internally — safe since an individual disk's size only ever spans 1-100x a pool's own unit, never the 1000x that would actually require pinning it (see `formatDiskSizeInPoolUnit` below) |
+| `formatDiskSizeInPoolUnit` / `formatDiskSizeInPoolUnitStable` | `(bits, poolIndex) → string` | Formats `bits` in `poolIndex`'s own FIXED SI unit (KB for pool 1, MB for pool 2, … — reuses the internal `SI_BYTE_UNIT_SYMBOLS`/`SI_BYTE_UNIT_SCALE` pool `formatDiskSize` shares), never auto-converting up to the next unit even once the value reaches 1000x this one — used for a Storage pool's or Data Lake's own balance/capacity (`PoolBalanceText` in `ByteFoundryPage`, `capacitySize`/`nextCostSize` in `DataLakePanel`), which legitimately can reach that boundary (a maxed KB Data Lake's own capacity is exactly 1000 KB) where `formatDiskSize` would misleadingly read "1 MB". The `Stable` variant is `formatMemoryAmountStable`'s fixed-decimal counterpart, for a ticking balance |
 | `getDiskSizesToShow` | `state → number[]` | Byte Foundry Disks: every size worth showing, ascending — every size ever built (`intro.disksBuiltTotal`), any size still held (`intro.disks`, covers a save/seed missing a matching built-total entry), whatever `getDiskSize` currently offers (even at 0 built, so its row/goal is visible before the first one is built), PLUS each capacity-visible pool's own smallest (read-cache-eligible) size via `getDataLakeUnitBits` — a pool can go Capacity-live well ahead of the disk-provisioning chain reaching it, and `tickDiskAutoFill` already pre-fills/consumes that pool's own read cache the instant it's visible, so this ensures that activity always has a row to render against (see `docs/DESIGN_HISTORY.md`). Shared by Foundry's continuous DiskArrayRow sections and the thin `StoragePage` wrapper |
 | `getRelevantDiskSizesForFoundry` | `state → number[]` | Helper: every size from `getDiskSizesToShow` whose own fixed corresponding tier is currently at that size's required level, plus always the highest shown size even when unmatched (issue #389), ascending. Foundry UI now lists every `getDiskSizesToShow` size as continuous sections; this helper remains for callers that want the narrower matching subset |
 | `provisionDisk` | `(state, maxPasses = Infinity) → state` | Common Byte Foundry Provision Disk operation: requires `isProvisionDiskTurnAvailable`, then collects as many WHOLE `size`-bit passes as that size's own POOL buffer (`intro.poolBuffers`, not the shared Data Stream Buffer directly) currently affords, capped at whichever is smallest of the buffer's own affordability, however many of `getDiskProvisionPassesRequired`'s own total remain (clamped at 0, so a stale over-collected count self-heals rather than going negative), and `maxPasses` — banking a partial installment in `intro.diskProvisionPasses[size]` when fewer than the full remaining requirement lands — and, on a partial installment, auto-arming `intro.diskBuildQueued` (always with `intro.diskBuildQueuedByReplay` reset to `false` — correct for its two direct callers, a manual click or `queueDiskBuild`'s own arm; its two OTHER callers, `tickFoundryResetConvenience` and `tickQueuedDiskBuild`, each re-mark it `true` on their own result when appropriate — see there) so the remaining passes fire themselves as the buffer refills, with no further click needed. Once the final pass lands, clears that counter, resets both queue flags, and increments `disksBuiltTotal[size]` in this SAME call — no separate timed construction any more (an earlier version set a persisted `intro.diskBuild` timer instead, duplicating the wait already spent funding the passes — see `docs/DESIGN_HISTORY.md`; `provisionDisk` itself never populates that field any more). `maxPasses` is passed only by `tickFoundryResetConvenience` and `tickQueuedDiskBuild` (both via `getDiskReplayPassAllowance`), never by a manual click |
@@ -2894,7 +2900,7 @@ purchases were manual or automatic.
 - `FILL_MULTIPLIER_TAP_CAP_PERCENT = 200` — hard ceiling on the CUMULATIVE fill-based + tap-bonus total (not the bonus alone) — `getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` clamp there; `tapIntroBit`/`tapPoolBuffer` no-op once already at this cap
 - `INTRO_DISK_UNLOCK_CAPACITY = BITS_PER_BYTE * MEMORY_BINARY_UNIT_STEP` (8192) — capacity threshold ("1 KiB" in Memory's own binary display scale — `getMemoryUnit`, distinct from a Disk's own SI-scaled size, `getDiskSize`) at which `ByteFoundryPage`'s whole Storage section becomes visible (`isStorageUnlocked`) — a later reveal than `INTRO_CONVERSION_UNLOCK_CAPACITY`'s own 8000-bit gate, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and pool 1's card reveal simultaneously, and exactly the threshold `tapIntroBit`'s reveal-mode switch checks via `isStorageUnlocked(state)` directly — NOT `getVisibleStoragePoolCount(state) >= 1`, which pool 1's own always-live special case would satisfy well before this threshold (see "Pool liveness is Capacity-only" in CLAUDE.md) — so Storage's reveal and the fill-based-multiplier tap mode (point 4a above) still switch on at the same moment, just via the correct predicate
 - `DISK_BUILD_COST_MULTIPLIER = 10` — Byte Foundry Disks: the CAP on how many `size`-bit funding passes a single disk can ever require (`getDiskProvisionPassesRequired`) — the array's Nth disk needs N passes, capped here at its last (10th); an earlier version paid every disk this many passes flat, regardless of ordinal (see `docs/DESIGN_HISTORY.md`)
-- `DISK_ARRAY_LADDER_CAP = 10` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`
+- `DISK_ARRAY_LADDER_CAP = 9` — Byte Foundry Disks: how many disks can ever be built at the buildable ladder's current size before it advances to the next size (see `getDiskSize`) — tracked via the cumulative, never-decremented `intro.disksBuiltTotal`; the array's own always-full cache substitutes for what would have been a 10th disk
 - `DISK_CACHE_BLOCK_COUNT = 8` — Byte Foundry Disks: a disk array's own cache (`intro.diskCache`, see `tickDiskAutoFill`) is split into this many equal blocks, each holding `size / DISK_CACHE_BLOCK_COUNT` bits, purely for display (`formatCacheSize`) — the pool's smallest size's cache also funds its own tier's level 1 automatically in bulk units, not by these display blocks (see `tickDiskLevelOneCachePull`)
 - `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER = 2` — Byte Foundry Disks: every DISK filling FROM a cache runs at this multiple of the owning pool's own Bandwidth (`getStoragePoolBandwidth` — the Byte Foundry production rate, hard-capped per pool at `Math.sqrt(getStoragePoolCapacity(state, poolIndex) / BITS_PER_BYTE) * BITS_PER_BYTE` — the sqrt operates on Capacity converted to Bytes, with the result converted back to bits/sec, so a pool with a small Capacity window can lag behind the raw rate once production outgrows it; Storage pools display this figure in SI units). A fresh disk's own funding passes (`provisionDisk`) bank at 1x that same capped rate — no separate multiplier of its own, since 1x is the rate itself
 - `CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER = 10` — Byte Foundry Disks: a read-cache's refill FROM Memory (`tickDiskAutoFill`'s pass 1) is capped, per call, at this multiple of the current production rate × `elapsedSeconds` — even a large banked Memory balance sitting behind a blocked tier claim only drains into the cache at this bounded rate once unblocked, never instantly

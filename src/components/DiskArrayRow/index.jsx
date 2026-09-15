@@ -1,6 +1,7 @@
 import {
   formatCacheSize,
   formatDiskSize,
+  formatDiskSizeBare,
   getDiskReadCacheFlush,
   getDiskReadCacheFlushFill,
   getDiskRedeemTierName,
@@ -216,6 +217,10 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
   const cached = intro.diskCache?.[size] ?? 0
   const blockBits = size / DISK_CACHE_BLOCK_COUNT
   const sizeLabel = formatDiskSize(size)
+  // Bare number, no unit — the surrounding pool card already establishes the scale (see
+  // formatDiskSizeBare's own doc comment in engine.js); aria-labels/tooltips keep the full
+  // unit-suffixed sizeLabel above.
+  const bareSizeLabel = formatDiskSizeBare(size)
   const blockLabel = formatCacheSize(blockBits)
   // Nth disk currently under construction (1-indexed); disksBuiltTotal hasn't incremented yet.
   const buildOrdinal = rebuilding
@@ -374,7 +379,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
               $empty={isEmpty}
               $pullEligible={isFull && pullEligible}
             >
-              <CellLabel $emphasis={isFull || isEmpty}>{sizeLabel}</CellLabel>
+              <CellLabel $emphasis={isFull || isEmpty}>{bareSizeLabel}</CellLabel>
             </DiskSquare>
           )
         })}
