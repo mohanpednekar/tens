@@ -1,5 +1,35 @@
 # Design history & rationale
 
+### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
+
+The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the
+per-tier `TICKSPEED_PRODUCTION_STEP` from `0.1` to `0.01` — matching Latency's own
+`GLOBAL_TICKSPEED_PRODUCTION_STEP` (1%) — and documented it explicitly in `CHANGELOG.md`
+("Tier tickspeed upgrades now give +1% per level (was +10%)"). The maintainer asked for this
+reverted directly: the per-tier ladder (`getTickspeedProductionMultiplier`,
+`buyTickspeedMultiplier`) is a separate, much cheaper, per-tier lever from Latency's own Bytes-funded
+global track (`getGlobalTickspeedProductionMultiplier`), and the two were never meant to share a
+step size — Latency stays at 1% (its own `GLOBAL_TICKSPEED_PRODUCTION_STEP`, unaffected by this
+revert), only the per-tier constant moved back to `0.1`. `docs/ECONOMY_REFERENCE.md` still had a
+stale "10%" mention left over in its formula writeup even while the constant itself read `0.01` —
+contradicting another spot in the same doc that already correctly said `0.1` — the tell that the
+drop to `0.01` was likely swept in unintentionally alongside the Latency-focused rename rather than
+a deliberate, isolated choice. Separately, `MainPage`'s own "+1% faster ticks"/"the next level makes
+it 1% more" button copy and `docs/MAINPAGE_REFERENCE.md` correctly matched the then-current `0.01`
+constant, and — along with several `engine.test.js`/`App.test.jsx` assertions/comments pinned to the
+same value — only became stale strings needing an update *because of* this reversion back to `0.1`,
+not evidence of the original drop. This reversion fixes both categories back to 10%, and drops the
+now-superseded `CHANGELOG.md` bullet entirely (the corresponding [Unreleased] entry hadn't shipped
+yet, so there's no net change left to document once reverted).
+
+### First ten Scale Ups standardized at three completed levels — 2026-09-13
+
+The first ten Scale Ups now each require 3 completed levels of their current target, which is the
+last tier unlocked by the Scale Up ladder. This restores one consistent threshold while the claims
+walk across all ten tiers; only subsequent claims against the already-claimed final tier escalate
+to 6, 9, 12, and so on. It supersedes the brief `3 × (scaleUpCount + 1)` behavior, which accidentally
+made each newly unlocked tier demand three more completed levels than its predecessor.
+
 ### Scale Up tier-scoped boosts and three-level reset cadence — 2026-09-10
 
 Scale Up now doubles only the tiers that were unlocked before the claim. The tier revealed by that
@@ -1336,6 +1366,23 @@ unmergeable to anything that defaults to squash (Cursor’s merge UI; the old `p
 flag), even when the same PR was clean and merged fine from the GitHub app via “Create a merge
 commit.” Fix: switch automation to `--merge`, document the alignment in `docs/AUTOMATION.md`, and
 optionally re-enable Squash in the ruleset if Cursor’s UI should keep using squash (tracking #343).
+
+### Cursor-powered successor engine removed (never enabled) — 2026-09-14
+
+The dual-engine plan described above and in the retired "Cursor-powered successor engine" section
+of `docs/AUTOMATION.md` — `cursor-autonomous-maintenance.yml` + `cursor-pr-followup.yml` running the
+Cursor CLI (`cursor-agent -p`) as a coexisting, eventually-replacing twin of the Claude engine — was
+removed rather than pursued further. The `CURSOR_API_KEY` secret needed to activate it was never
+added, so the two workflows had sat fully inert (no run ever spent Cursor quota) since they were
+merged. Removed along with the workflow files: the `cursor/*` branch-prefix carve-outs in
+`pr-auto-merge.yml` / `scripts/pr-low-risk-eligible.sh`, the Cursor entry in
+`automation-self-heal.yml`'s watched-workflow list, and the "Cursor Cloud Agent" `gh` GitHub-App-token
+workaround for interactive sessions (also never exercised in practice). `AGENTS.md` keeps its
+general "other AI tools may also read this file" framing (Codex, Cursor, or any future coding agent)
+since that's a statement about the AGENTS.md convention itself, not about this repo's own retired
+automation engine. Nothing here is reusable for a hypothetical future non-Claude engine beyond that
+framing — a real second engine would need its own branch-prefix/eligibility/watch wiring reintroduced
+at that time, matching this repo's "don't design for hypothetical future requirements" convention.
 
 ## Architecture / MainPage UI decisions
 

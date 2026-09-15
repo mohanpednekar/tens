@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
+  purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
+  level compounds the same Overclock-scaled 1% step.
+- **Completed levels now multiply production by ×1.1** (was ×2), compounding per completed level.
+- **Scale Up requirements are based on the target tier's completed levels** — each of the first ten
+  Scale Ups requires 3 completed levels on its target (the last unlocked tier), then repeated
+  final-tier claims require 6, 9, 12, … completed levels. This remains separate from tier re-reveal. A tier already
+  unlocked by a previous Scale Up within the same Overclock re-reveals at 2 completed predecessor
+  levels. The Scale Up button names the required tier, shows completed-level progress, and displays
+  "Unlock TB" when the claim will reveal Terabytes.
+- **Overclock requirements are completed levels of the final tier**: first available at 5 completed
+  levels, then at the previous claim's completed-level count + 3 (dynamic, not a fixed ladder). A
+  claim banks the whole completed-level count, so claiming 3 + 3 equals claiming 6.
+- **The final-tier XP-funded tickspeed boost unlocks after the first Scale Up of the final tier**
+  (the 10th Scale Up today) rather than on reveal alone.
+- **Byte Foundry Speed ×2 (Invest) and Capacity ×2 are consolidated into a single "Upgrade Data
+  Stream" button** (no icon): cost = current capacity, each upgrade doubles capacity, and Speed is
+  derived from capacity — `sqrt(capacityBytes)` B/s at even log2 exponents, the mean of the
+  neighbouring even-exponent speeds at odd ones (×1.5/×4/3 alternating, ×2 per two upgrades). Upgrade
+  Data Stream is now the lowest-priority Foundry action.
+- **Manual tap bonus is a separate yellow bar** directly below the blue fill-based bar: +5pp per
+  tap, −1pp/s decay, clamped 0–100%, shown only while the bonus is above 0; both bars are centered
+  and continuous with transparent tracks.
+- **Foundry balance tiles are cleaner and centered:** Speed/Bandwidth moved to the top-right, disk
+  counts were removed, balance and Capacity now share one centered line, and active tap percentages
+  use a neutral plus with a yellow percentage and tap icon.
+
+
 ### Accessibility
 - Added `focus-visible` outline to the Byte Foundry reset disclosure summary element for consistent keyboard accessibility.
 - Added `focus-visible` outline styles to TierNameTrigger and other interactive components.
@@ -20,11 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `@capacitor/cli` → `xcode`, which only uses `uuid.v4()` — still present on 11.x.
 
 ### Added
-- **Scale Up now boosts only tiers already unlocked when it is used**; the newly revealed tier
-  starts without that multiplier. At the final tier it remains available after every three levels.
-  Auto Scale Up pauses there so it cannot prevent an Overclock climb, and its status now makes that
-  suspension explicit. Overclock now first unlocks at level 5 and requires at least three more
-  levels after each use.
+- **Factory purchase levels now start at 0 and count completed levels** in tier details, accessible
+  buy labels, Scale Up progress, and Overclock progress instead of exposing the engine's one-based
+  cursor for the level currently being purchased.
+- **Scale Up now records tiers only when a claim succeeds**, re-reveals recorded tiers at predecessor
+  level 2, and stacks cumulative per-tier multipliers. Final-tier requirements progress 3 → 6 → 9,
+  letting Auto Scale Up remain active while Overclock stays reachable at level 5. Clock Speed
+  milestones no longer add a bonus.
 - **Scale Up and Overclock cards are more compact**, with reduced card/button padding, heading
   margins, and spacing between and within the two soft-reset controls.
 - **A dedicated Data Lake pool-fill tile** — a small fillable element inside each Data Lake block
@@ -772,12 +803,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Foundry Memory Disk rows**: always keep the highest storage size’s `DiskArrayRow` visible
   (even when that size is not currently redeemable), so the ladder’s current / incomplete array
   stays trackable. Matching/redeemable sizes are still listed ascending as before.
-- **Cursor housekeeping / planning run** now checks security (fix immediately when safe),
-  workflow/CI failures, PR conflicts, and CLAUDE.md/docs vs code consistency; auto-fixes trivial
-  findings and files `claude-task` issues for non-trivial ones. Soft budget guidance of ~1% of
-  Cursor Pro quota applies to **every** Cursor session (not planning-only). The same housekeeping
-  sweep also runs on every **push to `main`** (typically a merged PR), checking **all** open
-  non-fork PRs for conflicts, failing checks, and stalled auto-merge.
 - **Auto-merge after adversarial review**: finished non-risky bot PRs that get an adversarial
   `code-reviewer` `APPROVE` marker on their final head SHA always have GitHub auto-merge enabled
   (`pr-auto-merge.yml` Path 3 + `scripts/enable-auto-merge-if-eligible.sh`). Green-checks low-risk
