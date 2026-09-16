@@ -1532,12 +1532,13 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // or PP prerequisite at all, see tickspeedLevels/buyTickspeedMultiplier in engine.js);
           // level 1 is the baseline ×1, no bonus yet, each further level speeds up this tier's own
           // delivery frequency by another 10% (see getEffectiveTierTickSpeedSeconds in engine.js) —
-          // it does NOT change how much lands per delivery, only how often one arrives. Whenever
-          // the last tier's currently-owned count is >= the current block size (a full level, see
-          // getPurchaseBlockSize), this Money-funded ladder is instead replaced by an XP-funded one (see
+          // it does NOT change how much lands per delivery, only how often one arrives. Once the
+          // last tier has ever been the target of a successful Scale Up this cycle (see
           // isLastTierTickspeedXpUnlocked/getLastTierXpTickspeedMultiplier in engine.js and the
-          // last-tier-only controls below) — it reverts back to this Money-funded button if owned
-          // later drops below that (e.g. after a Prestige/Scale Up).
+          // last-tier-only controls below), this Money-funded ladder is replaced by an XP-funded
+          // one for the rest of the cycle — it does NOT revert back to this button just because
+          // owned later drops (e.g. after consuming XP resets every other tier); only a
+          // Prestige/Overclock (which reset scaleUpTierCounts) bring the Money-funded button back.
           const isLastTier = tier.id === lastTier.id
           const isLastTierXpUnlocked = isLastTier && isLastTierTickspeedXpUnlocked(state)
           const tickspeedLevel = state.tickspeedLevels?.[tier.id] ?? 1
@@ -1554,7 +1555,11 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           const lastTierXpBalance = Math.floor(state.prestige.xp ?? 0)
           const lastTierXpMinConsumption = getLastTierXpTickspeedMinConsumption(lastTierXpConsumed)
           const lastTierXpProgressPercent = progressPercent(lastTierXpBalance, lastTierXpMinConsumption)
-          const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && lastTierXpBalance >= lastTierXpMinConsumption
+          // Consuming XP wipes every other tier's owned/resources for a bonus that speeds up THIS
+          // tier's own delivery — pointless (and purely destructive) once this tier's own owned
+          // count has dropped to 0, since there's nothing left to apply the bonus to (see
+          // consumeXpForLastTierTickspeed's own matching guard in engine.js).
+          const canConsumeLastTierXp = isLastTierXpUnlocked && !isFrozen && owned > 0 && lastTierXpBalance >= lastTierXpMinConsumption
           const lastTierXpConsumeVisibleLabel = `🧬 ${formatAmount(lastTierXpBalance)} XP`
           // getLastTierXpTickspeedMultiplier compounds, so the marginal speedup this consumption
           // contributes is a ratio (new multiplier ÷ old), not the spent amount itself — and
@@ -1697,7 +1702,9 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   variant="smart"
                   disabled={!canConsumeLastTierXp}
                   onClick={handleConsumeLastTierXp}
-                  title={`Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`}
+                  title={owned > 0
+                    ? `Consume XP for a compounding +1% ${tier.name} tickspeed per XP (min ${formatAmount(lastTierXpMinConsumption)} XP right now) — resets every other tier's owned quantity and Bits to 0`
+                    : `No ${tier.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`}
                   $progress={lastTierXpProgressPercent}
                   $pulse={canConsumeLastTierXp}
                 >
