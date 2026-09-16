@@ -3,6 +3,8 @@ import StatCard from 'components/StatCard'
 import {
   formatAmount,
   formatDiskSize,
+  formatDiskSizeBare,
+  formatDiskSizeInPoolUnit,
   getBoosterPurchaseCost,
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
@@ -20,6 +22,7 @@ import {
   isDataLakeBoosterUnlocked,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
+  isDataLakeManualFillAvailable,
   isDataLakePoolReady,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
@@ -224,8 +227,12 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
         // Deposited/capacity/next-cost are all abstract unit counts internally, but every figure
         // shown here converts through unitBits into the same Byte-scale currency Disks themselves
-        // display (formatDiskSize) — per "Data lake uses the same currency as disks" — rather than
-        // a bare unit count.
+        // display — per "Data lake uses the same currency as disks" — rather than a bare unit
+        // count. Capacity/cost figures use formatDiskSizeInPoolUnit (this lake's own FIXED unit,
+        // e.g. always "KB" for the KB lake) rather than formatDiskSize's auto-nearest-unit pick,
+        // since a maxed lake's own capacity (1,000 units) legitimately reaches 1000x this lake's
+        // own unit — formatDiskSize would misleadingly auto-convert that to the next unit up (e.g.
+        // "1 MB") instead of staying "1000 KB". See formatDiskSizeInPoolUnit's own doc comment.
         const unitBits = getDataLakeUnitBits(tierIndex)
         const capacity = getDataLakeCapacity(state, tierIndex)
         const maxed = isDataLakeCapacityMaxed(state, tierIndex)
@@ -235,8 +242,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // see docs/DESIGN_HISTORY.md). Only read while !maxed, so level + 1 always stays within
         // DATA_LAKE_CAPACITY_BY_LEVEL's bounds.
         const nextCapacity = !maxed && DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex) + 1]
-        const capacitySize = formatDiskSize(capacity * unitBits)
-        const nextCostSize = formatDiskSize(nextCost * unitBits)
+        const capacitySize = formatDiskSizeInPoolUnit(capacity * unitBits, tierIndex)
+        const nextCostSize = formatDiskSizeInPoolUnit(nextCost * unitBits, tierIndex)
 
         const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
         const diskCounts = getDataLakeDiskCounts(state, tierIndex)
@@ -262,6 +269,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const poolReady = isDataLakePoolReady(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         const autoBuyEnabled = isDataLakeAutoBuyEnabled(state, tierIndex)
+        // Before this pool is entirely complete, the lake fills MANUALLY only, capped at just
+        // enough for its own next Booster — tickPoolBufferFill's automatic overflow doesn't start
+        // feeding it until then (see isStoragePoolFullyBuilt in engine.js). Outside the forced
+        // priority order, same as Buy — always clickable the instant it's available.
+        const canFillManually = isDataLakeManualFillAvailable(state, tierIndex)
 
         return (
           <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
@@ -291,21 +303,35 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               const openSlotSizeBits = unitBits * currentFillSubSize
               const openSlotFraction = poolReady && openSlotSizeBits > 0 ? clampFraction(fillBits / openSlotSizeBits) : 0
               const openSlotSizeLabel = formatDiskSize(openSlotSizeBits)
+              // Once every real disk slot for this level is already full, `currentFillSubSize`
+              // still reads 1 — the "virtual final unit" fallback (getDataLakeNextFillSubSize in
+              // engine.js) that lets the lake's own retained buffer supply the level's last unit,
+              // the same way a Storage array's cache substitutes for its own 10th disk. That fill
+              // creates no new disk square, so it's labeled distinctly from a real disk fill rather
+              // than claiming "fills the next disk" when there is no such disk left to fill.
+              const hasOpenDiskSlot = DATA_LAKE_SUB_SIZES.some(subSize => (diskCounts[subSize] ?? 0) < (slotCounts[subSize] ?? 0))
+              const isBufferOnlyFill = currentFillSubSize !== null && !hasOpenDiskSlot
               return (
                 <LakePoolTile
                   role="progressbar"
-                  aria-label={`${label} lake pool — fills the next ${openSlotSizeLabel} disk`}
+                  aria-label={`${label} lake pool — ${isBufferOnlyFill ? 'tops up its own retained buffer toward capacity' : `fills the next ${openSlotSizeLabel} disk`}`}
                   aria-valuenow={Math.round(openSlotFraction * 100)}
                   aria-valuemin={0}
                   aria-valuemax={100}
                   title={
                     poolReady
-                      ? `${label} Lake pool — fills toward the next ${openSlotSizeLabel} disk; completing it deposits instantly`
+                      ? isBufferOnlyFill
+                        ? `${label} Lake pool — tops up its own retained buffer toward capacity (every disk slot is already full; no new disk square is created)`
+                        : `${label} Lake pool — fills toward the next ${openSlotSizeLabel} disk; completing it deposits instantly`
                       : `${label} Lake pool — waiting on a ${formatDiskSize(unitBits)} disk to be built in Storage before this can start filling`
                   }
                 >
                   <LakePoolFill $fill={openSlotFraction} />
-                  <LakePoolLabel>{poolReady ? `${formatDiskSize(fillBits)} / ${openSlotSizeLabel}` : `Locked · 0 / ${openSlotSizeLabel}`}</LakePoolLabel>
+                  <LakePoolLabel>
+                    {poolReady
+                      ? `${formatDiskSize(fillBits)}${isBufferOnlyFill ? ' buffer' : ''} / ${openSlotSizeLabel}`
+                      : `Locked · 0 / ${openSlotSizeLabel}`}
+                  </LakePoolLabel>
                 </LakePoolTile>
               )
             })()}
@@ -323,6 +349,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               const slotSizeBits = unitBits * subSize
               const fillFraction = isFillingThisSize && slotSizeBits > 0 ? clampFraction(fillBits / slotSizeBits) : 0
               const sizeLabel = formatDiskSize(slotSizeBits)
+              const bareSizeLabel = formatDiskSizeBare(slotSizeBits)
               return (
                 <LakeSizeRow key={subSize} role="group" aria-label={`${label} lake ${sizeLabel} disks`}>
                   {Array.from({ length: totalSlots }, (_, index) => {
@@ -341,7 +368,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                         }
                       >
                         {isFilling && <LakeSquareFill $fill={fillFraction} />}
-                        <LakeSquareLabel>{sizeLabel}</LakeSquareLabel>
+                        <LakeSquareLabel>{bareSizeLabel}</LakeSquareLabel>
                       </LakeSquare>
                     )
                   })}
@@ -357,16 +384,42 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
             />
 
             <LakeActionsRow>
-              {/* Upgrade claims the slot whenever it's available — no longer any "available but
-                  not its turn" window to arbitrate against Buy, since isDataLakeCapacityDoublingAvailable
-                  is no longer part of the forced priority order (see its own doc comment in
-                  engine.js): it's always immediately clickable the instant its array is complete,
-                  the same posture Buy already had. */}
-              {upgradeAvailable ? (
+              {canFillManually && (
+                <ActionButton
+                  aria-label={`fill the ${label} Data Lake toward its next Booster`}
+                  onClick={() => actions.fillDataLakeManually(tierIndex)}
+                  title={`Draws from this pool's own buffer to top up toward the next ${boosterLabel} (${nextCostSize}) — automatic once this ENTIRE pool is built (every ×1/×10/×100 disk, not just the ${formatDiskSize(unitBits)} ones)`}
+                  type="button"
+                  variant="info"
+                >
+                  <ButtonContent>💧 Fill</ButtonContent>
+                </ActionButton>
+              )}
+              {/* Buy wins the slot the instant it's actually affordable — even when Upgrade is
+                  ALSO available (an array-complete pool whose banked units, e.g. from manual Fill,
+                  already cover the next Booster) — so a manually-filled deposit meant for a Booster
+                  purchase is never silently funneled into a forced Scale Out with no way to spend it
+                  first (auto-buy defaults off; see docs/DESIGN_HISTORY.md). Otherwise Upgrade claims
+                  the slot whenever it's available — no longer any "available but not its turn"
+                  window to arbitrate, since isDataLakeCapacityDoublingAvailable is no longer part of
+                  the forced priority order (see its own doc comment in engine.js): it's always
+                  immediately clickable the instant its array is complete, the same posture Buy
+                  already had. */}
+              {canBuy ? (
+                <ActionButton
+                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                  onClick={() => actions.buyBooster(tierIndex)}
+                  title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                </ActionButton>
+              ) : upgradeAvailable ? (
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSize(nextCapacity * unitBits)} — unlocked by completing that array in Storage`}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
                   type="button"
                   variant="prestige"
                 >

@@ -289,8 +289,11 @@ export const DISK_LADDER_SIZE_MULTIPLIER = 10
 // next (×DISK_LADDER_SIZE_MULTIPLIER) size. Driven by intro.disksBuiltTotal — cumulative, never
 // decremented by redeeming — so the ladder only ever advances. Deliberately decoupled from any
 // tier's CURRENT purchase level (a player can build ahead of or fall behind redeemability;
-// isDiskRedeemable is the only gate on whether a built disk is spendable yet).
-export const DISK_ARRAY_LADDER_CAP = 10
+// isDiskRedeemable is the only gate on whether a built disk is spendable yet). 9, not the array's
+// full 10x face-value total each size otherwise sums to — the array's own always-full cache (see
+// DISK_CACHE_BLOCK_COUNT below) economically substitutes for the 10th disk, so only 9 need to be
+// actually built and paid for. See docs/DESIGN_HISTORY.md.
+export const DISK_ARRAY_LADDER_CAP = 9
 // A disk array's cache — a permanent always-full reserve Memory tops up in whole-block transfers
 // (see tickDiskAutoFill in engine.js). Split into this many equal blocks, each holding
 // `size / DISK_CACHE_BLOCK_COUNT` bits (a real 1 KB/8000-bit array → 8 × 1000 bits/"1 Kb"; a 1 MB
@@ -500,17 +503,19 @@ export const COMPUTE_BOOST_MAX_STACKS = 10
 // needs no float-precision handling).
 //
 // At each capacity level, that level's own total is represented as up to DATA_LAKE_SUB_SIZE_DISK_
-// CAPS disks per sub-size (10 × ×1, 9 × ×10, 9 × ×100 — 10 + 90 + 900 = 1,000, exactly the maxed
-// level's own capacity) rather than a flat 10-per-size physical ceiling: fewer ×10/×100 slots than
-// ×1 slots so the three denominations' own maximums sum to precisely 1,000 with no leftover/
-// overlap, instead of an incidental 1,110 a flat 10-per-size cap would allow. A lake's disks always
-// fill smallest denomination first — every ×1 slot before any ×10 slot, every ×10 slot before any
-// ×100 slot — so "how many of each size are currently full" is a pure function of the lake's own
-// deposited total (see getDataLakeDiskCounts in engine.js), the same way DiskArrayRow's own built/
-// full counts are a pure function of state.
+// CAPS disks per sub-size (9 × ×1, 9 × ×10, 9 × ×100 — 9 + 90 + 900 = 999, one short of the maxed
+// level's own 1,000 capacity) rather than a flat 10-per-size physical ceiling — mirroring Storage's
+// own DISK_ARRAY_LADDER_CAP (9, not 10) above: the lake's own fill buffer supplies that last unit
+// directly once every representable disk slot is full, the same way a Storage array's cache
+// supplies its own 10th unit, rather than needing a 10th disk square of its own — see
+// DATA_LAKE_MAX_REPRESENTABLE_UNITS/getDataLakeCurrentFillSubSize in engine.js and
+// docs/DESIGN_HISTORY.md. A lake's disks always fill smallest denomination first — every ×1 slot
+// before any ×10 slot, every ×10 slot before any ×100 slot — so "how many of each size are
+// currently full" is a pure function of the lake's own deposited total (see getDataLakeDiskCounts
+// in engine.js), the same way DiskArrayRow's own built/full counts are a pure function of state.
 export const DATA_LAKE_TIER_COUNT = 10
 export const DATA_LAKE_SUB_SIZES = [1, 10, 100]
-export const DATA_LAKE_SUB_SIZE_DISK_CAPS = [10, 9, 9]
+export const DATA_LAKE_SUB_SIZE_DISK_CAPS = [9, 9, 9]
 export const DATA_LAKE_TIER_LABELS = ['KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB', 'RB', 'QB']
 export const DATA_LAKE_MAX_DISK_LADDER_STEP = DATA_LAKE_TIER_COUNT * DATA_LAKE_SUB_SIZES.length
 export const DATA_LAKE_CAPACITY_MAX_LEVEL = 3
@@ -520,29 +525,18 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // --- Data Lake overflow feed --- see tickDataLakeOverflowFill in engine.js, folded into
 // tickPoolBufferFill. Once a pool's own local Memory buffer is completely full, its reserved
 // share of the Data Stream's production rate has nowhere left to go — rather than that share
-// going to waste, a percentage of it feeds that pool's own matching Data Lake instead. That
-// percentage itself is fill-based on progress of the ONE disk currently being filled in that lake
-// (getDataLakeCurrentDiskFillFraction — NOT the lake's overall total; mirroring the
-// FILL_MULTIPLIER_* mechanic's own "higher when emptier" shape): DATA_LAKE_OVERFLOW_MAX_PERCENT
-// when that current disk is empty, linearly tapering down toward DATA_LAKE_OVERFLOW_MIN_PERCENT
-// (0) as it approaches completion — then straight back up to MAX the instant it completes and the
-// next disk opens, a repeating per-disk taper rather than one slow lake-wide ramp. Deliberately
-// independent of the pool's own fill-based Speed/Bandwidth multiplier (getPoolEffectMultiplier) —
-// these are two separate readings on the SAME bar (see ByteFoundryPage's pool MultiplierBar, which
-// switches from `mode="multiplier"` to `mode="lake"` once the pool's buffer is full rather than
-// showing both at once), not compounded into one.
+// going to waste, it feeds that pool's own matching Data Lake instead, at the plain available rate
+// (no artificial slowdown) — the same "no taper" posture Storage's own disk provisioning already
+// uses. An earlier version tapered this rate down as the currently-filling disk approached
+// completion (DATA_LAKE_OVERFLOW_MAX_PERCENT when empty, down toward DATA_LAKE_OVERFLOW_MIN_PERCENT
+// near completion) via a closed-form exponential-decay ODE; removed in favor of the simpler flat
+// rate — see docs/DESIGN_HISTORY.md. These two constants remain only as the fixed values
+// getDataLakeOverflowRatePercent (engine.js) now reports as a plain binary "receiving/not
+// receiving" indicator for ByteFoundryPage's own `mode="lake"` bar, chosen to match
+// FILL_MULTIPLIER_MIN_PERCENT so that bar's width still doesn't jump at the multiplier→lake
+// handoff (see MultiplierBar's own doc comment).
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
-// A rate PROPORTIONAL to the still-open disk's own remaining gap (the taper above) is a pure
-// exponential decay toward that gap — mathematically it shrinks the remainder forever without ever
-// reaching it, and in floating point gets permanently stuck a hair short of completion once the
-// remaining increment rounds to nothing (confirmed by simulation: fillBits froze at 7999.99999999…
-// out of a 8000-bit slot after ~440k ticks and never moved again). getDataLakeOverflowRatePercent
-// floors its returned percent here so the real rate always keeps making forward progress once a
-// disk is genuinely still open — the taper still reads as visually "approaching zero" at ordinary
-// (whole-percent) display precision, but the underlying fill mechanism actually terminates in a
-// bounded number of ticks instead of asymptoting. See docs/DESIGN_HISTORY.md.
-export const DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT = 5
 
 // Progress accrued while the game wasn't open (see engine.js's applyOfflineProgress) is
 // simulated at 50% of normal speed, for the entire game (main game tiers and the Byte Foundry
@@ -719,14 +713,16 @@ export const TICKSPEED_AUTOBUYER_COST = 10
 // well above the two cheaper Money-funded autobuyer toggles above, since this row is gated behind
 // allTiersFullyAutomated — a genuinely late-game convenience, not an early one.
 export const AUTO_PRESTIGE_AUTOBUYER_COST = 100
-// Whenever the last tier's currently-owned count is >= 10, its Money-funded tickspeed multiplier
-// (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier above) is replaced by an
-// XP-funded one instead (see engine.js's isLastTierTickspeedXpUnlocked/
+// Once the last tier has ever been the target of a successful Scale Up this cycle (see engine.js's
+// isLastTierTickspeedXpUnlocked — a scaleUpTierCounts-based latch, NOT a live owned check), its
+// Money-funded tickspeed multiplier (see TICKSPEED_MULTIPLIER_BASE_EXPONENT/buyTickspeedMultiplier
+// above) is replaced by an XP-funded one instead (see engine.js's
 // getLastTierXpTickspeedMultiplier/consumeXpForLastTierTickspeed) — each XP ever consumed this way
 // compounds another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own delivery frequency,
-// permanently (this accumulated bonus is never lost, even while owned dips below 10 and the
-// mechanic is temporarily disengaged). "Last tier" (not a hardcoded tier id) so this stays correct
-// if TIER_DEFINITIONS ever grows a new final entry.
+// permanently (this accumulated bonus is never lost, even while the last tier's own owned count
+// dips to 0 and consumeXpForLastTierTickspeed's own guard pauses further consumption — it doesn't
+// disengage the unlock itself; only a Prestige/Overclock does that). "Last tier" (not a hardcoded
+// tier id) so this stays correct if TIER_DEFINITIONS ever grows a new final entry.
 export const LAST_TIER_XP_TICKSPEED_STEP = 0.01
 // Each single XP-consumption action must be at least this fraction of the cumulative XP already
 // consumed this way (see engine.js's getLastTierXpTickspeedMinConsumption) — so repeat
