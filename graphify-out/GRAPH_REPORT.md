@@ -1,17 +1,17 @@
 # Graph Report - tens  (2026-09-16)
 
 ## Corpus Check
-- 108 files · ~456,268 words
+- 108 files · ~456,775 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .ico 1)
 
 ## Summary
-- 1627 nodes · 4054 edges · 100 communities (78 shown, 19 thin omitted)
+- 1627 nodes · 4056 edges · 98 communities (76 shown, 19 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 83 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e488ecf0`
+- Built from commit: `1041da24`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -41,12 +41,12 @@
 - DevModePage/index.jsx
 - Button/index.jsx
 - storage.js
-- App.jsx
+- tokens.js
 - AGENTS.md
 - navAttention.test.js
 - SettingsPage/index.jsx
 - MainPage
-- AppNav/index.jsx
+- App.jsx
 - CLAUDE.md
 - ComputePage
 - formatMemoryAmount
@@ -56,7 +56,6 @@
 - Economy model reference
 - createInitialGameState
 - [Unreleased]
-- contrast.js
 - devDependencies
 - Shared components reference
 - scripts
@@ -92,7 +91,6 @@
 - graphify reference: incremental update and cluster-only
 - pull_request_template.md
 - jsconfig.json
-- AppMenu/index.jsx
 - graphify reference: GitHub clone and cross-repo merge
 - graphify reference: transcribe video and audio
 - publish-strategy.sh
@@ -141,7 +139,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (100 total, 19 thin omitted)
+## Communities (98 total, 19 thin omitted)
 
 ### Community 0 - "Testing"
 Cohesion: 0.02
@@ -149,15 +147,15 @@ Nodes (81): "0.xyz <unit>" fractions eliminated from every Byte/bit-denominated 
 
 ### Community 1 - "MainPage/index.jsx"
 Cohesion: 0.04
-Nodes (58): BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill, BytePowerSegments, CategoryHeading (+50 more)
+Nodes (56): OfflineProgressNotice(), formatOfflineDuration(), BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill (+48 more)
 
 ### Community 2 - "Economy model"
 Cohesion: 0.04
 Nodes (56): ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight, Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Boost tier scaling: 4× effect only, no duration enhancement (#363), Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature, Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate, Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Economy model, Era ascension and Eons — meta-prestige above Unbounded (#407 / #405) (+48 more)
 
 ### Community 3 - "layers.js"
-Cohesion: 0.05
-Nodes (56): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_FLOPS_TIER_BY_ID (+48 more)
+Cohesion: 0.06
+Nodes (55): AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS (+47 more)
 
 ### Community 4 - "navAttention.js"
 Cohesion: 0.08
@@ -200,8 +198,8 @@ Cohesion: 0.04
 Nodes (47): Architecture / MainPage UI decisions, Auto-merge merge method must match the Main ruleset (2026-08-20), Auto-merge (`pr-auto-merge.yml`) — why the low-risk path is safe even if heuristics mis-fire, Automation design principles, Automation workflows, Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, CLAUDE.md Economy model duplication trim — 2026-09-03, Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04 (+39 more)
 
 ### Community 14 - "ComputeFlopsPage/index.jsx"
-Cohesion: 0.12
-Nodes (24): styled-components, Money, StatCard, buyComputeFlopsTier(), canBuyComputeFlopsTier(), formatAmount(), formatComputeFlopsBoost(), formatComputeFlopsTotal() (+16 more)
+Cohesion: 0.14
+Nodes (21): buyComputeFlopsTier(), canBuyComputeFlopsTier(), formatAmount(), formatComputeFlopsBoost(), formatComputeFlopsTotal(), getComputeFlopsTierCost(), getComputeFlopsTierProductionMultiplier(), getComputeFlopsTierWeight() (+13 more)
 
 ### Community 15 - "engine.js"
 Cohesion: 0.09
@@ -212,16 +210,16 @@ Cohesion: 0.31
 Nodes (9): getDataLakeSubSize(), getDataLakeTierIndex(), getDiskRequiredTierLevel(), getMatchingTierForDiskSize(), isDiskPullEligible(), isDiskReadCacheEligible(), isDiskStrandedByAdvancedTier(), pullDiskForCurrentLevel() (+1 more)
 
 ### Community 17 - "tickGame"
-Cohesion: 0.19
-Nodes (23): wouldAutobuyerStall(), buyTier(), buyTierQuantity(), getAutoPrestigeAttemptRate(), getCostEpochExponent(), getIntroKilobyteConversionCost(), getPrestigeProductionMultiplier(), getPurchaseBlockSize() (+15 more)
+Cohesion: 0.18
+Nodes (16): actTickspeed(), buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), getAutoPrestigeAttemptRate(), getLastTierId(), getLastTierXpTickspeedMinConsumption(), getPrestigeProductionMultiplier(), getPurchaseMilestoneMultiplier() (+8 more)
 
 ### Community 18 - "run-simulation.mjs"
-Cohesion: 0.13
-Nodes (19): actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), actTickspeed(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges (+11 more)
+Cohesion: 0.11
+Nodes (33): actMainBuys(), actPlayer(), actSoftResets(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues (+25 more)
 
 ### Community 19 - "App.test.jsx"
 Cohesion: 0.08
-Nodes (21): version, ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS (+13 more)
+Nodes (21): version, ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), AUTO_PRESTIGE_AUTOBUYER_COST, BITS_PER_BYTE, COMPUTE_BOOST_MAX_STACKS, COMPUTE_CORES_PER_NODE (+13 more)
 
 ### Community 20 - "What You Must Do When Invoked"
 Cohesion: 0.08
@@ -236,16 +234,16 @@ Cohesion: 0.13
 Nodes (21): ButtonGrid, coerceDraft(), Details, DevModePage(), FieldLabel, FieldNode(), FieldRow, Header (+13 more)
 
 ### Community 23 - "Button/index.jsx"
-Cohesion: 0.10
-Nodes (24): Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB (+16 more)
+Cohesion: 0.08
+Nodes (31): styled-components, Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb() (+23 more)
 
 ### Community 24 - "storage.js"
 Cohesion: 0.08
 Nodes (62): createEmptyDataLakes(), createEmptyDataLakeTier(), applyDevGameStateJson(), applyPendingComputeGrants(), buildClearSlotConfirmMessage(), buildDefaultMeta(), buildEraseAllSavesConfirmMessage(), buildResetActiveSlotConfirmMessage() (+54 more)
 
-### Community 25 - "App.jsx"
-Cohesion: 0.11
-Nodes (25): App(), GATE_EXEMPT_PAGES, PageShell, resolveInitialThemeMode(), isComputeFlopsPageRevealed(), getComputeFlopsAttentionLevel(), getNavAttention(), hasAffordableComputeFlopsTier() (+17 more)
+### Community 25 - "tokens.js"
+Cohesion: 0.10
+Nodes (22): AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT, getContrastRatio(), hexToRgb(), relativeLuminance(), srgbChannelToLinear(), GlobalStyle (+14 more)
 
 ### Community 26 - "AGENTS.md"
 Cohesion: 0.09
@@ -256,16 +254,16 @@ Cohesion: 0.11
 Nodes (19): vitest, AUTO_SCALE_UP_COST, BYTES_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE (+11 more)
 
 ### Community 28 - "SettingsPage/index.jsx"
-Cohesion: 0.09
-Nodes (23): Actions, Body, Card, ConfirmDialog(), Overlay, Title, isEraEligible(), buildSparklinePath() (+15 more)
+Cohesion: 0.12
+Nodes (16): buildSparklinePath(), CodeForm, CodeInput, Header, LockedNote, MuseumItem, MuseumList, RootDiv (+8 more)
 
 ### Community 29 - "MainPage"
-Cohesion: 0.16
-Nodes (23): buyTickspeedMultiplier(), formatAsCleanBytesIfExactMultiple(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier() (+15 more)
+Cohesion: 0.18
+Nodes (20): formatAsCleanBytesIfExactMultiple(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), getEffectiveTierTickSpeedSeconds(), getGlobalTickspeedProductionMultiplier(), getLastTierXpTickspeedMultiplier() (+12 more)
 
-### Community 30 - "AppNav/index.jsx"
-Cohesion: 0.20
-Nodes (9): APP_NAV_BOTTOM_PAD, AppNav(), AttentionDot, Bar, Icon, Label, NavItem, pulseHigh (+1 more)
+### Community 30 - "App.jsx"
+Cohesion: 0.10
+Nodes (26): App(), GATE_EXEMPT_PAGES, PageShell, resolveInitialThemeMode(), AppMenu(), Backdrop, Icon, MenuButton (+18 more)
 
 ### Community 31 - "CLAUDE.md"
 Cohesion: 0.10
@@ -280,8 +278,8 @@ Cohesion: 0.18
 Nodes (16): flooredBitsLabel(), floorToDecimals(), formatDiskSizeBare(), formatDiskSizeInPoolUnit(), formatMemoryAmount(), formatMemoryAmountStable(), formatPoolBalance(), formatPoolBalanceStable() (+8 more)
 
 ### Community 34 - "MilestonesPage/index.jsx"
-Cohesion: 0.17
-Nodes (12): applyFlopsAutobuyerMilestones(), getFlopsAutobuyerUnlockEra(), Badge, Category, CategoryHeading, Header, List, MilestonesPage() (+4 more)
+Cohesion: 0.16
+Nodes (13): applyFlopsAutobuyerMilestones(), getFlopsAutobuyerUnlockEra(), isEraEligible(), Badge, Category, CategoryHeading, Header, List (+5 more)
 
 ### Community 35 - "ByteFoundryPage"
 Cohesion: 0.12
@@ -302,10 +300,6 @@ Nodes (19): seedDataLakeSave(), allResourceIds(), buildEraIntroReset(), captureF
 ### Community 39 - "[Unreleased]"
 Cohesion: 0.05
 Nodes (36): [0.1.0] - 2026-07-05, [0.2.0] - 2026-07-12, [0.3.0] - 2026-07-13, [0.4.0] - 2026-07-13, [0.5.0] - 2026-07-14, Accessibility, Added, Added (+28 more)
-
-### Community 40 - "contrast.js"
-Cohesion: 0.33
-Nodes (8): AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT, getContrastRatio(), hexToRgb(), relativeLuminance(), srgbChannelToLinear(), themes
 
 ### Community 41 - "devDependencies"
 Cohesion: 0.14
@@ -328,8 +322,8 @@ Cohesion: 0.25
 Nodes (8): Byte Foundry, Core economy, Game architecture, Game design, Guide, Scripts, Security notes, Tens
 
 ### Community 46 - "InfoPage/index.jsx"
-Cohesion: 0.08
-Nodes (30): applyAutobuyerMilestones(), formatBitsInNearestUnit(), getAutobuyerUnlockMilestone(), getOverclockRequirement(), getTierTickspeedAutobuyerMilestone(), TIER_UNLOCK_PREV_LEVEL_REQUIREMENT, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER (+22 more)
+Cohesion: 0.07
+Nodes (31): applyAutobuyerMilestones(), formatBitsInNearestUnit(), getAutobuyerUnlockMilestone(), getOverclockRequirement(), getTierTickspeedAutobuyerMilestone(), TIER_UNLOCK_PREV_LEVEL_REQUIREMENT, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER (+23 more)
 
 ### Community 47 - "Procedure"
 Cohesion: 0.20
@@ -439,10 +433,6 @@ Nodes (3): Documentation, Summary, Test plan
 Cohesion: 0.50
 Nodes (3): compilerOptions, baseUrl, include
 
-### Community 78 - "AppMenu/index.jsx"
-Cohesion: 0.29
-Nodes (6): AppMenu(), Backdrop, Icon, MenuButton, Sheet, SheetTitle
-
 ### Community 82 - "Tier production tickspeed"
 Cohesion: 0.67
 Nodes (3): Multiplier outcomes are floored, Production figure (tick-progress ring removed), Tier production tickspeed
@@ -463,7 +453,7 @@ Nodes (7): getDiskRedeemTierName(), getDiskSizesToShow(), getRelevantDiskSizesFo
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `styled-components` connect `ComputeFlopsPage/index.jsx` to `getDiskSizesToShow`, `MainPage/index.jsx`, `MilestonesPage/index.jsx`, `package.json`, `ComputePage/index.jsx`, `ByteFoundryPage/index.jsx`, `DiskArrayRow/index.jsx`, `DataLakePanel/index.jsx`, `AppMenu/index.jsx`, `InfoPage/index.jsx`, `DevModePage/index.jsx`, `Button/index.jsx`, `App.jsx`, `SettingsPage/index.jsx`, `AppNav/index.jsx`?**
+- **Why does `styled-components` connect `Button/index.jsx` to `MainPage/index.jsx`, `MilestonesPage/index.jsx`, `package.json`, `ComputePage/index.jsx`, `ByteFoundryPage/index.jsx`, `DiskArrayRow/index.jsx`, `DataLakePanel/index.jsx`, `ComputeFlopsPage/index.jsx`, `InfoPage/index.jsx`, `DevModePage/index.jsx`, `tokens.js`, `getDiskSizesToShow`, `SettingsPage/index.jsx`, `App.jsx`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `Design history & rationale` connect `Design history & rationale` to `Testing`, `README.md`, `Economy model`?**
   _High betweenness centrality (0.020) - this node is a cross-community bridge._
@@ -476,4 +466,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `Testing` be split into smaller, more focused modules?**
   _Cohesion score 0.024691358024691357 - nodes in this community are weakly interconnected._
 - **Should `MainPage/index.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.03502824858757062 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.03508771929824561 - nodes in this community are weakly interconnected._

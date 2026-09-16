@@ -438,6 +438,16 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
   const bonusWidthPercent = (clampedBonus / FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) * 100
   const hasBonus = !isLakeMode && clampedBonus > 0
+  // The reading this bar actually displays (never the base while in lake mode, which is forced to
+  // 0 above and would otherwise always suppress the lake reading). A genuine 0 here — reachable
+  // only in lake mode, via getDataLakeOverflowRatePercent's own DATA_LAKE_OVERFLOW_MIN_PERCENT
+  // floor once a maxed lake has no open disk slot left to report a rate for — has nothing
+  // meaningful to draw: a zero-width center point plus an orphaned "0%" label reads as a stalled/
+  // broken bar rather than "nothing to show right now," so the whole row is hidden instead. The
+  // base multiplier reading itself never actually reaches 0 (its own floor is
+  // FILL_MULTIPLIER_MIN_PERCENT, 50), so this never hides the ordinary multiplier bar.
+  const displayPercent = isLakeMode ? clampedTotal : clampedBase
+  if (displayPercent <= 0) return null
 
   return (
     <BarRow>

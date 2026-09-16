@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   use a neutral plus with a yellow percentage and tap icon.
 
 ### Fixed
+- **The fill-based multiplier/Data Lake overflow-rate bar no longer shows an empty bar with an
+  orphaned "0%" label** — it now renders nothing at all whenever the reading it displays is exactly
+  0 (only reachable via a maxed Data Lake with no open disk slot left).
 - **A Storage pool's own buffer balance no longer misrenders as a raw bit count** (e.g. "3.187e6
   bits") whenever it sits below that pool's own fixed display unit (e.g. filling toward a "1 MB"
   capacity) — it now self-sizes to a finer unit instead (e.g. "398.375 KB / 1 MB").

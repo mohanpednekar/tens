@@ -17,6 +17,30 @@
       "source_location": "L935"
     },
     {
+      "id": "src_components_offlineprogressnotice_index_offlineprogressnotice",
+      "label": "OfflineProgressNotice()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "MainPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "offlineprogressnotice()",
+      "source_file": "src/components/OfflineProgressNotice/index.jsx",
+      "source_location": "L67"
+    },
+    {
+      "id": "src_game_engine_formatofflineduration",
+      "label": "formatOfflineDuration()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 1,
+      "community_name": "MainPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "formatofflineduration()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1897"
+    },
+    {
       "id": "src_pages_mainpage_index_collapsedisclosure",
       "label": "collapseDisclosure()",
       "_callable": true,
@@ -27,54 +51,6 @@
       "norm_label": "collapsedisclosure()",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L667"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatbonusormultiplier",
-      "label": "formatBonusOrMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatbonusormultiplier()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L902"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatbonuspercent",
-      "label": "formatBonusPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatbonuspercent()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L886"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
-      "label": "formatGlobalTickspeedBonusPercent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatglobaltickspeedbonuspercent()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L894"
-    },
-    {
-      "id": "src_pages_mainpage_index_formatrate",
-      "label": "formatRate()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatrate()",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L882"
     },
     {
       "id": "src_game_engine_getdatastreambasemultiplierpercent",
@@ -1061,40 +1037,40 @@
       "source_location": "L4238"
     },
     {
-      "id": "claude_skills_simulate_run_times_run_simulation_wouldautobuyerstall",
-      "label": "wouldAutobuyerStall()",
+      "id": "claude_skills_simulate_run_times_run_simulation_acttickspeed",
+      "label": "actTickspeed()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "wouldautobuyerstall()",
+      "norm_label": "acttickspeed()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L283"
+      "source_location": "L317"
     },
     {
-      "id": "src_game_engine_buytier",
-      "label": "buyTier()",
+      "id": "src_game_engine_buytickspeedmultiplier",
+      "label": "buyTickspeedMultiplier()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "buytier()",
+      "norm_label": "buytickspeedmultiplier()",
       "source_file": "src/game/engine.js",
-      "source_location": "L1914"
+      "source_location": "L5623"
     },
     {
-      "id": "src_game_engine_buytierquantity",
-      "label": "buyTierQuantity()",
+      "id": "src_game_engine_consumexpforlasttiertickspeed",
+      "label": "consumeXpForLastTierTickspeed()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "buytierquantity()",
+      "norm_label": "consumexpforlasttiertickspeed()",
       "source_file": "src/game/engine.js",
-      "source_location": "L1961"
+      "source_location": "L6530"
     },
     {
       "id": "src_game_engine_getautoprestigeattemptrate",
@@ -1109,28 +1085,28 @@
       "source_location": "L1346"
     },
     {
-      "id": "src_game_engine_getcostepochexponent",
-      "label": "getCostEpochExponent()",
+      "id": "src_game_engine_getlasttierid",
+      "label": "getLastTierId()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "getcostepochexponent()",
+      "norm_label": "getlasttierid()",
       "source_file": "src/game/engine.js",
-      "source_location": "L730"
+      "source_location": "L7"
     },
     {
-      "id": "src_game_engine_getintrokilobyteconversioncost",
-      "label": "getIntroKilobyteConversionCost()",
+      "id": "src_game_engine_getlasttierxptickspeedminconsumption",
+      "label": "getLastTierXpTickspeedMinConsumption()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "getintrokilobyteconversioncost()",
+      "norm_label": "getlasttierxptickspeedminconsumption()",
       "source_file": "src/game/engine.js",
-      "source_location": "L3207"
+      "source_location": "L937"
     },
     {
       "id": "src_game_engine_getprestigeproductionmultiplier",
@@ -1145,18 +1121,6 @@
       "source_location": "L949"
     },
     {
-      "id": "src_game_engine_getpurchaseblocksize",
-      "label": "getPurchaseBlockSize()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "getpurchaseblocksize()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L747"
-    },
-    {
       "id": "src_game_engine_getpurchasemilestonemultiplier",
       "label": "getPurchaseMilestoneMultiplier()",
       "_callable": true,
@@ -1169,100 +1133,64 @@
       "source_location": "L1272"
     },
     {
-      "id": "src_game_engine_gettieraffordablequantity",
-      "label": "getTierAffordableQuantity()",
+      "id": "src_game_engine_getscaleupmultiplier",
+      "label": "getScaleUpMultiplier()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "gettieraffordablequantity()",
+      "norm_label": "getscaleupmultiplier()",
       "source_file": "src/game/engine.js",
-      "source_location": "L797"
+      "source_location": "L1283"
     },
     {
-      "id": "src_game_engine_gettierbulkquantity",
-      "label": "getTierBulkQuantity()",
+      "id": "src_game_engine_gettickspeedmultiplierbasecost",
+      "label": "getTickspeedMultiplierBaseCost()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "gettierbulkquantity()",
+      "norm_label": "gettickspeedmultiplierbasecost()",
       "source_file": "src/game/engine.js",
-      "source_location": "L781"
+      "source_location": "L808"
     },
     {
-      "id": "src_game_engine_gettiercost",
-      "label": "getTierCost()",
+      "id": "src_game_engine_gettickspeedmultipliercost",
+      "label": "getTickspeedMultiplierCost()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "gettiercost()",
+      "norm_label": "gettickspeedmultipliercost()",
       "source_file": "src/game/engine.js",
-      "source_location": "L773"
+      "source_location": "L819"
     },
     {
-      "id": "src_game_engine_gettierpurchasedcount",
-      "label": "getTierPurchasedCount()",
+      "id": "src_game_engine_gettierscaleupmultiplier",
+      "label": "getTierScaleUpMultiplier()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "gettierpurchasedcount()",
+      "norm_label": "gettierscaleupmultiplier()",
       "source_file": "src/game/engine.js",
-      "source_location": "L1911"
+      "source_location": "L1286"
     },
     {
-      "id": "src_game_engine_gettierquantitycost",
-      "label": "getTierQuantityCost()",
+      "id": "src_game_engine_islasttiertickspeedxpunlocked",
+      "label": "isLastTierTickspeedXpUnlocked()",
       "_callable": true,
       "_origin": "ast",
       "community": 17,
       "community_name": "tickGame",
       "file_type": "code",
-      "norm_label": "gettierquantitycost()",
+      "norm_label": "islasttiertickspeedxpunlocked()",
       "source_file": "src/game/engine.js",
-      "source_location": "L790"
-    },
-    {
-      "id": "src_game_engine_gettierspendableamount",
-      "label": "getTierSpendableAmount()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "gettierspendableamount()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1908"
-    },
-    {
-      "id": "src_game_engine_granttierunits",
-      "label": "grantTierUnits()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "granttierunits()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L2022"
-    },
-    {
-      "id": "src_game_engine_istierunlocked",
-      "label": "isTierUnlocked()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "istierunlocked()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1373"
+      "source_location": "L922"
     },
     {
       "id": "src_game_engine_tickcomputeboost",
@@ -1277,18 +1205,6 @@
       "source_location": "L5468"
     },
     {
-      "id": "src_game_engine_tickdisklevelonecachepull",
-      "label": "tickDiskLevelOneCachePull()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "tickdisklevelonecachepull()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L4277"
-    },
-    {
       "id": "src_game_engine_tickgame",
       "label": "tickGame()",
       "_callable": true,
@@ -1301,18 +1217,6 @@
       "source_location": "L1527"
     },
     {
-      "id": "src_game_engine_tickintroautoinvest",
-      "label": "tickIntroAutoInvest()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "tickintroautoinvest()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L3289"
-    },
-    {
       "id": "src_game_engine_tickprovisiondisk",
       "label": "tickProvisionDisk()",
       "_callable": true,
@@ -1323,18 +1227,6 @@
       "norm_label": "tickprovisiondisk()",
       "source_file": "src/game/engine.js",
       "source_location": "L3645"
-    },
-    {
-      "id": "src_game_navattention_hasaffordablefulllevel",
-      "label": "hasAffordableFullLevel()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 17,
-      "community_name": "tickGame",
-      "file_type": "code",
-      "norm_label": "hasaffordablefulllevel()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L118"
     },
     {
       "id": "claude_skills_simulate_run_times_run_simulation_actmainbuys",
@@ -1383,18 +1275,6 @@
       "norm_label": "actspeedbonus()",
       "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
       "source_location": "L350"
-    },
-    {
-      "id": "claude_skills_simulate_run_times_run_simulation_acttickspeed",
-      "label": "actTickspeed()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 18,
-      "community_name": "run-simulation.mjs",
-      "file_type": "code",
-      "norm_label": "acttickspeed()",
-      "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
-      "source_location": "L317"
     },
     {
       "id": "claude_skills_simulate_run_times_run_simulation_countunlockedautobuyers",
@@ -1505,28 +1385,208 @@
       "source_location": "L140"
     },
     {
-      "id": "src_game_engine_consumexpforlasttiertickspeed",
-      "label": "consumeXpForLastTierTickspeed()",
+      "id": "claude_skills_simulate_run_times_run_simulation_wouldautobuyerstall",
+      "label": "wouldAutobuyerStall()",
       "_callable": true,
       "_origin": "ast",
       "community": 18,
       "community_name": "run-simulation.mjs",
       "file_type": "code",
-      "norm_label": "consumexpforlasttiertickspeed()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L6530"
+      "norm_label": "wouldautobuyerstall()",
+      "source_file": ".claude/skills/simulate-run-times/run-simulation.mjs",
+      "source_location": "L283"
     },
     {
-      "id": "src_game_engine_getlasttierxptickspeedminconsumption",
-      "label": "getLastTierXpTickspeedMinConsumption()",
+      "id": "src_game_engine_buytier",
+      "label": "buyTier()",
       "_callable": true,
       "_origin": "ast",
       "community": 18,
       "community_name": "run-simulation.mjs",
       "file_type": "code",
-      "norm_label": "getlasttierxptickspeedminconsumption()",
+      "norm_label": "buytier()",
       "source_file": "src/game/engine.js",
-      "source_location": "L937"
+      "source_location": "L1914"
+    },
+    {
+      "id": "src_game_engine_buytierquantity",
+      "label": "buyTierQuantity()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "buytierquantity()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1961"
+    },
+    {
+      "id": "src_game_engine_getcostepochexponent",
+      "label": "getCostEpochExponent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "getcostepochexponent()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L730"
+    },
+    {
+      "id": "src_game_engine_getintrokilobyteconversioncost",
+      "label": "getIntroKilobyteConversionCost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "getintrokilobyteconversioncost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3207"
+    },
+    {
+      "id": "src_game_engine_getpurchaseblocksize",
+      "label": "getPurchaseBlockSize()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "getpurchaseblocksize()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L747"
+    },
+    {
+      "id": "src_game_engine_gettieraffordablequantity",
+      "label": "getTierAffordableQuantity()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "gettieraffordablequantity()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L797"
+    },
+    {
+      "id": "src_game_engine_gettierbulkquantity",
+      "label": "getTierBulkQuantity()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "gettierbulkquantity()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L781"
+    },
+    {
+      "id": "src_game_engine_gettiercost",
+      "label": "getTierCost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "gettiercost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L773"
+    },
+    {
+      "id": "src_game_engine_gettierpurchasedcount",
+      "label": "getTierPurchasedCount()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "gettierpurchasedcount()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1911"
+    },
+    {
+      "id": "src_game_engine_gettierquantitycost",
+      "label": "getTierQuantityCost()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "gettierquantitycost()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L790"
+    },
+    {
+      "id": "src_game_engine_gettierspendableamount",
+      "label": "getTierSpendableAmount()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "gettierspendableamount()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1908"
+    },
+    {
+      "id": "src_game_engine_granttierunits",
+      "label": "grantTierUnits()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "granttierunits()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L2022"
+    },
+    {
+      "id": "src_game_engine_istierunlocked",
+      "label": "isTierUnlocked()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "istierunlocked()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1373"
+    },
+    {
+      "id": "src_game_engine_tickdisklevelonecachepull",
+      "label": "tickDiskLevelOneCachePull()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "tickdisklevelonecachepull()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L4277"
+    },
+    {
+      "id": "src_game_engine_tickintroautoinvest",
+      "label": "tickIntroAutoInvest()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "tickintroautoinvest()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L3289"
+    },
+    {
+      "id": "src_game_navattention_hasaffordablefulllevel",
+      "label": "hasAffordableFullLevel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
+      "file_type": "code",
+      "norm_label": "hasaffordablefulllevel()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L118"
     },
     {
       "id": "src_app_test_alltierssmartseed",
@@ -1538,7 +1598,7 @@
       "file_type": "code",
       "norm_label": "alltierssmartseed()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1676"
+      "source_location": "L1678"
     },
     {
       "id": "src_app_test_derivepurchasefieldsfromcounts",
@@ -1550,7 +1610,7 @@
       "file_type": "code",
       "norm_label": "derivepurchasefieldsfromcounts()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L71"
+      "source_location": "L73"
     },
     {
       "id": "src_app_test_opendevmode",
@@ -1562,7 +1622,7 @@
       "file_type": "code",
       "norm_label": "opendevmode()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L4727"
+      "source_location": "L4756"
     },
     {
       "id": "src_app_test_opensettings",
@@ -1574,7 +1634,7 @@
       "file_type": "code",
       "norm_label": "opensettings()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L102"
+      "source_location": "L104"
     },
     {
       "id": "src_app_test_seedintrostate",
@@ -1586,7 +1646,7 @@
       "file_type": "code",
       "norm_label": "seedintrostate()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L2408"
+      "source_location": "L2410"
     },
     {
       "id": "src_app_test_seedmaingamestate",
@@ -1598,7 +1658,7 @@
       "file_type": "code",
       "norm_label": "seedmaingamestate()",
       "source_file": "src/App.test.jsx",
-      "source_location": "L86"
+      "source_location": "L88"
     },
     {
       "id": "scripts_bump_version_assertunreleasedwellformed",
@@ -1985,6 +2045,18 @@
       "source_location": "L30"
     },
     {
+      "id": "src_components_confirmdialog_index_confirmdialog",
+      "label": "ConfirmDialog()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "confirmdialog()",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L70"
+    },
+    {
       "id": "src_components_incompatiblesavenotice_index_incompatiblesavenotice",
       "label": "IncompatibleSaveNotice()",
       "_callable": true,
@@ -1995,30 +2067,6 @@
       "norm_label": "incompatiblesavenotice()",
       "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
       "source_location": "L45"
-    },
-    {
-      "id": "src_components_offlineprogressnotice_index_offlineprogressnotice",
-      "label": "OfflineProgressNotice()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "offlineprogressnotice()",
-      "source_file": "src/components/OfflineProgressNotice/index.jsx",
-      "source_location": "L67"
-    },
-    {
-      "id": "src_game_engine_formatofflineduration",
-      "label": "formatOfflineDuration()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 23,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatofflineduration()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1897"
     },
     {
       "id": "src_game_engine_createemptydatalakes",
@@ -2669,100 +2717,52 @@
       "source_location": "L4"
     },
     {
-      "id": "src_app_app",
-      "label": "App()",
+      "id": "src_theme_contrast_getcontrastratio",
+      "label": "getContrastRatio()",
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "app()",
-      "source_file": "src/App.jsx",
-      "source_location": "L33"
+      "norm_label": "getcontrastratio()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L23"
     },
     {
-      "id": "src_app_resolveinitialthememode",
-      "label": "resolveInitialThemeMode()",
+      "id": "src_theme_contrast_hextorgb",
+      "label": "hexToRgb()",
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "resolveinitialthememode()",
-      "source_file": "src/App.jsx",
-      "source_location": "L20"
+      "norm_label": "hextorgb()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L16"
     },
     {
-      "id": "src_game_engine_iscomputeflopspagerevealed",
-      "label": "isComputeFlopsPageRevealed()",
+      "id": "src_theme_contrast_relativeluminance",
+      "label": "relativeLuminance()",
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "iscomputeflopspagerevealed()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L971"
+      "norm_label": "relativeluminance()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L11"
     },
     {
-      "id": "src_game_navattention_getcomputeflopsattentionlevel",
-      "label": "getComputeFlopsAttentionLevel()",
+      "id": "src_theme_contrast_srgbchanneltolinear",
+      "label": "srgbChannelToLinear()",
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "getcomputeflopsattentionlevel()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L252"
-    },
-    {
-      "id": "src_game_navattention_getnavattention",
-      "label": "getNavAttention()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "getnavattention()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L268"
-    },
-    {
-      "id": "src_game_navattention_hasaffordablecomputeflopstier",
-      "label": "hasAffordableComputeFlopsTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "hasaffordablecomputeflopstier()",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L247"
-    },
-    {
-      "id": "src_game_storage_loadthemepreference",
-      "label": "loadThemePreference()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "loadthemepreference()",
-      "source_file": "src/game/storage.js",
-      "source_location": "L738"
-    },
-    {
-      "id": "src_game_storage_savethemepreference",
-      "label": "saveThemePreference()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "savethemepreference()",
-      "source_file": "src/game/storage.js",
-      "source_location": "L748"
+      "norm_label": "srgbchanneltolinear()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L6"
     },
     {
       "id": "src_theme_index_getsystemthememode",
@@ -2770,23 +2770,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "getsystemthememode()",
       "source_file": "src/theme/index.jsx",
       "source_location": "L6"
-    },
-    {
-      "id": "src_theme_index_resolvethememode",
-      "label": "resolveThemeMode()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "resolvethememode()",
-      "source_file": "src/theme/index.jsx",
-      "source_location": "L11"
     },
     {
       "id": "src_theme_index_themeprovider",
@@ -2794,7 +2782,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "themeprovider()",
       "source_file": "src/theme/index.jsx",
@@ -2806,35 +2794,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "buildtheme()",
       "source_file": "src/theme/tokens.js",
       "source_location": "L140"
-    },
-    {
-      "id": "src_components_confirmdialog_index_confirmdialog",
-      "label": "ConfirmDialog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "confirmdialog()",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L70"
-    },
-    {
-      "id": "src_game_engine_iseraeligible",
-      "label": "isEraEligible()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "iseraeligible()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1080"
     },
     {
       "id": "src_pages_settingspage_index_buildsparklinepath",
@@ -2859,18 +2823,6 @@
       "norm_label": "settingspage()",
       "source_file": "src/pages/SettingsPage/index.jsx",
       "source_location": "L170"
-    },
-    {
-      "id": "src_game_engine_buytickspeedmultiplier",
-      "label": "buyTickspeedMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "buytickspeedmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L5623"
     },
     {
       "id": "src_game_engine_formatascleanbytesifexactmultiple",
@@ -2957,18 +2909,6 @@
       "source_location": "L908"
     },
     {
-      "id": "src_game_engine_getlasttierid",
-      "label": "getLastTierId()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "getlasttierid()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L7"
-    },
-    {
       "id": "src_game_engine_getlasttierxptickspeedmultiplier",
       "label": "getLastTierXpTickspeedMultiplier()",
       "_callable": true,
@@ -3005,42 +2945,6 @@
       "source_location": "L1330"
     },
     {
-      "id": "src_game_engine_getscaleupmultiplier",
-      "label": "getScaleUpMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "getscaleupmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1283"
-    },
-    {
-      "id": "src_game_engine_gettickspeedmultiplierbasecost",
-      "label": "getTickspeedMultiplierBaseCost()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "gettickspeedmultiplierbasecost()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L808"
-    },
-    {
-      "id": "src_game_engine_gettickspeedmultipliercost",
-      "label": "getTickspeedMultiplierCost()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "gettickspeedmultipliercost()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L819"
-    },
-    {
       "id": "src_game_engine_gettickspeedproductionmultiplier",
       "label": "getTickspeedProductionMultiplier()",
       "_callable": true,
@@ -3065,30 +2969,6 @@
       "source_location": "L1444"
     },
     {
-      "id": "src_game_engine_gettierscaleupmultiplier",
-      "label": "getTierScaleUpMultiplier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "gettierscaleupmultiplier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1286"
-    },
-    {
-      "id": "src_game_engine_islasttiertickspeedxpunlocked",
-      "label": "isLastTierTickspeedXpUnlocked()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 29,
-      "community_name": "MainPage",
-      "file_type": "code",
-      "norm_label": "islasttiertickspeedxpunlocked()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L922"
-    },
-    {
       "id": "src_game_layers_resource_symbol",
       "label": "RESOURCE_SYMBOL()",
       "_callable": true,
@@ -3101,6 +2981,30 @@
       "source_location": "L59"
     },
     {
+      "id": "src_pages_mainpage_index_formatbonusormultiplier",
+      "label": "formatBonusOrMultiplier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatbonusormultiplier()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L902"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatbonuspercent",
+      "label": "formatBonusPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatbonuspercent()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L886"
+    },
+    {
       "id": "src_pages_mainpage_index_formatcost",
       "label": "formatCost()",
       "_callable": true,
@@ -3111,6 +3015,30 @@
       "norm_label": "formatcost()",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L866"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
+      "label": "formatGlobalTickspeedBonusPercent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatglobaltickspeedbonuspercent()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L894"
+    },
+    {
+      "id": "src_pages_mainpage_index_formatrate",
+      "label": "formatRate()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MainPage",
+      "file_type": "code",
+      "norm_label": "formatrate()",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L882"
     },
     {
       "id": "src_pages_mainpage_index_mainpage",
@@ -3149,16 +3077,136 @@
       "source_location": "L71"
     },
     {
+      "id": "src_app_app",
+      "label": "App()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "app()",
+      "source_file": "src/App.jsx",
+      "source_location": "L33"
+    },
+    {
+      "id": "src_app_resolveinitialthememode",
+      "label": "resolveInitialThemeMode()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "resolveinitialthememode()",
+      "source_file": "src/App.jsx",
+      "source_location": "L20"
+    },
+    {
+      "id": "src_components_appmenu_index_appmenu",
+      "label": "AppMenu()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "appmenu()",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L77"
+    },
+    {
       "id": "src_components_appnav_index_appnav",
       "label": "AppNav()",
       "_callable": true,
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "appnav()",
       "source_file": "src/components/AppNav/index.jsx",
       "source_location": "L102"
+    },
+    {
+      "id": "src_game_engine_iscomputeflopspagerevealed",
+      "label": "isComputeFlopsPageRevealed()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "iscomputeflopspagerevealed()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L971"
+    },
+    {
+      "id": "src_game_navattention_getcomputeflopsattentionlevel",
+      "label": "getComputeFlopsAttentionLevel()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "getcomputeflopsattentionlevel()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L252"
+    },
+    {
+      "id": "src_game_navattention_getnavattention",
+      "label": "getNavAttention()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "getnavattention()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L268"
+    },
+    {
+      "id": "src_game_navattention_hasaffordablecomputeflopstier",
+      "label": "hasAffordableComputeFlopsTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "hasaffordablecomputeflopstier()",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L247"
+    },
+    {
+      "id": "src_game_storage_loadthemepreference",
+      "label": "loadThemePreference()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "loadthemepreference()",
+      "source_file": "src/game/storage.js",
+      "source_location": "L738"
+    },
+    {
+      "id": "src_game_storage_savethemepreference",
+      "label": "saveThemePreference()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "savethemepreference()",
+      "source_file": "src/game/storage.js",
+      "source_location": "L748"
+    },
+    {
+      "id": "src_theme_index_resolvethememode",
+      "label": "resolveThemeMode()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "resolvethememode()",
+      "source_file": "src/theme/index.jsx",
+      "source_location": "L11"
     },
     {
       "id": "src_game_engine_activatecomputeboost",
@@ -3629,6 +3677,18 @@
       "source_location": "L1104"
     },
     {
+      "id": "src_game_engine_iseraeligible",
+      "label": "isEraEligible()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 34,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "iseraeligible()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1080"
+    },
+    {
       "id": "src_pages_milestonespage_index_milestonespage",
       "label": "MilestonesPage()",
       "_callable": true,
@@ -4046,7 +4106,7 @@
       "file_type": "code",
       "norm_label": "bytefoundrypage()",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L484"
+      "source_location": "L494"
     },
     {
       "id": "e2e_data_lake_e2e_seeddatalakesave",
@@ -4743,54 +4803,6 @@
       "norm_label": "picklevel()",
       "source_file": "src/game/navAttention.js",
       "source_location": "L111"
-    },
-    {
-      "id": "src_theme_contrast_getcontrastratio",
-      "label": "getContrastRatio()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "getcontrastratio()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L23"
-    },
-    {
-      "id": "src_theme_contrast_hextorgb",
-      "label": "hexToRgb()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "hextorgb()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L16"
-    },
-    {
-      "id": "src_theme_contrast_relativeluminance",
-      "label": "relativeLuminance()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "relativeluminance()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L11"
-    },
-    {
-      "id": "src_theme_contrast_srgbchanneltolinear",
-      "label": "srgbChannelToLinear()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "srgbchanneltolinear()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L6"
     },
     {
       "id": "claude_skills_simulate_run_times_run_simulation_actfoundry",
@@ -5883,18 +5895,6 @@
       "norm_label": "parseadversarialreviewmarker()",
       "source_file": "scripts/adversarialReviewMarker.js",
       "source_location": "L26"
-    },
-    {
-      "id": "src_components_appmenu_index_appmenu",
-      "label": "AppMenu()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "appmenu()",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L77"
     },
     {
       "id": "src_game_engine_applyofflineprogress",
@@ -9237,50 +9237,6 @@
       "source_location": "L3676"
     },
     {
-      "id": "src_components_money_index",
-      "label": "Money/index.js",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "ComputeFlopsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "money/index.js",
-      "source_file": "src/components/Money/index.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_money_index_money",
-      "label": "Money",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "ComputeFlopsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "money",
-      "source_file": "src/components/Money/index.js",
-      "source_location": "L3"
-    },
-    {
-      "id": "src_components_statcard_index",
-      "label": "StatCard/index.js",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "ComputeFlopsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "statcard/index.js",
-      "source_file": "src/components/StatCard/index.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_statcard_index_statcard",
-      "label": "StatCard",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "ComputeFlopsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "statcard",
-      "source_file": "src/components/StatCard/index.js",
-      "source_location": "L8"
-    },
-    {
       "id": "src_pages_computeflopspage_index",
       "label": "ComputeFlopsPage/index.jsx",
       "_origin": "ast",
@@ -9389,17 +9345,6 @@
       "norm_label": "tierrow",
       "source_file": "src/pages/ComputeFlopsPage/index.jsx",
       "source_location": "L69"
-    },
-    {
-      "id": "ref_styled_components",
-      "label": "styled-components",
-      "_origin": "ast",
-      "community": 14,
-      "community_name": "ComputeFlopsPage/index.jsx",
-      "file_type": "concept",
-      "norm_label": "styled-components",
-      "source_file": "package.json",
-      "source_location": "L21"
     },
     {
       "id": "src_game_engine",
@@ -9534,26 +9479,26 @@
       "source_location": "L2288"
     },
     {
-      "id": "src_game_layers_autobuyer_unlock_milestone_step",
-      "label": "AUTOBUYER_UNLOCK_MILESTONE_STEP",
+      "id": "src_game_layers_hyperscaler_eon_cost_base",
+      "label": "HYPERSCALER_EON_COST_BASE",
       "_origin": "ast",
       "community": 15,
       "community_name": "engine.js",
       "file_type": "code",
-      "norm_label": "autobuyer_unlock_milestone_step",
+      "norm_label": "hyperscaler_eon_cost_base",
       "source_file": "src/game/layers.js",
-      "source_location": "L637"
+      "source_location": "L779"
     },
     {
-      "id": "src_game_layers_flops_autobuyer_era_step",
-      "label": "FLOPS_AUTOBUYER_ERA_STEP",
+      "id": "src_game_layers_hyperscaler_eon_cost_multiplier",
+      "label": "HYPERSCALER_EON_COST_MULTIPLIER",
       "_origin": "ast",
       "community": 15,
       "community_name": "engine.js",
       "file_type": "code",
-      "norm_label": "flops_autobuyer_era_step",
+      "norm_label": "hyperscaler_eon_cost_multiplier",
       "source_file": "src/game/layers.js",
-      "source_location": "L777"
+      "source_location": "L780"
     },
     {
       "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_floor",
@@ -9567,15 +9512,15 @@
       "source_location": "L737"
     },
     {
-      "id": "src_game_layers_purchase_milestone_mega_multiplier_base",
-      "label": "PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE",
+      "id": "src_game_layers_purchase_block_size_growth_interval_levels",
+      "label": "PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS",
       "_origin": "ast",
       "community": 15,
       "community_name": "engine.js",
       "file_type": "code",
-      "norm_label": "purchase_milestone_mega_multiplier_base",
+      "norm_label": "purchase_block_size_growth_interval_levels",
       "source_file": "src/game/layers.js",
-      "source_location": "L596"
+      "source_location": "L583"
     },
     {
       "id": "claude_skills_simulate_run_times_run_simulation",
@@ -9685,7 +9630,7 @@
       "file_type": "code",
       "norm_label": "all_tier_ids",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1672"
+      "source_location": "L1674"
     },
     {
       "id": "src_game_layers_auto_prestige_autobuyer_cost",
@@ -9721,17 +9666,6 @@
       "source_location": "L477"
     },
     {
-      "id": "src_game_layers_compute_boost_presets",
-      "label": "COMPUTE_BOOST_PRESETS",
-      "_origin": "ast",
-      "community": 19,
-      "community_name": "App.test.jsx",
-      "file_type": "code",
-      "norm_label": "compute_boost_presets",
-      "source_file": "src/game/layers.js",
-      "source_location": "L445"
-    },
-    {
       "id": "src_game_layers_compute_cores_per_node",
       "label": "COMPUTE_CORES_PER_NODE",
       "_origin": "ast",
@@ -9752,6 +9686,17 @@
       "norm_label": "compute_entity_cap",
       "source_file": "src/game/layers.js",
       "source_location": "L367"
+    },
+    {
+      "id": "src_game_layers_data_lake_capacity_by_level",
+      "label": "DATA_LAKE_CAPACITY_BY_LEVEL",
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "App.test.jsx",
+      "file_type": "code",
+      "norm_label": "data_lake_capacity_by_level",
+      "source_file": "src/game/layers.js",
+      "source_location": "L523"
     },
     {
       "id": "src_game_layers_data_lake_capacity_max_level",
@@ -9776,6 +9721,17 @@
       "source_location": "L538"
     },
     {
+      "id": "src_game_layers_data_lake_overflow_min_percent",
+      "label": "DATA_LAKE_OVERFLOW_MIN_PERCENT",
+      "_origin": "ast",
+      "community": 19,
+      "community_name": "App.test.jsx",
+      "file_type": "code",
+      "norm_label": "data_lake_overflow_min_percent",
+      "source_file": "src/game/layers.js",
+      "source_location": "L539"
+    },
+    {
       "id": "src_game_layers_disk_build_cost_multiplier",
       "label": "DISK_BUILD_COST_MULTIPLIER",
       "_origin": "ast",
@@ -9796,17 +9752,6 @@
       "norm_label": "disk_cache_block_count",
       "source_file": "src/game/layers.js",
       "source_location": "L307"
-    },
-    {
-      "id": "src_game_layers_fill_multiplier_max_percent",
-      "label": "FILL_MULTIPLIER_MAX_PERCENT",
-      "_origin": "ast",
-      "community": 19,
-      "community_name": "App.test.jsx",
-      "file_type": "code",
-      "norm_label": "fill_multiplier_max_percent",
-      "source_file": "src/game/layers.js",
-      "source_location": "L217"
     },
     {
       "id": "src_game_layers_fill_multiplier_min_percent",
@@ -11181,6 +11126,72 @@
       "source_location": "L187"
     },
     {
+      "id": "src_components_confirmdialog_index",
+      "label": "ConfirmDialog/index.jsx",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "confirmdialog/index.jsx",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_confirmdialog_index_actions",
+      "label": "Actions",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "actions",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L53"
+    },
+    {
+      "id": "src_components_confirmdialog_index_body",
+      "label": "Body",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "body",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L40"
+    },
+    {
+      "id": "src_components_confirmdialog_index_card",
+      "label": "Card",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "card",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L23"
+    },
+    {
+      "id": "src_components_confirmdialog_index_overlay",
+      "label": "Overlay",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "overlay",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L8"
+    },
+    {
+      "id": "src_components_confirmdialog_index_title",
+      "label": "Title",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "title",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L33"
+    },
+    {
       "id": "src_components_incompatiblesavenotice_index",
       "label": "IncompatibleSaveNotice/index.jsx",
       "_origin": "ast",
@@ -11236,6 +11247,28 @@
       "source_location": "L31"
     },
     {
+      "id": "src_components_money_index",
+      "label": "Money/index.js",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "money/index.js",
+      "source_file": "src/components/Money/index.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_money_index_money",
+      "label": "Money",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "money",
+      "source_file": "src/components/Money/index.js",
+      "source_location": "L3"
+    },
+    {
       "id": "src_components_offlineprogressnotice_index",
       "label": "OfflineProgressNotice/index.jsx",
       "_origin": "ast",
@@ -11280,6 +11313,28 @@
       "source_location": "L17"
     },
     {
+      "id": "src_components_statcard_index",
+      "label": "StatCard/index.js",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "statcard/index.js",
+      "source_file": "src/components/StatCard/index.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_statcard_index_statcard",
+      "label": "StatCard",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "statcard",
+      "source_file": "src/components/StatCard/index.js",
+      "source_location": "L8"
+    },
+    {
       "id": "src_pages_mainpage_index_prestigeprogresstrack",
       "label": "PrestigeProgressTrack",
       "_origin": "ast",
@@ -11289,6 +11344,17 @@
       "norm_label": "prestigeprogresstrack",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L328"
+    },
+    {
+      "id": "ref_styled_components",
+      "label": "styled-components",
+      "_origin": "ast",
+      "community": 23,
+      "community_name": "Button/index.jsx",
+      "file_type": "concept",
+      "norm_label": "styled-components",
+      "source_file": "package.json",
+      "source_location": "L21"
     },
     {
       "id": "src_game_storage",
@@ -11434,44 +11500,66 @@
       "source_location": "L1"
     },
     {
-      "id": "src_app",
-      "label": "App.jsx",
+      "id": "src_theme_contrast",
+      "label": "contrast.js",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "app.jsx",
-      "source_file": "src/App.jsx",
+      "norm_label": "contrast.js",
+      "source_file": "src/theme/contrast.js",
       "source_location": "L1"
     },
     {
-      "id": "src_app_gate_exempt_pages",
-      "label": "GATE_EXEMPT_PAGES",
+      "id": "src_theme_contrast_aa_large_text",
+      "label": "AA_LARGE_TEXT",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "gate_exempt_pages",
-      "source_file": "src/App.jsx",
-      "source_location": "L27"
+      "norm_label": "aa_large_text",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L34"
     },
     {
-      "id": "src_app_pageshell",
-      "label": "PageShell",
+      "id": "src_theme_contrast_aa_normal_text",
+      "label": "AA_NORMAL_TEXT",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
-      "norm_label": "pageshell",
-      "source_file": "src/App.jsx",
-      "source_location": "L29"
+      "norm_label": "aa_normal_text",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L33"
+    },
+    {
+      "id": "src_theme_contrast_aa_ui_component",
+      "label": "AA_UI_COMPONENT",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "tokens.js",
+      "file_type": "code",
+      "norm_label": "aa_ui_component",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L35"
+    },
+    {
+      "id": "src_theme_contrast_test",
+      "label": "contrast.test.js",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "tokens.js",
+      "file_type": "code",
+      "norm_label": "contrast.test.js",
+      "source_file": "src/theme/contrast.test.js",
+      "source_location": "L1"
     },
     {
       "id": "src_theme_fonts",
       "label": "fonts.js",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "fonts.js",
       "source_file": "src/theme/fonts.js",
@@ -11482,7 +11570,7 @@
       "label": "GlobalStyle.js",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "globalstyle.js",
       "source_file": "src/theme/GlobalStyle.js",
@@ -11493,7 +11581,7 @@
       "label": "GlobalStyle",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "globalstyle",
       "source_file": "src/theme/GlobalStyle.js",
@@ -11504,7 +11592,7 @@
       "label": "theme/index.jsx",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "theme/index.jsx",
       "source_file": "src/theme/index.jsx",
@@ -11515,10 +11603,21 @@
       "label": "tokens.js",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "tokens.js",
       "source_file": "src/theme/tokens.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_theme_tokens_contrast_test",
+      "label": "tokens.contrast.test.js",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "tokens.js",
+      "file_type": "code",
+      "norm_label": "tokens.contrast.test.js",
+      "source_file": "src/theme/tokens.contrast.test.js",
       "source_location": "L1"
     },
     {
@@ -11526,7 +11625,7 @@
       "label": "DEFAULT_MODE",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "default_mode",
       "source_file": "src/theme/tokens.js",
@@ -11537,7 +11636,7 @@
       "label": "font",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "font",
       "source_file": "src/theme/tokens.js",
@@ -11548,7 +11647,7 @@
       "label": "MODES",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "modes",
       "source_file": "src/theme/tokens.js",
@@ -11559,7 +11658,7 @@
       "label": "motion",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "motion",
       "source_file": "src/theme/tokens.js",
@@ -11570,7 +11669,7 @@
       "label": "palette",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "palette",
       "source_file": "src/theme/tokens.js",
@@ -11581,7 +11680,7 @@
       "label": "radius",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "radius",
       "source_file": "src/theme/tokens.js",
@@ -11592,7 +11691,7 @@
       "label": "shadow",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "shadow",
       "source_file": "src/theme/tokens.js",
@@ -11603,18 +11702,29 @@
       "label": "space",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "space",
       "source_file": "src/theme/tokens.js",
       "source_location": "L78"
     },
     {
+      "id": "src_theme_tokens_themes",
+      "label": "themes",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "tokens.js",
+      "file_type": "code",
+      "norm_label": "themes",
+      "source_file": "src/theme/tokens.js",
+      "source_location": "L155"
+    },
+    {
       "id": "src_theme_tokens_tieraccents",
       "label": "tierAccents",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "tieraccents",
       "source_file": "src/theme/tokens.js",
@@ -11625,7 +11735,7 @@
       "label": "type",
       "_origin": "ast",
       "community": 25,
-      "community_name": "App.jsx",
+      "community_name": "tokens.js",
       "file_type": "code",
       "norm_label": "type",
       "source_file": "src/theme/tokens.js",
@@ -12139,72 +12249,6 @@
       "source_location": "L37"
     },
     {
-      "id": "src_components_confirmdialog_index",
-      "label": "ConfirmDialog/index.jsx",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "confirmdialog/index.jsx",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_confirmdialog_index_actions",
-      "label": "Actions",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "actions",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L53"
-    },
-    {
-      "id": "src_components_confirmdialog_index_body",
-      "label": "Body",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "body",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L40"
-    },
-    {
-      "id": "src_components_confirmdialog_index_card",
-      "label": "Card",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "card",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L23"
-    },
-    {
-      "id": "src_components_confirmdialog_index_overlay",
-      "label": "Overlay",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "overlay",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L8"
-    },
-    {
-      "id": "src_components_confirmdialog_index_title",
-      "label": "Title",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "SettingsPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "title",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L33"
-    },
-    {
       "id": "src_pages_settingspage_index",
       "label": "SettingsPage/index.jsx",
       "_origin": "ast",
@@ -12436,6 +12480,17 @@
       "source_location": "L636"
     },
     {
+      "id": "src_game_layers_autobuyer_unlock_milestone_step",
+      "label": "AUTOBUYER_UNLOCK_MILESTONE_STEP",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "layers.js",
+      "file_type": "code",
+      "norm_label": "autobuyer_unlock_milestone_step",
+      "source_file": "src/game/layers.js",
+      "source_location": "L637"
+    },
+    {
       "id": "src_game_layers_compute_boost_tier_duration_step",
       "label": "COMPUTE_BOOST_TIER_DURATION_STEP",
       "_origin": "ast",
@@ -12524,17 +12579,6 @@
       "source_location": "L520"
     },
     {
-      "id": "src_game_layers_data_lake_overflow_min_percent",
-      "label": "DATA_LAKE_OVERFLOW_MIN_PERCENT",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "layers.js",
-      "file_type": "code",
-      "norm_label": "data_lake_overflow_min_percent",
-      "source_file": "src/game/layers.js",
-      "source_location": "L539"
-    },
-    {
       "id": "src_game_layers_data_lake_sub_sizes",
       "label": "DATA_LAKE_SUB_SIZES",
       "_origin": "ast",
@@ -12601,6 +12645,17 @@
       "source_location": "L776"
     },
     {
+      "id": "src_game_layers_flops_autobuyer_era_step",
+      "label": "FLOPS_AUTOBUYER_ERA_STEP",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "layers.js",
+      "file_type": "code",
+      "norm_label": "flops_autobuyer_era_step",
+      "source_file": "src/game/layers.js",
+      "source_location": "L777"
+    },
+    {
       "id": "src_game_layers_global_tickspeed_production_step",
       "label": "GLOBAL_TICKSPEED_PRODUCTION_STEP",
       "_origin": "ast",
@@ -12632,28 +12687,6 @@
       "norm_label": "hyperscaler_efficiency_rate_bonus_per_level",
       "source_file": "src/game/layers.js",
       "source_location": "L782"
-    },
-    {
-      "id": "src_game_layers_hyperscaler_eon_cost_base",
-      "label": "HYPERSCALER_EON_COST_BASE",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "layers.js",
-      "file_type": "code",
-      "norm_label": "hyperscaler_eon_cost_base",
-      "source_file": "src/game/layers.js",
-      "source_location": "L779"
-    },
-    {
-      "id": "src_game_layers_hyperscaler_eon_cost_multiplier",
-      "label": "HYPERSCALER_EON_COST_MULTIPLIER",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "layers.js",
-      "file_type": "code",
-      "norm_label": "hyperscaler_eon_cost_multiplier",
-      "source_file": "src/game/layers.js",
-      "source_location": "L780"
     },
     {
       "id": "src_game_layers_intro_byte_base_rate",
@@ -12843,17 +12876,6 @@
       "source_location": "L610"
     },
     {
-      "id": "src_game_layers_purchase_block_size_growth_interval_levels",
-      "label": "PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS",
-      "_origin": "ast",
-      "community": 3,
-      "community_name": "layers.js",
-      "file_type": "code",
-      "norm_label": "purchase_block_size_growth_interval_levels",
-      "source_file": "src/game/layers.js",
-      "source_location": "L583"
-    },
-    {
       "id": "src_game_layers_purchase_block_size_growth_step",
       "label": "PURCHASE_BLOCK_SIZE_GROWTH_STEP",
       "_origin": "ast",
@@ -12863,6 +12885,17 @@
       "norm_label": "purchase_block_size_growth_step",
       "source_file": "src/game/layers.js",
       "source_location": "L585"
+    },
+    {
+      "id": "src_game_layers_purchase_milestone_mega_multiplier_base",
+      "label": "PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "layers.js",
+      "file_type": "code",
+      "norm_label": "purchase_milestone_mega_multiplier_base",
+      "source_file": "src/game/layers.js",
+      "source_location": "L596"
     },
     {
       "id": "src_game_layers_purchase_milestone_multiplier_base",
@@ -12997,11 +13030,110 @@
       "source_location": "L643"
     },
     {
+      "id": "src_app",
+      "label": "App.jsx",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "app.jsx",
+      "source_file": "src/App.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_app_gate_exempt_pages",
+      "label": "GATE_EXEMPT_PAGES",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "gate_exempt_pages",
+      "source_file": "src/App.jsx",
+      "source_location": "L27"
+    },
+    {
+      "id": "src_app_pageshell",
+      "label": "PageShell",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "pageshell",
+      "source_file": "src/App.jsx",
+      "source_location": "L29"
+    },
+    {
+      "id": "src_components_appmenu_index",
+      "label": "AppMenu/index.jsx",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "appmenu/index.jsx",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_appmenu_index_backdrop",
+      "label": "Backdrop",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "backdrop",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L10"
+    },
+    {
+      "id": "src_components_appmenu_index_icon",
+      "label": "Icon",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "icon",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L71"
+    },
+    {
+      "id": "src_components_appmenu_index_menubutton",
+      "label": "MenuButton",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "menubutton",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L48"
+    },
+    {
+      "id": "src_components_appmenu_index_sheet",
+      "label": "Sheet",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "sheet",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L20"
+    },
+    {
+      "id": "src_components_appmenu_index_sheettitle",
+      "label": "SheetTitle",
+      "_origin": "ast",
+      "community": 30,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "sheettitle",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L38"
+    },
+    {
       "id": "src_components_appnav_index",
       "label": "AppNav/index.jsx",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "appnav/index.jsx",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13012,7 +13144,7 @@
       "label": "APP_NAV_BOTTOM_PAD",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "app_nav_bottom_pad",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13023,7 +13155,7 @@
       "label": "AttentionDot",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "attentiondot",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13034,7 +13166,7 @@
       "label": "Bar",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "bar",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13045,7 +13177,7 @@
       "label": "Icon",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "icon",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13056,7 +13188,7 @@
       "label": "Label",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "label",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13067,7 +13199,7 @@
       "label": "NavItem",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "navitem",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13078,7 +13210,7 @@
       "label": "pulseHigh",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "pulsehigh",
       "source_file": "src/components/AppNav/index.jsx",
@@ -13089,7 +13221,7 @@
       "label": "ATTENTION_HIGH",
       "_origin": "ast",
       "community": 30,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "attention_high",
       "source_file": "src/game/navAttention.js",
@@ -13141,7 +13273,7 @@
       "node_kind": "heading",
       "norm_label": "capacitor foundation (in progress \u2014 #70)",
       "source_file": "CLAUDE.md",
-      "source_location": "L1188"
+      "source_location": "L1191"
     },
     {
       "id": "claude_commands",
@@ -13189,7 +13321,7 @@
       "node_kind": "heading",
       "norm_label": "funding",
       "source_file": "CLAUDE.md",
-      "source_location": "L1201"
+      "source_location": "L1204"
     },
     {
       "id": "claude_graphify",
@@ -13201,7 +13333,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L1322"
+      "source_location": "L1325"
     },
     {
       "id": "claude_interactive_session_startup",
@@ -13225,7 +13357,7 @@
       "node_kind": "heading",
       "norm_label": "license",
       "source_file": "CLAUDE.md",
-      "source_location": "L1208"
+      "source_location": "L1211"
     },
     {
       "id": "claude_md_claude_claude",
@@ -13249,7 +13381,7 @@
       "node_kind": "heading",
       "norm_label": "path aliases",
       "source_file": "CLAUDE.md",
-      "source_location": "L1155"
+      "source_location": "L1158"
     },
     {
       "id": "claude_project",
@@ -13285,7 +13417,7 @@
       "node_kind": "heading",
       "norm_label": "pwa support",
       "source_file": "CLAUDE.md",
-      "source_location": "L1177"
+      "source_location": "L1180"
     },
     {
       "id": "claude_repo_layout",
@@ -13309,7 +13441,7 @@
       "node_kind": "heading",
       "norm_label": "security notes",
       "source_file": "CLAUDE.md",
-      "source_location": "L1312"
+      "source_location": "L1315"
     },
     {
       "id": "claude_tech_stack",
@@ -13333,7 +13465,7 @@
       "node_kind": "heading",
       "norm_label": "theming",
       "source_file": "CLAUDE.md",
-      "source_location": "L1162"
+      "source_location": "L1165"
     },
     {
       "id": "src_pages_milestonespage_index",
@@ -13666,7 +13798,7 @@
       "node_kind": "heading",
       "norm_label": "constants (`src/game/layers.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2857"
+      "source_location": "L2863"
     },
     {
       "id": "docs_economy_reference_economy_model_reference",
@@ -13690,7 +13822,7 @@
       "node_kind": "heading",
       "norm_label": "game state shape",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2222"
+      "source_location": "L2228"
     },
     {
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
@@ -13702,7 +13834,7 @@
       "node_kind": "heading",
       "norm_label": "key engine functions (`src/game/engine.js`)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2670"
+      "source_location": "L2676"
     },
     {
       "id": "docs_economy_reference_offline_progress",
@@ -13714,7 +13846,7 @@
       "node_kind": "heading",
       "norm_label": "offline progress",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1453"
+      "source_location": "L1459"
     },
     {
       "id": "docs_economy_reference_overclock",
@@ -13726,7 +13858,7 @@
       "node_kind": "heading",
       "norm_label": "overclock",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2086"
+      "source_location": "L2092"
     },
     {
       "id": "docs_economy_reference_pp_compute_flops",
@@ -13738,7 +13870,7 @@
       "node_kind": "heading",
       "norm_label": "pp compute (flops)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1515"
+      "source_location": "L1521"
     },
     {
       "id": "docs_economy_reference_prestige_and_the_googol_freeze",
@@ -13750,7 +13882,7 @@
       "node_kind": "heading",
       "norm_label": "prestige and the googol freeze",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1963"
+      "source_location": "L1969"
     },
     {
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
@@ -13762,7 +13894,7 @@
       "node_kind": "heading",
       "norm_label": "prestige info is hidden until first prestige",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2169"
+      "source_location": "L2175"
     },
     {
       "id": "docs_economy_reference_prestige_points_autobuyer_unlock_and_the_tickspeed_multiplier",
@@ -13774,7 +13906,7 @@
       "node_kind": "heading",
       "norm_label": "prestige points, autobuyer unlock, and the tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1556"
+      "source_location": "L1562"
     },
     {
       "id": "docs_economy_reference_reset",
@@ -13786,7 +13918,7 @@
       "node_kind": "heading",
       "norm_label": "reset",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2188"
+      "source_location": "L2194"
     },
     {
       "id": "docs_economy_reference_scale_up",
@@ -13798,7 +13930,7 @@
       "node_kind": "heading",
       "norm_label": "scale up",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2007"
+      "source_location": "L2013"
     },
     {
       "id": "docs_economy_reference_the_configurable_purchase_block_size_and_tier_levels",
@@ -13834,7 +13966,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.0] - 2026-07-05",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1178"
+      "source_location": "L1181"
     },
     {
       "id": "changelog_0_2_0_2026_07_12",
@@ -13846,7 +13978,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2026-07-12",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1166"
+      "source_location": "L1169"
     },
     {
       "id": "changelog_0_3_0_2026_07_13",
@@ -13858,7 +13990,7 @@
       "node_kind": "heading",
       "norm_label": "[0.3.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1149"
+      "source_location": "L1152"
     },
     {
       "id": "changelog_0_4_0_2026_07_13",
@@ -13870,7 +14002,7 @@
       "node_kind": "heading",
       "norm_label": "[0.4.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1133"
+      "source_location": "L1136"
     },
     {
       "id": "changelog_0_5_0_2026_07_14",
@@ -13882,7 +14014,7 @@
       "node_kind": "heading",
       "norm_label": "[0.5.0] - 2026-07-14",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1120"
+      "source_location": "L1123"
     },
     {
       "id": "changelog_accessibility",
@@ -13894,7 +14026,7 @@
       "node_kind": "heading",
       "norm_label": "accessibility",
       "source_file": "CHANGELOG.md",
-      "source_location": "L115"
+      "source_location": "L118"
     },
     {
       "id": "changelog_added",
@@ -13906,10 +14038,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L127"
+      "source_location": "L130"
     },
     {
-      "id": "changelog_added_1122",
+      "id": "changelog_added_1125",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13918,10 +14050,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1122"
+      "source_location": "L1125"
     },
     {
-      "id": "changelog_added_1135",
+      "id": "changelog_added_1138",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13930,10 +14062,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1135"
+      "source_location": "L1138"
     },
     {
-      "id": "changelog_added_1151",
+      "id": "changelog_added_1154",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13942,10 +14074,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1151"
+      "source_location": "L1154"
     },
     {
-      "id": "changelog_added_1168",
+      "id": "changelog_added_1171",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13954,10 +14086,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1168"
+      "source_location": "L1171"
     },
     {
-      "id": "changelog_added_1180",
+      "id": "changelog_added_1183",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13966,10 +14098,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1180"
+      "source_location": "L1183"
     },
     {
-      "id": "changelog_added_824",
+      "id": "changelog_added_827",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13978,10 +14110,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L824"
+      "source_location": "L827"
     },
     {
-      "id": "changelog_added_903",
+      "id": "changelog_added_906",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -13990,7 +14122,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L903"
+      "source_location": "L906"
     },
     {
       "id": "changelog_changed",
@@ -14005,7 +14137,7 @@
       "source_location": "L10"
     },
     {
-      "id": "changelog_changed_1110",
+      "id": "changelog_changed_1113",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14014,10 +14146,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1110"
+      "source_location": "L1113"
     },
     {
-      "id": "changelog_changed_1126",
+      "id": "changelog_changed_1129",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14026,10 +14158,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1126"
+      "source_location": "L1129"
     },
     {
-      "id": "changelog_changed_1139",
+      "id": "changelog_changed_1142",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14038,10 +14170,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1139"
+      "source_location": "L1142"
     },
     {
-      "id": "changelog_changed_1156",
+      "id": "changelog_changed_1159",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14050,10 +14182,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1156"
+      "source_location": "L1159"
     },
     {
-      "id": "changelog_changed_435",
+      "id": "changelog_changed_438",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14062,10 +14194,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L435"
+      "source_location": "L438"
     },
     {
-      "id": "changelog_changed_855",
+      "id": "changelog_changed_858",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14074,10 +14206,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L855"
+      "source_location": "L858"
     },
     {
-      "id": "changelog_changed_957",
+      "id": "changelog_changed_960",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14086,7 +14218,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L957"
+      "source_location": "L960"
     },
     {
       "id": "changelog_changelog",
@@ -14113,7 +14245,7 @@
       "source_location": "L56"
     },
     {
-      "id": "changelog_fixed_1084",
+      "id": "changelog_fixed_1087",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14122,10 +14254,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1084"
+      "source_location": "L1087"
     },
     {
-      "id": "changelog_fixed_1114",
+      "id": "changelog_fixed_1117",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14134,10 +14266,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1114"
+      "source_location": "L1117"
     },
     {
-      "id": "changelog_fixed_1130",
+      "id": "changelog_fixed_1133",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14146,10 +14278,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1130"
+      "source_location": "L1133"
     },
     {
-      "id": "changelog_fixed_1143",
+      "id": "changelog_fixed_1146",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14158,10 +14290,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1143"
+      "source_location": "L1146"
     },
     {
-      "id": "changelog_fixed_1162",
+      "id": "changelog_fixed_1165",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14170,10 +14302,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1162"
+      "source_location": "L1165"
     },
     {
-      "id": "changelog_fixed_1173",
+      "id": "changelog_fixed_1176",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14182,10 +14314,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1173"
+      "source_location": "L1176"
     },
     {
-      "id": "changelog_fixed_228",
+      "id": "changelog_fixed_231",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14194,7 +14326,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L228"
+      "source_location": "L231"
     },
     {
       "id": "changelog_removed",
@@ -14206,10 +14338,10 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L200"
+      "source_location": "L203"
     },
     {
-      "id": "changelog_removed_848",
+      "id": "changelog_removed_851",
       "label": "Removed",
       "_origin": "ast",
       "community": 39,
@@ -14218,7 +14350,7 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L848"
+      "source_location": "L851"
     },
     {
       "id": "changelog_security",
@@ -14230,10 +14362,10 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L119"
+      "source_location": "L122"
     },
     {
-      "id": "changelog_security_1106",
+      "id": "changelog_security_1109",
       "label": "Security",
       "_origin": "ast",
       "community": 39,
@@ -14242,7 +14374,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1106"
+      "source_location": "L1109"
     },
     {
       "id": "changelog_unreleased",
@@ -14310,83 +14442,6 @@
       "norm_label": "compute_reserve_merge_starts",
       "source_file": "src/game/navAttention.js",
       "source_location": "L90"
-    },
-    {
-      "id": "src_theme_contrast",
-      "label": "contrast.js",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "contrast.js",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_theme_contrast_aa_large_text",
-      "label": "AA_LARGE_TEXT",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "aa_large_text",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L34"
-    },
-    {
-      "id": "src_theme_contrast_aa_normal_text",
-      "label": "AA_NORMAL_TEXT",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "aa_normal_text",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L33"
-    },
-    {
-      "id": "src_theme_contrast_aa_ui_component",
-      "label": "AA_UI_COMPONENT",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "aa_ui_component",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L35"
-    },
-    {
-      "id": "src_theme_contrast_test",
-      "label": "contrast.test.js",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "contrast.test.js",
-      "source_file": "src/theme/contrast.test.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_theme_tokens_contrast_test",
-      "label": "tokens.contrast.test.js",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "tokens.contrast.test.js",
-      "source_file": "src/theme/tokens.contrast.test.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_theme_tokens_themes",
-      "label": "themes",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "contrast.js",
-      "file_type": "code",
-      "norm_label": "themes",
-      "source_file": "src/theme/tokens.js",
-      "source_location": "L155"
     },
     {
       "id": "package_devdependencies",
@@ -14959,6 +15014,17 @@
       "source_location": "L697"
     },
     {
+      "id": "src_game_layers_compute_boost_presets",
+      "label": "COMPUTE_BOOST_PRESETS",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "InfoPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "compute_boost_presets",
+      "source_file": "src/game/layers.js",
+      "source_location": "L445"
+    },
+    {
       "id": "src_game_layers_compute_boost_tier_power_step",
       "label": "COMPUTE_BOOST_TIER_POWER_STEP",
       "_origin": "ast",
@@ -15025,17 +15091,6 @@
       "source_location": "L411"
     },
     {
-      "id": "src_game_layers_data_lake_capacity_by_level",
-      "label": "DATA_LAKE_CAPACITY_BY_LEVEL",
-      "_origin": "ast",
-      "community": 46,
-      "community_name": "InfoPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "data_lake_capacity_by_level",
-      "source_file": "src/game/layers.js",
-      "source_location": "L523"
-    },
-    {
       "id": "src_game_layers_data_lake_sub_size_disk_caps",
       "label": "DATA_LAKE_SUB_SIZE_DISK_CAPS",
       "_origin": "ast",
@@ -15089,6 +15144,17 @@
       "norm_label": "era_eligibility_pp",
       "source_file": "src/game/layers.js",
       "source_location": "L774"
+    },
+    {
+      "id": "src_game_layers_fill_multiplier_max_percent",
+      "label": "FILL_MULTIPLIER_MAX_PERCENT",
+      "_origin": "ast",
+      "community": 46,
+      "community_name": "InfoPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "fill_multiplier_max_percent",
+      "source_file": "src/game/layers.js",
+      "source_location": "L217"
     },
     {
       "id": "src_game_layers_fill_multiplier_tap_decay_percent_per_second",
@@ -16421,7 +16487,7 @@
       "node_kind": "heading",
       "norm_label": "era ascension and eons (#407)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1574"
+      "source_location": "L1580"
     },
     {
       "id": "docs_economy_reference_multiplier_overflow_safety",
@@ -16433,7 +16499,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier overflow safety",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1946"
+      "source_location": "L1952"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_per_tier_automations",
@@ -16445,7 +16511,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for per-tier automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1754"
+      "source_location": "L1760"
     },
     {
       "id": "docs_economy_reference_pause_resume_for_the_global_automations",
@@ -16457,7 +16523,7 @@
       "node_kind": "heading",
       "norm_label": "pause/resume for the global automations",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1729"
+      "source_location": "L1735"
     },
     {
       "id": "docs_economy_reference_the_global_tickspeed_multiplier",
@@ -16469,7 +16535,7 @@
       "node_kind": "heading",
       "norm_label": "the global tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1816"
+      "source_location": "L1822"
     },
     {
       "id": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
@@ -16481,7 +16547,7 @@
       "node_kind": "heading",
       "norm_label": "the last tier's xp-funded tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1852"
+      "source_location": "L1858"
     },
     {
       "id": "docs_economy_reference_tickspeed_multiplier",
@@ -16493,7 +16559,7 @@
       "node_kind": "heading",
       "norm_label": "tickspeed multiplier",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1786"
+      "source_location": "L1792"
     },
     {
       "id": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
@@ -16505,7 +16571,7 @@
       "node_kind": "heading",
       "norm_label": "tier autobuyer/tier-tickspeed-autobuyer milestones",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1693"
+      "source_location": "L1699"
     },
     {
       "id": "scripts_generate_pwa_icons",
@@ -17863,72 +17929,6 @@
       "source_location": "L5"
     },
     {
-      "id": "src_components_appmenu_index",
-      "label": "AppMenu/index.jsx",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "appmenu/index.jsx",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_appmenu_index_backdrop",
-      "label": "Backdrop",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "backdrop",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L10"
-    },
-    {
-      "id": "src_components_appmenu_index_icon",
-      "label": "Icon",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "icon",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L71"
-    },
-    {
-      "id": "src_components_appmenu_index_menubutton",
-      "label": "MenuButton",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "menubutton",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L48"
-    },
-    {
-      "id": "src_components_appmenu_index_sheet",
-      "label": "Sheet",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "sheet",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L20"
-    },
-    {
-      "id": "src_components_appmenu_index_sheettitle",
-      "label": "SheetTitle",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "AppMenu/index.jsx",
-      "file_type": "code",
-      "norm_label": "sheettitle",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L38"
-    },
-    {
       "id": "claude_skills_graphify_references_github_and_merge",
       "label": "github-and-merge.md",
       "_origin": "ast",
@@ -18418,7 +18418,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier outcomes are floored",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1416"
+      "source_location": "L1422"
     },
     {
       "id": "docs_economy_reference_production_figure_tick_progress_ring_removed",
@@ -18430,7 +18430,7 @@
       "node_kind": "heading",
       "norm_label": "production figure (tick-progress ring removed)",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1439"
+      "source_location": "L1445"
     },
     {
       "id": "docs_economy_reference_tier_production_tickspeed",
@@ -18442,7 +18442,7 @@
       "node_kind": "heading",
       "norm_label": "tier production tickspeed",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1372"
+      "source_location": "L1378"
     },
     {
       "id": "github_copilot_instructions",
@@ -18941,7 +18941,7 @@
       "node_kind": "heading",
       "norm_label": "end-to-end testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1278"
+      "source_location": "L1281"
     },
     {
       "id": "claude_testing",
@@ -18953,7 +18953,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1220"
+      "source_location": "L1223"
     },
     {
       "id": "claude_github_milestones_release_grouping",
@@ -20423,7 +20423,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/App.test.jsx",
-      "source_location": "L89",
+      "source_location": "L91",
       "weight": 1.0
     },
     {
@@ -20435,7 +20435,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/App.test.jsx",
-      "source_location": "L91",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -30491,7 +30491,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L489",
+      "source_location": "L499",
       "weight": 1.0
     },
     {
@@ -30503,7 +30503,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L491",
+      "source_location": "L501",
       "weight": 1.0
     },
     {
@@ -30515,7 +30515,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L492",
+      "source_location": "L502",
       "weight": 1.0
     },
     {
@@ -30527,7 +30527,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L499",
+      "source_location": "L509",
       "weight": 1.0
     },
     {
@@ -30539,7 +30539,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L509",
+      "source_location": "L519",
       "weight": 1.0
     },
     {
@@ -30551,7 +30551,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L513",
+      "source_location": "L523",
       "weight": 1.0
     },
     {
@@ -30563,7 +30563,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L514",
+      "source_location": "L524",
       "weight": 1.0
     },
     {
@@ -30575,7 +30575,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L525",
+      "source_location": "L535",
       "weight": 1.0
     },
     {
@@ -30587,7 +30587,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L526",
+      "source_location": "L536",
       "weight": 1.0
     },
     {
@@ -30599,7 +30599,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L527",
+      "source_location": "L537",
       "weight": 1.0
     },
     {
@@ -30611,7 +30611,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L528",
+      "source_location": "L538",
       "weight": 1.0
     },
     {
@@ -30623,7 +30623,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L529",
+      "source_location": "L539",
       "weight": 1.0
     },
     {
@@ -30635,7 +30635,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L533",
+      "source_location": "L543",
       "weight": 1.0
     },
     {
@@ -30647,7 +30647,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L534",
+      "source_location": "L544",
       "weight": 1.0
     },
     {
@@ -30659,7 +30659,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L535",
+      "source_location": "L545",
       "weight": 1.0
     },
     {
@@ -30671,7 +30671,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L536",
+      "source_location": "L546",
       "weight": 1.0
     },
     {
@@ -30683,7 +30683,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L550",
+      "source_location": "L560",
       "weight": 1.0
     },
     {
@@ -30695,7 +30695,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L559",
+      "source_location": "L569",
       "weight": 1.0
     },
     {
@@ -30707,7 +30707,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L570",
+      "source_location": "L580",
       "weight": 1.0
     },
     {
@@ -30719,7 +30719,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L571",
+      "source_location": "L581",
       "weight": 1.0
     },
     {
@@ -30731,7 +30731,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L607",
+      "source_location": "L617",
       "weight": 1.0
     },
     {
@@ -30743,7 +30743,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L609",
+      "source_location": "L619",
       "weight": 1.0
     },
     {
@@ -30755,7 +30755,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L668",
+      "source_location": "L678",
       "weight": 1.0
     },
     {
@@ -30767,7 +30767,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L669",
+      "source_location": "L679",
       "weight": 1.0
     },
     {
@@ -30779,7 +30779,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L670",
+      "source_location": "L680",
       "weight": 1.0
     },
     {
@@ -30791,7 +30791,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L746",
+      "source_location": "L756",
       "weight": 1.0
     },
     {
@@ -30803,7 +30803,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L748",
+      "source_location": "L758",
       "weight": 1.0
     },
     {
@@ -30815,7 +30815,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L754",
+      "source_location": "L764",
       "weight": 1.0
     },
     {
@@ -30827,7 +30827,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L755",
+      "source_location": "L765",
       "weight": 1.0
     },
     {
@@ -30839,7 +30839,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L758",
+      "source_location": "L768",
       "weight": 1.0
     },
     {
@@ -30851,7 +30851,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L764",
+      "source_location": "L774",
       "weight": 1.0
     },
     {
@@ -30863,7 +30863,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L778",
+      "source_location": "L788",
       "weight": 1.0
     },
     {
@@ -30875,7 +30875,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L778",
+      "source_location": "L788",
       "weight": 1.0
     },
     {
@@ -33689,6 +33689,18 @@
     },
     {
       "source": "src_app_test",
+      "target": "package_version",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/App.test.jsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_test",
       "target": "src_game_storage_isdevmodeactive",
       "relation": "imports",
       "_origin": "ast",
@@ -33696,7 +33708,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/App.test.jsx",
-      "source_location": "L38",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -33708,19 +33720,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/App.test.jsx",
-      "source_location": "L39",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_test",
-      "target": "package_version",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src/App.test.jsx",
-      "source_location": "L4",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -33929,6 +33929,18 @@
     },
     {
       "source": "src_app_test",
+      "target": "src_game_layers_data_lake_capacity_by_level",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/App.test.jsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_test",
       "target": "src_game_layers_data_lake_capacity_max_level",
       "relation": "imports",
       "_origin": "ast",
@@ -33942,6 +33954,18 @@
     {
       "source": "src_app_test",
       "target": "src_game_layers_data_lake_overflow_max_percent",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/App.test.jsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_test",
+      "target": "src_game_layers_data_lake_overflow_min_percent",
       "relation": "imports",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -47129,6 +47153,18 @@
     },
     {
       "source": "src_app_test",
+      "target": "package",
+      "relation": "imports_from",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/App.test.jsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "src_app_test",
       "target": "src_game_storage",
       "relation": "imports_from",
       "_origin": "ast",
@@ -47136,7 +47172,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/App.test.jsx",
-      "source_location": "L38",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -47148,19 +47184,7 @@
       "confidence_score": 1.0,
       "context": "import",
       "source_file": "src/App.test.jsx",
-      "source_location": "L39",
-      "weight": 1.0
-    },
-    {
-      "source": "src_app_test",
-      "target": "package",
-      "relation": "imports_from",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "src/App.test.jsx",
-      "source_location": "L4",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -49050,150 +49074,128 @@
     },
     {
       "source": "changelog_0_1_0_2026_07_05",
-      "target": "changelog_added_1180",
+      "target": "changelog_added_1183",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1180",
+      "source_location": "L1183",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_added_1168",
+      "target": "changelog_added_1171",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1168",
+      "source_location": "L1171",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_fixed_1173",
+      "target": "changelog_fixed_1176",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1173",
+      "source_location": "L1176",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_added_1151",
+      "target": "changelog_added_1154",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1151",
+      "source_location": "L1154",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_changed_1156",
+      "target": "changelog_changed_1159",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1156",
+      "source_location": "L1159",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_fixed_1162",
+      "target": "changelog_fixed_1165",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1162",
+      "source_location": "L1165",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_added_1135",
+      "target": "changelog_added_1138",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1135",
+      "source_location": "L1138",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_changed_1139",
+      "target": "changelog_changed_1142",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1139",
+      "source_location": "L1142",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_fixed_1143",
+      "target": "changelog_fixed_1146",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1143",
+      "source_location": "L1146",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_added_1122",
+      "target": "changelog_added_1125",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1122",
+      "source_location": "L1125",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_changed_1126",
+      "target": "changelog_changed_1129",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1126",
+      "source_location": "L1129",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_fixed_1130",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L1130",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_changelog",
-      "target": "changelog_0_5_0_2026_07_14",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "CHANGELOG.md",
-      "source_location": "L1120",
-      "weight": 1.0
-    },
-    {
-      "source": "changelog_changelog",
-      "target": "changelog_0_4_0_2026_07_13",
+      "target": "changelog_fixed_1133",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -49204,13 +49206,35 @@
     },
     {
       "source": "changelog_changelog",
+      "target": "changelog_0_5_0_2026_07_14",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1123",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_changelog",
+      "target": "changelog_0_4_0_2026_07_13",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1136",
+      "weight": 1.0
+    },
+    {
+      "source": "changelog_changelog",
       "target": "changelog_0_3_0_2026_07_13",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1149",
+      "source_location": "L1152",
       "weight": 1.0
     },
     {
@@ -49221,7 +49245,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1166",
+      "source_location": "L1169",
       "weight": 1.0
     },
     {
@@ -49232,7 +49256,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1178",
+      "source_location": "L1181",
       "weight": 1.0
     },
     {
@@ -49259,46 +49283,46 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_1084",
+      "target": "changelog_fixed_1087",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1084",
+      "source_location": "L1087",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_security_1106",
+      "target": "changelog_security_1109",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1106",
+      "source_location": "L1109",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_1110",
+      "target": "changelog_changed_1113",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1110",
+      "source_location": "L1113",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_1114",
+      "target": "changelog_fixed_1117",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1114",
+      "source_location": "L1117",
       "weight": 1.0
     },
     {
@@ -49309,7 +49333,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L115",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -49320,7 +49344,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L119",
+      "source_location": "L122",
       "weight": 1.0
     },
     {
@@ -49331,7 +49355,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L127",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -49342,29 +49366,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L200",
+      "source_location": "L203",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_228",
+      "target": "changelog_fixed_231",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L228",
+      "source_location": "L231",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_435",
+      "target": "changelog_changed_438",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L435",
+      "source_location": "L438",
       "weight": 1.0
     },
     {
@@ -49380,57 +49404,57 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_824",
+      "target": "changelog_added_827",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L824",
+      "source_location": "L827",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_removed_848",
+      "target": "changelog_removed_851",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L848",
+      "source_location": "L851",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_855",
+      "target": "changelog_changed_858",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L855",
+      "source_location": "L858",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_903",
+      "target": "changelog_added_906",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L903",
+      "source_location": "L906",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_957",
+      "target": "changelog_changed_960",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L957",
+      "source_location": "L960",
       "weight": 1.0
     },
     {
@@ -49595,7 +49619,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1155",
+      "source_location": "L1158",
       "weight": 1.0
     },
     {
@@ -49606,7 +49630,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1162",
+      "source_location": "L1165",
       "weight": 1.0
     },
     {
@@ -49617,7 +49641,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1177",
+      "source_location": "L1180",
       "weight": 1.0
     },
     {
@@ -49628,7 +49652,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1201",
+      "source_location": "L1204",
       "weight": 1.0
     },
     {
@@ -49639,7 +49663,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1208",
+      "source_location": "L1211",
       "weight": 1.0
     },
     {
@@ -49650,7 +49674,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1220",
+      "source_location": "L1223",
       "weight": 1.0
     },
     {
@@ -49661,7 +49685,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1312",
+      "source_location": "L1315",
       "weight": 1.0
     },
     {
@@ -49672,7 +49696,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1322",
+      "source_location": "L1325",
       "weight": 1.0
     },
     {
@@ -49826,7 +49850,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1188",
+      "source_location": "L1191",
       "weight": 1.0
     },
     {
@@ -50915,7 +50939,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1278",
+      "source_location": "L1281",
       "weight": 1.0
     },
     {
@@ -53181,7 +53205,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1372",
+      "source_location": "L1378",
       "weight": 1.0
     },
     {
@@ -53192,7 +53216,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1453",
+      "source_location": "L1459",
       "weight": 1.0
     },
     {
@@ -53203,7 +53227,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1515",
+      "source_location": "L1521",
       "weight": 1.0
     },
     {
@@ -53214,7 +53238,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1556",
+      "source_location": "L1562",
       "weight": 1.0
     },
     {
@@ -53225,7 +53249,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1574",
+      "source_location": "L1580",
       "weight": 1.0
     },
     {
@@ -53236,7 +53260,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1963",
+      "source_location": "L1969",
       "weight": 1.0
     },
     {
@@ -53247,7 +53271,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2007",
+      "source_location": "L2013",
       "weight": 1.0
     },
     {
@@ -53258,7 +53282,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2086",
+      "source_location": "L2092",
       "weight": 1.0
     },
     {
@@ -53269,7 +53293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2169",
+      "source_location": "L2175",
       "weight": 1.0
     },
     {
@@ -53280,7 +53304,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2188",
+      "source_location": "L2194",
       "weight": 1.0
     },
     {
@@ -53291,7 +53315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2222",
+      "source_location": "L2228",
       "weight": 1.0
     },
     {
@@ -53302,7 +53326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2670",
+      "source_location": "L2676",
       "weight": 1.0
     },
     {
@@ -53313,7 +53337,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2857",
+      "source_location": "L2863",
       "weight": 1.0
     },
     {
@@ -53357,7 +53381,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1693",
+      "source_location": "L1699",
       "weight": 1.0
     },
     {
@@ -53368,7 +53392,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1729",
+      "source_location": "L1735",
       "weight": 1.0
     },
     {
@@ -53379,7 +53403,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1754",
+      "source_location": "L1760",
       "weight": 1.0
     },
     {
@@ -53390,7 +53414,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1786",
+      "source_location": "L1792",
       "weight": 1.0
     },
     {
@@ -53401,7 +53425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1816",
+      "source_location": "L1822",
       "weight": 1.0
     },
     {
@@ -53412,7 +53436,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1852",
+      "source_location": "L1858",
       "weight": 1.0
     },
     {
@@ -53423,7 +53447,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1946",
+      "source_location": "L1952",
       "weight": 1.0
     },
     {
@@ -53434,7 +53458,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1416",
+      "source_location": "L1422",
       "weight": 1.0
     },
     {
@@ -53445,7 +53469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1439",
+      "source_location": "L1445",
       "weight": 1.0
     },
     {
@@ -54820,7 +54844,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L102",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -54831,7 +54855,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L1672",
+      "source_location": "L1674",
       "weight": 1.0
     },
     {
@@ -54842,7 +54866,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L1676",
+      "source_location": "L1678",
       "weight": 1.0
     },
     {
@@ -54853,7 +54877,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L2408",
+      "source_location": "L2410",
       "weight": 1.0
     },
     {
@@ -54864,7 +54888,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L4727",
+      "source_location": "L4756",
       "weight": 1.0
     },
     {
@@ -54875,7 +54899,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L71",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -54886,7 +54910,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L86",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -62806,7 +62830,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ByteFoundryPage/index.jsx",
-      "source_location": "L484",
+      "source_location": "L494",
       "weight": 1.0
     },
     {
@@ -66245,5 +66269,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e488ecf0e33d56ffab6686c0338a964ac7337ff0"
+  "built_at_commit": "1041da24cb0b459b3d7bc0e4ab1018319645ae61"
 }

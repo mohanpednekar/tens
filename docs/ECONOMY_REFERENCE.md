@@ -341,7 +341,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
      `mode="multiplier"`, the normal accent-blue fill represents only the base fill multiplier. A
      live tap bonus renders as its own yellow, center-growing bar directly below it and disappears
-     at zero. The bar keeps the old
+     at zero. **The whole bar+percent row itself renders nothing at all whenever the reading it
+     displays (the base multiplier in `mode="multiplier"`, the lake overflow rate in `mode="lake"`)
+     is exactly 0** — a zero-width center-point bar plus an orphaned "0%" label reads as
+     stalled/broken rather than "nothing to report," so `MultiplierBar` returns `null` instead. In
+     practice this only ever fires in lake mode, once a maxed lake has no open disk slot left
+     (`getDataLakeOverflowRatePercent`'s own `DATA_LAKE_OVERFLOW_MIN_PERCENT` floor, 0) — the base
+     fill multiplier's own floor (`FILL_MULTIPLIER_MIN_PERCENT`, 50) never actually reaches 0. The bar keeps the old
      dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`
      contract (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still
      screen-reader-visible as a progress indicator and every test asserting on that contract is
