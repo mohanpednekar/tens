@@ -15,7 +15,6 @@ import {
   COMPUTE_ENTITY_CAP,
   DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
-  DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT,
   DATA_LAKE_OVERFLOW_MAX_PERCENT,
   DATA_LAKE_OVERFLOW_MIN_PERCENT,
   DATA_LAKE_SUB_SIZE_DISK_CAPS,
@@ -374,8 +373,8 @@ describe('constants', () => {
     expect(DISK_BUILD_COST_MULTIPLIER).toBe(10)
   })
 
-  it('DISK_ARRAY_LADDER_CAP is 10 (disks per size before the build ladder advances)', () => {
-    expect(DISK_ARRAY_LADDER_CAP).toBe(10)
+  it('DISK_ARRAY_LADDER_CAP is 9 (disks per size before the build ladder advances — the array\'s own cache substitutes for the 10th)', () => {
+    expect(DISK_ARRAY_LADDER_CAP).toBe(9)
   })
 
   it('DISK_LADDER_BASE_SIZE_BITS is 8000 (1 KB) and DISK_LADDER_SIZE_MULTIPLIER is 10 (every Byte power-of-ten size)', () => {
@@ -429,21 +428,16 @@ describe('constants', () => {
     expect(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]).toBe(1000)
   })
 
-  it('DATA_LAKE_SUB_SIZE_DISK_CAPS (10/9/9) sum exactly to the maxed level\'s own 1,000-unit capacity, one entry per DATA_LAKE_SUB_SIZES', () => {
+  it('DATA_LAKE_SUB_SIZE_DISK_CAPS (9/9/9) sum one unit short of the maxed level\'s own 1,000-unit capacity — the lake\'s own fill buffer supplies the last one, one entry per DATA_LAKE_SUB_SIZES', () => {
     expect(DATA_LAKE_SUB_SIZE_DISK_CAPS).toHaveLength(DATA_LAKE_SUB_SIZES.length)
     const total = DATA_LAKE_SUB_SIZES.reduce((sum, subSize, index) => sum + subSize * DATA_LAKE_SUB_SIZE_DISK_CAPS[index], 0)
-    expect(total).toBe(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL])
-    expect(DATA_LAKE_SUB_SIZE_DISK_CAPS).toEqual([10, 9, 9])
+    expect(total).toBe(DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL] - 1)
+    expect(DATA_LAKE_SUB_SIZE_DISK_CAPS).toEqual([9, 9, 9])
   })
 
   it('DATA_LAKE_OVERFLOW_MAX_PERCENT/MIN_PERCENT bound the lake-overflow rate at 50%..0%', () => {
     expect(DATA_LAKE_OVERFLOW_MAX_PERCENT).toBe(50)
     expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
     expect(DATA_LAKE_OVERFLOW_MAX_PERCENT).toBeGreaterThan(DATA_LAKE_OVERFLOW_MIN_PERCENT)
-  })
-
-  it('DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT sits strictly between the taper\'s MIN and MAX, so the real rate never actually reaches literal 0% (a pure proportional taper toward 0 never reaches its own target — see getDataLakeOverflowRatePercent)', () => {
-    expect(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT).toBeGreaterThan(DATA_LAKE_OVERFLOW_MIN_PERCENT)
-    expect(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT).toBeLessThan(DATA_LAKE_OVERFLOW_MAX_PERCENT)
   })
 })

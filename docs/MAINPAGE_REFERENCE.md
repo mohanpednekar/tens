@@ -115,9 +115,10 @@ Disk-deposit-funded Booster mechanic, and before that a manual "Claim Core" butt
 mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section).
 
 **Storage pools render as their own `PoolCard`s.** Each VISIBLE Storage pool
-(`getVisibleStoragePoolCount(state)` — the smaller of how many pools have a real disk built and how
-many pools' own capacity-unlock threshold Data Stream's raw Capacity has reached, see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) renders its own separate `PoolCard`
+(`getVisibleStoragePoolCount(state)` — PURE Capacity-based: how many pools' own capacity-unlock
+threshold the Data Stream's raw Capacity has reached, with NO disk-build dependency — see "Pool
+liveness is Capacity-only" in CLAUDE.md and docs/ECONOMY_REFERENCE.md's "Byte Foundry" section)
+renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
 balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard`
@@ -162,19 +163,21 @@ visible label always tracks
 `10^(n-1)`): 8000 bits/"1
 KB" at level 1, then 80,000/"10 KB", then 800,000/"100 KB", then 80,000,000/"10 MB" — skipping
 8,000,000/"1 MB", since `tier01`'s own cost-epoch exponent sequence skips it too — and only advances
-once `DISK_ARRAY_LADDER_CAP` (10) disks have ever been built at the current size (`disksBuiltTotal`,
+once `DISK_ARRAY_LADDER_CAP` (9 — the array's own cache substitutes for what would have been a
+10th disk) disks have ever been built at the current size (`disksBuiltTotal`,
 a cumulative, never-decremented count), decoupled from tier01's own CURRENT price. The build cost
 (`getDiskCost(state, capacityBits)`) is `capacityBits * getDiskProvisionPassesRequired(state,
-capacityBits)` — N for the array's Nth disk (1 for its first, capped at `DISK_BUILD_COST_MULTIPLIER`
-(10) for its last), not a flat count for every disk regardless of ordinal: a real 1 KB/8000-bit
-array's first disk costs 8,000 bits ("1 KB"), its last (10th) still costs 80,000 bits ("10 KB") — the
-same flat figure every disk in the array used to cost (see docs/DESIGN_HISTORY.md). No separate
+capacityBits)` — N for the array's Nth disk (1 for its first, up to 9 for its last;
+`DISK_BUILD_COST_MULTIPLIER`'s defensive 10 no longer reached), not a flat count for every disk
+regardless of ordinal: a real 1 KB/8000-bit array's first disk costs 8,000 bits ("1 KB"), its last
+(9th) costs 72,000 bits ("9 KB") — not the flat figure every disk in the array used to cost (see
+docs/DESIGN_HISTORY.md). No separate
 `BITS_PER_BYTE` factor is needed here now that `capacityBits` is already Byte-accurate (an earlier,
 buggy "kilobit"-scaled version of this ladder needed one — see docs/DESIGN_HISTORY.md).
 
 Below Build, every size from `getDiskSizesToShow(state)` renders a full interactive
 `components/DiskArrayRow` (cache + disks, ascending) as continuous sections on this same screen —
-not behind a Storage tab. Each disk strip always shows all 10 slots in one unbroken row.
+not behind a Storage tab. Each disk strip always shows all `DISK_ARRAY_LADDER_CAP` (9) slots in one unbroken row.
 
 Provisioning a disk's cost is no longer paid in one lump sum —
 `provisionDisk` (`actions.provisionDisk`) collects the cost in `getDiskProvisionPassesRequired(state,
@@ -217,12 +220,16 @@ today goes straight from idle to the disk existing, in the same click, with no m
 rendered**: **idle** (covers both the not-yet-started and
 funding-in-progress label variants above) — `aria-label="provision disk"`,
 `disabled={!canProvisionDisk}` where `canProvisionDisk = isProvisionDiskTurnAvailable(state)` (below
-a single pass's cost, no build already in progress, the ladder not yet exhausted for every currently-active
-pool, OR while a redeemable Disk Fill/an affordable Speed claim — both higher priority, see
-"Forced priority order" in docs/ECONOMY_REFERENCE.md — is currently available),
+a single pass's cost against the pool's SPENDABLE buffer (its own read cache's reservation,
+`getPoolCacheReservationBits`, excluded — mirrors `isProvisionDiskAvailable`'s own engine-side
+check, so the UI's affordability reading never credits bits the cache itself has first claim on), no
+build already in progress, the ladder not yet exhausted for every currently-active
+pool, OR while a redeemable Disk Fill — the only higher-priority action, see
+"Forced priority order" in docs/ECONOMY_REFERENCE.md; Upgrade Data Stream itself sits outside the
+order and never blocks Provision Disk — is currently available),
 `variant={canStartDiskBuild ? 'info' : 'neutral'}`,
-`title` either naming which higher-priority action to take first (`"Take Speed (or redeem a full
-Disk) first"`, when `diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
+`title` either naming which higher-priority action to take first (`"Redeem a full Disk first"`, when
+`diskBuildBlockedByPriority`) or — depending on whether this size's own fixed
 corresponding tier is currently at its required level (`diskRedeemTierName`, from
 `getDiskRedeemTierName(state, diskSize)`) — `"Costs
 {cost}, paid in {passesRequired} pass(es) of {size} each ({passesCollected}/
@@ -239,10 +246,20 @@ completing all three arrays in an earlier pool unlocks the next pool (see
 (`diskBuildProgress`) reads differently in each state: mid-provision, `100 - (remainingSeconds /
 totalSeconds) * 100` (a genuine "% built" fill, using `totalSeconds` as the fixed denominator so the
 fill only ever climbs toward 100 as `remainingSeconds` counts down); pool complete, a fixed `100`;
-idle, `((passesCollected * diskSize + min(diskPoolBufferBits, diskSize)) / diskCost) * 100` (already-
-collected passes count as permanent progress, plus however much of the CURRENT buffer counts toward
-the next pass, so the bar climbs smoothly between clicks rather than jumping only once a whole pass
-fires), paired with a hidden
+idle, `0` until `diskBuildEngaged` (`diskPassesCollected > 0 || intro.diskBuildQueued` — i.e. the
+player has actually clicked at least once), THEN
+`((passesCollected * diskSize + min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100`
+(`diskPoolSpendableBufferBits = diskPoolBufferBits - getPoolCacheReservationBits`, the SAME
+spendable amount `isProvisionDiskAvailable`/`provisionDisk` themselves check/spend against — the raw
+buffer alone would let the bar advance on bits the very next cache-fill tick is about to consume
+instead, making displayed progress regress or promise a pass that never actually lands; see
+`docs/DESIGN_HISTORY.md`) — already-
+collected passes count as permanent progress, plus however much of the CURRENT spendable buffer
+counts toward the next pass, so the bar climbs smoothly between clicks rather than jumping only once
+a whole pass fires — the button's own existence already signals eligibility, so it deliberately does NOT preview
+a fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read-cache
+fill) before the player has ever engaged this specific build; see `docs/DESIGN_HISTORY.md`. Paired
+with a hidden
 `role="progressbar"` (`aria-label="byte foundry disk build progress"`,
 `aria-valuenow={round(diskBuildProgress)}`, `aria-valuemin={0}`, `aria-valuemax={100}`). Both the
 label and `title` render the disk's size AND its cost via `formatDiskSize` (see "Numbers are
@@ -307,10 +324,14 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes, unconditionally preferring Scale Out whenever `isDataLakeCapacityDoublingAvailable`
-is true — Scale Out is never merely disabled-but-visible any more, and no longer arbitrated against
-Buy via the forced priority order at all (removed — see `docs/DESIGN_HISTORY.md`; array completion,
-independent of every other action's availability, is now Scale Out's only gate): "⚡ Scale Out"
+between two modes: Buy wins the slot whenever it's genuinely affordable (`canBuy`), even with Scale
+Out also available (e.g. right after a manual 💧 Fill deposit) — Scale Out only claims the slot once
+Buy isn't an option, so a Fill-funded Booster purchase the player wanted to make can no longer be
+silently redirected into a capacity level-up instead (see `docs/DESIGN_HISTORY.md`). Neither button
+is arbitrated against the other via the forced priority order at all (removed — see
+`docs/DESIGN_HISTORY.md`; array completion, independent of every other action's availability, is
+Scale Out's own gate, same as Buy's own affordability check) — Scale Out is never merely
+disabled-but-visible any more: "⚡ Scale Out"
 (`actions.doubleDataLakeCapacity`) once
 the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
 needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
@@ -435,8 +456,10 @@ automatically now (`tickDiskPull`/`tickDiskLevelOneCachePull`), not through a pl
   fill while a read-cache-to-disk flush is draining it. `aria-label` is the plain `"<size> cache
   block N"` (or `"… flushing to disk"` mid-flush); `title` explains the fill/flush state only.
 - A `SquaresRow` (`role="group"`, `aria-label="<size> disks"`) of exactly `DISK_ARRAY_LADDER_CAP`
-  (10) `DiskSquare`s — each labeled inside with the array's Byte-scale face size — a fixed-length
-  strip that **always** keeps all ten circles on one unbroken row (circles flex-shrink; never wraps
+  (9) `DiskSquare`s — each labeled inside with a BARE number, no unit (`formatDiskSizeBare` — the
+  surrounding pool card already establishes the scale; `aria-label`/`title` keep the full
+  unit-suffixed `formatDiskSize` form) — a fixed-length
+  strip that **always** keeps all 9 circles on one unbroken row (circles flex-shrink; never wraps
   on mobile); in-cell labels use `0.65rem` font:
   **full** (leftmost), split into a full disk about to be auto-pulled THIS TICK
   (`isDiskPullEligible` — matching its tier's current level at zero progress) rendering
@@ -850,24 +873,24 @@ many for a row already carrying the tier's autobuyer state (see "Unit autobuyer 
 cumulative figure is still in the row's own Details disclosure (see "Tier row details disclosure"
 below).
 
-Whenever the **last tier**'s currently-owned count is >= `getPurchaseBlockSize(state)` (a full
-level, see docs/ECONOMY_REFERENCE.md; `isLastTierTickspeedXpUnlocked`, see "The last tier's XP-funded
-tickspeed" below), this Money-funded `UpgradeButton` is replaced — in the same
-grid slot — by a quick-access **Scale Up** button instead (`⏩ ×2`, `actions.scaleUp` — the same
-action `ScaleUpCard`'s own button triggers, with a distinct `${tier.name}'s row: …` aria-label prefix so
-the two same-purpose buttons don't collide under `getByRole('button', { name })` in tests), rather than
-the manual XP-consume button (`🧬 {current unspent XP} XP`, `actions.consumeXpForLastTierTickspeed`)
-this slot used to show — reaching a full last-tier level is also exactly when Scale Up tends to be
-close, so this reuses the slot for the more actionable control. The underlying XP-funded tickspeed
-mechanic keeps running unattended: it's still spent automatically once per tick by the tier tickspeed
-autobuyer (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
-its current unspent-XP balance/next-consumption minimum still show in the row's Details disclosure (as
-an "XP Tickspeed" line) — there's simply no manual consume button for it any more. The Details
-disclosure keeps working unchanged for the last tier otherwise, still reading the XP-funded
-multiplier instead of the Money-funded one. This is a live check, not a one-time unlock: a
-Prestige/Scale Up resets the last tier's owned count to 0 along with every other tier's, which reverts
-this slot back to the normal Money-funded button until the player buys back up to a full level — see
-"The last tier's XP-funded tickspeed" below for why.
+Once the **last tier** has ever been the target of a successful Scale Up this cycle
+(`isLastTierTickspeedXpUnlocked` — a `scaleUpTierCounts`-based latch, NOT a live read of its
+current owned count, see docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), this
+Money-funded `UpgradeButton` is replaced — in the same grid slot, for the rest of the cycle — by
+the manual XP-consume button instead (`🧬 {current unspent XP} XP`,
+`actions.consumeXpForLastTierTickspeed`, behind a `window.confirm`). It's disabled whenever the
+last tier's own current owned count is 0 (nothing left to speed up — see
+`consumeXpForLastTierTickspeed`'s matching engine-level guard), unspent XP is below
+`getLastTierXpTickspeedMinConsumption`, or production is frozen; its `title` explains which. The
+same underlying action also fires automatically once per tick via the tier tickspeed autobuyer once
+bought (see "Automation" in docs/ECONOMY_REFERENCE.md's "The last tier's XP-funded tickspeed"), and
+its current unspent-XP balance/next-consumption minimum also show in the row's Details disclosure
+(as an "XP Tickspeed" line). The Details disclosure keeps working unchanged for the last tier
+otherwise, still reading the XP-funded multiplier instead of the Money-funded one. Only a
+Prestige/Overclock (which reset `scaleUpTierCounts`) reverts this slot back to the normal
+Money-funded button — the last tier's owned count merely dropping (e.g. from a Scale Up on an
+earlier tier, or from consuming XP itself) does NOT revert it, only disables the button — see "The
+last tier's XP-funded tickspeed" below for why.
 
 **No per-tier automation icon on the Factory view row.** A tier row's `name` grid area (shared by
 `TierNameTrigger` / `TierName`) holds the tier's symbol on the left and the owned count on the
@@ -1100,9 +1123,10 @@ reward is folded into the Tickspeed upgrade's own per-level rate, not a separate
 Like `ScaleUpButton`'s `Lv.{scaleUpTargetTierLevelDisplay}/{scaleUpRequirementDisplay}`, this pair
 uses the completed-level display offset while eligibility continues to use the raw engine values;
 see `getOverclockRequirement`'s own comment in `engine.js` and "Overclock" in
-docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button the way Scale Up gets
-one on the last tier's own row once full (see "Tickspeed multiplier" above) — Overclock is meant to be a
-deliberate, occasional decision reached via this card, not a frequent one-tap action.
+docs/ECONOMY_REFERENCE.md. There is no per-tier-row quick-access Overclock button — Overclock is meant
+to be a deliberate, occasional decision reached via this card, not a frequent one-tap action (unlike
+the last tier's own row, which does grow a dedicated XP-consume tickspeed button once XP-unlocked —
+see "Tickspeed multiplier" above — but that's a different action entirely, not a Scale Up shortcut).
 
 `OverclockCard`'s `<h2>` also wraps a `Disclosure` (see "No description prose on this page" above)
 whose body renders once `overclockCount > 0`: collapsed by default, clicking "Overclock" reveals a
