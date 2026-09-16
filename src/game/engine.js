@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -464,8 +464,9 @@ export const createInitialGameState = () => ({
     diskBuild: null,
     // PERMANENT — { [capacityBits]: passes collected so far } toward the CURRENT ladder offer's
     // build cost (see provisionDisk) — funding is paid in getDiskProvisionPassesRequired(state,
-    // size) installments of the disk's own face-value size each (N for the array's Nth disk, capped
-    // at DISK_BUILD_COST_MULTIPLIER (10)), rather than the full cost in one lump sum, so a pool's
+    // size) installments of the disk's own face-value size each (N for the array's Nth disk, up to
+    // 9 — DISK_ARRAY_LADDER_CAP — in practice; DISK_BUILD_COST_MULTIPLIER's defensive 10 no longer
+    // reached), rather than the full cost in one lump sum, so a pool's
     // buffer only ever needs to hold one pass at a time. Keyed by size (not a single scalar) for the
     // same "per-size map" shape disks/disksBuiltTotal/diskCache use, though only ever one size is
     // actively accumulating passes at a time (getDiskSize's single-size ladder). Cleared for that
@@ -2111,7 +2112,10 @@ export const getDataStreamEffectMultiplier = intro => getDataStreamMultiplierPer
 // FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100) — another tap would have nothing left to add.
 export const tapIntroBit = state => {
   if (state.intro.bits >= state.intro.capacity) return state
-  if (getVisibleStoragePoolCount(state) >= 1) {
+  // Fill-multiplier-bonus mode once Storage itself has been revealed — isStorageUnlocked directly
+  // (NOT getVisibleStoragePoolCount(state) >= 1, which pool 1's own special-case always satisfies
+  // regardless of actual Capacity — see that function's own doc comment).
+  if (isStorageUnlocked(state)) {
     // The manual tap bonus is its OWN 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT value, clamped
     // independently of the fill-based reading — a tap at the cap has nothing left to add (same
     // "nothing left to gain" reasoning as tapping an already-full Buffer).
@@ -2156,14 +2160,34 @@ export const getPoolIndexForDiskSize = sizeBits => {
   return step ? Math.ceil(step / DATA_LAKE_SUB_SIZES.length) : null
 }
 
-export const isStoragePoolUnlocked = (state, poolIndex) => {
+// Whether pool `poolIndex` itself has EVERY one of its own three ladder sizes fully built
+// (DISK_ARRAY_LADDER_CAP disks each) — "the pool is complete." Answers a question about that pool
+// ON ITS OWN, unlike isStoragePoolUnlocked below (which answers "is THIS pool reachable," a
+// question about the PRECEDING pool). Reused by isStoragePoolUnlocked (pool N+1 unlocks exactly
+// when pool N is complete) and by the Data Lake manual/automatic fill split (see
+// isDataLakeManualFillAvailable/tickPoolBufferFill) — a lake fills manually, capped at its next
+// Booster's cost, until its own matching pool is complete, then automatically (the pre-existing
+// overflow mechanic) from then on.
+export const isStoragePoolFullyBuilt = (state, poolIndex) => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getStoragePoolCount()) return false
-  if (poolIndex === 1) return true
-  const firstStep = (poolIndex - 2) * DATA_LAKE_SUB_SIZES.length + 1
+  const firstStep = (poolIndex - 1) * DATA_LAKE_SUB_SIZES.length + 1
   return DATA_LAKE_SUB_SIZES.every((_, offset) => {
     const size = getDiskLadderSizeBits(firstStep + offset)
     return (state.intro?.disksBuiltTotal?.[size] ?? 0) >= DISK_ARRAY_LADDER_CAP
   })
+}
+
+// Disk PROVISIONING eligibility is pool-to-pool: pool 1 is always reachable, and pool N+1 only
+// once pool N is entirely complete (isStoragePoolFullyBuilt) — this stays disk-build-only and
+// drives the disk ladder's own progression (getMaxActiveDiskLadderStep — which size Provision Disk
+// currently offers), Bandwidth/Capacity, and the Data Lake manual/automatic fill split above.
+// Deliberately UNRELATED to pool/cache VISIBILITY (see getCapacityUnlockedStoragePoolCount below,
+// which pool cards and the read cache key off instead) — the two were folded into one shared
+// primitive once already and reverted; see docs/DESIGN_HISTORY.md.
+export const isStoragePoolUnlocked = (state, poolIndex) => {
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getStoragePoolCount()) return false
+  if (poolIndex === 1) return true
+  return isStoragePoolFullyBuilt(state, poolIndex - 1)
 }
 
 export const getUnlockedStoragePoolCount = state => {
@@ -2175,30 +2199,44 @@ export const getUnlockedStoragePoolCount = state => {
   return count
 }
 
-// Pool N's own DISPLAY capacity gate: the Data Stream's raw binary capacity (intro.capacity) must
-// have reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on —
-// before that pool's own CARD renders, on top of (not instead of) isStoragePoolUnlocked's own
-// disk-build requirement above. Deliberately kept separate from isStoragePoolUnlocked/
-// getUnlockedStoragePoolCount rather than folded into them: those two feed the disk ladder's own
-// progression (getMaxActiveDiskLadderStep — which size is currently buildable), read-cache
-// eligibility, and Booster transfer pacing, none of which this capacity rule was meant to touch —
-// see docs/DESIGN_HISTORY.md for the wider blast radius an
-// earlier attempt at folding this into isStoragePoolUnlocked directly caused. Pool 1's own 1 KiB
-// (8,192-bit) threshold here is deliberately equal to isStorageUnlocked's own
+// Pool N's own CAPACITY gate: the Data Stream's raw binary capacity (intro.capacity) must have
+// reached 1024^N Bytes — 1 KiB for pool 1, 1 MiB for pool 2, 1 GiB for pool 3, and so on. Pool 1's
+// own 1 KiB (8,192-bit) threshold here is deliberately equal to isStorageUnlocked's own
 // INTRO_DISK_UNLOCK_CAPACITY, so pool 1's card and the whole Storage section reveal at the same
-// instant — this rule mainly bites pools 2+, whose thresholds grow past what disk-build progress
-// alone guarantees.
+// instant.
 export const getPoolCapacityUnlockThresholdBits = poolIndex =>
   BITS_PER_BYTE * (MEMORY_BINARY_UNIT_STEP ** poolIndex)
 
-// The number of pool CARDS ByteFoundryPage should actually render — the smaller of how many pools
-// disk-build progress has unlocked (getUnlockedStoragePoolCount) and how many pools' own capacity
-// threshold (getPoolCapacityUnlockThresholdBits) intro.capacity has reached. Thresholds grow
-// strictly with poolIndex, so the first one intro.capacity fails already bounds every pool after it.
+// The number of pools that are genuinely LIVE right now — visible, with an active buffer/bandwidth
+// and a usable read cache — based on the Data Stream's own raw Capacity ALONE
+// (getPoolCapacityUnlockThresholdBits), with NO disk-build dependency: reaching a pool's own
+// threshold unlocks that pool outright, cache included, regardless of how much has actually been
+// built in any earlier pool. Thresholds grow strictly with poolIndex, so the first one
+// intro.capacity fails already bounds every pool after it.
+//
+// Deliberately UNRELATED to isStoragePoolUnlocked/getUnlockedStoragePoolCount (disk-build-only —
+// see there): those still gate the disk ladder's own progression (getMaxActiveDiskLadderStep —
+// which size Provision Disk currently offers) and Bandwidth/Capacity — "to provision a disk, all
+// possible disks of all smaller sizes must already be provisioned; the disk prerequisites are
+// pool-to-pool," a SEPARATE, stricter chain from this pool-liveness gate. Folding the two into one
+// shared primitive was tried once already and reverted (a much wider blast radius than intended —
+// see docs/DESIGN_HISTORY.md); this function and isStoragePoolUnlocked must stay independent.
+//
+// This is what `tickPoolBufferFill` (which pools' buffers actively fill), `tickDiskAutoFill`'s read
+// cache eligibility, and `getPoolCacheReservationBits` all key off — a pool's buffer, and therefore
+// its read cache, comes alive purely on reaching this Capacity threshold. Also what `ByteFoundryPage`
+// uses to decide how many pool CARDS to render (the historical name of this function, from when it
+// only had to answer that one question).
 export const getVisibleStoragePoolCount = state => {
-  const diskUnlockedCount = getUnlockedStoragePoolCount(state)
-  let count = 0
-  for (let poolIndex = 1; poolIndex <= diskUnlockedCount; poolIndex += 1) {
+  // Pool 1 is always live, same baseline isStoragePoolUnlocked/getUnlockedStoragePoolCount have
+  // always used — it has no prerequisite pool of its own to reach a threshold ahead of. This has no
+  // real-gameplay effect (isStorageUnlocked's own separate top-level gate already prevents anything
+  // pool-buffer-related from mattering below this exact same threshold — see
+  // getPoolCapacityUnlockThresholdBits(1)'s own doc comment), but keeps every pool-1-scoped query
+  // (Bandwidth, buffer fill fraction, tap bonus, …) answerable at any capacity, matching how pool 1
+  // behaved before this function existed.
+  let count = 1
+  for (let poolIndex = 2; poolIndex <= getStoragePoolCount(); poolIndex += 1) {
     if ((state.intro?.capacity ?? 0) < getPoolCapacityUnlockThresholdBits(poolIndex)) break
     count = poolIndex
   }
@@ -2284,10 +2322,12 @@ const getDecadePowerEquivalentBits = rawBits => {
 }
 
 export const getStoragePoolBandwidth = (state, poolIndex) => {
-  const unlockedCount = getUnlockedStoragePoolCount(state)
   // Locked or invalid pools return 0. Callers must treat that as no available throughput:
-  // Math.max(rate, Number.MIN_VALUE) makes timed pacing effectively infinite.
-  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
+  // Math.max(rate, Number.MIN_VALUE) makes timed pacing effectively infinite. Keyed on
+  // getVisibleStoragePoolCount (Capacity-only) — a pool's Bandwidth comes alive the instant its own
+  // Capacity threshold is reached, independent of disk-build progress; see that function's own doc
+  // comment.
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return 0
   // Each unlocked pool's Bandwidth simply follows the Data Stream's own Speed doublings — the
   // same raw production rate the Data Stream tile itself uses — just re-expressed via the
   // SI-clean switchover sequence instead of plain binary (getSiCleanEquivalentBits): it matches
@@ -2307,22 +2347,30 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   return getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
 }
 
-export const getStoragePoolCapacity = (state, poolIndex) => {
-  const unlockedCount = getUnlockedStoragePoolCount(state)
-  // Locked or invalid pools return 0. This is a sentinel rather than a usable Capacity; live
-  // callers derive the pool from a built disk or a fully-built lake tier, both of which imply the
-  // corresponding pool is unlocked.
-  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > unlockedCount) return 0
+// The raw Capacity derivation for a given raw Data Stream capacity value (in bits), with no
+// visibility gate — getStoragePoolCapacity (below) calls this with the LIVE state.intro.capacity
+// plus a visibility early-return; getPoolBufferClampCeilingBits (below) calls this with a
+// SYNTHETIC capacity value instead (see there for why).
+const getStoragePoolCapacityAtRawCapacity = (rawCapacityBits, poolIndex) => {
   // Capacity is the decade-power equivalent (getDecadePowerEquivalentBits) of the shared Memory
   // doubling count, clamped to this pool's own window. It does not scale down when higher pools
   // unlock, so pool 1 stays capped at 100 KB (SI) once maxed — see POOL_CAPACITY_SI_STEP in
   // layers.js.
-  const rawCapacity = getDecadePowerEquivalentBits(state.intro?.capacity ?? 0)
+  const rawCapacity = getDecadePowerEquivalentBits(rawCapacityBits ?? 0)
   const floorBits = poolIndex === 1
     ? getStoragePoolMemoryBounds(1).startBits
     : getStoragePoolMemoryBounds(poolIndex - 1).endBits
   const ceilingBits = getStoragePoolMemoryBounds(poolIndex).endBits
   return Math.min(Math.max(rawCapacity, floorBits), ceilingBits)
+}
+
+export const getStoragePoolCapacity = (state, poolIndex) => {
+  // Locked or invalid pools return 0 — this is a sentinel rather than a usable Capacity. Keyed on
+  // getVisibleStoragePoolCount (Capacity-only), same as getStoragePoolBandwidth above: a pool's own
+  // derived Capacity comes alive the instant the SHARED Data Stream Capacity crosses that pool's
+  // own threshold, independent of disk-build progress.
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return 0
+  return getStoragePoolCapacityAtRawCapacity(state.intro?.capacity ?? 0, poolIndex)
 }
 
 // Each pool's own small local buffer (intro.poolBuffers) is sized as a fraction of that pool's
@@ -2340,6 +2388,38 @@ export const getStoragePoolCapacity = (state, poolIndex) => {
 // actually banked and spendable right now, gradually filled at the pool's own Bandwidth rather
 // than available all at once.
 export const getPoolBufferCapacity = (state, poolIndex) => getStoragePoolCapacity(state, poolIndex)
+
+// A pool's own ENTRY-CAPACITY ceiling, regardless of Capacity-visibility — getPoolBufferCapacity
+// (and getStoragePoolCapacity underneath it) return 0 for a pool that isn't yet Capacity-visible,
+// which is correct for "how much can this pool's buffer actively grow toward right now" but WRONG
+// as a clamp ceiling for a legacy value the pool might already be holding (a save from before
+// Capacity-only pool liveness existed could have a disk-build-unlocked pool's buffer/cache sitting
+// there under the old getUnlockedStoragePoolCount-based eligibility, well before its own Capacity
+// threshold is crossed) — clamping such a value to 0 would needlessly destroy real, permanent
+// progress rather than just bounding it until the pool naturally becomes visible.
+//
+// For a VISIBLE pool this is just its live getPoolBufferCapacity, same as always. For a HIDDEN one,
+// clamping against the LIVE state.intro.capacity (via getStoragePoolCapacityAtRawCapacity) would be
+// wrong in the other direction: intro.capacity only ever grows in ×2 doublings from a
+// power-of-two-bytes starting value (see upgradePoolCapacity), so it always lands exactly on every
+// pool's own getPoolCapacityUnlockThresholdBits on the way up — a hidden pool's eventual Capacity
+// the MOMENT it first becomes visible is therefore a FIXED value, deterministic from poolIndex
+// alone, not a moving target that tracks however far below threshold the current (much lower)
+// capacity happens to sit right now. Passing the live capacity through the raw formula while it's
+// still far below threshold would floor to that pool's own previous-pool-end floorBits — often
+// LOWER than the pool's real entry Capacity — needlessly truncating a legitimate legacy
+// buffer/cache refund that would fit fine once the pool is actually revealed. So this instead
+// evaluates the same raw formula at the SYNTHETIC capacity value the pool will have at that
+// crossing (getPoolCapacityUnlockThresholdBits(poolIndex)), giving the exact number the pool will
+// read the instant it's revealed — never below it (nothing to truncate unnecessarily) and never
+// above it either (once the pool is actually visible, getPoolBufferCapacity's own live-capacity
+// value takes over and can climb higher from there, same as any other pool).
+// Used by normalizePoolMemoryCapacity's migration clamp and tickDiskAutoFill's read-cache self-heal
+// refund, both of which can touch a not-yet-visible pool's buffer. See docs/DESIGN_HISTORY.md.
+const getPoolBufferClampCeilingBits = (state, poolIndex) =>
+  poolIndex <= getVisibleStoragePoolCount(state)
+    ? getPoolBufferCapacity(state, poolIndex)
+    : getStoragePoolCapacityAtRawCapacity(getPoolCapacityUnlockThresholdBits(poolIndex), poolIndex)
 
 export const getPoolBufferBits = (state, poolIndex) =>
   state.intro?.poolBuffers?.[poolIndex] ?? 0
@@ -2377,7 +2457,7 @@ export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPe
 // rate has nowhere to go" reasoning tapIntroBit's own full-Buffer guard uses), or one whose combined
 // multiplier is already at FILL_MULTIPLIER_TAP_CAP_PERCENT (200).
 export const tapPoolBuffer = poolIndex => state => {
-  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getUnlockedStoragePoolCount(state)) return state
+  if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return state
   if (getPoolBufferBits(state, poolIndex) >= getPoolBufferCapacity(state, poolIndex)) return state
   // Same independent 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT clamp as tapIntroBit above.
   const priorBonus = getPoolTapBonusPercent(state, poolIndex)
@@ -2472,7 +2552,11 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   // always structurally "unlocked" (see isStoragePoolUnlocked), which would silently start
   // siphoning bits into an invisible buffer from the very start of a cycle without this gate.
   if (!isStorageUnlocked(state)) return state
-  const unlockedCount = getUnlockedStoragePoolCount(state)
+  // Which pools' buffers actively fill — Capacity-only (getVisibleStoragePoolCount), NOT the
+  // disk-build-only getUnlockedStoragePoolCount: a pool's buffer (and so its Bandwidth/read cache)
+  // comes alive the instant its own Capacity threshold is reached, independent of how much of any
+  // earlier pool has actually been built. See getVisibleStoragePoolCount's own doc comment.
+  const unlockedCount = getVisibleStoragePoolCount(state)
   if (unlockedCount < 1) return state
 
   let bits = state.intro.bits
@@ -2530,6 +2614,12 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // isn't spent this tick, staying ordinary Bits for whatever else (Provision Disk, a later
     // pool's own buffer, tier01 auto-invest) can use it once this pool's turn is skipped.
     if (!isDataLakePoolReady(state, poolIndex)) continue
+    // AUTOMATIC overflow only feeds a lake once its own matching pool is entirely complete
+    // (isStoragePoolFullyBuilt — every one of that pool's three ladder sizes fully built). Before
+    // that, the lake fills MANUALLY only, capped at just enough for its next Booster
+    // (fillDataLakeManually/isDataLakeManualFillAvailable below) — see docs/DESIGN_HISTORY.md.
+    // Same "leave bits untouched" treatment as the not-ready case above.
+    if (!isStoragePoolFullyBuilt(state, poolIndex)) continue
 
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
@@ -2568,21 +2658,24 @@ export const normalizePoolMemoryCapacity = state => {
     changed = true
     nextIntro.capacity = capacity
   }
-  // Clamp each unlocked pool's own buffer down to its CURRENT Capacity ceiling. A save written
-  // before the pool Capacity formula moved from the finer SI-clean sequence to the coarser
-  // decade-power one (see docs/DESIGN_HISTORY.md) can carry a poolBuffers entry above the new,
-  // lower ceiling — tickPoolBufferFill's own room = Math.max(0, capacity - current) only ever
-  // stops TOPPING UP an over-capacity buffer, it never brings the excess back down, so without
-  // this clamp that excess stays fully spendable on Provision Disk even though the pool card
-  // displays a lower cap.
+  // Clamp EVERY pool's own buffer (not just currently Capacity-visible ones — see
+  // getPoolBufferClampCeilingBits) down to its own ceiling. A save written before the pool Capacity
+  // formula moved from the finer SI-clean sequence to the coarser decade-power one (see
+  // docs/DESIGN_HISTORY.md), OR before pool liveness moved from disk-build-based to Capacity-only,
+  // can carry a poolBuffers entry above the new ceiling — tickPoolBufferFill's own room =
+  // Math.max(0, capacity - current) only ever stops TOPPING UP an over-capacity buffer, it never
+  // brings the excess back down, so without this clamp that excess stays fully spendable on
+  // Provision Disk even though the pool card displays a lower cap (or, for a not-yet-visible pool,
+  // shows no card at all).
   const stateForBufferClamp = { ...state, intro: nextIntro }
-  const unlockedCount = getUnlockedStoragePoolCount(stateForBufferClamp)
-  if (unlockedCount >= 1 && nextIntro.poolBuffers) {
+  if (nextIntro.poolBuffers) {
     const poolBuffers = { ...nextIntro.poolBuffers }
     let buffersChanged = false
-    for (let poolIndex = 1; poolIndex <= unlockedCount; poolIndex += 1) {
+    for (const poolIndexStr of Object.keys(poolBuffers)) {
+      const poolIndex = Number(poolIndexStr)
+      if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getStoragePoolCount()) continue
       const current = poolBuffers[poolIndex] ?? 0
-      const cap = getPoolBufferCapacity(stateForBufferClamp, poolIndex)
+      const cap = getPoolBufferClampCeilingBits(stateForBufferClamp, poolIndex)
       const floored = Math.max(current, 0)
       const clamped = Math.min(floored, cap)
       if (clamped !== current) {
@@ -2591,6 +2684,49 @@ export const normalizePoolMemoryCapacity = state => {
       }
     }
     if (buffersChanged) {
+      changed = true
+      nextIntro.poolBuffers = poolBuffers
+    }
+  }
+  // A save written before this size's array cap dropped from 10 to 9 disks
+  // (DISK_ARRAY_LADDER_CAP — see docs/DESIGN_HISTORY.md) can carry disksBuiltTotal[size] === 9 with
+  // diskProvisionPasses[size] > 0: partial funding toward what used to be that size's 10th disk.
+  // Under the new cap that array already reads as complete at 9 (getDiskSize/provisionDisk will
+  // never look at this size again), so without this those already-spent passes would sit forever as
+  // dead state — bits the player genuinely paid, gone with nothing to show for them. Refund their
+  // bit-value into the owning pool's own buffer (capped at that pool's ceiling, same as any other
+  // over-buffer-capacity source — never manufactured past it) and clear the stale entry. This can
+  // only ever fire once per affected save: live play never reaches builtTotal[size] >=
+  // DISK_ARRAY_LADDER_CAP with a nonzero diskProvisionPasses[size] at the same time (provisionDisk
+  // clears that size's passes the instant its final pass lands).
+  if (nextIntro.diskProvisionPasses) {
+    const builtTotal = nextIntro.disksBuiltTotal ?? {}
+    const diskProvisionPasses = { ...nextIntro.diskProvisionPasses }
+    const poolBuffers = { ...(nextIntro.poolBuffers ?? {}) }
+    let orphanedPassesChanged = false
+    let refundedBuffersChanged = false
+    for (const sizeKey of Object.keys(diskProvisionPasses)) {
+      const size = Number(sizeKey)
+      const passes = diskProvisionPasses[sizeKey] ?? 0
+      if (!(passes > 0) || (builtTotal[size] ?? 0) < DISK_ARRAY_LADDER_CAP) continue
+      const poolIndex = getPoolIndexForDiskSize(size)
+      if (poolIndex) {
+        const ceiling = getPoolBufferClampCeilingBits({ ...state, intro: { ...nextIntro, poolBuffers } }, poolIndex)
+        const current = poolBuffers[poolIndex] ?? 0
+        const refunded = Math.min(ceiling, current + passes * size)
+        if (refunded !== current) {
+          poolBuffers[poolIndex] = refunded
+          refundedBuffersChanged = true
+        }
+      }
+      delete diskProvisionPasses[sizeKey]
+      orphanedPassesChanged = true
+    }
+    if (orphanedPassesChanged) {
+      changed = true
+      nextIntro.diskProvisionPasses = diskProvisionPasses
+    }
+    if (refundedBuffersChanged) {
       changed = true
       nextIntro.poolBuffers = poolBuffers
     }
@@ -2687,9 +2823,11 @@ export const normalizePoolMemoryCapacity = state => {
 }
 
 // Forced priority order for the Byte Foundry's recurring upgrade actions — Disk Fill >
-// Provision Disk > Compute > Upgrade Data Stream (see CLAUDE.md). Combine into a Byte sits outside
-// this forced order. Each base predicate below is that action's own plain availability check; the
-// "turn"-suffixed composites fold the ordering in.
+// Provision Disk > Compute (see CLAUDE.md). Combine into a Byte and Upgrade Data Stream both sit
+// outside this forced order entirely — Upgrade Data Stream was moved out per explicit request (see
+// docs/DESIGN_HISTORY.md): the Data Stream's own growth should never wait on Storage. Each base
+// predicate below is that action's own plain availability check; the "turn"-suffixed composites
+// fold the ordering in.
 
 // A disk pulls into its own matching tier's CURRENT level only from a clean slate — no partial
 // progress already made toward that level, by money or by the level-1 cache pull below. Storage
@@ -2735,13 +2873,31 @@ export const isDiskFillAvailable = state =>
 // over-required diskProvisionPasses entry, e.g. left over from a since-lowered pass requirement):
 // without this, provisionDisk's own self-heal clamp (Math.max(0, passesRequired - alreadyCollected))
 // would be unreachable behind an empty buffer, since this gate runs before that clamp ever executes.
+// The pool's own read cache (its smallest denomination, once currently unlocked by Capacity — see
+// isDiskReadCacheEligible/getVisibleStoragePoolCount) always gets first claim on that pool's
+// shared buffer over Provision Disk funding: however many more bits it needs to reach full are
+// reserved and never counted as available to fund a provisioning pass, so the cache keeps actively
+// filling even while a build is queued/in flight, rather than being starved every tick by
+// provisioning claiming each tick's fresh production ahead of it (see
+// docs/DESIGN_HISTORY.md). Zero once the cache is already full (or the pool isn't currently
+// unlocked / has no cache-eligible size at all) — provisioning then draws on the buffer exactly as
+// before. Deliberately keyed on the Capacity-only unlock count, not the disk-build-only
+// getUnlockedStoragePoolCount, so the cache reservation always matches actual cache eligibility.
+export const getPoolCacheReservationBits = (state, poolIndex) => {
+  if (!poolIndex || poolIndex > getVisibleStoragePoolCount(state)) return 0
+  const cacheSize = getDataLakeUnitBits(poolIndex)
+  const cached = state.intro?.diskCache?.[cacheSize] ?? 0
+  return Math.max(0, cacheSize - cached)
+}
+
 export const isProvisionDiskAvailable = state => {
   if (state.intro.diskBuild) return false
   if (isDiskLadderExhaustedForActivePools(state)) return false
   const size = getDiskSize(state)
   if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
   const poolIndex = getPoolIndexForDiskSize(size)
-  return getPoolBufferBits(state, poolIndex) >= size
+  const reserved = getPoolCacheReservationBits(state, poolIndex)
+  return getPoolBufferBits(state, poolIndex) - reserved >= size
 }
 
 // "Compute" — true once Compute Core conversion is unlocked and at least one brand-new boost
@@ -2764,22 +2920,30 @@ export const isPoolCapacityUpgradeAvailable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
-// The moving ceiling is reached once the highest unlocked pool's OWN derived SI-clean Capacity
-// (getStoragePoolCapacity) is at or above that pool's end bound — not the raw intro.capacity
-// value, which now keeps doubling past that point (see upgradePoolCapacity) until a new pool
-// unlocks and raises the ceiling again. This intentionally differs from the historical pre-#506
-// "halt before the next doubling would exceed the cap" check: the current ladder clamps at the
-// ceiling instead of stopping early.
+// The true ceiling is the FINAL pool's own end bound — not the highest DISK-BUILD-unlocked pool's
+// (a disk-build-based ceiling here would silently re-couple Capacity growth to disk-build progress,
+// defeating the whole point of pool liveness being Capacity-only: capacity could then never actually
+// outrun disk-build, since a pool's own ceiling always sits below the NEXT pool's own visibility
+// threshold — see docs/DESIGN_HISTORY.md for the incident this fixes). `getStoragePoolCapacity`
+// already returns 0 for a pool whose own Capacity threshold (getVisibleStoragePoolCount) hasn't been
+// reached yet, so comparing against the FINAL pool unconditionally is safe: the check simply reads
+// false (not yet at cap) for every pool short of the last, then compares the final pool's own
+// derived SI-clean Capacity against its own end bound once Capacity has grown enough to reach it.
+// Raw intro.capacity keeps doubling past any one pool's own ceiling (see upgradePoolCapacity) all
+// the way to the very last pool's — nothing about disk-build progress anywhere factors in.
 export const isMemoryCapacityAtCap = state => {
-  const unlockedCount = getUnlockedStoragePoolCount(state)
-  const { endBits } = getStoragePoolMemoryBounds(unlockedCount)
-  return getStoragePoolCapacity(state, unlockedCount) >= endBits
+  const finalPoolIndex = getStoragePoolCount()
+  const { endBits } = getStoragePoolMemoryBounds(finalPoolIndex)
+  return getStoragePoolCapacity(state, finalPoolIndex) >= endBits
 }
 
-export const isMemoryCapacityUpgradeAvailable = state =>
-  isPoolCapacityUpgradeAvailable(state) &&
-  !isDiskFillAvailable(state) &&
-  !isProvisionDiskAvailable(state)
+// Upgrade Data Stream is NOT part of the forced priority order at all — unlike every other
+// recurring Byte Foundry action, it's never disabled just because Disk Fill or Provision Disk
+// currently outrank it; the only gate is its own affordability (isPoolCapacityUpgradeAvailable).
+// This was a deliberate reversal of an earlier version that DID rank it below Disk Fill/Provision
+// Disk (see docs/DESIGN_HISTORY.md) — per explicit request, the Data Stream's own growth should
+// never wait on Storage.
+export const isMemoryCapacityUpgradeAvailable = state => isPoolCapacityUpgradeAvailable(state)
 
 // "Upgrade Data Stream" — the single consolidated Data Stream upgrade (Speed + Capacity merged):
 // costs the current capacity (drains the full Data Stream balance) and doubles intro.capacity
@@ -2789,9 +2953,9 @@ export const isMemoryCapacityUpgradeAvailable = state =>
 // binary-denominated (see "Economy model" in CLAUDE.md). Speed follows automatically, derived from
 // the new capacity (see getIntroProductionRate). Each storage pool derives its OWN
 // SI-clean Capacity from this raw doubling count instead (getStoragePoolCapacity/
-// getSiCleanEquivalentBits), clamped to that pool's own window there — so the "moving ceiling of the
-// highest unlocked pool" is enforced by isMemoryCapacityAtCap gating availability (via the
-// pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
+// getSiCleanEquivalentBits), clamped to that pool's own window there — so the true ceiling (the
+// FINAL pool's own end bound — see isMemoryCapacityAtCap) is enforced by gating availability (via
+// the pool's derived value), not by clamping this raw value directly. See docs/DESIGN_HISTORY.md for
 // two earlier, reverted attempts at this mechanic.
 export const upgradePoolCapacity = state => {
   if (!isMemoryCapacityUpgradeAvailable(state)) return state
@@ -3205,18 +3369,18 @@ export const getDiskSize = state => {
 // for its very first, 2 for its second, …), read from disksBuiltTotal at the moment this is called
 // — the more passes a disk needs, the longer funding it naturally takes at a given production rate,
 // which is now the ONLY time cost a disk's build imposes (see provisionDisk). Capped at
-// DISK_BUILD_COST_MULTIPLIER (10), which — since it equals DISK_ARRAY_LADDER_CAP — the ordinal
-// itself never actually exceeds (the ladder always advances to the next size once
-// DISK_ARRAY_LADDER_CAP disks are built); the cap is a defensive guard in case the two constants
-// ever diverge, not a real gameplay ceiling today. An earlier version paid every disk in a flat
-// DISK_BUILD_COST_MULTIPLIER passes regardless of ordinal — see docs/DESIGN_HISTORY.md for why the
-// array's early disks are now quicker to fund, its last still costing the same as before.
+// DISK_BUILD_COST_MULTIPLIER (10) as a defensive guard, though DISK_ARRAY_LADDER_CAP (9) means the
+// ordinal itself never actually reaches it any more — the array's own always-full cache
+// economically substitutes for what would have been the 10th (and most expensive) disk, so the
+// array's last real disk now costs only 9x its face value, not the full 10x every disk used to cost
+// flat before passes were scaled by ordinal at all (see docs/DESIGN_HISTORY.md).
 export const getDiskProvisionPassesRequired = (state, size) =>
   Math.min(DISK_BUILD_COST_MULTIPLIER, (state.intro?.disksBuiltTotal?.[size] ?? 0) + 1)
 
 // A disk's one-time build (construction) cost — getDiskProvisionPassesRequired(state, capacityBits)
-// passes of its own face value each: the array's first disk costs just 1x, its last still costs
-// DISK_BUILD_COST_MULTIPLIER (10)x, same as every disk used to cost flat (see
+// passes of its own face value each: the array's first disk costs just 1x, its last (9th,
+// DISK_ARRAY_LADDER_CAP) costs 9x — not DISK_BUILD_COST_MULTIPLIER's defensive 10x, and not the
+// flat figure every disk used to cost regardless of ordinal either (see
 // docs/DESIGN_HISTORY.md). No further BITS_PER_BYTE conversion is needed here — capacityBits (from
 // getDiskSize) is already Byte-accurate. This cost only ever pays for the empty container itself —
 // it is NOT what fills it (see tickDiskAutoFill).
@@ -3243,6 +3407,47 @@ export const formatDiskSize = formatBitsInNearestSiUnit
 // on the ordinary trimmed formatDiskSize, since those are mostly round/exact/slow-changing figures.
 export const formatDiskSizeStable = bits => formatMemoryAmountStable(bits, getSiByteUnit(bits))
 
+// A Disk's own bare numeric size, with NO unit suffix — used only for the small in-square label
+// (DiskArrayRow/DataLakePanel), where the surrounding pool/lake card already establishes the unit
+// (a "KB Pool" card's own disks are implicitly KB-denominated — see CLAUDE.md's "Economy model").
+// aria-labels/tooltips keep using formatDiskSize's own unit-suffixed form for accessibility; only
+// the visible square text drops it. Safe to reuse formatDiskSize's own auto-nearest-unit pick here
+// (rather than a pool-fixed one) since an individual disk's size only ever spans 1-100x a pool's
+// own unit, never the 1000x that would actually require pinning it — see
+// formatDiskSizeInPoolUnit's own doc comment below for the case that does.
+export const formatDiskSizeBare = bits => {
+  const unit = getSiByteUnit(bits)
+  return formatAmount(floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES))
+}
+
+// Formats `bits` in poolIndex's own FIXED SI unit (KB for pool 1, MB for pool 2, … — the same
+// mapping SI_BYTE_UNIT_SYMBOLS/TIER_DEFINITIONS already use), rather than formatDiskSize's own
+// auto-nearest-unit pick — never converting up to the next unit even once the value reaches 1000x
+// this one. A pool's own Storage buffer stays safely below that (see getStoragePoolMemoryBounds),
+// but a Data Lake's own balance/capacity legitimately reaches it (a maxed KB Data Lake's own
+// capacity is exactly 1000 KB — DATA_LAKE_CAPACITY_BY_LEVEL's own top level) — without this fix,
+// that would misleadingly auto-convert to "1 MB" instead of staying "1000 KB". See
+// docs/DESIGN_HISTORY.md.
+const getPoolFixedUnit = poolIndex => ({
+  symbol: SI_BYTE_UNIT_SYMBOLS[poolIndex] ?? SI_BYTE_UNIT_SYMBOLS[SI_BYTE_UNIT_SYMBOLS.length - 1],
+  divisor: BITS_PER_BYTE * (SI_BYTE_UNIT_SCALE ** poolIndex),
+})
+export const formatDiskSizeInPoolUnit = (bits, poolIndex) => formatMemoryAmount(bits, getPoolFixedUnit(poolIndex))
+
+// A pool's own buffer BALANCE spends most of its life below that pool's fixed unit (e.g. a MB
+// Pool buffer still filling toward its 1 MB capacity) — reusing formatDiskSizeInPoolUnit's fixed
+// unit directly for the balance would floor it below 1 there and trip formatMemoryAmount's own
+// "genuinely sub-unit" raw-bits fallback (e.g. "3.187e6 bits" instead of "398.375 KB"), even though
+// a finer named SI unit (KB) exists and fits it fine. Same self-size-below-capacity fix
+// formatMemoryBalanceValue (ByteFoundryPage) already applies to the binary Memory ladder — see
+// docs/DESIGN_HISTORY.md.
+const getPoolBalanceUnit = (bits, poolIndex) => {
+  const capacityUnit = getPoolFixedUnit(poolIndex)
+  return bits > 0 && bits < capacityUnit.divisor ? getSiByteUnit(bits) : capacityUnit
+}
+export const formatPoolBalance = (bits, poolIndex) => formatMemoryAmount(bits, getPoolBalanceUnit(bits, poolIndex))
+export const formatPoolBalanceStable = (bits, poolIndex) => formatMemoryAmountStable(bits, getPoolBalanceUnit(bits, poolIndex))
+
 // Formats a raw bit count (a Disk Cache block, or a whole cache) in its own dedicated bit-scale
 // unit (Kb/Mb/Gb/… — see BIT_UNIT_SYMBOLS/getBitUnit above) rather than formatDiskSize's
 // Byte-scale one — StoragePage uses this for cache amounts specifically, keeping formatDiskSize
@@ -3251,21 +3456,31 @@ export const formatCacheSize = bits => formatMemoryAmount(bits, getBitUnit(bits)
 
 // Every Disk size worth showing (ByteFoundryPage's own brief per-size summary, StoragePage's full
 // per-size squares rows): every size ever built, any size still held (a save/seed could hold disks
-// without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), plus whatever's
-// currently offered (even at 0 built, so its row/goal is visible before the first one is built) —
-// ascending, so rows read smallest-to-largest.
+// without a matching disksBuiltTotal entry — e.g. a migrated pre-ladder save), whatever's
+// currently offered (even at 0 built, so its row/goal is visible before the first one is built),
+// PLUS each capacity-visible pool's own smallest (read-cache-eligible) size — a pool can go
+// Capacity-live well ahead of the disk-provisioning chain reaching it (see "Pool liveness is
+// Capacity-only"), and `tickDiskAutoFill` already pre-fills/consumes that pool's own read cache the
+// instant it's visible, regardless of disk-build progress; without this, that cache activity (a
+// buffer visibly draining, a tier level advancing via `tickDiskLevelOneCachePull`) would have no
+// row to render against — see docs/DESIGN_HISTORY.md. Ascending, so rows read smallest-to-largest.
 export const getDiskSizesToShow = state => {
   const disksBuiltTotal = state.intro?.disksBuiltTotal ?? {}
   const disks = state.intro?.disks ?? {}
   const currentSize = getDiskSize(state)
+  const visiblePoolSmallestSizes = []
+  for (let poolIndex = 1; poolIndex <= getVisibleStoragePoolCount(state); poolIndex += 1) {
+    visiblePoolSmallestSizes.push(getDataLakeUnitBits(poolIndex))
+  }
   return [
     ...new Set([
       ...Object.keys(disksBuiltTotal).map(Number),
       ...Object.keys(disks).map(Number),
       currentSize,
+      ...visiblePoolSmallestSizes,
     ]),
   ]
-    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (disks[size] ?? 0) > 0 || size === currentSize)
+    .filter(size => (disksBuiltTotal[size] ?? 0) > 0 || (disks[size] ?? 0) > 0 || size === currentSize || visiblePoolSmallestSizes.includes(size))
     .sort((a, b) => a - b)
 }
 
@@ -3316,8 +3531,11 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
   const passesRequired = getDiskProvisionPassesRequired(state, size)
   const passesRemaining = Math.max(0, passesRequired - alreadyCollected)
   const bufferBits = getPoolBufferBits(state, poolIndex)
+  // Never spends bits reserved for topping up this pool's own read cache — see
+  // getPoolCacheReservationBits — so the cache keeps filling ahead of provisioning, not the reverse.
+  const spendableBufferBits = Math.max(0, bufferBits - getPoolCacheReservationBits(state, poolIndex))
   // isProvisionDiskTurnAvailable already guarantees at least one whole pass is affordable.
-  const affordablePasses = Math.min(passesRemaining, Math.floor(bufferBits / size), maxPasses)
+  const affordablePasses = Math.min(passesRemaining, Math.floor(spendableBufferBits / size), maxPasses)
   const passesCollected = alreadyCollected + affordablePasses
   const poolBuffers = { ...state.intro.poolBuffers, [poolIndex]: bufferBits - affordablePasses * size }
 
@@ -3366,7 +3584,7 @@ export const provisionDisk = (state, maxPasses = Infinity) => {
 // for why); `provisionDisk` itself now auto-arms this same flag for a build already begun (see
 // there), so this standalone action only matters for the narrower "queue up before the first pass
 // is even affordable" case. Especially useful there since a size's array never advances the disk
-// ladder until DISK_ARRAY_LADDER_CAP (10) builds have completed at that size — up to 10 separate
+// ladder until DISK_ARRAY_LADDER_CAP (9) builds have completed at that size — up to 9 separate
 // affordability instants to catch by hand otherwise, one per disk.
 export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
@@ -3460,13 +3678,13 @@ export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
 
 export const getDiskWriteCacheSegmentFill = merge => {
-  if (!merge || merge.segmentsCollected >= DISK_ARRAY_LADDER_CAP) return 0
+  if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return 0
   if (merge.segmentTotalSeconds <= 0) return 0
   return 1 - merge.segmentRemainingSeconds / merge.segmentTotalSeconds
 }
 
 export const getDiskWriteCacheFlushFill = merge => {
-  if (!merge || merge.segmentsCollected < DISK_ARRAY_LADDER_CAP) return 0
+  if (!merge || merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) return 0
   if (merge.flushTotalSeconds <= 0) return 0
   return 1 - merge.flushRemainingSeconds / merge.flushTotalSeconds
 }
@@ -3483,7 +3701,7 @@ export const getDiskWriteCacheFlushFill = merge => {
 // rounds of over-restriction (source-stranded, then target-stranded) this reverts.
 export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
   const merge = getDiskWriteCacheMerge(state, targetSize)
-  if (!merge || merge.segmentsCollected >= DISK_ARRAY_LADDER_CAP) return false
+  if (!merge || merge.segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) return false
   return isDiskRedeemable(state, merge.sourceSize)
 }
 
@@ -3504,6 +3722,13 @@ export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
 const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
   if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
+  // Only starts once the SOURCE array is entirely full (DISK_ARRAY_LADDER_CAP, 9) — a different
+  // constant from the COLLECT phase's own segment count below (DISK_LADDER_SIZE_MULTIPLIER, 10):
+  // this one gates ELIGIBILITY ("don't start draining this array upward until it's completely
+  // built"), while the segment count must equal the actual source→target SIZE RATIO for the merge
+  // to conserve value (10 segments of sourceSize sum to exactly one targetSize disk). The two
+  // happened to share one value before DISK_ARRAY_LADDER_CAP dropped to 9; conflating them again
+  // would silently manufacture 1 sourceSize-unit of value per merge. See docs/DESIGN_HISTORY.md.
   if ((state.intro.disks?.[sourceSize] ?? 0) < DISK_ARRAY_LADDER_CAP) return false
   if ((state.intro.disksBuiltTotal?.[targetSize] ?? 0) <= 0) return false
   return (state.intro.disksBuiltTotal[targetSize] ?? 0) > (state.intro.disks?.[targetSize] ?? 0)
@@ -3582,7 +3807,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
 
-    if (merge.segmentsCollected < DISK_ARRAY_LADDER_CAP) {
+    if (merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
       // Shares isDiskWriteCacheCollectPaused's own rule (see its doc comment above): pause ONLY
       // while the source has an active tier claim (temporary — Factory gets first crack at a disk
@@ -3608,7 +3833,7 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
 
       disks = decrementFullDiskCount(disks, merge.sourceSize)
       const segmentsCollected = merge.segmentsCollected + 1
-      if (segmentsCollected >= DISK_ARRAY_LADDER_CAP) {
+      if (segmentsCollected >= DISK_LADDER_SIZE_MULTIPLIER) {
         diskWriteCache[targetSize] = {
           ...merge,
           segmentsCollected,
@@ -3711,12 +3936,16 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   // or it would sit excluded from every fill/flush pass yet never self-heal either — permanently
   // stranded. Not reachable via ordinary play today (pool-unlock count never decreases without
   // buildEraIntroReset also wiping diskCache to `{}` outright), but cheap to close outright rather
-  // than leave as a latent trap for a future change to either invariant.
-  const unlockedPoolCount = getUnlockedStoragePoolCount(state)
+  // than leave as a latent trap for a future change to either invariant. Keyed on
+  // getVisibleStoragePoolCount (Capacity-only pool liveness), NOT the disk-build-only
+  // getUnlockedStoragePoolCount — the read cache is unlocked and usable the instant its pool's own
+  // Capacity threshold is reached, independent of disk-build progress (see
+  // getVisibleStoragePoolCount's own doc comment).
+  const capacityUnlockedPoolCount = getVisibleStoragePoolCount(state)
   const isCacheStillEligible = size => {
     if (!isDiskReadCacheEligible(size)) return false
     const poolIndex = getPoolIndexForDiskSize(size)
-    return Boolean(poolIndex) && poolIndex <= unlockedPoolCount
+    return Boolean(poolIndex) && poolIndex <= capacityUnlockedPoolCount
   }
 
   // Self-heal a save carrying leftover diskCache/diskReadCacheFlush for a size that's no longer
@@ -3729,7 +3958,15 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     const size = Number(sizeStr)
     if (isCacheStillEligible(size)) continue
     const poolIndex = getPoolIndexForDiskSize(size)
-    if (poolIndex) poolBuffers[poolIndex] = getPoolBufferBitsLocal(poolIndex) + diskCache[size]
+    // Clamped against the pool's own ceiling (getPoolBufferClampCeilingBits, visibility-aware) so
+    // this refund can never push a buffer past what it could ever validly hold — see
+    // docs/DESIGN_HISTORY.md for the over-cap migration bug this guards against.
+    if (poolIndex) {
+      poolBuffers[poolIndex] = Math.min(
+        getPoolBufferBitsLocal(poolIndex) + diskCache[size],
+        getPoolBufferClampCeilingBits(state, poolIndex),
+      )
+    }
     const { [size]: _removedCache, ...restCache } = diskCache
     diskCache = restCache
     changed = true
@@ -3753,9 +3990,9 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
   // model the original stall was diagnosed against). Passes 2/3 below already guard on
   // `hasEmptyContainer = builtTotal[size] > disks[size]` before flushing into an actual disk, so a
   // size with zero disks built simply accumulates cache and waits — no double-spend risk.
-  // (unlockedPoolCount itself is computed above, alongside the self-heal pass it's shared with.)
+  // (capacityUnlockedPoolCount itself is computed above, alongside the self-heal pass it's shared with.)
   const readCacheEligibleSizes = []
-  for (let poolIndex = 1; poolIndex <= unlockedPoolCount; poolIndex += 1) {
+  for (let poolIndex = 1; poolIndex <= capacityUnlockedPoolCount; poolIndex += 1) {
     readCacheEligibleSizes.push(getDataLakeUnitBits(poolIndex))
   }
   const sizes = readCacheEligibleSizes
@@ -4131,7 +4368,7 @@ export const getDataLakeCapacity = (state, tierIndex) =>
   DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]
 
 // Smallest-denomination-first decomposition of a lake's own whole-unit total into ×1/×10/×100
-// disk counts, each capped per DATA_LAKE_SUB_SIZE_DISK_CAPS (10/9/9 — see layers.js for why not a
+// disk counts, each capped per DATA_LAKE_SUB_SIZE_DISK_CAPS (9/9/9 — see layers.js for why not a
 // flat 10/10/10) — every ×1 slot fills before any ×10 slot, every ×10 before any ×100, matching
 // the actual fill order (see fillDataLakeDisks below).
 //
@@ -4179,31 +4416,87 @@ const decomposeDataLakeUnits = total => {
   return { disks, remainderUnits: remainder }
 }
 
-// Max disks per sub-size a lake could ever hold AT ITS CURRENT capacity level — decomposes the
-// level's own capacity value the same smallest-first way a deposited total decomposes (always an
-// exact fit, see decomposeDataLakeUnits above).
-export const getDataLakeDiskSlotCounts = (state, tierIndex) =>
-  decomposeDataLakeUnits(getDataLakeCapacity(state, tierIndex)).disks
+// The most units this LEVEL's own disk slots alone can ever represent — sum of subSize × its own
+// slot count (e.g. level 1's {1:9,10:0,100:0} → 9; level 3's {1:9,10:9,100:9} → 999) — always
+// exactly 1 short of that level's own DATA_LAKE_CAPACITY_BY_LEVEL capacity (0, 9, 99, 999 vs. 1,
+// 10, 100, 1,000): the last unit at EVERY level comes from the lake's own retained fill buffer
+// instead (see getDataLakeNextFillSubSize below), the same way a Storage array's own cache — not a
+// 10th disk square — supplies its own last unit. decomposeDataLakeUnits must never be asked to
+// decompose a depositedUnits total above this for the CURRENT level: at a non-max level, a total
+// exactly at (or beyond) that level's own capacity would otherwise decompose onto a sub-size this
+// level hasn't unlocked yet (e.g. capacity 10 at level 1 decomposing to "1 ×10 disk, 0 ×1 disks" —
+// decomposeDataLakeUnits's own residue-preserving algorithm, correct for its general contract, but
+// wrong once compared against a slotCounts that hasn't opened that ×10 slot at all), which read as
+// still having an OPEN ×1 slot instead of correctly reporting the level as maxed — a real bug
+// caught in adversarial review before merge, letting depositedUnits grow unboundedly past a
+// non-max level's own capacity via ordinary fill. See docs/DESIGN_HISTORY.md.
+const getDataLakeSlotRepresentableUnits = slotCounts =>
+  DATA_LAKE_SUB_SIZES.reduce((sum, subSize) => sum + subSize * (slotCounts[subSize] ?? 0), 0)
 
-// Whole completed disks per sub-size, purely derived from the lake's own deposited total — same
-// "no separate ledger" posture the earlier deposit-based design already had: a Booster purchase
-// spends real deposited units, so the disk breakdown just re-derives smaller the next time it's
-// read (see buyBooster below).
-export const getDataLakeDiskCounts = (state, tierIndex) =>
-  decomposeDataLakeUnits(getDataLakeTier(state, tierIndex)?.depositedUnits ?? 0).disks
+// Max disks per sub-size a lake could ever hold AT ITS CURRENT capacity level — every sub-size
+// SMALLER than the current level is fully maxed (its own DATA_LAKE_SUB_SIZE_DISK_CAPS slots), the
+// current level's own sub-size (and anything larger) has none yet: level 0 has no disk slots at
+// all (its lone unit is entirely buffer-sourced — see getDataLakeNextFillSubSize below), level 1
+// has only ×1 slots (9), level 2 has ×1 and ×10 (9 each), level 3 (max) has all three (9 each).
+// Each level's own capacity (DATA_LAKE_CAPACITY_BY_LEVEL: 1, 10, 100, 1,000) always sits exactly 1
+// unit above what these slots alone sum to (0, 9, 99, 999) — that last unit is always the lake's
+// own retained fill buffer, the same way a Storage array's own cache supplies ITS array's own last
+// unit, never a disk square of its own. Deliberately NOT derived by decomposing the level's raw
+// capacity value through decomposeDataLakeUnits's general (residue-preserving) algorithm — doing so
+// would, at an exact power-of-10 capacity boundary, prefer redistributing the WHOLE boundary onto a
+// single higher-denomination disk (e.g. capacity 10 decomposing to "1 ×10 disk, 0 ×1 disks") rather
+// than "9 ×1 disks fully maxed, 1 more from the buffer" — the opposite of the "always fills the
+// smallest disks first" rule the fill mechanism itself follows. See docs/DESIGN_HISTORY.md.
+export const getDataLakeDiskSlotCounts = (state, tierIndex) => {
+  const level = getDataLakeCapacityLevel(state, tierIndex)
+  return Object.fromEntries(
+    DATA_LAKE_SUB_SIZES.map((subSize, index) => [subSize, index < level ? DATA_LAKE_SUB_SIZE_DISK_CAPS[index] : 0]),
+  )
+}
 
-// The sub-size of whichever disk is next to fill (see fillDataLakeDisks below) — the smallest
-// sub-size not yet at its own current-level slot cap — or null once every slot at this capacity
-// level is already full (the lake is completely maxed for its current level).
+// Whole completed disks per sub-size, purely derived from the lake's own deposited total (clamped
+// to what THIS LEVEL's own slots can represent — getDataLakeSlotRepresentableUnits — a maxed
+// lake's own last unit lives in its fill buffer, not as a disk square, see above) — same "no
+// separate ledger" posture the earlier deposit-based design already had: a Booster purchase spends
+// real deposited units, so the disk breakdown just re-derives smaller the next time it's read (see
+// buyBooster below).
+export const getDataLakeDiskCounts = (state, tierIndex) => {
+  const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
+  const deposited = getDataLakeTier(state, tierIndex)?.depositedUnits ?? 0
+  return decomposeDataLakeUnits(Math.min(deposited, getDataLakeSlotRepresentableUnits(slotCounts))).disks
+}
+
+// The sub-size of whichever DISK is next to fill (see fillDataLakeDisks below) — the smallest
+// sub-size not yet at its own current-level slot cap — or null once every disk slot at this
+// capacity level is already full (the lake's disks alone are completely maxed for their current
+// level — see getDataLakeNextFillSubSize below for the level's own final, disk-less unit).
+// depositedUnits is clamped to THIS LEVEL's own slot-representable max before decomposing — see
+// getDataLakeSlotRepresentableUnits's own doc comment for why a flat/global clamp doesn't work here.
 const getDataLakeOpenSubSize = (depositedUnits, slotCounts) => {
-  const disks = decomposeDataLakeUnits(depositedUnits).disks
+  const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+  const disks = decomposeDataLakeUnits(Math.min(depositedUnits, representable)).disks
   return DATA_LAKE_SUB_SIZES.find(subSize => (disks[subSize] ?? 0) < (slotCounts[subSize] ?? 0)) ?? null
 }
 
+// The sub-size of whatever fills next — a real disk (getDataLakeOpenSubSize) while one's still
+// open, or, once every disk slot at this capacity level is full but the level's own capacity isn't
+// fully reached yet (true at EVERY level, not just the max one — see
+// getDataLakeSlotRepresentableUnits), a final virtual ×1 "slot" — filled through the exact
+// same fillBits mechanism as any real disk, just with no disk square of its own to show for it
+// (mirroring how a Storage array's own always-full cache isn't drawn as one of its numbered disk
+// squares either — see docs/DESIGN_HISTORY.md). Returns null once depositedUnits has genuinely
+// reached this level's own capacity, real disks and this last unit alike.
+const getDataLakeNextFillSubSize = (depositedUnits, slotCounts, capacity) => {
+  const openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
+  if (openSubSize !== null) return openSubSize
+  return depositedUnits < capacity ? 1 : null
+}
+
 export const getDataLakeCurrentFillSubSize = (state, tierIndex) =>
-  getDataLakeOpenSubSize(
+  getDataLakeNextFillSubSize(
     getDataLakeTier(state, tierIndex)?.depositedUnits ?? 0,
     getDataLakeDiskSlotCounts(state, tierIndex),
+    getDataLakeCapacity(state, tierIndex),
   )
 
 export const getDataLakeFillBits = (state, tierIndex) =>
@@ -4223,26 +4516,15 @@ export const getDataLakeCurrentDiskFillFraction = (state, tierIndex) => {
   return Math.min(1, Math.max(0, getDataLakeFillBits(state, tierIndex) / slotSizeBits))
 }
 
-// See DATA_LAKE_OVERFLOW_*_PERCENT in layers.js: DATA_LAKE_OVERFLOW_MAX_PERCENT when the disk
-// CURRENTLY being filled is empty, linearly down to DATA_LAKE_OVERFLOW_MIN_PERCENT once that one
-// disk is about to complete — then back up to MAX the instant it completes and the next one opens
-// (see getDataLakeCurrentDiskFillFraction above), not a slow lake-wide taper. Floored at
-// DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT (see its own comment in layers.js) so the taper
-// always keeps making real forward progress instead of asymptotically stalling short of
-// completion — a still-genuinely-open disk never actually reads/uses a rate of exactly 0. A lake
-// with NO open slot at all (fully maxed at its current capacity level) is the one case that must
-// NOT floor: nothing this rate could ever apply to would actually go anywhere (fillDataLakeDisks
-// itself no-ops on a maxed lake regardless of rate), and ByteFoundryPage's own gauge reads this
-// function directly for every pool's display label — showing a nonzero "5% incoming" rate on an
-// already-full lake would be actively misleading, not just an unreachable edge case (this WAS
-// reachable in practice, unlike this comment's own earlier claim that it wasn't — see
-// docs/DESIGN_HISTORY.md).
-export const getDataLakeOverflowRatePercent = (state, tierIndex) => {
-  if (getDataLakeCurrentFillSubSize(state, tierIndex) === null) return DATA_LAKE_OVERFLOW_MIN_PERCENT
-  const fraction = getDataLakeCurrentDiskFillFraction(state, tierIndex)
-  const taperedPercent = DATA_LAKE_OVERFLOW_MAX_PERCENT - fraction * (DATA_LAKE_OVERFLOW_MAX_PERCENT - DATA_LAKE_OVERFLOW_MIN_PERCENT)
-  return Math.max(DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT, taperedPercent)
-}
+// A plain binary "receiving / not receiving" reading for ByteFoundryPage's own `mode="lake"` bar —
+// DATA_LAKE_OVERFLOW_MAX_PERCENT while this lake has anything left to fill at its current capacity
+// level (a real disk slot or, at the max level, the final unit — see getDataLakeCurrentFillSubSize
+// above), DATA_LAKE_OVERFLOW_MIN_PERCENT once fully maxed. An earlier version tapered this down as
+// the currently-filling disk approached completion; removed along with the rate taper itself (see
+// docs/DESIGN_HISTORY.md) now that overflow fills at the plain available rate, same as Storage's
+// own disk provisioning.
+export const getDataLakeOverflowRatePercent = (state, tierIndex) =>
+  getDataLakeCurrentFillSubSize(state, tierIndex) === null ? DATA_LAKE_OVERFLOW_MIN_PERCENT : DATA_LAKE_OVERFLOW_MAX_PERCENT
 
 // Whether this lake's own matching Storage pool has built at least one real disk (the pool's own
 // smallest, ×1 size) — the gate for the lake itself being "unlocked" at all: both feeding overflow
@@ -4364,6 +4646,102 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   }
 }
 
+// The minimum additional bits this pool's own buffer must supply — on top of whatever partial
+// fillBits progress is already banked toward the currently-open disk slot — to guarantee at least
+// `neededUnits` more units deposited. NOT a naive `neededUnits * unitBits`: a slot only ever
+// deposits its own WHOLE sub-size at once (1, 10, or 100 — see fillDataLakeDisks), never a partial
+// amount, so reaching even 1 more needed unit still requires completing the ENTIRE currently-open
+// slot at its own full cost whenever that slot's own sub-size exceeds neededUnits (e.g. an open
+// ×100 slot with only 1 more unit needed for the next Booster) — walks forward slot-by-slot,
+// mirroring fillDataLakeDisks' own loop, rather than assuming a constant bits-per-unit exchange
+// rate that only actually holds at whole-slot boundaries. Returns null once the lake has no further
+// open slot at its current capacity level (manual fill can do nothing more there) — INCLUDING when
+// every remaining slot at this level, even fully completed, still wouldn't reach `neededUnits`: a
+// spend that only fills the lake to its own current-level max without actually affording the next
+// Booster would be irrecoverably lost the moment the required Scale Out (capacity level-up) fires —
+// doubleDataLakeCapacity resets both depositedUnits and fillBits to 0, it does NOT carry banked
+// units forward into the new capacity level — so offering that spend at all would be a trap, not
+// genuine (if incomplete) progress. See docs/DESIGN_HISTORY.md for the overspend/dead-button/
+// wasted-spend bugs this fixes.
+const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
+  const lake = getDataLakeTier(state, tierIndex)
+  const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
+  const capacity = getDataLakeCapacity(state, tierIndex)
+  const unitBits = getDataLakeUnitBits(tierIndex)
+  let depositedUnits = lake?.depositedUnits ?? 0
+  let fillBits = lake?.fillBits ?? 0
+  let openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+  if (openSubSize === null) return null
+  let unitsGained = 0
+  let bitsNeeded = 0
+  while (unitsGained < neededUnits && openSubSize !== null) {
+    const slotSizeBits = unitBits * openSubSize
+    bitsNeeded += slotSizeBits - fillBits
+    fillBits = 0
+    depositedUnits += openSubSize
+    unitsGained += openSubSize
+    openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+  }
+  return unitsGained < neededUnits ? null : bitsNeeded
+}
+
+// A lake fills MANUALLY, capped at just enough for its own next Booster, until its matching
+// Storage pool is entirely complete (isStoragePoolFullyBuilt — every one of that pool's three
+// ladder sizes fully built); tickPoolBufferFill's own automatic overflow only starts feeding it
+// once that's true (see there). Before completion, this is the ONLY way units reach the lake at
+// all. Same funding source overflow itself would have used — this pool's own buffer
+// (poolIndex === tierIndex, one lake per pool) — never the shared Data Stream directly, so a
+// manual fill never competes with Provision Disk for anything beyond what that pool's own buffer
+// already holds.
+export const isDataLakeManualFillAvailable = (state, tierIndex) => {
+  if (isStoragePoolFullyBuilt(state, tierIndex)) return false
+  if (!isDataLakePoolReady(state, tierIndex)) return false
+  const neededUnits = Math.max(0, getBoosterPurchaseCost(tierIndex)(state) - getDataLakeDepositedUnits(tierIndex)(state))
+  if (neededUnits <= 0) return false // already enough banked for the next Booster
+  // No open slot left at the lake's current capacity level — manual fill (and a click on it) would
+  // be a dead no-op until the corresponding Storage array unlocks the next capacity level (Scale
+  // Out) — hide the button rather than offering a click that silently does nothing.
+  const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
+  if (bitsNeeded === null) return false
+  // Require at least a full unit's worth banked before offering Fill — same minimum threshold as
+  // before, avoiding a click that only makes imperceptible progress on a mostly-empty open slot —
+  // UNLESS the slot's own remaining requirement (bitsNeeded) is already smaller than a full unit
+  // (a slot with partial fillBits progress sitting just short of completion): in that case the
+  // smaller, exact remaining amount is the real threshold, since a click completing the slot with
+  // however few bits are actually left is genuine progress, not something to hide behind a full
+  // unit's worth that the open slot no longer even needs. See docs/DESIGN_HISTORY.md.
+  return getPoolBufferBits(state, tierIndex) >= Math.min(bitsNeeded, getDataLakeUnitBits(tierIndex))
+}
+
+// Spends exactly getDataLakeManualFillBitsNeeded's own precise amount — never more than the next
+// Booster actually needs (accounting for any partial fillBits progress already banked, not a naive
+// per-unit estimate — see that function's own doc comment) — capped at whatever the buffer actually
+// holds, in which case the spend still only ever makes real, permanent progress toward completing
+// the currently-open slot (fillDataLakeDisks itself banks a partial spend in fillBits; nothing is
+// ever lost). Outside the forced priority order entirely, same as buyBooster — always available the
+// instant isDataLakeManualFillAvailable says so.
+export const fillDataLakeManually = tierIndex => state => {
+  if (!isDataLakeManualFillAvailable(state, tierIndex)) return state
+  const neededUnits = Math.max(0, getBoosterPurchaseCost(tierIndex)(state) - getDataLakeDepositedUnits(tierIndex)(state))
+  const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
+  if (bitsNeeded === null || bitsNeeded <= 0) return state
+  const bufferBits = getPoolBufferBits(state, tierIndex)
+  const spendBits = Math.min(bitsNeeded, bufferBits)
+  if (spendBits <= 0) return state
+  const filled = fillDataLakeDisks(state, state.intro.dataLakes, tierIndex, spendBits)
+  if (!filled) return state
+  const { unconsumedBits, ...lakeUpdate } = filled
+  const actuallySpent = spendBits - unconsumedBits
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      poolBuffers: { ...state.intro.poolBuffers, [tierIndex]: bufferBits - actuallySpent },
+      dataLakes: { ...state.intro.dataLakes, [tierIndex]: lakeUpdate },
+    },
+  }
+}
+
 // Player toggle for auto-buying this lake's own Boosters the instant they're affordable (see
 // tickDataLakeAutoBuy below) — meaningless while isDataLakeBoosterUnlocked is still false, but
 // still freely toggleable ahead of that, same as other autobuyer "enabled" flags in this file.
@@ -4449,8 +4827,9 @@ export const getDataLakeUnitBits = tierIndex =>
 const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   const lake = dataLakes[tierIndex] ?? getDataLakeTier(state, tierIndex)
   const slotCounts = getDataLakeDiskSlotCounts(state, tierIndex)
+  const capacity = getDataLakeCapacity(state, tierIndex)
   let depositedUnits = lake.depositedUnits ?? 0
-  let openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
+  let openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   if (openSubSize === null) return null
 
   const unitBits = getDataLakeUnitBits(tierIndex)
@@ -4463,7 +4842,7 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
     fillBits -= slotSizeBits
     depositedUnits += openSubSize
     boostersUnlocked = true
-    openSubSize = getDataLakeOpenSubSize(depositedUnits, slotCounts)
+    openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   }
   // Fully maxed at this level — whatever's left in fillBits has nowhere to go; hand it back as
   // unconsumedBits instead of silently discarding it (see this function's own doc comment above).
@@ -4473,133 +4852,35 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   return { ...lake, depositedUnits, fillBits, boostersUnlocked, unconsumedBits }
 }
 
-// The most disks any single lake could ever hold (DATA_LAKE_SUB_SIZE_DISK_CAPS' own sum, 28) —
-// applyDataLakeOverflow below can never need more segments than that to run out of room, so this
-// bounds its loop and guarantees it always terminates.
-const DATA_LAKE_OVERFLOW_SEGMENT_LIMIT = DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((sum, cap) => sum + cap, 0)
+// The most disks any single lake could ever hold (DATA_LAKE_SUB_SIZE_DISK_CAPS' own sum, 27) plus
+// the final buffer-sourced unit at the max level — applyDataLakeOverflow below can never need more
+// segments than that to run out of room, so this bounds its loop and guarantees it always
+// terminates.
+const DATA_LAKE_OVERFLOW_SEGMENT_LIMIT = DATA_LAKE_SUB_SIZE_DISK_CAPS.reduce((sum, cap) => sum + cap, 0) + 1
 
-// getDataLakeOverflowRatePercent's taper is exactly LINEAR in fill fraction (MAX at empty, down to
-// MIN at full, floored at FLOOR), which makes a single disk's own fill an ordinary first-order
-// linear ODE: dx/dt = fillRate * rateFraction(x/L), x = fillBits, L = the disk's own slot size.
-// That has a closed-form solution — exponential decay toward an equilibrium (which coincides with
-// L itself here, since DATA_LAKE_OVERFLOW_MIN_PERCENT is 0 — the taper alone asymptotically
-// approaches, but never reaches, 100% fill, which is exactly why a completion floor exists at
-// all — see the "floors the overflow rate" regression above) while still above the completion
-// floor, then plain constant-rate linear fill once the taper drops to the floor. The two solver
-// functions below (seconds→fill and fill→seconds) implement this exactly, in two regimes each —
-// so a single disk's own fill is mathematically exact and tick-size-independent: splitting the
-// same total elapsedSeconds into any number of smaller calls produces IDENTICAL results, not just
-// approximately close ones. Before this, applyDataLakeOverflow sampled ONE rate at the START of
-// each per-disk segment and applied it flatly for that whole segment's own duration — correct only
-// at a disk-completion BOUNDARY (re-evaluating per disk, per the comment above), but still wrong
-// WITHIN a single disk's own partial fill, whose true rate keeps decreasing continuously as fillBits
-// rises — verified to diverge from the true, tick-size-independent value by a large margin at
-// realistic production rates, not a rounding-error-scale difference; see docs/DESIGN_HISTORY.md.
-const DATA_LAKE_OVERFLOW_MAX_FRACTION = DATA_LAKE_OVERFLOW_MAX_PERCENT / 100
-const DATA_LAKE_OVERFLOW_MIN_FRACTION = DATA_LAKE_OVERFLOW_MIN_PERCENT / 100
-const DATA_LAKE_OVERFLOW_FLOOR_FRACTION = DATA_LAKE_OVERFLOW_COMPLETION_FLOOR_PERCENT / 100
-
-// Fill-fraction (of L) at which the taper crosses the completion floor, and the two derived ODE
-// constants for the exponential-decay regime below that threshold — shared by both solvers so
-// they can never disagree with each other about where one regime ends and the other begins.
-const getDataLakeOverflowTaperShape = slotSizeBits => {
-  const spread = DATA_LAKE_OVERFLOW_MAX_FRACTION - DATA_LAKE_OVERFLOW_MIN_FRACTION
-  if (spread <= 0) return null // degenerate config — taper never actually decreases, see callers
-  const thresholdFraction = Math.min(1, Math.max(0, (DATA_LAKE_OVERFLOW_MAX_FRACTION - DATA_LAKE_OVERFLOW_FLOOR_FRACTION) / spread))
-  return {
-    thresholdX: thresholdFraction * slotSizeBits,
-    equilibriumX: (DATA_LAKE_OVERFLOW_MAX_FRACTION / spread) * slotSizeBits, // "x*" the taper alone asymptotes toward
-    decayRate: spread / slotSizeBits, // per unit of fillRate — actual decay constant is fillRate * this
-  }
-}
-
-// Advances one disk's own fillBits (x0, out of slotSizeBits) by up to `seconds` of production at
-// `fillRate`. Returns the resulting fillBits (never overshoots past slotSizeBits — a segment stays
-// scoped to exactly one disk, same as before) and how much of `seconds` was actually consumed
-// (less than `seconds` only when the disk completes before the budget runs out).
-const solveDataLakeDiskFillAfterSeconds = (x0, slotSizeBits, fillRate, seconds) => {
-  if (seconds <= 0 || fillRate <= 0 || slotSizeBits <= 0 || x0 >= slotSizeBits) {
-    return { fillBits: Math.min(Math.max(0, x0), slotSizeBits), secondsUsed: 0 }
-  }
-  const shape = getDataLakeOverflowTaperShape(slotSizeBits)
-  const floorRate = fillRate * DATA_LAKE_OVERFLOW_FLOOR_FRACTION
-  if (!shape) {
-    // No taper at all (degenerate constants) — plain constant-rate fill the whole way.
-    const rate = fillRate * Math.max(DATA_LAKE_OVERFLOW_FLOOR_FRACTION, DATA_LAKE_OVERFLOW_MAX_FRACTION)
-    const timeToComplete = (slotSizeBits - x0) / rate
-    if (seconds >= timeToComplete) return { fillBits: slotSizeBits, secondsUsed: timeToComplete }
-    return { fillBits: x0 + rate * seconds, secondsUsed: seconds }
-  }
-
-  const { thresholdX, equilibriumX, decayRate: decayRatePerFillRate } = shape
-  const decayRate = fillRate * decayRatePerFillRate
-  let x = x0
-  let remaining = seconds
-
-  if (x < thresholdX) {
-    // x(t) = equilibriumX + (x0 - equilibriumX) * exp(-decayRate * t) — solve for how long it
-    // takes to reach the threshold, then either stop here (still within this regime) or continue
-    // into the floor regime below with whatever time is left.
-    const secondsToThreshold = -Math.log((thresholdX - equilibriumX) / (x - equilibriumX)) / decayRate
-    if (remaining < secondsToThreshold) {
-      return { fillBits: equilibriumX + (x - equilibriumX) * Math.exp(-decayRate * remaining), secondsUsed: seconds }
-    }
-    remaining -= secondsToThreshold
-    x = thresholdX
-  }
-
-  const timeToComplete = (slotSizeBits - x) / floorRate
-  if (remaining >= timeToComplete) return { fillBits: slotSizeBits, secondsUsed: seconds - remaining + timeToComplete }
-  return { fillBits: x + floorRate * remaining, secondsUsed: seconds }
-}
-
-// Inverse of the above: the real time it takes to advance one disk's own fillBits (x0) by exactly
-// `bits` at `fillRate` (`bits` is always <= slotSizeBits - x0 by construction at its one call
-// site below, so this never needs to reason about "running out of disk"). Used only when
-// applyDataLakeOverflow's own available-Bits budget — not time — is what limits a segment.
-const solveDataLakeDiskSecondsForBits = (x0, slotSizeBits, fillRate, bits) => {
-  const targetX = Math.min(slotSizeBits, x0 + Math.max(0, bits))
-  if (targetX <= x0 || fillRate <= 0) return 0
-  const shape = getDataLakeOverflowTaperShape(slotSizeBits)
-  const floorRate = fillRate * DATA_LAKE_OVERFLOW_FLOOR_FRACTION
-  if (!shape) {
-    const rate = fillRate * Math.max(DATA_LAKE_OVERFLOW_FLOOR_FRACTION, DATA_LAKE_OVERFLOW_MAX_FRACTION)
-    return (targetX - x0) / rate
-  }
-
-  const { thresholdX, equilibriumX, decayRate: decayRatePerFillRate } = shape
-  const decayRate = fillRate * decayRatePerFillRate
-  if (targetX <= thresholdX) {
-    return -Math.log((targetX - equilibriumX) / (x0 - equilibriumX)) / decayRate
-  }
-  let secondsSoFar = 0
-  let x = x0
-  if (x < thresholdX) {
-    secondsSoFar = -Math.log((thresholdX - equilibriumX) / (x - equilibriumX)) / decayRate
-    x = thresholdX
-  }
-  return secondsSoFar + (targetX - x) / floorRate
-}
-
-// Applies at most `availableSeconds`/`availableBits` worth of overflow to lake `tierIndex`, one
-// disk's own gap at a time (re-evaluating which disk is open, and its own exact closed-form fill
-// — see solveDataLakeDiskFillAfterSeconds/solveDataLakeDiskSecondsForBits above — every time a
-// disk completes, rather than computing one rate up front and reusing it for every disk a single
-// tick's own overflow might go on to complete; see docs/DESIGN_HISTORY.md). Each segment fills (up
-// to) one disk's own remaining gap, respecting BOTH the remaining time and the remaining Bits
-// budgets (whichever binds first), and stops early once either is exhausted — bounded by
-// DATA_LAKE_OVERFLOW_SEGMENT_LIMIT so this always terminates. Returns `{ lake, remainingBits,
-// changed }` — the caller's own `bits` should be SET to `remainingBits` (already accounts for
-// fillDataLakeDisks' own unconsumedBits at every segment), not decremented separately.
+// Applies at most `availableSeconds`/`availableBits` worth of overflow to lake `tierIndex` at the
+// plain `fillRate` — no artificial slowdown as a disk nears completion, the same posture Storage's
+// own disk provisioning already uses (an earlier version tapered this rate down via a closed-form
+// ODE; removed, see docs/DESIGN_HISTORY.md) — one open slot's own remaining gap at a time
+// (smallest sub-size first, re-evaluating which slot is open every time one completes, since a
+// single large `availableBits` can complete several in one call), bounded by
+// DATA_LAKE_OVERFLOW_SEGMENT_LIMIT so this always terminates. Tracks two SEPARATE budgets:
+// `remainingBits` is the caller's own currency balance (only ever decremented by what's actually
+// spent) while `spendableBits` is the fillRate/time-limited ceiling on how much THIS call may
+// deliver — conflating the two would silently discard whatever the rate couldn't reach this call
+// as if it had already been spent, destroying currency that was simply never offered. Returns
+// `{ lake, remainingBits, changed }` — the caller's own `bits` should be SET to `remainingBits`
+// (already accounts for fillDataLakeDisks' own unconsumedBits at every segment), not decremented
+// separately.
 const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, availableBits) => {
   let lake = getDataLakeTier(state, tierIndex)
-  let remainingSeconds = availableSeconds
   let remainingBits = availableBits
+  let spendableBits = Math.max(0, fillRate * availableSeconds)
   let changed = false
 
   for (
     let segment = 0;
-    segment < DATA_LAKE_OVERFLOW_SEGMENT_LIMIT && remainingSeconds > 0 && remainingBits > 0;
+    segment < DATA_LAKE_OVERFLOW_SEGMENT_LIMIT && remainingBits > 0 && spendableBits > 0;
     segment += 1
   ) {
     const viewState = { ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes, [tierIndex]: lake } } }
@@ -4607,22 +4888,15 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
     if (openSubSize === null) break // maxed — nothing left to fill
     const slotSizeBits = getDataLakeUnitBits(tierIndex) * openSubSize
     const x0 = lake.fillBits ?? 0
-
-    const afterTime = solveDataLakeDiskFillAfterSeconds(x0, slotSizeBits, fillRate, remainingSeconds)
-    let segmentBits = Math.min(afterTime.fillBits - x0, remainingBits)
-    let segmentSeconds = afterTime.secondsUsed
-    if (segmentBits < afterTime.fillBits - x0) {
-      // The Bits budget binds before the time budget does — the time this smaller amount actually
-      // takes is shorter than afterTime.secondsUsed (which assumed the larger, unaffordable one).
-      segmentSeconds = solveDataLakeDiskSecondsForBits(x0, slotSizeBits, fillRate, segmentBits)
-    }
+    const segmentBits = Math.min(remainingBits, spendableBits, slotSizeBits - x0)
     if (segmentBits <= 0) break
     const filled = fillDataLakeDisks(viewState, { [tierIndex]: lake }, tierIndex, segmentBits)
     if (!filled) break
     const { unconsumedBits, ...lakeUpdate } = filled
     lake = lakeUpdate
-    remainingBits -= segmentBits - unconsumedBits
-    remainingSeconds -= segmentSeconds
+    const actuallySpent = segmentBits - unconsumedBits
+    remainingBits -= actuallySpent
+    spendableBits -= actuallySpent
     changed = true
     if (unconsumedBits > 0) break // maxed out mid-segment — nothing more this call can do
   }
@@ -5395,10 +5669,11 @@ export const buyTickspeedMultiplier = tierId => state => {
   if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
-  // The last tier's Money-funded tickspeed ladder is replaced by the XP-funded one while the
-  // player currently owns >= 10 of that tier (see isLastTierTickspeedXpUnlocked/
-  // consumeXpForLastTierTickspeed) — this button has nothing to do for that tier for as long as
-  // that holds, reverting to normal once owned drops back below 10 (e.g. after a Prestige/Scale Up).
+  // The last tier's Money-funded tickspeed ladder is replaced by the XP-funded one once it has
+  // ever been the target of a successful Scale Up this cycle (see isLastTierTickspeedXpUnlocked —
+  // a scaleUpTierCounts-based latch, NOT a live owned check — and consumeXpForLastTierTickspeed) —
+  // this button has nothing to do for that tier for as long as that holds, reverting to normal
+  // only once a Prestige/Overclock resets scaleUpTierCounts, not merely from owned dropping.
   if (tierId === getLastTierId() && isLastTierTickspeedXpUnlocked(state)) return state
   const currentLevel = state.tickspeedLevels?.[tierId] ?? 1
 
@@ -6279,10 +6554,12 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // Spends XP to compound another LAST_TIER_XP_TICKSPEED_STEP (1%) into the last tier's own
 // tickspeed multiplier per XP consumed (see getLastTierXpTickspeedMultiplier) — durable within the
 // current run (never decays or reverts on its own), but reset to 0 by prestigeGame/scaleUpGame
-// along with prestige.xp itself, same as every other run-scoped field. Only
-// available while isLastTierTickspeedXpUnlocked (the last tier currently owns >=
-// getPurchaseBlockSize(state)), which is when it's currently replacing that tier's Money-funded
-// tickspeed button (see buyTickspeedMultiplier). Every successful consumption, no
+// along with prestige.xp itself, same as every other run-scoped field. Only available while
+// isLastTierTickspeedXpUnlocked (a scaleUpTierCounts-based latch — the last tier has EVER been
+// the target of a successful Scale Up this cycle, NOT a live owned check), which is when it's
+// currently replacing that tier's Money-funded tickspeed button (see buyTickspeedMultiplier) —
+// AND while the last tier's own current `owned` is > 0 (see the guard below; with nothing owned
+// there, there's nothing left to speed up). Every successful consumption, no
 // matter how small, resets tier 1 through the second-to-last tier's `owned` (and, to keep them in
 // sync, `resources`) counts back to 0 — the current *quantity* of each of those tiers, not their
 // `purchased` lifetime count or their purchaseLevels/purchaseLevelProgress (cost/level progress is
@@ -6292,11 +6569,22 @@ export const setAutoGlobalTickspeedEnabled = enabled => state => {
 // own delivery frequency. A single consumption must be at least
 // getLastTierXpTickspeedMinConsumption(xpConsumed so far) — see LAST_TIER_XP_TICKSPEED_MIN_
 // CONSUMPTION_PERCENT in layers.js — so it can't trickle in one XP at a time forever. A no-op if
-// not yet unlocked, if amount isn't a positive integer, if amount is below that minimum, if there
-// isn't enough unspent XP, or while production is frozen.
+// not yet unlocked, if the last tier's own owned count is 0, if amount isn't a positive integer,
+// if amount is below that minimum, if there isn't enough unspent XP, or while production is
+// frozen.
 export const consumeXpForLastTierTickspeed = amount => state => {
   if (isProductionFrozen(state)) return state
   if (!isLastTierTickspeedXpUnlocked(state)) return state
+
+  const lastTierId = getLastTierId()
+  // isLastTierTickspeedXpUnlocked is a one-time-per-cycle latch (scaleUpTierCounts), not a live
+  // read of the last tier's current owned count — it stays true for the rest of the cycle even
+  // after the last tier's own owned count later drops to 0 (e.g. a Prestige/Scale Up on an
+  // EARLIER tier doesn't touch it, but nothing replenishes it either once spent). Without this
+  // guard, consuming XP while the last tier owns nothing would still wipe every other tier's
+  // owned/resources and the Bits balance for a tickspeed bonus with nothing left to apply it
+  // to — a pure, irreversible-feeling loss with no offsetting benefit. See docs/DESIGN_HISTORY.md.
+  if (clampNonNegative(state.owned?.[lastTierId]) <= 0) return state
 
   const safeAmount = Math.floor(clampNonNegative(amount))
   if (safeAmount <= 0) return state
@@ -6307,7 +6595,6 @@ export const consumeXpForLastTierTickspeed = amount => state => {
   const availableXp = clampNonNegative(state.prestige.xp)
   if (safeAmount > availableXp) return state
 
-  const lastTierId = getLastTierId()
   const resetTierIds = TIER_DEFINITIONS
     .filter(tier => tier.id !== lastTierId)
     .map(tier => tier.id)

@@ -422,7 +422,7 @@ describe('schema merge on load', () => {
     expect(loaded.resources[MONEY_ID]).toBe(createInitialGameState().resources[MONEY_ID])
   })
 
-  it('strips a stale lastTierTickspeedXpUnlocked flag from an older save (replaced by a live owned >= 10 check)', () => {
+  it('strips a stale lastTierTickspeedXpUnlocked flag from an older save (replaced by a live scaleUpTierCounts-based check)', () => {
     const oldSave = {
       intro: { mainGameUnlocked: true },
       resources: { [MONEY_ID]: 10 },
