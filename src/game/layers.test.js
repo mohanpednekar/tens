@@ -341,6 +341,16 @@ describe('constants', () => {
     expect(getStoragePoolMemoryBounds(3).endBits).toBe((BITS_PER_BYTE * POOL_CAPACITY_SI_STEP ** 4) / 10)
   })
 
+  it('getStoragePoolMemoryBounds clamps an invalid poolIndex to pool 1', () => {
+    const pool1 = getStoragePoolMemoryBounds(1)
+    expect(getStoragePoolMemoryBounds(0)).toEqual(pool1)
+    expect(getStoragePoolMemoryBounds(-3)).toEqual(pool1)
+    expect(getStoragePoolMemoryBounds(NaN)).toEqual(pool1)
+    expect(getStoragePoolMemoryBounds()).toEqual(pool1)
+    // A non-integer floors toward the nearest whole pool rather than being rejected.
+    expect(getStoragePoolMemoryBounds(2.9)).toEqual(getStoragePoolMemoryBounds(2))
+  })
+
   it('MEMORY_BINARY_UNIT_STEP is 1024 (Data Stream Buffer display\'s own binary unit ladder — 1 KiB = 1024 Bytes; no longer governs where a pool\'s Capacity end bound itself lands, see POOL_CAPACITY_SI_STEP)', () => {
     expect(MEMORY_BINARY_UNIT_STEP).toBe(1024)
   })

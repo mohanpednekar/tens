@@ -4755,6 +4755,12 @@ describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues
     expect(getCoreEarnTimeSeconds(state)).toBe(state.intro.capacity / getIntroProductionRate(state.intro))
   })
 
+  it('getCoreEarnTimeSeconds is 0 for missing intro or non-positive capacity', () => {
+    expect(getCoreEarnTimeSeconds({})).toBe(0)
+    const zeroCapacity = withIntro(createInitialGameState(), { capacity: 0 })
+    expect(getCoreEarnTimeSeconds(zeroCapacity)).toBe(0)
+  })
+
   it('upgrading Core→Node makes it ×5 of Core earn and cascades later layers', () => {
     const locked = withIntro(createInitialGameState(), {
       autoMergeCoresIntoNode: true,
@@ -10412,11 +10418,29 @@ describe('Data Lakes', () => {
     expect(getDataLakeUnitBits(1)).toBe(unitBits1)
   })
 
+  it('getDiskLadderStep returns null for non-positive, non-finite, or off-ladder sizes', () => {
+    expect(getDiskLadderStep(0)).toBeNull()
+    expect(getDiskLadderStep(-kb1)).toBeNull()
+    expect(getDiskLadderStep(NaN)).toBeNull()
+    expect(getDiskLadderStep(Infinity)).toBeNull()
+    expect(getDiskLadderStep(kb1 * 1.5)).toBeNull()
+  })
+
   it('getBoosterPurchaseCost is purchased + 1 (no more in-flight transfers to count)', () => {
     const state = withIntro(createInitialGameState(), {
       dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { ...createInitialGameState().intro.dataLakes[1], purchased: 2 } },
     })
     expect(getBoosterPurchaseCost(1)(state)).toBe(3)
+  })
+
+  it('getDataLakeTier/getBoosterPurchaseCost/buyBooster no-op for an out-of-range tierIndex', () => {
+    const state = createInitialGameState()
+    expect(getDataLakeTier(state, 0)).toBeNull()
+    expect(getDataLakeTier(state, DATA_LAKE_TIER_COUNT + 1)).toBeNull()
+    expect(getBoosterPurchaseCost(0)(state)).toBe(0)
+    expect(getBoosterPurchaseCost(DATA_LAKE_TIER_COUNT + 1)(state)).toBe(0)
+    expect(buyBooster(0)(state)).toBe(state)
+    expect(buyBooster(DATA_LAKE_TIER_COUNT + 1)(state)).toBe(state)
   })
 
   it('getDataLakeCapacityLevel/getDataLakeCapacity default to level 0 (1 unit) for a fresh lake', () => {
