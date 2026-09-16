@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, vi } from 'vitest'
 import { version } from '../package.json'
-import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
+import { applyAutobuyerMilestones, formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeStable, getPoolBufferBits, getPoolBufferCapacity, getStoragePoolBandwidth, getTierCost } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   BITS_PER_BYTE,
@@ -12,8 +12,10 @@ import {
   COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
+  DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
   DATA_LAKE_OVERFLOW_MAX_PERCENT,
+  DATA_LAKE_OVERFLOW_MIN_PERCENT,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
   DISK_CACHE_BLOCK_COUNT,
@@ -1129,6 +1131,29 @@ test('once the last tier is full, its row shows the XP-consume tickspeed button,
   // (resets the run) from the row's XP-consume button (boosts this tier's own tickspeed).
   const panelScaleUpButton = screen.getByRole('button', { name: /^scale up \(requires 3 completed quettabytes levels/i })
   expect(panelScaleUpButton).not.toBe(rowXpButton)
+})
+
+test('the last tier row keeps showing the XP-consume button but disables it once that tier\'s own owned count is 0', () => {
+  seedMainGameState({
+    resources: { base: 12345 },
+    owned: { tier09: 10, tier10: 0 },
+    purchaseLevels: { tier09: 3, tier10: 2 },
+    // Still XP-unlocked (a successful Scale Up onto Quettabytes already landed this cycle) even
+    // though its own owned count has since dropped to 0 — the row must keep showing the
+    // XP-consume control rather than falling back to the Money-funded one, but the button itself
+    // has nothing left to speed up and must disable (see consumeXpForLastTierTickspeed's matching
+    // engine-level guard).
+    scaleUpTierCounts: { tier10: 1 },
+    prestige: { xp: 37, points: 0, count: 0, highestMilestone: 0 },
+  })
+  render(<App />)
+
+  const quettabytesLayer = screen.getByLabelText(/^quettabytes layer$/i)
+  const rowXpButton = within(quettabytesLayer).getByRole('button', {
+    name: /consume 37 xp for .* quettabytes tickspeed/i,
+  })
+  expect(rowXpButton).toHaveTextContent('🧬')
+  expect(rowXpButton).toBeDisabled()
 })
 
 test('clicking Scale Up once eligible resets resources but advances the target to the next tier', async () => {
@@ -2959,7 +2984,9 @@ test('Pool balance and Capacity share one precisely centered line', () => {
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
   const balance = pool1.querySelector('p')
-  expect(balance).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`)
+  // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
+  // always dedupes the balance's own unit suffix, leaving just the bare number.
+  expect(balance).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
   expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
@@ -2984,12 +3011,14 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
   )
-  // disksBuiltTotal seeded so isDataLakePoolReady(state, 1) is true — the bar only switches to
-  // lake mode once this pool's own lake can actually be fed (see the "buffer full but no disk
-  // built yet" test below for the not-ready case this transition is gated against).
+  // disksBuiltTotal seeded so the pool is entirely COMPLETE (isStoragePoolFullyBuilt) — the bar
+  // only switches to lake mode once AUTOMATIC overflow can actually feed this pool's own lake
+  // (see the "buffer full but no disk built yet" and "ready but not yet complete" tests below for
+  // the two not-yet-automatic cases this transition is gated against).
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
-    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 },
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
   })
   render(<App />)
 
@@ -3006,6 +3035,33 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
 })
 
+test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a maxed lake with no open disk slot left)', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  const maxedCapacity = DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    // Lake fully maxed (capacity level + deposited units both at their ceiling) — no open disk
+    // slot left, so getDataLakeCurrentFillSubSize is null and getDataLakeOverflowRatePercent
+    // reads DATA_LAKE_OVERFLOW_MIN_PERCENT (0) rather than a real in-progress rate.
+    dataLakes: { 1: { depositedUnits: maxedCapacity, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+  })
+  expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  // Neither the (now-retired) multiplier reading nor the lake overflow reading renders a
+  // progressbar — a genuine 0% reading has nothing meaningful to show (a zero-width bar plus an
+  // orphaned "0%" label), so the whole row is hidden rather than rendered empty.
+  expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
+  expect(within(pool1).queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
+  expect(within(pool1).queryByText('0%')).not.toBeInTheDocument()
+})
+
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
   // Same full-buffer seed as the transition test above, but with no disksBuiltTotal entry —
   // isDataLakePoolReady(state, 1) is false, so tickPoolBufferFill's overflow branch (engine.js)
@@ -3020,6 +3076,22 @@ test('the pool bar stays in fill-based-multiplier mode (never switches to the Da
   seedIntroState({
     bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
     poolBuffers: { 1: poolCapacity },
+  })
+  render(<App />)
+
+  expect(screen.queryByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).not.toBeInTheDocument()
+  const multiplierBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
+  expect(multiplierBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MIN_PERCENT))
+})
+
+test('the pool bar also stays in fill-based-multiplier mode while the pool has built one disk (isDataLakePoolReady) but is not yet entirely complete — AUTOMATIC overflow, what this bar describes, has not started yet either', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity }, disksBuiltTotal: { 8000: 1 }, // ready, but far from complete
   })
   render(<App />)
 
@@ -3169,31 +3241,31 @@ describe('Byte Foundry Storage', () => {
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
-    // 9 already built — this is the array's 10th (last) disk at this size, still costing the flat
-    // DISK_BUILD_COST_MULTIPLIER-times figure every disk used to cost regardless of ordinal (see
-    // getDiskProvisionPassesRequired in game/engine) — chosen so the cost meaningfully differs from
-    // the disk's own "1 KB" face size, unlike the array's first disk (which now costs just 1x, the
-    // same figure as its own size).
+    // 8 already built — this is the array's 9th (last, DISK_ARRAY_LADDER_CAP) disk at this size,
+    // costing 9x its own face value (getDiskProvisionPassesRequired scales by ordinal — the array's
+    // own cache substitutes for what would have been a 10th disk, see docs/DESIGN_HISTORY.md) —
+    // chosen so the cost meaningfully differs from the disk's own "1 KB" face size, unlike the
+    // array's first disk (which costs just 1x, the same figure as its own size).
     seedIntroState({
       bits: currentBankCost, capacity: currentBankCost, byteCreated: true ,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
     })
     render(<App />)
 
-    // currentBankCost is 80,000 bits = 10,000 Bytes — "10 KB" in the Disk's own SI scale
-    // (getDiskCost = diskSize * DISK_BUILD_COST_MULTIPLIER for this, the array's last disk), shown
-    // as "10 KB" rather than Memory's binary scale ("9.765 KiB") or the raw "80,000" bit count — a
-    // Disk's build cost is a Disk-denominated amount, so it renders on the same SI scale as the
-    // Disk's own size right next to it, not Memory's binary Sacrifice-ladder scale.
+    // The last disk's cost is 9 * 8,000 bits = 72,000 bits = 9,000 Bytes — "9 KB" in the Disk's own
+    // SI scale, shown as "9 KB" rather than Memory's binary scale or a raw bit count — a Disk's
+    // build cost is a Disk-denominated amount, so it renders on the same SI scale as the Disk's own
+    // size right next to it, not Memory's binary Sacrifice-ladder scale.
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent('10 KB')
-    expect(buildButton).not.toHaveTextContent('80,000')
+    expect(buildButton).toHaveTextContent('9 KB')
+    expect(buildButton).not.toHaveTextContent('72,000')
   })
 
   test('Provision Disk shows the pass count up front (0/N) for a multi-pass disk, even before the first pass is collected', () => {
-    // 9 already built — this build is the array's 10th (last) disk, needing 10 passes
-    // (getDiskProvisionPassesRequired) — before this fix the idle label only showed the total cost,
-    // giving no hint that funding it takes multiple passes until after the first click landed one.
+    // 8 already built — this build is the array's 9th (last, DISK_ARRAY_LADDER_CAP) disk, needing 9
+    // passes (getDiskProvisionPassesRequired) — before this fix the idle label only showed the
+    // total cost, giving no hint that funding it takes multiple passes until after the first click
+    // landed one.
     seedIntroState({
       bits: 0, capacity: currentBankCost, byteCreated: true ,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
@@ -3201,7 +3273,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
-    expect(buildButton).toHaveTextContent('0/10')
+    expect(buildButton).toHaveTextContent('0/9')
   })
 
   test('Provision Disk omits the pass count for a single-pass disk — nothing to clarify', () => {
@@ -3257,10 +3329,12 @@ describe('Byte Foundry Storage', () => {
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(pool1).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 1))}/s`)
     expect(pool2).toHaveTextContent(`${formatDiskSize(getStoragePoolBandwidth(savedState, 2))}/s`)
-    expect(pool1.querySelector('p')).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 1))}`)
-    expect(pool1).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 1)))
-    expect(pool2.querySelector('p')).toHaveTextContent(`0 B / ${formatDiskSize(getPoolBufferCapacity(savedState, 2))}`)
-    expect(pool2).toHaveTextContent(formatDiskSize(getPoolBufferCapacity(savedState, 2)))
+    // Balance and capacity now always share the same fixed pool unit, so formatCombinedBalance
+    // always dedupes the balance's own unit suffix, leaving just the bare number.
+    expect(pool1.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1)}`)
+    expect(pool1).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 1), 1))
+    expect(pool2.querySelector('p')).toHaveTextContent(`0 / ${formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2)}`)
+    expect(pool2).toHaveTextContent(formatDiskSizeInPoolUnit(getPoolBufferCapacity(savedState, 2), 2))
     expect(within(pool2).getByRole('button', { name: /collapse pool 2/i })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.queryByRole('group', { name: /^1 kb disks$/i })).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: /^1 mb disks$/i })).toBeInTheDocument()
@@ -3308,7 +3382,12 @@ describe('Byte Foundry Storage', () => {
     // exactly one pass's worth (currentBankSize), so the click collects the first pass and
     // auto-arms the queue for the rest rather than finishing the whole disk at once.
     // capacity: currentBankCost keeps pool 1 unlocked and the buffer's ceiling well above it.
-    seedIntroState({ bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true })
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test seeds.
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
     render(<App />)
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
@@ -3338,7 +3417,7 @@ describe('Byte Foundry Storage', () => {
     expect(diskGroup).toBeInTheDocument()
     expect(cacheGroup).toBeInTheDocument()
     expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/\/10 built/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
@@ -3357,14 +3436,15 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
 
     // currentBankSize is 8000 bits (a real "1 KB" disk) — each of its 8 cache blocks is 1000 bits
-    // labeled "1 Kb" (bit-scale); each disk circle is labeled "1 KB" (Byte-scale). Scoped to the
-    // disk/cache groups themselves (see the test above for why).
+    // labeled "1 Kb" (bit-scale); each disk circle shows a bare "1" (no unit — the surrounding pool
+    // card already establishes the KB scale, see formatDiskSizeBare). Scoped to the disk/cache
+    // groups themselves (see the test above for why).
     const diskGroup = screen.getByRole('group', { name: /^1 kb disks$/i })
     const cacheGroup = screen.getByRole('group', { name: /^1 kb read cache$/i })
     expect(diskGroup).toBeInTheDocument()
     expect(cacheGroup).toBeInTheDocument()
     expect(within(cacheGroup).getAllByText('1 Kb').length).toBe(DISK_CACHE_BLOCK_COUNT)
-    expect(within(diskGroup).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(diskGroup).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
   test('Foundry stacks multiple size arrays as continuous sections with in-cell size labels and no redeem ActionHint', () => {
@@ -3386,8 +3466,8 @@ describe('Byte Foundry Storage', () => {
     // Only the pool's smallest size (1 KB) ever shows a read cache — 10 KB fills exclusively via
     // write-cache ripple from below (see isDiskReadCacheEligible in engine.js).
     expect(screen.queryByRole('group', { name: /^10 kb read cache$/i })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10 KB').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(screen.getByRole('group', { name: /^1 kb disks$/i })).getAllByText('1').length).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(within(screen.getByRole('group', { name: /^10 kb disks$/i })).getAllByText('10').length).toBe(DISK_ARRAY_LADDER_CAP)
     expect(screen.queryByText(/^Cache$/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Tap a full disk/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Disks —/)).not.toBeInTheDocument()
@@ -3462,7 +3542,11 @@ describe('Byte Foundry Storage', () => {
       poolBuffers: { 1: currentBankSize },
       capacity: BITS_PER_BYTE * (2 ** 14),
       byteCreated: true,
-          })
+      // Pool 1's own read cache already full — otherwise getPoolCacheReservationBits would reserve
+      // this exact size out of the buffer this test seeds, since currentBankSize is also pool 1's
+      // own cache-eligible size.
+      diskCache: { [currentBankSize]: currentBankSize },
+    })
     const { unmount } = render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: /provision disk/i }))
@@ -3708,19 +3792,34 @@ describe('Byte Foundry Storage', () => {
     vi.useRealTimers()
   })
 
-  test('Upgrade claims the action slot over Buy whenever its own array is complete — no longer gated by the forced priority order', () => {
-    // Upgrade is available (the KB pool's ×1 array is fully built) and, since
-    // isDataLakeCapacityDoublingTurnAvailable is no longer part of the forced priority order (Speed
-    // ×2/Bandwidth is left available here, unlike the "capacity can be increased" test above, which
-    // neutralizes it — Upgrade is unaffected either way), it's immediately clickable regardless.
-    // Buy would also be genuinely affordable here (1 unit banked, first Booster costs 1), but
-    // Upgrade still takes the one shared slot — see DataLakePanel's own ternary.
+  test('Buy claims the action slot over Upgrade whenever it is actually affordable, even with the array complete — a manually-filled deposit meant for a Booster is never silently redirected into a forced Scale Out', () => {
+    // Upgrade is ALSO available here (the KB pool's ×1 array is fully built), but Buy wins the one
+    // shared slot since it's genuinely affordable (1 unit banked, first Booster costs 1) — see
+    // DataLakePanel's own ternary and docs/DESIGN_HISTORY.md for the bug this prevents.
     seedIntroState({
       bits: 8000,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
       dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
+    expect(buyButton).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
+  })
+
+  test('Upgrade claims the action slot when its own array is complete but Buy is not yet affordable', () => {
+    // No units banked at all — Buy could never be affordable, so Upgrade (array complete) takes
+    // the one shared slot, same as before this Buy-first reordering.
+    seedIntroState({
+      bits: 8000,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
     })
     render(<App />)
     openStorage()
