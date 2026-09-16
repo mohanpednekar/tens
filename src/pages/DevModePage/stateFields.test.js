@@ -76,4 +76,11 @@ describe('setValueAtPath', () => {
     expect(next).toEqual(original)
     expect(Object.prototype.polluted).toBeUndefined()
   })
+
+  it('prevents prototype pollution via prototype', () => {
+    const original = {}
+    const next = setValueAtPath(original, ['prototype', 'polluted'], true)
+    expect(next).toEqual(original)
+    expect(Object.prototype.polluted).toBeUndefined()
+  })
 })

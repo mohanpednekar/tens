@@ -16,3 +16,7 @@
 **Vulnerability:** The `isPlainObject` function relied solely on `typeof value === 'object'` and `!Array.isArray(value)` to identify plain objects, rendering it susceptible to objects instantiated with a null prototype or forged object-like entities. This vulnerability was exploited within the game's internal data-merging routines (`mergeStateForDevWrite`), enabling prototype pollution when merging crafted state structures.
 **Learning:** Checking for an object type and array absence is insufficient for verifying plain objects. Complex operations like recursive merging must strictly authenticate the object's prototype to prevent pollution vectors.
 **Prevention:** Always validate an object's prototype by ensuring `Object.prototype.toString.call(value) === '[object Object]'` and checking if its prototype strictly equals `Object.prototype` or `null`.
+## 2024-10-25 - Prototype Pollution via prototype key
+**Vulnerability:** The dev mode state merge logic dropped `__proto__` and `constructor` but missed `prototype`, still allowing prototype pollution through it.
+**Learning:** Checking for `__proto__` and `constructor` alone is insufficient when dealing with arbitrary JSON merging, as `prototype` can also be used to mutate object prototypes.
+**Prevention:** Always explicitly check for and skip `__proto__`, `constructor`, and `prototype` inside any custom object mapping, reduction, or deep-merge logic, especially when dealing with parsed JSON or external state inputs.
