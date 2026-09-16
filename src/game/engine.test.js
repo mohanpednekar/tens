@@ -75,11 +75,14 @@ import {
   formatBytes,
   formatCurrency,
   formatDiskSize,
+  formatDiskSizeInPoolUnit,
   formatDiskSizeStable,
   formatMemoryAmount,
   formatMemoryAmountStable,
   formatMoneyBalance,
   formatOfflineDuration,
+  formatPoolBalance,
+  formatPoolBalanceStable,
   getAutobuyerUnlockCost,
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
@@ -2624,6 +2627,25 @@ describe('formatMemoryAmount', () => {
     expect(formatMemoryAmount(500, kib)).toBe('500 bits')
     // 4 bits in a KiB-sized unit floors to a still-nonzero 0.003 at 3 decimals — also falls back.
     expect(formatMemoryAmount(4, kib)).toBe('4 bits')
+  })
+
+  describe('formatPoolBalance / formatPoolBalanceStable', () => {
+    it('self-sizes to a finer SI unit when the balance sits below the pool\'s own fixed unit', () => {
+      // Pool 2's own fixed unit is MB (divisor 8,000,000 bits) — a 3,187,000-bit balance is below
+      // that, so this must read in the pool's own next-finer unit (KB) rather than falling back to
+      // formatDiskSizeInPoolUnit's raw-bits case (the bug this fix addresses: "3.187e6 bits").
+      expect(formatPoolBalance(3_187_000, 2)).toBe('398.375 KB')
+      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.375 KB')
+    })
+
+    it('stays in the pool\'s own fixed unit once the balance reaches it', () => {
+      expect(formatPoolBalance(8_000_000, 2)).toBe('1 MB')
+      expect(formatPoolBalance(12_000_000, 2)).toBe('1.5 MB')
+    })
+
+    it('renders a zero balance the same as the fixed-unit formatter', () => {
+      expect(formatPoolBalance(0, 2)).toBe(formatDiskSizeInPoolUnit(0, 2))
+    })
   })
 
   it('a true zero is unaffected — "0 <unit>" has no decimal to violate the no-fraction rule', () => {

@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   use a neutral plus with a yellow percentage and tap icon.
 
 ### Fixed
+- **A Storage pool's own buffer balance no longer misrenders as a raw bit count** (e.g. "3.187e6
+  bits") whenever it sits below that pool's own fixed display unit (e.g. filling toward a "1 MB"
+  capacity) — it now self-sizes to a finer unit instead (e.g. "398.375 KB / 1 MB").
 - **A pool's own read cache now always gets first claim on that pool's buffer over Provision Disk
   funding**, rather than the reverse — a queued Provision Disk build could previously starve the
   read cache near-empty by claiming each tick's fresh production first.

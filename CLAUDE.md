@@ -1107,11 +1107,15 @@ size label (the small text inside each `DiskArrayRow`/`DataLakePanel` square) is
 no unit suffix (`formatDiskSizeBare` in `engine.js`) — the surrounding pool/lake card already
 establishes the scale (e.g. a "KB Pool" card's own disks are implicitly KB-denominated), so
 repeating the unit on every square would be redundant; aria-labels/tooltips keep the full
-unit-suffixed `formatDiskSize` form for accessibility. A pool's or Data Lake's own BALANCE/CAPACITY
-always renders in that pool's/lake's own fixed unit (`formatDiskSizeInPoolUnit`/
-`formatDiskSizeInPoolUnitStable`) rather than `formatDiskSize`'s auto-nearest-unit pick — never
-auto-converting up to the next unit even once the value reaches 1000x this one (a maxed KB Data
-Lake's own capacity reads "1000 KB", never "1 MB").
+unit-suffixed `formatDiskSize` form for accessibility. A pool's or Data Lake's own CAPACITY (and a
+Data Lake's own balance) always renders in that pool's/lake's own fixed unit (`formatDiskSizeInPoolUnit`)
+rather than `formatDiskSize`'s auto-nearest-unit pick — never auto-converting up to the next unit
+even once the value reaches 1000x this one (a maxed KB Data Lake's own capacity reads "1000 KB",
+never "1 MB"). A Storage pool's own buffer BALANCE (`PoolBalanceText` in `ByteFoundryPage`) instead
+self-sizes below that fixed unit (`formatPoolBalance`/`formatPoolBalanceStable`) — the buffer spends
+most of its life below the pool's own fixed unit (e.g. filling toward a "1 MB" capacity), so pinning
+it to that same fixed unit would floor it below 1 and misrender it as a raw bit count instead of a
+finer named unit (e.g. "398.375 KB / 1 MB", not "3.187e6 bits / 1 MB").
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
 loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -1248,7 +1252,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1786 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1789 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
