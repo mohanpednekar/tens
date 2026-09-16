@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatDiskSizeInPoolUnitStable, formatMemoryAmount, formatMemoryAmountStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -320,9 +320,10 @@ const useTrimBalanceAfterFull = isFull => {
 // can't be called a variable number of times inside a single component's own render.
 const PoolBalanceText = ({ bits, capacityBits, isFull, poolIndex }) => {
   const trimmed = useTrimBalanceAfterFull(isFull)
-  // Fixed to this pool's own unit (never auto-converting up to the next one) — see
-  // formatDiskSizeInPoolUnit's own doc comment in engine.js.
-  const balance = trimmed ? formatDiskSizeInPoolUnit(bits, poolIndex) : formatDiskSizeInPoolUnitStable(bits, poolIndex)
+  // The balance self-sizes below this pool's own fixed unit (see formatPoolBalance's own doc
+  // comment in engine.js) — capacity itself stays fixed to the pool's own unit (never auto-
+  // converting up to the next one), per formatDiskSizeInPoolUnit's own doc comment.
+  const balance = trimmed ? formatPoolBalance(bits, poolIndex) : formatPoolBalanceStable(bits, poolIndex)
   const capacity = formatDiskSizeInPoolUnit(capacityBits, poolIndex)
   return (
     <BalanceText>
@@ -437,6 +438,16 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
   const bonusWidthPercent = (clampedBonus / FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) * 100
   const hasBonus = !isLakeMode && clampedBonus > 0
+  // The reading this bar actually displays (never the base while in lake mode, which is forced to
+  // 0 above and would otherwise always suppress the lake reading). A genuine 0 here — reachable
+  // only in lake mode, via getDataLakeOverflowRatePercent's own DATA_LAKE_OVERFLOW_MIN_PERCENT
+  // floor once a maxed lake has no open disk slot left to report a rate for — has nothing
+  // meaningful to draw: a zero-width center point plus an orphaned "0%" label reads as a stalled/
+  // broken bar rather than "nothing to show right now," so the whole row is hidden instead. The
+  // base multiplier reading itself never actually reaches 0 (its own floor is
+  // FILL_MULTIPLIER_MIN_PERCENT, 50), so this never hides the ordinary multiplier bar.
+  const displayPercent = isLakeMode ? clampedTotal : clampedBase
+  if (displayPercent <= 0) return null
 
   return (
     <BarRow>

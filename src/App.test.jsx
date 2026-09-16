@@ -12,8 +12,10 @@ import {
   COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
+  DATA_LAKE_CAPACITY_BY_LEVEL,
   DATA_LAKE_CAPACITY_MAX_LEVEL,
   DATA_LAKE_OVERFLOW_MAX_PERCENT,
+  DATA_LAKE_OVERFLOW_MIN_PERCENT,
   DEFAULT_PURCHASE_BLOCK_SIZE,
   DISK_ARRAY_LADDER_CAP,
   DISK_CACHE_BLOCK_COUNT,
@@ -3031,6 +3033,33 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
   // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
   // sits at, so the bar's width does not jump across this transition.
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
+})
+
+test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a maxed lake with no open disk slot left)', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  const maxedCapacity = DATA_LAKE_CAPACITY_BY_LEVEL[DATA_LAKE_CAPACITY_MAX_LEVEL]
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    // Lake fully maxed (capacity level + deposited units both at their ceiling) — no open disk
+    // slot left, so getDataLakeCurrentFillSubSize is null and getDataLakeOverflowRatePercent
+    // reads DATA_LAKE_OVERFLOW_MIN_PERCENT (0) rather than a real in-progress rate.
+    dataLakes: { 1: { depositedUnits: maxedCapacity, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+  })
+  expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  // Neither the (now-retired) multiplier reading nor the lake overflow reading renders a
+  // progressbar — a genuine 0% reading has nothing meaningful to show (a zero-width bar plus an
+  // orphaned "0%" label), so the whole row is hidden rather than rendered empty.
+  expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
+  expect(within(pool1).queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
+  expect(within(pool1).queryByText('0%')).not.toBeInTheDocument()
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {

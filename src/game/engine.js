@@ -3433,7 +3433,20 @@ const getPoolFixedUnit = poolIndex => ({
   divisor: BITS_PER_BYTE * (SI_BYTE_UNIT_SCALE ** poolIndex),
 })
 export const formatDiskSizeInPoolUnit = (bits, poolIndex) => formatMemoryAmount(bits, getPoolFixedUnit(poolIndex))
-export const formatDiskSizeInPoolUnitStable = (bits, poolIndex) => formatMemoryAmountStable(bits, getPoolFixedUnit(poolIndex))
+
+// A pool's own buffer BALANCE spends most of its life below that pool's fixed unit (e.g. a MB
+// Pool buffer still filling toward its 1 MB capacity) — reusing formatDiskSizeInPoolUnit's fixed
+// unit directly for the balance would floor it below 1 there and trip formatMemoryAmount's own
+// "genuinely sub-unit" raw-bits fallback (e.g. "3.187e6 bits" instead of "398.375 KB"), even though
+// a finer named SI unit (KB) exists and fits it fine. Same self-size-below-capacity fix
+// formatMemoryBalanceValue (ByteFoundryPage) already applies to the binary Memory ladder — see
+// docs/DESIGN_HISTORY.md.
+const getPoolBalanceUnit = (bits, poolIndex) => {
+  const capacityUnit = getPoolFixedUnit(poolIndex)
+  return bits > 0 && bits < capacityUnit.divisor ? getSiByteUnit(bits) : capacityUnit
+}
+export const formatPoolBalance = (bits, poolIndex) => formatMemoryAmount(bits, getPoolBalanceUnit(bits, poolIndex))
+export const formatPoolBalanceStable = (bits, poolIndex) => formatMemoryAmountStable(bits, getPoolBalanceUnit(bits, poolIndex))
 
 // Formats a raw bit count (a Disk Cache block, or a whole cache) in its own dedicated bit-scale
 // unit (Kb/Mb/Gb/… — see BIT_UNIT_SYMBOLS/getBitUnit above) rather than formatDiskSize's
