@@ -160,144 +160,22 @@ model"/"Architecture" sections and `docs/ECONOMY_REFERENCE.md` in full before to
 `ComputePage` — and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration
 may already have tried and rejected.
 
-**Standing rule: non-binary (SI-clean or decade-power) transforms are for storage-pool-scoped
-values only — `intro.capacity` itself keeps doubling plainly in binary**, since it's also the Data
-Stream tile's own balance/capacity figure. Capacity requires a full Buffer, drains it, and doubles
-`intro.capacity` with a plain `×2` (`INTRO_CAPACITY_DOUBLING_STEP`) — unclamped to any pool boundary
-now, so it can grow past a pool's own ceiling once reached. Each Storage pool instead derives its
-OWN Capacity (`getStoragePoolCapacity`) from that same doubling count via a DECADE-POWER-OF-10
-ladder — deliberately coarser than Bandwidth's own finer SI-clean sequence below — 1 KB, 10 KB,
-100 KB (pool 1's own ceiling), and so on for higher pools (`getDecadePowerEquivalentBits`,
-closed-form: `10 ** floor(N * log10(2))` Bytes off the same robust doubling-step `N` count
-`getSiCleanEquivalentBits` computes), clamped to that pool's own window — flat within a decade,
-jumping straight to the next decade the instant `intro.capacity` crosses it, with no intermediate
-steps. Each decade step exactly funds the FACE VALUE of the disk-build one step behind it (e.g.
-crossing into "10 KB" Capacity funds a single Provision Disk funding pass toward a 1 KB disk, not
-that disk's own 80,000-bit full build cost) — deliberate, so a pool's buffer is always exactly far
-enough ahead to fund its own next disk's pass the moment the threshold is crossed. A
-pool's Bandwidth (`getStoragePoolBandwidth`) is unaffected — it still follows the same raw
-production rate the Data Stream tile's own rate figure uses, through the finer SI-clean transform
-(`getSiCleanEquivalentBits`, its own closed-form helper, distinct from Capacity's decade-power one
-though both share the same `N = round(log2(raw / 1 Byte))` doubling-step calculation, robust to
-floating-point drift from chained purchases/boosts) — `sqrt(pool Capacity in Bytes)` is only a
-guideline for the bandwidth's bounds, not the formula, though it still caps the real ceiling once a
-pool's own fixed Capacity can't keep up with an ever-growing rate. `isMemoryCapacityAtCap`
-(the purchase-availability gate) compares the FINAL pool's own derived Capacity to its ceiling, not
-the raw value — deliberately the last pool always, not the highest currently-unlocked/visible one,
-so Capacity growth is never re-capped by any one pool's own progress. Two earlier, reverted attempts shared one raw value between both displays instead — see
-docs/DESIGN_HISTORY.md (also home to the acknowledged, minor Compute merge/boost pacing consequence
-of `intro.capacity` no longer clamping to a pool ceiling — `getCoreEarnTimeSeconds` deliberately
-still reads the raw value). Storage pools 1–10 are derived views over this one generator: each
-unlocked pool's own Bandwidth is the shared production rate as above (both sides still
-bits/sec internally — Storage pools display in SI units for all purposes, unlike the Data Stream
-card's own balance/Buffer display, which stays binary). A pool's own Capacity end bound itself is
-also SI-aligned (`POOL_CAPACITY_SI_STEP`, not the shared ladder's binary `MEMORY_BINARY_UNIT_STEP`) —
-pool 1 caps at exactly 100 KB, pool 2 at 100 MB, pool 3 at 100 GB, … Each pool also owns a small local
-**buffer** (`intro.poolBuffers`) that
-every bit-costing Storage action for that pool spends from exclusively (Provision Disk's cost, the
-read-cache fill) — the shared Buffer only tops it up (`tickPoolBufferFill`, bandwidth-limited,
-ascending pool-by-pool, after tier01's own bootstrap conversion and Queued Capacity each tick). The
-buffer's own ceiling matches that pool's Capacity exactly (not a smaller fraction — see
-`docs/DESIGN_HISTORY.md` for why). The common **Provision Disk**
-operation (the persisted `intro.diskBuild` field intentionally retains its historical name) always
-targets the next disk size and renders INSIDE the pool card matching that size (not standalone in
-the Data Stream section), with a fallback copy below the Data Stream card for the rare case where
-the disk ladder has outrun the last currently-visible pool card. Its cost is paid in N passes of the disk's own face-value size each — N for the array's Nth disk
-(1 for its first, up to 9 for its last — `DISK_ARRAY_LADDER_CAP` (9), not `DISK_BUILD_COST_MULTIPLIER`'s
-10, which is no longer actually reached) rather than a flat count
-for every disk — (`intro.diskProvisionPasses`) rather than as one lump sum, so a pool's buffer only
-ever needs to hold one pass at a time; only once every required pass lands does the real timed build
-start, and a manual click that doesn't finish it in one call auto-arms a queue so the remaining
-passes fire themselves as the buffer refills, no further click needed. Only the largest unlocked pool is expanded; earlier pools remain as
-compact expandable summaries with their three disk arrays. Disks (`StoragePage`, timed builds — a
-fresh disk takes exactly the time to fill it at 1x Memory bandwidth (current production rate), ×N
-for the array's Nth disk; only the pool's smallest size gets an always-full **read cache** (Data
-Stream → read cache → timed flush to disk when tier allows; the Memory→cache refill is itself
-bandwidth-capped at 10x rate, and the cache→disk flush duration is one cache block at 2x rate) —
-every larger size fills exclusively via write-cache upward merges from the size below (collect from
-Disks at 5x rate, flush into the disk at 2x rate), never its own read cache (running both was
-redundant)) — each disk size has a fixed, permanent one-to-one mapping to one tier+level (KB sizes
-→ Kilobytes, MB sizes → Megabytes, etc., 1st/2nd/3rd size → that tier's level 1/2/3). Byte Foundry
-funds Byte Factory **pull-based, fully automatically, every tick**, with no player click and no
-manual Redeem/cache-release control (Foundry has no proactive knowledge of Factory state — it just
-supplies when a tier level is ready to pull): `tickDiskPull` pulls one FULL, clean-slate (zero
-purchase-level progress) disk into its matching tier level whenever that tier sits at exactly the
-disk's required level, completing the whole level in one shot; `tickDiskLevelOneCachePull` is the
-fallback for a tier still sitting at its own level 1 with no fresh disk to pull, spending its pool's
-own read cache directly instead — never past level 1, never atop existing progress. Compute
-Cores/Nodes/Compute Boost
-(`ComputePage`, nav **Boosters**). **Data Lakes** (KB … QB) fund Boosters, escalating cost (nth = n
-units) — fully decoupled from Storage Disks now: each lake is fed directly and continuously by its
-own matching pool's OVERFLOW (production beyond that pool's Memory buffer once completely full), at
-the plain available rate (no taper — same posture Storage's own disk provisioning uses), completing
-the lake's ×1/×10/×100 disks smallest-first, one at a time (capped 9/9/9 —
-`DATA_LAKE_SUB_SIZE_DISK_CAPS`, one unit short of each level's own 1/10/100/1,000-unit capacity —
-the level's own last unit fills via the lake's own retained buffer instead of a disk square,
-mirroring how a Storage array's cache substitutes for its own 10th disk). A lake is gated on
-`isDataLakePoolReady` — its own matching
-Storage pool having built at least one real disk, not the lake's own fill progress (overflow itself
-won't feed a lake until then). **A lake fills MANUALLY, capped at exactly its next Booster's own
-cost, until its matching pool is entirely built (`isStoragePoolFullyBuilt`) — only then does it
-switch to filling AUTOMATICALLY** from the pool's buffer overflow as above; manual fill
-(`fillDataLakeManually`/`isDataLakeManualFillAvailable`, a `💧 Fill` button) draws from the same
-pool buffer overflow would use, outside the forced priority order same as Buy. Boosters become
-buyable the instant that's true
-(`isDataLakeBoosterUnlocked`, following the same condition — an older per-lake `boostersUnlocked`
-flag, latched on the lake's own first completed disk, is still read as a fallback for old-save
-compatibility only). `DataLakePanel`'s own pool-fill tile stays visible even before unlock, reading
-a static "Locked · 0 / size" rather than being entirely absent. Buying (`buyBooster`, manual or
-auto-buy via `autoBuyEnabled`/`tickDataLakeAutoBuy`) spends the cost off the lake's own banked units
-instantly — no live transfer, no waiting, and — since it doesn't touch Bits/Disks at all — not part
-of the forced priority order. A lake's own capacity is a purchasable ladder: starts at 1 unit,
-climbs a plain decade-power-of-10 step per purchase (1, 10, 100, 1,000, hard-capped at level 3) —
-available once the CORRESPONDING Storage array for the current level is fully built (level 0→1
-needs the pool's smallest ×1 array, 1→2 the middle ×10, 2→3 the largest ×100 — no longer tied to the
-lake's own escalating Booster cost or to "the lake is full," both superseded), draining whatever it
-currently holds — independent of every other action's own availability, same as Booster purchases
-above, not arbitrated against the forced priority order at all. The UI repurposes one button
-between Buy and Upgrade, preferring Buy whenever it's genuinely affordable (even with Upgrade also
-available — Upgrade's own drain-on-claim cost would otherwise silently redirect a Fill-funded
-Booster purchase into a capacity level-up with no way to Buy first) and falling back to Upgrade only
-once Buy isn't an option. A save
-carrying a `capacityLevel` from an older, longer ladder — or written under the earlier
-deposits-shaped schema entirely (whose fields now just read as absent) — is clamped/defaulted on
-load (`normalizePoolMemoryCapacity`), same as a saved pool buffer above a since-lowered ceiling.
-A disk whose corresponding tier has already moved past the level it requires simply sits full and
-unredeemable by that tier for the rest of the cycle — nothing sweeps it into Bits (a removed "idle
-disk liquidation" mechanic used to do that); but `tickDiskWriteCache` CAN still fold such a stranded
-disk into the next size up, even when that target is itself already stranded too (progress is
-Prestige-permanent, so it's never wasted, and the target may still be a stepping stone toward a
-further, still-useful tier) — only an active tier claim on the source still pauses it (see
-docs/DESIGN_HISTORY.md). Deposited/capacity/next-cost display in Byte-scale (KB/MB/GB),
-matching Disks, not a bare unit count. A separate PP **Compute (Flops)** screen
-(`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP with KFlops→QFlops tiers (1,000–10³⁰ PP).
-An always-on auto-convert turns Data Stream bits into free `tier01` units at tier01's own current
-per-unit cost, with **no per-cycle cap** and no manual UI trigger (the old manual transfer-block row
-was removed) — it funds `tier01` purchases continuously, every cycle, but doesn't itself touch
-`intro.mainGameUnlocked` any more; that's `latchMainGameUnlocked`'s job (see above), keyed off
-Storage's own capacity threshold instead. **Pool liveness (card visibility, active buffer/Bandwidth,
-usable read cache) is now purely Capacity-based** — `intro.capacity` reaching that pool's own
-1024^N-Bytes threshold (`getPoolCapacityUnlockThresholdBits`, `getVisibleStoragePoolCount`), pool 1
-always live — INDEPENDENT of disk-build progress, which instead drives a genuinely separate chain:
-provisioning a disk in pool N+1 still requires every disk of every smaller size in pool N to already
-be fully built (`isStoragePoolFullyBuilt`/`isStoragePoolUnlocked`). Pool 1's own 1 KiB threshold is
-deliberately equal to `isStorageUnlocked`'s own `INTRO_DISK_UNLOCK_CAPACITY`, so the whole Storage
-section and pool 1's card reveal at the same instant, with pool 1 already showing a clean "1 KB"
-Capacity. A pool's own smallest size's read cache starts filling from Memory
-the instant its pool unlocks — pre-filled ready to flush before any disk of that size has ever been
-built (reinstated; see docs/DESIGN_HISTORY.md). The generator, Disks, Data Lakes, and Compute
-Cores/Nodes are permanent across every real Prestige; so is `intro.mainGameUnlocked` itself, a
-one-time-ever latch (`latchMainGameUnlocked`) — once Storage-unlock capacity is ever reached, no
-real Prestige or Era ascension resets it again, so Factory stays permanently reachable from then on.
-Only the Data Stream balance itself resets each cycle.
-After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
-to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
-upgrades on the Upgrades tab.
+Every formula/threshold/gating predicate behind Data Stream Capacity, pool Bandwidth, Provision
+Disk, Data Lakes (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button
+precedence, and pool-liveness-is-Capacity-only is deliberately omitted here — it's fully documented
+in `CLAUDE.md`'s "Architecture"/"Economy model" sections and `docs/ECONOMY_REFERENCE.md`/
+`docs/COMPONENTS_REFERENCE.md`; do not guess at any of it. After **100 lifetime prestiges**,
+production no longer freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64
+money-exponent powers beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
 Snapshots land on the stable orphan branch `ideal-run-strategy` as **one file per run** under
 `runs/` (never merge into `main`; do not rename with an agent/session suffix). Details:
+`.claude/skills/simulate-run-times/SKILL.md` / `CLAUDE.md`.
+
+### Adding a new tier
+
 Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` (naming-agnostic `id` next in the
 `tier0N`/`tierNN` sequence, `name`, `symbol`, `baseCost`, `costResourceId: MONEY_ID`,
 `producesResourceId` set to the previous tier's `id`, `baseTickSpeedSeconds` set to the next integer

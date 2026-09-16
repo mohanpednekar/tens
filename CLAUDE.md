@@ -716,21 +716,11 @@ Strict three-layer separation:
    "Provision Disk moved back inside its pool card" entry for why it moved there from the shared Data
    Stream section. Each disk array shows every size from `getDiskSizesToShow`, all
    `DISK_ARRAY_LADDER_CAP` (9) slots in one unbroken row. The "queue next build" pin-icon toggle was
-   removed from the UI, but `intro.diskBuildQueued`/`tickQueuedDiskBuild` are unconditionally wired
-   into `tickGame`'s own tick pipeline and live: `provisionDisk` auto-arms `diskBuildQueued` itself
-   whenever a click only partially funds a disk's current pass, so the remaining passes fire
-   themselves as the pool buffer refills, no further click needed (see "Economy model" below). The
-   button's own click handler now also calls `queueDiskBuild` directly whenever it isn't
-   turn-available (underfunded for even a first pass, or outranked by a higher-priority action) —
-   previously the button stayed disabled until a whole pass was already banked, so the FIRST pass
-   needed the same manual "wait, then remember to click" babysitting every later pass had already
-   stopped needing; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
-   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade` — they only
-   matter for the narrower "arm the queue before even the first pass is affordable" case. Its
-   progress fill stays at 0 until the button is actually engaged (a pass collected, or the build
-   queued) — the button's own existence already signals eligibility, so it no longer previews a
-   fill from whatever the pool buffer happens to be holding for unrelated reasons (e.g. read cache
-   fill) before the player has ever clicked it; see `docs/DESIGN_HISTORY.md`. Every
+   removed from the UI, but the underlying auto-arming queue it drove stays fully wired and live —
+   see the "Disks" entry under "Economy model" below for how a click arms it, and
+   `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section for what the button's own progress
+   fill shows; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
+   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade`. Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases, its
    own capacity Upgrade, and Upgrade Data Stream itself are the three exceptions, each arbitrated
@@ -1141,8 +1131,8 @@ the re-reveal mechanic: after a reset, a tier already unlocked by a previous Sca
 same Overclock re-reveals when its predecessor reaches 2 completed levels (`purchaseLevels` 3).
 Overclock keys off the **final** tier's completed levels: first available at 5, then dynamically at
 (the completed-level count the previous Overclock was taken at) + 3 — `overclockLastClaimCompletedLevels`,
-not a fixed 5/8/11/14 ladder. Latency compounds the same Overclock-scaled 1% step at every level;
-milestones add no separate production bonus.
+not a fixed 5/8/11/14 ladder (Latency's own Overclock-scaled 1% step is described under "Economy
+model" above).
 
 For questions about run times, time-to-prestige, or pacing/balance (e.g. how starting Prestige Points
 affect a single run's length), use the `simulate-run-times` skill
