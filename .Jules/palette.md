@@ -13,3 +13,6 @@
 ## 2026-09-06 - Focus Visible Styles for custom interactive components and Disclosure summary elements
 **Learning:** Custom components with `cursor: pointer` like `TierLine` that simulate button functionality often omit focus states, impairing keyboard navigation. Furthermore, native `<summary>` elements inside custom `<details>` (like `Disclosure`) require an explicit `:focus-visible` ring rather than relying on browser defaults to ensure proper keyboard accessibility within a styled-components environment.
 **Action:** When creating or modifying custom interactive elements with styled-components (such as `TierLine` and `Disclosure` summary elements), ensure `&:focus-visible` outlines are explicitly added to maintain standard keyboard accessibility flow.
+## 2026-09-14 - Focus Visible Styles for styled-components
+**Learning:** Custom `styled.button` and `styled.div` components in this app acting as interactive controls sometimes omit `&:focus-visible` states (for instance `TierLine` lacked it, unlike most standard interactive items), causing keyboard accessibility issues when navigating.
+**Action:** When adding or tweaking interactive `styled-components` elements, consistently implement an explicit `&:focus-visible` outline (usually matching the accent or highlight color of the component) to ensure the interface stays fully keyboard accessible.
