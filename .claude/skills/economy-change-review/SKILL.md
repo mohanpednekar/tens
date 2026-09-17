@@ -32,9 +32,8 @@ out two things verbatim:
 
 ## 3. Field-by-field diff against the approved table
 
-For every `TIER_DEFINITIONS` entry the diff adds, removes, or edits, compare each field
-(`id`, `name`, `symbol`, `baseCost`, `costResourceId`, `producesResourceId`,
-`baseTickSpeedSeconds`) against the issue's approved table **exactly** — not "close enough". Watch
+For every `TIER_DEFINITIONS` entry the diff adds, removes, or edits, compare each of the seven
+fields named in step 2 against the issue's approved table **exactly** — not "close enough". Watch
 specifically for:
 - An off-by-one in a `baseCost` exponent, or a `baseCost` that doesn't match the table at all.
 - A `producesResourceId` that doesn't chain to the correct previous tier's `id` (this is what
