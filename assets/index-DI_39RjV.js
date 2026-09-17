@@ -1763,6 +1763,11 @@ Error generating stack: `+e.message+`
   font-size: 0.9rem;
   min-width: 10rem;
   padding: 0.5rem 0.65rem;
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
 `,Ng=P.p`
   color: ${e=>e.$error?e.theme.color.danger:e.theme.color.textMuted};
   font-size: 0.8rem;
