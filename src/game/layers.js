@@ -584,10 +584,13 @@ export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 
-// A tier's production is multiplied by 1.1 at every completed level (see engine.js's
+// A tier's production is multiplied by 1.25 at every completed level (see engine.js's
 // getPurchaseMilestoneMultiplier), compounding per completed level — the per-level multiplier
-// normally applied.
-export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.1
+// normally applied. Raised from 1.1 to 1.25 to shorten a fresh-save run to first Prestige (roughly
+// 2.2x faster per the simulate-run-times skill — 2d7h → ~1d1h38m at PP 0) without materially
+// changing Overclock's own claim shape, which stays gated on the last tier's completed levels
+// (getOverclockRequirement), not this multiplier — see docs/DESIGN_HISTORY.md.
+export const PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25
 // Every 10th level uses this larger multiplier instead of PURCHASE_MILESTONE_MULTIPLIER_BASE for
 // that one level — a bigger milestone every 10 levels on top of the regular one every level (see
 // engine.js's getPurchaseMilestoneMultiplier). This "every 10th level" cadence is independent of

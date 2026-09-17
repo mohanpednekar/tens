@@ -573,7 +573,7 @@ test('the tier tickspeed multiplier button is buyable even when that tier\'s aut
   expect(screen.getByTitle(/tickspeed multiplier level 2 \(\+10% faster ticks\)/i)).toBeInTheDocument()
 })
 
-test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.1', () => {
+test('reaching 8 lifetime purchases of a tier multiplies its displayed production by ×1.25', () => {
   seedMainGameState({
     resources: { base: 10 },
     owned: { tier01: 10 },
@@ -582,9 +582,9 @@ test('reaching 8 lifetime purchases of a tier multiplies its displayed productio
   })
   render(<App />)
 
-  // Crossing the 8-purchase milestone completes level 1: owned(10) × 1 B/tick × 1.1 = 11 B/tick
+  // Crossing the 8-purchase milestone completes level 1: owned(10) × 1 B/tick × 1.25 = 12.5 B/tick
   // (the displayed amount floors to match tickGame's own floored credit).
-  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+11 B')
+  expect(screen.getByLabelText(/^kilobytes layer$/i)).toHaveTextContent('+12 B')
 })
 
 test('a tier shows its full per-tick production amount, not a reduced rate', () => {

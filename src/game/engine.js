@@ -1257,11 +1257,11 @@ export const buyPrestigeDoublePp = state => {
 export const getSmartAutobuyerCost = tierId =>
   SMART_AUTOBUYER_COST_MULTIPLIER * getAutobuyerUnlockCost(tierId)
 
-// Production doubles every time a tier completes another level — the same boundary where
-// getTierCost's cost-epoch exponent steps up, so completing a fresh level always pays off with
-// production alongside the steeper price. But every 10th level is a bigger milestone: that one
-// level contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE (10x) instead of the regular
-// PURCHASE_MILESTONE_MULTIPLIER_BASE (2x), compounding into every other level's factor —
+// Production is multiplied by PURCHASE_MILESTONE_MULTIPLIER_BASE (1.25x) every time a tier
+// completes another level — the same boundary where getTierCost's cost-epoch exponent steps up, so
+// completing a fresh level always pays off with production alongside the steeper price. But every
+// 10th level is a bigger milestone: that one level contributes PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE
+// (10x) instead of the regular 1.25x, compounding into every other level's factor —
 // levelsCompleted = level - 1; megaBlocks = floor(levelsCompleted/10); multiplier =
 // PURCHASE_MILESTONE_MULTIPLIER_BASE^(levelsCompleted-megaBlocks) *
 // PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE^megaBlocks. This "every 10th level" mega cadence is
