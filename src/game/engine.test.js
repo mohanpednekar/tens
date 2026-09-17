@@ -267,6 +267,7 @@ import {
   fillDataLakeManually,
   isDataLakeAutoBuyEnabled,
   isBoosterPurchaseAvailable,
+  isBoosterEntityAtCap,
   buyBooster,
   toggleDataLakeAutoBuy,
   tickDataLakeAutoBuy,
@@ -10981,6 +10982,20 @@ describe('Data Lakes', () => {
       // Requesting far more than the 2 slots of room actually left still only grants 2.
       const after = buyBooster(1, Number.MAX_SAFE_INTEGER)(state)
       expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
+    })
+
+    it('isBoosterEntityAtCap is true only once the entity is actually full, distinct from merely being under-deposited', () => {
+      const underDeposited = withLake(createInitialGameState(), 1, { depositedUnits: 0, boostersUnlocked: true })
+      expect(isBoosterEntityAtCap(underDeposited, 1)).toBe(false)
+      expect(isBoosterPurchaseAvailable(underDeposited, 1)).toBe(false) // for the other reason — not enough banked
+
+      const wellFunded = withLake(createInitialGameState(), 1, { depositedUnits: 900, boostersUnlocked: true })
+      expect(isBoosterEntityAtCap(wellFunded, 1)).toBe(false)
+      expect(isBoosterPurchaseAvailable(wellFunded, 1)).toBe(true)
+
+      const atCap = { ...wellFunded, intro: { ...wellFunded.intro, computeCores: COMPUTE_ENTITY_CAP } }
+      expect(isBoosterEntityAtCap(atCap, 1)).toBe(true)
+      expect(isBoosterPurchaseAvailable(atCap, 1)).toBe(false)
     })
 
     it('toggleDataLakeAutoBuy flips autoBuyEnabled without touching anything else', () => {

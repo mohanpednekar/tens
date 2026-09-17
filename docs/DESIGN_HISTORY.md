@@ -51,6 +51,29 @@ room reopens under the cap); manual Playwright screenshots of the Boosters scree
 confirming the button alignment, and of a capped-out KB Data Lake confirming the disabled Buy
 button's new title and that a forced click is a genuine no-op.
 
+**Follow-up round 1 (same day).** A separate report — "alignment of symbols and labels should be
+uniform across booster tiers" — turned out NOT to be about the slot columns (Playwright bounding-
+rect measurements confirmed the 10 normal slots already land at the exact same left/right pixel
+across every tier row regardless of label length: `SlotsRow`'s `flex: 1 1 auto` + `justify-content:
+flex-end` always right-packs the same fixed-width content against the row's own right edge,
+independent of how much slack space sits to its left — the visual impression of raggedness from a
+quick look was misleading). The real, measurable inconsistency was `TierSymbol` having no fixed
+width: plain-text glyph symbols (⬡ for Cores, ▦ for Grids) render ~6px narrower than the full-color
+emoji used for every other tier (🔗, 🧩, 🕸️, 🧵, ☁️, 🏢, 🖥️, 👑), so those two tiers' labels started
+a few pixels further left than the rest. Fixed by giving `TierSymbol` a fixed `width: 1.4em` and
+`text-align: center` — confirmed via measured `getBoundingClientRect().left` on every tier's label
+now landing at the identical x-coordinate.
+
+An adversarial review of the round-1 PR (`code-reviewer` subagent) also caught two gaps before this
+follow-up: (1) `InfoPage`'s own Guide copy under "Cores" still told players Boosters could push a
+tier past `COMPUTE_ENTITY_CAP` ("Data-Lake-limited rather than inventory-capped") — directly
+contradicting the just-shipped fix; `InfoPage`'s architectural contract (numbers/formulas can't
+drift because they're read from `engine.js`/`layers.js` constants) doesn't cover hand-written prose
+like this sentence, so it silently went stale. Rewritten to state the new pause-and-resume behavior.
+(2) The new `isBoosterEntityAtCap` predicate had no direct test of its own contract (cap vs. merely
+under-funded) — only exercised indirectly as a side effect of `isBoosterPurchaseAvailable`. Added a
+dedicated case distinguishing "not enough banked yet" from "entity full."
+
 ### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
 
 The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the

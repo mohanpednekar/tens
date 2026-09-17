@@ -380,10 +380,10 @@ const InfoPage = () => {
             boundary).
           </li>
           <li>
-            Every compute entity caps at {COMPUTE_ENTITY_CAP} held — except on the Data Lake
-            Booster path itself (any of the ten tiers, not just Cores), which is
-            Data-Lake-limited rather than inventory-capped and can push a tier's held count past
-            {' '}{COMPUTE_ENTITY_CAP}.
+            Every compute entity caps at {COMPUTE_ENTITY_CAP} held — including Data Lake Booster
+            purchases (any of the ten tiers, not just Cores), which pause once that tier's held
+            count reaches the cap and resume once it's spent back down (a merge, or a Compute
+            Boost activation/forfeit).
           </li>
         </ul>
 

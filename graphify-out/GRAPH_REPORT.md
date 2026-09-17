@@ -1,17 +1,17 @@
 # Graph Report - tens  (2026-09-17)
 
 ## Corpus Check
-- 113 files · ~457,536 words
+- 113 files · ~458,011 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .ico 1)
 
 ## Summary
-- 1651 nodes · 4083 edges · 107 communities (82 shown, 22 thin omitted)
+- 1651 nodes · 4084 edges · 107 communities (82 shown, 22 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 83 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4ead0fb1`
+- Built from commit: `1af6a191`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -187,12 +187,12 @@ Cohesion: 0.05
 Nodes (41): clearDiskBuildQueue(), enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid (+33 more)
 
 ### Community 9 - "DiskArrayRow/index.jsx"
-Cohesion: 0.08
-Nodes (40): CacheBlock, CacheBlocksRow, CacheFillIndicator, CellLabel, DiskArrayRow(), DiskSizeRow, DiskSquare, pullPulse (+32 more)
+Cohesion: 0.07
+Nodes (45): CacheBlock, CacheBlocksRow, CacheFillIndicator, CellLabel, DiskArrayRow(), DiskSizeRow, DiskSquare, pullPulse (+37 more)
 
 ### Community 10 - "DataLakePanel/index.jsx"
-Cohesion: 0.09
-Nodes (57): actFoundry(), ActionButton, BareDivider, clampFraction(), DataLakePanel(), getVisibleLakeTierIndexes(), LakeActionsRow, LakeBlock (+49 more)
+Cohesion: 0.08
+Nodes (61): actFoundry(), ActionButton, BareDivider, clampFraction(), DataLakePanel(), getVisibleLakeTierIndexes(), LakeActionsRow, LakeBlock (+53 more)
 
 ### Community 11 - "App.jsx"
 Cohesion: 0.10
@@ -287,8 +287,8 @@ Cohesion: 0.17
 Nodes (14): getAutobuyerUnlockMilestone(), getTierTickspeedAutobuyerMilestone(), isEraEligible(), InfoPage(), Badge, Category, CategoryHeading, Header (+6 more)
 
 ### Community 35 - "getStoragePoolCount"
-Cohesion: 0.22
-Nodes (13): getDataLakeCapacityUnlockArraySize(), getDataLakeSubSizeStep(), getDiskLadderSizeBits(), getDiskLadderStep(), getDiskSizeForTierLevel(), getMaxActiveDiskLadderStep(), getNextDiskLadderSize(), getStoragePoolCount() (+5 more)
+Cohesion: 0.38
+Nodes (7): getMaxActiveDiskLadderStep(), getStoragePoolCount(), getUnlockedStoragePoolCount(), isDiskLadderExhaustedForActivePools(), isStoragePoolFullyBuilt(), isStoragePoolUnlocked(), queueDiskBuild()
 
 ### Community 36 - "package.json"
 Cohesion: 0.12
@@ -379,8 +379,8 @@ Cohesion: 0.42
 Nodes (9): formatAsCleanBytesIfExactMultiple(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), RESOURCE_SYMBOL(), formatCost(), buildSparklinePath() (+1 more)
 
 ### Community 58 - "getVisibleStoragePoolCount"
-Cohesion: 0.18
-Nodes (18): canStartDiskWriteCacheMerge(), decrementFullDiskCount(), getDecadePowerEquivalentBits(), getDiskReadCacheFlushSeconds(), getDiskSizesToShow(), getDiskWriteCacheFlushSeconds(), getDiskWriteCacheSegmentSeconds(), getPoolBufferClampCeilingBits() (+10 more)
+Cohesion: 0.21
+Nodes (18): getDataStreamSpeedBytesPerSecond(), getDecadePowerEquivalentBits(), getDiskReadCacheFlushSeconds(), getDiskWriteCacheFlushSeconds(), getDiskWriteCacheSegmentSeconds(), getIntroProductionRate(), getPoolBufferCapacity(), getPoolBufferClampCeilingBits() (+10 more)
 
 ### Community 59 - "formatMemoryAmount"
 Cohesion: 0.20
@@ -423,8 +423,8 @@ Cohesion: 0.67
 Nodes (5): assign_milestone(), ensure_milestone(), milestone_number(), run(), sync-release-milestones.sh script
 
 ### Community 70 - "provisionDisk"
-Cohesion: 0.32
-Nodes (13): getDiskCost(), getDiskProvisionPassesCollected(), getDiskProvisionPassesRequired(), getDiskReplayPassAllowance(), getDiskSize(), getPoolCacheReservationBits(), isDiskBuildBelowCap(), isProvisionDiskAvailable() (+5 more)
+Cohesion: 0.33
+Nodes (13): getDiskProvisionPassesCollected(), getDiskProvisionPassesRequired(), getDiskReplayPassAllowance(), getDiskSize(), getPoolBufferBits(), getPoolCacheReservationBits(), isDiskBuildBelowCap(), isProvisionDiskAvailable() (+5 more)
 
 ### Community 71 - "adversarialReviewMarker.js"
 Cohesion: 0.80
@@ -459,8 +459,8 @@ Cohesion: 0.20
 Nodes (8): styled-components, AppMenu(), Backdrop, Icon, MenuButton, Sheet, SheetTitle, Money
 
 ### Community 82 - "ByteFoundryPage"
-Cohesion: 0.15
-Nodes (21): getDataLakeOverflowRatePercent(), getDataStreamBaseMultiplierPercent(), getDataStreamEffectMultiplier(), getDataStreamFillFraction(), getDataStreamMultiplierPercent(), getDataStreamSpeedBytesPerSecond(), getFillMultiplierPercent(), getIntroProductionRate() (+13 more)
+Cohesion: 0.14
+Nodes (18): getDataLakeOverflowRatePercent(), getDataStreamBaseMultiplierPercent(), getDataStreamEffectMultiplier(), getDataStreamFillFraction(), getDataStreamMultiplierPercent(), getDiskCost(), getDiskSizesToShow(), getFillMultiplierPercent() (+10 more)
 
 ### Community 84 - "bolt.md"
 Cohesion: 0.50

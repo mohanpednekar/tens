@@ -105,9 +105,15 @@ const TierLabel = styled.span`
   white-space: nowrap;
 `
 
+// A fixed width (rather than the symbol's own natural glyph width) keeps every tier's label
+// starting at the same horizontal offset — plain-text symbols (⬡, ▦) render noticeably narrower
+// than full-color emoji (🔗, 🧩, 🏢, …), which otherwise shifts the label a few px left for those
+// tiers and reads as misaligned across the ten rows.
 const TierSymbol = styled.span`
   flex: 0 0 auto;
+  width: 1.4em;
   font-size: 1em;
+  text-align: center;
 `
 
 const SlotsRow = styled.div`
