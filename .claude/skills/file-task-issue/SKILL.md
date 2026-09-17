@@ -35,8 +35,8 @@ for the tracking-issue case.
 
 For a `claude-task` backlog issue, always start from `.github/ISSUE_TEMPLATE/claude-task.yml` — don't
 restate its section skeleton here, just fill it in with this repo's conventions in mind. For an
-interactive tracking issue, don't use that template (see section 0 — its frontmatter auto-applies the
-`claude-task` label); file a blank issue and reproduce the same section shape by hand:
+interactive tracking issue, don't use that template (see section 0 for why); file a blank issue and
+reproduce the same section shape by hand:
 
 - **Goal** — one sentence, outcome-framed ("the Prestige panel shows X"), not task-framed
   ("update the Prestige panel").

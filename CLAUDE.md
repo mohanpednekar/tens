@@ -677,12 +677,12 @@ Strict three-layer separation:
    mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during the gate;
    Guide and More stay), permanently latched true the instant Storage's own capacity threshold is
    crossed (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold
-   that reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. The latch never
-   resets (not on a real Prestige, not on an Era ascension), so the gate is effectively one-time-ever;
-   once latched, `ByteFoundryPage` becomes a permanent, voluntarily-revisitable screen via AppNav's
-   Foundry item, staying just as interactive either way. Once `intro.mainGameUnlocked`, the standalone
-   Tap button is removed and the Data Stream tile itself becomes the tap target (`as="button"` on the
-   same `FillableStatCard`, calling the same `actions.tapIntroBit`) — see "Fill-based Speed/Bandwidth
+   that reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. This latch is
+   one-time-ever and never resets (not on a real Prestige, not on an Era ascension) — see `App.jsx`'s
+   repo-layout entry above for what that means for `ByteFoundryPage` once latched. Once
+   `intro.mainGameUnlocked`, the standalone Tap button is removed and the Data Stream tile itself
+   becomes the tap target (`as="button"` on the same `FillableStatCard`, calling the same
+   `actions.tapIntroBit`) — see "Fill-based Speed/Bandwidth
    multiplier" under "Economy model" below for what a tap does pre/post Storage reveal. Compute lives
    on its own dedicated screen (4b) once revealed, reached via AppNav; Storage's every-size detail
    (4a) is continuous sections on this same Foundry screen (and the reusable `StoragePage` wrapper),
