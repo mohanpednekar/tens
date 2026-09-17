@@ -4730,7 +4730,7 @@
       "file_type": "code",
       "norm_label": "canmerge()",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L461"
+      "source_location": "L463"
     },
     {
       "id": "src_pages_computepage_index_computepage",
@@ -4742,7 +4742,7 @@
       "file_type": "code",
       "norm_label": "computepage()",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L495"
+      "source_location": "L497"
     },
     {
       "id": "src_pages_computepage_index_singularize",
@@ -4754,7 +4754,7 @@
       "file_type": "code",
       "norm_label": "singularize()",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L493"
+      "source_location": "L495"
     },
     {
       "id": "scripts_generate_pwa_icons_buildico",
@@ -6830,7 +6830,7 @@
       "node_kind": "heading",
       "norm_label": "\"0.xyz <unit>\" fractions eliminated from every byte/bit-denominated display",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4960"
+      "source_location": "L4983"
     },
     {
       "id": "docs_design_history_a_devin_review_finding_on_the_pr_above_the_target_stranded_gate_broke_cross_tier_boundary_write_cache_chains_removed_the_stranded_gate_from_write_cache_entirely",
@@ -6842,7 +6842,7 @@
       "node_kind": "heading",
       "norm_label": "a devin review finding on the pr above: the target-stranded gate broke cross-tier-boundary write-cache chains \u2014 removed the \"stranded\" gate from write-cache entirely",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7007"
+      "source_location": "L7030"
     },
     {
       "id": "docs_design_history_a_devin_review_pass_on_the_idle_disk_liquidation_removal_found_write_cache_still_consuming_stranded_disks",
@@ -6854,7 +6854,7 @@
       "node_kind": "heading",
       "norm_label": "a devin review pass on the idle-disk-liquidation removal found write-cache still consuming stranded disks",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6687"
+      "source_location": "L6710"
     },
     {
       "id": "docs_design_history_a_fifth_and_sixth_devin_finding_on_the_same_pr_a_one_tick_lake_overflow_lag_and_a_currency_destroying_overshoot_in_filldatalakedisks_it_exposed",
@@ -6866,7 +6866,7 @@
       "node_kind": "heading",
       "norm_label": "a fifth and sixth devin finding on the same pr: a one-tick lake-overflow lag, and a currency-destroying overshoot in filldatalakedisks it exposed",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6213"
+      "source_location": "L6236"
     },
     {
       "id": "docs_design_history_a_fifth_codex_round_three_doc_ui_text_stragglers_left_by_the_earlier_fix_rounds",
@@ -6878,7 +6878,7 @@
       "node_kind": "heading",
       "norm_label": "a fifth codex round: three doc/ui-text stragglers left by the earlier fix rounds",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8092"
+      "source_location": "L8115"
     },
     {
       "id": "docs_design_history_a_fourth_codex_round_the_absolute_ceiling_clamp_itself_was_too_high",
@@ -6890,7 +6890,7 @@
       "node_kind": "heading",
       "norm_label": "a fourth codex round: the \"absolute ceiling\" clamp itself was too high",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8033"
+      "source_location": "L8056"
     },
     {
       "id": "docs_design_history_a_fourth_devin_finding_on_the_same_pr_the_disk_square_decomposition_could_strand_real_spendable_units_with_no_square_to_show_for_them",
@@ -6902,7 +6902,7 @@
       "node_kind": "heading",
       "norm_label": "a fourth devin finding on the same pr: the disk-square decomposition could strand real, spendable units with no square to show for them",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6145"
+      "source_location": "L6168"
     },
     {
       "id": "docs_design_history_a_further_devin_review_finding_on_the_same_area_pausing_a_stranded_write_cache_merge_still_lost_its_progress_to_prestige_fixed_by_making_diskwritecache_diskreadcacheflush_prestige_permanent",
@@ -6914,7 +6914,7 @@
       "node_kind": "heading",
       "norm_label": "a further devin review finding on the same area: pausing a stranded write-cache merge still lost its progress to prestige \u2014 fixed by making diskwritecache/diskreadcacheflush prestige-permanent",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6754"
+      "source_location": "L6777"
     },
     {
       "id": "docs_design_history_a_live_tap_bonus_could_survive_into_the_pool_gauge_s_mode_switch_breaking_the_clean_transition_at_50_claim",
@@ -6926,7 +6926,7 @@
       "node_kind": "heading",
       "norm_label": "a live tap bonus could survive into the pool gauge's mode switch, breaking the \"clean transition at 50%\" claim",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6611"
+      "source_location": "L6634"
     },
     {
       "id": "docs_design_history_a_ninth_finding_a_lake_s_escalating_booster_cost_could_outgrow_its_own_permanently_capped_capacity_bricking_it_forever",
@@ -6938,7 +6938,7 @@
       "node_kind": "heading",
       "norm_label": "a ninth finding: a lake's escalating booster cost could outgrow its own permanently-capped capacity, bricking it forever",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6353"
+      "source_location": "L6376"
     },
     {
       "id": "docs_design_history_a_second_devin_review_finding_on_the_same_pr_the_level_1_cache_fallback_could_spend_cache_out_from_under_an_in_flight_read_cache_flush_leaving_it_stuck_for_its_whole_remaining_duration_then_producing_no_disk",
@@ -6950,7 +6950,7 @@
       "node_kind": "heading",
       "norm_label": "a second devin review finding on the same pr: the level-1 cache fallback could spend cache out from under an in-flight read-cache flush, leaving it stuck for its whole remaining duration then producing no disk",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6909"
+      "source_location": "L6932"
     },
     {
       "id": "docs_design_history_a_seventh_codex_round_a_real_engine_bug_and_the_simulator_s_own_hard_cap_had_gone_stale_too",
@@ -6962,7 +6962,7 @@
       "node_kind": "heading",
       "norm_label": "a seventh codex round: a real engine bug, and the simulator's own \"hard cap\" had gone stale too",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8170"
+      "source_location": "L8193"
     },
     {
       "id": "docs_design_history_a_seventh_finding_the_pool_gauge_could_display_a_nonzero_incoming_overflow_rate_on_an_already_full_lake",
@@ -6974,7 +6974,7 @@
       "node_kind": "heading",
       "norm_label": "a seventh finding: the pool gauge could display a nonzero incoming-overflow rate on an already-full lake",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6279"
+      "source_location": "L6302"
     },
     {
       "id": "docs_design_history_a_sixth_codex_round_the_player_facing_guide_and_the_pacing_simulator_hadn_t_caught_up_either",
@@ -6986,7 +6986,7 @@
       "node_kind": "heading",
       "norm_label": "a sixth codex round: the player-facing guide and the pacing simulator hadn't caught up either",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8120"
+      "source_location": "L8143"
     },
     {
       "id": "docs_design_history_a_tenth_finding_idle_disk_liquidation_could_starve_a_still_needed_write_cache_merge_of_its_own_source_disks",
@@ -6998,7 +6998,7 @@
       "node_kind": "heading",
       "norm_label": "a tenth finding: idle disk liquidation could starve a still-needed write-cache merge of its own source disks",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6384"
+      "source_location": "L6407"
     },
     {
       "id": "docs_design_history_a_third_codex_round_invisible_cache_activity_a_stale_fill_tooltip_a_buy_button_hidden_behind_scale_out_and_an_unclamped_legacy_save_buffer",
@@ -7010,7 +7010,7 @@
       "node_kind": "heading",
       "norm_label": "a third codex round: invisible cache activity, a stale fill tooltip, a buy button hidden behind scale out, and an unclamped legacy-save buffer",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7958"
+      "source_location": "L7981"
     },
     {
       "id": "docs_design_history_a_third_party_automation_agent_s_merge_conflict_resolution_left_insecure_scratch_scripts_and_a_corrupted_committed_graph_on_main",
@@ -7022,7 +7022,7 @@
       "node_kind": "heading",
       "norm_label": "a third-party automation agent's merge-conflict resolution left insecure scratch scripts and a corrupted committed graph on `main`",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7106"
+      "source_location": "L7129"
     },
     {
       "id": "docs_design_history_an_adversarial_review_pass_on_pr_603_caught_the_new_cross_tier_boundary_test_asserting_a_false_would_have_failed_under_the_prior_fix_claim",
@@ -7034,7 +7034,7 @@
       "node_kind": "heading",
       "norm_label": "an adversarial review pass on pr #603 caught the new cross-tier-boundary test asserting a false \"would have failed under the prior fix\" claim",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7063"
+      "source_location": "L7086"
     },
     {
       "id": "docs_design_history_an_eighth_finding_a_tick_spanning_more_than_one_lake_disk_completion_reused_the_first_disk_s_stale_overflow_rate_for_the_rest",
@@ -7046,7 +7046,7 @@
       "node_kind": "heading",
       "norm_label": "an eighth finding: a tick spanning more than one lake-disk completion reused the first disk's stale overflow rate for the rest",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6307"
+      "source_location": "L6330"
     },
     {
       "id": "docs_design_history_an_eleventh_finding_the_data_lake_overflow_taper_was_sampled_once_per_disk_completion_segment_not_truly_continuous_making_a_single_tick_s_own_result_depend_on_how_it_was_split",
@@ -7058,7 +7058,7 @@
       "node_kind": "heading",
       "norm_label": "an eleventh finding: the data lake overflow taper was sampled once per disk-completion segment, not truly continuous \u2014 making a single tick's own result depend on how it was split",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6423"
+      "source_location": "L6446"
     },
     {
       "id": "docs_design_history_app_icon_redesigned_from_a_plain_10_text_glyph_to_an_8_cell_byte_grid",
@@ -7070,7 +7070,7 @@
       "node_kind": "heading",
       "norm_label": "app icon redesigned from a plain \"10\" text glyph to an 8-cell \"byte\" grid",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5104"
+      "source_location": "L5127"
     },
     {
       "id": "docs_design_history_bandwidth_cap_corrected_to_sqrt_capacity_in_bytes_not_raw_bits_storage_pools_switched_to_si_display",
@@ -7082,7 +7082,7 @@
       "node_kind": "heading",
       "norm_label": "bandwidth cap corrected to sqrt(capacity in bytes), not raw bits; storage pools switched to si display",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4581"
+      "source_location": "L4604"
     },
     {
       "id": "docs_design_history_compute_boost_base_presets_fixing_a_total_extra_production_ordering_bug",
@@ -7094,7 +7094,7 @@
       "node_kind": "heading",
       "norm_label": "compute boost base presets: fixing a total-extra-production ordering bug",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3836"
+      "source_location": "L3859"
     },
     {
       "id": "docs_design_history_consumexpforlasttiertickspeed_gained_an_owned_count_guard_after_a_real_softlock_report",
@@ -7106,7 +7106,7 @@
       "node_kind": "heading",
       "norm_label": "`consumexpforlasttiertickspeed` gained an owned-count guard after a real softlock report",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8241"
+      "source_location": "L8264"
     },
     {
       "id": "docs_design_history_cost_epoch_exponent_sequence_changed_a_third_time_fibonacci_replaced_with_a_linear_increment_one",
@@ -7118,7 +7118,7 @@
       "node_kind": "heading",
       "norm_label": "cost-epoch exponent sequence changed a third time: fibonacci replaced with a linear-increment one",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6012"
+      "source_location": "L6035"
     },
     {
       "id": "docs_design_history_data_lake_boosters_spending_real_deposits_not_a_separate_used_ledger",
@@ -7130,7 +7130,7 @@
       "node_kind": "heading",
       "norm_label": "data lake boosters: spending real deposits, not a separate \"used\" ledger",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3857"
+      "source_location": "L3880"
     },
     {
       "id": "docs_design_history_data_lake_boosters_take_two_from_a_spendable_balance_to_a_live_transfer_pipe",
@@ -7142,7 +7142,7 @@
       "node_kind": "heading",
       "norm_label": "data lake boosters, take two: from a spendable balance to a live transfer pipe",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3980"
+      "source_location": "L4003"
     },
     {
       "id": "docs_design_history_data_lake_capacity_doubling_cost_fixing_a_unit_count_real_bits_conflation_found_while_wiring_up_the_byte_scale_display",
@@ -7154,7 +7154,7 @@
       "node_kind": "heading",
       "norm_label": "data lake capacity-doubling cost: fixing a unit-count/real-bits conflation found while wiring up the byte-scale display",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4164"
+      "source_location": "L4187"
     },
     {
       "id": "docs_design_history_data_lake_capacity_doubling_reinstated_redesigned_as_a_level_based_ladder_with_a_hard_cap",
@@ -7166,7 +7166,7 @@
       "node_kind": "heading",
       "norm_label": "data lake capacity doubling reinstated, redesigned as a level-based ladder with a hard cap",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4253"
+      "source_location": "L4276"
     },
     {
       "id": "docs_design_history_data_lake_capacity_doubling_removed_the_cap_was_always_a_fixed_physical_ceiling_not_a_lever",
@@ -7178,7 +7178,7 @@
       "node_kind": "heading",
       "norm_label": "data lake capacity doubling removed: the cap was always a fixed physical ceiling, not a lever",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4199"
+      "source_location": "L4222"
     },
     {
       "id": "docs_design_history_data_lake_capacity_ladder_brought_under_the_same_si_clean_sequence_pool_memory_ui_restyled_to_match_the_data_stream_card",
@@ -7190,7 +7190,7 @@
       "node_kind": "heading",
       "norm_label": "data lake capacity ladder brought under the same si-clean sequence; pool memory ui restyled to match the data stream card",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4815"
+      "source_location": "L4838"
     },
     {
       "id": "docs_design_history_data_lake_capacity_upgrade_removed_from_the_forced_priority_order_array_completion_is_now_the_only_gate",
@@ -7202,7 +7202,7 @@
       "node_kind": "heading",
       "norm_label": "data lake capacity upgrade removed from the forced priority order \u2014 array completion is now the only gate",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7359"
+      "source_location": "L7382"
     },
     {
       "id": "docs_design_history_data_lake_refill_gating_staged_9_99_999_capacity_from_disk_array_completion",
@@ -7214,7 +7214,7 @@
       "node_kind": "heading",
       "norm_label": "data lake refill gating: staged 9 \u2192 99 \u2192 999 capacity from disk-array completion",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3941"
+      "source_location": "L3964"
     },
     {
       "id": "docs_design_history_data_stream_balance_raw_bits_fallback_narrowed_to_self_sizing_into_a_finer_unit_pool_bandwidth_moved_beside_its_title",
@@ -7226,7 +7226,7 @@
       "node_kind": "heading",
       "norm_label": "data stream balance: raw-bits fallback narrowed to self-sizing into a finer unit; pool bandwidth moved beside its title",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5476"
+      "source_location": "L5499"
     },
     {
       "id": "docs_design_history_data_stream_pool_balances_skip_their_padded_trailing_zeros_once_full_for_more_than_a_second",
@@ -7238,7 +7238,7 @@
       "node_kind": "heading",
       "norm_label": "data stream/pool balances skip their padded trailing zeros once full for more than a second",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7600"
+      "source_location": "L7623"
     },
     {
       "id": "docs_design_history_disk_arrays_and_data_lakes_moved_from_10_disks_per_size_to_9_cache_buffer_as_the_10th_unit",
@@ -7250,7 +7250,7 @@
       "node_kind": "heading",
       "norm_label": "disk arrays and data lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8282"
+      "source_location": "L8305"
     },
     {
       "id": "docs_design_history_disk_cache_always_full_reserve_whole_block_memory_transfers_no_pour_into_disks_issue_382",
@@ -7262,7 +7262,7 @@
       "node_kind": "heading",
       "norm_label": "disk cache: always-full reserve, whole-block memory transfers, no pour into disks (issue #382)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3791"
+      "source_location": "L3814"
     },
     {
       "id": "docs_design_history_disk_cache_fill_speeds_tied_to_memory_bandwidth_not_flat_hardcoded_rates",
@@ -7274,7 +7274,7 @@
       "node_kind": "heading",
       "norm_label": "disk/cache fill speeds tied to memory bandwidth, not flat/hardcoded rates",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4299"
+      "source_location": "L4322"
     },
     {
       "id": "docs_design_history_disk_ladder_offers_every_byte_power_of_ten_size_issue_368",
@@ -7286,7 +7286,7 @@
       "node_kind": "heading",
       "norm_label": "disk ladder offers every byte power-of-ten size (issue #368)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3779"
+      "source_location": "L3802"
     },
     {
       "id": "docs_design_history_disk_redemption_from_price_coincidence_to_a_fixed_one_to_one_tier_level_mapping",
@@ -7298,7 +7298,7 @@
       "node_kind": "heading",
       "norm_label": "disk redemption: from price coincidence to a fixed one-to-one tier+level mapping",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4066"
+      "source_location": "L4089"
     },
     {
       "id": "docs_design_history_factory_moneyhero_frozen_after_kilobytes_bytes_430_442",
@@ -7310,7 +7310,7 @@
       "node_kind": "heading",
       "norm_label": "factory moneyhero frozen after kilobytes \u2192 bytes (#430 / #442)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3809"
+      "source_location": "L3832"
     },
     {
       "id": "docs_design_history_four_bot_review_findings_on_the_pool_liveness_data_lake_pr_manual_fill_overspend_a_dead_fill_button_a_stale_doc_paragraph_and_a_ui_engine_buffer_mismatch",
@@ -7322,7 +7322,7 @@
       "node_kind": "heading",
       "norm_label": "four bot-review findings on the pool-liveness/data-lake pr: manual-fill overspend, a dead fill button, a stale doc paragraph, and a ui/engine buffer mismatch",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7862"
+      "source_location": "L7885"
     },
     {
       "id": "docs_design_history_getdatalakemanualfillbitsneeded_could_offer_a_fill_that_scale_out_would_immediately_erase",
@@ -7334,7 +7334,7 @@
       "node_kind": "heading",
       "norm_label": "`getdatalakemanualfillbitsneeded` could offer a fill that scale out would immediately erase",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7927"
+      "source_location": "L7950"
     },
     {
       "id": "docs_design_history_icons_added_to_the_byte_foundry_footer_figures_replaced_on_capacity_2",
@@ -7346,7 +7346,7 @@
       "node_kind": "heading",
       "norm_label": "icons added to the byte foundry footer figures; \ud83e\udde0 replaced on \"capacity \u00d72\"",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7185"
+      "source_location": "L7208"
     },
     {
       "id": "docs_design_history_idle_disk_liquidation_could_destroy_a_disk_from_a_still_mid_build_array_not_just_a_genuinely_full_lake",
@@ -7358,7 +7358,7 @@
       "node_kind": "heading",
       "norm_label": "idle disk liquidation could destroy a disk from a still-mid-build array, not just a genuinely full lake",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6047"
+      "source_location": "L6070"
     },
     {
       "id": "docs_design_history_idle_disk_liquidation_removed_entirely_stranded_disks_now_just_sit_idle_instead_of_being_converted_to_bits",
@@ -7370,7 +7370,7 @@
       "node_kind": "heading",
       "norm_label": "idle disk liquidation removed entirely \u2014 stranded disks now just sit idle instead of being converted to bits",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6640"
+      "source_location": "L6663"
     },
     {
       "id": "docs_design_history_ismemorycapacityatcap_silently_re_coupled_capacity_growth_to_disk_build_progress_making_the_pool_liveness_decoupling_above_unreachable",
@@ -7382,7 +7382,7 @@
       "node_kind": "heading",
       "norm_label": "`ismemorycapacityatcap` silently re-coupled capacity growth to disk-build progress, making the pool-liveness decoupling above unreachable",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7816"
+      "source_location": "L7839"
     },
     {
       "id": "docs_design_history_load_time_migration_clamps_for_the_decade_power_capacity_change_data_lake_capacity_ladder_moved_onto_the_same_shape",
@@ -7394,7 +7394,7 @@
       "node_kind": "heading",
       "norm_label": "load-time migration clamps for the decade-power capacity change; data lake capacity ladder moved onto the same shape",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5697"
+      "source_location": "L5720"
     },
     {
       "id": "docs_design_history_per_pool_bandwidth_capped_at_sqrt_capacity_data_lake_capacity_doubling_funded_by_draining_the_lake_idle_output_liquidates_into_bits",
@@ -7406,7 +7406,7 @@
       "node_kind": "heading",
       "norm_label": "per-pool bandwidth capped at sqrt(capacity); data lake capacity doubling funded by draining the lake; idle output liquidates into bits",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4380"
+      "source_location": "L4403"
     },
     {
       "id": "docs_design_history_per_pool_memory_buffers_a_real_intermediary_reservoir_between_the_data_stream_and_storage_spending",
@@ -7418,7 +7418,7 @@
       "node_kind": "heading",
       "norm_label": "per-pool memory buffers: a real intermediary reservoir between the data stream and storage spending",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4478"
+      "source_location": "L4501"
     },
     {
       "id": "docs_design_history_pool_bandwidth_s_formula_corrected_follows_the_raw_speed_doublings_via_the_si_transform_not_sqrt_capacity",
@@ -7430,7 +7430,7 @@
       "node_kind": "heading",
       "norm_label": "pool bandwidth's formula corrected \u2014 follows the raw speed doublings via the si transform, not sqrt(capacity)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5307"
+      "source_location": "L5330"
     },
     {
       "id": "docs_design_history_pool_capacity_doubling_mechanic_itself_corrected_to_land_on_si_clean_intermediate_steps",
@@ -7442,7 +7442,7 @@
       "node_kind": "heading",
       "norm_label": "pool capacity doubling mechanic itself corrected to land on si-clean intermediate steps",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4741"
+      "source_location": "L4764"
     },
     {
       "id": "docs_design_history_pool_capacity_end_bounds_corrected_to_si_powers_of_1000_not_binary_powers_of_1024",
@@ -7454,7 +7454,7 @@
       "node_kind": "heading",
       "norm_label": "pool capacity end bounds corrected to si powers of 1000, not binary powers of 1024",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4634"
+      "source_location": "L4657"
     },
     {
       "id": "docs_design_history_pool_capacity_s_si_clean_doubling_mechanic_reverted_it_broke_the_data_stream_tile_s_own_binary_display",
@@ -7466,7 +7466,7 @@
       "node_kind": "heading",
       "norm_label": "pool capacity's si-clean doubling mechanic reverted \u2014 it broke the data stream tile's own binary display",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5156"
+      "source_location": "L5179"
     },
     {
       "id": "docs_design_history_pool_capacity_s_si_clean_mechanic_restored_decoupled_from_the_data_stream_s_binary_value_instead_of_shared_with_it",
@@ -7478,7 +7478,7 @@
       "node_kind": "heading",
       "norm_label": "pool capacity's si-clean mechanic restored \u2014 decoupled from the data stream's binary value instead of shared with it",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5211"
+      "source_location": "L5234"
     },
     {
       "id": "docs_design_history_pool_cards_gated_on_a_capacity_threshold_too_read_cache_pre_fills_on_pool_unlock_manual_transfer_block_ui_removed",
@@ -7490,7 +7490,7 @@
       "node_kind": "heading",
       "norm_label": "pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock; manual transfer-block ui removed",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5539"
+      "source_location": "L5562"
     },
     {
       "id": "docs_design_history_pool_gauge_s_separate_bottom_half_data_lake_arc_replaced_with_one_dial_that_switches_meaning_once_the_buffer_is_full",
@@ -7502,7 +7502,7 @@
       "node_kind": "heading",
       "norm_label": "pool gauge's separate bottom-half data lake arc replaced with one dial that switches meaning once the buffer is full",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6531"
+      "source_location": "L6554"
     },
     {
       "id": "docs_design_history_pool_liveness_decoupled_from_disk_build_progress_data_lakes_fill_manually_before_their_pool_completes",
@@ -7514,7 +7514,7 @@
       "node_kind": "heading",
       "norm_label": "pool liveness decoupled from disk-build progress; data lakes fill manually before their pool completes",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7721"
+      "source_location": "L7744"
     },
     {
       "id": "docs_design_history_pool_titles_simplified_to_symbol_pool_each_pool_s_data_lake_moved_inside_its_own_card",
@@ -7526,7 +7526,7 @@
       "node_kind": "heading",
       "norm_label": "pool titles simplified to \"<symbol> pool\"; each pool's data lake moved inside its own card",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4892"
+      "source_location": "L4915"
     },
     {
       "id": "docs_design_history_precision_loss_at_large_magnitudes_in_the_si_clean_transform_fixed_with_a_closed_form_computation",
@@ -7538,7 +7538,7 @@
       "node_kind": "heading",
       "norm_label": "precision loss at large magnitudes in the si-clean transform \u2014 fixed with a closed-form computation",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5403"
+      "source_location": "L5426"
     },
     {
       "id": "docs_design_history_provision_disk_button_no_longer_previews_progress_before_the_player_has_ever_clicked_it",
@@ -7550,7 +7550,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk button no longer previews progress before the player has ever clicked it",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7697"
+      "source_location": "L7720"
     },
     {
       "id": "docs_design_history_provision_disk_moved_back_inside_its_pool_card_pool_capacity_switched_from_si_clean_to_a_plain_decade_of_10_ladder",
@@ -7562,7 +7562,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk moved back inside its pool card; pool capacity switched from si-clean to a plain decade-of-10 ladder",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5627"
+      "source_location": "L5650"
     },
     {
       "id": "docs_design_history_provision_disk_ordinal_scaled_pass_counts_and_passes_auto_continue_after_a_manual_start",
@@ -7574,7 +7574,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk: ordinal-scaled pass counts, and passes auto-continue after a manual start",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7236"
+      "source_location": "L7259"
     },
     {
       "id": "docs_design_history_provision_disk_s_idle_label_now_shows_0_n_up_front_write_cache_collect_sped_up_to_5x",
@@ -7586,7 +7586,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk's idle label now shows \"0/n\" up front; write-cache collect sped up to 5x",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7305"
+      "source_location": "L7328"
     },
     {
       "id": "docs_design_history_provision_disk_s_own_click_still_required_its_first_pass_to_already_be_banked_closing_the_one_case_the_prior_auto_continue_fix_left_open",
@@ -7598,7 +7598,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk's own click still required its first pass to already be banked \u2014 closing the one case the prior auto-continue fix left open",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7410"
+      "source_location": "L7433"
     },
     {
       "id": "docs_design_history_provision_disk_s_post_funding_build_timer_duplicated_the_wait_already_spent_funding_it",
@@ -7610,7 +7610,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk's post-funding build timer duplicated the wait already spent funding it",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7463"
+      "source_location": "L7486"
     },
     {
       "id": "docs_design_history_read_cache_blocks_diskarrayrow_render_a_proportional_fill_overlay_not_just_full_empty",
@@ -7622,7 +7622,7 @@
       "node_kind": "heading",
       "norm_label": "read cache blocks (`diskarrayrow`) render a proportional fill overlay, not just full/empty",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7208"
+      "source_location": "L7231"
     },
     {
       "id": "docs_design_history_read_cache_pre_fills_on_pool_unlock_reinstated",
@@ -7634,7 +7634,7 @@
       "node_kind": "heading",
       "norm_label": "read cache pre-fills on pool unlock, reinstated",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7521"
+      "source_location": "L7544"
     },
     {
       "id": "docs_design_history_read_cache_starved_by_provision_disk_claiming_each_tick_s_fresh_production_first",
@@ -7646,7 +7646,7 @@
       "node_kind": "heading",
       "norm_label": "read cache starved by provision disk claiming each tick's fresh production first",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7659"
+      "source_location": "L7682"
     },
     {
       "id": "docs_design_history_removing_claim_core_superseded_by_data_lake_boosters",
@@ -7658,7 +7658,7 @@
       "node_kind": "heading",
       "norm_label": "removing claim core: superseded by data lake boosters",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3885"
+      "source_location": "L3908"
     },
     {
       "id": "docs_design_history_storage_funding_rebuilt_push_pull_the_manual_redeem_button_and_autobuyer_gated_auto_redeem_are_gone_issue_571",
@@ -7670,7 +7670,7 @@
       "node_kind": "heading",
       "norm_label": "storage funding rebuilt push\u2192pull: the manual redeem button and autobuyer-gated auto-redeem are gone (issue #571)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6806"
+      "source_location": "L6829"
     },
     {
       "id": "docs_design_history_storage_s_own_reveal_threshold_lowered_to_pool_1_s_own_capacity_gate_data_lake_panel_redesigned_dev_mode_s_raw_state_updater_gap_closed",
@@ -7682,7 +7682,7 @@
       "node_kind": "heading",
       "norm_label": "storage's own reveal threshold lowered to pool 1's own capacity gate; data lake panel redesigned; dev mode's raw state-updater gap closed",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5799"
+      "source_location": "L5822"
     },
     {
       "id": "docs_design_history_testing",
@@ -7694,7 +7694,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3763"
+      "source_location": "L3786"
     },
     {
       "id": "docs_design_history_the_built_only_read_cache_gate_stranded_bits_a_legacy_save_s_cache_had_already_staged_under_the_reverted_eager_pre_fill_design",
@@ -7706,7 +7706,7 @@
       "node_kind": "heading",
       "norm_label": "the built-only read-cache gate stranded bits a legacy save's cache had already staged under the reverted eager-pre-fill design",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6584"
+      "source_location": "L6607"
     },
     {
       "id": "docs_design_history_the_multiplier_bar_moved_below_the_balance_with_its_percent_readout_below_the_bar_itself",
@@ -7718,7 +7718,7 @@
       "node_kind": "heading",
       "norm_label": "the multiplier bar moved below the balance, with its percent readout below the bar itself",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7165"
+      "source_location": "L7188"
     },
     {
       "id": "docs_design_history_the_read_cache_pre_fill_design_was_never_reconciled_with_the_later_decade_of_10_capacity_ladder_starving_a_freshly_unlocked_pool_s_buffer",
@@ -7730,7 +7730,7 @@
       "node_kind": "heading",
       "norm_label": "the read-cache pre-fill design was never reconciled with the later decade-of-10 capacity ladder, starving a freshly-unlocked pool's buffer",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6482"
+      "source_location": "L6505"
     },
     {
       "id": "docs_design_history_the_stranded_disks_never_touch_write_cache_either_rule_from_the_two_devin_review_findings_above_itself_turned_out_to_be_the_bug_it_permanently_starved_every_disk_size_past_the_first_one",
@@ -7742,7 +7742,7 @@
       "node_kind": "heading",
       "norm_label": "the \"stranded disks never touch write-cache either\" rule (from the two devin review findings above) itself turned out to be the bug: it permanently starved every disk size past the first one",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6941"
+      "source_location": "L6964"
     },
     {
       "id": "docs_design_history_three_more_findings_from_a_devin_bot_review_pass_on_the_pool_overflow_data_lake_rework_pr_an_overflow_rate_that_asymptotically_never_completes_a_lifetime_counter_bug_and_dropped_legacy_transfers",
@@ -7754,7 +7754,7 @@
       "node_kind": "heading",
       "norm_label": "three more findings from a devin bot review pass on the pool-overflow data lake rework pr: an overflow rate that asymptotically never completes, a lifetime-counter bug, and dropped legacy transfers",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6075"
+      "source_location": "L6098"
     },
     {
       "id": "docs_design_history_timed_read_cache_disk_flush_445",
@@ -7766,7 +7766,7 @@
       "node_kind": "heading",
       "norm_label": "timed read-cache \u2192 disk flush (#445)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3824"
+      "source_location": "L3847"
     },
     {
       "id": "docs_design_history_two_more_migration_logic_gaps_found_by_a_devin_review_pass_on_this_same_pr_unbounded_below_capacitylevel_edits_and_idle_liquidation_confusing_maxed_with_full",
@@ -7778,7 +7778,7 @@
       "node_kind": "heading",
       "norm_label": "two more migration/logic gaps found by a devin review pass on this same pr: unbounded-below capacitylevel edits, and idle liquidation confusing \"maxed\" with \"full\"",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5947"
+      "source_location": "L5970"
     },
     {
       "id": "docs_design_history_whole_byte_tier_costs_converted_from_an_arbitrary_looking_bit_count_to_bytes_in_scientific_notation",
@@ -7790,7 +7790,7 @@
       "node_kind": "heading",
       "norm_label": "whole-byte tier costs converted from an arbitrary-looking bit count to bytes in scientific notation",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5058"
+      "source_location": "L5081"
     },
     {
       "id": "src_pages_mainpage_index",
@@ -9236,7 +9236,7 @@
       "node_kind": "heading",
       "norm_label": "architecture / mainpage ui decisions",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1462"
+      "source_location": "L1485"
     },
     {
       "id": "docs_design_history_boosters_ui_revamp_buybooster_now_pauses_at_compute_entity_cap_tier_row_buttons_no_longer_clump_left_2026_09_17",
@@ -9260,7 +9260,7 @@
       "node_kind": "heading",
       "norm_label": "byte foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile \u2014 2026-09-02",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1028"
+      "source_location": "L1051"
     },
     {
       "id": "docs_design_history_claude_md_economy_model_duplication_trim_2026_09_03",
@@ -9272,7 +9272,7 @@
       "node_kind": "heading",
       "norm_label": "claude.md economy model duplication trim \u2014 2026-09-03",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L745"
+      "source_location": "L768"
     },
     {
       "id": "docs_design_history_compute_boost_reclaim_and_forfeit_made_mutually_exclusive_2026_09_04",
@@ -9284,7 +9284,7 @@
       "node_kind": "heading",
       "norm_label": "compute boost: reclaim and forfeit made mutually exclusive \u2014 2026-09-04",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L661"
+      "source_location": "L684"
     },
     {
       "id": "docs_design_history_critical_reverted_a_broken_buybooster_bulk_purchase_optimization_that_had_merged_onto_main_2026_09_09",
@@ -9296,7 +9296,7 @@
       "node_kind": "heading",
       "norm_label": "critical: reverted a broken `buybooster` bulk-purchase optimization that had merged onto `main` \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L286"
+      "source_location": "L309"
     },
     {
       "id": "docs_design_history_data_lake_unlock_capacity_tied_to_real_storage_progress_giant_circle_css_bug_compute_boost_reclaim_floor_2026_09_03",
@@ -9308,7 +9308,7 @@
       "node_kind": "heading",
       "norm_label": "data lake unlock/capacity tied to real storage progress; giant-circle css bug; compute boost reclaim floor \u2014 2026-09-03",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L780"
+      "source_location": "L803"
     },
     {
       "id": "docs_design_history_data_stream_buffer_rename_capacity_sacrifice_removed_506_superseded_by_456_2026_08_27",
@@ -9320,7 +9320,7 @@
       "node_kind": "heading",
       "norm_label": "data stream / buffer rename; capacity sacrifice removed (#506; superseded by #456) \u2014 2026-08-27",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1137"
+      "source_location": "L1160"
     },
     {
       "id": "docs_design_history_design_history_rationale",
@@ -9344,7 +9344,7 @@
       "node_kind": "heading",
       "norm_label": "devin review on pr #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs \u2014 2026-09-08",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L473"
+      "source_location": "L496"
     },
     {
       "id": "docs_design_history_devin_review_on_pr_608_round_2_reset_byte_foundry_s_replay_cap_could_be_bypassed_by_the_new_auto_continue_2026_09_08",
@@ -9356,7 +9356,7 @@
       "node_kind": "heading",
       "norm_label": "devin review on pr #608, round 2: reset byte foundry's replay cap could be bypassed by the new auto-continue \u2014 2026-09-08",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L443"
+      "source_location": "L466"
     },
     {
       "id": "docs_design_history_devin_review_on_pr_608_round_3_the_cap_clearing_fix_above_didn_t_stop_a_single_call_overshoot_or_the_same_gap_via_save_load_2026_09_09",
@@ -9368,7 +9368,7 @@
       "node_kind": "heading",
       "norm_label": "devin review on pr #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L386"
+      "source_location": "L409"
     },
     {
       "id": "docs_design_history_devin_review_on_pr_608_round_4_closed_the_bug_class_at_its_one_true_chokepoint_instead_of_patching_another_arming_site_2026_09_09",
@@ -9380,7 +9380,7 @@
       "node_kind": "heading",
       "norm_label": "devin review on pr #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L349"
+      "source_location": "L372"
     },
     {
       "id": "docs_design_history_devin_review_on_pr_608_round_6_a_provenance_tracking_fix_superseding_an_incomplete_bot_revert_2026_09_09",
@@ -9392,7 +9392,7 @@
       "node_kind": "heading",
       "norm_label": "devin review on pr #608, round 6: a provenance-tracking fix superseding an incomplete bot revert \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L311"
+      "source_location": "L334"
     },
     {
       "id": "docs_design_history_devin_review_on_pr_614_a_false_update_bug_a_stale_comment_and_a_deliberately_unfixed_legacy_save_ambiguity_2026_09_09",
@@ -9404,7 +9404,7 @@
       "node_kind": "heading",
       "norm_label": "devin review on pr #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L242"
+      "source_location": "L265"
     },
     {
       "id": "docs_design_history_distribution",
@@ -9416,7 +9416,7 @@
       "node_kind": "heading",
       "norm_label": "distribution",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3733"
+      "source_location": "L3756"
     },
     {
       "id": "docs_design_history_documentation",
@@ -9428,7 +9428,7 @@
       "node_kind": "heading",
       "norm_label": "documentation",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3749"
+      "source_location": "L3772"
     },
     {
       "id": "docs_design_history_first_ten_scale_ups_standardized_at_three_completed_levels_2026_09_13",
@@ -9440,7 +9440,7 @@
       "node_kind": "heading",
       "norm_label": "first ten scale ups standardized at three completed levels \u2014 2026-09-13",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L100"
+      "source_location": "L123"
     },
     {
       "id": "docs_design_history_ladder_screen_renamed_back_to_byte_factory_reverses_399_431_2026_08_31",
@@ -9452,7 +9452,7 @@
       "node_kind": "heading",
       "norm_label": "ladder screen renamed back to byte factory (reverses #399/#431) \u2014 2026-08-31",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1105"
+      "source_location": "L1128"
     },
     {
       "id": "docs_design_history_migration_in_src_save_migration_runs_on_every_load_2026_08_22",
@@ -9464,7 +9464,7 @@
       "node_kind": "heading",
       "norm_label": "migration in `src/save-migration/`, runs on every load \u2014 2026-08-22",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3698"
+      "source_location": "L3721"
     },
     {
       "id": "docs_design_history_pool_10_s_buffer_ceiling_landed_a_ulp_below_its_own_largest_disk_s_face_value_2026_09_08",
@@ -9476,7 +9476,7 @@
       "node_kind": "heading",
       "norm_label": "pool 10's buffer ceiling landed a ulp below its own largest disk's face value \u2014 2026-09-08",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L574"
+      "source_location": "L597"
     },
     {
       "id": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
@@ -9488,7 +9488,7 @@
       "node_kind": "heading",
       "norm_label": "`prestigegame` wiped era/eons/hyperscalercount/eonsupgrades/flops-autobuyer state on every ordinary prestige (#626) \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L118"
+      "source_location": "L141"
     },
     {
       "id": "docs_design_history_provision_disk_funding_split_into_passes_pool_capacity_ceilings_shrunk_10x_queue_toggle_removed_2026_09_08",
@@ -9500,7 +9500,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk funding split into passes, pool capacity ceilings shrunk 10x, queue toggle removed \u2014 2026-09-08",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L606"
+      "source_location": "L629"
     },
     {
       "id": "docs_design_history_provision_disk_gets_a_queue_next_build_toggle_closing_a_real_automation_gap_2026_09_03",
@@ -9512,7 +9512,7 @@
       "node_kind": "heading",
       "norm_label": "provision disk gets a \"queue next build\" toggle \u2014 closing a real automation gap \u2014 2026-09-03",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L957"
+      "source_location": "L980"
     },
     {
       "id": "docs_design_history_reset_byte_foundry_s_convenience_replay_didn_t_cover_partial_provision_disk_passes_2026_09_08",
@@ -9524,7 +9524,7 @@
       "node_kind": "heading",
       "norm_label": "reset byte foundry's convenience replay didn't cover partial provision disk passes \u2014 2026-09-08",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L553"
+      "source_location": "L576"
     },
     {
       "id": "docs_design_history_sacrifice_confirm_in_game_dialog_core_warning_only_when_unlocked",
@@ -9536,7 +9536,7 @@
       "node_kind": "heading",
       "norm_label": "sacrifice confirm: in-game dialog; core warning only when unlocked",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1154"
+      "source_location": "L1177"
     },
     {
       "id": "docs_design_history_save_persistence",
@@ -9548,7 +9548,7 @@
       "node_kind": "heading",
       "norm_label": "save persistence",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3696"
+      "source_location": "L3719"
     },
     {
       "id": "docs_design_history_scale_up_tier_scoped_boosts_and_three_level_reset_cadence_2026_09_10",
@@ -9560,7 +9560,7 @@
       "node_kind": "heading",
       "norm_label": "scale up tier-scoped boosts and three-level reset cadence \u2014 2026-09-10",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L108"
+      "source_location": "L131"
     },
     {
       "id": "docs_design_history_speed_up_renamed_to_scale_up_and_redesigned_from_a_last_tier_only_gate_to_a_per_tier_unlock_ladder_2026_09_09",
@@ -9572,7 +9572,7 @@
       "node_kind": "heading",
       "norm_label": "speed up renamed to scale up and redesigned from a last-tier-only gate to a per-tier unlock ladder \u2014 2026-09-09",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L137"
+      "source_location": "L160"
     },
     {
       "id": "docs_design_history_storage_pools_derive_from_one_data_stream_capacity_ladder_restored_456_2026_08_27",
@@ -9584,7 +9584,7 @@
       "node_kind": "heading",
       "norm_label": "storage pools derive from one data stream; capacity ladder restored (#456) \u2014 2026-08-27",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1123"
+      "source_location": "L1146"
     },
     {
       "id": "docs_design_history_tier_tickspeed_upgrade_reverted_from_1_to_10_per_level_2026_09_14",
@@ -9596,7 +9596,7 @@
       "node_kind": "heading",
       "norm_label": "tier tickspeed upgrade reverted from +1% to +10% per level \u2014 2026-09-14",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L78"
+      "source_location": "L101"
     },
     {
       "id": "docs_design_history_two_more_gaps_in_reset_byte_foundry_s_convenience_replay_caps_2026_09_08",
@@ -9608,7 +9608,7 @@
       "node_kind": "heading",
       "norm_label": "two more gaps in reset byte foundry's convenience-replay caps \u2014 2026-09-08",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L519"
+      "source_location": "L542"
     },
     {
       "id": "docs_design_history_why_a_pwa_instead_of_capacitor_native_app_store_distribution",
@@ -9620,7 +9620,7 @@
       "node_kind": "heading",
       "norm_label": "why a pwa instead of capacitor/native app-store distribution",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3735"
+      "source_location": "L3758"
     },
     {
       "id": "docs_design_history_why_semver_changelog_started_at_v0_5_0_not_v0_1_0_from_inception",
@@ -9632,7 +9632,7 @@
       "node_kind": "heading",
       "norm_label": "why semver/changelog started at v0.5.0, not v0.1.0-from-inception",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3751"
+      "source_location": "L3774"
     },
     {
       "id": "src_pages_computeflopspage_index",
@@ -9754,7 +9754,7 @@
       "node_kind": "heading",
       "norm_label": "auto-merge merge method must match the main ruleset (2026-08-20)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1436"
+      "source_location": "L1459"
     },
     {
       "id": "docs_design_history_auto_merge_pr_auto_merge_yml_why_the_low_risk_path_is_safe_even_if_heuristics_mis_fire",
@@ -9766,7 +9766,7 @@
       "node_kind": "heading",
       "norm_label": "auto-merge (`pr-auto-merge.yml`) \u2014 why the low-risk path is safe even if heuristics mis-fire",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1427"
+      "source_location": "L1450"
     },
     {
       "id": "docs_design_history_automation_design_principles",
@@ -9778,7 +9778,7 @@
       "node_kind": "heading",
       "norm_label": "automation design principles",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1286"
+      "source_location": "L1309"
     },
     {
       "id": "docs_design_history_automation_workflows",
@@ -9790,7 +9790,7 @@
       "node_kind": "heading",
       "norm_label": "automation workflows",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1180"
+      "source_location": "L1203"
     },
     {
       "id": "docs_design_history_cursor_powered_successor_engine_removed_never_enabled_2026_09_14",
@@ -9802,7 +9802,7 @@
       "node_kind": "heading",
       "norm_label": "cursor-powered successor engine removed (never enabled) \u2014 2026-09-14",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1445"
+      "source_location": "L1468"
     },
     {
       "id": "docs_design_history_orchestration_model_background",
@@ -9814,7 +9814,7 @@
       "node_kind": "heading",
       "norm_label": "orchestration model \u2014 background",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1259"
+      "source_location": "L1282"
     },
     {
       "id": "docs_design_history_outage_the_main_prompt_tripped_github_s_21_000_character_mixed_expression_limit",
@@ -9826,7 +9826,7 @@
       "node_kind": "heading",
       "norm_label": "outage: the main prompt tripped github's 21,000-character mixed-expression limit",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1361"
+      "source_location": "L1384"
     },
     {
       "id": "docs_design_history_permission_block_reasoning",
@@ -9838,7 +9838,7 @@
       "node_kind": "heading",
       "norm_label": "permission block reasoning",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1226"
+      "source_location": "L1249"
     },
     {
       "id": "docs_design_history_pr_follow_up_autonomous_pr_followup_yml_security_reasoning",
@@ -9850,7 +9850,7 @@
       "node_kind": "heading",
       "norm_label": "pr follow-up (`autonomous-pr-followup.yml`) \u2014 security reasoning",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1408"
+      "source_location": "L1431"
     },
     {
       "id": "docs_design_history_schedule_retune_cursor_ist_slots_claude_twice_daily_2026_08_20",
@@ -9862,7 +9862,7 @@
       "node_kind": "heading",
       "norm_label": "schedule retune (cursor ist slots + claude twice-daily) \u2014 2026-08-20",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1195"
+      "source_location": "L1218"
     },
     {
       "id": "docs_design_history_scheduled_maintenance_autonomous_maintenance_yml_job_status_reconciliation",
@@ -9874,7 +9874,7 @@
       "node_kind": "heading",
       "norm_label": "scheduled maintenance (`autonomous-maintenance.yml`) \u2014 job status reconciliation",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1306"
+      "source_location": "L1329"
     },
     {
       "id": "docs_design_history_stale_blocked_labels_after_workflows_write_landed_2026_08_20",
@@ -9886,7 +9886,7 @@
       "node_kind": "heading",
       "norm_label": "stale `blocked` labels after workflows: write landed \u2014 2026-08-20",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1182"
+      "source_location": "L1205"
     },
     {
       "id": "docs_design_history_turn_budget_history",
@@ -9898,7 +9898,7 @@
       "node_kind": "heading",
       "norm_label": "turn-budget history",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1237"
+      "source_location": "L1260"
     },
     {
       "id": "docs_design_history_why_a_pat_instead_of_the_default_github_token",
@@ -9910,7 +9910,7 @@
       "node_kind": "heading",
       "norm_label": "why a pat instead of the default `github_token`",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1217"
+      "source_location": "L1240"
     },
     {
       "id": "src_game_engine_computeflops_test",
@@ -10461,7 +10461,7 @@
       "node_kind": "heading",
       "norm_label": "bytefoundrypage: hiding the disk detail row and the transfer-to-main-game row once they're no longer pulling their weight",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3433"
+      "source_location": "L3456"
     },
     {
       "id": "docs_design_history_compute_boost_the_first_mechanic_to_spend_compute_cores_and_a_sacrifice_confirmation",
@@ -10473,7 +10473,7 @@
       "node_kind": "heading",
       "norm_label": "compute boost: the first mechanic to spend compute cores, and a sacrifice confirmation",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3171"
+      "source_location": "L3194"
     },
     {
       "id": "docs_design_history_compute_boost_tier_scaling_4_effect_only_no_duration_enhancement_363",
@@ -10485,7 +10485,7 @@
       "node_kind": "heading",
       "norm_label": "compute boost tier scaling: 4\u00d7 effect only, no duration enhancement (#363)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3191"
+      "source_location": "L3214"
     },
     {
       "id": "docs_design_history_compute_cores_nodes_capping_the_storage_ladder_and_two_different_meanings_of_mb_in_the_same_feature",
@@ -10497,7 +10497,7 @@
       "node_kind": "heading",
       "norm_label": "compute cores/nodes: capping the storage ladder, and two different meanings of \"mb\" in the same feature",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2938"
+      "source_location": "L2961"
     },
     {
       "id": "docs_design_history_compute_cores_reworked_capacity_tied_flush_cost_not_a_fixed_10_mb_storage_fullness_gate",
@@ -10509,7 +10509,7 @@
       "node_kind": "heading",
       "norm_label": "compute cores reworked: capacity-tied flush cost, not a fixed 10 mb / storage-fullness gate",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2988"
+      "source_location": "L3011"
     },
     {
       "id": "docs_design_history_compute_merge_timers_from_live_core_earn_10_auto_boost_30_pp_forfeit_with_confirm_377_380",
@@ -10521,7 +10521,7 @@
       "node_kind": "heading",
       "norm_label": "compute merge timers from live core earn \u00d710; auto-boost 30 pp; forfeit with confirm (#377/#380)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3208"
+      "source_location": "L3231"
     },
     {
       "id": "docs_design_history_economy_model",
@@ -10533,7 +10533,7 @@
       "node_kind": "heading",
       "norm_label": "economy model",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1801"
+      "source_location": "L1824"
     },
     {
       "id": "docs_design_history_era_ascension_and_eons_meta_prestige_above_unbounded_407_405",
@@ -10545,7 +10545,7 @@
       "node_kind": "heading",
       "norm_label": "era ascension and eons \u2014 meta-prestige above unbounded (#407 / #405)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3468"
+      "source_location": "L3491"
     },
     {
       "id": "docs_design_history_fibonacci_cost_curve_and_2_claims_for_the_first_three_invest_tiers_reinstated_this_time_deliberately",
@@ -10557,7 +10557,7 @@
       "node_kind": "heading",
       "norm_label": "fibonacci cost curve and 2-claims-for-the-first-three-invest-tiers reinstated, this time deliberately",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3085"
+      "source_location": "L3108"
     },
     {
       "id": "docs_design_history_forced_priority_order_storage_bank_fill_bandwidth_storage_bank_build_compute_memory_and_splitting_storage_compute_into_their_own_screens",
@@ -10569,7 +10569,7 @@
       "node_kind": "heading",
       "norm_label": "forced priority order (storage bank fill > bandwidth > storage bank build > compute > memory), and splitting storage/compute into their own screens",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3240"
+      "source_location": "L3263"
     },
     {
       "id": "docs_design_history_foundry_memory_always_keeps_the_highest_disk_row_issue_389",
@@ -10581,7 +10581,7 @@
       "node_kind": "heading",
       "norm_label": "foundry memory always keeps the highest disk row (issue #389)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3425"
+      "source_location": "L3448"
     },
     {
       "id": "docs_design_history_gettiercost_s_division_based_split_was_replaced_by_a_fixed_price_times_blocksize_model",
@@ -10593,7 +10593,7 @@
       "node_kind": "heading",
       "norm_label": "`gettiercost`'s division-based split was replaced by a fixed-price-times-blocksize model",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2739"
+      "source_location": "L2762"
     },
     {
       "id": "docs_design_history_gettiercost_split_into_per_unit_price_vs_level_total_price",
@@ -10605,7 +10605,7 @@
       "node_kind": "heading",
       "norm_label": "`gettiercost` split into per-unit price vs. level-total price",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2671"
+      "source_location": "L2694"
     },
     {
       "id": "docs_design_history_last_tier_s_xp_funded_tickspeed_from_a_permanent_latch_to_a_live_owned_10_check",
@@ -10617,7 +10617,7 @@
       "node_kind": "heading",
       "norm_label": "last tier's xp-funded tickspeed: from a permanent latch to a live owned >= 10 check",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2419"
+      "source_location": "L2442"
     },
     {
       "id": "docs_design_history_last_tier_s_xp_funded_tickspeed_from_additive_to_multiplicative",
@@ -10629,7 +10629,7 @@
       "node_kind": "heading",
       "norm_label": "last tier's xp-funded tickspeed: from additive to multiplicative",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2442"
+      "source_location": "L2465"
     },
     {
       "id": "docs_design_history_main_game_access_decouples_from_the_everything_freezes_flag_and_invest_gets_its_own_cost_ladder",
@@ -10641,7 +10641,7 @@
       "node_kind": "heading",
       "norm_label": "main-game access decouples from the \"everything freezes\" flag, and invest gets its own cost ladder",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1927"
+      "source_location": "L1950"
     },
     {
       "id": "docs_design_history_multiplier_overflow_safety_the_switch_to_compounding_needed_a_floor",
@@ -10653,7 +10653,7 @@
       "node_kind": "heading",
       "norm_label": "multiplier overflow safety: the switch to compounding needed a floor",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2461"
+      "source_location": "L2484"
     },
     {
       "id": "docs_design_history_overclock_again_the_standalone_multiplier_comes_back_deliberately_plus_a_full_requirement_rework",
@@ -10665,7 +10665,7 @@
       "node_kind": "heading",
       "norm_label": "overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2805"
+      "source_location": "L2828"
     },
     {
       "id": "docs_design_history_overclock_from_a_standalone_multiplier_to_a_tickscale_upgrade_step_boost",
@@ -10677,7 +10677,7 @@
       "node_kind": "heading",
       "norm_label": "overclock: from a standalone multiplier to a tickscale-upgrade step boost",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2772"
+      "source_location": "L2795"
     },
     {
       "id": "docs_design_history_overclock_once_more_back_to_folding_into_the_tickspeed_multiplier_s_own_step_now_multiplicative_and_covering_milestones_too",
@@ -10689,7 +10689,7 @@
       "node_kind": "heading",
       "norm_label": "overclock, once more: back to folding into the tickspeed multiplier's own step \u2014 now multiplicative and covering milestones too",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2873"
+      "source_location": "L2896"
     },
     {
       "id": "docs_design_history_pool_1_byte_generator_binary_memory_units_doubling_capacity_cap_4_bandwidth_ladder_457_epic_456",
@@ -10701,7 +10701,7 @@
       "node_kind": "heading",
       "norm_label": "pool 1 byte generator: binary memory units, doubling capacity cap, \u00d74 bandwidth ladder (#457, epic #456)",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3540"
+      "source_location": "L3563"
     },
     {
       "id": "docs_design_history_prestige_history_why_pp_replaced_direct_production_doubling",
@@ -10713,7 +10713,7 @@
       "node_kind": "heading",
       "norm_label": "prestige history: why pp replaced direct production doubling",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2388"
+      "source_location": "L2411"
     },
     {
       "id": "docs_design_history_purchase_block_size_became_a_runtime_configurable_growing_value_gettierlevel_replaced_by_direct_state_tracking",
@@ -10725,7 +10725,7 @@
       "node_kind": "heading",
       "norm_label": "purchase block size became a runtime-configurable, growing value \u2014 `gettierlevel` replaced by direct state tracking",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2595"
+      "source_location": "L2618"
     },
     {
       "id": "docs_design_history_purchase_level_resized_from_10_to_8_and_the_cost_epoch_sequence_changed_from_fibonacci_to_triangular",
@@ -10737,7 +10737,7 @@
       "node_kind": "heading",
       "norm_label": "purchase level resized from 10 to 8, and the cost-epoch sequence changed from fibonacci to triangular",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2537"
+      "source_location": "L2560"
     },
     {
       "id": "docs_design_history_reintroducing_the_1s_10s_tickspeed_ladder",
@@ -10749,7 +10749,7 @@
       "node_kind": "heading",
       "norm_label": "reintroducing the 1s-10s tickspeed ladder",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2224"
+      "source_location": "L2247"
     },
     {
       "id": "docs_design_history_repricing_tiers_to_real_world_bit_values",
@@ -10761,7 +10761,7 @@
       "node_kind": "heading",
       "norm_label": "repricing tiers to real-world bit values",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2198"
+      "source_location": "L2221"
     },
     {
       "id": "docs_design_history_reset_button_history",
@@ -10773,7 +10773,7 @@
       "node_kind": "heading",
       "norm_label": "reset button history",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2405"
+      "source_location": "L2428"
     },
     {
       "id": "docs_design_history_reset_byte_foundry_convenience_auto_now_includes_capacity_sacrifice_2026_08_25",
@@ -10785,7 +10785,7 @@
       "node_kind": "heading",
       "norm_label": "reset byte foundry convenience-auto now includes capacity/sacrifice \u2014 2026-08-25",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1803"
+      "source_location": "L1826"
     },
     {
       "id": "docs_design_history_sacrifice_for_10x_capacity_gated_behind_every_other_currently_possible_action",
@@ -10797,7 +10797,7 @@
       "node_kind": "heading",
       "norm_label": "sacrifice for 10x capacity gated behind every other currently-possible action",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3043"
+      "source_location": "L3066"
     },
     {
       "id": "docs_design_history_scaleupgame_s_highestmilestone_passthrough_was_a_real_bug_not_a_harmless_asymmetry",
@@ -10809,7 +10809,7 @@
       "node_kind": "heading",
       "norm_label": "`scaleupgame`'s `highestmilestone` passthrough was a real bug, not a harmless asymmetry",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2515"
+      "source_location": "L2538"
     },
     {
       "id": "docs_design_history_starting_money_reduced_from_10_to_1",
@@ -10821,7 +10821,7 @@
       "node_kind": "heading",
       "norm_label": "starting money reduced from 10 to 1",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2722"
+      "source_location": "L2745"
     },
     {
       "id": "docs_design_history_storage_auto_redeem_toggle_button_removed_for_now_default_flipped_to_always_on",
@@ -10833,7 +10833,7 @@
       "node_kind": "heading",
       "norm_label": "storage auto-redeem toggle button removed for now, default flipped to always-on",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2069"
+      "source_location": "L2092"
     },
     {
       "id": "docs_design_history_storage_banks_renamed_to_disks_timed_builds_a_per_array_cache_redemption_against_any_tier_and_the_kilobit_kilobyte_bug_fix",
@@ -10845,7 +10845,7 @@
       "node_kind": "heading",
       "norm_label": "storage banks renamed to disks: timed builds, a per-array cache, redemption against any tier, and the kilobit/kilobyte bug fix",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3291"
+      "source_location": "L3314"
     },
     {
       "id": "docs_design_history_the_1000_byte_invest_tier_drops_from_two_claims_to_one",
@@ -10857,7 +10857,7 @@
       "node_kind": "heading",
       "norm_label": "the 1000-byte invest tier drops from two claims to one",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2926"
+      "source_location": "L2949"
     },
     {
       "id": "docs_design_history_the_byte_foundry_becomes_a_per_prestige_cycle_mechanic_not_a_one_time_gate",
@@ -10869,7 +10869,7 @@
       "node_kind": "heading",
       "norm_label": "the byte foundry becomes a per-prestige-cycle mechanic, not a one-time gate",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1842"
+      "source_location": "L1865"
     },
     {
       "id": "docs_design_history_the_byte_generator_becomes_permanent_only_memory_and_the_gate_reset_each_prestige",
@@ -10881,7 +10881,7 @@
       "node_kind": "heading",
       "norm_label": "the byte generator becomes permanent \u2014 only \"memory\" and the gate reset each prestige",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1867"
+      "source_location": "L1890"
     },
     {
       "id": "docs_design_history_the_per_cycle_transfer_budget_cap_was_removed_the_transfer_row_mirrors_tier01_s_own_purchase_block_progress_instead",
@@ -10893,7 +10893,7 @@
       "node_kind": "heading",
       "norm_label": "the per-cycle transfer budget cap was removed \u2014 the transfer row mirrors tier01's own purchase-block progress instead",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2030"
+      "source_location": "L2053"
     },
     {
       "id": "docs_design_history_the_transfer_block_row_looked_permanently_stuck_tickintroautoinvest_waited_for_a_whole_batch_instead_of_converting_live",
@@ -10905,7 +10905,7 @@
       "node_kind": "heading",
       "norm_label": "the transfer-block row looked permanently stuck \u2014 `tickintroautoinvest` waited for a whole batch instead of converting live",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2089"
+      "source_location": "L2112"
     },
     {
       "id": "docs_design_history_the_transfer_budget_becomes_dynamic_tied_to_the_kilobyte_tier_s_own_block_size_a_real_buttoncontent_bug_fixed_along_the_way",
@@ -10917,7 +10917,7 @@
       "node_kind": "heading",
       "norm_label": "the transfer budget becomes dynamic (tied to the kilobyte tier's own block size); a real buttoncontent bug fixed along the way",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1980"
+      "source_location": "L2003"
     },
     {
       "id": "docs_design_history_tickdiskautofill_a_fully_staged_cache_could_get_starved_out_by_an_unrelated_smaller_size",
@@ -10929,7 +10929,7 @@
       "node_kind": "heading",
       "norm_label": "`tickdiskautofill`: a fully-staged cache could get starved out by an unrelated smaller size",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3389"
+      "source_location": "L3412"
     },
     {
       "id": "docs_design_history_tier_autobuyer_unlock_tier_tickspeed_autobuyer_became_free_prestige_count_milestone_unlocks",
@@ -10941,7 +10941,7 @@
       "node_kind": "heading",
       "norm_label": "tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2329"
+      "source_location": "L2352"
     },
     {
       "id": "docs_design_history_transfer_block_storage_bank_cost_stops_being_pinned_to_tier01_s_fresh_level_1_price",
@@ -10953,7 +10953,7 @@
       "node_kind": "heading",
       "norm_label": "transfer-block/storage-bank cost stops being pinned to tier01's fresh-level-1 price",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2144"
+      "source_location": "L2167"
     },
     {
       "id": "docs_design_history_why_autobuyer_unlock_is_pp_funded_only_with_no_first_tier_bypass",
@@ -10965,7 +10965,7 @@
       "node_kind": "heading",
       "norm_label": "why autobuyer unlock is pp-funded only, with no first-tier bypass",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2319"
+      "source_location": "L2342"
     },
     {
       "id": "docs_design_history_why_bytes_was_pulled_out_of_the_tier_ladder_in_favor_of_the_byte_foundry_intro",
@@ -10977,7 +10977,7 @@
       "node_kind": "heading",
       "norm_label": "why bytes was pulled out of the tier ladder in favor of the byte foundry intro",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1817"
+      "source_location": "L1840"
     },
     {
       "id": "docs_design_history_why_every_tier_s_tickspeed_is_uniform_at_1s",
@@ -10989,7 +10989,7 @@
       "node_kind": "heading",
       "norm_label": "why every tier's tickspeed is uniform at 1s",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2212"
+      "source_location": "L2235"
     },
     {
       "id": "docs_design_history_why_gettiercost_uses_a_multiplier_form_not_a_literal_power",
@@ -11001,7 +11001,7 @@
       "node_kind": "heading",
       "norm_label": "why `gettiercost` uses a multiplier form, not a literal power",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2188"
+      "source_location": "L2211"
     },
     {
       "id": "docs_design_history_why_prestige_pp_info_is_hidden_until_first_prestige",
@@ -11013,7 +11013,7 @@
       "node_kind": "heading",
       "norm_label": "why prestige/pp info is hidden until first prestige",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2396"
+      "source_location": "L2419"
     },
     {
       "id": "docs_design_history_why_scale_up_exists_and_why_its_requirement_escalates",
@@ -11025,7 +11025,7 @@
       "node_kind": "heading",
       "norm_label": "why scale up exists, and why its requirement escalates",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2258"
+      "source_location": "L2281"
     },
     {
       "id": "docs_design_history_why_scaleupcount_now_resets_on_prestige_reversing_the_original_design",
@@ -11037,7 +11037,7 @@
       "node_kind": "heading",
       "norm_label": "why `scaleupcount` now resets on prestige, reversing the original design",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2300"
+      "source_location": "L2323"
     },
     {
       "id": "docs_design_history_why_smart_autobuyers_exist",
@@ -11049,7 +11049,7 @@
       "node_kind": "heading",
       "norm_label": "why \"smart\" autobuyers exist",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2352"
+      "source_location": "L2375"
     },
     {
       "id": "docs_design_history_why_the_prestige_threshold_became_googol_bits_per_byte_not_a_round_new_number",
@@ -11061,7 +11061,7 @@
       "node_kind": "heading",
       "norm_label": "why the prestige threshold became `googol * bits_per_byte`, not a round new number",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1908"
+      "source_location": "L1931"
     },
     {
       "id": "docs_design_history_why_the_tick_progress_ring_was_removed",
@@ -11073,7 +11073,7 @@
       "node_kind": "heading",
       "norm_label": "why the tick-progress ring was removed",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2244"
+      "source_location": "L2267"
     },
     {
       "id": "docs_design_history_why_the_tickspeed_multiplier_no_longer_affects_purchase_frequency",
@@ -11085,7 +11085,7 @@
       "node_kind": "heading",
       "norm_label": "why the tickspeed multiplier no longer affects purchase frequency",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2361"
+      "source_location": "L2384"
     },
     {
       "id": "docs_design_history_why_tickspeed_multipliers_shrink_the_delivery_period_instead_of_scaling_production",
@@ -11097,7 +11097,7 @@
       "node_kind": "heading",
       "norm_label": "why tickspeed multipliers shrink the delivery period instead of scaling production",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2372"
+      "source_location": "L2395"
     },
     {
       "id": "docs_design_history_xp_and_everything_it_funds_became_run_scoped_not_permanent",
@@ -11109,7 +11109,7 @@
       "node_kind": "heading",
       "norm_label": "xp and everything it funds became run-scoped, not permanent",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2488"
+      "source_location": "L2511"
     },
     {
       "id": "docs_design_history_xp_status",
@@ -11121,7 +11121,7 @@
       "node_kind": "heading",
       "norm_label": "xp status",
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2413"
+      "source_location": "L2436"
     },
     {
       "id": "claude_skills_graphify_skill",
@@ -14053,7 +14053,7 @@
       "node_kind": "heading",
       "norm_label": "[0.1.0] - 2026-07-05",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1189"
+      "source_location": "L1190"
     },
     {
       "id": "changelog_0_2_0_2026_07_12",
@@ -14065,7 +14065,7 @@
       "node_kind": "heading",
       "norm_label": "[0.2.0] - 2026-07-12",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1177"
+      "source_location": "L1178"
     },
     {
       "id": "changelog_0_3_0_2026_07_13",
@@ -14077,7 +14077,7 @@
       "node_kind": "heading",
       "norm_label": "[0.3.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1160"
+      "source_location": "L1161"
     },
     {
       "id": "changelog_0_4_0_2026_07_13",
@@ -14089,7 +14089,7 @@
       "node_kind": "heading",
       "norm_label": "[0.4.0] - 2026-07-13",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1144"
+      "source_location": "L1145"
     },
     {
       "id": "changelog_0_5_0_2026_07_14",
@@ -14101,7 +14101,7 @@
       "node_kind": "heading",
       "norm_label": "[0.5.0] - 2026-07-14",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1131"
+      "source_location": "L1132"
     },
     {
       "id": "changelog_accessibility",
@@ -14113,7 +14113,7 @@
       "node_kind": "heading",
       "norm_label": "accessibility",
       "source_file": "CHANGELOG.md",
-      "source_location": "L126"
+      "source_location": "L127"
     },
     {
       "id": "changelog_added",
@@ -14125,10 +14125,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L138"
+      "source_location": "L139"
     },
     {
-      "id": "changelog_added_1133",
+      "id": "changelog_added_1134",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14137,10 +14137,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1133"
+      "source_location": "L1134"
     },
     {
-      "id": "changelog_added_1146",
+      "id": "changelog_added_1147",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14149,10 +14149,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1146"
+      "source_location": "L1147"
     },
     {
-      "id": "changelog_added_1162",
+      "id": "changelog_added_1163",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14161,10 +14161,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1162"
+      "source_location": "L1163"
     },
     {
-      "id": "changelog_added_1179",
+      "id": "changelog_added_1180",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14173,10 +14173,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1179"
+      "source_location": "L1180"
     },
     {
-      "id": "changelog_added_1191",
+      "id": "changelog_added_1192",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14185,10 +14185,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1191"
+      "source_location": "L1192"
     },
     {
-      "id": "changelog_added_835",
+      "id": "changelog_added_836",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14197,10 +14197,10 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L835"
+      "source_location": "L836"
     },
     {
-      "id": "changelog_added_914",
+      "id": "changelog_added_915",
       "label": "Added",
       "_origin": "ast",
       "community": 39,
@@ -14209,7 +14209,7 @@
       "node_kind": "heading",
       "norm_label": "added",
       "source_file": "CHANGELOG.md",
-      "source_location": "L914"
+      "source_location": "L915"
     },
     {
       "id": "changelog_changed",
@@ -14224,7 +14224,7 @@
       "source_location": "L10"
     },
     {
-      "id": "changelog_changed_1121",
+      "id": "changelog_changed_1122",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14233,10 +14233,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1121"
+      "source_location": "L1122"
     },
     {
-      "id": "changelog_changed_1137",
+      "id": "changelog_changed_1138",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14245,10 +14245,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1137"
+      "source_location": "L1138"
     },
     {
-      "id": "changelog_changed_1150",
+      "id": "changelog_changed_1151",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14257,10 +14257,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1150"
+      "source_location": "L1151"
     },
     {
-      "id": "changelog_changed_1167",
+      "id": "changelog_changed_1168",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14269,10 +14269,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1167"
+      "source_location": "L1168"
     },
     {
-      "id": "changelog_changed_446",
+      "id": "changelog_changed_447",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14281,10 +14281,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L446"
+      "source_location": "L447"
     },
     {
-      "id": "changelog_changed_866",
+      "id": "changelog_changed_867",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14293,10 +14293,10 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L866"
+      "source_location": "L867"
     },
     {
-      "id": "changelog_changed_968",
+      "id": "changelog_changed_969",
       "label": "Changed",
       "_origin": "ast",
       "community": 39,
@@ -14305,7 +14305,7 @@
       "node_kind": "heading",
       "norm_label": "changed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L968"
+      "source_location": "L969"
     },
     {
       "id": "changelog_changelog",
@@ -14332,7 +14332,7 @@
       "source_location": "L56"
     },
     {
-      "id": "changelog_fixed_1095",
+      "id": "changelog_fixed_1096",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14341,10 +14341,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1095"
+      "source_location": "L1096"
     },
     {
-      "id": "changelog_fixed_1125",
+      "id": "changelog_fixed_1126",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14353,10 +14353,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1125"
+      "source_location": "L1126"
     },
     {
-      "id": "changelog_fixed_1141",
+      "id": "changelog_fixed_1142",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14365,10 +14365,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1141"
+      "source_location": "L1142"
     },
     {
-      "id": "changelog_fixed_1154",
+      "id": "changelog_fixed_1155",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14377,10 +14377,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1154"
+      "source_location": "L1155"
     },
     {
-      "id": "changelog_fixed_1173",
+      "id": "changelog_fixed_1174",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14389,10 +14389,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1173"
+      "source_location": "L1174"
     },
     {
-      "id": "changelog_fixed_1184",
+      "id": "changelog_fixed_1185",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14401,10 +14401,10 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1184"
+      "source_location": "L1185"
     },
     {
-      "id": "changelog_fixed_239",
+      "id": "changelog_fixed_240",
       "label": "Fixed",
       "_origin": "ast",
       "community": 39,
@@ -14413,7 +14413,7 @@
       "node_kind": "heading",
       "norm_label": "fixed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L239"
+      "source_location": "L240"
     },
     {
       "id": "changelog_removed",
@@ -14425,10 +14425,10 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L211"
+      "source_location": "L212"
     },
     {
-      "id": "changelog_removed_859",
+      "id": "changelog_removed_860",
       "label": "Removed",
       "_origin": "ast",
       "community": 39,
@@ -14437,7 +14437,7 @@
       "node_kind": "heading",
       "norm_label": "removed",
       "source_file": "CHANGELOG.md",
-      "source_location": "L859"
+      "source_location": "L860"
     },
     {
       "id": "changelog_security",
@@ -14449,10 +14449,10 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L130"
+      "source_location": "L131"
     },
     {
-      "id": "changelog_security_1117",
+      "id": "changelog_security_1118",
       "label": "Security",
       "_origin": "ast",
       "community": 39,
@@ -14461,7 +14461,7 @@
       "node_kind": "heading",
       "norm_label": "security",
       "source_file": "CHANGELOG.md",
-      "source_location": "L1117"
+      "source_location": "L1118"
     },
     {
       "id": "changelog_unreleased",
@@ -15761,7 +15761,7 @@
       "file_type": "code",
       "norm_label": "activeboostrow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L271"
+      "source_location": "L273"
     },
     {
       "id": "src_pages_computepage_index_armedstatustext",
@@ -15772,7 +15772,7 @@
       "file_type": "code",
       "norm_label": "armedstatustext",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L211"
+      "source_location": "L213"
     },
     {
       "id": "src_pages_computepage_index_autoboostlabel",
@@ -15783,7 +15783,7 @@
       "file_type": "code",
       "norm_label": "autoboostlabel",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L260"
+      "source_location": "L262"
     },
     {
       "id": "src_pages_computepage_index_autoboostrow",
@@ -15794,7 +15794,7 @@
       "file_type": "code",
       "norm_label": "autoboostrow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L252"
+      "source_location": "L254"
     },
     {
       "id": "src_pages_computepage_index_boostrow",
@@ -15805,7 +15805,7 @@
       "file_type": "code",
       "norm_label": "boostrow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L220"
+      "source_location": "L222"
     },
     {
       "id": "src_pages_computepage_index_compactbutton",
@@ -15816,7 +15816,7 @@
       "file_type": "code",
       "norm_label": "compactbutton",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L157"
+      "source_location": "L155"
     },
     {
       "id": "src_pages_computepage_index_compute_boost_display",
@@ -15827,7 +15827,7 @@
       "file_type": "code",
       "norm_label": "compute_boost_display",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L286"
+      "source_location": "L288"
     },
     {
       "id": "src_pages_computepage_index_durationupgraderow",
@@ -15838,7 +15838,7 @@
       "file_type": "code",
       "norm_label": "durationupgraderow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L245"
+      "source_location": "L247"
     },
     {
       "id": "src_pages_computepage_index_entity_rows",
@@ -15849,7 +15849,7 @@
       "file_type": "code",
       "norm_label": "entity_rows",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L303"
+      "source_location": "L305"
     },
     {
       "id": "src_pages_computepage_index_header",
@@ -15863,17 +15863,6 @@
       "source_location": "L19"
     },
     {
-      "id": "src_pages_computepage_index_iconbutton",
-      "label": "IconButton",
-      "_origin": "ast",
-      "community": 5,
-      "community_name": "ComputePage/index.jsx",
-      "file_type": "code",
-      "norm_label": "iconbutton",
-      "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L163"
-    },
-    {
       "id": "src_pages_computepage_index_mergecountdown",
       "label": "MergeCountdown",
       "_origin": "ast",
@@ -15882,7 +15871,7 @@
       "file_type": "code",
       "norm_label": "mergecountdown",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L202"
+      "source_location": "L204"
     },
     {
       "id": "src_pages_computepage_index_normalslot",
@@ -15904,7 +15893,7 @@
       "file_type": "code",
       "norm_label": "reserveslot",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L193"
+      "source_location": "L195"
     },
     {
       "id": "src_pages_computepage_index_reserveslotsrow",
@@ -15915,7 +15904,7 @@
       "file_type": "code",
       "norm_label": "reserveslotsrow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L168"
+      "source_location": "L170"
     },
     {
       "id": "src_pages_computepage_index_rootdiv",
@@ -15948,7 +15937,7 @@
       "file_type": "code",
       "norm_label": "stackreclaimrow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L237"
+      "source_location": "L239"
     },
     {
       "id": "src_pages_computepage_index_statustext",
@@ -15960,6 +15949,17 @@
       "norm_label": "statustext",
       "source_file": "src/pages/ComputePage/index.jsx",
       "source_location": "L32"
+    },
+    {
+      "id": "src_pages_computepage_index_tieractionbutton",
+      "label": "TierActionButton",
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
+      "file_type": "code",
+      "norm_label": "tieractionbutton",
+      "source_file": "src/pages/ComputePage/index.jsx",
+      "source_location": "L165"
     },
     {
       "id": "src_pages_computepage_index_tierblock",
@@ -16014,7 +16014,7 @@
       "file_type": "code",
       "norm_label": "tiermergerow",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L148"
+      "source_location": "L146"
     },
     {
       "id": "src_pages_computepage_index_tierselectbutton",
@@ -31488,7 +31488,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L504",
+      "source_location": "L506",
       "weight": 1.0
     },
     {
@@ -31500,7 +31500,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L504",
+      "source_location": "L506",
       "weight": 1.0
     },
     {
@@ -31512,7 +31512,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L525",
+      "source_location": "L527",
       "weight": 1.0
     },
     {
@@ -31524,7 +31524,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L525",
+      "source_location": "L527",
       "weight": 1.0
     },
     {
@@ -31536,7 +31536,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L534",
+      "source_location": "L536",
       "weight": 1.0
     },
     {
@@ -31548,7 +31548,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L540",
+      "source_location": "L542",
       "weight": 1.0
     },
     {
@@ -31560,7 +31560,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L549",
+      "source_location": "L551",
       "weight": 1.0
     },
     {
@@ -31572,7 +31572,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L580",
+      "source_location": "L582",
       "weight": 1.0
     },
     {
@@ -31584,7 +31584,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L583",
+      "source_location": "L585",
       "weight": 1.0
     },
     {
@@ -31596,7 +31596,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L599",
+      "source_location": "L601",
       "weight": 1.0
     },
     {
@@ -31608,7 +31608,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L618",
+      "source_location": "L620",
       "weight": 1.0
     },
     {
@@ -31620,7 +31620,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L630",
+      "source_location": "L632",
       "weight": 1.0
     },
     {
@@ -31632,7 +31632,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L673",
+      "source_location": "L675",
       "weight": 1.0
     },
     {
@@ -31644,7 +31644,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L688",
+      "source_location": "L690",
       "weight": 1.0
     },
     {
@@ -31656,7 +31656,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L691",
+      "source_location": "L693",
       "weight": 1.0
     },
     {
@@ -31668,7 +31668,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L696",
+      "source_location": "L698",
       "weight": 1.0
     },
     {
@@ -31680,7 +31680,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L778",
+      "source_location": "L780",
       "weight": 1.0
     },
     {
@@ -49470,134 +49470,134 @@
     },
     {
       "source": "changelog_0_1_0_2026_07_05",
-      "target": "changelog_added_1191",
+      "target": "changelog_added_1192",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1191",
+      "source_location": "L1192",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_added_1179",
+      "target": "changelog_added_1180",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1179",
+      "source_location": "L1180",
       "weight": 1.0
     },
     {
       "source": "changelog_0_2_0_2026_07_12",
-      "target": "changelog_fixed_1184",
+      "target": "changelog_fixed_1185",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1184",
+      "source_location": "L1185",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_added_1162",
+      "target": "changelog_added_1163",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1162",
+      "source_location": "L1163",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_changed_1167",
+      "target": "changelog_changed_1168",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1167",
+      "source_location": "L1168",
       "weight": 1.0
     },
     {
       "source": "changelog_0_3_0_2026_07_13",
-      "target": "changelog_fixed_1173",
+      "target": "changelog_fixed_1174",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1173",
+      "source_location": "L1174",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_added_1146",
+      "target": "changelog_added_1147",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1146",
+      "source_location": "L1147",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_changed_1150",
+      "target": "changelog_changed_1151",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1150",
+      "source_location": "L1151",
       "weight": 1.0
     },
     {
       "source": "changelog_0_4_0_2026_07_13",
-      "target": "changelog_fixed_1154",
+      "target": "changelog_fixed_1155",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1154",
+      "source_location": "L1155",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_added_1133",
+      "target": "changelog_added_1134",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1133",
+      "source_location": "L1134",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_changed_1137",
+      "target": "changelog_changed_1138",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1137",
+      "source_location": "L1138",
       "weight": 1.0
     },
     {
       "source": "changelog_0_5_0_2026_07_14",
-      "target": "changelog_fixed_1141",
+      "target": "changelog_fixed_1142",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1141",
+      "source_location": "L1142",
       "weight": 1.0
     },
     {
@@ -49608,7 +49608,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1131",
+      "source_location": "L1132",
       "weight": 1.0
     },
     {
@@ -49619,7 +49619,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1144",
+      "source_location": "L1145",
       "weight": 1.0
     },
     {
@@ -49630,7 +49630,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1160",
+      "source_location": "L1161",
       "weight": 1.0
     },
     {
@@ -49641,7 +49641,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1177",
+      "source_location": "L1178",
       "weight": 1.0
     },
     {
@@ -49652,7 +49652,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1189",
+      "source_location": "L1190",
       "weight": 1.0
     },
     {
@@ -49679,46 +49679,46 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_1095",
+      "target": "changelog_fixed_1096",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1095",
+      "source_location": "L1096",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_security_1117",
+      "target": "changelog_security_1118",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1117",
+      "source_location": "L1118",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_1121",
+      "target": "changelog_changed_1122",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1121",
+      "source_location": "L1122",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_1125",
+      "target": "changelog_fixed_1126",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L1125",
+      "source_location": "L1126",
       "weight": 1.0
     },
     {
@@ -49729,7 +49729,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L126",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -49740,7 +49740,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L130",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -49751,7 +49751,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L138",
+      "source_location": "L139",
       "weight": 1.0
     },
     {
@@ -49762,29 +49762,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L211",
+      "source_location": "L212",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_fixed_239",
+      "target": "changelog_fixed_240",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L239",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_446",
+      "target": "changelog_changed_447",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L446",
+      "source_location": "L447",
       "weight": 1.0
     },
     {
@@ -49800,57 +49800,57 @@
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_835",
+      "target": "changelog_added_836",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L835",
+      "source_location": "L836",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_removed_859",
+      "target": "changelog_removed_860",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L859",
+      "source_location": "L860",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_866",
+      "target": "changelog_changed_867",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L866",
+      "source_location": "L867",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_added_914",
+      "target": "changelog_added_915",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L914",
+      "source_location": "L915",
       "weight": 1.0
     },
     {
       "source": "changelog_unreleased",
-      "target": "changelog_changed_968",
+      "target": "changelog_changed_969",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CHANGELOG.md",
-      "source_location": "L968",
+      "source_location": "L969",
       "weight": 1.0
     },
     {
@@ -51577,7 +51577,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1182",
+      "source_location": "L1205",
       "weight": 1.0
     },
     {
@@ -51588,7 +51588,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1195",
+      "source_location": "L1218",
       "weight": 1.0
     },
     {
@@ -51599,7 +51599,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1217",
+      "source_location": "L1240",
       "weight": 1.0
     },
     {
@@ -51610,7 +51610,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1226",
+      "source_location": "L1249",
       "weight": 1.0
     },
     {
@@ -51621,7 +51621,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1237",
+      "source_location": "L1260",
       "weight": 1.0
     },
     {
@@ -51632,7 +51632,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1259",
+      "source_location": "L1282",
       "weight": 1.0
     },
     {
@@ -51643,7 +51643,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1286",
+      "source_location": "L1309",
       "weight": 1.0
     },
     {
@@ -51654,7 +51654,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1306",
+      "source_location": "L1329",
       "weight": 1.0
     },
     {
@@ -51665,7 +51665,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1361",
+      "source_location": "L1384",
       "weight": 1.0
     },
     {
@@ -51676,7 +51676,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1408",
+      "source_location": "L1431",
       "weight": 1.0
     },
     {
@@ -51687,7 +51687,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1427",
+      "source_location": "L1450",
       "weight": 1.0
     },
     {
@@ -51698,7 +51698,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1436",
+      "source_location": "L1459",
       "weight": 1.0
     },
     {
@@ -51709,18 +51709,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1445",
+      "source_location": "L1468",
       "weight": 1.0
     },
     {
       "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_first_ten_scale_ups_standardized_at_three_completed_levels_2026_09_13",
+      "target": "docs_design_history_tier_tickspeed_upgrade_reverted_from_1_to_10_per_level_2026_09_14",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L100",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -51731,18 +51731,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1028",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_scale_up_tier_scoped_boosts_and_three_level_reset_cadence_2026_09_10",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L108",
+      "source_location": "L1051",
       "weight": 1.0
     },
     {
@@ -51753,7 +51742,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1105",
+      "source_location": "L1128",
       "weight": 1.0
     },
     {
@@ -51764,7 +51753,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1123",
+      "source_location": "L1146",
       "weight": 1.0
     },
     {
@@ -51775,7 +51764,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1137",
+      "source_location": "L1160",
       "weight": 1.0
     },
     {
@@ -51786,18 +51775,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1154",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L118",
+      "source_location": "L1177",
       "weight": 1.0
     },
     {
@@ -51808,18 +51786,40 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1180",
+      "source_location": "L1203",
       "weight": 1.0
     },
     {
       "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_speed_up_renamed_to_scale_up_and_redesigned_from_a_last_tier_only_gate_to_a_per_tier_unlock_ladder_2026_09_09",
+      "target": "docs_design_history_first_ten_scale_ups_standardized_at_three_completed_levels_2026_09_13",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L137",
+      "source_location": "L123",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_design_history_design_history_rationale",
+      "target": "docs_design_history_scale_up_tier_scoped_boosts_and_three_level_reset_cadence_2026_09_10",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L131",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_design_history_design_history_rationale",
+      "target": "docs_design_history_prestigegame_wiped_era_eons_hyperscalercount_eonsupgrades_flops_autobuyer_state_on_every_ordinary_prestige_626_2026_09_09",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -51830,7 +51830,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1462",
+      "source_location": "L1485",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_design_history_design_history_rationale",
+      "target": "docs_design_history_speed_up_renamed_to_scale_up_and_redesigned_from_a_last_tier_only_gate_to_a_per_tier_unlock_ladder_2026_09_09",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L160",
       "weight": 1.0
     },
     {
@@ -51841,7 +51852,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1801",
+      "source_location": "L1824",
       "weight": 1.0
     },
     {
@@ -51852,18 +51863,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L242",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_critical_reverted_a_broken_buybooster_bulk_purchase_optimization_that_had_merged_onto_main_2026_09_09",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L286",
+      "source_location": "L265",
       "weight": 1.0
     },
     {
@@ -51879,24 +51879,24 @@
     },
     {
       "source": "docs_design_history_design_history_rationale",
+      "target": "docs_design_history_critical_reverted_a_broken_buybooster_bulk_purchase_optimization_that_had_merged_onto_main_2026_09_09",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L309",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_design_history_design_history_rationale",
       "target": "docs_design_history_devin_review_on_pr_608_round_6_a_provenance_tracking_fix_superseding_an_incomplete_bot_revert_2026_09_09",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L311",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_devin_review_on_pr_608_round_4_closed_the_bug_class_at_its_one_true_chokepoint_instead_of_patching_another_arming_site_2026_09_09",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L349",
+      "source_location": "L334",
       "weight": 1.0
     },
     {
@@ -51907,7 +51907,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3696",
+      "source_location": "L3719",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_design_history_design_history_rationale",
+      "target": "docs_design_history_devin_review_on_pr_608_round_4_closed_the_bug_class_at_its_one_true_chokepoint_instead_of_patching_another_arming_site_2026_09_09",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L372",
       "weight": 1.0
     },
     {
@@ -51918,7 +51929,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3733",
+      "source_location": "L3756",
       "weight": 1.0
     },
     {
@@ -51929,7 +51940,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3749",
+      "source_location": "L3772",
       "weight": 1.0
     },
     {
@@ -51940,7 +51951,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3763",
+      "source_location": "L3786",
       "weight": 1.0
     },
     {
@@ -51951,7 +51962,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L386",
+      "source_location": "L409",
       "weight": 1.0
     },
     {
@@ -51962,7 +51973,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L443",
+      "source_location": "L466",
       "weight": 1.0
     },
     {
@@ -51973,7 +51984,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L473",
+      "source_location": "L496",
       "weight": 1.0
     },
     {
@@ -51984,7 +51995,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L519",
+      "source_location": "L542",
       "weight": 1.0
     },
     {
@@ -51995,7 +52006,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L553",
+      "source_location": "L576",
       "weight": 1.0
     },
     {
@@ -52006,7 +52017,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L574",
+      "source_location": "L597",
       "weight": 1.0
     },
     {
@@ -52017,7 +52028,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L606",
+      "source_location": "L629",
       "weight": 1.0
     },
     {
@@ -52028,7 +52039,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L661",
+      "source_location": "L684",
       "weight": 1.0
     },
     {
@@ -52039,18 +52050,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L745",
-      "weight": 1.0
-    },
-    {
-      "source": "docs_design_history_design_history_rationale",
-      "target": "docs_design_history_tier_tickspeed_upgrade_reverted_from_1_to_10_per_level_2026_09_14",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L78",
+      "source_location": "L768",
       "weight": 1.0
     },
     {
@@ -52061,7 +52061,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L780",
+      "source_location": "L803",
       "weight": 1.0
     },
     {
@@ -52072,7 +52072,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L957",
+      "source_location": "L980",
       "weight": 1.0
     },
     {
@@ -52083,7 +52083,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3735",
+      "source_location": "L3758",
       "weight": 1.0
     },
     {
@@ -52094,7 +52094,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3751",
+      "source_location": "L3774",
       "weight": 1.0
     },
     {
@@ -52105,7 +52105,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1803",
+      "source_location": "L1826",
       "weight": 1.0
     },
     {
@@ -52116,7 +52116,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1817",
+      "source_location": "L1840",
       "weight": 1.0
     },
     {
@@ -52127,7 +52127,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1842",
+      "source_location": "L1865",
       "weight": 1.0
     },
     {
@@ -52138,7 +52138,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1867",
+      "source_location": "L1890",
       "weight": 1.0
     },
     {
@@ -52149,7 +52149,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1908",
+      "source_location": "L1931",
       "weight": 1.0
     },
     {
@@ -52160,7 +52160,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1927",
+      "source_location": "L1950",
       "weight": 1.0
     },
     {
@@ -52171,7 +52171,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L1980",
+      "source_location": "L2003",
       "weight": 1.0
     },
     {
@@ -52182,7 +52182,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2030",
+      "source_location": "L2053",
       "weight": 1.0
     },
     {
@@ -52193,7 +52193,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2069",
+      "source_location": "L2092",
       "weight": 1.0
     },
     {
@@ -52204,7 +52204,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2089",
+      "source_location": "L2112",
       "weight": 1.0
     },
     {
@@ -52215,7 +52215,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2144",
+      "source_location": "L2167",
       "weight": 1.0
     },
     {
@@ -52226,7 +52226,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2188",
+      "source_location": "L2211",
       "weight": 1.0
     },
     {
@@ -52237,7 +52237,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2198",
+      "source_location": "L2221",
       "weight": 1.0
     },
     {
@@ -52248,7 +52248,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2212",
+      "source_location": "L2235",
       "weight": 1.0
     },
     {
@@ -52259,7 +52259,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2224",
+      "source_location": "L2247",
       "weight": 1.0
     },
     {
@@ -52270,7 +52270,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2244",
+      "source_location": "L2267",
       "weight": 1.0
     },
     {
@@ -52281,7 +52281,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2258",
+      "source_location": "L2281",
       "weight": 1.0
     },
     {
@@ -52292,7 +52292,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2300",
+      "source_location": "L2323",
       "weight": 1.0
     },
     {
@@ -52303,7 +52303,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2319",
+      "source_location": "L2342",
       "weight": 1.0
     },
     {
@@ -52314,7 +52314,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2329",
+      "source_location": "L2352",
       "weight": 1.0
     },
     {
@@ -52325,7 +52325,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2352",
+      "source_location": "L2375",
       "weight": 1.0
     },
     {
@@ -52336,7 +52336,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2361",
+      "source_location": "L2384",
       "weight": 1.0
     },
     {
@@ -52347,7 +52347,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2372",
+      "source_location": "L2395",
       "weight": 1.0
     },
     {
@@ -52358,7 +52358,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2388",
+      "source_location": "L2411",
       "weight": 1.0
     },
     {
@@ -52369,7 +52369,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2396",
+      "source_location": "L2419",
       "weight": 1.0
     },
     {
@@ -52380,7 +52380,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2405",
+      "source_location": "L2428",
       "weight": 1.0
     },
     {
@@ -52391,7 +52391,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2413",
+      "source_location": "L2436",
       "weight": 1.0
     },
     {
@@ -52402,7 +52402,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2419",
+      "source_location": "L2442",
       "weight": 1.0
     },
     {
@@ -52413,7 +52413,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2442",
+      "source_location": "L2465",
       "weight": 1.0
     },
     {
@@ -52424,7 +52424,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2461",
+      "source_location": "L2484",
       "weight": 1.0
     },
     {
@@ -52435,7 +52435,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2488",
+      "source_location": "L2511",
       "weight": 1.0
     },
     {
@@ -52446,7 +52446,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2515",
+      "source_location": "L2538",
       "weight": 1.0
     },
     {
@@ -52457,7 +52457,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2537",
+      "source_location": "L2560",
       "weight": 1.0
     },
     {
@@ -52468,7 +52468,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2595",
+      "source_location": "L2618",
       "weight": 1.0
     },
     {
@@ -52479,7 +52479,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2671",
+      "source_location": "L2694",
       "weight": 1.0
     },
     {
@@ -52490,7 +52490,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2722",
+      "source_location": "L2745",
       "weight": 1.0
     },
     {
@@ -52501,7 +52501,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2739",
+      "source_location": "L2762",
       "weight": 1.0
     },
     {
@@ -52512,7 +52512,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2772",
+      "source_location": "L2795",
       "weight": 1.0
     },
     {
@@ -52523,7 +52523,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2805",
+      "source_location": "L2828",
       "weight": 1.0
     },
     {
@@ -52534,7 +52534,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2873",
+      "source_location": "L2896",
       "weight": 1.0
     },
     {
@@ -52545,7 +52545,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2926",
+      "source_location": "L2949",
       "weight": 1.0
     },
     {
@@ -52556,7 +52556,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2938",
+      "source_location": "L2961",
       "weight": 1.0
     },
     {
@@ -52567,7 +52567,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2988",
+      "source_location": "L3011",
       "weight": 1.0
     },
     {
@@ -52578,7 +52578,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3043",
+      "source_location": "L3066",
       "weight": 1.0
     },
     {
@@ -52589,7 +52589,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3085",
+      "source_location": "L3108",
       "weight": 1.0
     },
     {
@@ -52600,7 +52600,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3171",
+      "source_location": "L3194",
       "weight": 1.0
     },
     {
@@ -52611,7 +52611,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3191",
+      "source_location": "L3214",
       "weight": 1.0
     },
     {
@@ -52622,7 +52622,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3208",
+      "source_location": "L3231",
       "weight": 1.0
     },
     {
@@ -52633,7 +52633,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3240",
+      "source_location": "L3263",
       "weight": 1.0
     },
     {
@@ -52644,7 +52644,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3291",
+      "source_location": "L3314",
       "weight": 1.0
     },
     {
@@ -52655,7 +52655,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3389",
+      "source_location": "L3412",
       "weight": 1.0
     },
     {
@@ -52666,7 +52666,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3425",
+      "source_location": "L3448",
       "weight": 1.0
     },
     {
@@ -52677,7 +52677,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3433",
+      "source_location": "L3456",
       "weight": 1.0
     },
     {
@@ -52688,7 +52688,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3468",
+      "source_location": "L3491",
       "weight": 1.0
     },
     {
@@ -52699,7 +52699,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3540",
+      "source_location": "L3563",
       "weight": 1.0
     },
     {
@@ -52710,7 +52710,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3698",
+      "source_location": "L3721",
       "weight": 1.0
     },
     {
@@ -52721,7 +52721,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3779",
+      "source_location": "L3802",
       "weight": 1.0
     },
     {
@@ -52732,7 +52732,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3791",
+      "source_location": "L3814",
       "weight": 1.0
     },
     {
@@ -52743,7 +52743,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3809",
+      "source_location": "L3832",
       "weight": 1.0
     },
     {
@@ -52754,7 +52754,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3824",
+      "source_location": "L3847",
       "weight": 1.0
     },
     {
@@ -52765,7 +52765,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3836",
+      "source_location": "L3859",
       "weight": 1.0
     },
     {
@@ -52776,7 +52776,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3857",
+      "source_location": "L3880",
       "weight": 1.0
     },
     {
@@ -52787,7 +52787,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3885",
+      "source_location": "L3908",
       "weight": 1.0
     },
     {
@@ -52798,7 +52798,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3941",
+      "source_location": "L3964",
       "weight": 1.0
     },
     {
@@ -52809,7 +52809,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3980",
+      "source_location": "L4003",
       "weight": 1.0
     },
     {
@@ -52820,7 +52820,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4066",
+      "source_location": "L4089",
       "weight": 1.0
     },
     {
@@ -52831,7 +52831,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4164",
+      "source_location": "L4187",
       "weight": 1.0
     },
     {
@@ -52842,7 +52842,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4199",
+      "source_location": "L4222",
       "weight": 1.0
     },
     {
@@ -52853,7 +52853,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4253",
+      "source_location": "L4276",
       "weight": 1.0
     },
     {
@@ -52864,7 +52864,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4299",
+      "source_location": "L4322",
       "weight": 1.0
     },
     {
@@ -52875,7 +52875,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4380",
+      "source_location": "L4403",
       "weight": 1.0
     },
     {
@@ -52886,7 +52886,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4478",
+      "source_location": "L4501",
       "weight": 1.0
     },
     {
@@ -52897,7 +52897,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4581",
+      "source_location": "L4604",
       "weight": 1.0
     },
     {
@@ -52908,7 +52908,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4634",
+      "source_location": "L4657",
       "weight": 1.0
     },
     {
@@ -52919,7 +52919,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4741",
+      "source_location": "L4764",
       "weight": 1.0
     },
     {
@@ -52930,7 +52930,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4815",
+      "source_location": "L4838",
       "weight": 1.0
     },
     {
@@ -52941,7 +52941,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4892",
+      "source_location": "L4915",
       "weight": 1.0
     },
     {
@@ -52952,7 +52952,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L4960",
+      "source_location": "L4983",
       "weight": 1.0
     },
     {
@@ -52963,7 +52963,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5058",
+      "source_location": "L5081",
       "weight": 1.0
     },
     {
@@ -52974,7 +52974,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5104",
+      "source_location": "L5127",
       "weight": 1.0
     },
     {
@@ -52985,7 +52985,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5156",
+      "source_location": "L5179",
       "weight": 1.0
     },
     {
@@ -52996,7 +52996,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5211",
+      "source_location": "L5234",
       "weight": 1.0
     },
     {
@@ -53007,7 +53007,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5307",
+      "source_location": "L5330",
       "weight": 1.0
     },
     {
@@ -53018,7 +53018,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5403",
+      "source_location": "L5426",
       "weight": 1.0
     },
     {
@@ -53029,7 +53029,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5476",
+      "source_location": "L5499",
       "weight": 1.0
     },
     {
@@ -53040,7 +53040,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5539",
+      "source_location": "L5562",
       "weight": 1.0
     },
     {
@@ -53051,7 +53051,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5627",
+      "source_location": "L5650",
       "weight": 1.0
     },
     {
@@ -53062,7 +53062,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5697",
+      "source_location": "L5720",
       "weight": 1.0
     },
     {
@@ -53073,7 +53073,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5799",
+      "source_location": "L5822",
       "weight": 1.0
     },
     {
@@ -53084,7 +53084,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L5947",
+      "source_location": "L5970",
       "weight": 1.0
     },
     {
@@ -53095,7 +53095,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6012",
+      "source_location": "L6035",
       "weight": 1.0
     },
     {
@@ -53106,7 +53106,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6047",
+      "source_location": "L6070",
       "weight": 1.0
     },
     {
@@ -53117,7 +53117,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6075",
+      "source_location": "L6098",
       "weight": 1.0
     },
     {
@@ -53128,7 +53128,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6145",
+      "source_location": "L6168",
       "weight": 1.0
     },
     {
@@ -53139,7 +53139,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6213",
+      "source_location": "L6236",
       "weight": 1.0
     },
     {
@@ -53150,7 +53150,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6279",
+      "source_location": "L6302",
       "weight": 1.0
     },
     {
@@ -53161,7 +53161,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6307",
+      "source_location": "L6330",
       "weight": 1.0
     },
     {
@@ -53172,7 +53172,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6353",
+      "source_location": "L6376",
       "weight": 1.0
     },
     {
@@ -53183,7 +53183,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6384",
+      "source_location": "L6407",
       "weight": 1.0
     },
     {
@@ -53194,7 +53194,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6423",
+      "source_location": "L6446",
       "weight": 1.0
     },
     {
@@ -53205,7 +53205,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6482",
+      "source_location": "L6505",
       "weight": 1.0
     },
     {
@@ -53216,7 +53216,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6531",
+      "source_location": "L6554",
       "weight": 1.0
     },
     {
@@ -53227,7 +53227,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6584",
+      "source_location": "L6607",
       "weight": 1.0
     },
     {
@@ -53238,7 +53238,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6611",
+      "source_location": "L6634",
       "weight": 1.0
     },
     {
@@ -53249,7 +53249,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6640",
+      "source_location": "L6663",
       "weight": 1.0
     },
     {
@@ -53260,7 +53260,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6687",
+      "source_location": "L6710",
       "weight": 1.0
     },
     {
@@ -53271,7 +53271,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6754",
+      "source_location": "L6777",
       "weight": 1.0
     },
     {
@@ -53282,7 +53282,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6806",
+      "source_location": "L6829",
       "weight": 1.0
     },
     {
@@ -53293,7 +53293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6909",
+      "source_location": "L6932",
       "weight": 1.0
     },
     {
@@ -53304,7 +53304,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L6941",
+      "source_location": "L6964",
       "weight": 1.0
     },
     {
@@ -53315,7 +53315,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7007",
+      "source_location": "L7030",
       "weight": 1.0
     },
     {
@@ -53326,7 +53326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7063",
+      "source_location": "L7086",
       "weight": 1.0
     },
     {
@@ -53337,7 +53337,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7106",
+      "source_location": "L7129",
       "weight": 1.0
     },
     {
@@ -53348,7 +53348,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7165",
+      "source_location": "L7188",
       "weight": 1.0
     },
     {
@@ -53359,7 +53359,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7185",
+      "source_location": "L7208",
       "weight": 1.0
     },
     {
@@ -53370,7 +53370,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7208",
+      "source_location": "L7231",
       "weight": 1.0
     },
     {
@@ -53381,7 +53381,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7236",
+      "source_location": "L7259",
       "weight": 1.0
     },
     {
@@ -53392,7 +53392,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7305",
+      "source_location": "L7328",
       "weight": 1.0
     },
     {
@@ -53403,7 +53403,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7359",
+      "source_location": "L7382",
       "weight": 1.0
     },
     {
@@ -53414,7 +53414,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7410",
+      "source_location": "L7433",
       "weight": 1.0
     },
     {
@@ -53425,7 +53425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7463",
+      "source_location": "L7486",
       "weight": 1.0
     },
     {
@@ -53436,7 +53436,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7521",
+      "source_location": "L7544",
       "weight": 1.0
     },
     {
@@ -53447,7 +53447,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7600",
+      "source_location": "L7623",
       "weight": 1.0
     },
     {
@@ -53458,7 +53458,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7659",
+      "source_location": "L7682",
       "weight": 1.0
     },
     {
@@ -53469,7 +53469,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7697",
+      "source_location": "L7720",
       "weight": 1.0
     },
     {
@@ -53480,7 +53480,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7721",
+      "source_location": "L7744",
       "weight": 1.0
     },
     {
@@ -53491,7 +53491,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7816",
+      "source_location": "L7839",
       "weight": 1.0
     },
     {
@@ -53502,7 +53502,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7862",
+      "source_location": "L7885",
       "weight": 1.0
     },
     {
@@ -53513,7 +53513,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7927",
+      "source_location": "L7950",
       "weight": 1.0
     },
     {
@@ -53524,7 +53524,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L7958",
+      "source_location": "L7981",
       "weight": 1.0
     },
     {
@@ -53535,7 +53535,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8033",
+      "source_location": "L8056",
       "weight": 1.0
     },
     {
@@ -53546,7 +53546,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8092",
+      "source_location": "L8115",
       "weight": 1.0
     },
     {
@@ -53557,7 +53557,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8120",
+      "source_location": "L8143",
       "weight": 1.0
     },
     {
@@ -53568,7 +53568,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8170",
+      "source_location": "L8193",
       "weight": 1.0
     },
     {
@@ -53579,7 +53579,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8241",
+      "source_location": "L8264",
       "weight": 1.0
     },
     {
@@ -53590,7 +53590,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L8282",
+      "source_location": "L8305",
       "weight": 1.0
     },
     {
@@ -63567,7 +63567,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L148",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -63578,18 +63578,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L157",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
       "source": "src_pages_computepage_index",
-      "target": "src_pages_computepage_index_iconbutton",
+      "target": "src_pages_computepage_index_tieractionbutton",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L163",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -63600,7 +63600,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L168",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
@@ -63622,7 +63622,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L193",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -63633,7 +63633,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L202",
+      "source_location": "L204",
       "weight": 1.0
     },
     {
@@ -63644,7 +63644,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L211",
+      "source_location": "L213",
       "weight": 1.0
     },
     {
@@ -63655,7 +63655,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L220",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -63666,7 +63666,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L237",
+      "source_location": "L239",
       "weight": 1.0
     },
     {
@@ -63677,7 +63677,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L245",
+      "source_location": "L247",
       "weight": 1.0
     },
     {
@@ -63688,7 +63688,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L252",
+      "source_location": "L254",
       "weight": 1.0
     },
     {
@@ -63710,7 +63710,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L260",
+      "source_location": "L262",
       "weight": 1.0
     },
     {
@@ -63721,7 +63721,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L271",
+      "source_location": "L273",
       "weight": 1.0
     },
     {
@@ -63732,7 +63732,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L286",
+      "source_location": "L288",
       "weight": 1.0
     },
     {
@@ -63743,7 +63743,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L303",
+      "source_location": "L305",
       "weight": 1.0
     },
     {
@@ -63776,7 +63776,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L461",
+      "source_location": "L463",
       "weight": 1.0
     },
     {
@@ -63798,7 +63798,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L493",
+      "source_location": "L495",
       "weight": 1.0
     },
     {
@@ -63809,7 +63809,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/ComputePage/index.jsx",
-      "source_location": "L495",
+      "source_location": "L497",
       "weight": 1.0
     },
     {
@@ -66863,5 +66863,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "7b9d1e7db85dba8aea0af98f70ba390d4dae3dba"
+  "built_at_commit": "f415a3eebea50ea2085e5c6a65e77cda8bb2c93b"
 }

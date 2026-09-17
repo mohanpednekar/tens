@@ -75,6 +75,29 @@ like this sentence, so it silently went stale. Rewritten to state the new pause-
 under-funded) — only exercised indirectly as a side effect of `isBoosterPurchaseAvailable`. Added a
 dedicated case distinguishing "not enough banked yet" from "entity full."
 
+A second adversarial round (after round 1's two gaps were fixed) caught one more issue: five spots
+(`engine.js`'s `getComputeEntityFieldRoom` comment, `InfoPage`, `CHANGELOG.md`,
+`docs/ECONOMY_REFERENCE.md`, this file's own round-1 paragraph above) described room under
+`COMPUTE_ENTITY_CAP` as freeing up via "a Compute Boost activation/forfeit" — but `forfeitComputeBoost`
+never touches the entity field at all (confirmed by its own pre-existing test), and
+`reclaimComputeBoost` actually *refunds* a token back onto the field, moving toward the cap rather
+than away from it. Only `activateComputeBoost`/`stackComputeBoost` spend a token and free room.
+Corrected to "activation/stack" in all five spots — wording-only, no behavior change.
+
+**Follow-up round 2.** A third report — "the booster buttons should look like factory tier buttons,
+not clumped" — asked for more than alignment: `ComputePage`'s pre-auto-merge Merge/Auto-merge pair
+were small, icon-only squares (`IconButton`, `width: 1.9em`) that (even after round 1's
+`justify-content: flex-end` fix) still read as visually lightweight next to `MainPage`'s own tier
+rows, whose Buy/Upgrade pair are two full `width: 100%` buttons splitting the row via a CSS grid's
+equal column halves. Replaced `IconButton` with `TierActionButton` (`flex: 1 1 0; width: 100%`) so
+the Merge/Auto-merge pair now fills the entire row as two equal-width buttons, the same visual
+weight and proportions as `MainPage`'s `UpgradeButton`/`BuyButton`; each also gained a short visible
+label ("⬆ Merge"/"🤖 Auto") alongside its icon, matching that same convention, rather than a bare
+icon in a narrow square. `aria-label`s were left unchanged, so no test needed updating (accessible
+name comes from `aria-label`, not the visible `ButtonContent` text). The post-unlock
+`ReserveSlotsRow` branch (the 8 reserve slots themselves, once auto-merge is unlocked for that
+boundary) already filled the row the same way via its own `flex: 1 1 auto` and was left untouched.
+
 ### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
 
 The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the

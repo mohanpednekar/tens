@@ -140,14 +140,12 @@ const NormalSlot = styled.span`
 // Row 2: pre-unlock, an instant Merge button + an Unlock Auto-merge button; post-unlock, the 8
 // reserve slots themselves, clickable as the manual-start trigger — "2nd row has merge button and
 // unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
-// justify-content: flex-end lines the pre-unlock buttons up with row 1's own right-aligned
-// SlotsRow above — without it they default to flex-start and clump at the left edge with the
-// row's full width sitting empty to their right (the post-unlock ReserveSlotsRow branch already
-// stretches itself via flex: 1 1 auto and right-aligns its own slots internally, so this only
-// visibly affects the pre-unlock Merge/Auto-merge button pair).
+// The post-unlock ReserveSlotsRow branch stretches itself via flex: 1 1 auto and right-aligns its
+// own slots internally, filling the row exactly like MainPage's own tier-row Buy/Upgrade pair;
+// justify-content: flex-end keeps that branch's slots pinned right regardless.
 const TierMergeRow = styled.div`
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: flex-end;
   flex-wrap: nowrap;
   gap: ${props => props.theme.space.xs};
@@ -160,9 +158,13 @@ const CompactButton = styled(Button)`
   flex: 0 0 auto;
 `
 
-const IconButton = styled(CompactButton)`
-  width: 1.9em;
-  padding: 0.3em;
+// Row 2's pre-unlock Merge/Auto-merge pair — each fills exactly half the row (flex: 1 1 0,
+// width: 100%), the same "two equal-width buttons split the row" look MainPage's own tier rows use
+// for their Upgrade/Buy pair, rather than small icon-only squares hugging one edge with the rest of
+// the row left empty.
+const TierActionButton = styled(CompactButton)`
+  flex: 1 1 0;
+  width: 100%;
 `
 
 const ReserveSlotsRow = styled.button`
@@ -773,7 +775,7 @@ const ComputePage = ({ game }) => {
                         </ReserveSlotsRow>
                       ) : (
                         <>
-                          <IconButton
+                          <TierActionButton
                             aria-label={`merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
                             disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0)}
                             onClick={() => actions[row.mergeAction]()}
@@ -785,9 +787,9 @@ const ComputePage = ({ game }) => {
                             type="button"
                             variant="prestige"
                           >
-                            <ButtonContent>⬆</ButtonContent>
-                          </IconButton>
-                          <IconButton
+                            <ButtonContent>⬆ Merge</ButtonContent>
+                          </TierActionButton>
+                          <TierActionButton
                             aria-label={row.autoAriaLabel}
                             disabled={!canEnableAuto}
                             onClick={() => actions[row.enableAutoAction]()}
@@ -795,8 +797,8 @@ const ComputePage = ({ game }) => {
                             type="button"
                             variant="info"
                           >
-                            <ButtonContent>🤖</ButtonContent>
-                          </IconButton>
+                            <ButtonContent>🤖 Auto</ButtonContent>
+                          </TierActionButton>
                         </>
                       )
                     )}

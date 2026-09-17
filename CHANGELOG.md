@@ -58,10 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   a purchase (manual or auto-buy) now pauses at the cap instead of growing the entity unbounded,
   resuming automatically once it's spent back down (a merge, or a Compute Boost activation/stack).
   The Boosters (`ComputePage`) tier rows' pre-auto-merge Merge/Auto-merge buttons no longer clump at
-  the row's left edge — they now line up with the slot row above them instead of leaving the rest of
-  the row's width empty. Each tier row's symbol/label also now starts at the same horizontal offset
-  as every other tier — a plain-text symbol (⬡, ▦) used to render narrower than a full-color emoji
-  one, shifting that row's label a few pixels left of the rest.
+  the row's left edge — they're now two equal-width buttons that fill the row, matching the Factory
+  tier rows' own Upgrade/Buy button pair, instead of small icon-only squares hugging one edge with
+  the rest of the row left empty. Each tier row's symbol/label also now starts at the same
+  horizontal offset as every other tier — a plain-text symbol (⬡, ▦) used to render narrower than a
+  full-color emoji one, shifting that row's label a few pixels left of the rest.
 - **The fill-based multiplier/Data Lake overflow-rate bar no longer shows an empty bar with an
   orphaned "0%" label** — it now renders nothing at all whenever the reading it displays is exactly
   0 (only reachable via a maxed Data Lake with no open disk slot left).
