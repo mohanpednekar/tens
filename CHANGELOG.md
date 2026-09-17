@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - **Buying a Data Lake Booster no longer mints a compute-ladder entity past its own 10-slot cap** —
   a purchase (manual or auto-buy) now pauses at the cap instead of growing the entity unbounded,
-  resuming automatically once it's spent back down (a merge, a Compute Boost activation/forfeit).
+  resuming automatically once it's spent back down (a merge, or a Compute Boost activation/stack).
   The Boosters (`ComputePage`) tier rows' pre-auto-merge Merge/Auto-merge buttons no longer clump at
   the row's left edge — they now line up with the slot row above them instead of leaving the rest of
   the row's width empty. Each tier row's symbol/label also now starts at the same horizontal offset

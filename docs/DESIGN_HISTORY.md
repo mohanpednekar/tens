@@ -22,7 +22,8 @@ superseding the earlier acceptance. `buyBooster` now caps its own `quantity` (pe
 bulk auto-buy) to whatever room remains under `COMPUTE_ENTITY_CAP` on the target entity, and is a
 same-reference no-op once that entity is already full — pausing purchases at the limit rather than
 minting past it, and resuming automatically the moment the entity is spent back down (a merge, a
-Compute Boost activation/forfeit). `isBoosterPurchaseAvailable` folds the same room check in so a
+Compute Boost activation/stack — forfeit doesn't touch the field, and reclaim moves the other
+way, refunding a token back onto it). `isBoosterPurchaseAvailable` folds the same room check in so a
 capped-out lake's Buy button disables itself instead of reading falsely affordable; a new
 `isBoosterEntityAtCap` mirror lets `DataLakePanel` show "`<Booster>` is already at the max of 10 —
 spend or merge it down first" instead of the previous, now-misleading "Needs `<cost>` banked" whenever

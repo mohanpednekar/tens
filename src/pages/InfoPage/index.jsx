@@ -383,7 +383,7 @@ const InfoPage = () => {
             Every compute entity caps at {COMPUTE_ENTITY_CAP} held — including Data Lake Booster
             purchases (any of the ten tiers, not just Cores), which pause once that tier's held
             count reaches the cap and resume once it's spent back down (a merge, or a Compute
-            Boost activation/forfeit).
+            Boost activation/stack).
           </li>
         </ul>
 

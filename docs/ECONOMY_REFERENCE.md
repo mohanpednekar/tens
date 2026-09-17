@@ -1021,7 +1021,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    reference no-op regardless of how much is banked — purchasing PAUSES at the cap instead of
    minting past it (see `docs/DESIGN_HISTORY.md` for the earlier, reverted "Data-Lake-limited, not
    inventory-capped" behavior this replaces); it resumes automatically once the entity is spent back
-   down (a merge, a Compute Boost activation/forfeit). `isBoosterEntityAtCap` is the UI-facing mirror
+   down (a merge, a Compute Boost activation/stack — forfeit doesn't touch the field, and reclaim
+   moves the other way, refunding a token back onto it). `isBoosterEntityAtCap` is the UI-facing mirror
    of this gate, letting `DataLakePanel`'s disabled Buy button say "entity full" instead of "not
    enough banked" when that's the actual reason. `toggleDataLakeAutoBuy(tierIndex)` flips a per-lake
    `autoBuyEnabled` flag (freely

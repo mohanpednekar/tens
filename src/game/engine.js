@@ -4565,7 +4565,8 @@ export const getBoosterPurchaseCost = tierIndex => state => {
 // Boosters pause once their own compute-ladder entity is already at COMPUTE_ENTITY_CAP (10) — the
 // same slot cap every other compute-ladder field respects (see the merge functions' own
 // COMPUTE_ENTITY_CAP gates) — freeing back up only once that entity is spent back down (a merge,
-// a Compute Boost activation/forfeit). An earlier version let buyBooster mint past this cap
+// a Compute Boost activation or stack — forfeit/reclaim don't; forfeit never touches the field
+// and reclaim refunds a token back onto it). An earlier version let buyBooster mint past this cap
 // entirely, uncapped by anything but the lake's own escalating cost — see docs/DESIGN_HISTORY.md.
 // Returns 0 for an out-of-range tierIndex (no matching field), same as "no room."
 const getComputeEntityFieldRoom = (state, tierIndex) => {
