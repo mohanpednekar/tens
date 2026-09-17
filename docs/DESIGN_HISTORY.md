@@ -8504,7 +8504,8 @@ refund, its ceiling clamp, and a no-op check for in-progress passes on the curre
 ### `PURCHASE_MILESTONE_MULTIPLIER_BASE` raised 1.1 → 1.25; a 2-vs-3-Overclock-claim "stretch/easy" retune was explored and dropped
 
 The maintainer felt a fresh run to first Prestige was too slow at the (still-Unreleased, never-
-shipped) `1.1` value the entry above landed on. `simulate-run-times` sweeps confirmed the raw
+shipped) `1.1` value from commit `219ddb3` — that commit's own message covers the change (`layers.js`
+production doubling → ×1.1), but it never got its own `DESIGN_HISTORY.md` entry. `simulate-run-times` sweeps confirmed the raw
 sensitivity: `1.1` → 2d7h to first Prestige (PP 0, career), `1.15` → 1d17h, `1.2` → 1d8h, `1.25` →
 1d1h38m, `1.3` → 21h12m, `1.5` → 11h33m. `1.5` (~4.8x faster) was judged too large a swing; `1.25`
 (~2.2x faster) shipped instead.

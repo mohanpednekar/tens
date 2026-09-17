@@ -46542,6 +46542,18 @@
     },
     {
       "source": "src_pages_mainpage_index",
+      "target": "src_game_layers_purchase_milestone_multiplier_base",
+      "relation": "imports",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "import",
+      "source_file": "src/pages/MainPage/index.jsx",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "src_pages_mainpage_index",
       "target": "src_game_layers_resource_symbol",
       "relation": "imports",
       "_origin": "ast",
@@ -66886,5 +66898,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "012929fd67ffb21dc67e5308f23b35ce3e54113c"
+  "built_at_commit": "d41ac41bfc3a4c026a5c75f293203a544b3fdf61"
 }
