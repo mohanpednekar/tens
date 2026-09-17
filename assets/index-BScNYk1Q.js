@@ -1118,6 +1118,11 @@ Error generating stack: `+e.message+`
     border-left-color: ${e=>e.$accent};
   }
 
+  &:focus-visible {
+    outline: 2px solid ${e=>e.$accent};
+    outline-offset: 2px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     animation: none;
   }
