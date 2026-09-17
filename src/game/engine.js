@@ -4562,9 +4562,27 @@ export const getBoosterPurchaseCost = tierIndex => state => {
   return Math.min(rawCost, getDataLakeCapacity(state, tierIndex))
 }
 
+// Boosters pause once their own compute-ladder entity is already at COMPUTE_ENTITY_CAP (10) — the
+// same slot cap every other compute-ladder field respects (see the merge functions' own
+// COMPUTE_ENTITY_CAP gates) — freeing back up only once that entity is spent back down (a merge,
+// a Compute Boost activation or stack — forfeit/reclaim don't; forfeit never touches the field
+// and reclaim refunds a token back onto it). An earlier version let buyBooster mint past this cap
+// entirely, uncapped by anything but the lake's own escalating cost — see docs/DESIGN_HISTORY.md.
+// Returns 0 for an out-of-range tierIndex (no matching field), same as "no room."
+const getComputeEntityFieldRoom = (state, tierIndex) => {
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  if (!field) return 0
+  return Math.max(0, COMPUTE_ENTITY_CAP - (state.intro?.[field] ?? 0))
+}
+
 export const isBoosterPurchaseAvailable = (state, tierIndex) =>
   isDataLakeBoosterUnlocked(state, tierIndex) &&
+  getComputeEntityFieldRoom(state, tierIndex) > 0 &&
   getDataLakeDepositedUnits(tierIndex)(state) >= getBoosterPurchaseCost(tierIndex)(state)
+
+// UI-facing mirror of getComputeEntityFieldRoom's own gate, so a disabled Buy button can tell
+// "entity full, spend it down first" apart from "not enough banked yet" (DataLakePanel).
+export const isBoosterEntityAtCap = (state, tierIndex) => getComputeEntityFieldRoom(state, tierIndex) <= 0
 
 // Optimized O(1) mathematical calculation for bulk Booster purchases
 const getBoosterBulkPurchase = (deposited, capacity, currentPurchased, isMaxed) => {
@@ -4601,13 +4619,20 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake || !isDataLakeBoosterUnlocked(state, tierIndex)) return state
 
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  if (!field) return state
+  // Never mint past COMPUTE_ENTITY_CAP (10) — see getComputeEntityFieldRoom's own doc comment —
+  // so a purchase pauses at the limit instead of growing the entity unbounded.
+  const roomUnderEntityCap = getComputeEntityFieldRoom(state, tierIndex)
+  if (roomUnderEntityCap <= 0) return state
+
   const currentPurchased = lake.purchased ?? 0
   const capacity = getDataLakeCapacity(state, tierIndex)
   const isMaxed = isDataLakeCapacityMaxed(state, tierIndex)
 
   const affordableMath = getBoosterBulkPurchase(lake.depositedUnits ?? 0, capacity, currentPurchased, isMaxed)
 
-  const buyQuantity = Math.min(quantity, affordableMath.quantity)
+  const buyQuantity = Math.min(quantity, affordableMath.quantity, roomUnderEntityCap)
   if (buyQuantity <= 0) return state
 
   // Re-calculate cost for exact quantity
@@ -4622,9 +4647,6 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
   } else {
     actualCost = buyQuantity * currentPurchased + (buyQuantity * (buyQuantity + 1)) / 2;
   }
-
-  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
-  if (!field) return state
 
   const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, buyQuantity)
 

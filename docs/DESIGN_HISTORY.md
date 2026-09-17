@@ -1,5 +1,103 @@
 # Design history & rationale
 
+### Boosters UI revamp: buyBooster now pauses at COMPUTE_ENTITY_CAP; tier row buttons no longer clump left — 2026-09-17
+
+Two reports against the Boosters screen (`ComputePage`) and its Data Lake purchase path
+(`DataLakePanel`/`buyBooster`):
+
+**Booster purchases exceeding the entity cap, with no pause.** `buyBooster` had never capped the
+compute-ladder entity it grants against `COMPUTE_ENTITY_CAP` (10) — only the Data Lake's own
+escalating triangular cost (`getBoosterPurchaseCost`) limited how many could be bought per call, and
+`tickDataLakeAutoBuy`'s bulk auto-buy (`quantity = Number.MAX_SAFE_INTEGER`) would happily keep
+minting past 10 for as long as the lake could afford it. This was actually a **deliberate,
+previously-tested** choice for tier 1 specifically — see "Removing Claim Core: superseded by Data
+Lake Boosters" above ("Boosters can push `computeCores` past `COMPUTE_ENTITY_CAP` while a
+Memory-flush Core could not") and `engine.test.js`'s old
+`'buyBooster can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped'` test —
+but the same unbounded-growth code path applied uniformly to all ten Booster tiers, contradicting
+`docs/ECONOMY_REFERENCE.md`'s own claim that `computeNodes` through `computeMegacomputers` stay
+"capped at `COMPUTE_ENTITY_CAP` (10)." Asked directly to fix "boosters getting generated beyond the
+limit and not pausing at the limit," the maintainer's framing treats the old allowance as the bug,
+superseding the earlier acceptance. `buyBooster` now caps its own `quantity` (per call and across a
+bulk auto-buy) to whatever room remains under `COMPUTE_ENTITY_CAP` on the target entity, and is a
+same-reference no-op once that entity is already full — pausing purchases at the limit rather than
+minting past it, and resuming automatically the moment the entity is spent back down (a merge, a
+Compute Boost activation/stack — forfeit doesn't touch the field, and reclaim moves the other
+way, refunding a token back onto it). `isBoosterPurchaseAvailable` folds the same room check in so a
+capped-out lake's Buy button disables itself instead of reading falsely affordable; a new
+`isBoosterEntityAtCap` mirror lets `DataLakePanel` show "`<Booster>` is already at the max of 10 —
+spend or merge it down first" instead of the previous, now-misleading "Needs `<cost>` banked" whenever
+the real blocker is the entity cap rather than insufficient deposits. **If this is ever revisited,
+don't reintroduce a per-tier exemption from the cap** — the whole point of the fix was that every
+tier should behave the same way, matching what the docs already claimed.
+
+**Tier row buttons clumped at the left edge.** Each `ComputePage` tier block's row 2 — before that
+boundary's auto-merge unlocks, an instant ⬆ Merge button plus a 🤖 Unlock Auto-merge button — had no
+`justify-content` on its `TierMergeRow` container, defaulting to `flex-start`. With both buttons
+sized to their own content (`flex: 0 0 auto`, inherited via `CompactButton`/`IconButton`), they sat
+flush against the left edge with the row's full width empty to their right — visibly inconsistent
+with row 1 above, whose slot row (`SlotsRow`) is right-aligned, and with the SAME row's own
+post-auto-merge-unlock rendering (`ReserveSlotsRow`), which already stretches itself
+(`flex: 1 1 auto`) and right-aligns its own reserve slots internally. Fixed by adding
+`justify-content: flex-end` to `TierMergeRow`, lining the pre-unlock button pair up with the row
+above instead of leaving it stranded on the left. (The Boost preset row's own `> button { flex: 1 1
+auto }` rule is separately overridden by `CompactButton`'s own higher-specificity `flex: 0 0 auto` —
+a latent, lower-priority issue left as-is here since that row is already `justify-content: center`
+and reads correctly, just not edge-to-edge; revisit only if a future pass wants those three buttons
+to visibly stretch full-width too.)
+
+Verification: `yarn test` (1797/1797 — one existing test rewritten to assert the new paused-at-cap
+behavior instead of the old exceeds-the-cap behavior, plus one new test covering resumption once
+room reopens under the cap); manual Playwright screenshots of the Boosters screen before/after
+confirming the button alignment, and of a capped-out KB Data Lake confirming the disabled Buy
+button's new title and that a forced click is a genuine no-op.
+
+**Follow-up round 1 (same day).** A separate report — "alignment of symbols and labels should be
+uniform across booster tiers" — turned out NOT to be about the slot columns (Playwright bounding-
+rect measurements confirmed the 10 normal slots already land at the exact same left/right pixel
+across every tier row regardless of label length: `SlotsRow`'s `flex: 1 1 auto` + `justify-content:
+flex-end` always right-packs the same fixed-width content against the row's own right edge,
+independent of how much slack space sits to its left — the visual impression of raggedness from a
+quick look was misleading). The real, measurable inconsistency was `TierSymbol` having no fixed
+width: plain-text glyph symbols (⬡ for Cores, ▦ for Grids) render ~6px narrower than the full-color
+emoji used for every other tier (🔗, 🧩, 🕸️, 🧵, ☁️, 🏢, 🖥️, 👑), so those two tiers' labels started
+a few pixels further left than the rest. Fixed by giving `TierSymbol` a fixed `width: 1.4em` and
+`text-align: center` — confirmed via measured `getBoundingClientRect().left` on every tier's label
+now landing at the identical x-coordinate.
+
+An adversarial review of the round-1 PR (`code-reviewer` subagent) also caught two gaps before this
+follow-up: (1) `InfoPage`'s own Guide copy under "Cores" still told players Boosters could push a
+tier past `COMPUTE_ENTITY_CAP` ("Data-Lake-limited rather than inventory-capped") — directly
+contradicting the just-shipped fix; `InfoPage`'s architectural contract (numbers/formulas can't
+drift because they're read from `engine.js`/`layers.js` constants) doesn't cover hand-written prose
+like this sentence, so it silently went stale. Rewritten to state the new pause-and-resume behavior.
+(2) The new `isBoosterEntityAtCap` predicate had no direct test of its own contract (cap vs. merely
+under-funded) — only exercised indirectly as a side effect of `isBoosterPurchaseAvailable`. Added a
+dedicated case distinguishing "not enough banked yet" from "entity full."
+
+A second adversarial round (after round 1's two gaps were fixed) caught one more issue: five spots
+(`engine.js`'s `getComputeEntityFieldRoom` comment, `InfoPage`, `CHANGELOG.md`,
+`docs/ECONOMY_REFERENCE.md`, this file's own round-1 paragraph above) described room under
+`COMPUTE_ENTITY_CAP` as freeing up via "a Compute Boost activation/forfeit" — but `forfeitComputeBoost`
+never touches the entity field at all (confirmed by its own pre-existing test), and
+`reclaimComputeBoost` actually *refunds* a token back onto the field, moving toward the cap rather
+than away from it. Only `activateComputeBoost`/`stackComputeBoost` spend a token and free room.
+Corrected to "activation/stack" in all five spots — wording-only, no behavior change.
+
+**Follow-up round 2.** A third report — "the booster buttons should look like factory tier buttons,
+not clumped" — asked for more than alignment: `ComputePage`'s pre-auto-merge Merge/Auto-merge pair
+were small, icon-only squares (`IconButton`, `width: 1.9em`) that (even after round 1's
+`justify-content: flex-end` fix) still read as visually lightweight next to `MainPage`'s own tier
+rows, whose Buy/Upgrade pair are two full `width: 100%` buttons splitting the row via a CSS grid's
+equal column halves. Replaced `IconButton` with `TierActionButton` (`flex: 1 1 0; width: 100%`) so
+the Merge/Auto-merge pair now fills the entire row as two equal-width buttons, the same visual
+weight and proportions as `MainPage`'s `UpgradeButton`/`BuyButton`; each also gained a short visible
+label ("⬆ Merge"/"🤖 Auto") alongside its icon, matching that same convention, rather than a bare
+icon in a narrow square. `aria-label`s were left unchanged, so no test needed updating (accessible
+name comes from `aria-label`, not the visible `ButtonContent` text). The post-unlock
+`ReserveSlotsRow` branch (the 8 reserve slots themselves, once auto-merge is unlocked for that
+boundary) already filled the row the same way via its own `flex: 1 1 auto` and was left untouched.
+
 ### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
 
 The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the

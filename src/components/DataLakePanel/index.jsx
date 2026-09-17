@@ -17,6 +17,7 @@ import {
   getDataLakeTier,
   getDataLakeTierLabel,
   getDataLakeUnitBits,
+  isBoosterEntityAtCap,
   isBoosterPurchaseAvailable,
   isDataLakeAutoBuyEnabled,
   isDataLakeBoosterUnlocked,
@@ -25,7 +26,7 @@ import {
   isDataLakeManualFillAvailable,
   isDataLakePoolReady,
 } from 'game/engine'
-import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
+import { COMPUTE_ENTITY_CAP, COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
 // Stacks multiple lake blocks (list mode — see getVisibleLakeTierIndexes below) with breathing
@@ -268,6 +269,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // alone.
         const poolReady = isDataLakePoolReady(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
+        // Purchases pause once the matching compute-ladder entity is already at its own
+        // COMPUTE_ENTITY_CAP — distinct from simply not having enough banked yet, so the disabled
+        // Buy button's own title can say which one it actually is (see isBoosterPurchaseAvailable's
+        // own doc comment in engine.js).
+        const entityAtCap = !canBuy && isBoosterEntityAtCap(state, tierIndex)
         const autoBuyEnabled = isDataLakeAutoBuyEnabled(state, tierIndex)
         // Before this pool is entirely complete, the lake fills MANUALLY only, capped at just
         // enough for its own next Booster — tickPoolBufferFill's automatic overflow doesn't start
@@ -430,7 +436,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
                   disabled={!canBuy}
                   onClick={() => actions.buyBooster(tierIndex)}
-                  title={canBuy ? `Buy 1 ${boosterLabel} for ${nextCostSize}` : `Needs ${nextCostSize} banked`}
+                  title={
+                    canBuy
+                      ? `Buy 1 ${boosterLabel} for ${nextCostSize}`
+                      : entityAtCap
+                        ? `${boosterLabel} is already at the max of ${COMPUTE_ENTITY_CAP} — spend or merge it down first`
+                        : `Needs ${nextCostSize} banked`
+                  }
                   type="button"
                   variant={canBuy ? 'success' : 'neutral'}
                 >
@@ -443,13 +455,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               )}
               {unlocked && (
                 <ActionButton
-<<<<<<< HEAD
                   aria-label={`auto-buy for the ${label} Data Lake`}
                   aria-pressed={autoBuyEnabled}
-=======
-                  aria-pressed={autoBuyEnabled}
-                  aria-label={`auto-buy for the ${label} Data Lake`}
->>>>>>> main
                   onClick={() => actions.toggleDataLakeAutoBuy(tierIndex)}
                   title={
                     autoBuyEnabled
