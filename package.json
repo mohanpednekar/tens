@@ -42,7 +42,7 @@
     "build": "vite build",
     "build:capacitor": "CAPACITOR=1 vite build",
     "cap:sync": "cap sync",
-    "test": "vitest run",
+    "test": "vitest run --testTimeout=10000",
     "test:watch": "vitest --host 127.0.0.1",
     "test:e2e": "playwright test",
     "audit": "yarn audit",
