@@ -6274,10 +6274,10 @@ describe('getPurchaseMilestoneMultiplier', () => {
     expect(getPurchaseMilestoneMultiplier(1)).toBe(1)
   })
 
-  it('compounds x1.1 per completed level', () => {
-    expect(getPurchaseMilestoneMultiplier(2)).toBeCloseTo(1.1)
-    expect(getPurchaseMilestoneMultiplier(3)).toBeCloseTo(1.21)
-    expect(getPurchaseMilestoneMultiplier(4)).toBeCloseTo(1.331)
+  it('compounds x1.25 per completed level', () => {
+    expect(getPurchaseMilestoneMultiplier(2)).toBeCloseTo(1.25)
+    expect(getPurchaseMilestoneMultiplier(3)).toBeCloseTo(1.5625)
+    expect(getPurchaseMilestoneMultiplier(4)).toBeCloseTo(1.953125)
   })
 
   it('treats level 0 and negative levels as level 1', () => {
@@ -6285,20 +6285,20 @@ describe('getPurchaseMilestoneMultiplier', () => {
     expect(getPurchaseMilestoneMultiplier(-1)).toBe(1)
   })
 
-  it('uses a 10x jump instead of x1.1 for the 10th completed level (level 11)', () => {
-    // 9 regular completed levels (1.1^9) × 1 mega level (10x) — not the 1.1^10 a plain
+  it('uses a 10x jump instead of x1.25 for the 10th completed level (level 11)', () => {
+    // 9 regular completed levels (1.25^9) × 1 mega level (10x) — not the 1.25^10 a plain
     // compounding ladder would give. This "every 10th level" mega cadence stays fixed at 10 levels,
     // independent of the (now variable) purchase block size.
-    expect(getPurchaseMilestoneMultiplier(10)).toBeCloseTo(1.1 ** 9)
-    expect(getPurchaseMilestoneMultiplier(11)).toBeCloseTo(1.1 ** 9 * 10)
+    expect(getPurchaseMilestoneMultiplier(10)).toBeCloseTo(1.25 ** 9)
+    expect(getPurchaseMilestoneMultiplier(11)).toBeCloseTo(1.25 ** 9 * 10)
   })
 
-  it('resumes regular x1.1 levels after a mega level, on top of its 10x', () => {
-    expect(getPurchaseMilestoneMultiplier(12)).toBeCloseTo(1.1 ** 10 * 10)
+  it('resumes regular x1.25 levels after a mega level, on top of its 10x', () => {
+    expect(getPurchaseMilestoneMultiplier(12)).toBeCloseTo(1.25 ** 10 * 10)
   })
 
   it('applies a second 10x mega level at level 21', () => {
-    expect(getPurchaseMilestoneMultiplier(21)).toBeCloseTo(1.1 ** 18 * 10 ** 2)
+    expect(getPurchaseMilestoneMultiplier(21)).toBeCloseTo(1.25 ** 18 * 10 ** 2)
   })
 })
 
@@ -7540,11 +7540,12 @@ describe('tickGame', () => {
     expect(after.owned[tensTier.id]).toBe(8)
     expect(after.purchased[tensTier.id]).toBe(8)
     // Cost drains money to $1,000. tensTier's own 1s tickspeed exactly completes one period within
-    // this same 1s tick, so the freshly-bought 8 units already produce once — the completed-level
-    // multiplier only applies to deliveries AFTER the level completes, so this one lands at the
-    // base 8 Bytes, mirrored into Bits.
-    expect(after.resources[MONEY_ID]).toBe(1000 + 8 * BITS_PER_BYTE)
-    expect(after.resources[BYTES_ID]).toBe(8)
+    // this same 1s tick, so the freshly-bought 8 units already produce once — buying the full block
+    // completes level 1 -> 2 before this tick's production runs, so that delivery already reflects
+    // level 2's own milestone multiplier (getPurchaseMilestoneMultiplier(2) = 1.25): floor(8 * 1.25)
+    // = 10 Bytes, mirrored into Bits.
+    expect(after.resources[MONEY_ID]).toBe(1000 + 10 * BITS_PER_BYTE)
+    expect(after.resources[BYTES_ID]).toBe(10)
   })
 
   it('caps an autobuyer batch purchase at the remaining units in the current cost block', () => {
