@@ -4,7 +4,7 @@ import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -1747,7 +1747,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                 variant="plain"
                 disabled={!canAfford}
                 onClick={() => actions.buyTierQuantity(tier.id)}
-                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also multiplies it by ×1.1`}
+                title={`Buy ${tier.name} to increase your ${RESOURCE_SYMBOL(tier.producesResourceId)} production — completing every level (${purchaseBlockSize} purchases) also multiplies it by ×${PURCHASE_MILESTONE_MULTIPLIER_BASE}`}
                 $progress={donePercent}
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}

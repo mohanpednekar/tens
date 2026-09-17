@@ -8500,3 +8500,69 @@ matches the tree it describes.
 refund, its ceiling clamp, and a no-op check for in-progress passes on the currently-offered size).
 `AGENTS.md`, `src/pages/InfoPage/index.jsx`, `docs/ECONOMY_REFERENCE.md`, and
 `docs/COMPONENTS_REFERENCE.md` updated in the same commit; `graphify-out/` regenerated.
+
+### `PURCHASE_MILESTONE_MULTIPLIER_BASE` raised 1.1 → 1.25; a 2-vs-3-Overclock-claim "stretch/easy" retune was explored and dropped
+
+The maintainer felt a fresh run to first Prestige was too slow at the (still-Unreleased, never-
+shipped) `1.1` value from commit `219ddb3` — that commit's own message covers the change (`layers.js`
+production doubling → ×1.1), but it never got its own `DESIGN_HISTORY.md` entry. `simulate-run-times` sweeps confirmed the raw
+sensitivity: `1.1` → 2d7h to first Prestige (PP 0, career), `1.15` → 1d17h, `1.2` → 1d8h, `1.25` →
+1d1h38m, `1.3` → 21h12m, `1.5` → 11h33m. `1.5` (~4.8x faster) was judged too large a swing; `1.25`
+(~2.2x faster) shipped instead.
+
+**Overclock was checked before picking a value, not after — and an earlier read of the sim output
+was wrong.** The `simulate-run-times` career table's "Overclock Δ" column is the cumulative
+`overclockCount` (banked completed-levels summed across every claim), **not** a claim count — for
+this game's ideal-bot run at every multiplier tested (`1.1` through `1.5`) it read `24`, which was
+first misread as "24 separate Overclock claims." Re-instrumenting the simulator to log each
+`overclockGame` state transition showed the real number: **exactly 3 claims** every time (at
+completed-level thresholds 5, 8, 11 — summing to `5+8+11=24`, the "Δ" value), landing at ~19%/38%/86%
+of the run at `1.1` and ~27%/50%/88% at `1.25`. So "Overclock should feel needed but not mandated,
+discovered with room to enjoy it before Prestige" was already true structurally, independent of
+`PURCHASE_MILESTONE_MULTIPLIER_BASE` — no Overclock constant needed to change for that goal.
+
+**A follow-up ask — make skipping the 3rd (natural) claim a genuine "stretch" (viable, harder) rather
+than "basically mandatory," while keeping 3 claims "easy"** — was investigated and explicitly dropped
+after the numbers came back, per the maintainer's own "don't worry too much about the 2 overclock
+stretch" call. Findings, for the record (all probed at `1.25` via a temporary, reverted instrumentation
+patch to `run-simulation.mjs` that caps/delays Overclock claims — never committed):
+
+- **Naively capping at 2 claims (still claimed at the bare minimum thresholds 5, 8) blew up total run
+  time ~11x** (1d1h38m → 11d17h22m) — nowhere near a mild "stretch."
+- **Lowering `OVERCLOCK_REQUIREMENT_STEP` (3 → 2 or 1) to soften the spacing between claims changed
+  the *natural* claim count itself** (5 claims at step 2, 6 at step 1, both summing to a
+  cumulative-24-independent target of 45) — it stopped mapping to "3 = easy" at all, so it doesn't fit
+  the requested framing.
+- **Lowering `OVERCLOCK_MULTIPLIER_STEP` (0.1 → 0.05) kept the natural count at 3 claims, but wrecked
+  overall pace instead** — the whole run went from 1d1h38m to **15d2h42m** (~14.6x slower), because
+  this constant isn't a per-claim reward in isolation: per the "back to folding into the Tickspeed
+  multiplier's own step" entry above, it's folded *multiplicatively* into both the regular and
+  milestone steps of the same track that drives the entire run's snowball — a deliberate design from
+  several rounds of earlier maintainer clarification, not incidental.
+- A "delay the final claim and bank a bigger single Overclock instead of claiming at the bare minimum"
+  strategy (a real, player-facing lever `overclockGame` already supports — a claim banks whatever
+  completed-level count it's actually taken at, not the minimum) was set up to probe as a possible
+  non-destructive way to get "2 big claims ≈ 3 small claims" pacing, but was abandoned mid-sweep
+  once the maintainer called off the whole 2-vs-3 investigation.
+
+**Conclusion: the sharp 2-vs-3 cliff is a structural consequence of Overclock's existing
+multiplicative-fold design (itself a deliberate, previously-negotiated choice — see the two entries
+above), not a bug or an oversight.** Reworking it into a shallower stretch/easy curve would mean
+changing the *shape* of `getOverclockMultiplier` itself (not just its constants), which touches a
+mechanic with real prior back-and-forth — left alone here per the maintainer's explicit
+deprioritization. A future session revisiting this should re-read this entry and the two Overclock
+entries above before changing `OVERCLOCK_MULTIPLIER_STEP`/`OVERCLOCK_REQUIREMENT_STEP`/
+`getOverclockMultiplier`'s shape, and should re-run the same probe pattern (a temporary,
+reverted-before-commit cap/delay patch to `run-simulation.mjs`, never a permanent addition to that
+script) rather than reasoning about the compounding by hand.
+
+**What shipped:** only `PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25` (`src/game/layers.js`) and its
+example-based test expectations (`engine.test.js`'s `getPurchaseMilestoneMultiplier`/`tickGame`
+describe blocks, `App.test.jsx`'s milestone-multiplier display test) — no Overclock constant changed.
+This also fixed pre-existing documentation drift unrelated to this change: `docs/ECONOMY_REFERENCE.md`
+and two `engine.js` comments near `getPurchaseMilestoneMultiplier` still described the pre-`1.1`
+`PURCHASE_MILESTONE_MULTIPLIER_BASE = 2` ("doubles"/"2x") value from before the entry above ever
+shipped it to `1.1` — corrected to the current `1.25` in the same commit.
+
+**Verification.** `yarn test`: 1798/1798. `simulate-run-times` re-run and published to the
+`ideal-run-strategy` orphan branch at the final `1.25` value per this repo's own convention.

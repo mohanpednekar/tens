@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Renamed Clock Speed to Latency.** It now unlocks once level 1 of the first tier (Kilobytes) is
   purchased, its Byte costs are exact powers of 10, and milestone bonus levels are removed — every
   level compounds the same Overclock-scaled 1% step.
-- **Completed levels now multiply production by ×1.1** (was ×2), compounding per completed level.
+- **Completed levels now multiply production by ×1.25** (was ×2), compounding per completed level.
 - **Scale Up requirements are based on the target tier's completed levels** — each of the first ten
   Scale Ups requires 3 completed levels on its target (the last unlocked tier), then repeated
   final-tier claims require 6, 9, 12, … completed levels. This remains separate from tier re-reveal. A tier already
