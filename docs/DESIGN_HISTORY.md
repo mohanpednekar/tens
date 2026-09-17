@@ -1,5 +1,56 @@
 # Design history & rationale
 
+### Boosters UI revamp: buyBooster now pauses at COMPUTE_ENTITY_CAP; tier row buttons no longer clump left — 2026-09-17
+
+Two reports against the Boosters screen (`ComputePage`) and its Data Lake purchase path
+(`DataLakePanel`/`buyBooster`):
+
+**Booster purchases exceeding the entity cap, with no pause.** `buyBooster` had never capped the
+compute-ladder entity it grants against `COMPUTE_ENTITY_CAP` (10) — only the Data Lake's own
+escalating triangular cost (`getBoosterPurchaseCost`) limited how many could be bought per call, and
+`tickDataLakeAutoBuy`'s bulk auto-buy (`quantity = Number.MAX_SAFE_INTEGER`) would happily keep
+minting past 10 for as long as the lake could afford it. This was actually a **deliberate,
+previously-tested** choice for tier 1 specifically — see "Removing Claim Core: superseded by Data
+Lake Boosters" above ("Boosters can push `computeCores` past `COMPUTE_ENTITY_CAP` while a
+Memory-flush Core could not") and `engine.test.js`'s old
+`'buyBooster can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped'` test —
+but the same unbounded-growth code path applied uniformly to all ten Booster tiers, contradicting
+`docs/ECONOMY_REFERENCE.md`'s own claim that `computeNodes` through `computeMegacomputers` stay
+"capped at `COMPUTE_ENTITY_CAP` (10)." Asked directly to fix "boosters getting generated beyond the
+limit and not pausing at the limit," the maintainer's framing treats the old allowance as the bug,
+superseding the earlier acceptance. `buyBooster` now caps its own `quantity` (per call and across a
+bulk auto-buy) to whatever room remains under `COMPUTE_ENTITY_CAP` on the target entity, and is a
+same-reference no-op once that entity is already full — pausing purchases at the limit rather than
+minting past it, and resuming automatically the moment the entity is spent back down (a merge, a
+Compute Boost activation/forfeit). `isBoosterPurchaseAvailable` folds the same room check in so a
+capped-out lake's Buy button disables itself instead of reading falsely affordable; a new
+`isBoosterEntityAtCap` mirror lets `DataLakePanel` show "`<Booster>` is already at the max of 10 —
+spend or merge it down first" instead of the previous, now-misleading "Needs `<cost>` banked" whenever
+the real blocker is the entity cap rather than insufficient deposits. **If this is ever revisited,
+don't reintroduce a per-tier exemption from the cap** — the whole point of the fix was that every
+tier should behave the same way, matching what the docs already claimed.
+
+**Tier row buttons clumped at the left edge.** Each `ComputePage` tier block's row 2 — before that
+boundary's auto-merge unlocks, an instant ⬆ Merge button plus a 🤖 Unlock Auto-merge button — had no
+`justify-content` on its `TierMergeRow` container, defaulting to `flex-start`. With both buttons
+sized to their own content (`flex: 0 0 auto`, inherited via `CompactButton`/`IconButton`), they sat
+flush against the left edge with the row's full width empty to their right — visibly inconsistent
+with row 1 above, whose slot row (`SlotsRow`) is right-aligned, and with the SAME row's own
+post-auto-merge-unlock rendering (`ReserveSlotsRow`), which already stretches itself
+(`flex: 1 1 auto`) and right-aligns its own reserve slots internally. Fixed by adding
+`justify-content: flex-end` to `TierMergeRow`, lining the pre-unlock button pair up with the row
+above instead of leaving it stranded on the left. (The Boost preset row's own `> button { flex: 1 1
+auto }` rule is separately overridden by `CompactButton`'s own higher-specificity `flex: 0 0 auto` —
+a latent, lower-priority issue left as-is here since that row is already `justify-content: center`
+and reads correctly, just not edge-to-edge; revisit only if a future pass wants those three buttons
+to visibly stretch full-width too.)
+
+Verification: `yarn test` (1797/1797 — one existing test rewritten to assert the new paused-at-cap
+behavior instead of the old exceeds-the-cap behavior, plus one new test covering resumption once
+room reopens under the cap); manual Playwright screenshots of the Boosters screen before/after
+confirming the button alignment, and of a capped-out KB Data Lake confirming the disabled Buy
+button's new title and that a forced click is a genuine no-op.
+
 ### Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14
 
 The "Latency rename + completed-level progression" rework (2026-09-13/14) had also dropped the

@@ -10962,13 +10962,25 @@ describe('Data Lakes', () => {
       expect(state.intro.computeCoresEverEarned).toBe(8)
     })
 
-    it('buyBooster can exceed COMPUTE_ENTITY_CAP — capacity is lake-limited, not inventory-capped', () => {
+    it('buyBooster pauses at COMPUTE_ENTITY_CAP — a same-reference no-op once the compute-ladder entity is already full, however much the lake has banked', () => {
       let state = withLake(createInitialGameState(), 1, {
         depositedUnits: 900, boostersUnlocked: true, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL,
       })
       state = { ...state, intro: { ...state.intro, computeCores: COMPUTE_ENTITY_CAP } }
-      state = buyBooster(1)(state)
-      expect(state.intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 1)
+      expect(isBoosterPurchaseAvailable(state, 1)).toBe(false)
+      const after = buyBooster(1)(state)
+      expect(after).toBe(state)
+      expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
+    })
+
+    it('buyBooster resumes, capped to the room actually available, once the entity is spent back below COMPUTE_ENTITY_CAP', () => {
+      let state = withLake(createInitialGameState(), 1, {
+        depositedUnits: 900, boostersUnlocked: true, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL,
+      })
+      state = { ...state, intro: { ...state.intro, computeCores: COMPUTE_ENTITY_CAP - 2 } }
+      // Requesting far more than the 2 slots of room actually left still only grants 2.
+      const after = buyBooster(1, Number.MAX_SAFE_INTEGER)(state)
+      expect(after.intro.computeCores).toBe(COMPUTE_ENTITY_CAP)
     })
 
     it('toggleDataLakeAutoBuy flips autoBuyEnabled without touching anything else', () => {

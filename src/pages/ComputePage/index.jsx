@@ -134,9 +134,15 @@ const NormalSlot = styled.span`
 // Row 2: pre-unlock, an instant Merge button + an Unlock Auto-merge button; post-unlock, the 8
 // reserve slots themselves, clickable as the manual-start trigger — "2nd row has merge button and
 // unlock automerge button (in place of the reserved slots before unlocking them)" (issue #321).
+// justify-content: flex-end lines the pre-unlock buttons up with row 1's own right-aligned
+// SlotsRow above — without it they default to flex-start and clump at the left edge with the
+// row's full width sitting empty to their right (the post-unlock ReserveSlotsRow branch already
+// stretches itself via flex: 1 1 auto and right-aligns its own slots internally, so this only
+// visibly affects the pre-unlock Merge/Auto-merge button pair).
 const TierMergeRow = styled.div`
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: nowrap;
   gap: ${props => props.theme.space.xs};
   width: 100%;

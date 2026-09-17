@@ -54,6 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   use a neutral plus with a yellow percentage and tap icon.
 
 ### Fixed
+- **Buying a Data Lake Booster no longer mints a compute-ladder entity past its own 10-slot cap** —
+  a purchase (manual or auto-buy) now pauses at the cap instead of growing the entity unbounded,
+  resuming automatically once it's spent back down (a merge, a Compute Boost activation/forfeit).
+  The Boosters (`ComputePage`) tier rows' pre-auto-merge Merge/Auto-merge buttons no longer clump at
+  the row's left edge — they now line up with the slot row above them instead of leaving the rest of
+  the row's width empty.
 - **The fill-based multiplier/Data Lake overflow-rate bar no longer shows an empty bar with an
   orphaned "0%" label** — it now renders nothing at all whenever the reading it displays is exactly
   0 (only reachable via a maxed Data Lake with no open disk slot left).
