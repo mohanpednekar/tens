@@ -96,6 +96,11 @@ const CodeInput = styled.input`
   font-size: 0.9rem;
   min-width: 10rem;
   padding: 0.5rem 0.65rem;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 const StatusText = styled.p`
