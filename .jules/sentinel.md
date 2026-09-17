@@ -16,7 +16,7 @@
 **Vulnerability:** The `isPlainObject` function relied solely on `typeof value === 'object'` and `!Array.isArray(value)` to identify plain objects, rendering it susceptible to objects instantiated with a null prototype or forged object-like entities. This vulnerability was exploited within the game's internal data-merging routines (`mergeStateForDevWrite`), enabling prototype pollution when merging crafted state structures.
 **Learning:** Checking for an object type and array absence is insufficient for verifying plain objects. Complex operations like recursive merging must strictly authenticate the object's prototype to prevent pollution vectors.
 **Prevention:** Always validate an object's prototype by ensuring `Object.prototype.toString.call(value) === '[object Object]'` and checking if its prototype strictly equals `Object.prototype` or `null`.
-## 2024-10-25 - Prototype Pollution via prototype key
-**Vulnerability:** The dev mode state merge logic dropped `__proto__` and `constructor` but missed `prototype`, still allowing prototype pollution through it.
-**Learning:** Checking for `__proto__` and `constructor` alone is insufficient when dealing with arbitrary JSON merging, as `prototype` can also be used to mutate object prototypes.
-**Prevention:** Always explicitly check for and skip `__proto__`, `constructor`, and `prototype` inside any custom object mapping, reduction, or deep-merge logic, especially when dealing with parsed JSON or external state inputs.
+## 2024-10-27 - Prototype Pollution via 'prototype' Key
+**Vulnerability:** A recursive deep merge function (`mergeStateForDevWrite`), json parse (`safeJsonParse`), and property setter (`setValueAtPath`) were filtering out `__proto__` and `constructor` to prevent prototype pollution, but failed to filter out the `prototype` key. This could allow pollution if the target object happens to be a constructor function or class.
+**Learning:** Filtering `__proto__` and `constructor` is insufficient if the target of a recursive merge or path setter can be a function. Attackers can pollute the `prototype` property of the function, which then affects all instances created from it.
+**Prevention:** Always explicitly check for and block the `prototype` key alongside `__proto__` and `constructor` when validating keys for deep object assignment or merging.
