@@ -13,12 +13,12 @@
 ## 2026-09-06 - Focus Visible Styles for custom interactive components and Disclosure summary elements
 **Learning:** Custom components with `cursor: pointer` like `TierLine` that simulate button functionality often omit focus states, impairing keyboard navigation. Furthermore, native `<summary>` elements inside custom `<details>` (like `Disclosure`) require an explicit `:focus-visible` ring rather than relying on browser defaults to ensure proper keyboard accessibility within a styled-components environment.
 **Action:** When creating or modifying custom interactive elements with styled-components (such as `TierLine` and `Disclosure` summary elements), ensure `&:focus-visible` outlines are explicitly added to maintain standard keyboard accessibility flow.
-<<<<<<< HEAD
+## 2026-09-14 - Focus Visible Styles for styled-components
+**Learning:** Custom `styled.button` and `styled.div` components in this app acting as interactive controls sometimes omit `&:focus-visible` states (for instance `TierLine` lacked it, unlike most standard interactive items), causing keyboard accessibility issues when navigating.
+**Action:** When adding or tweaking interactive `styled-components` elements, consistently implement an explicit `&:focus-visible` outline (usually matching the accent or highlight color of the component) to ensure the interface stays fully keyboard accessible.
 ## 2025-05-15 - Focus States on Styled Inputs
 **Learning:** Custom interactive elements like styled `<input>` tags (e.g., `CodeInput`) often miss explicit `&:focus-visible` styles, breaking keyboard navigation accessibility when default browser outlines clash with the theme or are obscured by custom borders.
 **Action:** Always ensure `&:focus-visible` styles are explicitly defined for all custom interactive elements, including `styled.input`, matching the app's token-driven focus patterns (`outline: 2px solid ${props => props.theme.color.accent}; outline-offset: 2px;`).
-=======
 ## 2024-09-11 - Static aria-label for Toggle Buttons with aria-pressed
 **Learning:** When adding `aria-pressed` to toggle buttons, ensure the button's `aria-label` is static (e.g., "Auto-buy") rather than dynamically changing based on state (e.g., "Enable Auto-buy" / "Disable Auto-buy"). Dynamic labels combined with `aria-pressed` cause redundant and confusing screen reader announcements.
 **Action:** When converting a button to a toggle state by adding `aria-pressed={bool}`, always remove dynamic state wording from its `aria-label` to provide a consistent control identity.
->>>>>>> main
