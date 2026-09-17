@@ -443,8 +443,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               )}
               {unlocked && (
                 <ActionButton
+<<<<<<< HEAD
                   aria-label={`auto-buy for the ${label} Data Lake`}
                   aria-pressed={autoBuyEnabled}
+=======
+                  aria-pressed={autoBuyEnabled}
+                  aria-label={`auto-buy for the ${label} Data Lake`}
+>>>>>>> main
                   onClick={() => actions.toggleDataLakeAutoBuy(tierIndex)}
                   title={
                     autoBuyEnabled

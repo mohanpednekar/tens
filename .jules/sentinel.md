@@ -16,3 +16,14 @@
 **Vulnerability:** The `isPlainObject` function relied solely on `typeof value === 'object'` and `!Array.isArray(value)` to identify plain objects, rendering it susceptible to objects instantiated with a null prototype or forged object-like entities. This vulnerability was exploited within the game's internal data-merging routines (`mergeStateForDevWrite`), enabling prototype pollution when merging crafted state structures.
 **Learning:** Checking for an object type and array absence is insufficient for verifying plain objects. Complex operations like recursive merging must strictly authenticate the object's prototype to prevent pollution vectors.
 **Prevention:** Always validate an object's prototype by ensuring `Object.prototype.toString.call(value) === '[object Object]'` and checking if its prototype strictly equals `Object.prototype` or `null`.
+<<<<<<< HEAD
+## 2024-11-20 - Prototype Pollution Vector via `prototype` key
+**Vulnerability:** The `prototype` key was not blocked in internal recursive merging and parsing functions (`safeJsonParse`, `mergeStateForDevWrite`, `setValueAtPath`), leaving a potential prototype pollution vector alongside `__proto__` and `constructor`.
+**Learning:** Checking for `__proto__` and `constructor` is insufficient for comprehensive protection against prototype pollution. If an attacker can overwrite a constructor function's `prototype` property, they can pollute the prototype chain of instances created from it. The unholy trinity of prototype pollution keys is `__proto__`, `constructor`, and `prototype`.
+**Prevention:** Always explicitly check for and skip the `prototype` key in addition to `__proto__` and `constructor` when iterating over untrusted object keys for merging, assignment, or parsing.
+=======
+## 2024-10-27 - Prototype Pollution via 'prototype' Key
+**Vulnerability:** A recursive deep merge function (`mergeStateForDevWrite`), json parse (`safeJsonParse`), and property setter (`setValueAtPath`) were filtering out `__proto__` and `constructor` to prevent prototype pollution, but failed to filter out the `prototype` key. This could allow pollution if the target object happens to be a constructor function or class.
+**Learning:** Filtering `__proto__` and `constructor` is insufficient if the target of a recursive merge or path setter can be a function. Attackers can pollute the `prototype` property of the function, which then affects all instances created from it.
+**Prevention:** Always explicitly check for and block the `prototype` key alongside `__proto__` and `constructor` when validating keys for deep object assignment or merging.
+>>>>>>> main
