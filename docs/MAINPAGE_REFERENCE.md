@@ -578,14 +578,16 @@ not at the bottom"):
      - **Row 2** (`TierMergeRow`), for every tier except the last (Megacomputer, no row 2 at all —
        see issue #280's "Out of scope" — though its row 1 is still Boost-selectable, the only place
        a Megacomputer has any use at all):
-       - **Before that boundary's auto-merge is unlocked:** an instant Merge button (fixed-width,
-         icon-only `IconButton`, `variant="prestige"`, label "⬆", `aria-label` spelling out the full
-         action e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
+       - **Before that boundary's auto-merge is unlocked:** an instant Merge button (`TierActionButton`,
+         `flex: 1 1 0; width: 100%` — fills exactly half the row, the same "two equal-width buttons"
+         look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
+         `variant="prestige"`, visible content "⬆ Merge", `aria-label` spelling out the full action
+         e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
-         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button right next to it
-         (`IconButton`, `variant="info"`, label "🤖", `aria-label="enable auto-merge for <…> into
-         <…>"`) — enabled once `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the
-         matching `game.actions.enableAutoMerge*` action.
+         `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
+         other half (`TierActionButton`, `variant="info"`, visible content "🤖 Auto",
+         `aria-label="enable auto-merge for <…> into <…>"`) — enabled once `COMPUTE_ENTITY_CAP` (10)
+         of the produced tier is held, calling the matching `game.actions.enableAutoMerge*` action.
        - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
          (8) `ReserveSlot` squares, all either entirely empty (idle) or entirely filled (a merge in
          flight, since the reserve only ever fills atomically) — clicking it IS the manual-start

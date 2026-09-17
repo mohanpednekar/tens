@@ -1006,8 +1006,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    **Buying Boosters** (`buyBooster(tierIndex)`) — funded ONLY from that lake's own banked units, no
    other resource involved, so — unlike Disk Fill/Speed/Provision Disk/Compute Boost — this isn't
    part of the forced priority order at all; it's always available the instant it's affordable
-   (`isBoosterPurchaseAvailable` — `isDataLakeBoosterUnlocked` AND `depositedUnits >=
-   getBoosterPurchaseCost`). The nth Booster ever bought at a tier costs n units
+   (`isBoosterPurchaseAvailable` — `isDataLakeBoosterUnlocked` AND room under `COMPUTE_ENTITY_CAP`
+   on the matching compute-ladder entity AND `depositedUnits >= getBoosterPurchaseCost`). The nth
+   Booster ever bought at a tier costs n units
    (`getBoosterPurchaseCost` — simply `purchased + 1`, with no transfer queue to
    count alongside it — EXCEPT once the lake's own capacity ladder is permanently maxed
    (`isDataLakeCapacityMaxed`), where the cost is capped at the lake's own fixed capacity instead of
@@ -1015,13 +1016,23 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    disk that was mid-fill before the spend may no longer be the lake's own open slot afterward, so
    any in-progress fill is discarded rather than carried forward inconsistently), increments
    `purchased`, and grants 1 of the matching compute-ladder entity instantly — no transfer, no
-   waiting. `toggleDataLakeAutoBuy(tierIndex)` flips a per-lake `autoBuyEnabled` flag (freely
+   waiting. A `quantity` request (e.g. `tickDataLakeAutoBuy`'s bulk buy) is capped to whatever room
+   is actually left under `COMPUTE_ENTITY_CAP`, and a lake whose entity is already full is a same-
+   reference no-op regardless of how much is banked — purchasing PAUSES at the cap instead of
+   minting past it (see `docs/DESIGN_HISTORY.md` for the earlier, reverted "Data-Lake-limited, not
+   inventory-capped" behavior this replaces); it resumes automatically once the entity is spent back
+   down (a merge, a Compute Boost activation/stack — forfeit doesn't touch the field, and reclaim
+   moves the other way, refunding a token back onto it). `isBoosterEntityAtCap` is the UI-facing mirror
+   of this gate, letting `DataLakePanel`'s disabled Buy button say "entity full" instead of "not
+   enough banked" when that's the actual reason. `toggleDataLakeAutoBuy(tierIndex)` flips a per-lake
+   `autoBuyEnabled` flag (freely
    toggleable even before `boostersUnlocked`, same as other autobuyer "enabled" flags in this file);
    `tickDataLakeAutoBuy` (called from `tickGame` right after `tickPoolBufferFill`, so a Booster this
    same tick's overflow just funded can auto-buy the same tick it completes) repeatedly buys per
    lake while enabled and affordable — cost escalates and `depositedUnits` only shrinks with each
-   purchase, so this always terminates. `DataLakePanel` shows a manual Buy button (disabled until
-   affordable) alongside an Auto/Manual toggle, both only once `boostersUnlocked`.
+   purchase, and the entity-cap ceiling above bounds it too, so this always terminates. `DataLakePanel`
+   shows a manual Buy button (disabled until affordable) alongside an Auto/Manual toggle, both only
+   once `boostersUnlocked`.
 
    **Stranded disks are never destroyed.** A disk whose own fixed corresponding tier has moved past
    the level it requires (see "Disks always take priority" above) simply stays full and
@@ -1051,15 +1062,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    other merges below) — see the reveal-latch paragraph further down for why this exists as a
    separate field from `computeCores` itself.
 
-   Both `computeCores` and `computeNodes` are capped at `COMPUTE_ENTITY_CAP` (10), the same as every
-   other compute-ladder entity (Clusters through Megacomputers, see below) — EXCEPT on the Data Lake
-   Booster path itself (`buyBooster`, any of the ten tiers, not just
-   Cores), which is Data-Lake-limited rather than inventory-capped and can push a tier's held count
-   past `COMPUTE_ENTITY_CAP` (see "Buying Boosters" above). Every merge function below (Core → Node
-   included) caps its own output gain at whatever room remains under the cap, leaving surplus input
-   unconverted rather than letting the output exceed it. Nothing is ever lost while capped; it
-   simply waits for
-   the player to spend an entity down via a future spending mechanic.
+   Every compute-ladder entity (`computeCores` through `computeMegacomputers`) is capped at
+   `COMPUTE_ENTITY_CAP` (10) everywhere it can grow — both the merge functions below (Core → Node
+   included, each capping its own output gain at whatever room remains under the cap, leaving
+   surplus input unconverted rather than letting the output exceed it) AND the Data Lake Booster
+   path itself (`buyBooster`, any of the ten tiers — see "Buying Boosters" above, which now pauses
+   purchases at the cap instead of minting past it). Nothing is ever lost while capped; it simply
+   waits for the player to spend an entity down via a future spending mechanic.
 
    Compute has its own dedicated screen, `ComputePage` — reached via a "⚡ Compute" nav button on
    `ByteFoundryPage`, which stays hidden until `isComputeCoreConversionUnlocked(state)`; like the
@@ -2568,9 +2577,11 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // Era ascension resets with the
                                                           // rest of the Foundry via buildEraIntroReset
                                                           // (...initial.intro) — see "Era ascension" above
-    computeCores: 0,                                      // PERMANENT, normally capped at COMPUTE_ENTITY_CAP (10)
-                                                          // but buyBooster can push it past that
-                                                          // (Data-Lake-limited, not inventory-capped). Granted by
+    computeCores: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10) —
+                                                          // buyBooster now pauses purchases at this cap too (an
+                                                          // earlier version let it push past this, Data-Lake-
+                                                          // limited rather than inventory-capped; reverted — see
+                                                          // docs/DESIGN_HISTORY.md). Granted by
                                                           // buyBooster (tier 1) — spending that tier's
                                                           // Data Lake's own banked units, instantly. Spent 1 at a
                                                           // time by activateComputeBoost below
