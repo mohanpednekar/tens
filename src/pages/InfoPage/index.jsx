@@ -14,6 +14,7 @@ import {
   COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_ENTITY_AUTO_MERGE_CAP,
   COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
   COMPUTE_MERGE_RATIO,
   COMPUTE_MERGE_RESERVE_CAP,
@@ -330,14 +331,14 @@ const InfoPage = () => {
           <li>
             Ten permanent lakes (one per storage denomination, KB … QB), gated on that pool having
             built at least one real disk. Until that pool's Storage array is entirely complete (all
-            three ×1/×10/×100 sizes fully built), the lake fills only MANUALLY, via a{' '}
-            <strong>💧 Fill</strong> button that spends directly from that pool's own Memory
-            buffer — capped at just enough for the lake's own next Booster, so a click never wastes a
-            deposit. Once the pool is entirely complete, filling switches to AUTOMATIC: whatever the
-            pool can't put toward its fill-based multiplier bonus (see Storage above) overflows
-            straight into that pool's own lake, at the plain available rate — no taper, the same
-            posture Storage's own disk provisioning uses. Disks are no longer deposited from
-            Storage — Data Lakes have their own separate disk ladder now.
+            three ×1/×10/×100 sizes fully built), the lake only fills when its own conversion control
+            is drawing toward a Booster (see below) — spending directly from that pool's own Memory
+            buffer, capped at just enough for the lake's own next Booster, so a click never wastes a
+            deposit. Once the pool is entirely complete, filling switches to AUTOMATIC regardless of
+            that control: whatever the pool can't put toward its fill-based multiplier bonus (see
+            Storage above) overflows straight into that pool's own lake, at the plain available
+            rate — no taper, the same posture Storage's own disk provisioning uses. Disks are no
+            longer deposited from Storage — Data Lakes have their own separate disk ladder now.
           </li>
           <li>
             A lake fills its own disks smallest-size-first (×1, then ×10, then ×100 of that lake's
@@ -364,15 +365,17 @@ const InfoPage = () => {
           <li>
             Boosters unlock permanently for a lake the first time it fills even one disk. From then
             on, the nth Booster ever bought from that lake costs n banked units, spent instantly (no
-            live transfer or waiting period) — buy manually, or flip that lake's own Auto toggle to
-            buy automatically the instant it's affordable.
+            live transfer or waiting period). A single control shows the next Booster's cost — click
+            it to buy immediately if already banked, or to start automatically drawing from the
+            pool's own buffer until it is, then buy 1 and stop (never a standing auto-buy loop; it
+            can't be started while that tier's compute entity is already full).
           </li>
         </ul>
 
         <h3>Cores</h3>
         <ul>
           <li>
-            Bought from the matching Data Lake's own Buy/Auto controls (on the Byte Foundry
+            Bought from the matching Data Lake's own cost/conversion control (on the Byte Foundry
             screen) — there is no other way to obtain a Core.
           </li>
           <li>
@@ -383,7 +386,10 @@ const InfoPage = () => {
             Every compute entity caps at {COMPUTE_ENTITY_CAP} held — including Data Lake Booster
             purchases (any of the ten tiers, not just Cores), which pause once that tier's held
             count reaches the cap and resume once it's spent back down (a merge, or a Compute
-            Boost activation/stack).
+            Boost activation/stack) — EXCEPT for a tier whose own outbound merge boundary already
+            has auto-merge unlocked, where the cap instead rises to {COMPUTE_ENTITY_AUTO_MERGE_CAP}{' '}
+            (the extra {COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_ENTITY_CAP} being that boundary's own
+            gradually-filling reserve — see "Merge chain" below).
           </li>
         </ul>
 
@@ -402,10 +408,14 @@ const InfoPage = () => {
             that boundary.
           </li>
           <li>
-            After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve with a timed
-            countdown. Core → Node takes {COMPUTE_MERGE_CORE_EARN_MULTIPLIER}× the time to earn one
-            Core at your current Memory fill rate (capacity ÷ bits/sec, before Boost). Each next
-            boundary is ×{COMPUTE_MERGE_STEP_MULTIPLIER} the previous layer’s duration — or ×
+            After unlock: merging uses an {COMPUTE_MERGE_RESERVE_CAP}-slot reserve, alongside the
+            input tier's own {COMPUTE_ENTITY_CAP} normal slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} total
+            held). The reserve fills gradually as that tier keeps growing past its normal 10 — via
+            continued Booster purchases or a lower-tier merge — rather than all at once. A merge
+            itself, once started, runs a timed countdown: Core → Node takes{' '}
+            {COMPUTE_MERGE_CORE_EARN_MULTIPLIER}× the time to earn one Core at your current Memory
+            fill rate (capacity ÷ bits/sec, before Boost). Each next boundary is ×
+            {COMPUTE_MERGE_STEP_MULTIPLIER} the previous layer’s duration — or ×
             {COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} after that boundary’s sequential duration
             upgrade (sacrifice {COMPUTE_ENTITY_CAP} held tokens of its input tier once auto-merge
             is unlocked). Before unlock, merges stay instant.
@@ -416,7 +426,13 @@ const InfoPage = () => {
             unupgraded ×{COMPUTE_MERGE_STEP_MULTIPLIER} step becomes the new one. Later layers
             rescale from the new chain. An in-flight timer keeps the duration snapshotted at start.
           </li>
-          <li>Auto-merge starts when the input tier’s normal slots are completely full ({COMPUTE_ENTITY_CAP}).</li>
+          <li>
+            Auto-merge starts only once the input tier reaches the FULL extended cap (
+            {COMPUTE_ENTITY_AUTO_MERGE_CAP} — the normal slots plus the whole reserve) — a stricter
+            bar than starting a merge manually, which still only needs {COMPUTE_MERGE_RATIO} held
+            across the normal + reserve slots, letting you convert early instead of waiting for
+            automation.
+          </li>
         </ul>
 
         <h3>Compute Boost</h3>

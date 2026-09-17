@@ -1,5 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getNextComputeMergeDurationUpgradeIndex, isComputeBoostTurnAvailable, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getComputeReserveHeld, getNextComputeMergeDurationUpgradeIndex, isComputeBoostTurnAvailable, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
 import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -189,16 +189,19 @@ const ReserveSlotsRow = styled.button`
   }
 `
 
-// A reserve-pool slot (one of COMPUTE_MERGE_RESERVE_CAP, 8) — always either entirely empty (idle,
-// nothing committed) or entirely filled (a merge in flight, timing down to completion) since the
-// reserve only ever fills atomically, never partially — see engine.js's startComputeMergeReserve.
+// A reserve-pool slot (one of COMPUTE_MERGE_RESERVE_CAP, 8) — three visual states: empty (idle,
+// nothing banked yet), filled (gradually accumulating toward the next automatic merge — see
+// engine.js's getComputeReserveHeld, fed by continued Booster purchases/lower-tier merges past the
+// primary COMPUTE_ENTITY_CAP slots), or merging (a merge actually in flight, timing down to
+// completion — the same "warn" color the countdown text itself uses, distinct from the plain
+// accent used for "banked but not yet committed" so the two don't read as the same state).
 const ReserveSlot = styled.span`
   flex: 0 0 auto;
   width: 0.85rem;
   height: 0.85rem;
   border-radius: ${props => props.theme.radius.sm};
-  border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.theme.color.surfaceSunken)};
-  background: ${props => (props.$merging ? props.theme.color.warn : 'transparent')};
+  border: 1.2px solid ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.accent : props.theme.color.surfaceSunken)};
+  background: ${props => (props.$merging ? props.theme.color.warn : props.$filled ? props.theme.color.surfaceRaised : 'transparent')};
 `
 
 const MergeCountdown = styled.span`
@@ -722,9 +725,16 @@ const ComputePage = ({ game }) => {
               const autoEnabled = hasMergeRow ? Boolean(intro[row.autoFlagField]) : false
               const autoCostHeld = row.autoCostField ? (intro[row.autoCostField] ?? 0) : 0
               const canEnableAuto = hasMergeRow && !autoEnabled && autoCostHeld >= COMPUTE_ENTITY_CAP
+              const autoUnlockProgress = Math.min(100, (autoCostHeld / COMPUTE_ENTITY_CAP) * 100)
               const remainingSeconds = row.timerField ? (intro[row.timerField] ?? 0) : 0
               const merging = remainingSeconds > 0
               const startAvailable = autoEnabled && !merging && count >= COMPUTE_MERGE_RATIO && (intro[row.mergeOutputField] ?? 0) < COMPUTE_ENTITY_CAP
+              // Once auto-merge is unlocked, `count` can climb past COMPUTE_ENTITY_CAP into the
+              // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
+              // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
+              // shows up as reserve fill in row 2 instead, never as an overflowing "14/10".
+              const primaryHeld = Math.min(count, COMPUTE_ENTITY_CAP)
+              const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
 
               return (
                 <TierBlock key={row.key} aria-label={`${row.label} tier`}>
@@ -738,10 +748,10 @@ const ComputePage = ({ game }) => {
                       $selected={selectedBoostTierIndex === tierIndex}
                     >
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
-                      <TierLabel>{`${row.label} ${formatAmount(count)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
+                      <TierLabel>{`${row.label} ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
                       <SlotsRow role="group" aria-label={`${row.label} slots`}>
                         {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
-                          <NormalSlot key={index} $filled={index < count} aria-hidden="true" />
+                          <NormalSlot key={index} $filled={index < primaryHeld} aria-hidden="true" />
                         ))}
                       </SlotsRow>
                     </TierSelectButton>
@@ -754,7 +764,7 @@ const ComputePage = ({ game }) => {
                           aria-label={
                             merging
                               ? `${row.label} reserve merge in progress, ${formatOfflineDuration(remainingSeconds)} left`
-                              : `start merging ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`
+                              : `start merging ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}, ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           disabled={!startAvailable}
                           onClick={startAvailable ? () => actions[row.startAction]() : undefined}
@@ -764,13 +774,13 @@ const ComputePage = ({ game }) => {
                               ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
                               : startAvailable
                                 ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a timed merge into 1 ${row.mergeOutputLabel}`
-                                : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots`
+                                : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           type="button"
                         >
                           {merging && <MergeCountdown>{formatOfflineDuration(remainingSeconds)}</MergeCountdown>}
                           {Array.from({ length: COMPUTE_MERGE_RESERVE_CAP }, (_, index) => (
-                            <ReserveSlot key={index} $merging={merging} aria-hidden="true" />
+                            <ReserveSlot key={index} $filled={index < reserveHeld} $merging={merging} aria-hidden="true" />
                           ))}
                         </ReserveSlotsRow>
                       ) : (
@@ -796,8 +806,9 @@ const ComputePage = ({ game }) => {
                             title={`Auto: sacrifice all ${COMPUTE_ENTITY_CAP} ${row.autoCostLabel} (have ${formatAmount(autoCostHeld)}) to permanently automate this step whenever ${row.label} is full, via a timed reserve merge`}
                             type="button"
                             variant="info"
+                            $progress={autoUnlockProgress}
                           >
-                            <ButtonContent>🤖 Auto</ButtonContent>
+                            <ButtonContent>{`🤖 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )

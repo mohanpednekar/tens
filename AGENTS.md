@@ -144,9 +144,12 @@ displayed Speed/Bandwidth figures themselves) scales the real delivery rate by b
 recent taps.
 Disks (`StoragePage`) fill and pull into Factory automatically, with no manual redeem step, and each
 Storage pool's overflow feeds its own Data Lake automatically too — but Boosters, which spend banked
-Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), are a manual
-`buyBooster` action unless the player enables that lake's own optional auto-buy (`autoBuyEnabled`,
-off by default). A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
+Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only buy via a single
+per-lake "🎯 `<cost>`" control: it buys immediately if already affordable, or arms a one-shot
+`autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
+persistent auto-buy loop). Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a
+gradually-filled 8-slot reserve) once that tier's own outbound merge boundary has auto-merge
+unlocked. A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 reveals at 100 PP. The generator, Disks, Data Lakes, and Compute entities are permanent across every
 real Prestige; Era ascension is a bigger reset (`buildEraIntroReset`) that wipes Disks/Data
 Lakes/Compute entity balances back to scratch while still keeping `byteCreated`, the

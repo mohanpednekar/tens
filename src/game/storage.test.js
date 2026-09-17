@@ -518,7 +518,7 @@ describe('schema merge on load', () => {
       fillBits: 0,
       purchased: 4 + 2, // the 2 in-flight transfers count toward the next Booster's own cost too
       boostersUnlocked: true,
-      autoBuyEnabled: false,
+      autoConvertActive: false,
       capacityLevel: 2,
     })
     expect(loaded.intro.dataLakes['2']).toEqual({
@@ -526,7 +526,7 @@ describe('schema merge on load', () => {
       fillBits: 0,
       purchased: 0,
       boostersUnlocked: false,
-      autoBuyEnabled: false,
+      autoConvertActive: false,
       capacityLevel: 0,
     })
     // Both pending transfers were tier 1 (Cores) — granted directly, same as a real buyBooster(1)
@@ -998,8 +998,8 @@ describe('Dev Mode', () => {
         ...createInitialGameState().intro,
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
-          1: { depositedUnits: 53, fillBits: 0, purchased: 5, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 2 },
-          2: { depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 },
+          1: { depositedUnits: 53, fillBits: 0, purchased: 5, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 2 },
+          2: { depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2 },
         },
       },
     }
@@ -1013,7 +1013,7 @@ describe('Dev Mode', () => {
     // ...and every sibling at every depth survives untouched: tier 1's own depositedUnits (a
     // sibling of the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
     expect(result.state.intro.dataLakes['1'].depositedUnits).toBe(53)
-    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 })
+    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2 })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

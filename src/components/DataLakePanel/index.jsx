@@ -1,7 +1,6 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
-  formatAmount,
   formatDiskSize,
   formatDiskSizeBare,
   formatDiskSizeInPoolUnit,
@@ -19,14 +18,13 @@ import {
   getDataLakeUnitBits,
   isBoosterEntityAtCap,
   isBoosterPurchaseAvailable,
-  isDataLakeAutoBuyEnabled,
+  isDataLakeAutoConvertActive,
   isDataLakeBoosterUnlocked,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
-  isDataLakeManualFillAvailable,
   isDataLakePoolReady,
 } from 'game/engine'
-import { COMPUTE_ENTITY_CAP, COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
+import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
 
 // Stacks multiple lake blocks (list mode — see getVisibleLakeTierIndexes below) with breathing
@@ -52,8 +50,8 @@ const LakeBlock = styled.div`
 
 const LakeHeaderRow = styled.div`
   display: flex;
-  align-items: baseline;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
   gap: ${props => props.theme.space.sm};
 `
 
@@ -164,13 +162,6 @@ const LakePoolLabel = styled.span`
   font-variant-numeric: tabular-nums;
 `
 
-const LakeActionsRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${props => props.theme.space.sm};
-`
-
 // Icon + amount only, cost/state tucked into the title/aria-label rather than a second visible
 // line — matches every other milestone-style action button on this page (Upgrade Data Stream,
 // Provision Disk).
@@ -222,8 +213,6 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
     <LakesList>
       {visibleTiers.map(tierIndex => {
         const label = getDataLakeTierLabel(tierIndex)
-        const lake = getDataLakeTier(state, tierIndex)
-        const purchased = lake?.purchased ?? 0
         const nextCost = getBoosterPurchaseCost(tierIndex)(state)
         const boosterLabel = COMPUTE_TIER_LABELS[tierIndex - 1] ?? 'Booster'
         // Deposited/capacity/next-cost are all abstract unit counts internally, but every figure
@@ -274,12 +263,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // Buy button's own title can say which one it actually is (see isBoosterPurchaseAvailable's
         // own doc comment in engine.js).
         const entityAtCap = !canBuy && isBoosterEntityAtCap(state, tierIndex)
-        const autoBuyEnabled = isDataLakeAutoBuyEnabled(state, tierIndex)
-        // Before this pool is entirely complete, the lake fills MANUALLY only, capped at just
-        // enough for its own next Booster — tickPoolBufferFill's automatic overflow doesn't start
-        // feeding it until then (see isStoragePoolFullyBuilt in engine.js). Outside the forced
-        // priority order, same as Buy — always clickable the instant it's available.
-        const canFillManually = isDataLakeManualFillAvailable(state, tierIndex)
+        // While true, tickDataLakeAutoConvert (engine.js) is automatically drawing from this pool's
+        // own buffer every tick toward the next Booster, on its way to buying 1 and stopping — see
+        // startDataLakeAutoConvert. The header's own cost control renders as an inert label rather
+        // than a button for the whole duration (below).
+        const converting = isDataLakeAutoConvertActive(state, tierIndex)
 
         return (
           <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
@@ -288,7 +276,57 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
                 <span>Lake</span>
               </LakeTitle>
-              <StatusText>{formatAmount(purchased)}× {boosterLabel}</StatusText>
+              {/* The lake's own next-Booster cost doubles as its sole action control — clicking it
+                  buys immediately if already affordable, or starts the one-shot fill-then-buy
+                  automation otherwise (see startDataLakeAutoConvert's own doc comment); no separate
+                  Fill/Buy/Auto-Manual row is needed. Upgrade (Scale Out) still shares this same slot
+                  whenever it's the more relevant action (see the ternary below) — same "one action
+                  slot, priority-ordered" convention this row always used. Showing a lifetime
+                  purchased count here as well would be redundant: the cost figure alone already says
+                  everything a player needs at a glance. */}
+              {converting ? (
+                <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              ) : entityAtCap ? (
+                <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              ) : canBuy ? (
+                <ActionButton
+                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                  onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
+                  title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                </ActionButton>
+              ) : upgradeAvailable ? (
+                <ActionButton
+                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
+                  onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>⚡ Scale Out</ButtonContent>
+                </ActionButton>
+              ) : unlocked ? (
+                <ActionButton
+                  aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
+                  onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
+                  title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this ENTIRE pool is built`}
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                </ActionButton>
+              ) : (
+                <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              )}
             </LakeHeaderRow>
 
             {currentFillSubSize !== null && (() => {
@@ -388,88 +426,6 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               aria-valuemin={0}
               aria-valuemax={100}
             />
-
-            <LakeActionsRow>
-              {canFillManually && (
-                <ActionButton
-                  aria-label={`fill the ${label} Data Lake toward its next Booster`}
-                  onClick={() => actions.fillDataLakeManually(tierIndex)}
-                  title={`Draws from this pool's own buffer to top up toward the next ${boosterLabel} (${nextCostSize}) — automatic once this ENTIRE pool is built (every ×1/×10/×100 disk, not just the ${formatDiskSize(unitBits)} ones)`}
-                  type="button"
-                  variant="info"
-                >
-                  <ButtonContent>💧 Fill</ButtonContent>
-                </ActionButton>
-              )}
-              {/* Buy wins the slot the instant it's actually affordable — even when Upgrade is
-                  ALSO available (an array-complete pool whose banked units, e.g. from manual Fill,
-                  already cover the next Booster) — so a manually-filled deposit meant for a Booster
-                  purchase is never silently funneled into a forced Scale Out with no way to spend it
-                  first (auto-buy defaults off; see docs/DESIGN_HISTORY.md). Otherwise Upgrade claims
-                  the slot whenever it's available — no longer any "available but not its turn"
-                  window to arbitrate, since isDataLakeCapacityDoublingAvailable is no longer part of
-                  the forced priority order (see its own doc comment in engine.js): it's always
-                  immediately clickable the instant its array is complete, the same posture Buy
-                  already had. */}
-              {canBuy ? (
-                <ActionButton
-                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
-                  onClick={() => actions.buyBooster(tierIndex)}
-                  title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
-                  type="button"
-                  variant="success"
-                >
-                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
-                </ActionButton>
-              ) : upgradeAvailable ? (
-                <ActionButton
-                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
-                  onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
-                  type="button"
-                  variant="prestige"
-                >
-                  <ButtonContent>⚡ Scale Out</ButtonContent>
-                </ActionButton>
-              ) : unlocked ? (
-                <ActionButton
-                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
-                  disabled={!canBuy}
-                  onClick={() => actions.buyBooster(tierIndex)}
-                  title={
-                    canBuy
-                      ? `Buy 1 ${boosterLabel} for ${nextCostSize}`
-                      : entityAtCap
-                        ? `${boosterLabel} is already at the max of ${COMPUTE_ENTITY_CAP} — spend or merge it down first`
-                        : `Needs ${nextCostSize} banked`
-                  }
-                  type="button"
-                  variant={canBuy ? 'success' : 'neutral'}
-                >
-                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
-                </ActionButton>
-              ) : (
-                <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
-                  {`🎯 ${nextCostSize}`}
-                </StatusText>
-              )}
-              {unlocked && (
-                <ActionButton
-                  aria-label={`auto-buy for the ${label} Data Lake`}
-                  aria-pressed={autoBuyEnabled}
-                  onClick={() => actions.toggleDataLakeAutoBuy(tierIndex)}
-                  title={
-                    autoBuyEnabled
-                      ? 'Auto-buy is on — the next Booster buys itself the instant it is affordable'
-                      : 'Auto-buy is off — buy manually'
-                  }
-                  type="button"
-                  variant={autoBuyEnabled ? 'info' : 'neutral'}
-                >
-                  <ButtonContent>{autoBuyEnabled ? '🔁 Auto' : '🔁 Manual'}</ButtonContent>
-                </ActionButton>
-              )}
-            </LakeActionsRow>
           </LakeBlock>
         )
       })}

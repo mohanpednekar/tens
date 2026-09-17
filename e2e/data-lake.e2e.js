@@ -21,7 +21,7 @@ const seedDataLakeSave = () => {
       // pool-overflow fill (a real-time mechanic) to keep this e2e spec fast and deterministic.
       dataLakes: {
         ...state.intro.dataLakes,
-        1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 1 },
+        1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 },
       },
     },
   }

@@ -1,5 +1,81 @@
 # Design history & rationale
 
+### Auto-merge Booster progress display, a gradually-filling 18-slot extended cap, and one-shot Data Lake conversion replacing the persistent Auto/Manual toggle — 2026-09-17
+
+A three-part follow-up request against the just-shipped Boosters UI revamp above, aimed at the
+pre-auto-merge-unlock "🤖 Auto" button, the reserve-pool mechanic auto-merge unlocks into, and
+`DataLakePanel`'s own Fill/Buy/Auto-Manual control row.
+
+**Part 1: the Auto button now shows live progress, matching Factory's own Buy-button convention.**
+Before this change, the pre-unlock "🤖 Auto" `TierActionButton` was a plain icon+label with no
+indication of how close its `COMPUTE_ENTITY_CAP` (10)-of-output-entity unlock cost actually was —
+the player had to read the row-1 slot count above it and do the comparison themselves. Reusing
+`Button`'s existing `progressFill`/`$progress` mechanic (already used by Factory's own Buy buttons
+for cost-block progress), the button now fills toward its own unlock cost and its visible text
+switches from a bare "🤖 Auto" to `` 🤖 <held>/<COMPUTE_ENTITY_CAP> `` — self-explanatory without a
+separate row-1 readout.
+
+**Part 2: the "extra 8 slots" auto-merge unlocks into now fill gradually, not atomically, and the
+auto-trigger threshold moved to match.** The maintainer's framing — "the same button shall hold 8
+additional boosters after the original 10 slots are full, once these 8 slots are full, only then it
+will auto merge those 8" — reads as the reserve pool being fed by ordinary, continuing entity growth
+(further `buyBooster` purchases, or a lower-tier merge crediting the same field) rather than a single
+atomic pull the instant the primary 10 fills. This is itself a reversal of `COMPUTE_MERGE_RESERVE_CAP`'s
+own original design (see the "issue #321" entries above): that version filled the reserve in one
+atomic, all-8-at-once instant pull the moment the primary hit 10, immediately starting the merge
+timer. Implemented via a new `COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP +
+COMPUTE_MERGE_RESERVE_CAP` (18) constant: once a boundary's auto-merge is unlocked, that tier's
+effective cap (`getComputeEntityEffectiveCap`) rises from 10 to 18, so `buyBooster`/a lower-tier
+merge can keep crediting the field past 10 instead of pausing there (this itself reverses the
+just-shipped Part-1-of-the-prior-PR pause-at-10 behavior, but ONLY for a tier whose own outbound
+boundary has auto-merge unlocked — every other tier, and a not-yet-unlocked tier's own field, still
+pauses at the plain 10 exactly as that PR intended). The reserve's own fill level is derived, not
+persisted: `getComputeReserveHeld` reads `clamp(held - COMPUTE_ENTITY_CAP, 0, COMPUTE_MERGE_RESERVE_CAP)`
+off the live entity count — avoiding a new state field entirely, at the cost of one extra branch
+(while a merge is actually in flight, the reserve reads as fully committed regardless of the live
+count, which has by then already dropped back toward 10 and may be accumulating the next batch — only
+the timer field distinguishes the two). The auto-trigger itself (`tickComputeMergeBoundary`'s call
+into `startComputeMergeReserve`) needed only a one-line threshold change, from `COMPUTE_ENTITY_CAP` to
+`COMPUTE_ENTITY_AUTO_MERGE_CAP` — automation now waits for the full 18 before firing, a deliberately
+stricter bar than the MANUAL start button, which keeps its original, lower `COMPUTE_MERGE_RATIO` (8)
+threshold unchanged (a player can still convert early; only the hands-off auto-trigger waits for the
+full reserve). The manual Merge/Auto-unlock buttons were already removed once a boundary's auto-merge
+unlocks (pre-existing, unchanged by this PR).
+
+**Part 3: `DataLakePanel`'s Fill/Buy/Auto-Manual three-control row collapsed into one self-explanatory
+conversion control.** The maintainer's clarification was explicit that the lifetime "`<N>× <Booster>`"
+counter text didn't need to exist ("just show next booster cost at that place and that is self
+explanatory. Thus we do not need the bottom row at all"), and that clicking the cost control itself
+should "fully automate the sequence to fill up and then convert it into a booster and then stop" —
+i.e. exactly the "manual conversion" behavior described for the Foundry screen in Part 1 of the
+original request, applied here to Data Lakes specifically. This replaces the persistent
+`toggleDataLakeAutoBuy`/`tickDataLakeAutoBuy`/`autoBuyEnabled` toggle (a standing "keep auto-buying
+forever" flag) with a one-shot `autoConvertActive` flag and `startDataLakeAutoConvert`/
+`tickDataLakeAutoConvert`: a click buys immediately if already affordable, or arms the flag if not;
+`tickDataLakeAutoConvert` (run every tick, right after `tickPoolBufferFill` so the same tick's fresh
+overflow can fund it) then draws from the pool's own buffer via the pre-existing `fillDataLakeManually`
+helper (now purely internal, no longer a direct UI action of its own) until affordable, buys exactly
+1, and clears the flag — never a persistent bulk loop. Starting is refused
+(`isDataLakeAutoConvertStartAvailable`) if the entity is already at its own effective cap, per the
+request's explicit "should not be allowed to start if the booster slots are already full." While
+converting, `DataLakePanel` renders the control as an inert status label instead of a clickable
+button ("Once automated, it will change from button to label"). The old 💧 Fill button and the
+🔁 Auto/Manual toggle button are both gone outright — `fillDataLakeManually` keeping its own tests and
+export even with no remaining UI trigger of its own, the same posture `queueDiskBuild`'s own
+UI-less-but-still-wired precedent already established (see CLAUDE.md's Provision Disk paragraph).
+
+**Verification.** `yarn test`: 1810/1810 — the `describe.each` auto-merge/reserve-merge-timer suite
+(covering all 9 merge boundaries) updated for the new 18-token auto-trigger threshold, plus a new
+test confirming the OLD threshold (10) is now correctly a same-reference no-op; the old
+`toggleDataLakeAutoBuy`/`tickDataLakeAutoBuy` test block replaced with coverage of
+`startDataLakeAutoConvert`'s immediate-buy/arm-the-flag branches, `isDataLakeAutoConvertStartAvailable`'s
+three gates, and `tickDataLakeAutoConvert`'s fill-then-buy-then-stop sequence across real ticks. Manual
+Playwright verification of all three UI states (progress-filling Auto button; partially/fully-filled
+reserve squares with a live countdown; DataLakePanel's buy/start-conversion/converting-label states) and
+a live end-to-end click confirming `startDataLakeAutoConvert` drives real state changes over
+subsequent ticks. `CLAUDE.md`, `AGENTS.md`, and `docs/ECONOMY_REFERENCE.md` updated in the same
+change per this repo's documentation convention.
+
 ### Boosters UI revamp: buyBooster now pauses at COMPUTE_ENTITY_CAP; tier row buttons no longer clump left — 2026-09-17
 
 Two reports against the Boosters screen (`ComputePage`) and its Data Lake purchase path
