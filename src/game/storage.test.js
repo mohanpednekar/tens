@@ -728,6 +728,14 @@ describe('supporter unlock + save slots', () => {
     expect(setActiveSaveSlot('2').ok).toBe(false)
   })
 
+  it('short-circuits with already: true when switching to the slot that is already active, without rewriting meta', () => {
+    const before = loadSavesMeta()
+    expect(before.activeSlotId).toBe('0')
+    const result = setActiveSaveSlot('0')
+    expect(result).toEqual({ ok: true, already: true, meta: before })
+    expect(loadSavesMeta()).toEqual(before)
+  })
+
   it('renames an unlocked slot', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     expect(renameSaveSlot('1', 'Alt run').ok).toBe(true)
