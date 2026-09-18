@@ -67,6 +67,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+- **Fixed a crash on the Foundry screen** (`ReferenceError: LakeActionsRow is not defined`,
+  triggered the instant any Data Lake panel rendered) caused by a stray leftover reference to a
+  removed control from the Data Lake conversion redesign above. Starting a Data Lake conversion on
+  an old save also now correctly requires its Storage pool to actually be able to feed it, rather
+  than only checking the legacy Boosters-unlocked latch.
 - **Buying a Data Lake Booster no longer mints a compute-ladder entity past its own 10-slot cap** —
   a purchase (manual or auto-buy) now pauses at the cap instead of growing the entity unbounded,
   resuming automatically once it's spent back down (a merge, or a Compute Boost activation/stack).

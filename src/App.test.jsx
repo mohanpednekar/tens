@@ -3757,6 +3757,26 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByRole('button', { name: /buy 1 cores from the kb data lake/i })).toBeInTheDocument()
   })
 
+  test('the same legacy boostersUnlocked latch, when not yet affordable, does NOT offer a "start converting" control that could never actually fund anything (regression — the header control must key off isDataLakePoolReady, not the looser latch)', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      // No disksBuiltTotal entry for pool 1 — isDataLakePoolReady is false — and not enough
+      // deposited to be immediately affordable either, so canBuy is also false: this is exactly
+      // the state that used to render a clickable "start converting" button whose click would
+      // arm autoConvertActive with no way for it to ever bank anything.
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    const lakeBlock = within(pool1).getByLabelText('KB lake')
+    expect(within(lakeBlock).queryByRole('button', { name: /start converting toward 1 cores from the kb data lake/i })).not.toBeInTheDocument()
+    expect(within(lakeBlock).getByTitle('Build a 1 KB disk in Storage to unlock Boosters here')).toBeInTheDocument()
+  })
+
   test('Data Lake capacity can be increased ×10 by clicking its ⚡ Scale Out button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another
