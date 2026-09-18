@@ -1879,7 +1879,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                         </PpUpgradeBadge>
                         <PauseToggleButton
                           aria-pressed={tierTickspeedAutobuyerEnabled}
-                          aria-label={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
+                          aria-label={`pause or resume ${tier.name}'s tickspeed autobuyer`}
                           onClick={() => actions.setTierTickspeedAutobuyerEnabled(tier.id, !tierTickspeedAutobuyerEnabled)}
                           title={tierTickspeedAutobuyerEnabled ? `Pause ${tier.name}'s tickspeed autobuyer` : `Resume ${tier.name}'s tickspeed autobuyer`}
                           type="button"
@@ -1918,7 +1918,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                           </PpUpgradeBadge>
                           <PauseToggleButton
                             aria-pressed={autobuyerEnabled}
-                            aria-label={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
+                            aria-label={`pause or resume ${tier.name}'s autobuyer`}
                             onClick={() => actions.setAutobuyerEnabled(tier.id, !autobuyerEnabled)}
                             title={autobuyerEnabled ? `Pause ${tier.name}'s autobuyer` : `Resume ${tier.name}'s autobuyer`}
                             type="button"
@@ -1983,7 +1983,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   </PpUpgradeBadge>
                   <PauseToggleButton
                     aria-pressed={tickspeedAutobuyerEnabled}
-                    aria-label={tickspeedAutobuyerEnabled ? 'Pause Tickspeed Autobuyer automation' : 'Resume Tickspeed Autobuyer automation'}
+                    aria-label="pause or resume Tickspeed Autobuyer automation"
                     onClick={() => actions.setAutoGlobalTickspeedEnabled(!tickspeedAutobuyerEnabled)}
                     title={tickspeedAutobuyerEnabled ? 'Pause Tickspeed Autobuyer automation' : 'Resume Tickspeed Autobuyer automation'}
                     type="button"
@@ -2030,7 +2030,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   </PpUpgradeBadge>
                   <PauseToggleButton
                     aria-pressed={autoScaleUpEnabled}
-                    aria-label={autoScaleUpEnabled ? 'Pause Auto Scale Up automation' : 'Resume Auto Scale Up automation'}
+                    aria-label="pause or resume Auto Scale Up automation"
                     onClick={() => actions.setAutoScaleUpEnabled(!autoScaleUpEnabled)}
                     title={autoScaleUpEnabled ? 'Pause Auto Scale Up automation' : 'Resume Auto Scale Up automation'}
                     type="button"
@@ -2082,7 +2082,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                     </PpUpgradeBadge>
                     <PauseToggleButton
                       aria-pressed={autoPrestigeAutobuyerEnabled}
-                      aria-label={autoPrestigeAutobuyerEnabled ? 'Pause Auto-Prestige Autobuyer automation' : 'Resume Auto-Prestige Autobuyer automation'}
+                      aria-label="pause or resume Auto-Prestige Autobuyer automation"
                       onClick={() => actions.setAutoPrestigeAutobuyerEnabled(!autoPrestigeAutobuyerEnabled)}
                       title={autoPrestigeAutobuyerEnabled ? 'Pause Auto-Prestige Autobuyer automation' : 'Resume Auto-Prestige Autobuyer automation'}
                       type="button"
@@ -2155,7 +2155,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                   {isAutoPrestigeActive && (
                     <PauseToggleButton
                       aria-pressed={autoPrestigeEnabled}
-                      aria-label={autoPrestigeEnabled ? 'Pause Auto-Prestige automation' : 'Resume Auto-Prestige automation'}
+                      aria-label="pause or resume Auto-Prestige automation"
                       onClick={() => actions.setAutoPrestigeEnabled(!autoPrestigeEnabled)}
                       title={autoPrestigeEnabled ? 'Pause Auto-Prestige automation' : 'Resume Auto-Prestige automation'}
                       type="button"

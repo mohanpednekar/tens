@@ -426,6 +426,88 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               aria-valuemin={0}
               aria-valuemax={100}
             />
+
+            <LakeActionsRow>
+              {canFillManually && (
+                <ActionButton
+                  aria-label={`fill the ${label} Data Lake toward its next Booster`}
+                  onClick={() => actions.fillDataLakeManually(tierIndex)}
+                  title={`Draws from this pool's own buffer to top up toward the next ${boosterLabel} (${nextCostSize}) — automatic once this ENTIRE pool is built (every ×1/×10/×100 disk, not just the ${formatDiskSize(unitBits)} ones)`}
+                  type="button"
+                  variant="info"
+                >
+                  <ButtonContent>💧 Fill</ButtonContent>
+                </ActionButton>
+              )}
+              {/* Buy wins the slot the instant it's actually affordable — even when Upgrade is
+                  ALSO available (an array-complete pool whose banked units, e.g. from manual Fill,
+                  already cover the next Booster) — so a manually-filled deposit meant for a Booster
+                  purchase is never silently funneled into a forced Scale Out with no way to spend it
+                  first (auto-buy defaults off; see docs/DESIGN_HISTORY.md). Otherwise Upgrade claims
+                  the slot whenever it's available — no longer any "available but not its turn"
+                  window to arbitrate, since isDataLakeCapacityDoublingAvailable is no longer part of
+                  the forced priority order (see its own doc comment in engine.js): it's always
+                  immediately clickable the instant its array is complete, the same posture Buy
+                  already had. */}
+              {canBuy ? (
+                <ActionButton
+                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                  onClick={() => actions.buyBooster(tierIndex)}
+                  title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                </ActionButton>
+              ) : upgradeAvailable ? (
+                <ActionButton
+                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
+                  onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>⚡ Scale Out</ButtonContent>
+                </ActionButton>
+              ) : unlocked ? (
+                <ActionButton
+                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                  disabled={!canBuy}
+                  onClick={() => actions.buyBooster(tierIndex)}
+                  title={
+                    canBuy
+                      ? `Buy 1 ${boosterLabel} for ${nextCostSize}`
+                      : entityAtCap
+                        ? `${boosterLabel} is already at the max of ${COMPUTE_ENTITY_CAP} — spend or merge it down first`
+                        : `Needs ${nextCostSize} banked`
+                  }
+                  type="button"
+                  variant={canBuy ? 'success' : 'neutral'}
+                >
+                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                </ActionButton>
+              ) : (
+                <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              )}
+              {unlocked && (
+                <ActionButton
+                  aria-label={`pause or resume auto-buy for the ${label} Data Lake`}
+                  aria-pressed={autoBuyEnabled}
+                  onClick={() => actions.toggleDataLakeAutoBuy(tierIndex)}
+                  title={
+                    autoBuyEnabled
+                      ? 'Auto-buy is on — the next Booster buys itself the instant it is affordable'
+                      : 'Auto-buy is off — buy manually'
+                  }
+                  type="button"
+                  variant={autoBuyEnabled ? 'info' : 'neutral'}
+                >
+                  <ButtonContent>{autoBuyEnabled ? '🔁 Auto' : '🔁 Manual'}</ButtonContent>
+                </ActionButton>
+              )}
+            </LakeActionsRow>
           </LakeBlock>
         )
       })}
