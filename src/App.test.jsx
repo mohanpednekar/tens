@@ -4341,7 +4341,7 @@ describe('Compute auto-merge automation', () => {
     expect(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i })).toBeDisabled()
   })
 
-  test('enabling auto-merge sacrifices ALL 10 held Clusters and replaces the button with an Auto badge', () => {
+  test('enabling auto-merge sacrifices exactly 10 held Clusters and replaces the button with an Auto badge', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeClusters: 10,
@@ -4355,6 +4355,21 @@ describe('Compute auto-merge automation', () => {
     expect(saved.intro.computeClusters).toBe(0)
     expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
     expect(screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })).not.toBeInTheDocument()
+  })
+
+  test('enabling auto-merge preserves any Clusters held above 10 — regression: this used to zero the whole field, destroying reserve progress the Clusters into Network boundary was already gradually accumulating', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeClusters: 15, autoMergeClustersIntoNetwork: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeClusters).toBe(5) // NOT 0 — the reserve's own 5 units survive
+    expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
   })
 
   test('once auto-merge is unlocked for a tier, a real tick auto-starts a reserve merge once the input is completely full (the merge itself only completes once its own timed duration elapses — see engine.test.js)', () => {
@@ -4385,6 +4400,30 @@ describe('Compute auto-merge automation', () => {
 
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
+  })
+
+  test('the pre-unlock Auto button shows live progress toward its own unlock cost, matching Factory\'s own Buy-button convention', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 6,
+    })
+    render(<App />)
+    openBoosters()
+
+    const autoButton = screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i })
+    expect(autoButton).toHaveTextContent('🤖 6/10')
+    expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
+  })
+
+  test('the reserve-slot row shows a partial, gradually-filled count once auto-merge is unlocked, not just empty-or-full', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: COMPUTE_ENTITY_CAP + 3, autoMergeNodesIntoCluster: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByRole('button', { name: /3\/8 banked toward the next automatic merge/i })).toBeInTheDocument()
   })
 
 })
