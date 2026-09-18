@@ -1,5 +1,98 @@
 # Design history & rationale
 
+### Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18
+
+Three same-day fixes, discovered in sequence while running the mandatory adversarial `code-reviewer`
+subagent against PR #679 (the entry immediately below this one) — which returned `NEEDS CHANGES` —
+and then, while reapplying its fixes, discovering `main` was actively broken by an unrelated merge
+issue.
+
+**A stray merge corruption crashed `main` outright.** PR #679's own head commit (verified, CI-green,
+1810/1810 locally) cleanly deleted `DataLakePanel`'s old `LakeActionsRow` block (💧 Fill / Buy /
+🔁 Auto-Manual) in favor of the new single header-row control. But the commit GitHub actually merged
+into `main` somehow carried BOTH the new header control AND a full, otherwise-verbatim copy of the
+deleted `LakeActionsRow` block re-added on top — a pure ~90-line addition with no matching deletion,
+confirmed by diffing PR #679's own verified head commit against the merged `main` tip (every other
+file byte-identical; only this one file differed, purely additively). The reintroduced block
+referenced a styled-component (`LakeActionsRow`) and action functions (`buyBooster`,
+`fillDataLakeManually`, `toggleDataLakeAutoBuy`) that #679 had legitimately removed everywhere else
+(confirmed via a repo-wide grep — no other reference survives) — so `main` crashed with
+`ReferenceError: LakeActionsRow is not defined` the instant any `DataLakePanel` rendered, i.e. as
+soon as a player reached Foundry past the Byte Foundry gate. Confirmed catastrophic by running
+`yarn test` against a fresh checkout of `origin/main` directly: 88 failures, all rooted in this one
+`ReferenceError` (plus cascading fake-timer leaks from tests that crashed before their own cleanup).
+The exact mechanism that produced this merge (a bad manual conflict resolution in GitHub's web UI, a
+squash race, or something else) couldn't be determined from the repo's own history and wasn't worth
+chasing further — the fix is the same regardless: delete the stray block. Shipped immediately as its
+own urgent PR (#683), separate from the two behavioral fixes below, given the severity (a
+production-crashing bug on `main`, not merely a design refinement).
+
+**Bug 1: `enableAutoMerge` could silently destroy gradually-accumulated reserve progress.**
+`enableAutoMerge(outputField, autoFlagField)` (`engine.js`) still did `[outputField]: 0` — zeroing
+the ENTIRE field — on the assumption (true before #679) that a compute-ladder entity could never
+hold more than `COMPUTE_ENTITY_CAP` (10). #679 broke that assumption: once a tier's own outbound
+merge boundary has auto-merge unlocked, its field can legitimately hold up to
+`COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) via ordinary Booster purchases or a lower-tier merge, gradually
+filling its own reserve. Unlocking a DIFFERENT, downstream boundary's auto-merge while that field
+sat between 10 and 18 (e.g. holding 15 Clusters while Clusters→Network's own reserve was still
+filling, then clicking "Unlock Auto-merge" on Nodes→Clusters, which only checks `>= 10`) wiped the
+whole field to 0 — destroying the extra 5 units of real, player-earned reserve progress. Confirmed
+by the reviewer via a direct repro against the real engine. Fixed by subtracting exactly
+`COMPUTE_ENTITY_CAP` instead of zeroing: `[outputField]: (state.intro?.[outputField] ?? 0) -
+COMPUTE_ENTITY_CAP`. Every `enableAutoMerge*` action already required `>= COMPUTE_ENTITY_CAP` to
+fire at all (`isAutoMergeUnlockAvailable`), so the result can never go negative. The Auto button's
+own title text ("sacrifice all 10 ...") and the matching `docs/ECONOMY_REFERENCE.md` prose were both
+literally describing the old, buggy "zero everything" behavior — corrected to "sacrifice exactly 10,
+not the field's entire live count" in both places.
+
+**Bug 2: a legacy save's Data Lake conversion control could get stuck forever with no cancel path.**
+`isDataLakeAutoConvertStartAvailable` only checked `isDataLakeBoosterUnlocked` (unlocked OR the
+legacy per-lake `boostersUnlocked` latch) and room under the entity cap — not whether the lake's own
+Storage pool could ever actually feed it. `isDataLakeBoosterUnlocked` intentionally also returns true
+under that legacy latch alone, for an old save where `boostersUnlocked` is already true but
+`isDataLakePoolReady` (a real disk actually built this era) is still false — a real, previously
+anticipated divergence (see the "Pool liveness" / `LakePoolTile` entries elsewhere in this file).
+Clicking "start converting" in that exact state armed `autoConvertActive` with no way to ever clear
+it: `tickDataLakeAutoConvert` only calls `fillDataLakeManually`, which is itself gated on
+`isDataLakePoolReady` and therefore a permanent no-op there — `depositedUnits` would never move,
+`isBoosterPurchaseAvailable` would never become true, and nothing else in the engine ever clears the
+flag once armed (confirmed by the reviewer via a direct repro: 5 ticks in a row returned the exact
+same state reference). The control would sit showing its inert "converting" label forever for that
+lake. Fixed two ways: (1) `isDataLakeAutoConvertStartAvailable` now also requires
+`isDataLakePoolReady`, so starting is refused outright in this state — `DataLakePanel`'s own render
+priority was updated to match (the clickable "start converting" branch now checks `poolReady`
+instead of the looser `unlocked`, so this state correctly falls through to the "locked" status text
+instead of offering a button that would silently no-op); (2) `tickDataLakeAutoConvert` also
+defensively clears the flag if it's somehow already active on an un-ready pool (a save written
+before this fix, or a raw Dev Mode state edit), rather than spinning forever — belt-and-suspenders
+alongside the start-time gate.
+
+**Test coverage gap.** `getComputeReserveHeld`/`isComputeEntityAutoMergeUnlocked` had been imported
+into `engine.test.js` by #679 but never directly exercised — only indirectly, through `tickGame`-
+level threshold tests that never inspected the reserve-display function's own three branches (locked
+out; gradually filling; fully committed during an in-flight merge). Added a dedicated `describe`
+block covering all three, plus the out-of-range/defensive-clamp edges. Also added: a regression test
+for `enable` preserving excess above `COMPUTE_ENTITY_CAP` (bug 1), a regression test for
+`tickDataLakeAutoConvert`'s defensive clear (bug 2), an `isDataLakeAutoConvertStartAvailable` case
+for the legacy-latch-but-not-ready state, and two `App.test.jsx` cases covering the Auto button's own
+live progress text/disabled state and the reserve row's partial-fill aria-label — none of which #679
+had covered at the UI level either.
+
+Four of #679's own pre-existing `Data Lakes` tests seeded `boostersUnlocked: true` directly as a bare
+"make Boosters unlocked" shortcut, without ever seeding `disksBuiltTotal`  — meaning they were
+unknowingly exercising the exact legacy-latch-but-not-ready state bug 2 describes as their supposedly
+"normal" setup. Updated those to also seed `disksBuiltTotal` (matching what real gameplay would
+actually produce before `boostersUnlocked` ever gets set — see `fillDataLakeDisks`'s own latch),
+distinguishing them from the one test that now deliberately exercises the legacy-only path.
+
+**Verification.** `yarn test`: 1828/1828 (10 new tests: 5 in `engine.test.js` for the two bug fixes
+and the `getComputeReserveHeld`/`isComputeEntityAutoMergeUnlocked` coverage gap, 3 fixed pre-existing
+tests, 2 new `App.test.jsx` UI-level regressions). `CLAUDE.md` and `docs/ECONOMY_REFERENCE.md`
+updated in the same commit; `graphify-out/` regenerated. Posted as a PR comment on #679 (the
+adversarial-review marker, delivered post-merge) rather than blocking it, since the review completed
+after the PR had already been merged directly. The merge-corruption crash fix shipped separately as
+PR #683 (see above), ahead of these two behavioral fixes, given its severity.
+
 ### Auto-merge Booster progress display, a gradually-filling 18-slot extended cap, and one-shot Data Lake conversion replacing the persistent Auto/Manual toggle — 2026-09-17
 
 A three-part follow-up request against the just-shipped Boosters UI revamp above, aimed at the
