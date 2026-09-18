@@ -221,8 +221,12 @@ jobs:
           merged_pr=$(gh pr list --state merged --limit 5 --json number,mergedAt \
             --jq 'sort_by(.mergedAt) | reverse | .[0].number // empty')
           if [ -n "$merged_pr" ]; then
+            # `gh`'s own --jq flag only accepts the filter expression itself — it does not
+            # support additional jq flags like --arg, so this must pipe into a real `jq`
+            # invocation instead of passing --arg through `gh ... --jq`. See the failed run
+            # this fixes: "accepts at most 1 arg(s), received 4".
             already_commented=$(gh pr view "$merged_pr" --json comments \
-              --jq --arg url "$RUN_URL" '[.comments[].body | select(contains($url))] | length > 0')
+              | jq --arg url "$RUN_URL" '[.comments[].body | select(contains($url))] | length > 0')
             if [ "$already_commented" = "true" ]; then
               echo "Already commented on #$merged_pr for this failed run ($RUN_URL); skipping."
             else

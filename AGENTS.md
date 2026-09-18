@@ -153,20 +153,19 @@ Lakes/Compute entity balances back to scratch while still keeping `byteCreated`,
 `mainGameUnlocked` latch, and select automation-unlock flags. Only the Data Stream balance resets
 each ordinary cycle.
 
-**Same caveat as above applies here too — every formula, threshold, and UI-rendering detail behind
-this paragraph is deliberately omitted; do not guess at any of it.** Read `CLAUDE.md`'s "Economy
-model"/"Architecture" sections and `docs/ECONOMY_REFERENCE.md` in full before touching
-`src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or `ByteFoundryPage`/`StoragePage`/
-`ComputePage` — and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration
-may already have tried and rejected.
-
-Every formula/threshold/gating predicate behind Data Stream Capacity, pool Bandwidth, Provision
+**Same caveat as above applies here too, extended to Data Stream Capacity, pool Bandwidth, Provision
 Disk, Data Lakes (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button
-precedence, and pool-liveness-is-Capacity-only is deliberately omitted here — it's fully documented
-in `CLAUDE.md`'s "Architecture"/"Economy model" sections and `docs/ECONOMY_REFERENCE.md`/
-`docs/COMPONENTS_REFERENCE.md`; do not guess at any of it. After **100 lifetime prestiges**,
-production no longer freezes at 1 Googol Bytes (optional Prestige to claim PP); PP earns 1 per 64
-money-exponent powers beyond Googol, improvable via Double PP upgrades on the Upgrades tab.
+precedence, and pool-liveness-is-Capacity-only — every formula/threshold/UI-rendering/gating detail
+behind this paragraph is deliberately omitted; do not guess at any of it.** It's fully documented in
+`CLAUDE.md`'s "Economy model"/"Architecture" sections and `docs/ECONOMY_REFERENCE.md`/
+`docs/COMPONENTS_REFERENCE.md`. Read those in full before touching `src/game/engine.js`,
+`src/game/layers.js`, `TIER_DEFINITIONS`, or `ByteFoundryPage`/`StoragePage`/`ComputePage` — and
+check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may already have
+tried and rejected.
+
+After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
+to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
+upgrades on the Upgrades tab.
 
 For run times / pacing questions — and after any change that can significantly affect ideal Foundry
 or prestige timings — use the `simulate-run-times` skill and publish via `publish-strategy.sh`.
