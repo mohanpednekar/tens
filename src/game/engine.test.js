@@ -265,12 +265,15 @@ import {
   isDataLakePoolReady,
   isDataLakeManualFillAvailable,
   fillDataLakeManually,
-  isDataLakeAutoBuyEnabled,
+  isDataLakeAutoConvertActive,
+  isDataLakeAutoConvertStartAvailable,
   isBoosterPurchaseAvailable,
   isBoosterEntityAtCap,
   buyBooster,
-  toggleDataLakeAutoBuy,
-  tickDataLakeAutoBuy,
+  startDataLakeAutoConvert,
+  tickDataLakeAutoConvert,
+  isComputeEntityAutoMergeUnlocked,
+  getComputeReserveHeld,
   getDataLakeTierIndex,
   getDataLakeSubSize,
   getDataLakeUnitBits,
@@ -289,7 +292,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -4617,18 +4620,23 @@ describe.each([
     expect(tick(1)(state)).toBe(state)
   })
 
-  it('tick auto-starts a reserve merge once enabled and the input entity is completely full — moving COMPUTE_MERGE_RATIO out of the input and starting the timer, without granting the output yet', () => {
+  it('tick is still a same-reference no-op at the OLD instant-pull threshold (COMPUTE_ENTITY_CAP, 10) — the auto-trigger now needs the full extended cap (18)', () => {
     const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
+    expect(tick(1)(state)).toBe(state)
+  })
+
+  it('tick auto-starts a reserve merge once enabled and the input entity reaches the extended cap (COMPUTE_ENTITY_AUTO_MERGE_CAP, 18 — primary 10 plus the gradually-filled reserve) — moving COMPUTE_MERGE_RATIO out of the input and starting the timer, without granting the output yet', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true })
     const after = tick(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO) // back to the primary 10
     expect(after.intro[outputField]).toBe(0)
     expect(after.intro[timerField]).toBe(durationOf() - 1) // the same tick's elapsedSeconds also counts down
   })
 
-  it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled back to COMPUTE_ENTITY_CAP', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, [timerField]: durationOf() })
+  it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled all the way back to the extended cap', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, [timerField]: durationOf() })
     const after = tick(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP) // untouched — no second merge started
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP) // untouched — no second merge started
     expect(after.intro[timerField]).toBe(durationOf() - 1) // only the in-flight merge's own timer ticks down
   })
 
@@ -4698,10 +4706,10 @@ describe.each([
     expect(prestigeGame(state).intro[timerField]).toBe(durationOf() - 5)
   })
 
-  it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input is full', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true, byteCreated: true })
+  it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input reaches the extended cap', () => {
+    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, byteCreated: true })
     const after = tickGame(1)(state)
-    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+    expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
     expect(after.intro[timerField]).toBeGreaterThan(0)
   })
 
@@ -10621,7 +10629,7 @@ describe('Data Lakes', () => {
           ...createInitialGameState().intro.dataLakes,
           // 9 ones already built (the level's own real-disk max) — the buffer's own final unit is
           // next; capacity is 10 at level 1.
-          1: { capacityLevel: 1, depositedUnits: 9, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 },
+          1: { capacityLevel: 1, depositedUnits: 9, fillBits: 0, boostersUnlocked: true, autoConvertActive: false, purchased: 0 },
         },
       })
       let state = level1
@@ -10680,7 +10688,7 @@ describe('Data Lakes', () => {
           ...createInitialGameState().intro.dataLakes,
           // capacityLevel 1 => capacity 10, slot counts {1: 9, 10: 0, 100: 0} — with depositedUnits
           // below 9, the current open slot is always a ×1 disk, sized exactly unitBits1.
-          1: { capacityLevel: 1, depositedUnits, fillBits: unitBits1 * 0.5, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 },
+          1: { capacityLevel: 1, depositedUnits, fillBits: unitBits1 * 0.5, boostersUnlocked: true, autoConvertActive: false, purchased: 0 },
         },
       })
       // Same half-filled CURRENT disk whether the lake already holds 0 or 3 completed disks — the
@@ -10699,7 +10707,7 @@ describe('Data Lakes', () => {
       // no-ops once maxed regardless of rate), and the pool gauge reads this function directly for
       // its own display label.
       const maxed = withIntro(createInitialGameState(), {
-        dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoBuyEnabled: false, purchased: 0 } },
+        dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoConvertActive: false, purchased: 0 } },
       })
       expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
       expect(getDataLakeCurrentDiskFillFraction(maxed, 1)).toBe(1)
@@ -10999,31 +11007,78 @@ describe('Data Lakes', () => {
       expect(isBoosterPurchaseAvailable(atCap, 1)).toBe(false)
     })
 
-    it('toggleDataLakeAutoBuy flips autoBuyEnabled without touching anything else', () => {
-      const state = createInitialGameState()
-      expect(isDataLakeAutoBuyEnabled(state, 1)).toBe(false)
-      const on = toggleDataLakeAutoBuy(1)(state)
-      expect(isDataLakeAutoBuyEnabled(on, 1)).toBe(true)
-      const off = toggleDataLakeAutoBuy(1)(on)
-      expect(isDataLakeAutoBuyEnabled(off, 1)).toBe(false)
+    it('startDataLakeAutoConvert buys immediately, without arming the flag, when already affordable', () => {
+      const state = withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true })
+      const after = startDataLakeAutoConvert(1)(state)
+      expect(after.intro.dataLakes[1].purchased).toBe(1)
+      expect(after.intro.computeCores).toBe(1)
+      expect(isDataLakeAutoConvertActive(after, 1)).toBe(false)
     })
 
-    it('tickDataLakeAutoBuy repeatedly buys while enabled and affordable, across every lake, stopping once the escalating cost can no longer be covered', () => {
-      let state = withLake(createInitialGameState(), 1, { depositedUnits: 6, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 2 })
-      // Costs 1, 2, 3 => 6 spent total, leaving 0; a 4th purchase (cost 4) is unaffordable.
-      state = tickDataLakeAutoBuy(state)
-      expect(state.intro.dataLakes[1].purchased).toBe(3)
-      expect(getDataLakeDepositedUnits(1)(state)).toBe(0)
-      expect(state.intro.computeCores).toBe(3)
+    it('startDataLakeAutoConvert arms autoConvertActive, without buying yet, when not yet affordable', () => {
+      const state = withLake(createInitialGameState(), 1, { depositedUnits: 0, boostersUnlocked: true })
+      const after = startDataLakeAutoConvert(1)(state)
+      expect(isDataLakeAutoConvertActive(after, 1)).toBe(true)
+      expect(after.intro.dataLakes[1].purchased).toBe(0)
     })
 
-    it('tickDataLakeAutoBuy skips a lake with autoBuyEnabled false, even if affordable', () => {
-      const state = withLake(createInitialGameState(), 1, { depositedUnits: 100, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 3 })
-      expect(tickDataLakeAutoBuy(state)).toBe(state)
+    it('isDataLakeAutoConvertStartAvailable/startDataLakeAutoConvert require unlocked, not already active, and room under the entity cap', () => {
+      const base = withLake(createInitialGameState(), 1, { boostersUnlocked: true })
+      expect(isDataLakeAutoConvertStartAvailable(base, 1)).toBe(true)
+
+      const notUnlocked = withLake(createInitialGameState(), 1, { boostersUnlocked: false })
+      expect(isDataLakeAutoConvertStartAvailable(notUnlocked, 1)).toBe(false)
+      expect(startDataLakeAutoConvert(1)(notUnlocked)).toBe(notUnlocked)
+
+      const alreadyActive = withLake(createInitialGameState(), 1, { boostersUnlocked: true, autoConvertActive: true })
+      expect(isDataLakeAutoConvertStartAvailable(alreadyActive, 1)).toBe(false)
+      expect(startDataLakeAutoConvert(1)(alreadyActive)).toBe(alreadyActive)
+
+      const atCap = { ...base, intro: { ...base.intro, computeCores: COMPUTE_ENTITY_CAP } }
+      expect(isDataLakeAutoConvertStartAvailable(atCap, 1)).toBe(false)
+      expect(startDataLakeAutoConvert(1)(atCap)).toBe(atCap)
     })
 
-    it('tickDataLakeAutoBuy is driven by tickGame every tick', () => {
-      const state = withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true, autoBuyEnabled: true, capacityLevel: 1 })
+    it('tickDataLakeAutoConvert fills from the pool buffer, then buys exactly 1 and stops — never a bulk/repeating buy', () => {
+      let state = withIntro(withPoolBuffer(createInitialGameState(), kb1), {
+        disksBuiltTotal: { [kb1]: 1 },
+        dataLakes: { 1: { ...getDataLakeTier(createInitialGameState(), 1), boostersUnlocked: true, autoConvertActive: true } },
+      })
+      // First tick: not yet affordable (nothing deposited yet), so it draws from the pool buffer
+      // instead — the same fillDataLakeManually mechanism a manual click always used.
+      state = tickDataLakeAutoConvert(state)
+      expect(getDataLakeDepositedUnits(1)(state)).toBe(1) // exactly the next Booster's own cost
+      expect(state.intro.dataLakes[1].purchased).toBe(0)
+      expect(isDataLakeAutoConvertActive(state, 1)).toBe(true) // still running — hasn't bought yet
+
+      // Second tick: now affordable — buys exactly 1 and stops.
+      state = tickDataLakeAutoConvert(state)
+      expect(state.intro.dataLakes[1].purchased).toBe(1)
+      expect(state.intro.computeCores).toBe(1)
+      expect(isDataLakeAutoConvertActive(state, 1)).toBe(false)
+
+      // A further tick does nothing more — the flag is off, unlike the old persistent auto-buy.
+      expect(tickDataLakeAutoConvert(state)).toBe(state)
+    })
+
+    it('tickDataLakeAutoConvert skips a lake with autoConvertActive false, even if affordable', () => {
+      const state = withLake(createInitialGameState(), 1, { depositedUnits: 100, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 3 })
+      expect(tickDataLakeAutoConvert(state)).toBe(state)
+    })
+
+    it('tickDataLakeAutoConvert stops cleanly, without buying, if the entity fills up some other way (e.g. a merge) while conversion is running', () => {
+      const state = withLake(
+        { ...createInitialGameState(), intro: { ...createInitialGameState().intro, computeCores: COMPUTE_ENTITY_CAP } },
+        1,
+        { depositedUnits: 100, boostersUnlocked: true, autoConvertActive: true },
+      )
+      const after = tickDataLakeAutoConvert(state)
+      expect(isDataLakeAutoConvertActive(after, 1)).toBe(false)
+      expect(after.intro.dataLakes[1].purchased).toBe(0) // no purchase happened — nothing to convert into
+    })
+
+    it('startDataLakeAutoConvert/tickDataLakeAutoConvert are driven by tickGame every tick', () => {
+      const state = withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 1 })
       const after = tickGame(0.1)(state)
       expect(after.intro.dataLakes[1].purchased).toBe(1)
       expect(after.intro.computeCores).toBe(1)
@@ -11218,18 +11273,18 @@ describe('Data Lakes', () => {
       fillBits: 0,
       purchased: 0,
       boostersUnlocked: false,
-      autoBuyEnabled: false,
+      autoConvertActive: false,
       capacityLevel: 0,
     })
   })
 
-  it('prestigeGame carries dataLakes (depositedUnits/fillBits/purchased/boostersUnlocked/autoBuyEnabled/capacityLevel) through a real Prestige unchanged', () => {
+  it('prestigeGame carries dataLakes (depositedUnits/fillBits/purchased/boostersUnlocked/autoConvertActive/capacityLevel) through a real Prestige unchanged', () => {
     const seededLake = {
       depositedUnits: 3,
       fillBits: 456,
       purchased: 4,
       boostersUnlocked: true,
-      autoBuyEnabled: true,
+      autoConvertActive: true,
       capacityLevel: 2,
     }
     const state = withMoney(
@@ -11249,7 +11304,7 @@ describe('Data Lakes', () => {
       fillBits: 456,
       purchased: 4,
       boostersUnlocked: true,
-      autoBuyEnabled: true,
+      autoConvertActive: true,
       capacityLevel: 2,
     }
     const state = eraEligibleState({

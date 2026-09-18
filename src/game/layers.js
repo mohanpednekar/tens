@@ -364,6 +364,9 @@ export const COMPUTE_CORES_PER_NODE = 8
 // the input entity itself (for every manual merge) simply stays put, waiting for the player to
 // spend the capped entity down via a future spending mechanic, the same "waits, doesn't lose
 // progress" posture Disks already have when nothing can consume them yet.
+// Once a tier's own outbound merge boundary has auto-merge unlocked (see COMPUTE_ENTITY_AUTO_MERGE_CAP
+// below), this is only the PRIMARY-slot cap — the entity can keep growing past it, into the reserve,
+// up to COMPUTE_ENTITY_AUTO_MERGE_CAP.
 export const COMPUTE_ENTITY_CAP = 10
 // 8 of one compute-ladder entity merges into 1 of the next tier up — the full ten-tier progression
 // is Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer →
@@ -387,20 +390,32 @@ export const COMPUTE_MERGE_RATIO = 8
 // pool once that boundary's auto-merge is unlocked (see intro.autoMergeCoresIntoNode/
 // autoMergeNodesIntoCluster/… below) — a same-sized second pool of COMPUTE_MERGE_RESERVE_CAP (8,
 // same value as COMPUTE_MERGE_RATIO — a merge always consumes exactly one full group) slots
-// alongside the entity's own COMPUTE_ENTITY_CAP (10) normal slots, "18 slots" total. The reserve
-// only ever holds tokens already committed to an in-progress merge — filling it (always in one
-// instant, all-8-at-once move, never gradually) and starting its timer are the same action,
-// whether triggered automatically (input entity completely full, 10 held) or manually (player
-// click, needs only COMPUTE_MERGE_RATIO, 8, held — see startComputeCoresMerge/
-// startComputeNodesMerge/… in engine.js). At most one merge is ever in flight per boundary at a
-// time — the reserve is binary in practice (0 or a full COMPUTE_MERGE_RESERVE_CAP), tracked by a
-// single countdown field (e.g. intro.computeCoresMergeRemainingSeconds) rather than a separate
-// fill-count, since nothing else can partially fill it. Before a boundary's auto-merge is
-// unlocked, merging that tier is still the old-style instant, untimed action (see
-// mergeComputeCoresIntoNode/mergeComputeNodesIntoCluster/… — each becomes a same-reference no-op
-// once its own auto-merge flag flips true, since merging fully transitions to the timed reserve
-// system from then on).
+// alongside the entity's own COMPUTE_ENTITY_CAP (10) normal slots, "18 slots" total
+// (COMPUTE_ENTITY_AUTO_MERGE_CAP below). Unlike before, the reserve now fills GRADUALLY: once
+// auto-merge is unlocked for a boundary, the entity's own effective cap for further Booster
+// purchases (buyBooster) or lower-tier merges rises from COMPUTE_ENTITY_CAP to
+// COMPUTE_ENTITY_AUTO_MERGE_CAP — the "extra" 8 units held past the primary 10 slots ARE the
+// reserve, derived straight from the live entity count rather than tracked in a separate field
+// (see getComputeReserveHeld in engine.js). The moment the entity reaches
+// COMPUTE_ENTITY_AUTO_MERGE_CAP (18), the auto-trigger fires (`tickComputeMergeBoundary`'s own
+// threshold — moves COMPUTE_MERGE_RATIO, 8, back out, leaving the primary 10 intact) and starts the
+// timer, exactly like a manual click always could (still COMPUTE_MERGE_RATIO, 8, as its own lower
+// threshold — see startComputeCoresMerge/startComputeNodesMerge/… in engine.js) — this part is
+// unchanged. At most one merge is ever in flight per boundary at a time (`timerField > 0` blocks a
+// second auto-start); while one is in flight, further purchases can still accumulate the NEXT
+// batch from 10 back up toward 18. Before a boundary's auto-merge is unlocked, merging that tier is
+// still the old-style instant, untimed action (see mergeComputeCoresIntoNode/
+// mergeComputeNodesIntoCluster/… — each becomes a same-reference no-op once its own auto-merge flag
+// flips true, since merging fully transitions to the timed reserve system from then on). An earlier
+// version filled the reserve in one atomic, all-8-at-once instant pull rather than gradually via
+// continued purchases — reversed; see docs/DESIGN_HISTORY.md.
 export const COMPUTE_MERGE_RESERVE_CAP = 8
+// The effective per-entity cap once that tier's own outbound merge boundary has auto-merge
+// unlocked — COMPUTE_ENTITY_CAP (10 primary slots) + COMPUTE_MERGE_RESERVE_CAP (8 reserve slots
+// gradually filled by continued Booster purchases/lower-tier merges) = 18 "slots" total. Before
+// auto-merge is unlocked for that boundary, COMPUTE_ENTITY_CAP alone is still the cap — see
+// getComputeEntityFieldRoom in engine.js.
+export const COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_RESERVE_CAP
 // Timed reserve-merge durations are NOT a fixed second table — they derive from live Core earn
 // time (Memory capacity ÷ Byte generator bits/sec, before Compute Boost). Core→Node starts at
 // COMPUTE_MERGE_CORE_EARN_MULTIPLIER × that earn time; each next boundary multiplies the previous

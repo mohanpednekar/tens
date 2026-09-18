@@ -108,8 +108,9 @@ Compute lives entirely on its own dedicated screen (`ComputePage` — see below)
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
 INTRO_COMPUTE_CORE_UNLOCK_CAPACITY`). Cores themselves are obtained via `buyBooster`, bought
 instantly from the matching Data Lake's own banked units on that pool's own `PoolCard`
-(manually, or automatically once that lake's own Auto toggle is on — see "Storage pools render as
-their own PoolCards" below) — not minted
+(a click either buys immediately if already affordable or arms a one-shot auto-convert that finishes
+the purchase automatically over subsequent ticks — see "Storage pools render as their own
+PoolCards" below) — not minted
 from Data Stream, and no longer via any Storage Disk deposit or live transfer (an earlier
 Disk-deposit-funded Booster mechanic, and before that a manual "Claim Core" button/auto-claim
 mechanic, were both superseded — see docs/ECONOMY_REFERENCE.md's "Data Lakes" section).
@@ -311,8 +312,8 @@ A lake's own block deliberately mirrors `PoolCard`'s own title-row-plus-disk-arr
 a labelled table row — "less labels, more actual numbers," matching the rest of the page: a header
 row pairs the lake's title, "`<symbol>` Lake" (e.g. "KB Lake" — the size unit is always part of the
 visible name, per the fuller `"{label} Data Lake — funds {boosterLabel}"` phrase tucked into a
-`title` attribute instead of crowding the compact header), with a `StatusText` showing how many of
-the funded Booster it's produced so far (e.g. "3× Cores"). Below that, one `LakeSizeRow` of round
+`title` attribute instead of crowding the compact header), with a single control in place of the old
+lifetime-purchased-count text — see below for what it shows. Below that, one `LakeSizeRow` of round
 `LakeSquare`s per non-empty sub-size (×1/×10/×100, smallest first) — the same disk-array visual
 language `DiskArrayRow` uses for Storage's own Disks — showing every completed disk filled, plus a
 live left-to-right fill (`LakeSquareFill`, driven by `getDataLakeCurrentFillSubSize`/
@@ -323,31 +324,44 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 `isDataLakePoolReady` or a static "Locked · 0 / `<size>`" before that (deliberately keyed off
 `isDataLakePoolReady`, not the lake's `isDataLakeBoosterUnlocked`/unlock state, which can diverge
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
-already-mid-fill with no feedback in between. An actions row underneath repurposes ONE button slot
-between two modes: Buy wins the slot whenever it's genuinely affordable (`canBuy`), even with Scale
-Out also available (e.g. right after a manual 💧 Fill deposit) — Scale Out only claims the slot once
-Buy isn't an option, so a Fill-funded Booster purchase the player wanted to make can no longer be
-silently redirected into a capacity level-up instead (see `docs/DESIGN_HISTORY.md`). Neither button
-is arbitrated against the other via the forced priority order at all (removed — see
-`docs/DESIGN_HISTORY.md`; array completion, independent of every other action's availability, is
-Scale Out's own gate, same as Buy's own affordability check) — Scale Out is never merely
-disabled-but-visible any more: "⚡ Scale Out"
-(`actions.doubleDataLakeCapacity`) once
-the corresponding Storage array for the lake's current capacity level is fully built (level 0→1
-needs the pool's smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array) — the
-capacity ladder itself is a plain decade-power-of-10 step per level, not a literal doubling; the
-action/function name still says "double" (unrelated to the button's own "Scale Out" label) since
-only the ladder's VALUES changed, see
-docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden (not merely disabled) unless that array is
-actually complete, and hidden once the lake's own 1,000-unit hard cap is reached
-(`isDataLakeCapacityMaxed`); otherwise a `🎯 <cost>` "Buy" button (`actions.buyBooster`) once that
-lake is unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one
-real disk, not the lake's own fill progress), or the same `🎯 <cost>` text alone, non-interactive,
-before that. Boosters buy instantly out of the lake's own banked units — there is no live transfer
-or waiting period any more — with a second "🔁 Auto"/"🔁 Manual" toggle (`actions.toggleDataLakeAutoBuy`)
-next to it once unlocked, buying automatically the instant the next Booster is affordable. See
-docs/ECONOMY_REFERENCE.md's "Data Lakes" section for the underlying mechanic, and
-`docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
+already-mid-fill with no feedback in between.
+
+**The header row's control is a single "`🎯 <next Booster cost>`" element, no bottom action row at
+all** (the old separate 💧 Fill / Buy / 🔁 Auto-Manual three-control row, and the lifetime
+"`<N>×  <Booster>`" counter text, are both gone — see `docs/DESIGN_HISTORY.md`'s "one-shot
+Data Lake conversion" entry). The cost figure alone is self-explanatory, so no separate counter is
+needed. It renders as one of four things, in priority order: (1) while
+`isDataLakeAutoConvertActive` (`converting`), an inert `StatusText` label reading the same
+`🎯 <cost>` text — no longer clickable, mid-automation; (2) once the matching compute-ladder entity
+is already at its own effective cap (`entityAtCap`, `!canBuy && isBoosterEntityAtCap`), the same
+`🎯 <cost>` text as a `StatusText` explaining the entity is full; (3) whenever genuinely affordable
+right now (`canBuy`, `isBoosterPurchaseAvailable`) — even with Scale Out also available (e.g. right
+after the buffer just filled) — a clickable `🎯 <cost>` `ActionButton` (`aria-label="buy 1 <Booster>
+from the <label> Data Lake"`) that calls `actions.startDataLakeAutoConvert(tierIndex)`, buying
+immediately since the cost is already banked; (4) otherwise, IF the corresponding Storage array for
+the lake's current capacity level is fully built (`upgradeAvailable`, level 0→1 needs the pool's
+smallest ×1 array done, 1→2 the middle ×10 array, 2→3 the largest ×100 array), "⚡ Scale Out"
+(`actions.doubleDataLakeCapacity`) claims the same slot instead — the capacity ladder itself is a
+plain decade-power-of-10 step per level, not a literal doubling; the action/function name still says
+"double" (unrelated to the button's own "Scale Out" label) since only the ladder's VALUES changed,
+see docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden (not merely disabled) unless that array
+is actually complete, and hidden once the lake's own 1,000-unit hard cap is reached
+(`isDataLakeCapacityMaxed`); (5) once unlocked (`isDataLakeBoosterUnlocked` — the matching Storage
+pool has built at least one real disk) but not yet affordable, a clickable `🎯 <cost>` `ActionButton`
+(`aria-label="start converting toward 1 <Booster> from the <label> Data Lake"`) that also calls
+`actions.startDataLakeAutoConvert(tierIndex)` — this time arming the one-shot `autoConvertActive`
+flag rather than buying immediately, since `tickDataLakeAutoConvert` (engine.js) then automatically
+draws from this pool's own buffer every tick until the cost is banked, buys exactly 1, and clears the
+flag (the control flips back to state (1)'s inert label for the whole duration — "Once automated, it
+will change from button to label," per the request this implements); or (6) before the lake is even
+unlocked, the same `🎯 <cost>` text as a non-interactive `StatusText`. Neither Scale Out nor the cost
+control is arbitrated against the other via the forced priority order at all (removed — see
+`docs/DESIGN_HISTORY.md`; array completion is Scale Out's own gate, same as the cost control's own
+affordability/unlock checks). Starting a conversion is refused outright
+(`isDataLakeAutoConvertStartAvailable`) once the entity is already at its own effective cap — "should
+not be allowed to start if the booster slots are already full," per the request. See
+docs/ECONOMY_REFERENCE.md's "Data Lakes" section (including its "One-shot auto-convert" subsection)
+for the underlying mechanic, and `docs/COMPONENTS_REFERENCE.md` for `DataLakePanel`'s full contract.
 
 There is no manual transfer-block UI any more (removed — see `docs/DESIGN_HISTORY.md`;
 `isIntroConversionUnlocked`/`getIntroKilobyteConversionCost` still exist as pure, tested exports but
@@ -569,9 +583,13 @@ not at the bottom"):
      - **Row 1** (`TierHeaderRow`): a `TierSelectButton` (its own clickable `<button>`) wrapping the
        tier's symbol (`TierSymbol`, decorative, `aria-hidden`) + label (`TierLabel`, e.g. `"Clusters
        3/10"`) + a `SlotsRow` (`role="group"`, `aria-label="<Label> slots"`) of `COMPUTE_ENTITY_CAP`
-       (10) `NormalSlot` squares, filled left-to-right up to the current count — the same
-       discrete-square convention `StoragePage`'s own `DiskSquare` uses, just non-interactive (a
-       plain status square, not a button). Clicking `TierSelectButton` toggles
+       (10) `NormalSlot` squares — both the label and the slots read off `primaryHeld =
+       min(count, COMPUTE_ENTITY_CAP)`, not the raw entity count, so this row always reads
+       `min(held, 10)/10` and never overflows past "10/10" once auto-merge is unlocked and the
+       entity has grown into its own reserve (the "extra" shows up in row 2's `ReserveSlotsRow`
+       instead — see below) — the same discrete-square convention `StoragePage`'s own `DiskSquare`
+       uses, just non-interactive (a plain status square, not a button). Clicking `TierSelectButton`
+       toggles
        `selectedBoostTierIndex` (local component state) to arm/disarm that tier for the Boost
        effects section above (issue #326 — "click any tier row"), highlighted
        (`$selected`/`aria-pressed`) while armed.
@@ -585,18 +603,29 @@ not at the bottom"):
          e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
          tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
          `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
-         other half (`TierActionButton`, `variant="info"`, visible content "🤖 Auto",
-         `aria-label="enable auto-merge for <…> into <…>"`) — enabled once `COMPUTE_ENTITY_CAP` (10)
-         of the produced tier is held, calling the matching `game.actions.enableAutoMerge*` action.
+         other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
+         toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
+         buttons use for cost-block progress — visible content `` "🤖 <held>/<COMPUTE_ENTITY_CAP>" ``
+         instead of a bare "🤖 Auto", so the button is self-explanatory the same way a Factory Buy
+         button is; `aria-label="enable auto-merge for <…> into <…>"` stays unchanged) — enabled once
+         `COMPUTE_ENTITY_CAP` (10) of the produced tier is held, calling the matching
+         `game.actions.enableAutoMerge*` action.
        - **Once unlocked:** a `ReserveSlotsRow` — a single `<button>` wrapping `COMPUTE_MERGE_RESERVE_CAP`
-         (8) `ReserveSlot` squares, all either entirely empty (idle) or entirely filled (a merge in
-         flight, since the reserve only ever fills atomically) — clicking it IS the manual-start
-         trigger ("slots are the button"), calling the matching `game.actions.startCompute*Merge`
-         action, enabled once `isCompute*MergeStartAvailable` allows it (at least `COMPUTE_MERGE_RATIO`
-         held across the normal + reserve slots, no merge already in flight, room under
-         `COMPUTE_ENTITY_CAP` on the output). While a merge is in flight, a `MergeCountdown` span
-         (`formatOfflineDuration` of the remaining seconds) renders inline with the filled slots;
-         `aria-label`/`title` both spell out the remaining time.
+         (8) `ReserveSlot` squares — reading `getComputeReserveHeld(state, tierIndex)` (0..8), NOT an
+         atomic empty/full toggle: a squares fills in one at a time as the entity's own held count
+         keeps growing past its primary 10 (via continued Booster purchases or a lower-tier merge),
+         up to `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) total held; while a merge is actually in flight
+         the reserve instead reads as fully committed regardless of the live count (which has by then
+         dropped back toward 10 and may be accumulating the next batch) — clicking the row IS the
+         manual-start trigger ("slots are the button"), calling the matching
+         `game.actions.startCompute*Merge` action, enabled once `isCompute*MergeStartAvailable`
+         allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
+         SAME, lower threshold as before this row existed, deliberately NOT the stricter
+         `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) the automatic trigger itself now waits for — no merge
+         already in flight, room under `COMPUTE_ENTITY_CAP` on the output). While a merge is in
+         flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
+         inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
+         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count.
 
      Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".
      "Compute" names the page/feature only — no entity label carries a "Compute" prefix.

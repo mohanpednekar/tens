@@ -930,9 +930,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `fillBits` progress rather than losing anything. `tickPoolBufferFill`'s automatic overflow branch now requires
    `isStoragePoolFullyBuilt(state, poolIndex)` in addition to `isDataLakePoolReady` (previously just
    the latter) — so a pool that has built its ×1 disk but not yet its ×10/×100 sizes only ever fills
-   its lake through the manual `💧 Fill` button (`DataLakePanel`), never automatically. Like Buy,
-   `isDataLakeManualFillAvailable`/`fillDataLakeManually` sit entirely OUTSIDE the forced priority
-   order — arbitrated purely on their own eligibility. `isDataLakeBoosterUnlocked`
+   its lake through `fillDataLakeManually`, never automatically. `fillDataLakeManually` is no longer
+   a standalone UI action of its own (no more dedicated Fill button) — `tickDataLakeAutoConvert`
+   (see "Buying Boosters" below) is its only caller now, driving it one step per tick while a lake's
+   own `autoConvertActive` flag is set. Like Buy, `isDataLakeManualFillAvailable`/
+   `fillDataLakeManually` sit entirely OUTSIDE the forced priority order — arbitrated purely on their
+   own eligibility. `isDataLakeBoosterUnlocked`
    follows the SAME condition: Boosters become buyable the instant a disk exists for that pool, not
    once the lake ITSELF has ever completed a disk (an earlier design — the very first disk the lake
    completed, always its own ×1 slot since fill order is smallest-first, permanently latched a
@@ -993,7 +996,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    above the current array's own bounds — left unclamped, `getDataLakeCapacity` would index past
    the array and return `undefined`, breaking every downstream comparison against it. A save
    written under the earlier deposits-shaped schema (`deposits`/`transfers` fields instead of
-   `depositedUnits`/`fillBits`/`boostersUnlocked`/`autoBuyEnabled`) simply reads those new fields as
+   `depositedUnits`/`fillBits`/`boostersUnlocked`/`autoConvertActive`) simply reads those new fields as
    absent — every getter falls back (`?? 0`/`?? false`), so an old save loads as a fresh, empty,
    locked lake at whatever `capacityLevel` it already had (clamped as below), with no dedicated
    migration step needed since every new field is a scalar with a safe zero-value default.
@@ -1006,9 +1009,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    **Buying Boosters** (`buyBooster(tierIndex)`) — funded ONLY from that lake's own banked units, no
    other resource involved, so — unlike Disk Fill/Speed/Provision Disk/Compute Boost — this isn't
    part of the forced priority order at all; it's always available the instant it's affordable
-   (`isBoosterPurchaseAvailable` — `isDataLakeBoosterUnlocked` AND room under `COMPUTE_ENTITY_CAP`
-   on the matching compute-ladder entity AND `depositedUnits >= getBoosterPurchaseCost`). The nth
-   Booster ever bought at a tier costs n units
+   (`isBoosterPurchaseAvailable` — `isDataLakeBoosterUnlocked` AND room under the matching
+   compute-ladder entity's own effective cap (`getComputeEntityFieldRoom` — `COMPUTE_ENTITY_CAP`, or
+   the extended `COMPUTE_ENTITY_AUTO_MERGE_CAP` once that tier's own outbound merge boundary has
+   auto-merge unlocked — see "Compute" below) AND `depositedUnits >= getBoosterPurchaseCost`). The
+   nth Booster ever bought at a tier costs n units
    (`getBoosterPurchaseCost` — simply `purchased + 1`, with no transfer queue to
    count alongside it — EXCEPT once the lake's own capacity ladder is permanently maxed
    (`isDataLakeCapacityMaxed`), where the cost is capped at the lake's own fixed capacity instead of
@@ -1016,23 +1021,35 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    disk that was mid-fill before the spend may no longer be the lake's own open slot afterward, so
    any in-progress fill is discarded rather than carried forward inconsistently), increments
    `purchased`, and grants 1 of the matching compute-ladder entity instantly — no transfer, no
-   waiting. A `quantity` request (e.g. `tickDataLakeAutoBuy`'s bulk buy) is capped to whatever room
-   is actually left under `COMPUTE_ENTITY_CAP`, and a lake whose entity is already full is a same-
-   reference no-op regardless of how much is banked — purchasing PAUSES at the cap instead of
-   minting past it (see `docs/DESIGN_HISTORY.md` for the earlier, reverted "Data-Lake-limited, not
-   inventory-capped" behavior this replaces); it resumes automatically once the entity is spent back
-   down (a merge, a Compute Boost activation/stack — forfeit doesn't touch the field, and reclaim
-   moves the other way, refunding a token back onto it). `isBoosterEntityAtCap` is the UI-facing mirror
-   of this gate, letting `DataLakePanel`'s disabled Buy button say "entity full" instead of "not
-   enough banked" when that's the actual reason. `toggleDataLakeAutoBuy(tierIndex)` flips a per-lake
-   `autoBuyEnabled` flag (freely
-   toggleable even before `boostersUnlocked`, same as other autobuyer "enabled" flags in this file);
-   `tickDataLakeAutoBuy` (called from `tickGame` right after `tickPoolBufferFill`, so a Booster this
-   same tick's overflow just funded can auto-buy the same tick it completes) repeatedly buys per
-   lake while enabled and affordable — cost escalates and `depositedUnits` only shrinks with each
-   purchase, and the entity-cap ceiling above bounds it too, so this always terminates. `DataLakePanel`
-   shows a manual Buy button (disabled until affordable) alongside an Auto/Manual toggle, both only
-   once `boostersUnlocked`.
+   waiting. A `quantity` request is capped to whatever room is actually left under the entity's own
+   effective cap, and a lake whose entity is already full is a same-reference no-op regardless of how
+   much is banked — purchasing PAUSES at the cap instead of minting past it (see
+   `docs/DESIGN_HISTORY.md` for the earlier, reverted "Data-Lake-limited, not inventory-capped"
+   behavior this replaces); it resumes automatically once the entity is spent back down (a merge, a
+   Compute Boost activation/stack — forfeit doesn't touch the field, and reclaim moves the other way,
+   refunding a token back onto it). `isBoosterEntityAtCap` is the UI-facing mirror of this gate,
+   letting `DataLakePanel`'s cost control say "entity full" instead of "not enough banked" when
+   that's the actual reason.
+
+   **One-shot auto-convert** (`intro.dataLakes[tier].autoConvertActive`,
+   `startDataLakeAutoConvert(tierIndex)`/`isDataLakeAutoConvertStartAvailable`/
+   `tickDataLakeAutoConvert` in `engine.js`) replaced an earlier persistent Auto/Manual toggle
+   (`toggleDataLakeAutoBuy`/`tickDataLakeAutoBuy`/`autoBuyEnabled` — see `docs/DESIGN_HISTORY.md`).
+   `DataLakePanel` shows a single "🎯 `<cost>`" control per lake (in place of the old separate
+   Fill/Buy/Auto-Manual row): clicking it calls `startDataLakeAutoConvert`, which buys immediately
+   (`buyBooster(tierIndex, 1)`) if already affordable, or — same-reference no-op below
+   `isDataLakeAutoConvertStartAvailable` (unlocked, not already converting, room under the entity's
+   own effective cap) — otherwise sets `autoConvertActive` true. `tickDataLakeAutoConvert` (called
+   from `tickGame` right after `tickPoolBufferFill`, so a Booster this same tick's overflow just
+   funded can convert the same tick) then, per active lake: clears the flag with no purchase if the
+   entity filled up some other way in the meantime (e.g. a merge from the tier below) and has no
+   more room; otherwise buys exactly 1 and clears the flag the instant affordable
+   (`isBoosterPurchaseAvailable`); otherwise calls `fillDataLakeManually` once — the SAME mechanism a
+   standalone Fill click always used — to make one tick's worth of progress and tries again next
+   tick. The net effect: one click "fully automates the sequence to fill up and then convert it into
+   a Booster, then stop" — always exactly 1 conversion per activation, never a persistent bulk
+   auto-buy loop. While `autoConvertActive`, `DataLakePanel`'s control renders as an inert label
+   instead of a clickable button.
 
    **Stranded disks are never destroyed.** A disk whose own fixed corresponding tier has moved past
    the level it requires (see "Disks always take priority" above) simply stays full and
@@ -1067,8 +1084,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    included, each capping its own output gain at whatever room remains under the cap, leaving
    surplus input unconverted rather than letting the output exceed it) AND the Data Lake Booster
    path itself (`buyBooster`, any of the ten tiers — see "Buying Boosters" above, which now pauses
-   purchases at the cap instead of minting past it). Nothing is ever lost while capped; it simply
-   waits for the player to spend an entity down via a future spending mechanic.
+   purchases at the cap instead of minting past it) — EXCEPT for tier 1 through 9's own entity once
+   its OUTBOUND merge boundary has auto-merge unlocked, where the effective cap rises to
+   `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18 — see "Once a boundary's auto-merge is unlocked..." below for
+   what the "extra" 8 held past 10 represents). Nothing is ever lost while capped; it simply waits for
+   the player to spend an entity down via a future spending mechanic.
 
    Compute has its own dedicated screen, `ComputePage` — reached via a "⚡ Compute" nav button on
    `ByteFoundryPage`, which stays hidden until `isComputeCoreConversionUnlocked(state)`; like the
@@ -1109,15 +1129,24 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    "Security notes" in CLAUDE.md). Each boundary gets a same-sized second pool of
    `COMPUTE_MERGE_RESERVE_CAP` (8, same value as `COMPUTE_MERGE_RATIO` — a merge always consumes
    exactly one full group) slots alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots —
-   "18 slots" total per boundary. The reserve pool is modeled without a separate count field: since it
-   always fills atomically (all 8 at once, never gradually) and only one merge can be in flight per
-   boundary at a time, a single countdown-timer field per boundary
-   (`intro.computeCoresMergeRemainingSeconds`/`computeNodesMergeRemainingSeconds`/… — 0 = idle, > 0 =
-   merging, all PERMANENT, carried through a real Prestige unchanged rather than being cancelled,
-   since an in-flight merge represents already-committed tokens) fully captures the state. Starting a
-   merge (`startComputeCoresMerge`/`startComputeNodesMerge`/…, built off a shared
-   `startComputeMergeReserve` factory) instantly moves `COMPUTE_MERGE_RATIO` (8) tokens out of the
-   input entity's normal slots and starts the timer at that boundary's live duration from
+   "18 slots" total per boundary (`COMPUTE_ENTITY_AUTO_MERGE_CAP`). **Unlike an earlier version, the
+   reserve is modeled with no separate count field of its own and fills GRADUALLY, not atomically**:
+   `getComputeReserveHeld(state, tierIndex)` derives how much of it is filled straight from the live
+   entity count — `clamp(held - COMPUTE_ENTITY_CAP, 0, COMPUTE_MERGE_RESERVE_CAP)` — so it grows 1 at
+   a time as `buyBooster`/a lower-tier merge keeps crediting the same field past its primary 10 slots
+   (see "Every compute-ladder entity..." above for the extended cap this relies on), rather than
+   moving 8 out of the input in one atomic pull the moment it hits 10 (the earlier, reverted
+   behavior — see `docs/DESIGN_HISTORY.md`). WHILE a merge is actually in flight
+   (`timerField > 0`), `getComputeReserveHeld` instead reads as fully committed
+   (`COMPUTE_MERGE_RESERVE_CAP`) regardless of the live count, which has by then already dropped back
+   toward 10 and may be accumulating the NEXT batch — only the timer field distinguishes "the current
+   in-flight batch" from "the next batch already forming." A single countdown-timer field per
+   boundary (`intro.computeCoresMergeRemainingSeconds`/`computeNodesMergeRemainingSeconds`/… — 0 =
+   idle, > 0 = merging, all PERMANENT, carried through a real Prestige unchanged rather than being
+   cancelled, since an in-flight merge represents already-committed tokens) is still all the persisted
+   state a merge itself needs. Starting a merge (`startComputeCoresMerge`/`startComputeNodesMerge`/…,
+   built off a shared `startComputeMergeReserve` factory) instantly moves `COMPUTE_MERGE_RATIO` (8)
+   tokens out of the input entity and starts the timer at that boundary's live duration from
    `getComputeMergeDurationSeconds` (Core→Node = 10× live Core earn time — capacity ÷ bits/sec
    before Boost; each next boundary ×10 the previous, or ×5 after that boundary’s sequential
    duration upgrade — snapshotted at merge start so in-flight timers do not rescale mid-merge).
@@ -1127,13 +1156,15 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    the reserve for the next merge. There are two ways to start a merge, sharing the same underlying
    `startComputeMergeReserve` call but at different thresholds: the AUTO-trigger
    (`tickAutoMergeCoresIntoNode`/…, called every tick from `tickGame`'s `AUTO_MERGE_TICKERS`
-   pipeline, lowest tier first) only fires once the input is COMPLETELY full (`COMPUTE_ENTITY_CAP`,
-   10) — a deliberately stricter bar so automation only ever mops up an entity the player has let cap
-   out; the MANUAL trigger (`isComputeCoresMergeStartAvailable`/… gating the same `startCompute*Merge`
-   action, now player-clickable once unlocked) fires at the lower `COMPUTE_MERGE_RATIO` (8) threshold
-   — "the button is enabled only when there are at least 8 tokens available across all the 18 slots."
-   Both are same-reference no-ops while a merge is already in flight for that boundary, or once the
-   output is already at `COMPUTE_ENTITY_CAP`.
+   pipeline, lowest tier first) only fires once the input reaches the FULL extended cap
+   (`COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18 — not just the primary 10) — a deliberately stricter bar so
+   automation only ever mops up an entity the player has let fill all the way past its primary slots;
+   the MANUAL trigger (`isComputeCoresMergeStartAvailable`/… gating the same `startCompute*Merge`
+   action, now player-clickable once unlocked) still fires at the lower `COMPUTE_MERGE_RATIO` (8)
+   threshold — "the button is enabled only when there are at least 8 tokens available across all the
+   18 slots" — letting the player convert early rather than waiting for the reserve to fill on its
+   own. Both are same-reference no-ops while a merge is already in flight for that boundary, or once
+   the output is already at `COMPUTE_ENTITY_CAP`.
 
    **Auto-merge automation** (see issues #316/#321): each of the 9 manual merges above can be
    permanently automated, one tier boundary at a time. `enableAutoMergeCoresIntoNode`/
@@ -1150,16 +1181,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    timed reserve system described above, for both triggers.
 
    **`ComputePage` shows two rows per tier** (issue #321): row 1 is the tier's name/symbol plus
-   `COMPUTE_ENTITY_CAP` (10) normal-slot squares; row 2 is, before that boundary's auto-merge is
-   unlocked, an instant Merge button (disabled below `COMPUTE_MERGE_RATIO` held) plus an Unlock
-   Auto-merge button (disabled below `COMPUTE_ENTITY_CAP` of the output entity held) — or, once
+   `COMPUTE_ENTITY_CAP` (10) normal-slot squares — always reading `min(held, 10)/10`, never
+   overflowing past "10/10" even once auto-merge is unlocked and the entity itself has grown into its
+   own reserve (the "extra" shows up in row 2 instead); row 2 is, before that boundary's auto-merge is
+   unlocked, an instant `TierActionButton` Merge (disabled below `COMPUTE_MERGE_RATIO` held) plus an
+   Unlock Auto-merge `TierActionButton` (disabled below `COMPUTE_ENTITY_CAP` of the output entity
+   held, showing a live `$progress` fill and its own held/cap figure toward that cost) — or, once
    unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves, with no separate
    button: clicking that row IS what manually starts a merge ("slots are the button"), showing a
-   countdown while one is in flight. Cores' own row 2 follows the identical merge-boundary shape as
+   countdown while one is in flight, or gradually filling (`getComputeReserveHeld`) while accumulating
+   toward the next automatic trigger. Cores' own row 2 follows the identical merge-boundary shape as
    every other tier (Core → Node) — obtaining Cores themselves happens on Foundry's own
-   `DataLakePanel` (its Buy/auto-buy control, see "Buying Boosters" above), not on `ComputePage` at
-   all. Megacomputer (the last tier) has no row 2 at
-   all — nothing to merge into or automate past it.
+   `DataLakePanel` (its Booster-conversion control, see "Buying Boosters" above), not on `ComputePage`
+   at all. Megacomputer (the last tier) has no row 2 at all — nothing to merge into or automate past it.
 
    A new, permanent, one-time reveal latch, `intro.computeMergePageUnlocked` (defaults `false`,
    never re-clears once set, carried over unchanged by every real Prestige exactly like the
@@ -2573,14 +2607,18 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // One lake per storage denomination (KB … QB), fed by
                                                           // that pool's own overflow (see tickPoolBufferFill):
                                                           // { depositedUnits, fillBits, purchased,
-                                                          // boostersUnlocked, autoBuyEnabled, capacityLevel }.
+                                                          // boostersUnlocked, autoConvertActive, capacityLevel }.
                                                           // Era ascension resets with the
                                                           // rest of the Foundry via buildEraIntroReset
                                                           // (...initial.intro) — see "Era ascension" above
-    computeCores: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10) —
-                                                          // buyBooster now pauses purchases at this cap too (an
-                                                          // earlier version let it push past this, Data-Lake-
-                                                          // limited rather than inventory-capped; reverted — see
+    computeCores: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or the
+                                                          // extended COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the
+                                                          // Core -> Node boundary's own auto-merge is unlocked (see
+                                                          // getComputeEntityEffectiveCap/getComputeReserveHeld) —
+                                                          // buyBooster now pauses purchases at whichever cap
+                                                          // currently applies (an earlier version let it push past
+                                                          // this uncapped, Data-Lake-limited rather than
+                                                          // inventory-capped; reverted — see
                                                           // docs/DESIGN_HISTORY.md). Granted by
                                                           // buyBooster (tier 1) — spending that tier's
                                                           // Data Lake's own banked units, instantly. Spent 1 at a
@@ -2591,40 +2629,59 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // decremented by spending/merging.
                                                           // computeMergePageUnlocked below gates on this, not the
                                                           // live computeCores balance
-    computeNodes: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeNodes: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Node ->
+                                                          // Cluster boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeCoresIntoNode (pre-unlock,
                                                           // instant, 8 computeCores -> 1) or by a completed Core ->
                                                           // Node reserve merge post-unlock (see issue #321). Also
                                                           // the input to mergeComputeNodesIntoCluster below
-    computeClusters: 0,                                   // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeClusters: 0,                                   // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Cluster ->
+                                                          // Network boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeNodesIntoCluster (8
                                                           // computeNodes -> 1), itself the input to
                                                           // mergeComputeClustersIntoNetwork below
-    computeNetworks: 0,                                   // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeNetworks: 0,                                   // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Network ->
+                                                          // Grid boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeClustersIntoNetwork (8
                                                           // computeClusters -> 1), itself the input to
                                                           // mergeComputeNetworksIntoGrid below
-    computeGrids: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeGrids: 0,                                      // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Grid ->
+                                                          // Fabric boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeNetworksIntoGrid (8
                                                           // computeNetworks -> 1), itself the input to
                                                           // mergeComputeGridsIntoFabric below
-    computeFabrics: 0,                                    // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeFabrics: 0,                                    // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Fabric ->
+                                                          // Cloud boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeGridsIntoFabric (8
                                                           // computeGrids -> 1), itself the input to
                                                           // mergeComputeFabricsIntoCloud below
-    computeClouds: 0,                                     // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeClouds: 0,                                     // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Cloud ->
+                                                          // Datacenter boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeFabricsIntoCloud (8
                                                           // computeFabrics -> 1), itself the input to
                                                           // mergeComputeCloudsIntoDatacenter below
-    computeDatacenters: 0,                                // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeDatacenters: 0,                                // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the Datacenter ->
+                                                          // Supercomputer boundary's own auto-merge is unlocked.
                                                           // Incremented by mergeComputeCloudsIntoDatacenter (8
                                                           // computeClouds -> 1), itself the input to
                                                           // mergeComputeDatacentersIntoSupercomputer below
-    computeSupercomputers: 0,                             // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeSupercomputers: 0,                             // PERMANENT, capped at COMPUTE_ENTITY_CAP (10), or
+                                                          // COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once the
+                                                          // Supercomputer -> Megacomputer boundary's own auto-merge
+                                                          // is unlocked.
                                                           // Incremented by mergeComputeDatacentersIntoSupercomputer
                                                           // (8 computeDatacenters -> 1), itself the input to
                                                           // mergeComputeSupercomputersIntoMegacomputer below
-    computeMegacomputers: 0,                              // PERMANENT, capped at COMPUTE_ENTITY_CAP (10).
+    computeMegacomputers: 0,                              // PERMANENT, capped at COMPUTE_ENTITY_CAP (10) — top of
+                                                          // the merge chain, no outbound boundary of its own, so no
+                                                          // extended-cap exception applies here.
                                                           // Incremented by
                                                           // mergeComputeSupercomputersIntoMegacomputer (8
                                                           // computeSupercomputers -> 1). Top of the merge chain
@@ -2698,7 +2755,7 @@ purchases were manual or automatic.
 | `getTierSpendableAmount` | `(state, tier) → number` | Balance of `tier.costResourceId` (always `MONEY_ID`, `'base'`) |
 | `getTierPurchasedCount` | `(state, tierId) → number` | Lifetime purchases — display/back-compat only; no longer used for cost scaling (see `state.purchaseLevels`/`purchaseLevelProgress`) |
 | `isProductionFrozen` | `state → bool` | `Money >= PRESTIGE_THRESHOLD` AND `prestige.count < PRESTIGE_UNBOUNDED_MIN_COUNT` (100) — once true, `buyTier`/`buyTickspeedMultiplier`/most PP purchases become no-ops; `tickGame` either stays frozen or calls `prestigeGame` automatically once Auto-Prestige's banked attempt budget crosses 1. At/after 100 lifetime prestiges, `isUnboundedPrestigeUnlocked` — production continues and Prestige is optional |
-| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | First, unconditionally, `latchMainGameUnlocked` (see above — a no-op once already latched or before Storage's own capacity threshold). Then runs the Byte Foundry's `tickIntroProduction`, then `tickDiskBuild`, then `tickDiskAutoFill`, then every `tickAutoMerge*(elapsedSeconds)` (issues #316/#321 — lowest tier first including Core → Node, see `AUTO_MERGE_TICKERS` — each both auto-starts a reserve merge and counts down any merge already in flight), then `tickComputeBoost(elapsedSeconds)` (counting an active Compute Boost's remaining duration down, unconditionally, alongside the rest of this pipeline), then `tickIntroAutoInvest`, in that order, unconditionally, before anything below (see "Byte Foundry" above) — `tickDiskBuild` counts down any in-progress disk array build (unconditional, bypasses nothing); `tickDiskAutoFill` then gets first claim on the Memory `tickIntroProduction` just delivered, ahead of `tickIntroAutoInvest`'s own direct bit-to-Kilobyte conversion — a Disk array the player has already built isn't starved of Memory it's waiting to be filled with; `tickDiskAutoFill` has no dependency on tier01's level so running it this early costs nothing (unlike `tickDiskPull`/`tickDiskLevelOneCachePull`, which still run last — see their own table rows below). Compute Cores are no longer minted from Memory at all — they're bought instantly with a Data Lake's own banked units via `buyBooster`; `tickDataLakeAutoBuy` (auto-buying every lake with `autoBuyEnabled`) runs right after `tickPoolBufferFill` (whose own overflow branch is what feeds the lakes — see "Data Lakes" above), so a Booster that tick's overflow just funded can auto-buy the same tick, though it only cascades through `AUTO_MERGE_TICKERS` (which runs earlier in the pipeline, right after `tickFoundryResetConvenience`) starting the NEXT tick — a one-tick lag, imperceptible at `TICK_RATE_MS`. `tickIntroProduction` short-circuits to a same-reference no-op before `byteCreated`, and `tickIntroAutoInvest` once `bits` can't cover even one more `getIntroKilobyteConversionCost(state)` unit; neither ever fully freezes, and neither is capped (`tickIntroAutoInvest` is capped per-call at one tier01 level's worth, not overall — see its own table row). If `isProductionFrozen`: when `autoPrestige` isn't bought OR `autoPrestigeEnabled` is false (paused — see "Pause/resume for the global automations" above), short-circuits (returns the same state, unchanged); otherwise accumulates `autoPrestigeAttemptBudget` by `getAutoPrestigeAttemptRate(autoPrestige) * elapsedSeconds` and, once that crosses 1 (with `TICK_ACCUMULATION_EPSILON` tolerance), calls `prestigeGame` immediately (prestigeGame's own reset zeroes the budget back out) — otherwise returns the state with just the updated budget. Otherwise (not frozen) runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier — but only once its `tierProductionAccumulators[tier.id]` (incremented by `elapsedSeconds` this tick) crosses that tier's own `getEffectiveTierTickSpeedSeconds(state, tier.id)` — the tier's base tickspeed shrunk by both tickspeed multipliers (with the same epsilon tolerance); when it does, delivers `floor(owned × (whole effective periods elapsed) × multiplier × scaleUpMultiplier × getPurchaseMilestoneMultiplier(level) × computeBoostMultiplier)` in one batch — `computeBoostMultiplier` is `getComputeBoostMultiplier(intro)` for tier01 specifically and `1` for every other tier (see "Compute Boost" above) — note neither tickspeed multiplier appears in this credit formula, since they already did their work by shrinking the period the "whole effective periods elapsed" count is measured against — where `multiplier` is `getPrestigeProductionMultiplier(prestige.points)` if `prestigeSpeedBonusUnlocked` is true, or a flat `1` otherwise, and `scaleUpMultiplier` is `getTierScaleUpMultiplier(state, tier.id)` — always ≥ 1 and scoped to that tier’s persisted claim count — and the result is floored so `owned`/`resources` stay integer-valued — and banks any leftover remainder for the next tick — then checks milestones, then — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]` — no dependency on `autobuyers[tier.id]` at all) and whose `tierTickspeedAutobuyerEnabled[tier.id] ?? true` is true (paused behaves exactly as if `tierTickspeedAutobuyer[tier.id]` were still false, see "Pause/resume for per-tier automations" in CLAUDE.md) — calls `buyTickspeedMultiplier(tier.id)` once more automatically, no-op if unaffordable (edge-triggered on affordability, not scaled by `elapsedSeconds`), **except for the last tier once `isLastTierTickspeedXpUnlocked` holds**, where the same bought flag instead calls `consumeXpForLastTierTickspeed(state.prestige.xp)` (spending the tier's entire current XP balance, same edge-triggered convention, no-op below the minimum consumption threshold — see "The last tier's XP-funded tickspeed" in CLAUDE.md), and — if `autoPrestige` is bought and `autoPrestigeEnabled` is true — accumulates `autoPrestigeAttemptBudget` here too, scaled by `elapsedSeconds` (the clock runs continuously regardless of frozen state, but can only ever fire from the frozen branch above). `globalTickspeedMultiplier` needs no per-tick accumulation of its own — unlike Auto-Prestige's attempt budget, it's just a permanent level read via `getGlobalTickspeedProductionMultiplier` inside `getEffectiveTierTickSpeedSeconds` each tick, changed only by the player's own `buyGlobalTickspeedMultiplier` clicks or — once `autoGlobalTickspeed` is bought (see `buyTickspeedAutobuyer`) and `autoGlobalTickspeedEnabled` is true — by `tickGame` calling `buyGlobalTickspeedMultiplier` automatically every tick right after the per-tier tickspeed self-upgrade step above, the same edge-triggered convention, re-validating its own eligibility internally each time. Next, if `autoPrestigeAutobuyer` is bought and `autoPrestigeAutobuyerEnabled` is true, calls `buyAutoPrestige` once more automatically (edge-triggered, re-validating its own eligibility internally — no rate-accumulating budget, unlike Auto-Prestige's own attempt budget above), the same convention as the tickspeed self-upgrade steps just before it. For each non-`null` (unlocked) autobuyer whose `autobuyersEnabled[tier.id] ?? true` is also true (a paused tier is treated exactly like "never unlocked" here, including skipping this budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md), accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + elapsedSeconds` — a flat rate, independent of tickspeed level) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget (with the same epsilon tolerance), carrying any fractional remainder into the next tick. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`) still on its very first level (`purchaseLevels[tier.id] === 1`), which uses 1 instead — above 1 (`Number.MAX_SAFE_INTEGER` in the running app, see `useIncrementalGame`'s `BUY_QUANTITY`) each attempt only buys once the tier can afford the *entire* current cost block up to that size. Finally, if `autoScaleUp` is bought and `autoScaleUpEnabled` is true, calls `scaleUpGame` once more (edge-triggered, re-validating its own eligibility internally), including at the final tier; requirements 3, 6, 9, and so on leave Overclock available at level 5 between the first two automatic claims |
+| `tickGame` | `(elapsedSeconds, autobuyerBatchSize = 1) → state → state` | First, unconditionally, `latchMainGameUnlocked` (see above — a no-op once already latched or before Storage's own capacity threshold). Then runs the Byte Foundry's `tickIntroProduction`, then `tickDiskBuild`, then `tickDiskAutoFill`, then every `tickAutoMerge*(elapsedSeconds)` (issues #316/#321 — lowest tier first including Core → Node, see `AUTO_MERGE_TICKERS` — each both auto-starts a reserve merge and counts down any merge already in flight), then `tickComputeBoost(elapsedSeconds)` (counting an active Compute Boost's remaining duration down, unconditionally, alongside the rest of this pipeline), then `tickIntroAutoInvest`, in that order, unconditionally, before anything below (see "Byte Foundry" above) — `tickDiskBuild` counts down any in-progress disk array build (unconditional, bypasses nothing); `tickDiskAutoFill` then gets first claim on the Memory `tickIntroProduction` just delivered, ahead of `tickIntroAutoInvest`'s own direct bit-to-Kilobyte conversion — a Disk array the player has already built isn't starved of Memory it's waiting to be filled with; `tickDiskAutoFill` has no dependency on tier01's level so running it this early costs nothing (unlike `tickDiskPull`/`tickDiskLevelOneCachePull`, which still run last — see their own table rows below). Compute Cores are no longer minted from Memory at all — they're bought instantly with a Data Lake's own banked units via `buyBooster`; `tickDataLakeAutoConvert` (advancing every lake with `autoConvertActive` — the one-shot flag `startDataLakeAutoConvert` arms, see "One-shot auto-convert" above) runs right after `tickPoolBufferFill` (whose own overflow branch is what feeds the lakes — see "Data Lakes" above), so a Booster that tick's overflow just funded can convert the same tick, though it only cascades through `AUTO_MERGE_TICKERS` (which runs earlier in the pipeline, right after `tickFoundryResetConvenience`) starting the NEXT tick — a one-tick lag, imperceptible at `TICK_RATE_MS`. `tickIntroProduction` short-circuits to a same-reference no-op before `byteCreated`, and `tickIntroAutoInvest` once `bits` can't cover even one more `getIntroKilobyteConversionCost(state)` unit; neither ever fully freezes, and neither is capped (`tickIntroAutoInvest` is capped per-call at one tier01 level's worth, not overall — see its own table row). If `isProductionFrozen`: when `autoPrestige` isn't bought OR `autoPrestigeEnabled` is false (paused — see "Pause/resume for the global automations" above), short-circuits (returns the same state, unchanged); otherwise accumulates `autoPrestigeAttemptBudget` by `getAutoPrestigeAttemptRate(autoPrestige) * elapsedSeconds` and, once that crosses 1 (with `TICK_ACCUMULATION_EPSILON` tolerance), calls `prestigeGame` immediately (prestigeGame's own reset zeroes the budget back out) — otherwise returns the state with just the updated budget. Otherwise (not frozen) runs autobuyers highest-tier-first (every tier costs the same resource, Money, so autobuyers compete for one shared pool — the higher tier gets first claim on limited funds), then produces resources for every unlocked tier — but only once its `tierProductionAccumulators[tier.id]` (incremented by `elapsedSeconds` this tick) crosses that tier's own `getEffectiveTierTickSpeedSeconds(state, tier.id)` — the tier's base tickspeed shrunk by both tickspeed multipliers (with the same epsilon tolerance); when it does, delivers `floor(owned × (whole effective periods elapsed) × multiplier × scaleUpMultiplier × getPurchaseMilestoneMultiplier(level) × computeBoostMultiplier)` in one batch — `computeBoostMultiplier` is `getComputeBoostMultiplier(intro)` for tier01 specifically and `1` for every other tier (see "Compute Boost" above) — note neither tickspeed multiplier appears in this credit formula, since they already did their work by shrinking the period the "whole effective periods elapsed" count is measured against — where `multiplier` is `getPrestigeProductionMultiplier(prestige.points)` if `prestigeSpeedBonusUnlocked` is true, or a flat `1` otherwise, and `scaleUpMultiplier` is `getTierScaleUpMultiplier(state, tier.id)` — always ≥ 1 and scoped to that tier’s persisted claim count — and the result is floored so `owned`/`resources` stay integer-valued — and banks any leftover remainder for the next tick — then checks milestones, then — for every tier whose tier tickspeed autobuyer is bought (`tierTickspeedAutobuyer[tier.id]` — no dependency on `autobuyers[tier.id]` at all) and whose `tierTickspeedAutobuyerEnabled[tier.id] ?? true` is true (paused behaves exactly as if `tierTickspeedAutobuyer[tier.id]` were still false, see "Pause/resume for per-tier automations" in CLAUDE.md) — calls `buyTickspeedMultiplier(tier.id)` once more automatically, no-op if unaffordable (edge-triggered on affordability, not scaled by `elapsedSeconds`), **except for the last tier once `isLastTierTickspeedXpUnlocked` holds**, where the same bought flag instead calls `consumeXpForLastTierTickspeed(state.prestige.xp)` (spending the tier's entire current XP balance, same edge-triggered convention, no-op below the minimum consumption threshold — see "The last tier's XP-funded tickspeed" in CLAUDE.md), and — if `autoPrestige` is bought and `autoPrestigeEnabled` is true — accumulates `autoPrestigeAttemptBudget` here too, scaled by `elapsedSeconds` (the clock runs continuously regardless of frozen state, but can only ever fire from the frozen branch above). `globalTickspeedMultiplier` needs no per-tick accumulation of its own — unlike Auto-Prestige's attempt budget, it's just a permanent level read via `getGlobalTickspeedProductionMultiplier` inside `getEffectiveTierTickSpeedSeconds` each tick, changed only by the player's own `buyGlobalTickspeedMultiplier` clicks or — once `autoGlobalTickspeed` is bought (see `buyTickspeedAutobuyer`) and `autoGlobalTickspeedEnabled` is true — by `tickGame` calling `buyGlobalTickspeedMultiplier` automatically every tick right after the per-tier tickspeed self-upgrade step above, the same edge-triggered convention, re-validating its own eligibility internally each time. Next, if `autoPrestigeAutobuyer` is bought and `autoPrestigeAutobuyerEnabled` is true, calls `buyAutoPrestige` once more automatically (edge-triggered, re-validating its own eligibility internally — no rate-accumulating budget, unlike Auto-Prestige's own attempt budget above), the same convention as the tickspeed self-upgrade steps just before it. For each non-`null` (unlocked) autobuyer whose `autobuyersEnabled[tier.id] ?? true` is also true (a paused tier is treated exactly like "never unlocked" here, including skipping this budget accumulation — see "Pause/resume for per-tier automations" in CLAUDE.md), accumulates a fractional purchase-attempt budget (`autobuyerAttemptBudgets[tier.id] + elapsedSeconds` — a flat rate, independent of tickspeed level) and fires one purchase attempt (via `buyTierQuantity`) per whole unit of budget (with the same epsilon tolerance), carrying any fractional remainder into the next tick. If a purchase can't be afforded, the loop stops *without* spending the already-accumulated attempt — it stays banked. The effective per-iteration batch size is `autobuyerBatchSize`, except for a "smart" tier (`smartAutobuyer[tier.id]`) still on its very first level (`purchaseLevels[tier.id] === 1`), which uses 1 instead — above 1 (`Number.MAX_SAFE_INTEGER` in the running app, see `useIncrementalGame`'s `BUY_QUANTITY`) each attempt only buys once the tier can afford the *entire* current cost block up to that size. Finally, if `autoScaleUp` is bought and `autoScaleUpEnabled` is true, calls `scaleUpGame` once more (edge-triggered, re-validating its own eligibility internally), including at the final tier; requirements 3, 6, 9, and so on leave Overclock available at level 5 between the first two automatic claims |
 | `getIntroProductionRate` | `intro → number` | Byte Foundry: current bits/sec, `getDataStreamSpeedBytesPerSecond(intro.capacity) * BITS_PER_BYTE` — derived from Capacity (see point 5 above), never independently upgraded. This is the DISPLAYED rate — see point 4a above, `getDataStreamEffectMultiplier` is what actually scales `tickIntroProduction`'s real per-tick delivery. Used by `tapIntroBit`'s pre-reveal branch and the passive-production display |
 | `getDataStreamSpeedBytesPerSecond` | `capacityBits → number` | Byte Foundry: derived Speed in Bytes/sec — `(2**floor(e/2) + 2**ceil(e/2)) / 2` where `e = round(log2(capacityBytes))`; exactly `sqrt(capacityBytes)` at even exponents, the mean of the neighbouring even-exponent speeds at odd ones (alternating ×1.5/×4/3 growth, ×2 per two capacity upgrades). `0` for non-positive input |
 | `getFillMultiplierPercent` | `fillFraction → percent` | `FILL_MULTIPLIER_MAX_PERCENT - clamp(fillFraction, 0, 1) * 100` — see point 4a above |
@@ -2786,8 +2843,8 @@ purchases were manual or automatic.
 | `tickDiskLevelOneCachePull` | `state → state` | Byte Foundry Disks: generalizes tier01's own pre-Storage-unlock bootstrap (`convertIntroBitsToKilobytes` — untouched, drawing from `intro.bits` before any pool/cache exists at all) to every tier's own level 1, once its matching pool exists. For every tier currently at level 1 with no fresh disk pull-eligible this tick (`isDiskPullEligible` false for its own level-1 disk size — covering both "no disk built yet" and "a disk exists but this level already has progress"), spends whole units straight out of that tier's own pool's smallest-size `diskCache` at the tier's current per-unit cost, via `grantTierUnits` (same bypass rationale as `pullDiskForCurrentLevel`) — capped at as many whole units as the cache affords AND the level's own remaining requirement (`getPurchaseBlockSize(state) - purchaseLevelProgress`); also cancels any `intro.diskReadCacheFlush` entry already in flight for that same size (Devin Review finding — a preserved flush after a level reset would otherwise block that size's cache refill for its whole remaining duration, then complete with too little cache left to produce a disk). Never applies past level 1 — a tier's 2nd/3rd disk-funded levels only ever pull from a whole disk, never cache (see `docs/DESIGN_HISTORY.md`). Called right after `tickDiskPull` in `tickStorage`, every tick, frozen or not |
 | `isComputeCoreConversionUnlocked` | `state → bool` | Byte Foundry Compute Cores predicate (not a reducer): `intro.capacity >= INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` (400,000 — 50 KB SI) — drives whether `ByteFoundryPage` shows the "⚡ Compute" nav button to `ComputePage` at all. Unrelated to Disks entirely (earlier versions gated on Disk array fullness, then on a dynamic Memory flush — see `docs/DESIGN_HISTORY.md`) |
 | `mergeComputeCoresIntoNode` / `mergeComputeNodesIntoCluster` / `mergeComputeClustersIntoNetwork` / `mergeComputeNetworksIntoGrid` / `mergeComputeGridsIntoFabric` / `mergeComputeFabricsIntoCloud` / `mergeComputeCloudsIntoDatacenter` / `mergeComputeDatacentersIntoSupercomputer` / `mergeComputeSupercomputersIntoMegacomputer` | `state → state` | ComputePage merge chain (issues #280/#321), each built off a shared `mergeComputeEntities(inputField, outputField, autoFlagField)` factory: player-triggered only, never called from `tickGame`. A permanent same-reference no-op once that boundary's own `autoFlagField` has ever flipped true (merging then fully transitions to the timed reserve system below — see `startComputeMergeReserve`); otherwise same-reference no-op below one full group of `COMPUTE_MERGE_RATIO` (8) of the input, or once the output is already at `COMPUTE_ENTITY_CAP` (10); otherwise converts every complete group into the output, capped at remaining room, leaving surplus input unconverted |
-| `startComputeCoresMerge` / `startComputeNodesMerge` / `startComputeClustersMerge` / `startComputeNetworksMerge` / `startComputeGridsMerge` / `startComputeFabricsMerge` / `startComputeCloudsMerge` / `startComputeDatacentersMerge` / `startComputeSupercomputersMerge` | `state → state` | Reserve-merge timer system (issue #321), each built off a shared `startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, threshold)` factory — the manual, player-clicked ("slots are the button") counterpart to the auto-trigger inside `tickAutoMerge*` below, using `COMPUTE_MERGE_RATIO` (8) as its own threshold rather than `tickAutoMerge*`'s stricter `COMPUTE_ENTITY_CAP` (10). Same-reference no-op while that boundary's auto-merge isn't unlocked, a merge is already in flight (`timerField > 0`), the input is below `threshold`, or the output is already at `COMPUTE_ENTITY_CAP`; otherwise moves exactly `COMPUTE_MERGE_RATIO` out of the input and starts the timer at that boundary's own `COMPUTE_MERGE_DURATIONS_SECONDS` entry. `isComputeCoresMergeStartAvailable`/`isComputeNodesMergeStartAvailable`/… are each a plain UI mirror of the same gate |
-| `tickAutoMergeCoresIntoNode` / `tickAutoMergeNodesIntoCluster` / `tickAutoMergeClustersIntoNetwork` / `tickAutoMergeNetworksIntoGrid` / `tickAutoMergeGridsIntoFabric` / `tickAutoMergeFabricsIntoCloud` / `tickAutoMergeCloudsIntoDatacenter` / `tickAutoMergeDatacentersIntoSupercomputer` / `tickAutoMergeSupercomputersIntoMegacomputer` | `elapsedSeconds → state → state` | Auto-merge + reserve-timer automation (issues #316/#321), each built off a shared `tickComputeMergeBoundary(elapsedSeconds, inputField, outputField, autoFlagField, timerField, durationSeconds)` factory combining two steps: (1) auto-starts a reserve merge (`startComputeMergeReserve`, same as `startCompute*Merge` above but at the stricter `COMPUTE_ENTITY_CAP` (10) auto-trigger threshold, not the manual `COMPUTE_MERGE_RATIO` (8)) if the matching `intro.autoMerge*` flag is set and the input is completely full; (2) counts an in-flight merge's timer down by `elapsedSeconds` (`tickComputeMergeReserveTimer`), granting 1 of the output entity and clearing the timer on completion. Called from `tickGame`'s `AUTO_MERGE_TICKERS.reduce`, each invoked as `tick(elapsedSeconds)(state)`, lowest tier first (Core → Node included), so one tick can cascade both auto-triggering and completion up multiple tiers in a row |
+| `startComputeCoresMerge` / `startComputeNodesMerge` / `startComputeClustersMerge` / `startComputeNetworksMerge` / `startComputeGridsMerge` / `startComputeFabricsMerge` / `startComputeCloudsMerge` / `startComputeDatacentersMerge` / `startComputeSupercomputersMerge` | `state → state` | Reserve-merge timer system (issue #321), each built off a shared `startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, threshold)` factory — the manual, player-clicked ("slots are the button") counterpart to the auto-trigger inside `tickAutoMerge*` below, using `COMPUTE_MERGE_RATIO` (8) as its own threshold rather than `tickAutoMerge*`'s stricter `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18). Same-reference no-op while that boundary's auto-merge isn't unlocked, a merge is already in flight (`timerField > 0`), the input is below `threshold`, or the output is already at `COMPUTE_ENTITY_CAP`; otherwise moves exactly `COMPUTE_MERGE_RATIO` out of the input and starts the timer at that boundary's own `COMPUTE_MERGE_DURATIONS_SECONDS` entry. `isComputeCoresMergeStartAvailable`/`isComputeNodesMergeStartAvailable`/… are each a plain UI mirror of the same gate |
+| `tickAutoMergeCoresIntoNode` / `tickAutoMergeNodesIntoCluster` / `tickAutoMergeClustersIntoNetwork` / `tickAutoMergeNetworksIntoGrid` / `tickAutoMergeGridsIntoFabric` / `tickAutoMergeFabricsIntoCloud` / `tickAutoMergeCloudsIntoDatacenter` / `tickAutoMergeDatacentersIntoSupercomputer` / `tickAutoMergeSupercomputersIntoMegacomputer` | `elapsedSeconds → state → state` | Auto-merge + reserve-timer automation (issues #316/#321), each built off a shared `tickComputeMergeBoundary(elapsedSeconds, inputField, outputField, autoFlagField, timerField, durationSeconds)` factory combining two steps: (1) auto-starts a reserve merge (`startComputeMergeReserve`, same as `startCompute*Merge` above but at the stricter `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) auto-trigger threshold, not the manual `COMPUTE_MERGE_RATIO` (8)) if the matching `intro.autoMerge*` flag is set and the input has reached the full extended cap; (2) counts an in-flight merge's timer down by `elapsedSeconds` (`tickComputeMergeReserveTimer`), granting 1 of the output entity and clearing the timer on completion. Called from `tickGame`'s `AUTO_MERGE_TICKERS.reduce`, each invoked as `tick(elapsedSeconds)(state)`, lowest tier first (Core → Node included), so one tick can cascade both auto-triggering and completion up multiple tiers in a row |
 | `enableAutoMergeCoresIntoNode` / `enableAutoMergeNodesIntoCluster` / `enableAutoMergeClustersIntoNetwork` / `enableAutoMergeNetworksIntoGrid` / `enableAutoMergeGridsIntoFabric` / `enableAutoMergeFabricsIntoCloud` / `enableAutoMergeCloudsIntoDatacenter` / `enableAutoMergeDatacentersIntoSupercomputer` / `enableAutoMergeSupercomputersIntoMegacomputer` | `state → state` | Auto-merge automation (issues #316/#321), each built off a shared `enableAutoMerge(outputField, autoFlagField)` factory: no-op below the matching `isAutoMerge*UnlockAvailable` gate; otherwise sacrifices ALL `COMPUTE_ENTITY_CAP` (10) currently-held units of that merge's own OUTPUT entity and permanently sets the matching `intro.autoMerge*` flag true — which is what actually switches that boundary over to the timed reserve-merge system (see `startComputeMergeReserve` further down this table) |
 | `isAutoMergeCoresIntoNodeUnlockAvailable` / `isAutoMergeNodesIntoClusterUnlockAvailable` / `isAutoMergeClustersIntoNetworkUnlockAvailable` / `isAutoMergeNetworksIntoGridUnlockAvailable` / `isAutoMergeGridsIntoFabricUnlockAvailable` / `isAutoMergeFabricsIntoCloudUnlockAvailable` / `isAutoMergeCloudsIntoDatacenterUnlockAvailable` / `isAutoMergeDatacentersIntoSupercomputerUnlockAvailable` / `isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable` | `state → bool` | Whether the matching `enableAutoMerge*` action would do anything: `COMPUTE_ENTITY_CAP` (10) of the OUTPUT entity held AND the matching `autoMerge*` flag isn't already true |
 | `getComputeBoostTierMultiplier` | `(boostType, tierIndex) → number` | Byte Foundry Compute Boost (issue #326): `preset.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** (tierIndex - 1)` — 0 for an invalid `boostType` or an out-of-range `tierIndex` (not 1-`COMPUTE_BOOST_TIER_FIELDS.length`) |
@@ -2949,9 +3006,10 @@ purchases were manual or automatic.
 - `CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER = 5` — Byte Foundry Disks: a write-cache's collect-from-Disks phase (`getDiskWriteCacheSegmentSeconds`, one segment per full source disk) runs at this multiple of the current production rate — moving an already-built disk's contents into the write cache is a bulk transfer, faster than `DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER` (2)'s bandwidth-limited disk-from-cache flush that follows it (see `tickDiskWriteCache`)
 - `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY = INTRO_CAPACITY_CAP_BITS / INTRO_CAPACITY_DOUBLING_STEP = 400_000` — Byte Foundry Compute Cores: Buffer / pool Memory Capacity threshold (50 KB SI, half of pool 1's end bound — historically one Capacity doubling short of the cap) at which Boosters/`ComputePage` becomes visible — scales automatically with `INTRO_CAPACITY_CAP_BITS` (10x smaller since the pool-Capacity-ceiling shrink); unrelated to Disks (see `isComputeCoreConversionUnlocked`). Capacity reaches this threshold through the full-Buffer doubling ladder rather than a Combine snap (subject to other gates)
 - `COMPUTE_CORES_PER_NODE = 8` — Byte Foundry Compute Cores: how many Compute Cores 1 Compute Node costs via the separate, unrelated `latchComputeMergePageIfNeeded`/`computeCoresEverEarned` lifetime-counter bookkeeping (NOT the Core → Node merge boundary below, which reuses the same ratio via `COMPUTE_MERGE_RATIO` instead)
-- `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes`/`computeClusters`/`computeNetworks`/`computeGrids`/`computeFabrics`/`computeClouds`/`computeDatacenters`/`computeSupercomputers`/`computeMegacomputers`) — see every `mergeCompute*Into*` function/the reserve-timer system below. Also the auto-trigger threshold for starting a reserve merge (`tickAutoMerge*`), stricter than the manual `COMPUTE_MERGE_RATIO`
+- `COMPUTE_ENTITY_CAP = 10` — Byte Foundry Compute Cores: maximum permanent balance of any compute-ladder entity (`computeCores`/`computeNodes`/`computeClusters`/`computeNetworks`/`computeGrids`/`computeFabrics`/`computeClouds`/`computeDatacenters`/`computeSupercomputers`/`computeMegacomputers`) whose own outbound merge boundary doesn't yet have auto-merge unlocked (or, for `computeMegacomputers`, always — no outbound boundary of its own) — see every `mergeCompute*Into*` function/the reserve-timer system below. Also the fixed cap `mergeComputeEntities`/`startComputeMergeReserve` output a merge INTO, regardless of that output entity's own effective cap
+- `COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_RESERVE_CAP` (18) — the effective per-entity cap for tiers 1-9 once THEIR OWN outbound merge boundary has auto-merge unlocked (`isComputeEntityAutoMergeUnlocked`/`getComputeEntityEffectiveCap`) — the primary 10 slots plus the boundary's own gradually-filling 8-slot reserve. Also the auto-trigger threshold for starting a reserve merge (`tickAutoMerge*`, via `tickComputeMergeBoundary`), stricter than the manual `COMPUTE_MERGE_RATIO` (8) a player-clicked start still uses (`startCompute*Merge`)
 - `COMPUTE_MERGE_RATIO = 8` — ComputePage merge chain (issues #280/#321): how many of one compute-ladder entity merge into 1 of the next tier up (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer) — the manual-trigger threshold either for the old instant merge (pre-unlock) or for starting a reserve merge (post-unlock, via `startCompute*Merge`) — see every `mergeCompute*Into*` function and `startComputeMergeReserve`
-- `COMPUTE_MERGE_RESERVE_CAP = 8` — issue #321: size of the 8-slot reserve pool a boundary gains once its auto-merge is unlocked, alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots — "18 slots" total per boundary. Same value as `COMPUTE_MERGE_RATIO` (a merge always consumes exactly one full group) but a separate constant since it denotes the reserve pool's own capacity, not a conversion ratio
+- `COMPUTE_MERGE_RESERVE_CAP = 8` — issue #321: size of the 8-slot reserve pool a boundary gains once its auto-merge is unlocked, alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots — "18 slots" total per boundary (`COMPUTE_ENTITY_AUTO_MERGE_CAP`). Same value as `COMPUTE_MERGE_RATIO` (a merge always consumes exactly one full group) but a separate constant since it denotes the reserve pool's own capacity, not a conversion ratio. Modeled with no persisted count field of its own — `getComputeReserveHeld` derives how much is filled straight from the live entity count instead (see "Once a boundary's auto-merge is unlocked..." above)
 - `COMPUTE_MERGE_CORE_EARN_MULTIPLIER = 10` — Core→Node timed-merge duration is this × live Core earn time (`capacity / getIntroProductionRate`, before Boost); see `getComputeMergeDurationSeconds`
 - `COMPUTE_MERGE_STEP_MULTIPLIER = 10` / `COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED = 5` — each next boundary multiplies the previous duration by 10, or by 5 once that boundary’s sequential duration upgrade is claimed (`intro.computeMergeDurationUpgrades`)
 - `COMPUTE_MERGE_DURATION_UPGRADE_COUNT = 9` — one sequential upgrade per merge boundary

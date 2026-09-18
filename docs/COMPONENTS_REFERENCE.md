@@ -110,8 +110,9 @@ directly below its disks, not in a separate panel after all the pool cards.
 
 `DataLakePanel` (`bare tierIndex={poolIndex}`) renders one lake as a single self-contained block —
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
-the size unit is always part of the visible name) with a compact `StatusText` showing how many of the
-funded Booster it's produced so far (e.g. "3× Cores"); then a dedicated `LakePoolTile` (own
+the size unit is always part of the visible name) with a single next-Booster-cost control in place of
+a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
+this control does); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
@@ -137,35 +138,43 @@ per size" shape `DiskArrayRow` uses for Storage — a lake disk just fills and c
 pull-eligibility distinction to render — the one currently-open slot shows a live left-to-right fill toward its
 own full size, but only once `isDataLakePoolReady` (same gate as `LakePoolTile` above, and for the
 same reason — otherwise a legacy save's residual `fillBits` would render this square as actively
-filling); before that it renders as an ordinary empty slot; then an actions row. Before the pool corresponding
-to this lake is entirely complete (`!isStoragePoolFullyBuilt`), whenever `isDataLakeManualFillAvailable`
-holds (the lake is ready, its own pool isn't yet fully built, at least one more unit is still needed
-for the next Booster, and the pool's own buffer holds at least one unit's worth of bits) a `💧 Fill`
-button appears — `actions.fillDataLakeManually(tierIndex)` draws directly from that pool's own buffer
-(the same source automatic overflow would otherwise use) to top up toward the next Booster, capped at
-exactly what's still needed; outside the forced priority order entirely, same as Buy. See CLAUDE.md's
-"Data Lakes" (manual vs. automatic fill) for the full mechanic. Then ONE repurposed button: once the Storage array corresponding
-to the lake's CURRENT capacity level is fully built (`isDataLakeCapacityDoublingAvailable` — the
-pool's smallest ×1 array for level 0→1, middle ×10 for 1→2, largest ×100 for 2→3 — not the lake's
-own Booster cost any more), an "⚡ Scale Out" button (disabled until the forced-priority chain allows
-it, HIDDEN rather than merely disabled before that array is complete); otherwise, once the lake is
-unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one real disk,
-not the lake's own fill progress), a `🎯 <next Booster cost>` Buy button (cost/capacity figures
-render via `formatDiskSizeInPoolUnit` — this lake's own FIXED unit, e.g. always "KB" for the KB
-lake, never auto-converting up even past 1000x — rather than `formatDiskSize`'s auto-nearest-unit
-pick, since a maxed lake's own capacity legitimately reaches that boundary) (disabled until affordable)
-plus an Auto/Manual toggle for `autoBuyEnabled` — the two button modes are **no longer guaranteed
-mutually exclusive** (that held only under the old cost-based Upgrade condition — see
-`docs/DESIGN_HISTORY.md`), so `DataLakePanel` shows only one, preferring BUY whenever it's genuinely
-affordable (`canBuy`) — even with Upgrade ALSO available (e.g. right after a manual Fill banks just
-enough) — since Upgrade's own `doubleDataLakeCapacity` drains whatever the lake currently holds as
-its cost, and unconditionally preferring Upgrade would silently redirect a Fill-funded Booster
-purchase into a capacity level-up with no way to Buy first (auto-buy defaults off); Upgrade only
-claims the slot once Buy isn't an option (see `docs/DESIGN_HISTORY.md`). Before unlock, that slot is just inert `🎯 <next cost>` status text. Every
-figure is a real, minimally-labelled number — no "Deposited"/"Capacity"/"Bought"/"Next" column
-headers — matching the rest of the page's "big number, few words" convention. `ComputePage` no
-longer has any Booster-buying control of its own — Foundry's `DataLakePanel` is the only place to
-buy or auto-buy one. Omitting `tierIndex` falls back to every visible-with-activity lake
+filling); before that it renders as an ordinary empty slot. **There is no bottom actions row at all**
+— the old separate 💧 Fill button, Buy/Scale-Out/locked ternary, and 🔁 Auto/Manual toggle are all
+gone, replaced entirely by the ONE header-row control mentioned above (see
+`docs/DESIGN_HISTORY.md`'s "one-shot Data Lake conversion" entry). That control renders one of, in
+priority order: (1) while `isDataLakeAutoConvertActive` (a conversion is mid-flight), an inert
+`🎯 <next Booster cost>` status label — no longer clickable; (2) once the matching compute-ladder
+entity is already at its own effective cap, the same `🎯 <cost>` text as a status label explaining
+the entity is full; (3) whenever genuinely affordable right now (`isBoosterPurchaseAvailable`), a
+clickable `🎯 <cost>` button (`actions.startDataLakeAutoConvert(tierIndex)`) that buys immediately;
+(4) otherwise, IF the Storage array corresponding to the lake's CURRENT capacity level is fully built
+(`isDataLakeCapacityDoublingAvailable` — the pool's smallest ×1 array for level 0→1, middle ×10 for
+1→2, largest ×100 for 2→3 — not the lake's own Booster cost any more), an "⚡ Scale Out" button
+(`actions.doubleDataLakeCapacity`, HIDDEN rather than merely disabled before that array is complete);
+(5) once unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one
+real disk) but not yet affordable, a clickable `🎯 <cost>` button that also calls
+`actions.startDataLakeAutoConvert(tierIndex)` — this time arming the one-shot `autoConvertActive`
+flag: `tickDataLakeAutoConvert` (engine.js, run every tick) then automatically draws from this pool's
+own buffer (the same source a standalone Fill click used to) until the cost is banked, buys exactly
+1, and clears the flag, at which point the control drops back to state (1)'s inert label for the
+whole duration — "one click fully automates the sequence to fill up and then convert it into a
+Booster, then stop," never a persistent auto-buy loop; or (6) before unlock, the same `🎯 <cost>`
+text as a plain non-interactive status label. Cost/capacity figures render via
+`formatDiskSizeInPoolUnit` — this lake's own FIXED unit, e.g. always "KB" for the KB lake, never
+auto-converting up even past 1000x — rather than `formatDiskSize`'s auto-nearest-unit pick, since a
+maxed lake's own capacity legitimately reaches that boundary. Buy/start-conversion and Scale Out are
+**not guaranteed mutually exclusive** (that held only under an old cost-based Upgrade condition —
+see `docs/DESIGN_HISTORY.md`), so the control always prefers Buy/start-conversion whenever it's
+genuinely available — even with Scale Out ALSO available (e.g. right after the buffer just filled
+enough) — since Scale Out's own `doubleDataLakeCapacity` drains whatever the lake currently holds as
+its cost, and unconditionally preferring it would silently redirect a Booster purchase the player
+wanted into a capacity level-up instead; Scale Out only claims the slot once Buy/start-conversion
+isn't an option. Starting a conversion is refused outright (`isDataLakeAutoConvertStartAvailable`)
+once the entity is already at its own effective cap. Every figure is a real, minimally-labelled
+number — no "Deposited"/"Capacity"/"Bought"/"Next" column headers — matching the rest of the page's
+"big number, few words" convention. `ComputePage` no longer has any Booster-buying control of its
+own — Foundry's `DataLakePanel` is the only place to buy or convert one. Omitting `tierIndex` falls
+back to every visible-with-activity lake
 (`getVisibleLakeTierIndexes`), each rendered as its own block stacked in a `LakesList`, optionally
 wrapped in one shared `StatCard` (`bare = false`) — retained for reuse/tests; no current caller uses
 this mode.

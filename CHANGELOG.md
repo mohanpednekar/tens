@@ -52,6 +52,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Foundry balance tiles are cleaner and centered:** Speed/Bandwidth moved to the top-right, disk
   counts were removed, balance and Capacity now share one centered line, and active tap percentages
   use a neutral plus with a yellow percentage and tap icon.
+- **The Boosters screen's pre-auto-merge "🤖 Auto" button now shows live progress toward its own
+  unlock cost** — a fill bar plus a `<held>/10` figure, matching how Factory's own Buy buttons show
+  cost-block progress. Once a boundary's auto-merge unlocks, that tier can now keep holding up to 8
+  more past its normal 10-slot cap — a gradually-filling reserve (via continued Booster purchases or
+  a lower-tier merge, not an atomic pull) shown as partially/fully filled squares in the tier's own
+  reserve row; the automatic merge trigger now waits for all 18 slots to fill before firing, while
+  manually starting a merge still only needs 8.
+- **A Data Lake's own next-Booster-cost control now fully replaces its old Fill/Buy/Auto-Manual
+  row.** Clicking it buys immediately if already affordable, or starts a one-shot automatic
+  conversion that draws from the pool's own buffer until enough is banked, buys exactly 1 Booster,
+  and stops — never a standing auto-buy loop. While converting, the control shows as a label instead
+  of a button. Starting is blocked if the matching compute entity is already full. The lake's old
+  lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
 - **Buying a Data Lake Booster no longer mints a compute-ladder entity past its own 10-slot cap** —

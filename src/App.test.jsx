@@ -10,6 +10,7 @@ import {
   COMPUTE_BOOST_PRESETS,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
+  COMPUTE_ENTITY_AUTO_MERGE_CAP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
   DATA_LAKE_CAPACITY_BY_LEVEL,
@@ -3048,7 +3049,7 @@ test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a 
     // Lake fully maxed (capacity level + deposited units both at their ceiling) — no open disk
     // slot left, so getDataLakeCurrentFillSubSize is null and getDataLakeOverflowRatePercent
     // reads DATA_LAKE_OVERFLOW_MIN_PERCENT (0) rather than a real in-progress rate.
-    dataLakes: { 1: { depositedUnits: maxedCapacity, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+    dataLakes: { 1: { depositedUnits: maxedCapacity, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
   })
   expect(DATA_LAKE_OVERFLOW_MIN_PERCENT).toBe(0)
   render(<App />)
@@ -3721,7 +3722,7 @@ describe('Byte Foundry Storage', () => {
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
-      dataLakes: { 1: { depositedUnits: 3, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 1 } },
+      dataLakes: { 1: { depositedUnits: 3, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
     })
     render(<App />)
     openStorage()
@@ -3731,7 +3732,7 @@ describe('Byte Foundry Storage', () => {
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
     const lakeBlock = within(pool1).getByLabelText('KB lake')
     expect(within(lakeBlock).getByText('Lake')).toBeInTheDocument()
-    expect(within(lakeBlock).getByText(/Cores/)).toBeInTheDocument()
+    expect(within(lakeBlock).getByRole('button', { name: /buy 1 Cores from the KB Data Lake/i })).toBeInTheDocument()
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
@@ -3741,7 +3742,7 @@ describe('Byte Foundry Storage', () => {
       byteCreated: true,
       // No disksBuiltTotal entry for pool 1 at all — isDataLakePoolReady is false, but the legacy
       // per-lake flag still makes isDataLakeBoosterUnlocked true (old-save compatibility).
-      dataLakes: { 1: { depositedUnits: 5, fillBits: 4321, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 1 } },
+      dataLakes: { 1: { depositedUnits: 5, fillBits: 4321, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
     })
     render(<App />)
     openStorage()
@@ -3773,7 +3774,7 @@ describe('Byte Foundry Storage', () => {
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
             disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
-      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 1, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 1, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 0 } },
     })
     const { unmount } = render(<App />)
     openStorage()
@@ -3801,7 +3802,7 @@ describe('Byte Foundry Storage', () => {
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
-      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 0 } },
     })
     render(<App />)
     openStorage()
@@ -3819,7 +3820,7 @@ describe('Byte Foundry Storage', () => {
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
       disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP },
-      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: 0 } },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 0 } },
     })
     render(<App />)
     openStorage()
@@ -3834,7 +3835,7 @@ describe('Byte Foundry Storage', () => {
       bits: 0,
       capacity: INTRO_DISK_UNLOCK_CAPACITY,
       byteCreated: true,
-      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoBuyEnabled: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+      dataLakes: { 1: { depositedUnits: 1, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
     })
     render(<App />)
     openStorage()
@@ -4340,14 +4341,14 @@ describe('Compute auto-merge automation', () => {
     vi.useFakeTimers()
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
-      computeNodes: COMPUTE_ENTITY_CAP, autoMergeNodesIntoCluster: true,
+      computeNodes: COMPUTE_ENTITY_AUTO_MERGE_CAP, autoMergeNodesIntoCluster: true,
     })
     const { unmount } = render(<App />)
     act(() => { vi.advanceTimersByTime(TICK_RATE_MS) })
 
     const saved = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(saved.intro.computeClusters).toBe(0)
-    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP - COMPUTE_MERGE_RATIO)
+    expect(saved.intro.computeNodes).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
     expect(saved.intro.computeNodesMergeRemainingSeconds).toBeGreaterThan(0)
 
     unmount()

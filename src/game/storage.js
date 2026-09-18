@@ -424,8 +424,8 @@ const getLegacyPendingTransferCount = tier =>
 // discrete, already-complete disks, never a partial one — so it starts at 0. boostersUnlocked is a
 // new permanent latch; a legacy lake that already banked units or bought a Booster had already
 // crossed the equivalent milestone under the old (unlocked-by-default) mechanic, so it carries
-// forward unlocked rather than re-locking a lake the player was already using. autoBuyEnabled is a
-// new opt-in toggle with no legacy equivalent, so it starts off. `purchased` additionally absorbs
+// forward unlocked rather than re-locking a lake the player was already using. autoConvertActive is
+// a one-shot automation flag with no legacy equivalent, so it starts off. `purchased` additionally absorbs
 // any pending transfers (see getLegacyPendingTransferCount) — each one already completed its own
 // purchase under the old model's own accounting, so the NEXT Booster's escalating cost
 // (getBoosterPurchaseCost = purchased + 1) picks up where the old save actually was, not cheaper.
@@ -443,13 +443,13 @@ const migrateLegacyDataLakeTier = legacy => {
     fillBits: 0,
     purchased,
     boostersUnlocked: depositedUnits > 0 || purchased > 0,
-    autoBuyEnabled: false,
+    autoConvertActive: false,
     capacityLevel: Math.max(0, Number(legacy.capacityLevel) || 0),
   }
 }
 
 // Every field on a CURRENT-shape lake tier is a scalar (depositedUnits/fillBits/purchased/
-// boostersUnlocked/autoBuyEnabled/capacityLevel) — no nested container needing its own deep
+// boostersUnlocked/autoConvertActive/capacityLevel) — no nested container needing its own deep
 // merge, so a plain shallow overlay per tier is sufficient once any legacy tier has already been
 // translated above. Returns `{ dataLakes, pendingComputeGrants }` — the latter a
 // tierIndex -> count map of legacy in-flight transfers still owed their compute-ladder entity,

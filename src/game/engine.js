@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -55,9 +55,12 @@ const createEmptyDataLakeTier = () => ({
   // isDataLakeBoosterUnlocked): unlike depositedUnits, which can drop back down once a Booster is
   // bought, Boosters stay unlocked for this lake forever once earned.
   boostersUnlocked: false,
-  // Player toggle (see toggleDataLakeAutoBuy/tickDataLakeAutoBuy): auto-buy the next Booster the
-  // instant this lake can afford it. Meaningless while boostersUnlocked is still false.
-  autoBuyEnabled: false,
+  // One-shot automation flag (see startDataLakeAutoConvert/tickDataLakeAutoConvert): while true,
+  // every tick draws from this pool's own buffer toward the next Booster (same mechanism a manual
+  // fill always used), buys the instant affordable, then clears back to false — a single
+  // fill-then-buy conversion per activation, not a standing auto-buy loop. Meaningless while
+  // boostersUnlocked is still false.
+  autoConvertActive: false,
   // How many times this lake's own deposit capacity has been advanced — see getDataLakeCapacity
   // below. 0 = the starting 1-unit capacity; DATA_LAKE_CAPACITY_MAX_LEVEL is a permanent hard cap.
   capacityLevel: 0,
@@ -510,7 +513,7 @@ export const createInitialGameState = () => ({
     // section of layers.js.
     computeCores: 0,
     // PERMANENT — a monotonically-increasing lifetime counter, incremented by
-    // latchComputeMergePageIfNeeded (via buyBooster/tickDataLakeAutoBuy) alongside computeCores itself
+    // latchComputeMergePageIfNeeded (via buyBooster/tickDataLakeAutoConvert) alongside computeCores itself
     // but NEVER decremented by spending (activateComputeBoost) or merging
     // (mergeComputeCoresIntoNode/startComputeCoresMerge) — the actual "CUMULATIVE total of Compute
     // Cores ever earned" computeMergePageUnlocked below needs. computeCores alone can't serve this
@@ -1537,7 +1540,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // Core -> Node is no longer automatic/unconditional (see issue #321) — it's just the first
   // boundary in AUTO_MERGE_TICKERS below, same as every other tier boundary. Compute Cores
   // themselves are no longer minted from Memory at all — they're bought with that lake's own
-  // banked units (see buyBooster/tickDataLakeAutoBuy, run later this same tick, after
+  // banked units (see buyBooster/tickDataLakeAutoConvert, run later this same tick, after
   // tickPoolBufferFill), unrelated to Storage or this tick pipeline entirely.
   // tickIntroAutoInvest then converts whatever Memory is left over. tickIntroProduction short-circuits to the
   // same-reference no-op once !byteCreated, and tickIntroAutoInvest once bits can't cover even one
@@ -1571,7 +1574,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // first so a single tick can cascade upward through every unlocked step in a row — see
   // AUTO_MERGE_TICKERS and issue #321. Each ticker both auto-starts a reserve merge (once that
   // boundary's input is completely full) and counts down any merge already in flight. A Booster
-  // bought via tickDataLakeAutoBuy below (after this tick's own tickPoolBufferFill fills the
+  // bought via tickDataLakeAutoConvert below (after this tick's own tickPoolBufferFill fills the
   // lakes) only cascades through this chain starting NEXT tick — a one-tick lag, imperceptible at
   // TICK_RATE_MS.
   const stateAfterAutoMerges = AUTO_MERGE_TICKERS.reduce((tickState, tick) => tick(elapsedSeconds)(tickState), stateAfterFoundryConvenience)
@@ -1587,11 +1590,11 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // One tick's lag before a topped-up buffer is visible to that same tick's own cache fill
   // (tickDiskAutoFill, which already ran earlier this tick) is imperceptible at TICK_RATE_MS.
   const stateAfterPoolBufferFill = tickPoolBufferFill(elapsedSeconds)(stateAfterIntro)
-  // Auto-buys the next Booster for every lake with autoBuyEnabled, now that this tick's own
-  // overflow fill above has had its chance to fund it — see tickDataLakeAutoBuy/buyBooster.
-  const stateAfterDataLakeAutoBuy = tickDataLakeAutoBuy(stateAfterPoolBufferFill)
+  // Advances every lake's own one-shot autoConvertActive automation, now that this tick's own
+  // overflow fill above has had its chance to fund it — see tickDataLakeAutoConvert/buyBooster.
+  const stateAfterDataLakeAutoConvert = tickDataLakeAutoConvert(stateAfterPoolBufferFill)
   const stateAfterFlops = tickComputeFlopsAutobuyers(elapsedSeconds)(
-    tickComputeFlops(elapsedSeconds)(stateAfterDataLakeAutoBuy),
+    tickComputeFlops(elapsedSeconds)(stateAfterDataLakeAutoConvert),
   )
 
   const autoPrestigeLevel = stateAfterFlops.autoPrestige ?? null
@@ -4543,9 +4546,6 @@ export const isDataLakePoolReady = (state, tierIndex) =>
 export const isDataLakeBoosterUnlocked = (state, tierIndex) =>
   (getDataLakeTier(state, tierIndex)?.boostersUnlocked ?? false) || isDataLakePoolReady(state, tierIndex)
 
-export const isDataLakeAutoBuyEnabled = (state, tierIndex) =>
-  getDataLakeTier(state, tierIndex)?.autoBuyEnabled ?? false
-
 // The nth Booster ever bought at a tier costs n units — but once the lake's own capacity ladder
 // is permanently maxed (DATA_LAKE_CAPACITY_MAX_LEVEL, see isDataLakeCapacityMaxed above), that
 // escalation is capped at the lake's own (now-fixed) capacity rather than left to keep climbing
@@ -4562,17 +4562,47 @@ export const getBoosterPurchaseCost = tierIndex => state => {
   return Math.min(rawCost, getDataLakeCapacity(state, tierIndex))
 }
 
-// Boosters pause once their own compute-ladder entity is already at COMPUTE_ENTITY_CAP (10) — the
-// same slot cap every other compute-ladder field respects (see the merge functions' own
-// COMPUTE_ENTITY_CAP gates) — freeing back up only once that entity is spent back down (a merge,
-// a Compute Boost activation or stack — forfeit/reclaim don't; forfeit never touches the field
-// and reclaim refunds a token back onto it). An earlier version let buyBooster mint past this cap
-// entirely, uncapped by anything but the lake's own escalating cost — see docs/DESIGN_HISTORY.md.
-// Returns 0 for an out-of-range tierIndex (no matching field), same as "no room."
+// Whether tierIndex's own OUTBOUND merge boundary (tierIndex 1..9, Cores..Supercomputers — tier 10
+// Megacomputer has none) has auto-merge unlocked — the gate for whether this tier's own effective
+// cap is COMPUTE_ENTITY_CAP (10) or the extended COMPUTE_ENTITY_AUTO_MERGE_CAP (18, 10 primary + 8
+// gradually-filled reserve — see layers.js).
+export const isComputeEntityAutoMergeUnlocked = (state, tierIndex) => {
+  const boundary = COMPUTE_MERGE_BOUNDARIES[tierIndex - 1]
+  return Boolean(boundary) && (state.intro?.[boundary.autoFlagField] ?? false)
+}
+
+const getComputeEntityEffectiveCap = (state, tierIndex) =>
+  isComputeEntityAutoMergeUnlocked(state, tierIndex) ? COMPUTE_ENTITY_AUTO_MERGE_CAP : COMPUTE_ENTITY_CAP
+
+// Boosters pause once their own compute-ladder entity is already at its effective cap — COMPUTE_ENTITY_CAP
+// (10) normally, or the extended COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once that tier's own outbound
+// merge boundary has auto-merge unlocked, since the "extra" 8 held past 10 there are the boundary's
+// own gradually-filling reserve (see layers.js) — freeing back up only once the entity is spent
+// back down (a merge, a Compute Boost activation or stack — forfeit/reclaim don't; forfeit never
+// touches the field and reclaim refunds a token back onto it). An earlier version let buyBooster
+// mint past this cap entirely, uncapped by anything but the lake's own escalating cost — see
+// docs/DESIGN_HISTORY.md. Returns 0 for an out-of-range tierIndex (no matching field), same as "no room."
 const getComputeEntityFieldRoom = (state, tierIndex) => {
   const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
   if (!field) return 0
-  return Math.max(0, COMPUTE_ENTITY_CAP - (state.intro?.[field] ?? 0))
+  return Math.max(0, getComputeEntityEffectiveCap(state, tierIndex) - (state.intro?.[field] ?? 0))
+}
+
+// How much of tierIndex's own held count sits in its outbound boundary's gradually-filling reserve
+// (0..COMPUTE_MERGE_RESERVE_CAP) — everything past the primary COMPUTE_ENTITY_CAP (10) slots, i.e.
+// `held - COMPUTE_ENTITY_CAP` clamped to the reserve's own width. While a merge is actively in
+// flight (that boundary's own timer > 0), the reserve reads as fully committed (COMPUTE_MERGE_RESERVE_CAP)
+// regardless of the live held count, which by then has already dropped back toward 10 and may be
+// accumulating the NEXT batch — the in-flight reserve and "next batch already forming" are
+// different things, and only the timer distinguishes them (ComputePage's own countdown display).
+// Returns 0 wherever auto-merge isn't unlocked for this tier (no reserve concept applies yet).
+export const getComputeReserveHeld = (state, tierIndex) => {
+  if (!isComputeEntityAutoMergeUnlocked(state, tierIndex)) return 0
+  const boundary = COMPUTE_MERGE_BOUNDARIES[tierIndex - 1]
+  if ((state.intro?.[boundary.timerField] ?? 0) > 0) return COMPUTE_MERGE_RESERVE_CAP
+  const field = COMPUTE_BOOST_TIER_FIELDS[tierIndex - 1]
+  const held = state.intro?.[field] ?? 0
+  return Math.max(0, Math.min(COMPUTE_MERGE_RESERVE_CAP, held - COMPUTE_ENTITY_CAP))
 }
 
 export const isBoosterPurchaseAvailable = (state, tierIndex) =>
@@ -4720,9 +4750,9 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
   if (!isDataLakePoolReady(state, tierIndex)) return false
   const neededUnits = Math.max(0, getBoosterPurchaseCost(tierIndex)(state) - getDataLakeDepositedUnits(tierIndex)(state))
   if (neededUnits <= 0) return false // already enough banked for the next Booster
-  // No open slot left at the lake's current capacity level — manual fill (and a click on it) would
-  // be a dead no-op until the corresponding Storage array unlocks the next capacity level (Scale
-  // Out) — hide the button rather than offering a click that silently does nothing.
+  // No open slot left at the lake's current capacity level — a manual fill would be a dead no-op
+  // until the corresponding Storage array unlocks the next capacity level (Scale Out) — tell
+  // tickDataLakeAutoConvert not to spin on it rather than silently doing nothing every tick.
   const bitsNeeded = getDataLakeManualFillBitsNeeded(state, tierIndex, neededUnits)
   if (bitsNeeded === null) return false
   // Require at least a full unit's worth banked before offering Fill — same minimum threshold as
@@ -4741,7 +4771,9 @@ export const isDataLakeManualFillAvailable = (state, tierIndex) => {
 // holds, in which case the spend still only ever makes real, permanent progress toward completing
 // the currently-open slot (fillDataLakeDisks itself banks a partial spend in fillBits; nothing is
 // ever lost). Outside the forced priority order entirely, same as buyBooster — always available the
-// instant isDataLakeManualFillAvailable says so.
+// instant isDataLakeManualFillAvailable says so. No longer a direct UI action of its own (see
+// docs/DESIGN_HISTORY.md) — tickDataLakeAutoConvert is its only caller now, driving it one step per
+// tick while a lake's own autoConvertActive flag is set.
 export const fillDataLakeManually = tierIndex => state => {
   if (!isDataLakeManualFillAvailable(state, tierIndex)) return state
   const neededUnits = Math.max(0, getBoosterPurchaseCost(tierIndex)(state) - getDataLakeDepositedUnits(tierIndex)(state))
@@ -4764,34 +4796,74 @@ export const fillDataLakeManually = tierIndex => state => {
   }
 }
 
-// Player toggle for auto-buying this lake's own Boosters the instant they're affordable (see
-// tickDataLakeAutoBuy below) — meaningless while isDataLakeBoosterUnlocked is still false, but
-// still freely toggleable ahead of that, same as other autobuyer "enabled" flags in this file.
-export const toggleDataLakeAutoBuy = tierIndex => state => {
+// Sets (or clears) a lake's one-shot autoConvertActive flag directly — shared by
+// startDataLakeAutoConvert (turns it on) and tickDataLakeAutoConvert (turns it back off once that
+// one conversion completes or can no longer proceed). Same-reference no-op for an out-of-range
+// tierIndex.
+const setDataLakeAutoConvertActive = (tierIndex, active) => state => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake) return state
   return {
     ...state,
     intro: {
       ...state.intro,
-      dataLakes: {
-        ...state.intro.dataLakes,
-        [tierIndex]: { ...lake, autoBuyEnabled: !(lake.autoBuyEnabled ?? false) },
-      },
+      dataLakes: { ...state.intro.dataLakes, [tierIndex]: { ...lake, autoConvertActive: active } },
     },
   }
 }
 
-// Auto-buys every lake's own next Booster while autoBuyEnabled and affordable — repeatedly per
-// lake (cost escalates and depositedUnits only shrinks with each purchase, so this always
-// terminates). Called from tickGame right after tickPoolBufferFill, so a Booster this same tick's
-// overflow just funded can auto-buy the same tick it completes.
-export const tickDataLakeAutoBuy = state => {
+export const isDataLakeAutoConvertActive = (state, tierIndex) =>
+  getDataLakeTier(state, tierIndex)?.autoConvertActive ?? false
+
+// Whether clicking this lake's own conversion control right now would do anything: unlocked, not
+// already mid-conversion, and the matching compute-ladder entity has room (see
+// getComputeEntityFieldRoom) — a manual conversion is never allowed to start once that entity is
+// already at its own cap, since there would be nothing left to convert the result into.
+export const isDataLakeAutoConvertStartAvailable = (state, tierIndex) => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake || (lake.autoConvertActive ?? false)) return false
+  if (!isDataLakeBoosterUnlocked(state, tierIndex)) return false
+  return getComputeEntityFieldRoom(state, tierIndex) > 0
+}
+
+// A single click "fully automates the sequence to fill up and then convert it into a Booster, then
+// stop" (replacing the old persistent Auto/Manual toggle — see docs/DESIGN_HISTORY.md): if this
+// lake is already banked enough (isBoosterPurchaseAvailable), buys immediately rather than making
+// the player wait a tick for tickDataLakeAutoConvert to notice; otherwise arms autoConvertActive,
+// and tickDataLakeAutoConvert (called every tick from tickGame) keeps drawing from this pool's own
+// buffer (the same source a manual 💧 Fill click always used) until enough is banked, buys exactly
+// 1, then clears the flag — a single conversion per click, never a standing auto-buy loop. Same-
+// reference no-op below isDataLakeAutoConvertStartAvailable's own gate.
+export const startDataLakeAutoConvert = tierIndex => state => {
+  if (!isDataLakeAutoConvertStartAvailable(state, tierIndex)) return state
+  if (isBoosterPurchaseAvailable(state, tierIndex)) return buyBooster(tierIndex, 1)(state)
+  return setDataLakeAutoConvertActive(tierIndex, true)(state)
+}
+
+// Drives every lake's own one-shot autoConvertActive flag one step per tick — called from tickGame
+// right after tickPoolBufferFill, so a fill that same tick's overflow just completed is visible
+// immediately. Per active lake: if the matching compute-ladder entity filled up some other way
+// (e.g. a merge from the tier below) while this was running, there is nothing left to convert
+// toward — clear the flag and stop, rather than spin forever. Otherwise, buy the instant affordable
+// (clearing the flag — the one conversion is done) or, while not yet affordable, draw one more
+// step from this pool's own buffer via fillDataLakeManually (a same-reference no-op on its own
+// terms whenever there's nothing to draw yet, e.g. the buffer hasn't refilled this tick) — the
+// exact same source and mechanism a manual 💧 Fill click always used, just fired automatically
+// every tick instead of needing a click each time.
+export const tickDataLakeAutoConvert = state => {
   let nextState = state
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
-    if (!isDataLakeAutoBuyEnabled(nextState, tierIndex)) continue
-    // ⚡ Bolt Optimization: Use O(1) bulk purchase instead of O(N) while loop
-    nextState = buyBooster(tierIndex, Number.MAX_SAFE_INTEGER)(nextState)
+    if (!isDataLakeAutoConvertActive(nextState, tierIndex)) continue
+    if (getComputeEntityFieldRoom(nextState, tierIndex) <= 0) {
+      nextState = setDataLakeAutoConvertActive(tierIndex, false)(nextState)
+      continue
+    }
+    if (isBoosterPurchaseAvailable(nextState, tierIndex)) {
+      nextState = buyBooster(tierIndex, 1)(nextState)
+      nextState = setDataLakeAutoConvertActive(tierIndex, false)(nextState)
+      continue
+    }
+    nextState = fillDataLakeManually(tierIndex)(nextState)
   }
   return nextState
 }
@@ -5084,21 +5156,23 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // the 9 manual merges above can be permanently automated, one tier boundary at a time, by
 // sacrificing ALL COMPUTE_ENTITY_CAP (10) currently-held units of that merge's own OUTPUT entity —
 // e.g. enableAutoMergeNodesIntoCluster spends 10 Clusters to flip autoMergeNodesIntoCluster on.
-// Once enabled, merging that boundary — auto or manual alike — transitions entirely to a timed
-// RESERVE pool (see COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js /
-// below): starting a merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input
-// entity's own normal COMPUTE_ENTITY_CAP (10) slots into the boundary's reserve, then counts down
-// that boundary's duration (live Core earn ×10 chain, or ×5 after a duration upgrade — snapshotted
-// at start so an in-flight timer does not rescale mid-merge) before granting 1 of the output
-// entity (cap-checked) and clearing the reserve — at most one merge in flight per boundary at a
-// time. Auto-triggers only once the input is COMPLETELY full (10, not 8) — a stricter bar than a
-// manual start's own COMPUTE_MERGE_RATIO (8), so automation only ever mops up an entity the player
-// has let cap out, never preempting a more efficient manual start at 8.
+// Once enabled, the INPUT entity's own effective cap rises from COMPUTE_ENTITY_CAP to
+// COMPUTE_ENTITY_AUTO_MERGE_CAP (18 — see getComputeEntityEffectiveCap/isComputeEntityAutoMergeUnlocked
+// above and layers.js), and merging that boundary — auto or manual alike — transitions entirely to
+// a timed RESERVE pool (see COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js
+// / below): starting a merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input
+// entity, then counts down that boundary's duration (live Core earn ×10 chain, or ×5 after a
+// duration upgrade — snapshotted at start so an in-flight timer does not rescale mid-merge) before
+// granting 1 of the output entity (cap-checked) and clearing the timer — at most one merge in
+// flight per boundary at a time. Auto-triggers only once the input reaches the FULL extended cap
+// (18, not just the primary 10) — a stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8),
+// so automation only ever mops up an entity the player has let fill all the way past its primary
+// slots, never preempting a more efficient manual start at 8 (or at any point up to 17).
 
-// Shared by both the auto-trigger (threshold COMPUTE_ENTITY_CAP) and the manual click-to-start
-// action (threshold COMPUTE_MERGE_RATIO) below — a same-reference no-op while auto-merge isn't
-// unlocked for this boundary, a merge is already in flight (timerField > 0), input is below
-// `threshold`, or output is already at COMPUTE_ENTITY_CAP. Otherwise moves exactly
+// Shared by both the auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18) and the manual
+// click-to-start action (threshold COMPUTE_MERGE_RATIO, 8) below — a same-reference no-op while
+// auto-merge isn't unlocked for this boundary, a merge is already in flight (timerField > 0), input
+// is below `threshold`, or output is already at COMPUTE_ENTITY_CAP. Otherwise moves exactly
 // COMPUTE_MERGE_RATIO out of the input entity and starts the timer at `durationSeconds`.
 const startComputeMergeReserve = (inputField, outputField, autoFlagField, timerField, durationSeconds, threshold) => state => {
   if (!(state.intro?.[autoFlagField] ?? false)) return state
@@ -5141,14 +5215,15 @@ const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) =
   }
 }
 
-// Combines one boundary's auto-trigger (threshold COMPUTE_ENTITY_CAP) with its timer countdown —
-// the single per-boundary function tickGame's own AUTO_MERGE_TICKERS pipeline calls every tick
-// (see further down this file). Duration is read live from state at auto-start so a duration-step
-// upgrade (or a changed Core earn rate) applies to newly started merges immediately; an already
-// in-flight timer keeps whatever value was snapshotted at its start.
+// Combines one boundary's auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18 — the input
+// entity's own extended cap once this boundary's auto-merge is unlocked, not just the primary 10)
+// with its timer countdown — the single per-boundary function tickGame's own AUTO_MERGE_TICKERS
+// pipeline calls every tick (see further down this file). Duration is read live from state at
+// auto-start so a duration-step upgrade (or a changed Core earn rate) applies to newly started
+// merges immediately; an already in-flight timer keeps whatever value was snapshotted at its start.
 const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoFlagField, timerField, boundaryIndex) => state => {
   const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
-  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_CAP)(state)
+  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(state)
   return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterAutoStart)
 }
 

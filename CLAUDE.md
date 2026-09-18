@@ -738,13 +738,17 @@ Strict three-layer separation:
    Stack + Reclaim-or-Forfeit row, mutually exclusive by `computeBoostStacks`; `canReclaimComputeBoost`/
    `canForfeitComputeBoost` enforce this at the engine level too), THEN each of the nine
    merge-boundary tiers' two rows (issues #321/#326/#363: row 1 is the `COMPUTE_ENTITY_CAP` (10)
-   normal-slot squares plus a `TierSelectButton` that arms the Boost presets above at that tier's own
-   scaled power; row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
-   Auto-merge buttons, or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares
-   themselves as the manual-start trigger — Megacomputer has no row 2). Cores are obtained by buying
-   Boosters from the matching Data Lake on Foundry's `DataLakePanel` (see "Economy model" below), not
-   minted from Memory. Full button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; rationale for
-   the render order and the Stack/Reclaim/Forfeit mutual exclusivity: `docs/DESIGN_HISTORY.md`.
+   normal-slot squares, always reading at most 10/10 even once auto-merge is unlocked and the entity
+   itself has grown into its own reserve (see "Economy model" below), plus a `TierSelectButton` that
+   arms the Boost presets above at that tier's own scaled power; row 2 is, before auto-merge unlocks,
+   Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock Auto-merge `TierActionButton`s (the latter showing a live
+   progress fill/cost toward its own `COMPUTE_ENTITY_CAP`-unit unlock cost), or, once unlocked, the
+   `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot squares themselves — now gradually filled
+   (`getComputeReserveHeld`) rather than only ever empty-or-full — as the manual-start trigger —
+   Megacomputer has no row 2). Cores are obtained by buying Boosters from the matching Data Lake on
+   Foundry's `DataLakePanel` (see "Economy model" below), not minted from Memory. Full
+   button/gate/aria-label detail: `docs/MAINPAGE_REFERENCE.md`; rationale for the render order and the
+   Stack/Reclaim/Forfeit mutual exclusivity: `docs/DESIGN_HISTORY.md`.
 4c. **`ComputeFlopsPage/index.jsx`** — PP **Compute (Flops)** screen (page id `'compute'`), taking
    `{ game }`. Reached via AppNav once `isComputeFlopsPageRevealed` (spendable PP ≥ 100, latched in
    `computeFlops.pageUnlocked`). Ten tiers KFlops→QFlops (`COMPUTE_FLOPS_TIER_DEFINITIONS`), PP-funded
@@ -945,7 +949,7 @@ automatic path to tier units, and before that (on a save's very first, still-gat
 auto-convert alone carries the player through the mandatory gate with no click needed.
 `convertIntroBitsToKilobytes` itself is unchanged and still exported/tested — only its one UI caller
 was removed.
-The generator, Disks, Data Lakes (`depositedUnits`/`fillBits` / purchased Boosters / `autoBuyEnabled`
+The generator, Disks, Data Lakes (`depositedUnits`/`fillBits` / purchased Boosters / `autoConvertActive`
 / `capacityLevel`), and every compute-ladder entity — Core, Node, Cluster, Network, Grid, Fabric,
 Cloud, Datacenter, Supercomputer, Megacomputer (every tier past Node mergeable manually, 8:1 per
 tier, once unlocked — "Compute" names the page/feature only, not any individual entity) — are all
@@ -1045,30 +1049,41 @@ all PERMANENT across every real Prestige. Full cost/timing formulas and the pull
 are in `docs/ECONOMY_REFERENCE.md`.
 
 **Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
-`tickDataLakeAutoBuy` in `engine.js`) — ten permanent lakes (KB…QB), fully decoupled from Disk builds
+`tickDataLakeAutoConvert` in `engine.js`) — ten permanent lakes (KB…QB), fully decoupled from Disk builds
 themselves. A lake is gated on its pool having built at least one real disk (`isDataLakePoolReady`);
 before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than live progress. **A lake
 fills MANUALLY, capped at just enough for its own next Booster, until its matching Storage pool is
 entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's three ladder sizes fully
 built); only once complete does it fill AUTOMATICALLY** from that pool's buffer OVERFLOW
 (`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Manual fill
-(`fillDataLakeManually`/`isDataLakeManualFillAvailable`, a `💧 Fill` button in `DataLakePanel`) spends
-directly from that pool's own buffer — the same source overflow itself would use — up to however
-many units the next Booster still needs; outside the forced priority order, same as Buy. Overflow
-fills the lake's own ×1/×10/×100 disks smallest-first, one disk at a time, at the plain available
-rate — no artificial slowdown, the same "no taper" posture Storage's own disk provisioning already
-uses (an earlier version tapered the rate down as the currently-filling disk approached completion;
-removed, see `docs/DESIGN_HISTORY.md`). Each sub-size is capped at `DATA_LAKE_SUB_SIZE_DISK_CAPS`
-(9/9/9, not a flat 10/10/10 — mirroring `DISK_ARRAY_LADDER_CAP`'s own 9), one unit short of each
-level's own capacity (1/10/100/1,000) — the level's own last unit fills through the lake's own
-retained fill buffer instead of a disk square, the same way a Storage array's cache substitutes for
-its own 10th disk (`getDataLakeNextFillSubSize`/`getDataLakeSlotRepresentableUnits`); a mixed-radix
-decomposition (`decomposeDataLakeUnits`) keeps the visible disk-square breakdown always exact with no
-leftover. Capacity is a purchasable decade-power ladder (1/10/100/1,000 units, capped at level 3),
-advancing only once the CORRESPONDING Storage array size is fully built. **Buying Boosters**
-(`buyBooster`) spends only banked lake units — outside the forced priority order entirely, always
-available the instant affordable — at a `purchased + 1` cost (capped once the lake is
-capacity-maxed) and grants 1 compute-ladder entity instantly; `toggleDataLakeAutoBuy` auto-buys.
+(`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends directly from that pool's own
+buffer — the same source overflow itself would use — up to however many units the next Booster
+still needs; outside the forced priority order, same as Buy. It's no longer a standalone UI action
+of its own: `DataLakePanel` has a single "🎯 `<cost>`" control (replacing the old separate
+Fill/Buy/Auto-Manual row) that either buys immediately (already affordable) or arms
+`intro.dataLakes[tier].autoConvertActive`, and `tickDataLakeAutoConvert` then drives
+`fillDataLakeManually` one step per tick until affordable, buys exactly 1, and clears the flag —
+"one click, one full fill-then-buy conversion, then stop," never a persistent auto-buy loop (see
+`docs/DESIGN_HISTORY.md` for the reversal this replaces). While converting, that same control
+renders as an inert label instead of a button; starting is refused
+(`isDataLakeAutoConvertStartAvailable`) once the matching compute-ladder entity is already at its
+own cap. Overflow fills the lake's own ×1/×10/×100 disks smallest-first, one disk at a time, at the
+plain available rate — no artificial slowdown, the same "no taper" posture Storage's own disk
+provisioning already uses (an earlier version tapered the rate down as the currently-filling disk
+approached completion; removed, see `docs/DESIGN_HISTORY.md`). Each sub-size is capped at
+`DATA_LAKE_SUB_SIZE_DISK_CAPS` (9/9/9, not a flat 10/10/10 — mirroring `DISK_ARRAY_LADDER_CAP`'s own
+9), one unit short of each level's own capacity (1/10/100/1,000) — the level's own last unit fills
+through the lake's own retained fill buffer instead of a disk square, the same way a Storage array's
+cache substitutes for its own 10th disk (`getDataLakeNextFillSubSize`/
+`getDataLakeSlotRepresentableUnits`); a mixed-radix decomposition (`decomposeDataLakeUnits`) keeps
+the visible disk-square breakdown always exact with no leftover. Capacity is a purchasable
+decade-power ladder (1/10/100/1,000 units, capped at level 3), advancing only once the CORRESPONDING
+Storage array size is fully built. **Buying Boosters** (`buyBooster`) spends only banked lake
+units — outside the forced priority order entirely, always available the instant affordable — at a
+`purchased + 1` cost (capped once the lake is capacity-maxed) and grants 1 compute-ladder entity
+instantly, up to that entity's own effective cap (`COMPUTE_ENTITY_CAP`, 10 — or the extended
+`COMPUTE_ENTITY_AUTO_MERGE_CAP`, 18, once that tier's own outbound merge boundary has auto-merge
+unlocked, see "Compute" below); pauses (a same-reference no-op) once at that cap.
 **Stranded disks are never destroyed, but they DO still feed the write cache — regardless of
 whether the target is stranded too.** A disk whose corresponding tier has already moved past the
 level it requires simply sits full and un-pullable by that tier for the rest of the cycle — nothing
@@ -1237,7 +1252,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1798 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1810 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
