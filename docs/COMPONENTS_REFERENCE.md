@@ -151,8 +151,12 @@ clickable `🎯 <cost>` button (`actions.startDataLakeAutoConvert(tierIndex)`) t
 (`isDataLakeCapacityDoublingAvailable` — the pool's smallest ×1 array for level 0→1, middle ×10 for
 1→2, largest ×100 for 2→3 — not the lake's own Booster cost any more), an "⚡ Scale Out" button
 (`actions.doubleDataLakeCapacity`, HIDDEN rather than merely disabled before that array is complete);
-(5) once unlocked (`isDataLakeBoosterUnlocked` — the matching Storage pool has built at least one
-real disk) but not yet affordable, a clickable `🎯 <cost>` button that also calls
+(5) once its matching Storage pool is actually ready to feed it (`isDataLakePoolReady` — has built at
+least one real disk this era; deliberately NOT the looser `isDataLakeBoosterUnlocked`, which also
+passes under a legacy `boostersUnlocked` latch alone — starting a conversion there would arm
+`autoConvertActive` with no way for it to ever bank anything, leaving the control stuck showing
+"converting" forever — see `docs/DESIGN_HISTORY.md`) but not yet affordable, a clickable `🎯 <cost>`
+button that also calls
 `actions.startDataLakeAutoConvert(tierIndex)` — this time arming the one-shot `autoConvertActive`
 flag: `tickDataLakeAutoConvert` (engine.js, run every tick) then automatically draws from this pool's
 own buffer (the same source a standalone Fill click used to) until the cost is banked, buys exactly
