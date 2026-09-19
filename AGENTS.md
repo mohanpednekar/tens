@@ -150,7 +150,12 @@ per-lake "🎯 `<cost>`" control: it buys immediately if already affordable, or 
 persistent auto-buy loop). Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a
 gradually-filled 8-slot reserve) once that tier's own outbound merge boundary has auto-merge
 unlocked. A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
-reveals at 100 PP. The generator, Disks, Data Lakes, and Compute entities are permanent across every
+reveals at 100 PP. At a pool's 9/9/9, full-lake, unreachable-next-Booster wall, its pool-local
+Reset adds 1,000 permanent lake-only capacity, empties that pool's Storage/lake, and free-rebuilds
+its disks sequentially before persistent automatic Booster conversion resumes; rebuilding blocks
+only new provisioning starts in later pools. The first reset fixes lake speed at 50%, and reset two
+onward uses the normal bandwidth steps (dynamically limited by the following pool for non-final
+pools). The generator, Disks, Data Lakes, and Compute entities are permanent across every
 real Prestige; Era ascension is a bigger reset (`buildEraIntroReset`) that wipes Disks/Data
 Lakes/Compute entity balances back to scratch while still keeping `byteCreated`, the
 `mainGameUnlocked` latch, and select automation-unlock flags. Only the Data Stream balance resets

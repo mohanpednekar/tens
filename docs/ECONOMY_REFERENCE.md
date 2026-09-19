@@ -1,5 +1,16 @@
 # Economy model reference
 
+## Pool-local reset loop
+
+At a pool's terminal state (9/9/9 disks, full lake, and next Booster cost above lake capacity), the
+pool may reset independently. Its Storage contents, buffer, and lake are emptied, while Booster
+progress and earlier reset rewards remain. Capacity grows by 1,000 lake units per reset. Disk
+containers then re-provision free and automatically, sequentially after each current disk fills;
+new provisioning in later pools is locked until 9/9/9 is restored, without cancelling later work
+already underway. Completed rebuilds continuously auto-buy affordable Boosters from their own lake.
+The first reset permanently fixes lake speed at 50%; reset two onward advances the existing normal
+bandwidth ladder, dynamically bounded for non-final pools by half the next pool's bandwidth.
+
 Referenced from `CLAUDE.md`'s Economy model section. Read this before touching
 `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed
 constant or formula — it's the full mechanic reference (cost/production formulas, the purchase
