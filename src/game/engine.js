@@ -4816,13 +4816,21 @@ export const isDataLakeAutoConvertActive = (state, tierIndex) =>
   getDataLakeTier(state, tierIndex)?.autoConvertActive ?? false
 
 // Whether clicking this lake's own conversion control right now would do anything: unlocked, not
-// already mid-conversion, and the matching compute-ladder entity has room (see
-// getComputeEntityFieldRoom) — a manual conversion is never allowed to start once that entity is
-// already at its own cap, since there would be nothing left to convert the result into.
+// already mid-conversion, its matching Storage pool can actually feed it, and the matching
+// compute-ladder entity has room (see getComputeEntityFieldRoom) — a manual conversion is never
+// allowed to start once that entity is already at its own cap, since there would be nothing left
+// to convert the result into. The isDataLakePoolReady check (not just isDataLakeBoosterUnlocked,
+// which also passes under the legacy boostersUnlocked latch — see that predicate's own doc
+// comment) matters specifically for an old save carrying that legacy latch with no real disk yet
+// built this era: without it, starting a conversion would arm autoConvertActive with
+// fillDataLakeManually permanently unable to ever bank anything (isDataLakeManualFillAvailable
+// gates on isDataLakePoolReady too), leaving the control stuck showing "converting" forever with
+// no way to cancel — see docs/DESIGN_HISTORY.md.
 export const isDataLakeAutoConvertStartAvailable = (state, tierIndex) => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake || (lake.autoConvertActive ?? false)) return false
   if (!isDataLakeBoosterUnlocked(state, tierIndex)) return false
+  if (!isDataLakePoolReady(state, tierIndex)) return false
   return getComputeEntityFieldRoom(state, tierIndex) > 0
 }
 
@@ -4855,6 +4863,15 @@ export const tickDataLakeAutoConvert = state => {
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
     if (!isDataLakeAutoConvertActive(nextState, tierIndex)) continue
     if (getComputeEntityFieldRoom(nextState, tierIndex) <= 0) {
+      nextState = setDataLakeAutoConvertActive(tierIndex, false)(nextState)
+      continue
+    }
+    // Defense in depth alongside isDataLakeAutoConvertStartAvailable's own isDataLakePoolReady
+    // gate above: a state that somehow already carries autoConvertActive true while its pool
+    // isn't ready (a save from before this check existed, or a raw Dev Mode state edit) would
+    // otherwise spin forever here, since fillDataLakeManually can never bank anything in that
+    // state either. Clear and stop rather than get stuck.
+    if (!isDataLakePoolReady(nextState, tierIndex)) {
       nextState = setDataLakeAutoConvertActive(tierIndex, false)(nextState)
       continue
     }
@@ -5308,10 +5325,23 @@ const isAutoMergeUnlockAvailable = (state, outputField, autoFlagField) =>
   !(state.intro?.[autoFlagField] ?? false) && (state.intro?.[outputField] ?? 0) >= COMPUTE_ENTITY_CAP
 
 // A same-reference no-op below isAutoMergeUnlockAvailable's own gate (already enabled, or fewer
-// than COMPUTE_ENTITY_CAP of the output entity currently held).
+// than COMPUTE_ENTITY_CAP of the output entity currently held). Sacrifices exactly
+// COMPUTE_ENTITY_CAP (10) of the output entity — NOT the field's entire live count. The output
+// entity can independently hold up to COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once ITS OWN outbound
+// boundary already has auto-merge unlocked (its gradually-filling reserve, see
+// getComputeReserveHeld); zeroing the whole field here would silently destroy that reserve
+// progress the instant a player unlocks the boundary BELOW it. Subtracting only the flat 10-unit
+// cost leaves any such excess intact.
 const enableAutoMerge = (outputField, autoFlagField) => state => {
   if (!isAutoMergeUnlockAvailable(state, outputField, autoFlagField)) return state
-  return { ...state, intro: { ...state.intro, [outputField]: 0, [autoFlagField]: true } }
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      [outputField]: (state.intro?.[outputField] ?? 0) - COMPUTE_ENTITY_CAP,
+      [autoFlagField]: true,
+    },
+  }
 }
 
 // UI mirror of startComputeMergeReserve's own manual-click gate (threshold COMPUTE_MERGE_RATIO,
