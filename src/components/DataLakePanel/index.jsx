@@ -152,6 +152,13 @@ const LakePoolFill = styled.div`
   transform: scaleX(${props => props.$fill});
 `
 
+const LakeActionsRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${props => props.theme.space.sm};
+`
+
 const LakePoolLabel = styled.span`
   position: relative;
   font-family: ${props => props.theme.font.display};
