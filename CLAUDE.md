@@ -871,6 +871,22 @@ would now be refused.
 
 ## Economy model
 
+### Pool-local resets
+
+Each Storage pool has an independent end-of-progression reset. Reset is offered only at 9/9/9
+disks, with a completely full Data Lake, when the next Booster costs more than that lake can hold.
+It empties only that pool's disks, buffer, and lake; Booster state and prior reset rewards remain.
+Each reset permanently adds 1,000 units of lake-only capacity. The first reset fixes lake overflow
+speed at 50%; the second and later resets also advance the pool through the existing bandwidth
+steps, with non-final reward growth limited dynamically by half the following pool's bandwidth.
+
+After reset the pool provisions its disks automatically and for free, one at a time in normal
+smallest-first order, waiting for the current disk to fill before provisioning the next. While the
+pool is rebuilding, later pools cannot start new provisioning (already-active work may finish).
+After all 9/9/9 disks return, the lake automatically buys every affordable Booster until slots fill
+or the next cost exceeds capacity; filling the lake at that wall enables the next reset. Pools never
+transfer or share resources through this loop.
+
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). Every tier is bought
 directly with the base currency (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces

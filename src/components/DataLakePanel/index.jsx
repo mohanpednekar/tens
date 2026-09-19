@@ -22,6 +22,7 @@ import {
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
   isDataLakePoolReady,
+  isStoragePoolResetAvailable,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -274,6 +275,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // startDataLakeAutoConvert. The header's own cost control renders as an inert label rather
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
+        const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
 
         return (
           <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
@@ -290,7 +292,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   slot, priority-ordered" convention this row always used. Showing a lifetime
                   purchased count here as well would be redundant: the cost figure alone already says
                   everything a player needs at a glance. */}
-              {converting ? (
+              {resetAvailable ? (
+                <ActionButton
+                  aria-label={`reset the ${label} Storage Pool`}
+                  onClick={() => actions.resetStoragePool(tierIndex)}
+                  title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>↻ Reset Pool</ButtonContent>
+                </ActionButton>
+              ) : converting ? (
                 <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
                   {`🎯 ${nextCostSize}`}
                 </StatusText>

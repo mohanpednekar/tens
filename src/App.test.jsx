@@ -3036,7 +3036,7 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
 })
 
-test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a maxed lake with no open disk slot left)', () => {
+test('a maxed pre-reset Data Lake retains its 5% speed floor', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3055,12 +3055,11 @@ test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a 
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Neither the (now-retired) multiplier reading nor the lake overflow reading renders a
-  // progressbar — a genuine 0% reading has nothing meaningful to show (a zero-width bar plus an
-  // orphaned "0%" label), so the whole row is hidden rather than rendered empty.
+  // The ordinary fill multiplier is gone once overflow takes over, while the pre-reset lake's
+  // original taper remains visible at its 5% floor.
   expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
-  expect(within(pool1).queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
-  expect(within(pool1).queryByText('0%')).not.toBeInTheDocument()
+  expect(within(pool1).getByRole('progressbar', { name: /data lake overflow rate/i })).toHaveAttribute('aria-valuenow', '5')
+  expect(within(pool1).getByText('5%')).toBeInTheDocument()
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {

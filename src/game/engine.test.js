@@ -272,6 +272,11 @@ import {
   buyBooster,
   startDataLakeAutoConvert,
   tickDataLakeAutoConvert,
+  isStoragePoolResetAvailable,
+  isLaterPoolProvisioningLocked,
+  isStoragePoolRebuilding,
+  resetStoragePool,
+  tickPoolResetReprovision,
   isComputeEntityAutoMergeUnlocked,
   getComputeReserveHeld,
   getDataLakeTierIndex,
@@ -10729,7 +10734,7 @@ describe('Data Lakes', () => {
       expect(tickPoolBufferFill(5)(state)).toBe(state)
     })
 
-    it('getDataLakeCurrentDiskFillFraction tracks ONLY the disk currently being filled, not the lake\'s overall total; getDataLakeOverflowRatePercent is a plain binary receiving/not-receiving indicator', () => {
+    it('tracks current disk fill separately while pre-reset lake speed falls from 50% toward 5%', () => {
       const withCurrentFill = depositedUnits => withIntro(createInitialGameState(), {
         dataLakes: {
           ...createInitialGameState().intro.dataLakes,
@@ -10746,19 +10751,16 @@ describe('Data Lakes', () => {
       expect(getDataLakeCurrentDiskFillFraction(empty, 1)).toBeCloseTo(0.5)
       expect(getDataLakeCurrentDiskFillFraction(partial, 1)).toBeCloseTo(0.5)
       expect(getDataLakeOverflowRatePercent(empty, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT)
-      expect(getDataLakeOverflowRatePercent(partial, 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT)
+      expect(getDataLakeOverflowRatePercent(partial, 1)).toBeCloseTo(36.5)
       expect(getDataLakeOverflowRatePercent(createInitialGameState(), 1)).toBe(DATA_LAKE_OVERFLOW_MAX_PERCENT) // fresh, empty disk
 
-      // Once maxed at the current level (no open slot left), the rate reads MIN_PERCENT (0) —
-      // nothing this rate could ever apply to has anywhere left to go (fillDataLakeDisks itself
-      // no-ops once maxed regardless of rate), and the pool gauge reads this function directly for
-      // its own display label.
+      // At capacity the original pre-reset taper reaches its 5% floor.
       const maxed = withIntro(createInitialGameState(), {
         dataLakes: { ...createInitialGameState().intro.dataLakes, 1: { capacityLevel: 0, depositedUnits: 1, fillBits: 0, boostersUnlocked: true, autoConvertActive: false, purchased: 0 } },
       })
+      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(5)
       expect(getDataLakeCurrentFillSubSize(maxed, 1)).toBe(null)
       expect(getDataLakeCurrentDiskFillFraction(maxed, 1)).toBe(1)
-      expect(getDataLakeOverflowRatePercent(maxed, 1)).toBe(DATA_LAKE_OVERFLOW_MIN_PERCENT)
     })
 
     it('is associative — splitting the same total elapsedSeconds into many small ticks produces the SAME lake fill as one big tick (a flat, un-tapered rate is trivially associative, but this guards against a future regression reintroducing a per-segment rate that isn\'t)', () => {
@@ -11151,7 +11153,7 @@ describe('Data Lakes', () => {
       expect(after.intro.computeCores).toBe(1)
     })
 
-    it("caps the escalating Booster cost at the lake's own capacity once permanently maxed, so Boosters stay buyable forever instead of going permanently unaffordable (regression — Devin finding: the nth Booster costs n units with no upper bound, but capacity itself permanently caps at DATA_LAKE_CAPACITY_MAX_LEVEL's 1,000 units; once purchased reached 1,000 the next cost (1,001) could never be deposited and isDataLakeCapacityDoublingAvailable was also false (already maxed), so the lake could never buy another Booster again)", () => {
+    it("lets Booster cost exceed capacity to create the pool-reset wall", () => {
       const maxed = withLake(createInitialGameState(), 1, {
         depositedUnits: 1000,
         boostersUnlocked: true,
@@ -11160,16 +11162,11 @@ describe('Data Lakes', () => {
       })
       // Without the fix this would be 1001 — unaffordable forever, since depositedUnits can never
       // exceed the lake's own (now permanently fixed) 1,000-unit capacity.
-      expect(getBoosterPurchaseCost(1)(maxed)).toBe(1000)
-      expect(isBoosterPurchaseAvailable(maxed, 1)).toBe(true)
+      expect(getBoosterPurchaseCost(1)(maxed)).toBe(1001)
+      expect(isBoosterPurchaseAvailable(maxed, 1)).toBe(false)
       expect(isDataLakeCapacityDoublingAvailable(maxed, 1)).toBe(false)
 
-      const after = buyBooster(1)(maxed)
-      expect(after.intro.dataLakes[1].purchased).toBe(1001)
-      expect(getDataLakeDepositedUnits(1)(after)).toBe(0)
-      // The lake can refill to its own capacity and buy again indefinitely — cost stays pinned at
-      // capacity rather than climbing past what could ever be deposited.
-      expect(getBoosterPurchaseCost(1)(after)).toBe(1000)
+      expect(buyBooster(1)(maxed)).toBe(maxed)
 
       // Below the maxed capacity level, escalation is unaffected — this only kicks in once maxed.
       const notMaxed = withLake(createInitialGameState(), 1, { depositedUnits: 100, boostersUnlocked: true, capacityLevel: 2, purchased: 99 })
@@ -11342,6 +11339,82 @@ describe('Data Lakes', () => {
       boostersUnlocked: false,
       autoConvertActive: false,
       capacityLevel: 0,
+      resetCount: 0,
+      rebuilding: false,
+      bandwidthSteps: 0,
+    })
+  })
+
+  describe('pool-local end-of-progression resets', () => {
+    const pool1Sizes = [kb1, kb10, kb100]
+    const updateLake = (state, poolIndex, updates) => withIntro(state, {
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [poolIndex]: { ...state.intro.dataLakes[poolIndex], ...updates },
+      },
+    })
+    const completePool = (state, poolIndex = 1) => withIntro(state, {
+      disksBuiltTotal: {
+        ...state.intro.disksBuiltTotal,
+        ...Object.fromEntries(pool1Sizes.map(size => [size * (1000 ** (poolIndex - 1)), DISK_ARRAY_LADDER_CAP])),
+      },
+    })
+
+    it('requires 9/9/9, a full lake, and an unreachable next Booster', () => {
+      let state = completePool(createInitialGameState())
+      state = updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 999 })
+      expect(isStoragePoolResetAvailable(state, 1)).toBe(false) // next cost still fits
+      state = updateLake(state, 1, { purchased: 1000 })
+      expect(isStoragePoolResetAvailable(state, 1)).toBe(true)
+      expect(isStoragePoolResetAvailable(updateLake(state, 1, { depositedUnits: 999 }), 1)).toBe(false)
+    })
+
+    it('empties only its pool, permanently grows lake capacity, and rebuilds sequentially for free', () => {
+      let state = completePool(createInitialGameState())
+      state = withIntro(updateLake(state, 1, { capacityLevel: 3, depositedUnits: 1000, purchased: 1000 }), {
+        disks: { [kb1]: 9, [kb10]: 9, [kb100]: 9 },
+        poolBuffers: { 1: 123, 2: 456 },
+      })
+      const reset = resetStoragePool(1)(state)
+      expect(getDataLakeCapacity(reset, 1)).toBe(2000)
+      expect(reset.intro.dataLakes[1].resetCount).toBe(1)
+      expect(reset.intro.dataLakes[1].purchased).toBe(1000)
+      expect(reset.intro.poolBuffers).toMatchObject({ 1: 0, 2: 456 })
+      expect(isLaterPoolProvisioningLocked(reset, 2)).toBe(true)
+      expect(isStoragePoolRebuilding(reset, 1)).toBe(true)
+      expect(isProvisionDiskAvailable(reset)).toBe(false)
+      expect(provisionDisk(reset)).toBe(reset)
+      expect(queueDiskBuild(reset)).toBe(reset)
+      const first = tickPoolResetReprovision(reset)
+      expect(first.intro.disksBuiltTotal[kb1]).toBe(1)
+      expect(tickPoolResetReprovision(first)).toBe(first) // first disk must fill before the next appears
+      const filled = withIntro(first, { disks: { ...first.intro.disks, [kb1]: 1 } })
+      expect(tickPoolResetReprovision(filled).intro.disksBuiltTotal[kb1]).toBe(2)
+      expect(getDataLakeOverflowRatePercent(reset, 1)).toBe(50)
+
+      const prestiged = prestigeGame(withMoney(reset, PRESTIGE_THRESHOLD))
+      expect(prestiged.intro.poolResetRebuildingCount).toBe(1)
+      expect(tickPoolResetReprovision(prestiged).intro.disksBuiltTotal[kb1]).toBe(1)
+    })
+
+    it('auto-buys reachable Boosters only after rebuild and grants bandwidth from reset two onward', () => {
+      let rebuilt = completePool(createInitialGameState())
+      rebuilt = updateLake(rebuilt, 1, { resetCount: 1, capacityLevel: 3, depositedUnits: 1, purchased: 0 })
+      rebuilt = withIntro(rebuilt, { poolResetCount: 1 })
+      expect(tickDataLakeAutoConvert(rebuilt).intro.dataLakes[1].purchased).toBe(1)
+      const afterPrestige = prestigeGame(withMoney(rebuilt, PRESTIGE_THRESHOLD))
+      expect(afterPrestige.intro.poolResetCount).toBe(1)
+      expect(tickDataLakeAutoConvert(updateLake(afterPrestige, 1, { depositedUnits: 1, purchased: 0 })).intro.dataLakes[1].purchased).toBe(1)
+
+      let wall = updateLake(rebuilt, 1, { depositedUnits: 2000, purchased: 2000 })
+      const second = resetStoragePool(1)(wall)
+      expect(second.intro.dataLakes[1].resetCount).toBe(2)
+      expect(second.intro.dataLakes[1].bandwidthSteps).toBe(1)
+
+      const capacityVisible = withIntro(createInitialGameState(), { capacity: 8 * 1000 ** 4 })
+      const capped = updateLake(updateLake(capacityVisible, 1, { bandwidthSteps: 20 }), 2, { bandwidthSteps: 0 })
+      const raised = updateLake(capped, 2, { bandwidthSteps: 20 })
+      expect(getStoragePoolBandwidth(raised, 1)).toBeGreaterThanOrEqual(getStoragePoolBandwidth(capped, 1))
     })
   })
 
