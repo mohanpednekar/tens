@@ -3757,6 +3757,26 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByRole('button', { name: /buy 1 cores from the kb data lake/i })).toBeInTheDocument()
   })
 
+  test('the same legacy boostersUnlocked latch, when not yet affordable, does NOT offer a "start converting" control that could never actually fund anything (regression — the header control must key off isDataLakePoolReady, not the looser latch)', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      // No disksBuiltTotal entry for pool 1 — isDataLakePoolReady is false — and not enough
+      // deposited to be immediately affordable either, so canBuy is also false: this is exactly
+      // the state that used to render a clickable "start converting" button whose click would
+      // arm autoConvertActive with no way for it to ever bank anything.
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+    })
+    render(<App />)
+    openStorage()
+
+    const pool1 = screen.getByRole('region', { name: 'pool 1' })
+    const lakeBlock = within(pool1).getByLabelText('KB lake')
+    expect(within(lakeBlock).queryByRole('button', { name: /start converting toward 1 cores from the kb data lake/i })).not.toBeInTheDocument()
+    expect(within(lakeBlock).getByTitle('Build a 1 KB disk in Storage to unlock Boosters here')).toBeInTheDocument()
+  })
+
   test('Data Lake capacity can be increased ×10 by clicking its ⚡ Scale Out button', () => {
     // Fake timers + fireEvent (see the Sacrifice tests above for the same hazard/pattern): a real
     // tick landing between render and the click could otherwise change intro.bits or another
@@ -4321,7 +4341,7 @@ describe('Compute auto-merge automation', () => {
     expect(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i })).toBeDisabled()
   })
 
-  test('enabling auto-merge sacrifices ALL 10 held Clusters and replaces the button with an Auto badge', () => {
+  test('enabling auto-merge sacrifices exactly 10 held Clusters and replaces the button with an Auto badge', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeClusters: 10,
@@ -4335,6 +4355,21 @@ describe('Compute auto-merge automation', () => {
     expect(saved.intro.computeClusters).toBe(0)
     expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
     expect(screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })).not.toBeInTheDocument()
+  })
+
+  test('enabling auto-merge preserves any Clusters held above 10 — regression: this used to zero the whole field, destroying reserve progress the Clusters into Network boundary was already gradually accumulating', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeClusters: 15, autoMergeClustersIntoNetwork: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    fireEvent.click(screen.getByRole('button', { name: /enable auto-merge for nodes into clusters/i }))
+
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeClusters).toBe(5) // NOT 0 — the reserve's own 5 units survive
+    expect(saved.intro.autoMergeNodesIntoCluster).toBe(true)
   })
 
   test('once auto-merge is unlocked for a tier, a real tick auto-starts a reserve merge once the input is completely full (the merge itself only completes once its own timed duration elapses — see engine.test.js)', () => {
@@ -4365,6 +4400,30 @@ describe('Compute auto-merge automation', () => {
 
     expect(screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /start merging 8 nodes into 1 cluster/i })).toBeEnabled()
+  })
+
+  test('the pre-unlock Auto button shows live progress toward its own unlock cost, matching Factory\'s own Buy-button convention', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: 6,
+    })
+    render(<App />)
+    openBoosters()
+
+    const autoButton = screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i })
+    expect(autoButton).toHaveTextContent('🤖 6/10')
+    expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
+  })
+
+  test('the reserve-slot row shows a partial, gradually-filled count once auto-merge is unlocked, not just empty-or-full', () => {
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      computeNodes: COMPUTE_ENTITY_CAP + 3, autoMergeNodesIntoCluster: true,
+    })
+    render(<App />)
+    openBoosters()
+
+    expect(screen.getByRole('button', { name: /3\/8 banked toward the next automatic merge/i })).toBeInTheDocument()
   })
 
 })

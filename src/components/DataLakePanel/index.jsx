@@ -19,7 +19,6 @@ import {
   isBoosterEntityAtCap,
   isBoosterPurchaseAvailable,
   isDataLakeAutoConvertActive,
-  isDataLakeBoosterUnlocked,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
   isDataLakePoolReady,
@@ -257,12 +256,12 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // but not its turn" state left to represent.
         const upgradeAvailable = isDataLakeCapacityDoublingAvailable(state, tierIndex)
         const doublingCost = getDataLakeCapacityDoublingCost(state, tierIndex)
-        const unlocked = isDataLakeBoosterUnlocked(state, tierIndex)
-        // Distinct from `unlocked` above for old-save compatibility: a legacy `boostersUnlocked`
-        // latch can make `unlocked` true while this pool has never built a real disk, in which case
-        // Boosters correctly stay purchasable but the lake's own pool-fill tile (below) must NOT
-        // claim to be actively filling, since tickPoolBufferFill's overflow branch is gated on this
-        // alone.
+        // A legacy `boostersUnlocked` latch (see isDataLakeBoosterUnlocked's own doc comment) can
+        // make Boosters purchasable while this pool has never built a real disk — but conversion
+        // (the header control below) and the pool-fill tile both need the real thing, poolReady,
+        // not that latch: isDataLakeAutoConvertStartAvailable/tickPoolBufferFill's overflow branch
+        // both gate on poolReady alone, so a save carrying only the legacy latch can never actually
+        // fund anything here (see docs/DESIGN_HISTORY.md).
         const poolReady = isDataLakePoolReady(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         // Purchases pause once the matching compute-ladder entity is already at its own
@@ -319,7 +318,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 >
                   <ButtonContent>⚡ Scale Out</ButtonContent>
                 </ActionButton>
-              ) : unlocked ? (
+              ) : poolReady ? (
                 <ActionButton
                   aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
                   onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
@@ -343,14 +342,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               // read as "no idea what it did in between" once the tile DID eventually show up already
               // mid-fill.
               //
-              // Deliberately keyed off `poolReady` (isDataLakePoolReady), NOT `unlocked`
-              // (isDataLakeBoosterUnlocked) — the two diverge for an old save whose legacy
+              // Deliberately keyed off `poolReady` (isDataLakePoolReady), NOT
+              // isDataLakeBoosterUnlocked — the two diverge for an old save whose legacy
               // `boostersUnlocked` flag is already true but whose matching Storage pool has never
-              // built a real disk: `unlocked` reads true there (Boosters correctly stay purchasable,
-              // for save compatibility), but tickPoolBufferFill's overflow branch is gated on
-              // `isDataLakePoolReady` alone, so this tile would NEVER actually fill — showing real
-              // (frozen) fillBits/size progress under `unlocked` would misrepresent a permanently
-              // stalled tile as actively filling (found by Devin Review on this same PR).
+              // built a real disk: isDataLakeBoosterUnlocked reads true there (Boosters correctly
+              // stay purchasable, for save compatibility), but tickPoolBufferFill's overflow branch
+              // is gated on `isDataLakePoolReady` alone, so this tile would NEVER actually fill —
+              // showing real (frozen) fillBits/size progress under the unlocked latch would
+              // misrepresent a permanently stalled tile as actively filling (found by Devin Review
+              // on this same PR; isDataLakeAutoConvertStartAvailable now gates on poolReady too,
+              // for the same reason — see docs/DESIGN_HISTORY.md).
               const openSlotSizeBits = unitBits * currentFillSubSize
               const openSlotFraction = poolReady && openSlotSizeBits > 0 ? clampFraction(fillBits / openSlotSizeBits) : 0
               const openSlotSizeLabel = formatDiskSize(openSlotSizeBits)
@@ -433,22 +434,6 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               aria-valuemin={0}
               aria-valuemax={100}
             />
-
-            <LakeActionsRow>
-              
-              {/* Buy wins the slot the instant it's actually affordable — even when Upgrade is
-                  ALSO available (an array-complete pool whose banked units, e.g. from manual Fill,
-                  already cover the next Booster) — so a manually-filled deposit meant for a Booster
-                  purchase is never silently funneled into a forced Scale Out with no way to spend it
-                  first (auto-buy defaults off; see docs/DESIGN_HISTORY.md). Otherwise Upgrade claims
-                  the slot whenever it's available — no longer any "available but not its turn"
-                  window to arbitrate, since isDataLakeCapacityDoublingAvailable is no longer part of
-                  the forced priority order (see its own doc comment in engine.js): it's always
-                  immediately clickable the instant its array is complete, the same posture Buy
-                  already had. */}
-              
-              
-            </LakeActionsRow>
           </LakeBlock>
         )
       })}

@@ -803,7 +803,7 @@ const ComputePage = ({ game }) => {
                             aria-label={row.autoAriaLabel}
                             disabled={!canEnableAuto}
                             onClick={() => actions[row.enableAutoAction]()}
-                            title={`Auto: sacrifice all ${COMPUTE_ENTITY_CAP} ${row.autoCostLabel} (have ${formatAmount(autoCostHeld)}) to permanently automate this step whenever ${row.label} is full, via a timed reserve merge`}
+                            title={`Auto: sacrifice ${COMPUTE_ENTITY_CAP} of your ${formatAmount(autoCostHeld)} ${row.autoCostLabel} to permanently automate this step whenever ${row.label} is full, via a timed reserve merge`}
                             type="button"
                             variant="info"
                             $progress={autoUnlockProgress}

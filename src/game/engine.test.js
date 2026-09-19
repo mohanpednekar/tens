@@ -4689,10 +4689,17 @@ describe.each([
     expect(enable(state)).toBe(state)
   })
 
-  it('enable sacrifices ALL 10 held units of the output entity and permanently flips the auto flag', () => {
+  it('enable sacrifices exactly COMPUTE_ENTITY_CAP (10) held units of the output entity and permanently flips the auto flag', () => {
     const state = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP })
     const after = enable(state)
     expect(after.intro[outputField]).toBe(0)
+    expect(after.intro[autoFlagField]).toBe(true)
+  })
+
+  it('enable subtracts exactly COMPUTE_ENTITY_CAP, preserving any excess above it — regression: an earlier version zeroed the whole field, silently destroying reserve progress the output entity\'s OWN outbound boundary may already be gradually accumulating past its primary 10 (see COMPUTE_ENTITY_AUTO_MERGE_CAP)', () => {
+    const state = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP + 5 })
+    const after = enable(state)
+    expect(after.intro[outputField]).toBe(5) // NOT 0
     expect(after.intro[autoFlagField]).toBe(true)
   })
 
@@ -4718,6 +4725,46 @@ describe.each([
     const after = tickGame(durationOf())(state)
     expect(after.intro[outputField]).toBe(1)
     expect(after.intro[timerField]).toBe(0)
+  })
+})
+
+describe('isComputeEntityAutoMergeUnlocked / getComputeReserveHeld (tier 1 Cores → Node boundary)', () => {
+  it('isComputeEntityAutoMergeUnlocked reflects the matching boundary\'s own auto flag, and false for an out-of-range tierIndex', () => {
+    expect(isComputeEntityAutoMergeUnlocked(createInitialGameState(), 1)).toBe(false)
+    expect(isComputeEntityAutoMergeUnlocked(withIntro(createInitialGameState(), { autoMergeCoresIntoNode: true }), 1)).toBe(true)
+    expect(isComputeEntityAutoMergeUnlocked(createInitialGameState(), 0)).toBe(false)
+    expect(isComputeEntityAutoMergeUnlocked(createInitialGameState(), 11)).toBe(false)
+  })
+
+  it('getComputeReserveHeld is 0 whenever this boundary\'s auto-merge isn\'t unlocked, regardless of how many are held', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_CAP + 5 })
+    expect(getComputeReserveHeld(state, 1)).toBe(0)
+  })
+
+  it('getComputeReserveHeld is 0 right at COMPUTE_ENTITY_CAP once unlocked — the reserve is still empty at the primary cap', () => {
+    const state = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_CAP, autoMergeCoresIntoNode: true })
+    expect(getComputeReserveHeld(state, 1)).toBe(0)
+  })
+
+  it('getComputeReserveHeld grows 1-for-1 with the live count past COMPUTE_ENTITY_CAP, clamped at COMPUTE_MERGE_RESERVE_CAP', () => {
+    const partial = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_CAP + 3, autoMergeCoresIntoNode: true })
+    expect(getComputeReserveHeld(partial, 1)).toBe(3)
+
+    const full = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP, autoMergeCoresIntoNode: true })
+    expect(getComputeReserveHeld(full, 1)).toBe(COMPUTE_MERGE_RESERVE_CAP)
+
+    // Defensively clamped even if the live count somehow exceeded the extended cap.
+    const overshoot = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_AUTO_MERGE_CAP + 4, autoMergeCoresIntoNode: true })
+    expect(getComputeReserveHeld(overshoot, 1)).toBe(COMPUTE_MERGE_RESERVE_CAP)
+  })
+
+  it('getComputeReserveHeld reads as fully committed (COMPUTE_MERGE_RESERVE_CAP) while a merge is in flight, regardless of the live count having already dropped back down for the next batch', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCores: COMPUTE_ENTITY_CAP + 2, // the next batch already re-accumulating
+      autoMergeCoresIntoNode: true,
+      computeCoresMergeRemainingSeconds: 5,
+    })
+    expect(getComputeReserveHeld(state, 1)).toBe(COMPUTE_MERGE_RESERVE_CAP)
   })
 })
 
@@ -11008,7 +11055,7 @@ describe('Data Lakes', () => {
     })
 
     it('startDataLakeAutoConvert buys immediately, without arming the flag, when already affordable', () => {
-      const state = withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true })
+      const state = withIntro(withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true }), { disksBuiltTotal: { [kb1]: 1 } })
       const after = startDataLakeAutoConvert(1)(state)
       expect(after.intro.dataLakes[1].purchased).toBe(1)
       expect(after.intro.computeCores).toBe(1)
@@ -11016,27 +11063,37 @@ describe('Data Lakes', () => {
     })
 
     it('startDataLakeAutoConvert arms autoConvertActive, without buying yet, when not yet affordable', () => {
-      const state = withLake(createInitialGameState(), 1, { depositedUnits: 0, boostersUnlocked: true })
+      const state = withIntro(withLake(createInitialGameState(), 1, { depositedUnits: 0, boostersUnlocked: true }), { disksBuiltTotal: { [kb1]: 1 } })
       const after = startDataLakeAutoConvert(1)(state)
       expect(isDataLakeAutoConvertActive(after, 1)).toBe(true)
       expect(after.intro.dataLakes[1].purchased).toBe(0)
     })
 
-    it('isDataLakeAutoConvertStartAvailable/startDataLakeAutoConvert require unlocked, not already active, and room under the entity cap', () => {
-      const base = withLake(createInitialGameState(), 1, { boostersUnlocked: true })
+    it('isDataLakeAutoConvertStartAvailable/startDataLakeAutoConvert require unlocked, its pool ready, not already active, and room under the entity cap', () => {
+      const base = withIntro(withLake(createInitialGameState(), 1, { boostersUnlocked: true }), { disksBuiltTotal: { [kb1]: 1 } })
       expect(isDataLakeAutoConvertStartAvailable(base, 1)).toBe(true)
 
       const notUnlocked = withLake(createInitialGameState(), 1, { boostersUnlocked: false })
       expect(isDataLakeAutoConvertStartAvailable(notUnlocked, 1)).toBe(false)
       expect(startDataLakeAutoConvert(1)(notUnlocked)).toBe(notUnlocked)
 
-      const alreadyActive = withLake(createInitialGameState(), 1, { boostersUnlocked: true, autoConvertActive: true })
+      const alreadyActive = withIntro(withLake(createInitialGameState(), 1, { boostersUnlocked: true, autoConvertActive: true }), { disksBuiltTotal: { [kb1]: 1 } })
       expect(isDataLakeAutoConvertStartAvailable(alreadyActive, 1)).toBe(false)
       expect(startDataLakeAutoConvert(1)(alreadyActive)).toBe(alreadyActive)
 
       const atCap = { ...base, intro: { ...base.intro, computeCores: COMPUTE_ENTITY_CAP } }
       expect(isDataLakeAutoConvertStartAvailable(atCap, 1)).toBe(false)
       expect(startDataLakeAutoConvert(1)(atCap)).toBe(atCap)
+
+      // Regression: a legacy save carrying the old boostersUnlocked latch but whose pool has never
+      // actually built a real disk this era must NOT be allowed to start a conversion — fillDataLakeManually
+      // (isDataLakeManualFillAvailable's own isDataLakePoolReady gate) can never bank anything for it,
+      // so arming autoConvertActive here would leave the control permanently stuck showing "converting"
+      // with no way to ever clear it (see docs/DESIGN_HISTORY.md).
+      const legacyLatchPoolNotReady = withLake(createInitialGameState(), 1, { boostersUnlocked: true })
+      expect(isDataLakePoolReady(legacyLatchPoolNotReady, 1)).toBe(false)
+      expect(isDataLakeAutoConvertStartAvailable(legacyLatchPoolNotReady, 1)).toBe(false)
+      expect(startDataLakeAutoConvert(1)(legacyLatchPoolNotReady)).toBe(legacyLatchPoolNotReady)
     })
 
     it('tickDataLakeAutoConvert fills from the pool buffer, then buys exactly 1 and stops — never a bulk/repeating buy', () => {
@@ -11077,8 +11134,18 @@ describe('Data Lakes', () => {
       expect(after.intro.dataLakes[1].purchased).toBe(0) // no purchase happened — nothing to convert into
     })
 
+    it('tickDataLakeAutoConvert defensively clears a flag stuck active on an un-ready pool, rather than spinning forever (regression: a state carrying autoConvertActive true with no way for fillDataLakeManually to ever bank anything — e.g. a legacy boostersUnlocked latch with no real disk built, or a raw Dev Mode edit — used to leave the control permanently stuck showing "converting")', () => {
+      const state = withLake(createInitialGameState(), 1, { depositedUnits: 0, boostersUnlocked: true, autoConvertActive: true })
+      expect(isDataLakePoolReady(state, 1)).toBe(false)
+      const after = tickDataLakeAutoConvert(state)
+      expect(isDataLakeAutoConvertActive(after, 1)).toBe(false)
+      expect(after.intro.dataLakes[1].purchased).toBe(0)
+      // Further ticks are a clean no-op — nothing left running to get stuck.
+      expect(tickDataLakeAutoConvert(after)).toBe(after)
+    })
+
     it('startDataLakeAutoConvert/tickDataLakeAutoConvert are driven by tickGame every tick', () => {
-      const state = withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 1 })
+      const state = withIntro(withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 1 }), { disksBuiltTotal: { [kb1]: 1 } })
       const after = tickGame(0.1)(state)
       expect(after.intro.dataLakes[1].purchased).toBe(1)
       expect(after.intro.computeCores).toBe(1)
