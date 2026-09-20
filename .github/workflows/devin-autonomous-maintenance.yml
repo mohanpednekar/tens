@@ -192,9 +192,13 @@ jobs:
           workflow. Follow the CHANGELOG.md convention (## [Unreleased] entry for
           user-facing changes).
 
-          Never modify .github/workflows/, deploy/release config, or security
-          policy. Never merge your own PR. If nothing is actionable, do nothing —
-          a no-op run is a fine outcome.
+          You may modify anything in the repo — application source, docs, and
+          .github/workflows/ (including this workflow file itself) or
+          deploy/release config when a task calls for it. Treat workflow and
+          deploy/release changes as high-risk: keep the diff minimal and explain
+          in the PR why the change is safe. Never push to main and never merge
+          your own PR — all changes still land via PR and human review. If
+          nothing is actionable, do nothing — a no-op run is a fine outcome.
 
           Report at the end: what you picked, the PR URL if any, or why you did
           nothing.

@@ -1,0 +1,111 @@
+name: Devin workflow health check
+
+# Daily midnight (UTC) watchdog for devin-autonomous-maintenance.yml. Verifies
+# the workflow file still parses as YAML, that a run has started recently (its
+# cron fires every 4h, so >26h of silence means the schedule is disabled or
+# dormant), and that the latest completed run did not fail. On any failure it
+# files — or comments on an existing — `automation-failure` issue and exits red.
+# Per-run failure triage itself is handled by automation-self-heal.yml, which
+# watches this workflow's completed runs; this job is the belt-and-suspenders
+# catch for breakage that produces no run at all.
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # midnight UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+concurrency:
+  group: devin-workflow-health
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Health checks
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          problems=""
+          WF=.github/workflows/devin-autonomous-maintenance.yml
+
+          # 1. The workflow file still parses as YAML (ruby's psych is stdlib).
+          if ruby -e 'require "yaml"; YAML.load_file(ARGV[0])' "$WF" 2>/tmp/yaml.err; then
+            echo "YAML parse: ok"
+          else
+            echo "YAML parse FAILED:"
+            cat /tmp/yaml.err
+            problems="${problems}- \`$WF\` no longer parses as YAML (see the check run log).\n"
+          fi
+
+          # 2. Latest completed run did not fail.
+          conclusion=$(gh run list --workflow=devin-autonomous-maintenance.yml \
+            --status=completed --limit=1 --json conclusion \
+            --jq '.[0].conclusion // "none"')
+          echo "latest completed run conclusion: $conclusion"
+          if [ "$conclusion" = "failure" ] || [ "$conclusion" = "none" ]; then
+            problems="${problems}- Latest completed run conclusion: \`$conclusion\`.\n"
+          fi
+
+          # 3. Staleness: cron fires every 4h — alert if no run started in >26h.
+          last_started=$(gh run list --workflow=devin-autonomous-maintenance.yml \
+            --limit=1 --json createdAt --jq '.[0].createdAt // ""')
+          echo "last run createdAt: ${last_started:-none}"
+          if [ -z "$last_started" ]; then
+            problems="${problems}- No runs of \`devin-autonomous-maintenance.yml\` found at all.\n"
+          else
+            last_epoch=$(date -d "$last_started" +%s)
+            age_h=$(( ($(date +%s) - last_epoch) / 3600 ))
+            echo "last run age: ${age_h}h"
+            if [ "$age_h" -gt 26 ]; then
+              problems="${problems}- No run in ${age_h}h (expected every 4h — schedule may be disabled or dormant).\n"
+            fi
+          fi
+
+          if [ -n "$problems" ]; then
+            echo "broken=true" >> "$GITHUB_OUTPUT"
+            { echo "problems<<P_EOF"; printf '%b' "$problems"; echo "P_EOF"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "broken=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: File automation-failure issue
+        if: steps.check.outputs.broken == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROBLEMS: ${{ steps.check.outputs.problems }}
+        run: |
+          set -euo pipefail
+          gh label create automation-failure \
+            --color ededed \
+            --description "Automation workflow failure needing human triage" --force
+
+          existing=$(gh issue list --label automation-failure --state open --limit 50 \
+            --json number,title \
+            --jq '[.[] | select(.title | contains("devin-autonomous-maintenance"))] | .[0].number // empty')
+
+          body=$(printf 'The daily \`devin-workflow-health\` check found the Devin autonomous maintenance workflow unhealthy:\n\n%b\nCheck run: %s' \
+            "$PROBLEMS" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+            echo "Commented on existing issue #$existing"
+          else
+            gh issue create --label automation-failure \
+              --title "devin-autonomous-maintenance workflow unhealthy" \
+              --body "$body"
+            echo "Filed new automation-failure issue"
+          fi
+
+          # Exit red so the check run itself reads as failed in the Actions tab.
+          exit 1

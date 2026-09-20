@@ -292,6 +292,12 @@ workflow self-improvement, gap analysis).
 open a `devin/auto-*` PR; git/`gh` authenticate via `GH_AUTOMATION_PAT` so PRs trigger CI, and the
 agent authenticates via a `DEVIN_CLI_CREDENTIALS` secret containing a `credentials.toml` from
 `devin auth login`. Its 5-open-PR ceiling counts `devin/auto-*` and `claude/auto-*` together.
+Its prompt places no file-scope restriction — it may edit anything including
+`.github/workflows/` (its own file included) and deploy/release config; every change still
+lands via PR + human review (`pr-auto-merge.yml` keeps `.github/workflows/**` PRs out of
+green-checks auto-merge). `devin-workflow-health.yml` runs daily at midnight UTC to verify the
+workflow file parses, a run started within the last 26h, and the latest run didn't fail —
+filing an `automation-failure` issue otherwise.
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` and
 `devin/auto-*` PRs.
 `dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
@@ -299,7 +305,7 @@ itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches me
 `main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
 or on green checks alone for our own automation's branches (`claude/*`, `devin/auto-*`) when the
 diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
-workflows (maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
+workflows (Claude + Devin maintenance, PR follow-up, Dependabot follow-up, auto-merge) for failed
 runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
 issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
 

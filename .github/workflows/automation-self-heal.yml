@@ -9,6 +9,7 @@ on:
   workflow_run:
     workflows:
       - Autonomous maintenance
+      - Devin autonomous maintenance
       - Autonomous PR follow-up
       - Auto-merge on approval
       - Dependabot PR follow-up
@@ -52,6 +53,7 @@ jobs:
           # Map workflow display name → repo-relative file (must stay in sync with `on.workflows`).
           case "$RUN_NAME" in
             "Autonomous maintenance") slug="autonomous-maintenance"; file=".github/workflows/autonomous-maintenance.yml" ;;
+            "Devin autonomous maintenance") slug="devin-autonomous-maintenance"; file=".github/workflows/devin-autonomous-maintenance.yml" ;;
             "Autonomous PR follow-up") slug="autonomous-pr-followup"; file=".github/workflows/autonomous-pr-followup.yml" ;;
             "Auto-merge on approval") slug="pr-auto-merge"; file=".github/workflows/pr-auto-merge.yml" ;;
             "Dependabot PR follow-up") slug="dependabot-pr-followup"; file=".github/workflows/dependabot-pr-followup.yml" ;;

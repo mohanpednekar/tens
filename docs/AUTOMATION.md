@@ -257,6 +257,35 @@ genuinely independent task. A hard ceiling of 5 concurrently-open autonomous PRs
 `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write
 tools, even during the self-improvement task — only `autonomous-maintenance.yml` may edit itself.
 
+### Devin autonomous maintenance (`devin-autonomous-maintenance.yml`)
+
+The Devin-CLI counterpart to `autonomous-maintenance.yml`, running every 4 hours at :17 UTC.
+Each run installs the Devin CLI (credentials from the `DEVIN_CLI_CREDENTIALS` repo secret — a
+`credentials.toml` copied from a machine where `devin auth login` was run), then invokes
+`devin -p --prompt-file <file> --model swe --permission-mode dangerous
+--respect-workspace-trust false` with a composed prompt mirroring Phase 0 → Phase A: fix a red
+`main` CI first, else pick the top eligible `claude-task` issue and implement it on a
+`devin/auto-<issue>-<slug>` branch with a PR into `main`. The guard step counts `devin/auto-*`
+and `claude/auto-*` open PRs together toward the shared 5-PR ceiling (a red main bypasses it)
+and sorts the backlog `priority:high` → normal → `priority:low` with `blocked` excluded.
+
+Unlike the Claude counterpart, the Devin agent runs under `--permission-mode dangerous` rather
+than a settings deny-list, and its prompt places **no file-scope restriction**: it may modify
+anything in the repo — including `.github/workflows/` (its own file included) and
+deploy/release config — when a task calls for it. The hard rails that remain are never push to
+`main`, never merge its own PR, and always land changes via PR + human review
+(`pr-auto-merge.yml` still excludes `.github/workflows/**` PRs from green-checks auto-merge, so
+workflow edits stay human-gated).
+
+**Health check (`devin-workflow-health.yml`).** A daily midnight-UTC watchdog with no agent:
+parses the workflow file as YAML, confirms a run started within the last 26h (catches a
+disabled/dormant schedule — a breakage producing no run at all is invisible to
+`automation-self-heal.yml`'s `workflow_run` trigger), and checks the latest completed run's
+conclusion. On failure it files — or comments on an existing — `automation-failure`-labeled
+issue and exits red. Per-run failures are additionally watched directly by
+`automation-self-heal.yml` (Devin autonomous maintenance is in its watched list), which can
+open a `claude/self-heal-devin-autonomous-maintenance-*` fix PR.
+
 ### PR follow-up (`autonomous-pr-followup.yml`)
 
 Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
@@ -301,7 +330,8 @@ or `deploy.yml` (product-facing; broken-`main` CI is Phase 0 / issue #37; broken
 surfaced by the deterministic deploy-failure step above). It also never edits its own file
 (runaway self-modification ban).
 
-**Watched workflows** (by `name:`): Autonomous maintenance, Autonomous PR follow-up, Auto-merge on
+**Watched workflows** (by `name:`): Autonomous maintenance, Devin autonomous maintenance,
+Autonomous PR follow-up, Auto-merge on
 approval, Dependabot PR follow-up. Trigger is
 `workflow_run: [completed]`, filtered in-job to `conclusion == 'failure'`.
 
