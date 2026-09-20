@@ -115,6 +115,8 @@ jobs:
           curl -fsSL https://cli.devin.ai/install.sh -o "$RUNNER_TEMP/install-devin.sh" \
             && bash "$RUNNER_TEMP/install-devin.sh" < /dev/null
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # $GITHUB_PATH only takes effect in the NEXT step — export for this one.
+          export PATH="$HOME/.local/bin:$PATH"
           devin auth status
 
       - name: Enable Corepack
