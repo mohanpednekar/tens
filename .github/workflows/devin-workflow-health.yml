@@ -8,6 +8,11 @@ name: Devin workflow health check
 # Per-run failure triage itself is handled by automation-self-heal.yml, which
 # watches this workflow's completed runs; this job is the belt-and-suspenders
 # catch for breakage that produces no run at all.
+#
+# Known limitation: GitHub disables cron triggers after 60 days of repo
+# inactivity, which would take this watchdog down together with its target —
+# full dormancy coverage needs the external out-of-band re-kick described in
+# docs/AUTOMATION.md "Reliability: cron dormancy".
 
 on:
   schedule:
@@ -53,7 +58,8 @@ jobs:
             --status=completed --limit=1 --json conclusion \
             --jq '.[0].conclusion // "none"')
           echo "latest completed run conclusion: $conclusion"
-          if [ "$conclusion" = "failure" ] || [ "$conclusion" = "none" ]; then
+          # Anything but success (failure/cancelled/timed_out/none) is unhealthy.
+          if [ "$conclusion" != "success" ]; then
             problems="${problems}- Latest completed run conclusion: \`$conclusion\`.\n"
           fi
 
