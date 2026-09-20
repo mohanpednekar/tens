@@ -303,9 +303,9 @@ workflows (maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
 runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`
 issue — never edits `ci.yml` / `deploy.yml` / itself (full detail: `docs/AUTOMATION.md`).
 
-Guard-step context feeds are bounded by standing rule: any new feed must pass an explicit `--limit`
-and display-cap with a "+N more" note; list-type feeds render number + title + labels only (never
-full bodies) — `docs/AUTOMATION.md` (#81).
+Guard-step context feeds are bounded by standing rule: any *new* feed must bound its query
+(`--limit`, `--paginate`, or single-item fetch) and display-cap with a "+N more" note, rendering
+compact identifying fields only (never full bodies) — `docs/AUTOMATION.md` (#81).
 
 **Budget discipline applies to every session, not just automation.**
 
