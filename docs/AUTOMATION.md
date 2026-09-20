@@ -262,8 +262,9 @@ tools, even during the self-improvement task — only `autonomous-maintenance.ym
 Deterministic (no agent). On every push to `main` — i.e. every merge — it lists all open PRs and
 checks each one's `mergeable` state. A PR that is `CONFLICTING` gets a comment with a per-head-SHA
 dedupe marker (`<!-- pr-conflict-sweep sha=... -->`, so a PR left conflicted across several merges
-isn't re-spammed, but a new head resets it). For `claude/*`/`devin/*` branches the comment doubles
-as the trigger for `autonomous-pr-followup.yml`, which performs the actual merge-and-resolve;
+isn't re-spammed, but a new head resets it). For `claude/auto-*`/`devin/auto-*` branches — exactly
+the patterns `autonomous-pr-followup.yml` accepts — the comment doubles
+as its trigger, and the follow-up performs the actual merge-and-resolve;
 human-authored PRs just get an author notification. Runs on `GH_AUTOMATION_PAT` because comments
 from the default `GITHUB_TOKEN` can't trigger other workflows.
 

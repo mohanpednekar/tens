@@ -663,8 +663,10 @@ jobs:
           threads, bot reviews (Devin Review, Copilot, etc.), and CI checks. Address each
           actionable item, reply to and resolve every thread you handled (branch protection
           blocks merge on any unresolved thread), and iterate until the PR is mergeable — green
-          required checks, no unresolved actionable feedback. Feedback arriving after the run
-          ends is handled by autonomous-pr-followup.yml.
+          required checks, no unresolved actionable feedback. Reply to an inline review thread
+          via `gh api repos/{owner}/{repo}/pulls/<pr>/comments -f in_reply_to=<comment-id>`, then
+          resolve all unresolved threads with `scripts/resolve-pr-threads.sh <pr>`. Feedback
+          arriving after the run ends is handled by autonomous-pr-followup.yml.
           TEMPLATE_EOF
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
           prompt_text=${prompt_text//'$REPO'/$REPO}
@@ -702,7 +704,7 @@ jobs:
           # the only way to see WHY an unattended run ended without producing anything.
           show_full_output: true
           claude_args: |
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
           settings: |
             {
               "permissions": {
