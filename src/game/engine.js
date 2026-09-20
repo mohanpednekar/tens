@@ -4955,11 +4955,10 @@ export const startDataLakeAutoConvert = tierIndex => state => {
 export const tickDataLakeAutoConvert = state => {
   let nextState = state
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
-    // Completed reset pools permanently automate every reachable Booster. Never start early:
-    // rebuilding must restore the complete 9/9/9 Storage pool first.
-    if ((nextState.intro?.poolResetCount ?? 0) > 0 &&
-        (getDataLakeTier(nextState, tierIndex)?.resetCount ?? 0) > 0 &&
-        isStoragePoolFullyBuilt(nextState, tierIndex) &&
+    // A completed 9/9/9 pool permanently automates every reachable Booster. Before completion,
+    // the lake retains its explicit one-shot conversion control; once complete there is no
+    // conversion button to press and each affordable Booster is obtained automatically.
+    if (isStoragePoolFullyBuilt(nextState, tierIndex) &&
         getBoosterPurchaseCost(tierIndex)(nextState) <= getDataLakeCapacity(nextState, tierIndex) &&
         isBoosterPurchaseAvailable(nextState, tierIndex)) {
       nextState = buyBooster(tierIndex, 1)(nextState)

@@ -11125,6 +11125,17 @@ describe('Data Lakes', () => {
       expect(tickDataLakeAutoConvert(state)).toBe(state)
     })
 
+    it('automatically buys an affordable Booster from a completed 9/9/9 pool without an active one-shot conversion', () => {
+      const state = withIntro(
+        withLake(createInitialGameState(), 1, { depositedUnits: 1, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 3 }),
+        { disksBuiltTotal: { [kb1]: DISK_ARRAY_LADDER_CAP, [kb10]: DISK_ARRAY_LADDER_CAP, [kb100]: DISK_ARRAY_LADDER_CAP } },
+      )
+      const after = tickDataLakeAutoConvert(state)
+      expect(after.intro.dataLakes[1].purchased).toBe(1)
+      expect(after.intro.computeCores).toBe(1)
+      expect(after.intro.dataLakes[1].autoConvertActive).toBe(false)
+    })
+
     it('tickDataLakeAutoConvert stops cleanly, without buying, if the entity fills up some other way (e.g. a merge) while conversion is running', () => {
       const state = withLake(
         { ...createInitialGameState(), intro: { ...createInitialGameState().intro, computeCores: COMPUTE_ENTITY_CAP } },

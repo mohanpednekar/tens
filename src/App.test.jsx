@@ -3734,6 +3734,22 @@ describe('Byte Foundry Storage', () => {
     expect(within(lakeBlock).getByRole('button', { name: /buy 1 Cores from the KB Data Lake/i })).toBeInTheDocument()
   })
 
+  test('a completed 9/9/9 pool shows an automatic-conversion label instead of a Booster conversion button', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+    })
+    render(<App />)
+    openStorage()
+
+    const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
+    expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent('🎯 1 KB')
+  })
+
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
     seedIntroState({
       bits: 0,

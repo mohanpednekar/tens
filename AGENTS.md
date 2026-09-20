@@ -147,7 +147,9 @@ Storage pool's overflow feeds its own Data Lake automatically too — but Booste
 Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only buy via a single
 per-lake "🎯 `<cost>`" control: it buys immediately if already affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
-persistent auto-buy loop). Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a
+persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9, the
+control becomes a non-clickable cost label and every affordable Booster converts automatically.
+Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a
 gradually-filled 8-slot reserve) once that tier's own outbound merge boundary has auto-merge
 unlocked. A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
 reveals at 100 PP. At a pool's 9/9/9, full-lake, unreachable-next-Booster wall, its pool-local

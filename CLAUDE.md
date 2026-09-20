@@ -883,7 +883,8 @@ steps, with non-final reward growth limited dynamically by half the following po
 After reset the pool provisions its disks automatically and for free, one at a time in normal
 smallest-first order, waiting for the current disk to fill before provisioning the next. While the
 pool is rebuilding, later pools cannot start new provisioning (already-active work may finish).
-After all 9/9/9 disks return, the lake automatically buys every affordable Booster until slots fill
+Whenever all 9/9/9 disks are provisioned (including before the first reset), the lake's Booster
+control becomes a non-clickable cost label and the lake automatically buys every affordable Booster until slots fill
 or the next cost exceeds capacity; filling the lake at that wall enables the next reset. Pools never
 transfer or share resources through this loop.
 
