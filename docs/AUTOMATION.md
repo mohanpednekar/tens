@@ -297,6 +297,27 @@ issue and exits red. Per-run failures are additionally watched directly by
 `automation-self-heal.yml` (Devin autonomous maintenance is in its watched list), which can
 open a `claude/self-heal-devin-autonomous-maintenance-*` fix PR.
 
+### Shared workflow helpers
+
+To keep the workflows DRY and single-responsibility, three pieces are extracted instead of
+copied per-workflow:
+
+- `.github/actions/setup-node-yarn` — composite action: `corepack enable` →
+  `actions/setup-node@v7` (Node 22, yarn cache) → `yarn install --frozen-lockfile`
+  (`install: "false"` skips the install for agent-driven jobs that run yarn themselves).
+  **Trusted refs only** — never `uses:` it in a job whose checkout is an untrusted PR SHA;
+  a composite's steps execute with the workflow's privileges, so a hostile branch could
+  replace them. The PR-follow-up workflows keep Node setup inline for exactly that reason.
+- `scripts/pr-head-guard.sh <pr> <glob...>` — resolves a PR's head branch/SHA from the API,
+  refuses fork heads, and enforces the branch prefix. Prints `branch<TAB>sha`. The
+  follow-up workflows fetch it via a sparse `ref: main` checkout *before* checking out the
+  pinned PR SHA, so the guard can't be weakened by the branch it authorizes.
+- `scripts/claude-deny-settings.sh [extra-file...]` — emits the `settings` JSON for
+  `anthropics/claude-code-action` from a shared base deny-list (`ci.yml`, `deploy.yml`,
+  `automation-self-heal.yml` — never editable by an unattended agent) plus caller-supplied
+  extras (follow-up workflows pass every other workflow file since their prompts forbid
+  all workflow edits). Run it from the same trusted main checkout as the guard.
+
 ### PR follow-up (`autonomous-pr-followup.yml`)
 
 Since no human (or live Claude Code session) is watching between scheduled runs, this workflow closes
