@@ -278,6 +278,15 @@ narrowly-scoped and includes `Workflows: write`, so autonomous runs can push com
 `.github/CODEOWNERS` still applies once branch protection requires it (see issue #62 and
 `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
+**Shared helpers.** Workflows share three extracted pieces rather than duplicating them:
+`.github/actions/setup-node-yarn` (composite: corepack + Node 22 + optional `yarn install`,
+used only on trusted refs — the PR-follow-up workflows keep setup inline because their
+checkout is untrusted PR code), `scripts/pr-head-guard.sh` (fork + branch-prefix check run
+from a sparse **main** checkout before the pinned-SHA checkout), and
+`scripts/claude-deny-settings.sh` (generates the claude-code-action `settings` deny JSON;
+base list always protects `ci.yml`/`deploy.yml`/`automation-self-heal.yml`, callers pass
+extra files). See `docs/AUTOMATION.md` "Shared workflow helpers".
+
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
 `autonomous-maintenance.yml`, which runs twice daily (9:00am and 9:00pm IST) and does exactly one unit of work per run,

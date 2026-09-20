@@ -1,0 +1,32 @@
+name: Node + Yarn setup
+description: >-
+  Shared preamble for workflows that run Node/Yarn commands: enable Corepack,
+  set up Node with the yarn cache, and (optionally) install dependencies.
+  Keep this as the single source of truth — the repo pins yarn@1.22.22 via
+  Corepack (see package.json packageManager), so workflows never call npm.
+inputs:
+  node-version:
+    description: Node major version for actions/setup-node
+    required: false
+    default: "22"
+  install:
+    description: Run `yarn install --frozen-lockfile` after setup ("true"/"false")
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Enable Corepack
+      run: corepack enable
+      shell: bash
+
+    - name: Set up Node
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: yarn
+
+    - name: Install dependencies
+      if: inputs.install == 'true'
+      run: yarn install --frozen-lockfile
+      shell: bash
