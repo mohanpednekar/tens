@@ -80,7 +80,11 @@ jobs:
               continue
             fi
 
-            touches_workflows=$(jq -r '[.files[].path | select(startswith(".github/workflows/"))] | length' <<<"$pr")
+            # gh pr list's nested `files` connection is capped at 100 entries and
+            # doesn't paginate — a workflow file beyond that cutoff would go
+            # unseen. Fetch the full path list via the paginated files endpoint.
+            touches_workflows=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$num/files" \
+              --paginate --jq '.[].filename' | grep -c '^\.github/workflows/' || true)
 
             case "$branch" in
               # Match exactly the patterns autonomous-pr-followup.yml accepts —

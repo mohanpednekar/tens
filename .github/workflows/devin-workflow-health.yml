@@ -60,7 +60,6 @@ jobs:
           conclusion=${last_completed%% *}
           failed_run_id=${last_completed##* }
           echo "latest completed run conclusion: $conclusion (id: ${failed_run_id:-none})"
-          echo "fail_marker=health-fail-run=${failed_run_id:-none}" >> "$GITHUB_OUTPUT"
           # Anything but success (failure/cancelled/timed_out/none) is unhealthy.
           if [ "$conclusion" != "success" ]; then
             problems="${problems}- Latest completed run (id $failed_run_id) conclusion: \`$conclusion\`.\n"
@@ -80,6 +79,12 @@ jobs:
               problems="${problems}- No run in ${age_h}h (expected every 4h — schedule may be disabled or dormant).\n"
             fi
           fi
+
+          # Dedupe marker hashes the full normalized problem state (all three
+          # checks, after they've all run) — a marker built only from a run id
+          # would suppress a new comment when a different condition turns bad.
+          marker_hash=$(printf '%b' "$problems" | sha256sum | cut -c1-16)
+          echo "fail_marker=health-state=$marker_hash" >> "$GITHUB_OUTPUT"
 
           if [ -n "$problems" ]; then
             echo "broken=true" >> "$GITHUB_OUTPUT"
@@ -108,11 +113,12 @@ jobs:
             "$FAIL_MARKER" "$PROBLEMS" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
 
           if [ -n "$existing" ]; then
-            # Dedupe by the marker for the failing run: if the latest comment on
-            # the issue already reported this same state, a persistent failure
-            # doesn't add a new comment every midnight.
-            last_body=$(gh issue view "$existing" --json comments \
-              --jq '.comments[-1].body // ""')
+            # Dedupe by the state marker: if the issue body OR its latest
+            # comment already reports this exact problem state, a persistent
+            # failure doesn't add a new comment every midnight. (The body is
+            # checked too — on a newly created issue the marker lives there.)
+            last_body=$(gh issue view "$existing" --json body,comments \
+              --jq '.body + "\n" + (.comments[-1].body // "")')
             if grep -q "$FAIL_MARKER" <<<"$last_body"; then
               echo "Issue #$existing already reports this state ($FAIL_MARKER) — skipping comment."
             else

@@ -2,10 +2,13 @@
 # Inspect or resolve review threads on an automation-owned PR.
 #
 # Usage:
-#   resolve-pr-threads.sh list <pr>             — one JSON line per review thread
-#                                                 (id, isResolved, first comment's
-#                                                 author/body/path/line) so the caller
+#   resolve-pr-threads.sh list <pr>             — one JSON line per review thread:
+#                                                 {id, isResolved, path, line,
+#                                                 comments: [{author, body}]}
+#                                                 (up to 20 comments per thread,
+#                                                 300 chars each) so the caller
 #                                                 can map threads to feedback
+#                                                 including later replies
 #   resolve-pr-threads.sh resolve <pr> <id>...  — resolve ONLY the given thread IDs
 #
 # Design constraints (do not weaken):
