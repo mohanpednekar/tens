@@ -95,7 +95,10 @@ jobs:
       - name: Install Devin CLI
         if: steps.guard.outputs.skip != 'true'
         run: |
-          curl -fsSL https://cli.devin.ai/install.sh | bash
+          # < /dev/null: the installer launches an interactive login prompt on a
+          # fresh machine and exits 1 ("Login canceled") when stdin is a TTY-less
+          # runner; a closed stdin makes it skip that step instead.
+          curl -fsSL https://cli.devin.ai/install.sh | bash < /dev/null
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Write Devin CLI credentials
