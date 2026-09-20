@@ -116,6 +116,10 @@ jobs:
           # between. A SHA is immutable, so this checks out exactly what was authorized.
           ref: ${{ steps.pr.outputs.sha }}
           fetch-depth: 0
+          # PAT so follow-up pushes (e.g. to devin/auto-* branches) trigger the
+          # pull_request event — a GITHUB_TOKEN push cannot. Matches
+          # dependabot-pr-followup.yml's checkout.
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
 
       - name: Enable Corepack
         if: steps.pr.outputs.skip != 'true'
