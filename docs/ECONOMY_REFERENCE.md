@@ -1,5 +1,16 @@
 # Economy model reference
 
+## Pool-local reset loop
+
+At a pool's terminal state (9/9/9 disks, full lake, and next Booster cost above lake capacity), the
+pool may reset independently. Its Storage contents, buffer, and lake are emptied, while Booster
+progress and earlier reset rewards remain. Capacity grows by 1,000 lake units per reset. Disk
+containers then re-provision free and automatically, sequentially after each current disk fills;
+new provisioning in later pools is locked until 9/9/9 is restored, without cancelling later work
+already underway. Completed rebuilds continuously auto-buy affordable Boosters from their own lake.
+The first reset permanently fixes lake speed at 50%; reset two onward advances the existing normal
+bandwidth ladder, dynamically bounded for non-final pools by half the next pool's bandwidth.
+
 Referenced from `CLAUDE.md`'s Economy model section. Read this before touching
 `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or any economy/prestige/tickspeed
 constant or formula — it's the full mechanic reference (cost/production formulas, the purchase
@@ -1015,9 +1026,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    auto-merge unlocked — see "Compute" below) AND `depositedUnits >= getBoosterPurchaseCost`). The
    nth Booster ever bought at a tier costs n units
    (`getBoosterPurchaseCost` — simply `purchased + 1`, with no transfer queue to
-   count alongside it — EXCEPT once the lake's own capacity ladder is permanently maxed
-   (`isDataLakeCapacityMaxed`), where the cost is capped at the lake's own fixed capacity instead of
-   continuing to climb past what a maxed lake could ever hold; see `docs/DESIGN_HISTORY.md`). Buying spends the cost off `depositedUnits`, resets `fillBits` to 0 (the
+   count alongside it). The cost may exceed current lake capacity; that unreachable cost is the
+   pool-local reset wall. Buying spends the cost off `depositedUnits`, resets `fillBits` to 0 (the
    disk that was mid-fill before the spend may no longer be the lake's own open slot afterward, so
    any in-progress fill is discarded rather than carried forward inconsistently), increments
    `purchased`, and grants 1 of the matching compute-ladder entity instantly — no transfer, no
@@ -1048,8 +1058,11 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    standalone Fill click always used — to make one tick's worth of progress and tries again next
    tick. The net effect: one click "fully automates the sequence to fill up and then convert it into
    a Booster, then stop" — always exactly 1 conversion per activation, never a persistent bulk
-   auto-buy loop. While `autoConvertActive`, `DataLakePanel`'s control renders as an inert label
-   instead of a clickable button.
+   auto-buy loop while Storage is incomplete. Once the matching Storage pool reaches 9/9/9,
+   `DataLakePanel` permanently renders the next cost as an inert label instead of a conversion
+   button, and `tickDataLakeAutoConvert` buys each affordable Booster automatically even when
+   `autoConvertActive` is false. It stops naturally when the entity is full or the next cost is
+   above lake capacity.
 
    **Stranded disks are never destroyed.** A disk whose own fixed corresponding tier has moved past
    the level it requires (see "Disks always take priority" above) simply stays full and

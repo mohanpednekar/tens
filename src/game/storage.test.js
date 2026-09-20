@@ -488,6 +488,8 @@ describe('schema merge on load', () => {
         dataLakes: createInitialGameState().intro.dataLakes,
         dataStreamTapBonusPercent: 0,
         poolTapBonusPercents: {},
+        poolResetCount: 0,
+        poolResetRebuildingCount: 0,
       },
     }
     saveGameState(state)
@@ -520,6 +522,9 @@ describe('schema merge on load', () => {
       boostersUnlocked: true,
       autoConvertActive: false,
       capacityLevel: 2,
+      resetCount: 0,
+      rebuilding: false,
+      bandwidthSteps: 0,
     })
     expect(loaded.intro.dataLakes['2']).toEqual({
       depositedUnits: 0,
@@ -528,6 +533,9 @@ describe('schema merge on load', () => {
       boostersUnlocked: false,
       autoConvertActive: false,
       capacityLevel: 0,
+      resetCount: 0,
+      rebuilding: false,
+      bandwidthSteps: 0,
     })
     // Both pending transfers were tier 1 (Cores) — granted directly, same as a real buyBooster(1)
     // call would have, including the matching lifetime-earned/merge-page-unlock bookkeeping.
@@ -1013,7 +1021,7 @@ describe('Dev Mode', () => {
     // ...and every sibling at every depth survives untouched: tier 1's own depositedUnits (a
     // sibling of the edited `purchased` key), and tier 2 entirely (a sibling of tier 1 itself).
     expect(result.state.intro.dataLakes['1'].depositedUnits).toBe(53)
-    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2 })
+    expect(result.state.intro.dataLakes['2']).toEqual({ depositedUnits: 91, fillBits: 0, purchased: 12, boostersUnlocked: true, autoConvertActive: true, capacityLevel: 2, resetCount: 0, rebuilding: false, bandwidthSteps: 0 })
   })
 
   it('applyDevGameStateJson stamps the current save schema version on write', () => {

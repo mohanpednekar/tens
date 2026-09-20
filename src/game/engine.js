@@ -64,6 +64,11 @@ const createEmptyDataLakeTier = () => ({
   // How many times this lake's own deposit capacity has been advanced — see getDataLakeCapacity
   // below. 0 = the starting 1-unit capacity; DATA_LAKE_CAPACITY_MAX_LEVEL is a permanent hard cap.
   capacityLevel: 0,
+  // Pool-local end-game loop. Resets permanently expand only this lake and temporarily put the
+  // matching Storage pool into its free, sequential rebuild mode.
+  resetCount: 0,
+  rebuilding: false,
+  bandwidthSteps: 0,
 })
 
 export const createEmptyDataLakes = () => {
@@ -507,6 +512,8 @@ export const createInitialGameState = () => ({
     // getDataLakeCapacity() units, filled continuously from that denomination's own Storage pool
     // overflow (see tickPoolBufferFill/fillDataLakeDisks below) rather than from deposited Disks.
     dataLakes: createEmptyDataLakes(),
+    poolResetRebuildingCount: 0,
+    poolResetCount: 0,
     // PERMANENT — like the Byte generator/Disks above, carried over every real Prestige
     // (see prestigeGame). Granted by buyBooster (tier 1) below — spending that lake's own banked
     // units — and spent 1 at a time by activateComputeBoost — see the "Byte Foundry Compute Boost"
@@ -1556,7 +1563,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
-  const stateAfterProvision = tickProvisionDisk(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay))
+  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))
   // Queued Capacity fires as soon as Memory is full (after production/build countdown), before
   // Disk auto-fill can spend that full bar — see tickQueuedCapacityUpgrade.
   const stateAfterQueuedCapacity = tickQueuedCapacityUpgrade(stateAfterProvision)
@@ -2180,6 +2187,22 @@ export const isStoragePoolFullyBuilt = (state, poolIndex) => {
   })
 }
 
+const getStoragePoolSizes = poolIndex => {
+  const firstStep = (poolIndex - 1) * DATA_LAKE_SUB_SIZES.length + 1
+  return DATA_LAKE_SUB_SIZES.map((_, offset) => getDiskLadderSizeBits(firstStep + offset))
+}
+
+// A rebuilding pool blocks only the START of later-pool provisioning. A legacy timed build that
+// was already underway is intentionally left alone and tickProvisionDisk may finish it.
+export const isLaterPoolProvisioningLocked = (state, poolIndex) =>
+  Object.keys(state.intro?.dataLakes ?? {}).some(key => {
+    const earlier = Number(key)
+    return earlier < poolIndex && Boolean(getDataLakeTier(state, earlier)?.rebuilding)
+  })
+
+export const isStoragePoolRebuilding = (state, poolIndex) =>
+  Boolean(getDataLakeTier(state, poolIndex)?.rebuilding)
+
 // Disk PROVISIONING eligibility is pool-to-pool: pool 1 is always reachable, and pool N+1 only
 // once pool N is entirely complete (isStoragePoolFullyBuilt) — this stays disk-build-only and
 // drives the disk ladder's own progression (getMaxActiveDiskLadderStep — which size Provision Disk
@@ -2347,7 +2370,18 @@ export const getStoragePoolBandwidth = (state, poolIndex) => {
   const sqrtCapBytes = Math.sqrt(capacityBytes)
   const rawRateBytes = getIntroProductionRate(state.intro ?? {}) / BITS_PER_BYTE
   const boundedBytes = Math.min(rawRateBytes, sqrtCapBytes)
-  return getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
+  const base = getSiCleanEquivalentBits(boundedBytes * BITS_PER_BYTE)
+  const steps = Math.max(0, getDataLakeTier(state, poolIndex)?.bandwidthSteps ?? 0)
+  if (steps === 0) return base
+  let advanced = base
+  for (let step = 0; step < steps; step += 1) {
+    // The normal Data Stream ladder advances one binary half-step at a time; converting each
+    // result through the existing SI-clean mapping preserves its alternating 1.5x/1.33x shape.
+    advanced = getSiCleanEquivalentBits(advanced * Math.SQRT2)
+  }
+  if (poolIndex >= getStoragePoolCount()) return advanced
+  const nextBandwidth = getStoragePoolBandwidth(state, poolIndex + 1)
+  return Math.max(base, Math.min(advanced, nextBandwidth / 2))
 }
 
 // The raw Capacity derivation for a given raw Data Stream capacity value (in bits), with no
@@ -2899,8 +2933,46 @@ export const isProvisionDiskAvailable = state => {
   const size = getDiskSize(state)
   if (getDiskProvisionPassesCollected(state, size) >= getDiskProvisionPassesRequired(state, size)) return true
   const poolIndex = getPoolIndexForDiskSize(size)
+  if (isStoragePoolRebuilding(state, poolIndex)) return false
+  if (isLaterPoolProvisioningLocked(state, poolIndex)) return false
   const reserved = getPoolCacheReservationBits(state, poolIndex)
   return getPoolBufferBits(state, poolIndex) - reserved >= size
+}
+
+// Free reset recovery provisions one container at a time. The next container appears only after
+// every already-provisioned container at the current size is full; sizes therefore retain the
+// ordinary smallest-to-largest Storage progression instead of snapping straight back to 9/9/9.
+export const tickPoolResetReprovision = state => {
+  if (!(state.intro?.poolResetRebuildingCount > 0)) return state
+  let nextState = state
+  for (let poolIndex = 1; poolIndex <= getStoragePoolCount(); poolIndex += 1) {
+    const lake = getDataLakeTier(nextState, poolIndex)
+    if (!lake?.rebuilding) continue
+    const sizes = getStoragePoolSizes(poolIndex)
+    const size = sizes.find(candidate => (nextState.intro.disksBuiltTotal?.[candidate] ?? 0) < DISK_ARRAY_LADDER_CAP)
+    if (!size) {
+      nextState = setDataLakeAutoConvertActive(poolIndex, false)({
+        ...nextState,
+        intro: {
+          ...nextState.intro,
+          poolResetRebuildingCount: Math.max(0, (nextState.intro.poolResetRebuildingCount ?? 1) - 1),
+          dataLakes: { ...nextState.intro.dataLakes, [poolIndex]: { ...lake, rebuilding: false } },
+        },
+      })
+      continue
+    }
+    const built = nextState.intro.disksBuiltTotal?.[size] ?? 0
+    const full = nextState.intro.disks?.[size] ?? 0
+    if (built > 0 && full < built) continue
+    nextState = {
+      ...nextState,
+      intro: {
+        ...nextState.intro,
+        disksBuiltTotal: { ...nextState.intro.disksBuiltTotal, [size]: built + 1 },
+      },
+    }
+  }
+  return nextState
 }
 
 // "Compute" — true once Compute Core conversion is unlocked and at least one brand-new boost
@@ -3593,6 +3665,7 @@ export const queueDiskBuild = state => {
   if (state.intro?.diskBuildQueued) return state
   if (state.intro.diskBuild) return state
   if (isDiskLadderExhaustedForActivePools(state)) return state
+  if (isStoragePoolRebuilding(state, getPoolIndexForDiskSize(getDiskSize(state)))) return state
   // A standalone/manual arm, never replay-owned — see diskBuildQueuedByReplay's own comment in
   // createInitialGameState.
   return { ...state, intro: { ...state.intro, diskBuildQueued: true, diskBuildQueuedByReplay: false } }
@@ -4368,7 +4441,8 @@ export const isDataLakeCapacityMaxed = (state, tierIndex) =>
   getDataLakeCapacityLevel(state, tierIndex) >= DATA_LAKE_CAPACITY_MAX_LEVEL
 
 export const getDataLakeCapacity = (state, tierIndex) =>
-  DATA_LAKE_CAPACITY_BY_LEVEL[getDataLakeCapacityLevel(state, tierIndex)]
+  DATA_LAKE_CAPACITY_BY_LEVEL[Math.min(getDataLakeCapacityLevel(state, tierIndex), DATA_LAKE_CAPACITY_MAX_LEVEL)] +
+  Math.max(0, getDataLakeTier(state, tierIndex)?.resetCount ?? 0) * 1000
 
 // Smallest-denomination-first decomposition of a lake's own whole-unit total into ×1/×10/×100
 // disk counts, each capped per DATA_LAKE_SUB_SIZE_DISK_CAPS (9/9/9 — see layers.js for why not a
@@ -4527,7 +4601,9 @@ export const getDataLakeCurrentDiskFillFraction = (state, tierIndex) => {
 // docs/DESIGN_HISTORY.md) now that overflow fills at the plain available rate, same as Storage's
 // own disk provisioning.
 export const getDataLakeOverflowRatePercent = (state, tierIndex) =>
-  getDataLakeCurrentFillSubSize(state, tierIndex) === null ? DATA_LAKE_OVERFLOW_MIN_PERCENT : DATA_LAKE_OVERFLOW_MAX_PERCENT
+  (getDataLakeTier(state, tierIndex)?.resetCount ?? 0) > 0
+    ? DATA_LAKE_OVERFLOW_MAX_PERCENT
+    : 5 + 45 * (1 - getDataLakeDepositedUnits(tierIndex)(state) / Math.max(1, getDataLakeCapacity(state, tierIndex)))
 
 // Whether this lake's own matching Storage pool has built at least one real disk (the pool's own
 // smallest, ×1 size) — the gate for the lake itself being "unlocked" at all: both feeding overflow
@@ -4546,20 +4622,12 @@ export const isDataLakePoolReady = (state, tierIndex) =>
 export const isDataLakeBoosterUnlocked = (state, tierIndex) =>
   (getDataLakeTier(state, tierIndex)?.boostersUnlocked ?? false) || isDataLakePoolReady(state, tierIndex)
 
-// The nth Booster ever bought at a tier costs n units — but once the lake's own capacity ladder
-// is permanently maxed (DATA_LAKE_CAPACITY_MAX_LEVEL, see isDataLakeCapacityMaxed above), that
-// escalation is capped at the lake's own (now-fixed) capacity rather than left to keep climbing
-// forever: past capacity level 3 there's no further capacity upgrade left to fund a cost that
-// keeps growing past what the lake could ever hold, which would otherwise leave every future
-// Booster permanently unaffordable (deposits can never exceed capacity) — a lake that should have
-// an indefinite Booster path instead going permanently dead once purchased reaches capacity+1. See
-// docs/DESIGN_HISTORY.md.
+// The nth Booster ever bought at a tier costs n units. Costs deliberately continue beyond the
+// current capacity: that unreachable next cost is the pool-local reset wall.
 export const getBoosterPurchaseCost = tierIndex => state => {
   const lake = getDataLakeTier(state, tierIndex)
   if (!lake) return 0
-  const rawCost = (lake.purchased ?? 0) + 1
-  if (!isDataLakeCapacityMaxed(state, tierIndex)) return rawCost
-  return Math.min(rawCost, getDataLakeCapacity(state, tierIndex))
+  return (lake.purchased ?? 0) + 1
 }
 
 // Whether tierIndex's own OUTBOUND merge boundary (tierIndex 1..9, Cores..Supercomputers — tier 10
@@ -4616,26 +4684,8 @@ export const isBoosterEntityAtCap = (state, tierIndex) => getComputeEntityFieldR
 
 // Optimized O(1) mathematical calculation for bulk Booster purchases
 const getBoosterBulkPurchase = (deposited, capacity, currentPurchased, isMaxed) => {
-  let mathQ = 0;
-  let mathCost = 0;
-
-  if (isMaxed) {
-    let k1 = Math.max(0, capacity - currentPurchased);
-    let S1 = k1 * currentPurchased + (k1 * (k1 + 1)) / 2;
-
-    if (deposited < S1) {
-      mathQ = Math.floor((-(2 * currentPurchased + 1) + Math.sqrt(Math.pow(2 * currentPurchased + 1, 2) + 8 * deposited)) / 2);
-      mathCost = mathQ * currentPurchased + (mathQ * (mathQ + 1)) / 2;
-    } else {
-      let remD = deposited - S1;
-      let k2 = Math.floor(remD / capacity);
-      mathQ = k1 + k2;
-      mathCost = S1 + k2 * capacity;
-    }
-  } else {
-      mathQ = Math.floor((-(2 * currentPurchased + 1) + Math.sqrt(Math.pow(2 * currentPurchased + 1, 2) + 8 * deposited)) / 2);
-      mathCost = mathQ * currentPurchased + (mathQ * (mathQ + 1)) / 2;
-  }
+  const mathQ = Math.floor((-(2 * currentPurchased + 1) + Math.sqrt(Math.pow(2 * currentPurchased + 1, 2) + 8 * deposited)) / 2);
+  const mathCost = mathQ * currentPurchased + (mathQ * (mathQ + 1)) / 2;
   return { quantity: mathQ, cost: mathCost };
 }
 
@@ -4667,16 +4717,7 @@ export const buyBooster = (tierIndex, quantity = 1) => state => {
 
   // Re-calculate cost for exact quantity
   let actualCost = 0;
-  if (isMaxed) {
-    let k1 = Math.min(buyQuantity, Math.max(0, capacity - currentPurchased));
-    actualCost += k1 * currentPurchased + (k1 * (k1 + 1)) / 2;
-    let k2 = buyQuantity - k1;
-    if (k2 > 0) {
-      actualCost += k2 * capacity;
-    }
-  } else {
-    actualCost = buyQuantity * currentPurchased + (buyQuantity * (buyQuantity + 1)) / 2;
-  }
+  actualCost = buyQuantity * currentPurchased + (buyQuantity * (buyQuantity + 1)) / 2;
 
   const boosterUpdates = latchComputeMergePageIfNeeded(state.intro, tierIndex, field, buyQuantity)
 
@@ -4834,6 +4875,59 @@ export const isDataLakeAutoConvertStartAvailable = (state, tierIndex) => {
   return getComputeEntityFieldRoom(state, tierIndex) > 0
 }
 
+export const isStoragePoolResetAvailable = (state, tierIndex) => {
+  const lake = getDataLakeTier(state, tierIndex)
+  if (!lake || lake.rebuilding || !isStoragePoolFullyBuilt(state, tierIndex)) return false
+  return getDataLakeDepositedUnits(tierIndex)(state) >= getDataLakeCapacity(state, tierIndex) &&
+    getBoosterPurchaseCost(tierIndex)(state) > getDataLakeCapacity(state, tierIndex)
+}
+
+// Consumes only this pool's Storage and lake. Compute/Booster state is deliberately retained, as
+// are this lake's prior reset rewards; no neighbouring pool can contribute resources to the reset.
+export const resetStoragePool = tierIndex => state => {
+  if (!isStoragePoolResetAvailable(state, tierIndex)) return state
+  const lake = getDataLakeTier(state, tierIndex)
+  const sizes = getStoragePoolSizes(tierIndex)
+  const withoutSizes = source => Object.fromEntries(
+    Object.entries(source ?? {}).filter(([key]) => !sizes.includes(Number(key))),
+  )
+  const resetCount = (lake.resetCount ?? 0) + 1
+  const diskBuildBelongsToPool = getPoolIndexForDiskSize(state.intro.diskBuild?.size) === tierIndex
+  const diskWriteCache = Object.fromEntries(Object.entries(state.intro.diskWriteCache ?? {}).filter(
+    ([targetSize, merge]) => !sizes.includes(Number(targetSize)) && !sizes.includes(Number(merge?.sourceSize)),
+  ))
+  return {
+    ...state,
+    intro: {
+      ...state.intro,
+      disks: withoutSizes(state.intro.disks),
+      disksBuiltTotal: withoutSizes(state.intro.disksBuiltTotal),
+      diskCache: withoutSizes(state.intro.diskCache),
+      diskReadCacheFlush: withoutSizes(state.intro.diskReadCacheFlush),
+      diskWriteCache,
+      diskProvisionPasses: withoutSizes(state.intro.diskProvisionPasses),
+      diskBuild: diskBuildBelongsToPool ? null : state.intro.diskBuild,
+      diskBuildQueued: diskBuildBelongsToPool ? false : state.intro.diskBuildQueued,
+      diskBuildQueuedByReplay: diskBuildBelongsToPool ? false : state.intro.diskBuildQueuedByReplay,
+      poolBuffers: { ...state.intro.poolBuffers, [tierIndex]: 0 },
+      dataLakes: {
+        ...state.intro.dataLakes,
+        [tierIndex]: {
+          ...lake,
+          depositedUnits: 0,
+          fillBits: 0,
+          autoConvertActive: false,
+          resetCount,
+          rebuilding: true,
+          bandwidthSteps: (lake.bandwidthSteps ?? 0) + (resetCount >= 2 ? 1 : 0),
+        },
+      },
+      poolResetRebuildingCount: (state.intro.poolResetRebuildingCount ?? 0) + 1,
+      poolResetCount: (state.intro.poolResetCount ?? 0) + 1,
+    },
+  }
+}
+
 // A single click "fully automates the sequence to fill up and then convert it into a Booster, then
 // stop" (replacing the old persistent Auto/Manual toggle — see docs/DESIGN_HISTORY.md): if this
 // lake is already banked enough (isBoosterPurchaseAvailable), buys immediately rather than making
@@ -4861,6 +4955,14 @@ export const startDataLakeAutoConvert = tierIndex => state => {
 export const tickDataLakeAutoConvert = state => {
   let nextState = state
   for (let tierIndex = 1; tierIndex <= DATA_LAKE_TIER_COUNT; tierIndex += 1) {
+    // A completed 9/9/9 pool permanently automates every reachable Booster. Before completion,
+    // the lake retains its explicit one-shot conversion control; once complete there is no
+    // conversion button to press and each affordable Booster is obtained automatically.
+    if (isStoragePoolFullyBuilt(nextState, tierIndex) &&
+        getBoosterPurchaseCost(tierIndex)(nextState) <= getDataLakeCapacity(nextState, tierIndex) &&
+        isBoosterPurchaseAvailable(nextState, tierIndex)) {
+      nextState = buyBooster(tierIndex, 1)(nextState)
+    }
     if (!isDataLakeAutoConvertActive(nextState, tierIndex)) continue
     if (getComputeEntityFieldRoom(nextState, tierIndex) <= 0) {
       nextState = setDataLakeAutoConvertActive(tierIndex, false)(nextState)
@@ -6254,6 +6356,8 @@ export const prestigeGame = state => {
       // Prestige so a new cycle keeps its Booster funding path. Era ascension still resets them
       // with the rest of the Foundry (see buildEraIntroReset).
       dataLakes: state.intro?.dataLakes ?? initial.intro.dataLakes,
+      poolResetCount: state.intro?.poolResetCount ?? initial.intro.poolResetCount,
+      poolResetRebuildingCount: state.intro?.poolResetRebuildingCount ?? initial.intro.poolResetRebuildingCount,
       // Every compute-ladder entity (Core through Megacomputer), and the ComputePage reveal latch,
       // are just as permanent as the Byte generator/Storage above — carried over unchanged, never
       // wiped by a real Prestige along with Memory itself.

@@ -3036,7 +3036,7 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
   expect(lakeRateBar).toHaveAttribute('aria-valuenow', String(DATA_LAKE_OVERFLOW_MAX_PERCENT))
 })
 
-test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a maxed lake with no open disk slot left)', () => {
+test('a maxed pre-reset Data Lake retains its 5% speed floor', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
     1,
@@ -3055,12 +3055,11 @@ test('the pool bar hides entirely once the Data Lake overflow rate reaches 0 (a 
   render(<App />)
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  // Neither the (now-retired) multiplier reading nor the lake overflow reading renders a
-  // progressbar — a genuine 0% reading has nothing meaningful to show (a zero-width bar plus an
-  // orphaned "0%" label), so the whole row is hidden rather than rendered empty.
+  // The ordinary fill multiplier is gone once overflow takes over, while the pre-reset lake's
+  // original taper remains visible at its 5% floor.
   expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
-  expect(within(pool1).queryByRole('progressbar', { name: /data lake overflow rate/i })).not.toBeInTheDocument()
-  expect(within(pool1).queryByText('0%')).not.toBeInTheDocument()
+  expect(within(pool1).getByRole('progressbar', { name: /data lake overflow rate/i })).toHaveAttribute('aria-valuenow', '5')
+  expect(within(pool1).getByText('5%')).toBeInTheDocument()
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
@@ -3733,6 +3732,22 @@ describe('Byte Foundry Storage', () => {
     const lakeBlock = within(pool1).getByLabelText('KB lake')
     expect(within(lakeBlock).getByText('Lake')).toBeInTheDocument()
     expect(within(lakeBlock).getByRole('button', { name: /buy 1 Cores from the KB Data Lake/i })).toBeInTheDocument()
+  })
+
+  test('a completed 9/9/9 pool shows an automatic-conversion label instead of a Booster conversion button', () => {
+    seedIntroState({
+      bits: 0,
+      capacity: INTRO_DISK_UNLOCK_CAPACITY,
+      byteCreated: true,
+      disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+      dataLakes: { 1: { depositedUnits: 0, fillBits: 0, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: DATA_LAKE_CAPACITY_MAX_LEVEL } },
+    })
+    render(<App />)
+    openStorage()
+
+    const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
+    expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent('🎯 1 KB')
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
