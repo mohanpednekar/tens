@@ -78,7 +78,7 @@ if [ -z "$branch" ]; then
 fi
 
 case "$branch" in
-  claude/auto-*|claude/self-heal-*|claude/heal-main-*|dependabot/*) ;;
+  claude/auto-*|claude/self-heal-*|claude/heal-main-*|devin/auto-*|dependabot/*) ;;
   *)
     echo "not a bot-authored branch ($branch)"
     exit 1

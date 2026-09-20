@@ -287,11 +287,17 @@ outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `pri
 always outranks Phase B (a maintenance menu: test coverage, dependency/security — including any
 medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
 workflow self-improvement, gap analysis).
-`autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` PRs.
+`devin-autonomous-maintenance.yml` is the Devin-CLI counterpart: every 4 hours (UTC :17) it runs
+`devin -p --model swe --permission-mode bypass` to pick the top eligible `claude-task` issue and
+open a `devin/auto-*` PR; git/`gh` authenticate via `GH_AUTOMATION_PAT` so PRs trigger CI, and the
+agent authenticates via a `DEVIN_CLI_CREDENTIALS` secret containing a `credentials.toml` from
+`devin auth login`. Its 5-open-PR ceiling counts `devin/auto-*` and `claude/auto-*` together.
+`autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` and
+`devin/auto-*` PRs.
 `dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
 itself broke call sites (Phase 0 still owns `@dependabot rebase` for branches merely behind
 `main`). `pr-auto-merge.yml` enables GitHub's native auto-merge either on human approval (any PR)
-or on green checks alone for our own automation's branches (`claude/*`) when the
+or on green checks alone for our own automation's branches (`claude/*`, `devin/auto-*`) when the
 diff meets a conservative low-risk bar. `automation-self-heal.yml` watches the orchestration
 workflows (maintenance/follow-up, Dependabot follow-up, auto-merge) for failed
 runs and either opens a draft `claude/self-heal-*` config fix or files an `automation-failure`

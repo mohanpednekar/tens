@@ -1,0 +1,215 @@
+name: Devin autonomous maintenance
+
+# Devin-CLI counterpart to autonomous-maintenance.yml (Claude Code). Fires every
+# 4 hours, picks the top eligible claude-task backlog issue, implements it on a
+# devin/auto-* branch, and opens a PR. See docs/AUTOMATION.md.
+#
+# One-time setup: add a repository secret DEVIN_CLI_CREDENTIALS containing the
+# contents of ~/.local/share/devin/credentials.toml from a machine where
+# `devin auth login` was run (Devin Enterprise). Git pushes and `gh` use the
+# existing GH_AUTOMATION_PAT secret — a GITHUB_TOKEN push can't trigger the
+# pull_request event, so PRs opened with it would never get the required `test`
+# check (same reason the other autonomous workflows use the PAT).
+
+on:
+  schedule:
+    # Every 4 hours at :17 past (UTC) — a non-round minute to avoid the
+    # top-of-hour runner congestion.
+    - cron: "17 */4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: devin-autonomous-maintenance
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # PAT so Devin CLI's git pushes authenticate as the automation account
+          # and their PRs trigger ci.yml (a GITHUB_TOKEN push cannot).
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+
+      - name: Check open autonomous PRs and task backlog
+        id: guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Skip only once every task slot is taken (5 open autonomous PRs total,
+          # counting BOTH devin/auto-* and claude/auto-* since both engines draw
+          # from the same claude-task backlog — otherwise parallel runs can pick
+          # the same issue and open competing PRs). --limit 100 is explicit: the
+          # gh default of 30 silently truncates (see incident referenced in
+          # autonomous-maintenance.yml).
+          open_prs=$(gh pr list --state open --limit 100 --json headRefName,title \
+            --jq '[.[] | select((.headRefName | startswith("devin/auto-")) or (.headRefName | startswith("claude/auto-")))]')
+          count=$(jq 'length' <<<"$open_prs")
+          summary=$(jq -r '.[] | "- \(.headRefName): \(.title)"' <<<"$open_prs")
+          {
+            echo "open_prs<<PR_EOF"
+            echo "$summary"
+            echo "PR_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # A red main is the top priority and bypasses the 5-PR ceiling.
+          main_ci_conclusion=$(gh run list --workflow=ci.yml --branch=main \
+            --status=completed --limit=1 --json conclusion \
+            --jq '.[0].conclusion // "unknown"')
+          echo "main_ci_broken=$([ "$main_ci_conclusion" = "failure" ] && echo true || echo false)" \
+            >> "$GITHUB_OUTPUT"
+
+          if [ "$count" -ge 5 ] && [ "$main_ci_conclusion" != "failure" ]; then
+            echo "5 autonomous PRs already open — skipping this run."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Backlog: open claude-task issues not labeled blocked, sorted
+          # priority:high → normal → priority:low, ascending number within tier.
+          TASK_DISPLAY_CAP=30
+          open_tasks_json=$(gh issue list --label claude-task --state open --limit 200 \
+            --json number,title,labels \
+            --jq '[.[] | select([.labels[].name] | index("blocked") | not)]')
+          open_tasks=$(jq -r --argjson cap "$TASK_DISPLAY_CAP" '
+            def prio: if ([.labels[].name] | index("priority:high")) then 0
+                      elif ([.labels[].name] | index("priority:low")) then 2
+                      else 1 end;
+            (sort_by(prio, .number))[0:$cap][]
+            | "- #\(.number): \(.title)"' <<<"$open_tasks_json")
+          {
+            echo "open_tasks<<TASK_EOF"
+            echo "${open_tasks:-(none)}"
+            echo "TASK_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install Devin CLI
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          curl -fsSL https://cli.devin.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Write Devin CLI credentials
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          DEVIN_CLI_CREDENTIALS: ${{ secrets.DEVIN_CLI_CREDENTIALS }}
+        run: |
+          if [ -z "$DEVIN_CLI_CREDENTIALS" ]; then
+            echo "::error::DEVIN_CLI_CREDENTIALS secret is not set — see the comment at the top of this workflow."
+            exit 1
+          fi
+          mkdir -p "$HOME/.local/share/devin"
+          printf '%s' "$DEVIN_CLI_CREDENTIALS" > "$HOME/.local/share/devin/credentials.toml"
+          chmod 600 "$HOME/.local/share/devin/credentials.toml"
+          devin auth status
+
+      - name: Enable Corepack
+        if: steps.guard.outputs.skip != 'true'
+        run: corepack enable
+
+      - name: Set up Node
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        if: steps.guard.outputs.skip != 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: Compose prompt
+        id: compose-prompt
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          REPO: ${{ github.repository }}
+          OPEN_PRS: ${{ steps.guard.outputs.open_prs }}
+          OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
+          MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
+        run: |
+          : "${OPEN_PRS:=(none)}"
+          : "${OPEN_TASKS:=(none)}"
+          cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/devin-prompt.txt"
+          You are running as a scheduled, unattended maintenance job inside the
+          GitHub Actions runner for REPO: $REPO. Nobody is watching this run, so
+          only make changes you are confident are safe, small, and correct. Work
+          efficiently: avoid redundant reads and re-checks.
+
+          Read CLAUDE.md first — it documents this repo's architecture,
+          conventions, and testing setup, and you must follow it exactly.
+          docs/DESIGN_HISTORY.md records approaches already tried and rejected —
+          check it before changing a formula or workflow.
+
+          Environment: Yarn 1 Classic via Corepack (never npm); dependencies are
+          already installed. Verify with `yarn test` (Vitest) before committing.
+          `gh` CLI and git push are authenticated via the repo's automation PAT.
+
+          Currently open autonomous PRs, from BOTH devin/auto-* and claude/auto-*
+          branches (do not open a duplicate for a task already covered by any of
+          these):
+          $OPEN_PRS
+
+          MAIN_CI_BROKEN=$MAIN_CI_BROKEN
+
+          ## Phase 0 — broken main first
+          If MAIN_CI_BROKEN is true, diagnose the latest ci.yml failure on main
+          (`gh run list`/`gh run view`) and open a fix PR before anything else.
+
+          ## Phase A — backlog task
+          Open claude-task issues (already sorted priority:high → normal →
+          priority:low, ascending issue number; `blocked`-labeled issues are
+          excluded upstream):
+          $OPEN_TASKS
+
+          Pick the first eligible task. Before starting, read the issue's full
+          spec and comment history (`gh issue view <n> --comments`): skip it if a
+          prior automated run already opened a PR for it, or if two consecutive
+          automated runs concluded it can't be implemented as written — in the
+          latter case add the `blocked` label with a short comment and move to
+          the next issue. Favor size:S/size:M; for size:L take only a safe,
+          well-scoped slice.
+
+          Implement the task on a branch `devin/auto-<issue>-<slug>`, commit,
+          push, and open a PR into `main` following the repo's
+          pull_request_template.md, referencing the issue (e.g. "Part of #N" or
+          "Fixes #N") and noting it was created by the Devin CLI autonomous
+          workflow. Follow the CHANGELOG.md convention (## [Unreleased] entry for
+          user-facing changes).
+
+          Never modify .github/workflows/, deploy/release config, or security
+          policy. Never merge your own PR. If nothing is actionable, do nothing —
+          a no-op run is a fine outcome.
+
+          Report at the end: what you picked, the PR URL if any, or why you did
+          nothing.
+          TEMPLATE_EOF
+          # Substitute the runtime values into the template (bash string
+          # replacement — see the compose-prompt comment in
+          # autonomous-maintenance.yml for why this isn't envsubst).
+          prompt=$(cat "$RUNNER_TEMP/devin-prompt.txt")
+          prompt="${prompt//\$REPO/$REPO}"
+          prompt="${prompt//\$OPEN_PRS/$OPEN_PRS}"
+          prompt="${prompt//\$OPEN_TASKS/$OPEN_TASKS}"
+          prompt="${prompt//\$MAIN_CI_BROKEN/$MAIN_CI_BROKEN}"
+          printf '%s' "$prompt" > "$RUNNER_TEMP/devin-prompt-final.txt"
+          wc -c "$RUNNER_TEMP/devin-prompt-final.txt"
+
+      - name: Run Devin CLI maintenance task
+        if: steps.guard.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          # --model swe resolves to the latest SWE model. bypass permission mode
+          # is required for a fully unattended run (smart still prompts for
+          # installs and mutating git commands).
+          devin -p --model swe --permission-mode bypass \
+            "$(cat "$RUNNER_TEMP/devin-prompt-final.txt")"
