@@ -22,6 +22,8 @@ import {
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
   isDataLakePoolReady,
+  isStoragePoolFullyBuilt,
+  isStoragePoolResetAvailable,
 } from 'game/engine'
 import { COMPUTE_TIER_LABELS, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_SUB_SIZES, DATA_LAKE_TIER_COUNT } from 'game/layers'
 import styled from 'styled-components'
@@ -263,6 +265,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // both gate on poolReady alone, so a save carrying only the legacy latch can never actually
         // fund anything here (see docs/DESIGN_HISTORY.md).
         const poolReady = isDataLakePoolReady(state, tierIndex)
+        const poolComplete = isStoragePoolFullyBuilt(state, tierIndex)
         const canBuy = isBoosterPurchaseAvailable(state, tierIndex)
         // Purchases pause once the matching compute-ladder entity is already at its own
         // COMPUTE_ENTITY_CAP — distinct from simply not having enough banked yet, so the disabled
@@ -274,6 +277,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         // startDataLakeAutoConvert. The header's own cost control renders as an inert label rather
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
+        const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
 
         return (
           <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
@@ -290,7 +294,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   slot, priority-ordered" convention this row always used. Showing a lifetime
                   purchased count here as well would be redundant: the cost figure alone already says
                   everything a player needs at a glance. */}
-              {converting ? (
+              {resetAvailable ? (
+                <ActionButton
+                  aria-label={`reset the ${label} Storage Pool`}
+                  onClick={() => actions.resetStoragePool(tierIndex)}
+                  title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>↻ Reset Pool</ButtonContent>
+                </ActionButton>
+              ) : converting ? (
                 <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
                   {`🎯 ${nextCostSize}`}
                 </StatusText>
@@ -299,15 +313,21 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   {`🎯 ${nextCostSize}`}
                 </StatusText>
               ) : canBuy ? (
-                <ActionButton
-                  aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
-                  onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
-                  title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
-                  type="button"
-                  variant="success"
-                >
-                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
-                </ActionButton>
+                poolComplete ? (
+                  <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
+                    {`🎯 ${nextCostSize}`}
+                  </StatusText>
+                ) : (
+                  <ActionButton
+                    aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                    onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
+                    title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
+                    type="button"
+                    variant="success"
+                  >
+                    <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                  </ActionButton>
+                )
               ) : upgradeAvailable ? (
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
@@ -318,6 +338,10 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 >
                   <ButtonContent>⚡ Scale Out</ButtonContent>
                 </ActionButton>
+              ) : poolComplete ? (
+                <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
               ) : poolReady ? (
                 <ActionButton
                   aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}

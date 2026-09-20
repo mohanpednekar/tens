@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Added pool-local end-of-progression resets: a completed 9/9/9 Storage Pool at an unreachable
+  Booster capacity wall can restart its own disks for permanent Data Lake capacity, speed, and
+  bandwidth progression, followed by free sequential rebuilding and automatic Booster conversion.
+- Completed 9/9/9 pools now show the next Booster cost as a label and convert affordable Lake
+  contents automatically, without a conversion button.
+
 ### Changed
 - **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
   own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
