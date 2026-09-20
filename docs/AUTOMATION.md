@@ -110,6 +110,17 @@ feed's per-run token cost stays bounded rather than growing unboundedly with bac
 narrower, already-landed slice of what #81 originally scoped (which assumed a larger set of guard-step
 context feeds — Project summary, checklist status, Discussions ideas, etc. — that turned out not to
 exist yet; see #81's Dependencies for why that fuller chain is still blocked).
+
+That capping is also a **standing constraint on any future guard-step feed**, not just a description
+of today's set — the part of #81 that can land ahead of its still-blocked audit. Whenever a later
+issue adds a context feed (the Project summary #53, bug/security-alert lists #55, automation-retro
+list #57, checklist status #63, Discussions ideas #66, or anything else), it must arrive in the same
+shape: an explicit `--limit` on the underlying `gh` call, list items rendered as number + title +
+labels only (never full bodies), and a hard display cap with a "+N more, see the tracker directly"
+note — so the guard step's fixed per-run context cost stays bounded as tracking surfaces accumulate.
+The rule applies to both engines' guard steps alike; `devin-autonomous-maintenance.yml` already
+follows it.
+
 `blocked` covers two distinct situations, not just one: an environment/permission restriction of the
 unattended session itself (the original use case), and — per Phase A's comment-history check below —
 a task issue where a second consecutive run independently reached the same "infeasible as written"
