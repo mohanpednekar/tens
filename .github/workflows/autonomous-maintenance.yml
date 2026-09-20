@@ -47,7 +47,7 @@ jobs:
           # draws from the same claude-task backlog, so the 5-PR ceiling is shared and each
           # engine must see the other's open PRs to avoid duplicate/competing work.
           open_prs=$(gh pr list --state open --limit 100 --json headRefName,title \
-            --jq '[.[] | select(.headRefName | startswith("claude/auto-") or (.headRefName | startswith("devin/auto-")))]')
+            --jq '[.[] | select((.headRefName | startswith("claude/auto-")) or (.headRefName | startswith("devin/auto-")))]')
           count=$(jq 'length' <<<"$open_prs")
 
           summary=$(jq -r '.[] | "- \(.headRefName): \(.title)"' <<<"$open_prs")

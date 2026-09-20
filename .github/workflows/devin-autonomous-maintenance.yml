@@ -51,7 +51,7 @@ jobs:
           # gh default of 30 silently truncates (see incident referenced in
           # autonomous-maintenance.yml).
           open_prs=$(gh pr list --state open --limit 100 --json headRefName,title \
-            --jq '[.[] | select(.headRefName | startswith("devin/auto-") or (.headRefName | startswith("claude/auto-")))]')
+            --jq '[.[] | select((.headRefName | startswith("devin/auto-")) or (.headRefName | startswith("claude/auto-")))]')
           count=$(jq 'length' <<<"$open_prs")
           summary=$(jq -r '.[] | "- \(.headRefName): \(.title)"' <<<"$open_prs")
           {
