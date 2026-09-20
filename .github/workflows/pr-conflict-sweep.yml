@@ -64,17 +64,12 @@ jobs:
             case "$branch" in
               claude/*|devin/*)
                 # The comment doubles as the trigger for autonomous-pr-followup.
-                body="$marker
-This PR has merge conflicts with \`main\` after the latest merge. Merge \`main\`
-into \`$branch\` (no rebase — review context is anchored to existing SHAs),
-resolve the conflicts for real, re-run \`yarn test\`, and push to the same
-branch."
+                body=$(printf '%s\n%s' "$marker" \
+                  "This PR has merge conflicts with \`main\` after the latest merge. Merge \`main\` into \`$branch\` (no rebase — review context is anchored to existing SHAs), resolve the conflicts for real, re-run \`yarn test\`, and push to the same branch.")
                 ;;
               *)
-                body="$marker
-Heads-up @$author: this PR now has merge conflicts with \`main\` after the
-latest merge. Please merge \`main\` into \`$branch\` and resolve them — the PR
-cannot merge while conflicted."
+                body=$(printf '%s\n%s' "$marker" \
+                  "Heads-up @$author: this PR now has merge conflicts with \`main\` after the latest merge. Please merge \`main\` into \`$branch\` and resolve them — the PR cannot merge while conflicted.")
                 ;;
             esac
 
