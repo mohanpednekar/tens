@@ -52,7 +52,7 @@ jobs:
           # Only our own automation's branches are eligible for approval-free merge —
           # never a human contributor's branch, bot or not.
           case "$CHECK_SUITE_BRANCH" in
-            claude/auto-*|claude/self-heal-*|claude/heal-main-*|dependabot/*) ;;
+            claude/auto-*|claude/self-heal-*|claude/heal-main-*|devin/auto-*|dependabot/*) ;;
             *)
               echo "Not a bot-authored branch ($CHECK_SUITE_BRANCH), skipping."
               exit 0

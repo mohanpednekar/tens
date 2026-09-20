@@ -95,7 +95,7 @@ jobs:
             exit 0
           fi
 
-          if [[ "$branch" != claude/auto-* ]]; then
+          if [[ "$branch" != claude/auto-* && "$branch" != devin/auto-* ]]; then
             echo "Not an autonomous-maintenance PR (branch: $branch), skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
