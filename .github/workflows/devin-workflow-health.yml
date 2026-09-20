@@ -54,13 +54,16 @@ jobs:
           fi
 
           # 2. Latest completed run did not fail.
-          conclusion=$(gh run list --workflow=devin-autonomous-maintenance.yml \
-            --status=completed --limit=1 --json conclusion \
-            --jq '.[0].conclusion // "none"')
-          echo "latest completed run conclusion: $conclusion"
+          last_completed=$(gh run list --workflow=devin-autonomous-maintenance.yml \
+            --status=completed --limit=1 --json conclusion,databaseId \
+            --jq '.[0] | "\(.conclusion // "none") \(.databaseId // "")"')
+          conclusion=${last_completed%% *}
+          failed_run_id=${last_completed##* }
+          echo "latest completed run conclusion: $conclusion (id: ${failed_run_id:-none})"
+          echo "fail_marker=health-fail-run=${failed_run_id:-none}" >> "$GITHUB_OUTPUT"
           # Anything but success (failure/cancelled/timed_out/none) is unhealthy.
           if [ "$conclusion" != "success" ]; then
-            problems="${problems}- Latest completed run conclusion: \`$conclusion\`.\n"
+            problems="${problems}- Latest completed run (id $failed_run_id) conclusion: \`$conclusion\`.\n"
           fi
 
           # 3. Staleness: cron fires every 4h — alert if no run started in >26h.
@@ -90,6 +93,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROBLEMS: ${{ steps.check.outputs.problems }}
+          FAIL_MARKER: ${{ steps.check.outputs.fail_marker }}
         run: |
           set -euo pipefail
           gh label create automation-failure \
@@ -100,12 +104,21 @@ jobs:
             --json number,title \
             --jq '[.[] | select(.title | contains("devin-autonomous-maintenance"))] | .[0].number // empty')
 
-          body=$(printf 'The daily \`devin-workflow-health\` check found the Devin autonomous maintenance workflow unhealthy:\n\n%b\nCheck run: %s' \
-            "$PROBLEMS" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
+          body=$(printf '<!-- %s -->\nThe daily \`devin-workflow-health\` check found the Devin autonomous maintenance workflow unhealthy:\n\n%b\nCheck run: %s' \
+            "$FAIL_MARKER" "$PROBLEMS" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID")
 
           if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "$body"
-            echo "Commented on existing issue #$existing"
+            # Dedupe by the marker for the failing run: if the latest comment on
+            # the issue already reported this same state, a persistent failure
+            # doesn't add a new comment every midnight.
+            last_body=$(gh issue view "$existing" --json comments \
+              --jq '.comments[-1].body // ""')
+            if grep -q "$FAIL_MARKER" <<<"$last_body"; then
+              echo "Issue #$existing already reports this state ($FAIL_MARKER) — skipping comment."
+            else
+              gh issue comment "$existing" --body "$body"
+              echo "Commented on existing issue #$existing"
+            fi
           else
             gh issue create --label automation-failure \
               --title "devin-autonomous-maintenance workflow unhealthy" \

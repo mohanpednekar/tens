@@ -13,9 +13,10 @@
 #   `gh api graphql` is deliberately NOT granted to the unattended agent
 #   (an unrestricted mutation surface could merge PRs). This script is the
 #   narrow, whitelistable form.
-# - Only PRs whose head branch matches this repo's automation prefixes
-#   (claude/*, devin/*) may be touched — the agent can never resolve threads on
-#   a human's or external contributor's PR.
+# - Only PRs opened FROM THIS REPO (headRepositoryOwner == repo owner, so fork
+#   branches can't claim a claude/* name) on an automation prefix
+#   (claude/*, devin/*) AND authored by the repo owner or a [bot] account may be
+#   touched — a human's PR can never match all three.
 # - `resolve` takes explicit IDs the caller selected after replying to each one;
 #   it never bulk-resolves "all unresolved", so feedback the agent missed (or
 #   that arrived mid-run) stays open and keeps branch protection engaged.
@@ -32,8 +33,21 @@ full_repo="${GITHUB_REPOSITORY:-$(gh repo view --json nameWithOwner --jq .nameWi
 owner="${full_repo%%/*}"
 repo="${full_repo##*/}"
 
-# Guard: automation branches only.
+# Guard: same-repo automation branch authored by the owner or a bot.
 branch=$(gh pr view "$pr" --json headRefName --jq .headRefName)
+head_owner=$(gh pr view "$pr" --json headRepositoryOwner --jq .headRepositoryOwner.login)
+author=$(gh pr view "$pr" --json author --jq .author.login)
+if [ "$head_owner" != "$owner" ]; then
+  echo "error: PR #$pr head is from '$head_owner', not '$owner' (fork PR)" >&2
+  exit 1
+fi
+case "$author" in
+  "$owner" | *"[bot]"* | app/*) ;;
+  *)
+    echo "error: PR #$pr author '$author' is not the repo owner or a bot/app" >&2
+    exit 1
+    ;;
+esac
 case "$branch" in
   claude/*|devin/*) ;;
   *)
@@ -52,7 +66,7 @@ list_threads() {
           repository(owner: $owner, name: $repo) {
             pullRequest(number: $pr) {
               reviewThreads(first: 100, after: $after) {
-                nodes { id isResolved comments(first: 1) { nodes { body path line author { login } } } }
+                nodes { id isResolved comments(first: 20) { nodes { body path line author { login } } } }
                 pageInfo { hasNextPage endCursor }
               }
             }
@@ -64,7 +78,7 @@ list_threads() {
           repository(owner: $owner, name: $repo) {
             pullRequest(number: $pr) {
               reviewThreads(first: 100) {
-                nodes { id isResolved comments(first: 1) { nodes { body path line author { login } } } }
+                nodes { id isResolved comments(first: 20) { nodes { body path line author { login } } } }
                 pageInfo { hasNextPage endCursor }
               }
             }
@@ -73,7 +87,7 @@ list_threads() {
     fi
     jq -c '.data.repository.pullRequest.reviewThreads.nodes[] |
       {id, isResolved, path: .comments.nodes[0].path, line: .comments.nodes[0].line,
-       author: .comments.nodes[0].author.login, body: (.comments.nodes[0].body | .[0:200])}' <<<"$page"
+       comments: [.comments.nodes[] | {author: .author.login, body: (.body | .[0:300])}]}' <<<"$page"
     local next
     next=$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo | select(.hasNextPage) | .endCursor // empty' <<<"$page")
     [ -n "$next" ] || break
