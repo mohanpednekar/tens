@@ -40,6 +40,23 @@ jobs:
             --json number,headRefName,headRefOid,mergeable,author \
             > /tmp/open-prs.json
 
+          # GitHub reports UNKNOWN while it computes mergeability after the
+          # push. Retry those PRs in rounds under a shared deadline (3 × 15s
+          # total) so a wave of recomputing PRs can't starve the conflict
+          # checks of the ones behind them.
+          for round in 1 2 3; do
+            unknown=$(jq -r '[.[] | select(.mergeable == "UNKNOWN") | .number][]?' /tmp/open-prs.json)
+            [ -n "$unknown" ] || break
+            sleep 15
+            while read -r n; do
+              [ -n "$n" ] || continue
+              m=$(gh pr view "$n" --json mergeable --jq .mergeable)
+              jq --argjson n "$n" --arg m "$m" \
+                'map(if .number == $n then .mergeable = $m else . end)' \
+                /tmp/open-prs.json > /tmp/open-prs.new.json && mv /tmp/open-prs.new.json /tmp/open-prs.json
+            done <<<"$unknown"
+          done
+
           jq -c '.[]' /tmp/open-prs.json | while read -r pr; do
             num=$(jq -r .number <<<"$pr")
             branch=$(jq -r .headRefName <<<"$pr")
@@ -47,17 +64,6 @@ jobs:
             mergeable=$(jq -r .mergeable <<<"$pr")
             author=$(jq -r '.author.login' <<<"$pr")
             echo "PR #$num ($branch, @$author): mergeable=$mergeable"
-
-            # GitHub reports UNKNOWN while it computes mergeability after the
-            # push — re-query that PR a few times before giving up.
-            if [ "$mergeable" = "UNKNOWN" ]; then
-              for attempt in 1 2 3; do
-                sleep 15
-                mergeable=$(gh pr view "$num" --json mergeable --jq .mergeable)
-                [ "$mergeable" != "UNKNOWN" ] && break
-              done
-              echo "  after retry: mergeable=$mergeable"
-            fi
 
             [ "$mergeable" = "CONFLICTING" ] || continue
 

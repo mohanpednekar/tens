@@ -663,9 +663,12 @@ jobs:
           threads, bot reviews (Devin Review, Copilot, etc.), and CI checks. Address each
           actionable item, reply to and resolve every thread you handled (branch protection
           blocks merge on any unresolved thread), and iterate until the PR is mergeable — green
-          required checks, no unresolved actionable feedback. Reply to an inline review thread
+          required checks, no unresolved actionable feedback. For each review thread: reply to it
           via `gh api repos/{owner}/{repo}/pulls/<pr>/comments -f in_reply_to=<comment-id>`, then
-          resolve all unresolved threads with `scripts/resolve-pr-threads.sh <pr>`. Feedback
+          resolve that thread by ID with `scripts/resolve-pr-threads.sh resolve <pr> <thread-id>`
+          (list thread IDs with `scripts/resolve-pr-threads.sh list <pr>`); never bulk-resolve
+          threads you didn't just handle — finish with a final `list` sweep to confirm nothing
+          remains unresolved. Feedback
           arriving after the run ends is handled by autonomous-pr-followup.yml.
           TEMPLATE_EOF
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
