@@ -1,0 +1,113 @@
+name: PR conflict sweep
+
+# After every merge to main (push event), check every open PR's mergeable state.
+# A PR that has become CONFLICTING gets a comment asking for a real merge of
+# main into the branch. For `claude/*` and `devin/auto-*` branches that comment
+# also triggers autonomous-pr-followup.yml, which resolves the conflict
+# autonomously. A per-head-SHA marker prevents comment spam when a PR stays
+# conflicted across several merges.
+#
+# Uses GH_AUTOMATION_PAT rather than GITHUB_TOKEN: comments authored by the
+# default token cannot trigger the follow-up workflow (the same reason every
+# other automation workflow uses the PAT).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write # PR comments are issue comments under the hood
+
+concurrency:
+  group: pr-conflict-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check open PRs for merge conflicts
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+        run: |
+          set -euo pipefail
+
+          # --limit 1000: gh paginates past the API's 100-per-page cap, so every
+          # open PR is covered (a hard cap beyond that is a deliberate non-goal).
+          gh pr list --state open --limit 1000 \
+            --json number,headRefName,headRefOid,mergeable,author,files \
+            > /tmp/open-prs.json
+
+          # GitHub reports UNKNOWN while it computes mergeability after the
+          # push. Retry those PRs in rounds under a shared deadline (3 × 15s
+          # total) so a wave of recomputing PRs can't starve the conflict
+          # checks of the ones behind them.
+          for round in 1 2 3; do
+            unknown=$(jq -r '[.[] | select(.mergeable == "UNKNOWN") | .number][]?' /tmp/open-prs.json)
+            [ -n "$unknown" ] || break
+            sleep 15
+            while read -r n; do
+              [ -n "$n" ] || continue
+              m=$(gh pr view "$n" --json mergeable --jq .mergeable)
+              jq --argjson n "$n" --arg m "$m" \
+                'map(if .number == $n then .mergeable = $m else . end)' \
+                /tmp/open-prs.json > /tmp/open-prs.new.json && mv /tmp/open-prs.new.json /tmp/open-prs.json
+            done <<<"$unknown"
+          done
+
+          jq -c '.[]' /tmp/open-prs.json | while read -r pr; do
+            num=$(jq -r .number <<<"$pr")
+            branch=$(jq -r .headRefName <<<"$pr")
+            head=$(jq -r .headRefOid <<<"$pr")
+            mergeable=$(jq -r .mergeable <<<"$pr")
+            author=$(jq -r '.author.login' <<<"$pr")
+            echo "PR #$num ($branch, @$author): mergeable=$mergeable"
+
+            [ "$mergeable" = "CONFLICTING" ] || continue
+
+            marker="<!-- pr-conflict-sweep sha=$head -->"
+            # Skip if we already flagged this exact head — a new head push
+            # (e.g. a fix attempt) resets the dedupe.
+            already=$(gh pr view "$num" --json comments \
+              --jq --arg marker "$marker" \
+              '[.comments[].body | select(contains($marker))] | length')
+            if [ "$already" -gt 0 ]; then
+              echo "  already flagged at this head — skipping"
+              continue
+            fi
+
+            # gh pr list's nested `files` connection is capped at 100 entries and
+            # doesn't paginate — a workflow file beyond that cutoff would go
+            # unseen. Fetch the full path list via the paginated files endpoint.
+            touches_workflows=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$num/files" \
+              --paginate --jq '.[].filename' | grep -c '^\.github/workflows/' || true)
+
+            case "$branch" in
+              # Match exactly the patterns autonomous-pr-followup.yml accepts —
+              # other claude/* / devin/* branches (e.g. self-heal) get the
+              # human-notification comment instead of a trigger that no-ops.
+              claude/auto-*|devin/auto-*)
+              if [ "$touches_workflows" -gt 0 ]; then
+                # The follow-up agent is forbidden from editing
+                # .github/workflows/ — a conflict there is human work.
+                body=$(printf '%s\n%s' "$marker" \
+                  "Heads-up @$author: this PR now has merge conflicts with \`main\` and it touches \`.github/workflows/\`, which the autonomous follow-up agent is not permitted to edit — please merge \`main\` into \`$branch\` and resolve manually.")
+              else
+                # The comment doubles as the trigger for autonomous-pr-followup.
+                body=$(printf '%s\n%s' "$marker" \
+                  "This PR has merge conflicts with \`main\` after the latest merge. Merge \`main\` into \`$branch\` (no rebase — review context is anchored to existing SHAs), resolve the conflicts for real, re-run \`yarn test\`, and push to the same branch.")
+              fi
+                ;;
+              *)
+                body=$(printf '%s\n%s' "$marker" \
+                  "Heads-up @$author: this PR now has merge conflicts with \`main\` after the latest merge. Please merge \`main\` into \`$branch\` and resolve them — the PR cannot merge while conflicted.")
+                ;;
+            esac
+
+            gh pr comment "$num" --body "$body"
+            echo "  commented on #$num"
+          done
