@@ -92,19 +92,11 @@ jobs:
             echo "TASK_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Install Devin CLI
-        if: steps.guard.outputs.skip != 'true'
-        run: |
-          # Download then run with a closed stdin: the installer launches an
-          # interactive login prompt on a fresh machine and exits 1 ("Login
-          # canceled") on a TTY-less runner; < /dev/null skips that step. It must
-          # apply to the file execution, not the pipeline — `curl | bash <
-          # /dev/null` would make bash read /dev/null instead of the script.
-          curl -fsSL https://cli.devin.ai/install.sh -o "$RUNNER_TEMP/install-devin.sh" \
-            && bash "$RUNNER_TEMP/install-devin.sh" < /dev/null
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
       - name: Write Devin CLI credentials
+        # Must run BEFORE the install step: install.sh ends by running
+        # `devin setup`, which launches an interactive login prompt on a fresh
+        # machine and exits 1 ("Login canceled") on a TTY-less runner — but it
+        # skips the prompt entirely when credentials.toml already exists.
         if: steps.guard.outputs.skip != 'true'
         env:
           DEVIN_CLI_CREDENTIALS: ${{ secrets.DEVIN_CLI_CREDENTIALS }}
@@ -116,6 +108,13 @@ jobs:
           mkdir -p "$HOME/.local/share/devin"
           printf '%s' "$DEVIN_CLI_CREDENTIALS" > "$HOME/.local/share/devin/credentials.toml"
           chmod 600 "$HOME/.local/share/devin/credentials.toml"
+
+      - name: Install Devin CLI
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          curl -fsSL https://cli.devin.ai/install.sh -o "$RUNNER_TEMP/install-devin.sh" \
+            && bash "$RUNNER_TEMP/install-devin.sh" < /dev/null
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           devin auth status
 
       - name: Enable Corepack
