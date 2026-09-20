@@ -111,7 +111,7 @@ set_milestone_if_missing() {
 
 # --- Shipped infrastructure / navigation (close) ---
 
-close_if_open 339 "**Shipped.** \`cursor-autonomous-maintenance.yml\` runs five IST wall-clock slots (four development + dedicated **1:30am IST** housekeeping/planning) and post-merge housekeeping on every push to \`main\`. Documented in \`CLAUDE.md\` / \`docs/AUTOMATION.md\`."
+close_if_open 339 "**Closed without shipping.** \`cursor-autonomous-maintenance.yml\` was removed in #652 — the Cursor engine was never enabled (\`CURSOR_API_KEY\` was never provisioned), so the IST-slot schedule it tracks no longer exists. See `docs/DESIGN_HISTORY.md`."
 
 close_if_open 343 "**Shipped.** \`pr-auto-merge.yml\` uses \`gh pr merge --auto --merge\` (not \`--squash\`) on all paths, aligned with the Main ruleset's allowed merge methods. Documented in \`docs/AUTOMATION.md\`."
 
