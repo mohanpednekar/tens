@@ -288,7 +288,7 @@ always outranks Phase B (a maintenance menu: test coverage, dependency/security 
 medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
 workflow self-improvement, gap analysis).
 `devin-autonomous-maintenance.yml` is the Devin-CLI counterpart: every 4 hours (UTC :17) it runs
-`devin -p --model swe --permission-mode bypass` to pick the top eligible `claude-task` issue and
+`devin -p --prompt-file <file> --model swe --permission-mode dangerous --respect-workspace-trust false` to pick the top eligible `claude-task` issue and
 open a `devin/auto-*` PR; git/`gh` authenticate via `GH_AUTOMATION_PAT` so PRs trigger CI, and the
 agent authenticates via a `DEVIN_CLI_CREDENTIALS` secret containing a `credentials.toml` from
 `devin auth login`. Its 5-open-PR ceiling counts `devin/auto-*` and `claude/auto-*` together.

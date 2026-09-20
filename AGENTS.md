@@ -249,7 +249,7 @@ The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml`
 `claude/*` branches, twice daily at 9:00am/9:00pm IST. `automation-self-heal.yml` watches
 orchestration-workflow failures and opens draft `claude/self-heal-*` fixes or `automation-failure`
 issues (see `docs/AUTOMATION.md`). A parallel **Devin CLI** engine
-(`devin-autonomous-maintenance.yml`, `devin -p --model swe --permission-mode bypass`, every 4h)
+(`devin-autonomous-maintenance.yml`, `devin -p --prompt-file <file> --model swe --permission-mode dangerous --respect-workspace-trust false`, every 4h)
 consumes the same `claude-task` backlog on `devin/auto-*` branches; its git/`gh` auth is
 `GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret, and both engines share one 5-open-PR
 ceiling that counts `claude/auto-*` and `devin/auto-*` together. `devin/auto-*` PRs get the same
