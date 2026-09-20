@@ -95,10 +95,13 @@ jobs:
       - name: Install Devin CLI
         if: steps.guard.outputs.skip != 'true'
         run: |
-          # < /dev/null: the installer launches an interactive login prompt on a
-          # fresh machine and exits 1 ("Login canceled") when stdin is a TTY-less
-          # runner; a closed stdin makes it skip that step instead.
-          curl -fsSL https://cli.devin.ai/install.sh | bash < /dev/null
+          # Download then run with a closed stdin: the installer launches an
+          # interactive login prompt on a fresh machine and exits 1 ("Login
+          # canceled") on a TTY-less runner; < /dev/null skips that step. It must
+          # apply to the file execution, not the pipeline — `curl | bash <
+          # /dev/null` would make bash read /dev/null instead of the script.
+          curl -fsSL https://cli.devin.ai/install.sh -o "$RUNNER_TEMP/install-devin.sh" \
+            && bash "$RUNNER_TEMP/install-devin.sh" < /dev/null
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Write Devin CLI credentials
