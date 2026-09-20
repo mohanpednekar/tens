@@ -991,6 +991,42 @@ export const latchComputeFlopsPageUnlocked = state => {
   }
 }
 
+export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => {
+  const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
+  if (!flopTier) return { affordable: 0, totalCost: 0 }
+  const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
+  let spendable = clampNonNegative(state.prestige?.points ?? 0)
+
+  let quantity = 0
+  let totalCost = 0
+
+  while (quantity < maxQuantity) {
+    const cost = getComputeFlopsTierCost(flopTier, owned + quantity)
+    if (spendable < cost) break
+    spendable -= cost
+    totalCost += cost
+    quantity++
+  }
+
+  return { affordable: quantity, totalCost }
+}
+
+export const buyComputeFlopsTierQuantity = (flopId, quantity, totalCost) => state => {
+  if (quantity <= 0) return state
+  const latched = latchComputeFlopsPageUnlocked(state)
+  const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
+  return {
+    ...latched,
+    prestige: { ...latched.prestige, points: (latched.prestige?.points ?? 0) - totalCost },
+    computeFlops: {
+      ...latched.computeFlops,
+      owned: {
+        ...latched.computeFlops.owned,
+        [flopId]: owned + quantity,
+      },
+    },
+  }
+}
 export const getComputeFlopsTierCost = (flopTier, ownedCount = 0) => {
   const level = clampNonNegative(ownedCount) + 1
   return getTierCost({ baseCost: flopTier.baseCostPP }, level)
@@ -1149,12 +1185,16 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
     if ((result.computeFlopsAutobuyers?.[flopTier.id] ?? null) === null) return
     if (!(result.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true)) return
     let budget = (result.computeFlopsAutobuyerAttemptBudgets?.[flopTier.id] ?? 0) + elapsedSeconds
-    while (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
-      if (!canBuyComputeFlopsTier(result, flopTier.id)) break
-      const next = buyComputeFlopsTier(flopTier.id)(result)
-      if (next === result) break
-      result = next
-      budget -= 1
+    // We tolerate TICK_ACCUMULATION_EPSILON for reaching 1, so the max affordable budget
+    // is Math.floor(budget + TICK_ACCUMULATION_EPSILON)
+    const maxAttempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
+
+    if (maxAttempts >= 1) {
+      const { affordable, totalCost } = getComputeFlopsAffordableAndCost(result, flopTier.id, maxAttempts)
+      if (affordable > 0) {
+        result = buyComputeFlopsTierQuantity(flopTier.id, affordable, totalCost)(result)
+        budget -= affordable
+      }
     }
     result = {
       ...result,
