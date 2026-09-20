@@ -215,8 +215,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
         run: |
-          # --model swe resolves to the latest SWE model. bypass permission mode
-          # is required for a fully unattended run (smart still prompts for
-          # installs and mutating git commands).
-          devin -p --model swe --permission-mode bypass \
-            "$(cat "$RUNNER_TEMP/devin-prompt-final.txt")"
+          # --model swe resolves to the latest SWE model. "dangerous" permission
+          # mode is required for a fully unattended run (smart still prompts for
+          # installs and mutating git commands; there is no "bypass" mode).
+          # --prompt-file avoids the prompt being parsed as a PATH arg — -p's
+          # inline prompt must immediately follow the flag. Print mode also
+          # refuses to run in an untrusted directory, hence
+          # --respect-workspace-trust false.
+          devin -p --prompt-file "$RUNNER_TEMP/devin-prompt-final.txt" \
+            --model swe --permission-mode dangerous \
+            --respect-workspace-trust false
