@@ -255,6 +255,9 @@ consumes the same `claude-task` backlog on `devin/auto-*` branches; its git/`gh`
 ceiling that counts `claude/auto-*` and `devin/auto-*` together. `devin/auto-*` PRs get the same
 follow-up and low-risk auto-merge handling as `claude/auto-*`.
 
+Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
++ display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
+
 ## Reliability: cron dormancy
 
 GitHub Actions disables a workflow's `schedule` (cron) trigger after 60 days with no repository

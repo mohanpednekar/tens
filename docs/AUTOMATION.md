@@ -114,12 +114,15 @@ exist yet; see #81's Dependencies for why that fuller chain is still blocked).
 That capping is also a **standing constraint on any future guard-step feed**, not just a description
 of today's set — the part of #81 that can land ahead of its still-blocked audit. Whenever a later
 issue adds a context feed (the Project summary #53, bug/security-alert lists #55, automation-retro
-list #57, checklist status #63, Discussions ideas #66, or anything else), it must arrive in the same
-shape: an explicit `--limit` on the underlying `gh` call, list items rendered as number + title +
-labels only (never full bodies), and a hard display cap with a "+N more, see the tracker directly"
-note — so the guard step's fixed per-run context cost stays bounded as tracking surfaces accumulate.
-The rule applies to both engines' guard steps alike; `devin-autonomous-maintenance.yml` already
-follows it.
+list #57, checklist status #63, Discussions ideas #66, or anything else), it must arrive bounded: an
+explicit `--limit` on the underlying `gh` call and a hard display cap with a "+N more, see the
+tracker directly" note. *List-type* feeds render items as number + title + labels only (never full
+bodies); status feeds bounded by design instead (Project field values, checklist state) keep to a
+compact fixed-shape summary — either way the guard step's fixed per-run context cost stays bounded as
+tracking surfaces accumulate. The rule applies to both engines' guard steps;
+`devin-autonomous-maintenance.yml` `--limit`s and summarises its feeds but its backlog feed still
+lacks the "+N more" overflow note — a known gap for the future audit to close, not a compliant
+example.
 
 `blocked` covers two distinct situations, not just one: an environment/permission restriction of the
 unattended session itself (the original use case), and — per Phase A's comment-history check below —
