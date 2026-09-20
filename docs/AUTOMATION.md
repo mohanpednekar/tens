@@ -257,6 +257,16 @@ genuinely independent task. A hard ceiling of 5 concurrently-open autonomous PRs
 `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write
 tools, even during the self-improvement task — only `autonomous-maintenance.yml` may edit itself.
 
+### PR conflict sweep (`pr-conflict-sweep.yml`)
+
+Deterministic (no agent). On every push to `main` — i.e. every merge — it lists all open PRs and
+checks each one's `mergeable` state. A PR that is `CONFLICTING` gets a comment with a per-head-SHA
+dedupe marker (`<!-- pr-conflict-sweep sha=... -->`, so a PR left conflicted across several merges
+isn't re-spammed, but a new head resets it). For `claude/*`/`devin/*` branches the comment doubles
+as the trigger for `autonomous-pr-followup.yml`, which performs the actual merge-and-resolve;
+human-authored PRs just get an author notification. Runs on `GH_AUTOMATION_PAT` because comments
+from the default `GITHUB_TOKEN` can't trigger other workflows.
+
 ### Devin autonomous maintenance (`devin-autonomous-maintenance.yml`)
 
 The Devin-CLI counterpart to `autonomous-maintenance.yml`, running every 4 hours at :17 UTC.

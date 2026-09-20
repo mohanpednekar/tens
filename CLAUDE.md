@@ -295,7 +295,9 @@ agent authenticates via a `DEVIN_CLI_CREDENTIALS` secret containing a `credentia
 Its prompt places no file-scope restriction — it may edit anything including
 `.github/workflows/` (its own file included) and deploy/release config; every change still
 lands via PR + human review (`pr-auto-merge.yml` keeps `.github/workflows/**` PRs out of
-green-checks auto-merge). `devin-workflow-health.yml` runs daily at midnight UTC to verify the
+green-checks auto-merge). `pr-conflict-sweep.yml` runs on every push to `main` and flags every
+open PR that has become conflicted — on `claude/*`/`devin/*` branches the comment also triggers
+the follow-up agent to merge-and-resolve. `devin-workflow-health.yml` runs daily at midnight UTC to verify the
 workflow file parses, a run started within the last 26h, and the latest run didn't fail —
 filing an `automation-failure` issue otherwise. Its prompt also applies the Pull-requests
 convention above to its own PRs: check review feedback (human + bot, incl. Devin Review) and CI

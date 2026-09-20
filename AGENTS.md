@@ -258,8 +258,9 @@ follow-up and low-risk auto-merge handling as `claude/auto-*`. The Devin prompt 
 file-scope restriction — it may edit anything including `.github/workflows/` (its own file
 included); changes still land via PR + human review. Its prompt requires the same
 check-feedback → address → resolve → iterate-until-mergeable loop on its own PRs before the run
-ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `devin-workflow-health.yml`
-runs daily at
+ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on
+every push to `main` and comments on any open PR that became conflicted (the comment triggers the
+follow-up agent on automation branches). `devin-workflow-health.yml` runs daily at
 midnight UTC, filing an `automation-failure` issue when the workflow file stops parsing, no run
 has started in >26h, or the latest run didn't succeed.
 
