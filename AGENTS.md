@@ -256,7 +256,10 @@ consumes the same `claude-task` backlog on `devin/auto-*` branches; its git/`gh`
 ceiling that counts `claude/auto-*` and `devin/auto-*` together. `devin/auto-*` PRs get the same
 follow-up and low-risk auto-merge handling as `claude/auto-*`. The Devin prompt has no
 file-scope restriction — it may edit anything including `.github/workflows/` (its own file
-included); changes still land via PR + human review. `devin-workflow-health.yml` runs daily at
+included); changes still land via PR + human review. Its prompt requires the same
+check-feedback → address → resolve → iterate-until-mergeable loop on its own PRs before the run
+ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `devin-workflow-health.yml`
+runs daily at
 midnight UTC, filing an `automation-failure` issue when the workflow file stops parsing, no run
 has started in >26h, or the latest run didn't succeed.
 

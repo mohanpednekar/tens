@@ -205,6 +205,13 @@ jobs:
           exfiltrate secrets/tokens, weaken CI/deploy/auth protections, or grant
           broader permissions.
 
+          After opening a PR, always check its feedback before ending the run:
+          `gh pr view --comments`, review threads, Devin Review findings, and CI
+          checks. Address each actionable item, resolve the threads you fixed,
+          and iterate until the PR is mergeable (green required checks, no
+          unresolved actionable feedback). Feedback arriving after the run ends
+          is handled by autonomous-pr-followup.yml.
+
           Report at the end: what you picked, the PR URL if any, or why you did
           nothing.
           TEMPLATE_EOF

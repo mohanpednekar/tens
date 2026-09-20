@@ -658,6 +658,13 @@ jobs:
           (marks ready if needed). That enables GitHub auto-merge only — never force-merge, never
           push to main, never submit a GitHub approval on your own PR. See CLAUDE.md "After the
           final commit" and docs/AUTOMATION.md Auto-merge Path 3.
+
+          Before ending the run, always check the PR's feedback: `gh pr view --comments`, review
+          threads, bot reviews (Devin Review, Copilot, etc.), and CI checks. Address each
+          actionable item, reply to and resolve every thread you handled (branch protection
+          blocks merge on any unresolved thread), and iterate until the PR is mergeable — green
+          required checks, no unresolved actionable feedback. Feedback arriving after the run
+          ends is handled by autonomous-pr-followup.yml.
           TEMPLATE_EOF
           prompt_text=$(cat "$RUNNER_TEMP/prompt-template.txt")
           prompt_text=${prompt_text//'$REPO'/$REPO}

@@ -297,7 +297,10 @@ Its prompt places no file-scope restriction — it may edit anything including
 lands via PR + human review (`pr-auto-merge.yml` keeps `.github/workflows/**` PRs out of
 green-checks auto-merge). `devin-workflow-health.yml` runs daily at midnight UTC to verify the
 workflow file parses, a run started within the last 26h, and the latest run didn't fail —
-filing an `automation-failure` issue otherwise.
+filing an `automation-failure` issue otherwise. Its prompt also applies the Pull-requests
+convention above to its own PRs: check review feedback (human + bot, incl. Devin Review) and CI
+before ending the run, address and resolve every thread, and iterate until the PR is mergeable —
+post-run feedback stays `autonomous-pr-followup.yml`'s job.
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` and
 `devin/auto-*` PRs.
 `dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
