@@ -631,6 +631,12 @@ scripts/
                                `enable-auto-merge-if-eligible.sh` and `pr-auto-merge.yml`
   enable-auto-merge-if-eligible.sh ← marks a PR ready + enables GitHub auto-merge once it's
                                adversarial-APPROVEd and low-risk (see "Pull requests" above)
+  resolve-pr-threads.sh      ← lists/resolves PR review threads by ID for automation-owned PRs
+                               (`claude/*`/`devin/*`, repo-owner/bot-authored only); `list` is
+                               read-only, `resolve` only accepts explicit caller-selected IDs, never
+                               a bulk "resolve all" — used by `autonomous-maintenance.yml` and
+                               `autonomous-pr-followup.yml`'s review-thread-resolution loop (see
+                               "Pull requests" above)
   backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent GitHub issue-hygiene sweeps
                                (close shipped/stray issues, unblock/label ready work) run on every
                                `autonomous-maintenance.yml` invocation — see docs/AUTOMATION.md
