@@ -105,7 +105,8 @@ not an error, on any repo with more open items than that. This repo hit it for r
 `claude-task` issues, the guard step's unlimited `gh issue list` call silently dropped every issue
 below the cutoff, including several `priority:high` ones (#45-49) that should have outranked what
 Phase A was actually shown (see #45/#81's comment history). Every `gh issue list`/`gh pr list` call in
-the guard step now passes an explicit `--limit` (200 for the task backlog, 100 elsewhere) well above
+the guard step now passes an explicit `--limit` (200 for the task backlog, 500 for the bug feed,
+100 elsewhere) well above
 this solo project's realistic backlog size, so the CLI itself never silently drops an item. The task
 backlog is additionally capped for *display* at 30 entries — sorted `priority:high` first, then
 normal, then `priority:low`, each tier by ascending issue number (mirroring Phase A's own walk order)
