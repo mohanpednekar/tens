@@ -208,6 +208,83 @@ jobs:
             echo "GAP_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Open bug-labeled issues (number + title + labels only — the #81 standing
+          # rule for list-type feeds), surfaced to every run for two purposes: the
+          # cross-phase bug-filing rule below dedups against it before creating a
+          # new bug issue, and Phase A can weigh a bug's described Impact within a
+          # priority tier. BUG_DISPLAY_CAP bounds the feed's per-run token cost the
+          # same way TASK_DISPLAY_CAP bounds the backlog feed.
+          BUG_DISPLAY_CAP=20
+          open_bug_json=$(gh issue list --label bug --state open --limit 100 \
+            --json number,title,labels)
+          open_bug_count=$(jq 'length' <<<"$open_bug_json")
+          open_bug_issues=$(jq -r --argjson cap "$BUG_DISPLAY_CAP" '
+            sort_by(.number)[0:$cap][]
+            | "- #\(.number): \(.title) [\([.labels[].name] | join(", "))]"
+          ' <<<"$open_bug_json")
+          if [ "$open_bug_count" -gt "$BUG_DISPLAY_CAP" ]; then
+            open_bug_issues="$open_bug_issues
+            - (+$((open_bug_count - BUG_DISPLAY_CAP)) more open bug issue(s) not shown — see \`gh issue list --label bug --state open\` for the rest)"
+          fi
+          {
+            echo "open_bug_issues<<BUG_EOF"
+            echo "$open_bug_issues"
+            echo "BUG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          # Open code-scanning (CodeQL) and secret-scanning alerts → the alert-to-bug
+          # wiring described in the prompt below (#55). Fetched via GH_AUTOMATION_PAT
+          # rather than this step's default GITHUB_TOKEN: secret-scanning alerts have
+          # no GITHUB_TOKEN permission scope at all, so both feeds go through the PAT
+          # and behave identically. Requires the PAT scopes tracked on #62 ("Code
+          # scanning alerts: read" already granted; "Secret scanning alerts: read"
+          # still pending) — each call fails soft to an empty list on any API error,
+          # so a missing scope just means the run sees no alerts, never a red job.
+          # The secret-scanning render deliberately includes only number + secret
+          # type + link, never the .secret field, so a detected value can never land
+          # in the run's prompt context. per_page=100 is the explicit bound (#81);
+          # ALERT_DISPLAY_CAP caps what's actually shown, same convention as above.
+          ALERT_DISPLAY_CAP=20
+          if ! code_scanning_json=$(GH_TOKEN="${{ secrets.GH_AUTOMATION_PAT }}" \
+            gh api "repos/${{ github.repository }}/code-scanning/alerts?state=open&per_page=100" \
+            2>/dev/null); then
+            code_scanning_json="[]"
+          fi
+          code_scanning_count=$(jq 'length' <<<"$code_scanning_json")
+          code_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
+            sort_by(.number)[0:$cap][]
+            | "- #\(.number) [\(.rule.security_severity_level // .rule.severity // "unknown")] \(.rule.id): \((.rule.description // .rule.name // "(no description)") | gsub("\n"; " ")) (\(.html_url))"
+          ' <<<"$code_scanning_json")
+          if [ "$code_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
+            code_scanning_alerts="$code_scanning_alerts
+            - (+$((code_scanning_count - ALERT_DISPLAY_CAP)) more open code-scanning alert(s) not shown — see the repo's Security tab)"
+          fi
+          {
+            echo "code_scanning_alerts<<CSALERT_EOF"
+            echo "$code_scanning_alerts"
+            echo "CSALERT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if ! secret_scanning_json=$(GH_TOKEN="${{ secrets.GH_AUTOMATION_PAT }}" \
+            gh api "repos/${{ github.repository }}/secret-scanning/alerts?state=open&per_page=100" \
+            2>/dev/null); then
+            secret_scanning_json="[]"
+          fi
+          secret_scanning_count=$(jq 'length' <<<"$secret_scanning_json")
+          secret_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
+            sort_by(.number)[0:$cap][]
+            | "- #\(.number) [\(.secret_type_display_name // .secret_type)] (\(.html_url))"
+          ' <<<"$secret_scanning_json")
+          if [ "$secret_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
+            secret_scanning_alerts="$secret_scanning_alerts
+            - (+$((secret_scanning_count - ALERT_DISPLAY_CAP)) more open secret-scanning alert(s) not shown — see the repo's Security tab)"
+          fi
+          {
+            echo "secret_scanning_alerts<<SSALERT_EOF"
+            echo "$secret_scanning_alerts"
+            echo "SSALERT_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Surface a broken deploy.yml run
         # Deterministic (no Claude invocation) and unconditional — runs even when the guard step
         # sets skip=true (5-PR ceiling) or the "Run autonomous maintenance task" step below is
@@ -287,11 +364,14 @@ jobs:
           OPEN_PRS: ${{ steps.guard.outputs.open_prs }}
           OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
           OPEN_GAP_ISSUES: ${{ steps.guard.outputs.open_gap_issues }}
+          OPEN_BUG_ISSUES: ${{ steps.guard.outputs.open_bug_issues }}
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
           MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
           FAILING_PRS: ${{ steps.guard.outputs.failing_prs }}
           DEPENDABOT_ALERTS: ${{ steps.guard.outputs.dependabot_alerts }}
           DEPENDABOT_PRS: ${{ steps.guard.outputs.dependabot_prs }}
+          CODE_SCANNING_ALERTS: ${{ steps.guard.outputs.code_scanning_alerts }}
+          SECRET_SCANNING_ALERTS: ${{ steps.guard.outputs.secret_scanning_alerts }}
         run: |
           # Assembled here, rather than inline in the claude-code-action step's with.prompt
           # field below, to work around a GitHub Actions parser limit: a YAML scalar mixing
@@ -314,9 +394,12 @@ jobs:
           : "${OPEN_PRS:=(none)}"
           : "${OPEN_TASKS:=(none)}"
           : "${OPEN_GAP_ISSUES:=(none)}"
+          : "${OPEN_BUG_ISSUES:=(none)}"
           : "${FAILING_PRS:=(none)}"
           : "${DEPENDABOT_ALERTS:=(none)}"
           : "${DEPENDABOT_PRS:=(none)}"
+          : "${CODE_SCANNING_ALERTS:=(none)}"
+          : "${SECRET_SCANNING_ALERTS:=(none)}"
           if [ "$MAIN_CI_BROKEN" = "true" ]; then
             MAIN_CI_STATUS_LINE="FAILED: $MAIN_CI_RUN_URL"
           else
@@ -351,6 +434,11 @@ jobs:
           analysis task (see Phase B item 6):
           $OPEN_GAP_ISSUES
 
+          Currently-open bug issues (number: title [labels]) — dedup targets for the
+          bug-filing rule below, and Phase A may weigh their described Impact within a
+          priority tier:
+          $OPEN_BUG_ISSUES
+
           Main branch CI status: the latest completed run of ci.yml on main
           $MAIN_CI_STATUS_LINE
 
@@ -367,6 +455,41 @@ jobs:
           already in flight there means Phase 0(b) above (or pr-auto-merge.yml, once its
           checks pass) already has it covered:
           $DEPENDABOT_PRS
+
+          Currently-open code-scanning (CodeQL) alerts:
+          $CODE_SCANNING_ALERTS
+
+          Currently-open secret-scanning alerts (secret type + link only — the feed
+          deliberately never includes a detected secret value):
+          $SECRET_SCANNING_ALERTS
+
+          Filing bugs — applies to every phase, alongside your real task. If you notice a
+          genuine bug that is unrelated to (or beyond the scope of) the work you're doing,
+          file a `claude-task` + `bug` issue for it instead of fixing it in the same run —
+          a bug already directly in-scope for your current task is just normal work, not a
+          filing. Ensure the label exists first (idempotent):
+          `gh label create bug --color d93f0b --description "Defect found by an autonomous run" --force`.
+          The issue body must carry the usual claude-task template sections (Goal / Context /
+          Spec / Files / Out of scope / Verification / Explicit authorizations /
+          Dependencies) plus an explicit **Impact** line — one sentence on who/what is
+          affected and how badly — because Phase A weighs it when ordering same-priority
+          candidates. Dedup first: check the open bug list above, and search bodies with
+          `gh issue list --label bug --state open --search "in:body <keyword>"`, so you
+          never file a duplicate. This filing is cheap housekeeping, never your unit of
+          work for the run.
+
+          Alert-to-bug wiring (#55). For each open code-scanning or secret-scanning alert
+          listed above that is NOT already tracked by an open bug issue — search open
+          bug-issue bodies for the alert's URL or alert/rule ID first — file one
+          `claude-task` + `bug` issue linking the alert (the body links to it rather than
+          restating it) and set its **Impact** line from the alert's severity:
+          `critical`/`high` → say so explicitly and consider `priority:high`; lower
+          severities stay default priority. For a secret-scanning alert, NEVER include the
+          detected secret's value — the alert link plus which file/commit it was found in
+          only — and for a `critical` finding the issue must state that rotating/revoking
+          the credential is urgent manual maintainer action: the issue tracks it, it does
+          not remediate it. Dependabot security alerts are NOT part of this — Phase 0(c)
+          and Phase B item 2 already own those.
 
           This is a side project — time is not a constraint (one task per scheduled run is fine), but
           your self-estimated usage-window budget per run is (see above). Before you start
@@ -486,6 +609,12 @@ jobs:
             candidate left (everything else is blocked/covered/exhausted). Idempotently ensure
             the label exists before relying on it: `gh label create priority:low --color c5def5
             --description "Deferred until the rest of the backlog clears" --force`.
+            Within the same nominal priority tier you may weigh a `bug`-labeled issue's
+            described **Impact** to pick a more-impactful bug ahead of a lower-impact
+            issue filed earlier — `priority:high` still jumps the queue outright; this
+            only refines ordering *within* a tier. When you deviate from strict
+            lowest-number ordering this way, say so explicitly in the PR body or an
+            issue comment so the reasoning stays visible, never silent.
           - For each candidate in turn: first check its own comment history for a prior
             automated investigation you'd otherwise just repeat: `gh issue view <number> --json
             comments --jq '.comments[-3:] | .[] | "\(.author.login) @ \(.createdAt):\n\(.body)"'`.
@@ -674,9 +803,12 @@ jobs:
           prompt_text=${prompt_text//'$OPEN_PRS'/$OPEN_PRS}
           prompt_text=${prompt_text//'$OPEN_TASKS'/$OPEN_TASKS}
           prompt_text=${prompt_text//'$OPEN_GAP_ISSUES'/$OPEN_GAP_ISSUES}
+          prompt_text=${prompt_text//'$OPEN_BUG_ISSUES'/$OPEN_BUG_ISSUES}
           prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
           prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}
           prompt_text=${prompt_text//'$DEPENDABOT_PRS'/$DEPENDABOT_PRS}
+          prompt_text=${prompt_text//'$CODE_SCANNING_ALERTS'/$CODE_SCANNING_ALERTS}
+          prompt_text=${prompt_text//'$SECRET_SCANNING_ALERTS'/$SECRET_SCANNING_ALERTS}
           prompt_text=${prompt_text//'$MAIN_CI_STATUS_LINE'/$MAIN_CI_STATUS_LINE}
           {
             echo "prompt<<PROMPT_COMPOSE_EOF"
@@ -713,7 +845,7 @@ jobs:
           # the only way to see WHY an unattended run ended without producing anything.
           show_full_output: true
           claude_args: |
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr create:*),Bash(gh pr list:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr ready:*),Bash(gh run list:*),Bash(gh run view:*),Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh issue edit:*),Bash(gh label create:*),Bash(gh api repos/*/milestones:*),Bash(gh api repos/*/dependabot/alerts*:*),Bash(gh api repos/*/code-scanning/alerts*:*),Bash(gh api repos/*/secret-scanning/alerts*:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/enable-auto-merge-if-eligible.sh:*),Bash(scripts/pr-low-risk-eligible.sh:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/enable-auto-merge-if-eligible.sh:*),Bash(./scripts/pr-low-risk-eligible.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
           # Deny list is generated by scripts/claude-deny-settings.sh (shared base:
           # ci.yml, deploy.yml, automation-self-heal.yml) — single source of truth.
           settings: ${{ steps.deny.outputs.settings }}
