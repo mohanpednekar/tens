@@ -141,8 +141,11 @@ extends mechanically to the guard step's code-scanning (CodeQL) and secret-scann
 each open alert not already tracked by an open `bug` issue gets one `claude-task` + `bug` issue
 linking it, Impact set from the alert's severity (`critical`/`high` noted explicitly and a
 `priority:high` candidate; lower severities default priority). A secret-scanning filing never
-includes the detected value — alert link + file/commit only — and a `critical` one states that
-rotating/revoking the credential is urgent manual maintainer action. Dependabot security alerts
+lets the detected value reach the issue *or* the run's own transcript — file/commit detail comes
+from the `/locations` endpoint (paths + commit SHAs, no secret field), never the alert detail
+endpoint, and the guard-step feed itself also calls the list API with `hide_secret=true` — and a
+`critical` filing states that rotating/revoking the credential is urgent manual maintainer
+action. Dependabot security alerts
 are deliberately NOT in this pipeline: Phase 0(c)/Phase B item 2 already own those (direct fix or
 a `claude-task` + `priority:high` + `security` issue) — filing a second `bug` issue for them would
 duplicate that coverage. All of this filing is cheap housekeeping alongside the run's real task,

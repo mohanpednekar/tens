@@ -215,7 +215,8 @@ jobs:
           # priority tier. BUG_DISPLAY_CAP bounds the feed's per-run token cost the
           # same way TASK_DISPLAY_CAP bounds the backlog feed.
           BUG_DISPLAY_CAP=20
-          open_bug_json=$(gh issue list --label bug --state open --limit 100 \
+          BUG_FETCH_LIMIT=500
+          open_bug_json=$(gh issue list --label bug --state open --limit "$BUG_FETCH_LIMIT" \
             --json number,title,labels)
           open_bug_count=$(jq 'length' <<<"$open_bug_json")
           open_bug_issues=$(jq -r --argjson cap "$BUG_DISPLAY_CAP" '
@@ -223,8 +224,12 @@ jobs:
             | "- #\(.number): \(.title) [\([.labels[].name] | join(", "))]"
           ' <<<"$open_bug_json")
           if [ "$open_bug_count" -gt "$BUG_DISPLAY_CAP" ]; then
+            bug_more="+$((open_bug_count - BUG_DISPLAY_CAP))"
+            # A fetch that exactly hits BUG_FETCH_LIMIT may itself be truncated —
+            # the note then reports a floor ("+N+"), not a false exact count.
+            [ "$open_bug_count" -ge "$BUG_FETCH_LIMIT" ] && bug_more="${bug_more}+"
             open_bug_issues="$open_bug_issues
-            - (+$((open_bug_count - BUG_DISPLAY_CAP)) more open bug issue(s) not shown — see \`gh issue list --label bug --state open\` for the rest)"
+            - (${bug_more} more open bug issue(s) not shown — see \`gh issue list --label bug --state open\` for the rest)"
           fi
           {
             echo "open_bug_issues<<BUG_EOF"
@@ -242,17 +247,20 @@ jobs:
           # so a missing scope just means the run sees no alerts, never a red job.
           # The secret-scanning render deliberately includes only number + secret
           # type + link, never the .secret field, so a detected value can never land
-          # in the run's prompt context. per_page=100 is the explicit bound (#81);
-          # ALERT_DISPLAY_CAP caps what's actually shown, same convention as above.
+          # in the run's prompt context; `hide_secret=true` additionally keeps any
+          # literal detected value out of the raw API response entirely. Fetch is
+          # --paginate --slurp (one flattened array across all pages) so the +N
+          # note's count can't silently under-report past page 1, and
+          # ALERT_DISPLAY_CAP caps what's actually shown — the #81 convention.
           ALERT_DISPLAY_CAP=20
           if ! code_scanning_json=$(GH_TOKEN="${{ secrets.GH_AUTOMATION_PAT }}" \
             gh api "repos/${{ github.repository }}/code-scanning/alerts?state=open&per_page=100" \
-            2>/dev/null); then
+            --paginate --slurp 2>/dev/null); then
             code_scanning_json="[]"
           fi
-          code_scanning_count=$(jq 'length' <<<"$code_scanning_json")
+          code_scanning_count=$(jq 'flatten | length' <<<"$code_scanning_json")
           code_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
-            sort_by(.number)[0:$cap][]
+            flatten | sort_by(.number)[0:$cap][]
             | "- #\(.number) [\(.rule.security_severity_level // .rule.severity // "unknown")] \(.rule.id): \((.rule.description // .rule.name // "(no description)") | gsub("\n"; " ")) (\(.html_url))"
           ' <<<"$code_scanning_json")
           if [ "$code_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
@@ -266,13 +274,13 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           if ! secret_scanning_json=$(GH_TOKEN="${{ secrets.GH_AUTOMATION_PAT }}" \
-            gh api "repos/${{ github.repository }}/secret-scanning/alerts?state=open&per_page=100" \
-            2>/dev/null); then
+            gh api "repos/${{ github.repository }}/secret-scanning/alerts?state=open&per_page=100&hide_secret=true" \
+            --paginate --slurp 2>/dev/null); then
             secret_scanning_json="[]"
           fi
-          secret_scanning_count=$(jq 'length' <<<"$secret_scanning_json")
+          secret_scanning_count=$(jq 'flatten | length' <<<"$secret_scanning_json")
           secret_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
-            sort_by(.number)[0:$cap][]
+            flatten | sort_by(.number)[0:$cap][]
             | "- #\(.number) [\(.secret_type_display_name // .secret_type)] (\(.html_url))"
           ' <<<"$secret_scanning_json")
           if [ "$secret_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
@@ -473,7 +481,8 @@ jobs:
           Spec / Files / Out of scope / Verification / Explicit authorizations /
           Dependencies) plus an explicit **Impact** line — one sentence on who/what is
           affected and how badly — because Phase A weighs it when ordering same-priority
-          candidates. Dedup first: check the open bug list above, and search bodies with
+          candidates; apply a `size:S`/`size:M`/`size:L` label like any claude-task issue.
+          Dedup first: check the open bug list above, and search bodies with
           `gh issue list --label bug --state open --search "in:body <keyword>"`, so you
           never file a duplicate. This filing is cheap housekeeping, never your unit of
           work for the run.
@@ -483,12 +492,18 @@ jobs:
           bug-issue bodies for the alert's URL or alert/rule ID first — file one
           `claude-task` + `bug` issue linking the alert (the body links to it rather than
           restating it) and set its **Impact** line from the alert's severity:
-          `critical`/`high` → say so explicitly and consider `priority:high`; lower
-          severities stay default priority. For a secret-scanning alert, NEVER include the
-          detected secret's value — the alert link plus which file/commit it was found in
-          only — and for a `critical` finding the issue must state that rotating/revoking
-          the credential is urgent manual maintainer action: the issue tracks it, it does
-          not remediate it. Dependabot security alerts are NOT part of this — Phase 0(c)
+          `critical`/`high` → say so explicitly and consider `priority:high` (ensure the
+          label exists first if you apply it: `gh label create priority:high --color
+          b60205 --description "Jumps the Phase A backlog queue" --force`); lower
+          severities stay default priority. For a secret-scanning alert, never let the
+          detected secret's value reach the issue OR your own context/logs: to learn
+          which file/commit it was found in, call
+          `gh api repos/$REPO/secret-scanning/alerts/<n>/locations` (paths + commit SHAs
+          only — it has no secret field) and never the alert detail endpoint itself,
+          which can return the literal value into this run's public transcript; for a
+          `critical` finding the issue must state that rotating/revoking the credential
+          is urgent manual maintainer action: the issue tracks it, it does not
+          remediate it. Dependabot security alerts are NOT part of this — Phase 0(c)
           and Phase B item 2 already own those.
 
           This is a side project — time is not a constraint (one task per scheduled run is fine), but
@@ -721,8 +736,10 @@ jobs:
              this is for other gaps, e.g. deploy.yml or CodeQL failures going unwatched), an
              unaddressed dependency/security finding, or a thin Phase A backlog. Skip any gap
              already covered by one of the currently-open gap-analysis
-             proposals listed above. File exactly 1 well-specified claude-task issue (via
-             `gh issue create`) proposing a concrete solution — match the structure of
+             proposals listed above. File exactly 1 well-specified gap-analysis claude-task
+             issue (via
+             `gh issue create`) proposing a concrete solution — bug/alert filings from the
+             rules above are separate and don't count against this cap — match the structure of
              `.github/ISSUE_TEMPLATE/claude-task.yml` (Goal / Context / Spec & acceptance
              criteria / Files likely touched / Out of scope / Verification / Explicit
              authorizations / Dependencies) and size it the same way a human-authored task issue
