@@ -249,8 +249,8 @@ jobs:
           Currently-open code-scanning (CodeQL) alerts:
           $CODE_SCANNING_ALERTS
 
-          Currently-open secret-scanning alerts (secret type + link only — the
-          feed deliberately never includes a detected secret value):
+          Currently-open secret-scanning alerts (secret type + validity + link only —
+          the feed deliberately never includes a detected secret value):
           $SECRET_SCANNING_ALERTS
 
           MAIN_CI_BROKEN=$MAIN_CI_BROKEN

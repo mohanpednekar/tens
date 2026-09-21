@@ -139,9 +139,10 @@ template sections plus an explicit **Impact** line — one sentence on who/what 
 badly — which is what Phase A weighs (below) when ordering same-priority candidates. Dedup is
 against the guard step's open-`bug` feed plus an `in:body` search before filing. The same rule
 extends mechanically to the guard step's code-scanning (CodeQL) and secret-scanning alert feeds —
-both rendered severity/validity-first (critical→high→…, active→unknown→inactive) with all
-interpolated metadata stripped of control characters and length-capped, since alert text is
-untrusted content entering a privileged prompt. Each open alert not already tracked by an open
+both rendered severity/validity-first (critical→high→…, active→unknown→inactive) with the
+interpolated free-text metadata (rule IDs/descriptions, secret-type names) stripped of
+control characters and length-capped, since alert text is untrusted content entering a
+privileged prompt. Each open alert not already tracked by an open
 `bug` issue gets one `claude-task` + `bug` issue linking it — dedup is by the alert's own URL or
 number, never a shared rule ID — with Impact set from severity (`critical`/`high` noted
 explicitly and a `priority:high` candidate; secret-scanning has no severity so `active`/`valid`
