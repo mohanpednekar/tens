@@ -138,15 +138,19 @@ run (a bug already directly in-scope is just normal work). The filed issue carri
 template sections plus an explicit **Impact** line — one sentence on who/what is affected and how
 badly — which is what Phase A weighs (below) when ordering same-priority candidates. Dedup is
 against the guard step's open-`bug` feed plus an `in:body` search before filing. The same rule
-extends mechanically to the guard step's code-scanning (CodeQL) and secret-scanning alert feeds:
-each open alert not already tracked by an open `bug` issue gets one `claude-task` + `bug` issue
-linking it, Impact set from the alert's severity (`critical`/`high` noted explicitly and a
-`priority:high` candidate; lower severities default priority). A secret-scanning filing never
-lets the detected value reach the issue *or* the run's own transcript — file/commit detail comes
-from the `/locations` endpoint (paths + commit SHAs, no secret field), never the alert detail
-endpoint, and the guard-step feed itself also calls the list API with `hide_secret=true` — and a
-`critical` filing states that rotating/revoking the credential is urgent manual maintainer
-action. Dependabot security alerts
+extends mechanically to the guard step's code-scanning (CodeQL) and secret-scanning alert feeds —
+both rendered severity/validity-first (critical→high→…, active→unknown→inactive) with all
+interpolated metadata stripped of control characters and length-capped, since alert text is
+untrusted content entering a privileged prompt. Each open alert not already tracked by an open
+`bug` issue gets one `claude-task` + `bug` issue linking it — dedup is by the alert's own URL or
+number, never a shared rule ID — with Impact set from severity (`critical`/`high` noted
+explicitly and a `priority:high` candidate; secret-scanning has no severity so `active`/`valid`
+validity takes that slot, meaning an urgent-rotation note in the body). A secret-scanning filing
+never lets the detected value reach the issue *or* the run's own transcript — file/commit detail
+comes from the `/locations` endpoint (paths + commit SHAs, no secret field), never the alert
+detail endpoint, and the guard-step feed itself also calls the list API with `hide_secret=true`.
+Overflow beyond the feed cap becomes ONE umbrella triage issue linking the Security tab rather
+than the agent paging raw alert data. Dependabot security alerts
 are deliberately NOT in this pipeline: Phase 0(c)/Phase B item 2 already own those (direct fix or
 a `claude-task` + `priority:high` + `security` issue) — filing a second `bug` issue for them would
 duplicate that coverage. All of this filing is cheap housekeeping alongside the run's real task,
