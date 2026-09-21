@@ -1004,21 +1004,43 @@ export const canBuyComputeFlopsTier = (state, flopId) => {
   return clampNonNegative(state.prestige?.points ?? 0) >= cost
 }
 
-export const buyComputeFlopsTier = flopId => state => {
+export const getComputeFlopsAffordableQuantity = (flopTier, ownedCount, spendable, requestedQuantity) => {
+  let affordable = 0
+  let remainingSpendable = spendable
+  let currentOwned = ownedCount
+  
+  while (affordable < requestedQuantity) {
+    const cost = getComputeFlopsTierCost(flopTier, currentOwned)
+    if (remainingSpendable >= cost) {
+      remainingSpendable -= cost
+      affordable++
+      currentOwned++
+    } else {
+      break
+    }
+  }
+  return { affordable, totalCost: spendable - remainingSpendable }
+}
+
+export const buyComputeFlopsTier = (flopId, quantity = 1) => state => {
   const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
   if (!flopTier) return state
-  if (!canBuyComputeFlopsTier(state, flopId)) return state
+  
   const latched = latchComputeFlopsPageUnlocked(state)
   const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
-  const cost = getComputeFlopsTierCost(flopTier, owned)
+  const spendable = clampNonNegative(latched.prestige?.points ?? 0)
+  
+  const { affordable, totalCost } = getComputeFlopsAffordableQuantity(flopTier, owned, spendable, quantity)
+  if (affordable === 0) return state
+
   return {
     ...latched,
-    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    prestige: { ...latched.prestige, points: latched.prestige.points - totalCost },
     computeFlops: {
       ...latched.computeFlops,
       owned: {
         ...latched.computeFlops.owned,
-        [flopId]: clampNonNegative((latched.computeFlops.owned[flopId] ?? 0) + 1),
+        [flopId]: clampNonNegative(owned + affordable),
       },
     },
   }
@@ -1149,12 +1171,20 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
     if ((result.computeFlopsAutobuyers?.[flopTier.id] ?? null) === null) return
     if (!(result.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true)) return
     let budget = (result.computeFlopsAutobuyerAttemptBudgets?.[flopTier.id] ?? 0) + elapsedSeconds
-    while (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
-      if (!canBuyComputeFlopsTier(result, flopTier.id)) break
-      const next = buyComputeFlopsTier(flopTier.id)(result)
-      if (next === result) break
-      result = next
-      budget -= 1
+    if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
+      const attempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
+      const spendable = clampNonNegative(result.prestige?.points ?? 0)
+      const owned = clampNonNegative(result.computeFlops?.owned?.[flopTier.id] ?? 0)
+      
+      const { affordable } = getComputeFlopsAffordableQuantity(flopTier, owned, spendable, attempts)
+      
+      if (affordable > 0) {
+        result = buyComputeFlopsTier(flopTier.id, affordable)(result)
+        budget -= affordable
+      } else {
+        // Break out logic similar to original - if can't afford, we bank the remaining budget (it just stays in budget)
+        // Original loop breaks and leaves budget as is.
+      }
     }
     result = {
       ...result,
