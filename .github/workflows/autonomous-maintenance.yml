@@ -243,8 +243,8 @@ jobs:
           # no GITHUB_TOKEN permission scope at all, so both feeds go through the PAT
           # and behave identically. Requires the PAT scopes tracked on #62 ("Code
           # scanning alerts: read" already granted; "Secret scanning alerts: read"
-          # still pending) — each call fails soft to an empty list on any API error,
-          # so a missing scope just means the run sees no alerts, never a red job.
+          # still pending) — each call fails soft on any API error (warning +
+          # "(unavailable)" marker, never a red job) so a missing scope can't break CI.
           # The secret-scanning render deliberately includes only number + secret
           # type + link, never the .secret field, so a detected value can never land
           # in the run's prompt context; `hide_secret=true` additionally keeps any
@@ -253,22 +253,28 @@ jobs:
           # note's count can't silently under-report past page 1, and
           # ALERT_DISPLAY_CAP caps what's actually shown — the #81 convention.
           ALERT_DISPLAY_CAP=20
+          # A failed fetch is NOT rendered as an empty list — that would make a
+          # missing PAT scope or API outage indistinguishable from "no alerts".
+          # It surfaces as a ::warning in the step log plus an explicit
+          # "(unavailable — fetch failed)" marker in the feed the agent sees.
           if ! code_scanning_json=$(GH_TOKEN="${{ secrets.GH_AUTOMATION_PAT }}" \
             gh api "repos/${{ github.repository }}/code-scanning/alerts?state=open&per_page=100" \
             --paginate --slurp 2>/dev/null); then
-            code_scanning_json="[]"
-          fi
-          code_scanning_count=$(jq 'flatten | length' <<<"$code_scanning_json")
-          code_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
-            def sevrank: if . == "critical" then 0 elif . == "high" then 1
-                         elif . == "medium" then 2 elif . == "low" then 3 else 4 end;
-            def clean($n): tostring | gsub("[\n\r\t]"; " ") | .[0:$n];
-            flatten | sort_by((.rule.security_severity_level // .rule.severity // "" | sevrank), .number)[0:$cap][]
-            | "- #\(.number) [\(.rule.security_severity_level // .rule.severity // "unknown")] \((.rule.id // "unknown-rule") | clean(80)): \((.rule.description // .rule.name // "(no description)") | clean(160)) (\(.html_url))"
-          ' <<<"$code_scanning_json")
-          if [ "$code_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
-            code_scanning_alerts="$code_scanning_alerts
-            - (+$((code_scanning_count - ALERT_DISPLAY_CAP)) more open code-scanning alert(s) not shown — see the repo's Security tab)"
+            code_scanning_alerts="- (unavailable — code-scanning alert fetch failed; see this step's ::warning in the run log)"
+            echo "::warning::code-scanning alert fetch failed — feed marked unavailable for this run (PAT scope or API error)"
+          else
+            code_scanning_count=$(jq 'flatten | length' <<<"$code_scanning_json")
+            code_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
+              def sevrank: if . == "critical" then 0 elif . == "high" then 1
+                           elif . == "medium" then 2 elif . == "low" then 3 else 4 end;
+              def clean($n): tostring | gsub("[\n\r\t]"; " ") | .[0:$n];
+              flatten | sort_by((.rule.security_severity_level // .rule.severity // "" | sevrank), .number)[0:$cap][]
+              | "- #\(.number) [\(.rule.security_severity_level // .rule.severity // "unknown")] \((.rule.id // "unknown-rule") | clean(80)): \((.rule.description // .rule.name // "(no description)") | clean(160)) (\(.html_url))"
+            ' <<<"$code_scanning_json")
+            if [ "$code_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
+              code_scanning_alerts="$code_scanning_alerts
+              - (+$((code_scanning_count - ALERT_DISPLAY_CAP)) more open code-scanning alert(s) not shown — see the repo's Security tab)"
+            fi
           fi
           {
             echo "code_scanning_alerts<<CSALERT_EOF"
@@ -279,18 +285,20 @@ jobs:
           if ! secret_scanning_json=$(GH_TOKEN="${{ secrets.GH_AUTOMATION_PAT }}" \
             gh api "repos/${{ github.repository }}/secret-scanning/alerts?state=open&per_page=100&hide_secret=true" \
             --paginate --slurp 2>/dev/null); then
-            secret_scanning_json="[]"
-          fi
-          secret_scanning_count=$(jq 'flatten | length' <<<"$secret_scanning_json")
-          secret_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
-            def vrank: if . == "active" or . == "valid" then 0 elif . == "unknown" then 1 else 2 end;
-            def clean($n): tostring | gsub("[\n\r\t]"; " ") | .[0:$n];
-            flatten | sort_by((.validity // "unknown" | vrank), .number)[0:$cap][]
-            | "- #\(.number) [\((.secret_type_display_name // .secret_type) | clean(80))] validity=\(.validity // "unknown") (\(.html_url))"
-          ' <<<"$secret_scanning_json")
-          if [ "$secret_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
-            secret_scanning_alerts="$secret_scanning_alerts
-            - (+$((secret_scanning_count - ALERT_DISPLAY_CAP)) more open secret-scanning alert(s) not shown — see the repo's Security tab)"
+            secret_scanning_alerts="- (unavailable — secret-scanning alert fetch failed; see this step's ::warning in the run log)"
+            echo "::warning::secret-scanning alert fetch failed — feed marked unavailable for this run (PAT scope or API error)"
+          else
+            secret_scanning_count=$(jq 'flatten | length' <<<"$secret_scanning_json")
+            secret_scanning_alerts=$(jq -r --argjson cap "$ALERT_DISPLAY_CAP" '
+              def vrank: if . == "active" or . == "valid" then 0 elif . == "unknown" then 1 else 2 end;
+              def clean($n): tostring | gsub("[\n\r\t]"; " ") | .[0:$n];
+              flatten | sort_by((.validity // "unknown" | vrank), .number)[0:$cap][]
+              | "- #\(.number) [\((.secret_type_display_name // .secret_type) | clean(80))] validity=\(.validity // "unknown") (\(.html_url))"
+            ' <<<"$secret_scanning_json")
+            if [ "$secret_scanning_count" -gt "$ALERT_DISPLAY_CAP" ]; then
+              secret_scanning_alerts="$secret_scanning_alerts
+              - (+$((secret_scanning_count - ALERT_DISPLAY_CAP)) more open secret-scanning alert(s) not shown — see the repo's Security tab)"
+            fi
           fi
           {
             echo "secret_scanning_alerts<<SSALERT_EOF"

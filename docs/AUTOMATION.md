@@ -23,8 +23,10 @@ Dependabot alerts by default for public repos, so no separate manual step is nee
 The code-scanning/secret-scanning alert feeds (#55's alert-to-bug wiring, both engines' guard
 steps) instead authenticate as `GH_AUTOMATION_PAT` — secret-scanning alerts have no
 `GITHUB_TOKEN` scope at all — and depend on the PAT's "Code scanning alerts: read" /
-"Secret scanning alerts: read" scopes tracked in #62's checklist; each feed fails soft to an
-empty list until granted, so a missing scope never turns a run red.
+"Secret scanning alerts: read" scopes tracked in #62's checklist; each feed fails soft on
+any API error — a `::warning` in the step log plus an explicit `(unavailable — fetch
+failed)` marker in the feed — so a missing scope or outage never turns a run red, but is
+also never indistinguishable from "no alerts".
 `automation-self-heal.yml` also needs `issues: write` so it can file `automation-failure` triage
 issues when a config-level fix isn't confident.
 
