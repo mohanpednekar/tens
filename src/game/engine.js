@@ -1727,18 +1727,54 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     // drift as tierProductionAccumulators (see TICK_ACCUMULATION_EPSILON) — without it, ten
     // 0.1-elapsedSeconds calls at the baseline rate sum to 0.9999999999999999, one shy of
     // triggering a purchase that should fire exactly on schedule.
+    // ⚡ Bolt Optimization: Replaced O(attempts) state-cloning loop with an O(1) mathematical batch calculation within the current level.
+    // Instead of processing the budget one attempt (of size blockMax) at a time, we calculate the max attempts affordable
+    // and process them all in a single state update, bounded by the level boundary where the unit cost changes.
+    // Expected impact: Speeds up long-running bulk purchases (offline progress) by several orders of magnitude and reduces CPU / memory thrashing.
     while (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
+      const attempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
+      if (attempts <= 0) break
+
       const tierLevel = result.purchaseLevels?.[tier.id] ?? 1
       const levelProgress = result.purchaseLevelProgress?.[tier.id] ?? 0
       const blockSize = getPurchaseBlockSize(result)
       const effectiveBatchSize = result.smartAutobuyer?.[tier.id] && tierLevel === 1 ? 1 : autobuyerBatchSize
-      const blockMax = getTierBulkQuantity(blockSize, levelProgress, effectiveBatchSize)
-      const affordable = getTierAffordableQuantity(tier, tierLevel, blockSize, levelProgress, getTierSpendableAmount(result, tier), effectiveBatchSize)
-      if (affordable < blockMax) break // can't afford the full current-cost batch yet — hold, bank the attempt
-      const next = buyTierQuantity(tier.id, blockMax)(result)
-      if (next === result) break
+
+      const remainingInLevel = Math.max(0, blockSize - levelProgress)
+      const maxAttemptsInLevel = Math.ceil(remainingInLevel / effectiveBatchSize)
+
+      let processAttempts = Math.min(attempts, maxAttemptsInLevel)
+
+      const unitCost = getTierCost(tier, tierLevel)
+      if (unitCost > 0) {
+        const spendable = getTierSpendableAmount(result, tier)
+        const affordableUnits = Math.floor(clampNonNegative(spendable) / unitCost)
+        let affordableAttempts = Math.floor(affordableUnits / effectiveBatchSize)
+
+        // If the affordable attempts reaches the last attempt in the level,
+        // the last attempt may require fewer units (remainingInLevel % effectiveBatchSize).
+        // Check if we can afford that final attempt.
+        if (affordableAttempts === maxAttemptsInLevel - 1) {
+           const unitsForAffordable = affordableAttempts * effectiveBatchSize
+           const finalAttemptUnits = remainingInLevel - unitsForAffordable
+           if (affordableUnits >= unitsForAffordable + finalAttemptUnits) {
+              affordableAttempts += 1
+           }
+        }
+        processAttempts = Math.min(processAttempts, affordableAttempts)
+      }
+
+      if (processAttempts <= 0) break // can't afford even 1 full attempt
+
+      let unitsToBuy = processAttempts * effectiveBatchSize
+      if (processAttempts === maxAttemptsInLevel) {
+          unitsToBuy = remainingInLevel
+      }
+
+      const next = buyTierQuantity(tier.id, unitsToBuy)(result)
+      if (next === result) break // safety guard, shouldn't happen unless frozen
       result = next
-      budget -= 1
+      budget -= processAttempts
     }
     return {
       ...result,
