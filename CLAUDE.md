@@ -93,13 +93,11 @@ an explicit workflow file.
 Always create a pull request after pushing changes to a branch — do not ask the user whether to
 create one first. This applies to every change made in this repo, not just specific tasks.
 
-PRs are opened as drafts by default, but a draft should only stay a draft while there's real,
-known work still pending on it — a queued follow-up commit, a fix still being written, tests that
-haven't been run yet. The moment a PR reflects genuinely finished work (its own local checks pass
-and nothing further is planned), mark it ready for review — don't leave it sitting in draft once
-there's nothing left to do. A draft doesn't get reviewed and isn't eligible for auto-merge, so an
-indefinitely-draft PR after the work is actually done just stalls it for no reason. This applies to
-every PR in this repo, autonomous or interactive.
+PRs are opened as drafts by default, but should stay draft only while real, known work is still
+pending (a queued commit, a fix in progress, unrun tests). Mark it ready the moment it reflects
+genuinely finished work (local checks pass, nothing further planned) — a draft isn't reviewed or
+auto-merge-eligible, so leaving one open after the work is done just stalls it for no reason. This
+applies to every PR in this repo, autonomous or interactive.
 
 **Verification effort scales with how public the PR is**: minimal testing (one `yarn test` after a
 coherent batch of changes, not after every edit) while nothing's been opened yet; one full local
@@ -145,17 +143,16 @@ reaching status quo (no new actionable comments and CI green, or only pre-existi
 failures left), not just after a single round; the loop isn't done until nothing new shows up.
 
 **Explicitly mark each review thread resolved once you've handled it** — reply with what you did
-(fixed, or why no action is needed for a purely informational finding), then call
+(fixed, or why no action is needed for an informational finding), then call
 `resolve_review_thread` (or the equivalent UI action) on that same thread. This applies to every
-thread, not just ones that needed a code fix: a bot's purely informational/confirmatory comment
-still needs an acknowledging reply and an explicit resolve, not just silence. This repo's branch
-protection requires every conversation on a PR resolved before it can merge — an unresolved thread,
-even one that never needed any code change, blocks the merge FOREVER (indefinitely, not just until
-some other condition clears) regardless of how green CI is or how many approvals exist. A single
-stray unresolved thread left over from an earlier review round is enough to silently stall a PR that
-otherwise looks completely done — so treat "reply and resolve" as a mandatory pair for every thread
-you touch, and periodically sweep the PR's full thread list (not just the ones a fresh notification
-just surfaced) for anything still sitting unresolved before considering a PR finished.
+thread, including a bot's purely informational/confirmatory comment: it still needs an
+acknowledging reply and an explicit resolve, not silence. This repo's branch protection requires
+every conversation on a PR resolved before it can merge — one unresolved thread blocks the merge
+indefinitely regardless of how green CI is or how many approvals exist, and a single stray one left
+over from an earlier review round is enough to silently stall an otherwise-finished PR. Treat
+"reply and resolve" as a mandatory pair for every thread you touch, and periodically sweep the PR's
+full thread list (not just threads a fresh notification just surfaced) before considering a PR
+finished.
 
 Keep PRs green through genuine fixes only — never `--no-verify`, never disable or delete a failing
 test to make it pass, never weaken a check just to get past it. If a check itself is wrong, flaky, or
@@ -641,6 +638,12 @@ scripts/
                                `enable-auto-merge-if-eligible.sh` and `pr-auto-merge.yml`
   enable-auto-merge-if-eligible.sh ← marks a PR ready + enables GitHub auto-merge once it's
                                adversarial-APPROVEd and low-risk (see "Pull requests" above)
+  resolve-pr-threads.sh      ← lists/resolves PR review threads by ID for automation-owned PRs
+                               (`claude/*`/`devin/*`, repo-owner/bot-authored only); `list` is
+                               read-only, `resolve` only accepts explicit caller-selected IDs, never
+                               a bulk "resolve all" — used by `autonomous-maintenance.yml` and
+                               `autonomous-pr-followup.yml`'s review-thread-resolution loop (see
+                               "Pull requests" above)
   backlog-issue-hygiene.sh, epic-407-issue-hygiene.sh ← idempotent GitHub issue-hygiene sweeps
                                (close shipped/stray issues, unblock/label ready work) run on every
                                `autonomous-maintenance.yml` invocation — see docs/AUTOMATION.md
@@ -890,9 +893,9 @@ slot management) — bypasses `getActiveSlotId`'s own dev-mode redirect entirely
 ever helps callers that go through `getActiveSlotId()` itself, like `loadGameState`/`saveGameState`/
 `clearGameState`). All three now explicitly refuse to run (`{ ok: false, reason: 'dev_mode_active' }`)
 whenever `isDevModeActive()` is true, so Settings' "Play"/"Clear"/"Erase all save progress" can never
-destroy or repoint a real player's save while Dev Mode is showing the (unrelated) dev save on
-screen — this was a real bug caught by adversarial review before merge (see this feature's own PR
-history), not a hypothetical. `useIncrementalGame`'s `eraseAllSaveProgress`/`clearSlot`/
+destroy or repoint a real player's save while Dev Mode shows the (unrelated) dev save on screen — a
+real bug this feature's adversarial review caught before merge, not a hypothetical.
+`useIncrementalGame`'s `eraseAllSaveProgress`/`clearSlot`/
 `switchSaveSlot` all check that `ok` flag before touching React state, so the guard's effect is
 visible end-to-end, not just at the storage layer. `SettingsPage` additionally disables the
 corresponding buttons (`title="Disable Dev Mode first"`) whenever `game.devModeActive` is true, so
@@ -1306,7 +1309,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1828 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1834 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
