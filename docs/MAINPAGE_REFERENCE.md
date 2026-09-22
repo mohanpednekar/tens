@@ -100,9 +100,11 @@ B/s at even `log2` exponents and the arithmetic mean of the two neighbouring eve
 odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
 after-upgrade preview. `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
-isMemoryCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and no higher-priority
-action (Disk Fill, Provision Disk, Compute) currently available — Upgrade Data Stream is now the
-LOWEST-priority action in the forced order (see "Forced priority order" in docs/ECONOMY_REFERENCE.md).
+isMemoryCapacityUpgradeAvailable(state)` — a full Buffer, the Combine prerequisite met, and Capacity
+not yet at its final-pool cap; unlike Disk Fill/Provision Disk/Compute, this check has no dependency
+on any other action's own availability. Upgrade Data Stream sits OUTSIDE the forced priority order
+entirely — a deliberate reversal of an earlier version that ranked it lowest within the order (see
+"Forced priority order" in docs/ECONOMY_REFERENCE.md and docs/DESIGN_HISTORY.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=
