@@ -1040,21 +1040,43 @@ export const canBuyComputeFlopsTier = (state, flopId) => {
   return clampNonNegative(state.prestige?.points ?? 0) >= cost
 }
 
-export const buyComputeFlopsTier = flopId => state => {
+export const getComputeFlopsAffordableQuantity = (flopTier, ownedCount, spendable, requestedQuantity) => {
+  let affordable = 0
+  let remainingSpendable = spendable
+  let currentOwned = ownedCount
+  
+  while (affordable < requestedQuantity) {
+    const cost = getComputeFlopsTierCost(flopTier, currentOwned)
+    if (remainingSpendable >= cost) {
+      remainingSpendable -= cost
+      affordable++
+      currentOwned++
+    } else {
+      break
+    }
+  }
+  return { affordable, totalCost: spendable - remainingSpendable }
+}
+
+export const buyComputeFlopsTier = (flopId, quantity = 1) => state => {
   const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
   if (!flopTier) return state
-  if (!canBuyComputeFlopsTier(state, flopId)) return state
+  
   const latched = latchComputeFlopsPageUnlocked(state)
   const owned = clampNonNegative(latched.computeFlops?.owned?.[flopId] ?? 0)
-  const cost = getComputeFlopsTierCost(flopTier, owned)
+  const spendable = clampNonNegative(latched.prestige?.points ?? 0)
+  
+  const { affordable, totalCost } = getComputeFlopsAffordableQuantity(flopTier, owned, spendable, quantity)
+  if (affordable === 0) return state
+
   return {
     ...latched,
-    prestige: { ...latched.prestige, points: latched.prestige.points - cost },
+    prestige: { ...latched.prestige, points: latched.prestige.points - totalCost },
     computeFlops: {
       ...latched.computeFlops,
       owned: {
         ...latched.computeFlops.owned,
-        [flopId]: clampNonNegative((latched.computeFlops.owned[flopId] ?? 0) + 1),
+        [flopId]: clampNonNegative(owned + affordable),
       },
     },
   }
