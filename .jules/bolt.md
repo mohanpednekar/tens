@@ -8,6 +8,12 @@
 ## 2024-05-25 - Replace O(N) while loop for Booster bulk purchases with O(1) mathematical formulation
 **Learning:** In idle/incremental games, offline progress or massive resource gains can trigger O(N) `while` loops for autobuyers (like `tickDataLakeAutoBuy`), freezing the main thread. Calculating the maximum affordable quantity using a `while` loop iteratively checks costs which causes a performance bottleneck.
 **Action:** Use the sum of arithmetic progression formula and its inverse (quadratic formula) to determine the maximum affordable quantity in O(1) time. Properly account for edge cases such as when the cost scales linearly up to a specific capacity and then remains flat. Pass a `quantity` parameter to the buy action (e.g., `buyBooster(tierIndex, quantity)`) to compute exact costs and update the state in one bulk operation.
+<<<<<<< HEAD
 ## 2024-09-20 - Replace O(N) Compute Flops autobuyer with O(1) mathematical formulation
 **Learning:** In idle/incremental games, autobuyers accumulating large attempt budgets trigger O(N) `while` loops (like `tickComputeFlopsAutobuyers`), freezing the main thread and recalculating costs on each single-unit purchase. Calculating the total maximum affordable quantity iteratively is inefficient for exponential cost functions.
 **Action:** Use an O(1) equivalent by factoring max attempts directly into a `getComputeFlopsAffordableAndCost` and `buyComputeFlopsTierQuantity` mechanism which reduces total processing overhead. Wait, calculating exponential growth costs directly inside a loop that's bounded strictly by max attempts is okay for this specific `budget` constraint because the scale and attempts limit its N to small values, but the key performance win is avoiding deep-cloning the immutable state tree in `buyComputeFlopsTier` N times. Replacing N object spreads with a single bulk update saves massive memory allocations and garbage collection overhead.
+=======
+## 2024-06-25 - Replace O(N) while loop for Compute Flops bulk purchases with O(1) loop equivalent calculation
+**Learning:** The Compute Flops autobuyers used a budget loop `while (budget >= 1)` that iteratively called `buyComputeFlopsTier` which was extremely slow when catching up on large budgets (e.g. offline progress), freezing the thread.
+**Action:** Refactored `tickComputeFlopsAutobuyers` to consume the entire budget at once by determining the affordable quantity natively and passing the calculated total cost and quantity to the updated `buyComputeFlopsTier` action, removing the O(N) while loop.
+>>>>>>> origin/main
