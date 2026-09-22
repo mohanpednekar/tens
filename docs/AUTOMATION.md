@@ -82,7 +82,7 @@ read as a real break to the next run's Phase 0 CI check.
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
 Phase 0/A/B text described below — into a file via a quoted bash heredoc, substitutes the handful of
-dynamic values (open PR/task/gap-issue lists, CI status, failing PRs, Dependabot alerts/PRs) using
+dynamic values (open PR/task/gap-issue/automation-retro lists, CI status, failing PRs, Dependabot alerts/PRs) using
 bash's own `${var//pattern/replacement}` parameter expansion, and exposes the result as a single step
 output. The `claude-code-action` step's `with.prompt:` is then just `${{ steps.compose-prompt.outputs.
 prompt }}` — a lone expression with no literal text mixed in. This exists because GitHub Actions caps a
@@ -113,8 +113,8 @@ exist yet; see #81's Dependencies for why that fuller chain is still blocked).
 
 That capping is also a **standing constraint on any future guard-step feed**, not just a description
 of today's set — the part of #81 that can land ahead of its still-blocked audit. Whenever a later
-issue adds a context feed (the Project summary #53, bug/security-alert lists #55, automation-retro
-list #57, checklist status #63, Discussions ideas #66, or anything else), it must arrive bounded: an
+issue adds a context feed (the Project summary #53, bug/security-alert lists #55, checklist status
+#63, Discussions ideas #66, or anything else), it must arrive bounded: an
 explicit `--limit` on the underlying `gh` call and a hard display cap with a "+N more, see the
 tracker directly" note. *List-type* feeds render items as number + title + labels only (never full
 bodies); status feeds bounded by design instead (Project field values, checklist state) keep to a
@@ -132,6 +132,21 @@ The latter exists because without it, a stale-spec issue that keeps winning FIFO
 identical dead-end analysis every single run indefinitely — issue #101 did this 6 runs in a row before
 being closed manually — instead of self-locking after the second occurrence the way an
 environment/permission blocker already did from the first.
+
+**Automation-retro reporting (#57)** is the third filing channel, for when the automation *itself*
+misfires — a budget/turn overrun despite the self-estimated 50% target, an auto-merge that shouldn't
+have fired, the duplicate-PR guard failing to prevent overlap, a tag/Project/release step erroring —
+as opposed to a bug in the game (the `bug` pipeline, #55) or a missing repo capability
+(`gap-analysis`, Phase B item 6). The prompt instructs any run, in any phase, that observes such a
+misfire to file a `claude-task` + `automation-retro` issue describing what happened, what should have
+happened, and a suggested process fix — linking the Actions run/job URL as evidence rather than
+dumping logs, and checking the guard step's open-`automation-retro` feed first so a new report extends
+an existing one instead of duplicating it. Quota-wall hits are classified distinctly: a lone
+transient Claude-side 429/5xx needs no retro at all (the tolerated-failure classifier already
+downgrades it to a warning and the next scheduled run retries); a *recurring* pattern of those
+downgrades is the signal a retro exists to capture. Retros only propose — any workflow-file fix one
+leads to is still bound by Phase B item 5's restrictions unless the issue's own Explicit
+Authorizations says otherwise.
 
 **Deploy-failure detection (`deploy.yml`, GitHub Pages) is a deterministic step, not part of the
 Claude prompt** (see #256). The guard step's `main_deploy_broken`/`main_deploy_run_url` outputs
