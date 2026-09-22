@@ -429,12 +429,7 @@ Error generating stack: `+e.message+`
   opacity: 0.35;
   transform-origin: left center;
   transform: scaleX(${e=>e.$fill});
-`;P.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: ${e=>e.theme.space.sm};
-`;var hf=P.span`
+`,hf=P.span`
   position: relative;
   font-family: ${e=>e.theme.font.display};
   font-size: ${e=>e.theme.type.scale.sm.size};
