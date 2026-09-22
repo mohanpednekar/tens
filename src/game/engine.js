@@ -1207,31 +1207,15 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
     if ((result.computeFlopsAutobuyers?.[flopTier.id] ?? null) === null) return
     if (!(result.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true)) return
     let budget = (result.computeFlopsAutobuyerAttemptBudgets?.[flopTier.id] ?? 0) + elapsedSeconds
-<<<<<<< HEAD
     // We tolerate TICK_ACCUMULATION_EPSILON for reaching 1, so the max affordable budget
     // is Math.floor(budget + TICK_ACCUMULATION_EPSILON)
     const maxAttempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
-    
+
     if (maxAttempts >= 1) {
       const { affordable, totalCost } = getComputeFlopsAffordableAndCost(result, flopTier.id, maxAttempts)
       if (affordable > 0) {
         result = buyComputeFlopsTierQuantity(flopTier.id, affordable, totalCost)(result)
         budget -= affordable
-=======
-    if (budget >= 1 - TICK_ACCUMULATION_EPSILON) {
-      const attempts = Math.floor(budget + TICK_ACCUMULATION_EPSILON)
-      const spendable = clampNonNegative(result.prestige?.points ?? 0)
-      const owned = clampNonNegative(result.computeFlops?.owned?.[flopTier.id] ?? 0)
-      
-      const { affordable } = getComputeFlopsAffordableQuantity(flopTier, owned, spendable, attempts)
-      
-      if (affordable > 0) {
-        result = buyComputeFlopsTier(flopTier.id, affordable)(result)
-        budget -= affordable
-      } else {
-        // Break out logic similar to original - if can't afford, we bank the remaining budget (it just stays in budget)
-        // Original loop breaks and leaves budget as is.
->>>>>>> origin/main
       }
     }
     result = {
@@ -1244,6 +1228,7 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
   })
   return result
 }
+
 
 const buildEraIntroReset = (state, initial) => {
   const byteCreated = Boolean(state.intro?.byteCreated)
