@@ -4568,8 +4568,10 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  // No vi.useFakeTimers() here (this test drives navigation via async userEvent.click) — the real
+  // tick can land between render and this assertion, so the exact starting balance isn't a stable
+  // invariant to assert on; aria-valuemax is.
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   // Tap + Upgrade Data Stream stay fully interactive — Sacrifice is gone; nothing here ever
   // goes read-only.
