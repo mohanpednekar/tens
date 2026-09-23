@@ -304,6 +304,7 @@ jobs:
             echo "secret_scanning_alerts<<SSALERT_EOF"
             echo "$secret_scanning_alerts"
             echo "SSALERT_EOF"
+          } >> "$GITHUB_OUTPUT"
 
           # Same shape for already-open automation-retro reports (#57): a run about to
           # file one dedups against — or extends — an existing report rather than piling
@@ -326,7 +327,6 @@ jobs:
             echo "open_retro_issues<<RETRO_EOF"
             echo "$open_retro_issues"
             echo "RETRO_EOF"
-
           } >> "$GITHUB_OUTPUT"
 
       - name: Surface a broken deploy.yml run
