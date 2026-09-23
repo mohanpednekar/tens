@@ -996,10 +996,10 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
   if (!flopTier) return { affordable: 0, totalCost: 0 }
   const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
   let spendable = clampNonNegative(state.prestige?.points ?? 0)
-  
+
   let quantity = 0
   let totalCost = 0
-  
+
   while (quantity < maxQuantity) {
     const cost = getComputeFlopsTierCost(flopTier, owned + quantity)
     if (spendable < cost) break
@@ -1007,7 +1007,8 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
     totalCost += cost
     quantity++
   }
-  
+
+
   return { affordable: quantity, totalCost }
 }
 
