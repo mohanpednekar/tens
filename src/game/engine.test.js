@@ -10431,6 +10431,37 @@ describe('tickComputeFlopsAutobuyers via tickGame', () => {
     expect(after.prestige.points).toBeLessThan(5000)
   })
 
+  it('buys multiple units in a single tick when accumulated budget covers more than one attempt', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+    const initial = createInitialGameState()
+    // Costs from owned 0: 1_000, 10_000, 100_000 — enough spendable for all three attempts.
+    const state = {
+      ...withPrestigePoints(initial, 1_000 + 10_000 + 100_000),
+      computeFlops: { ...initial.computeFlops, pageUnlocked: true },
+      computeFlopsAutobuyers: { ...initial.computeFlopsAutobuyers, [flopId]: 1 },
+      computeFlopsAutobuyerAttemptBudgets: { ...initial.computeFlopsAutobuyerAttemptBudgets, [flopId]: 0 },
+    }
+    const after = tickGame(3.5)(state)
+    expect(after.computeFlops.owned[flopId]).toBe(3)
+    expect(after.prestige.points).toBe(0)
+    expect(after.computeFlopsAutobuyerAttemptBudgets[flopId]).toBeCloseTo(0.5, 10)
+  })
+
+  it('banks the whole accumulated budget without buying when not even one unit is affordable', () => {
+    const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
+    const initial = createInitialGameState()
+    const state = {
+      ...withPrestigePoints(initial, 500),
+      computeFlops: { ...initial.computeFlops, pageUnlocked: true },
+      computeFlopsAutobuyers: { ...initial.computeFlopsAutobuyers, [flopId]: 1 },
+      computeFlopsAutobuyerAttemptBudgets: { ...initial.computeFlopsAutobuyerAttemptBudgets, [flopId]: 0 },
+    }
+    const after = tickGame(2)(state)
+    expect(after.computeFlops.owned[flopId]).toBe(0)
+    expect(after.prestige.points).toBe(500)
+    expect(after.computeFlopsAutobuyerAttemptBudgets[flopId]).toBeCloseTo(2, 10)
+  })
+
   it('does not buy when the Flops autobuyer is paused', () => {
     const flopId = COMPUTE_FLOPS_TIER_DEFINITIONS[0].id
     const initial = createInitialGameState()
