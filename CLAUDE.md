@@ -275,21 +275,27 @@ narrowly-scoped and includes `Workflows: write`, so autonomous runs can push com
 `.github/CODEOWNERS` still applies once branch protection requires it (see issue #62 and
 `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
-**Shared helpers.** Workflows share three extracted pieces rather than duplicating them:
+**Shared helpers.** Workflows share four extracted pieces rather than duplicating them:
 `.github/actions/setup-node-yarn` (composite: corepack + Node 22 + optional `yarn install`,
 used only on trusted refs — the PR-follow-up workflows keep setup inline because their
 checkout is untrusted PR code), `scripts/pr-head-guard.sh` (fork + branch-prefix check run
-from a sparse **main** checkout before the pinned-SHA checkout), and
+from a sparse **main** checkout before the pinned-SHA checkout),
 `scripts/claude-deny-settings.sh` (generates the claude-code-action `settings` deny JSON;
 base list always protects `ci.yml`/`deploy.yml`/`release.yml`/`automation-self-heal.yml`,
-callers pass extra files). See `docs/AUTOMATION.md` "Shared workflow helpers".
+callers pass extra files), and `scripts/orphan-branch-scan.sh` (the #59 orphaned-branch feed
+both maintenance engines' guard steps render — remote `claude/*`/`devin/*`/`cursor/*` branches
+with no open PR, plus merged-into-main status). See `docs/AUTOMATION.md` "Shared workflow
+helpers".
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
 `autonomous-maintenance.yml`, which runs twice daily (9:00am and 9:00pm IST) and does exactly one unit of work per run,
 picked in three phases — Phase 0 (CI/CD failures, plus any unaddressed critical/high-severity
 Dependabot security alert, severity-sorted the same way Phase A sorts priority labels) always
-outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `priority:low`), which
+outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `priority:low` — but
+first each run sweeps the guard step's orphaned-branch feed: stale merged/closed-issue branches
+are deleted, and an unmerged branch whose issue is still open is resumed in preference to a new
+task, #59), which
 always outranks Phase B (a maintenance menu: test coverage, dependency/security — including any
 medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
 workflow self-improvement, gap analysis). Any run in either engine that notices a genuine bug

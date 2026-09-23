@@ -326,7 +326,25 @@ jobs:
             echo "open_retro_issues<<RETRO_EOF"
             echo "$open_retro_issues"
             echo "RETRO_EOF"
+          } >> "$GITHUB_OUTPUT"
 
+          # Orphaned autonomous branches (#59): remote claude/*/devin/*/cursor/*
+          # branches with no open PR — a run that died mid-task after pushing
+          # but before opening a PR is invisible to the duplicate-PR guard
+          # above. The deterministic scan (shared script, same fail-soft
+          # posture as the alert feeds) renders branch + issue-number-if-
+          # parseable + merged-into-main status; the prompt below decides
+          # resume vs delete.
+          if [ -x scripts/orphan-branch-scan.sh ]; then
+            orphan_branches=$(scripts/orphan-branch-scan.sh)
+          else
+            orphan_branches="- (unavailable — scripts/orphan-branch-scan.sh missing; see this step's ::warning in the run log)"
+            echo "::warning::scripts/orphan-branch-scan.sh missing or not executable — orphan-branch feed unavailable for this run"
+          fi
+          {
+            echo "orphan_branches<<ORPHAN_EOF"
+            echo "${orphan_branches:-(none)}"
+            echo "ORPHAN_EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Surface a broken deploy.yml run
@@ -411,6 +429,7 @@ jobs:
           OPEN_BUG_ISSUES: ${{ steps.guard.outputs.open_bug_issues }}
 
           OPEN_RETRO_ISSUES: ${{ steps.guard.outputs.open_retro_issues }}
+          ORPHAN_BRANCHES: ${{ steps.guard.outputs.orphan_branches }}
 
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
           MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
@@ -444,6 +463,7 @@ jobs:
           : "${OPEN_BUG_ISSUES:=(none)}"
 
           : "${OPEN_RETRO_ISSUES:=(none)}"
+          : "${ORPHAN_BRANCHES:=(none)}"
 
           : "${FAILING_PRS:=(none)}"
           : "${DEPENDABOT_ALERTS:=(none)}"
@@ -475,6 +495,11 @@ jobs:
 
           Currently-open autonomous PRs (branch: title):
           $OPEN_PRS
+
+          Orphaned autonomous branches (remote claude/*/devin/*/cursor/* with
+          no open PR — a run that died mid-task after pushing leaves work the
+          duplicate-PR guard can't see; #59):
+          $ORPHAN_BRANCHES
 
           Open task backlog (issues labeled claude-task, curated by the maintainer in planning
           sessions):
@@ -660,7 +685,32 @@ jobs:
             empty, and there is no unaddressed critical/high Dependabot alert), fall through
             to Phase A.
 
-          PHASE A — task backlog next. If the backlog above is non-empty, walk it in order and
+          PHASE A — task backlog next. First handle the orphaned-branch list
+          above, before walking the backlog — each entry is pushed work from a
+          run that died before opening a PR (#59):
+          - "merged into main" → the work already landed; delete the remote
+            branch: `git push origin --delete <branch>`.
+          - Not merged → look for an issue number in the branch name
+            (conventions: `claude/auto-task-<n>-*`, `devin/auto-<n>-*`; numbers
+            also appear mid-slug, e.g. `cursor/<slug>-399-*`) and check it with
+            `gh issue view <n>`: closed → delete the remote branch; still open
+            → prefer RESUMING that branch over a new task — `git fetch origin
+            <branch> && git checkout -b <branch> FETCH_HEAD`, run `yarn test`
+            to see its real state (don't assume the partial work is correct or
+            complete), finish it on the same branch, push, and open the PR with
+            the usual `Closes #<n>`/`Part of #<n>` body. A resume counts as
+            this run's one unit of work — don't also start a fresh task.
+          - No identifiable issue/PR reference and not merged → leave the
+            branch alone for a human; don't guess at resumability.
+          - Resume-loop guard: if a branch's history shows it has been resumed
+            repeatedly without ever reaching a PR (commit dates spread across
+            several distinct run windows), stop auto-resuming it — file an
+            `automation-retro` issue per AUTOMATION-RETRO REPORTING below
+            flagging the task as likely oversized or stuck, and move on.
+          - Keep the sweep cheap: deletions are quick; resume at most one
+            branch per run, then proceed to the backlog walk.
+
+          If the backlog above is non-empty, walk it in order and
           implement the first candidate that turns out to actually be implementable — do not
           stop at the first candidate just because it's skippable or turns out infeasible; keep
           moving down the order until you land on one you can implement, or you've worked through
@@ -919,6 +969,7 @@ jobs:
           prompt_text=${prompt_text//'$OPEN_BUG_ISSUES'/$OPEN_BUG_ISSUES}
 
           prompt_text=${prompt_text//'$OPEN_RETRO_ISSUES'/$OPEN_RETRO_ISSUES}
+          prompt_text=${prompt_text//'$ORPHAN_BRANCHES'/$ORPHAN_BRANCHES}
 
           prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
           prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}
