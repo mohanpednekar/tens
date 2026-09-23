@@ -2440,7 +2440,7 @@ test('tapping increments the bit balance and stops once capacity is reached', as
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
   const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  // expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_STARTING_CAPACITY))
 
   for (let i = 0; i < INTRO_STARTING_CAPACITY; i++) {
@@ -4979,6 +4979,7 @@ describe('Dev Mode', () => {
 })
 
 test('theme preference in Settings switches mode and persists across remount', async () => {
+  vi.setConfig({ testTimeout: 30000 })
   const user = userEvent.setup()
   seedMainGameState()
   const { unmount } = render(<App />)

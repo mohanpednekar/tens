@@ -2,6 +2,7 @@ import {
   buyAutoScaleUp,
   buyComputeFlopsTier,
   createInitialGameState,
+  getComputeFlopsAffordableQuantity,
   getComputeFlopsTotal,
   getComputeFlopsTierCost,
   getComputeFlopsTierProductionMultiplier,
@@ -165,5 +166,75 @@ describe('Compute Flops screen', () => {
     expect(state.computeFlops.pageUnlocked).toBe(true)
     expect(isComputeFlopsPageRevealed(state)).toBe(true)
     expect(state.prestige.points).toBe(COMPUTE_FLOPS_REVEAL_PP - AUTO_SCALE_UP_COST)
+  })
+
+  describe('getComputeFlopsAffordableQuantity', () => {
+    const flopTier = { baseCostPP: COMPUTE_FLOPS_FIRST_TIER_COST_PP }
+
+    it('fills as many of the requested quantity as the spendable balance covers, at escalating per-unit cost', () => {
+      // Costs from ownedCount 0: 1_000, then 10_000, then 100_000.
+      expect(getComputeFlopsAffordableQuantity(flopTier, 0, 11_000, 5)).toEqual({
+        affordable: 2,
+        totalCost: 11_000,
+      })
+    })
+
+    it('returns 0 affordable and 0 totalCost when even the first unit is unaffordable', () => {
+      expect(getComputeFlopsAffordableQuantity(flopTier, 0, 999, 5)).toEqual({
+        affordable: 0,
+        totalCost: 0,
+      })
+    })
+
+    it('caps affordable at requestedQuantity even with far more spendable than needed', () => {
+      expect(getComputeFlopsAffordableQuantity(flopTier, 0, 1e9, 3)).toEqual({
+        affordable: 3,
+        totalCost: 1_000 + 10_000 + 100_000,
+      })
+    })
+
+    it('returns 0 affordable for a non-positive requestedQuantity regardless of spendable', () => {
+      expect(getComputeFlopsAffordableQuantity(flopTier, 0, 1e9, 0)).toEqual({ affordable: 0, totalCost: 0 })
+    })
+  })
+
+  describe('buyComputeFlopsTier batch purchases', () => {
+    it('buys multiple units in one call, spending the sum of each unit\'s own escalating price', () => {
+      const state = {
+        ...createInitialGameState(),
+        prestige: { xp: 0, points: 1_000 + 10_000, count: 1, highestMilestone: 1 },
+      }
+      const after = buyComputeFlopsTier('flop01', 2)(state)
+      expect(after.computeFlops.owned.flop01).toBe(2)
+      expect(after.prestige.points).toBe(0)
+    })
+
+    it('partially fills a batch purchase when spendable affords fewer units than requested, spending only for the affordable units', () => {
+      const state = {
+        ...createInitialGameState(),
+        prestige: { xp: 0, points: 15_000, count: 1, highestMilestone: 1 },
+      }
+      const after = buyComputeFlopsTier('flop01', 5)(state)
+      expect(after.computeFlops.owned.flop01).toBe(2)
+      expect(after.prestige.points).toBe(15_000 - (1_000 + 10_000))
+    })
+
+    it('no-ops (same state reference) when not even a single unit is affordable', () => {
+      const state = {
+        ...createInitialGameState(),
+        prestige: { xp: 0, points: 999, count: 1, highestMilestone: 1 },
+      }
+      expect(buyComputeFlopsTier('flop01', 3)(state)).toBe(state)
+    })
+
+    it('defaults quantity to 1 when omitted', () => {
+      const state = {
+        ...createInitialGameState(),
+        prestige: { xp: 0, points: 1_000, count: 1, highestMilestone: 1 },
+      }
+      const after = buyComputeFlopsTier('flop01')(state)
+      expect(after.computeFlops.owned.flop01).toBe(1)
+      expect(after.prestige.points).toBe(0)
+    })
   })
 })

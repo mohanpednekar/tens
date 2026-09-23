@@ -1008,6 +1008,7 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
     quantity++
   }
 
+
   return { affordable: quantity, totalCost }
 }
 
@@ -1228,6 +1229,7 @@ const tickComputeFlopsAutobuyers = elapsedSeconds => state => {
   })
   return result
 }
+
 
 const buildEraIntroReset = (state, initial) => {
   const byteCreated = Boolean(state.intro?.byteCreated)
