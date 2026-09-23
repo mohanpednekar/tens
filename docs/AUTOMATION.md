@@ -82,7 +82,7 @@ read as a real break to the next run's Phase 0 CI check.
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
 Phase 0/A/B text described below — into a file via a quoted bash heredoc, substitutes the handful of
-dynamic values (open PR/task/gap-issue lists, CI status, failing PRs, Dependabot alerts/PRs) using
+dynamic values (open PR/task/gap-issue/automation-retro lists, CI status, failing PRs, Dependabot alerts/PRs) using
 bash's own `${var//pattern/replacement}` parameter expansion, and exposes the result as a single step
 output. The `claude-code-action` step's `with.prompt:` is then just `${{ steps.compose-prompt.outputs.
 prompt }}` — a lone expression with no literal text mixed in. This exists because GitHub Actions caps a
@@ -113,8 +113,8 @@ exist yet; see #81's Dependencies for why that fuller chain is still blocked).
 
 That capping is also a **standing constraint on any future guard-step feed**, not just a description
 of today's set — the part of #81 that can land ahead of its still-blocked audit. Whenever a later
-issue adds a context feed (the Project summary #53, bug/security-alert lists #55, automation-retro
-list #57, checklist status #63, Discussions ideas #66, or anything else), it must arrive bounded: an
+issue adds a context feed (the Project summary #53, bug/security-alert lists #55, checklist status
+#63, Discussions ideas #66, or anything else), it must arrive bounded: an
 explicit `--limit` on the underlying `gh` call and a hard display cap with a "+N more, see the
 tracker directly" note. *List-type* feeds render items as number + title + labels only (never full
 bodies); status feeds bounded by design instead (Project field values, checklist state) keep to a
@@ -132,6 +132,21 @@ The latter exists because without it, a stale-spec issue that keeps winning FIFO
 identical dead-end analysis every single run indefinitely — issue #101 did this 6 runs in a row before
 being closed manually — instead of self-locking after the second occurrence the way an
 environment/permission blocker already did from the first.
+
+**Automation-retro reporting (#57)** is the third filing channel, for when the automation *itself*
+misfires — a budget/turn overrun despite the self-estimated 50% target, an auto-merge that shouldn't
+have fired, the duplicate-PR guard failing to prevent overlap, a tag/Project/release step erroring —
+as opposed to a bug in the game (the `bug` pipeline, #55) or a missing repo capability
+(`gap-analysis`, Phase B item 6). The prompt instructs any run, in any phase, that observes such a
+misfire to file a `claude-task` + `automation-retro` issue describing what happened, what should have
+happened, and a suggested process fix — linking the Actions run/job URL as evidence rather than
+dumping logs, and checking the guard step's open-`automation-retro` feed first so a new report extends
+an existing one instead of duplicating it. Quota-wall hits are classified distinctly: a lone
+transient Claude-side 429/5xx needs no retro at all (the tolerated-failure classifier already
+downgrades it to a warning and the next scheduled run retries); a *recurring* pattern of those
+downgrades is the signal a retro exists to capture. Retros only propose — any workflow-file fix one
+leads to is still bound by Phase B item 5's restrictions unless the issue's own Explicit
+Authorizations says otherwise.
 
 **Deploy-failure detection (`deploy.yml`, GitHub Pages) is a deterministic step, not part of the
 Claude prompt** (see #256). The guard step's `main_deploy_broken`/`main_deploy_run_url` outputs
@@ -253,7 +268,7 @@ allowed in Phase A only when the task issue's "Explicit authorizations" section 
 specific change. PRs are minimised for *similar* work but not capped to one at a time — Claude skips
 opening a PR that duplicates an already-open one's purpose, while still opening a separate PR for a
 genuinely independent task. A hard ceiling of 5 concurrently-open autonomous PRs is a safety net
-(bypassed only by Phase 0's main-is-broken case). `ci.yml`, `deploy.yml`,
+(bypassed only by Phase 0's main-is-broken case). `ci.yml`, `deploy.yml`, `release.yml`,
 `autonomous-pr-followup.yml`, and `pr-auto-merge.yml` are all explicitly denied to Claude's Edit/Write
 tools, even during the self-improvement task — only `autonomous-maintenance.yml` may edit itself.
 
@@ -314,7 +329,8 @@ copied per-workflow:
   pinned PR SHA, so the guard can't be weakened by the branch it authorizes.
 - `scripts/claude-deny-settings.sh [extra-file...]` — emits the `settings` JSON for
   `anthropics/claude-code-action` from a shared base deny-list (`ci.yml`, `deploy.yml`,
-  `automation-self-heal.yml` — never editable by an unattended agent) plus caller-supplied
+  `release.yml`, `automation-self-heal.yml` — never editable by an unattended Claude agent) plus
+  caller-supplied
   extras (follow-up workflows pass every other workflow file since their prompts forbid
   all workflow edits). Run it from the same trusted main checkout as the guard.
 
@@ -348,8 +364,8 @@ guard time (same TOCTOU rationale as the autonomous follow-up). It re-invokes Cl
 failure), push a genuine call-site/config fix to the *existing* Dependabot branch, or leave exactly
 one explanatory `gh pr comment` if it cannot confidently fix — never open a new PR, never
 force-push, never merge or approve. `settings.permissions.deny` blocks Edit/Write on `ci.yml`,
-`deploy.yml`, `autonomous-maintenance.yml`, `autonomous-pr-followup.yml`, `pr-auto-merge.yml`, and
-its own file. Merging a fixed Dependabot PR still goes through the existing `pr-auto-merge.yml`
+`deploy.yml`, `release.yml`, `autonomous-maintenance.yml`, `autonomous-pr-followup.yml`,
+`pr-auto-merge.yml`, and its own file. Merging a fixed Dependabot PR still goes through the existing `pr-auto-merge.yml`
 paths (human approval, or green-checks low-risk for patch/minor bumps) — unchanged.
 
 ### Automation self-heal (`automation-self-heal.yml`)
@@ -374,7 +390,7 @@ passed to the agent.
 
 **Agent:** `anthropics/claude-code-action@v1` with `CLAUDE_CODE_OAUTH_TOKEN` +
 `GH_AUTOMATION_PAT`, `--max-turns 25`, no `yarn` tools (workflow-config only).
-`settings.permissions.deny` blocks Edit/Write on `ci.yml`, `deploy.yml`, and
+`settings.permissions.deny` blocks Edit/Write on `ci.yml`, `deploy.yml`, `release.yml`, and
 `automation-self-heal.yml` itself — and deliberately **omits** the watched automation workflow
 files so a confident config fix can land (issue #36's deny-list-narrowing authorization). Choose
 exactly one path: (1) confident config fix → draft PR on
@@ -434,6 +450,37 @@ session):
 - "Require review from Code Owners" in that same branch-protection rule, so the `.github/CODEOWNERS`
   entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
   checklist until confirmed done).
+
+### Release (`release.yml`)
+
+Deterministic (no agent) — the post-merge half of #52, complementing the pre-merge
+`yarn bump-version` script (`scripts/bump-version.mjs`). Fires on `push` to `main` filtered to
+`paths: ['package.json']`, so it only runs when a merged PR touched the version file. Each run
+operates on its own pushed SHA (no concurrency queue — a dropped middle run could otherwise skip
+a version's tag entirely), reads `package.json`'s `"version"` there, and exits silently when the
+push didn't actually change `"version"` (dependency bumps and other non-version `package.json`
+edits — guarding against tagging the current version at a non-release commit, which would also
+preempt #51's historical tag placement) or when both the tag and its GitHub Release already
+exist. An existing tag is always verified to point at the pushed SHA first — a tag (with or
+without a Release) pointing anywhere else means a manual/historical tag and fails loudly rather
+than being silently accepted. A backward/sideways version move fails loudly. Otherwise it extracts that version's
+`## [x.y.z]` section from `CHANGELOG.md` — reusing `bump-version.mjs`'s
+`extractVersionSection`, one parser for both the tag message and the Release body — pushes an
+annotated `v<version>` tag at that pushed SHA, and creates a GitHub Release (`v<version>`
+title, notes = the same changelog section). Both writes go through `GH_AUTOMATION_PAT`; the
+workflow makes **no commits and no PRs**, so "never push to main" stays intact — the version bump
+itself still lands inside the PR diff via `yarn bump-version` before merge. If `package.json`'s
+version has no matching changelog section (or one with no bullet entries) the run fails loudly
+rather than tagging a noteless release — that state means the bump step was skipped or
+hand-edited and needs a human. The job is resumable: a tag that already exists without a Release
+(e.g. a prior run died between the tag push and `gh release create`) is first verified to point
+at the pushed SHA — a mismatch means a manual/historical tag and fails loudly — then the run
+finishes just the Release. It is on
+the shared deny-list's protected base (`scripts/claude-deny-settings.sh`), so no unattended
+*Claude* agent can edit it; the Devin engine runs without a deny list and is covered by the
+always-open-a-PR + CODEOWNERS human-review gate instead. Failures are not watched by
+`automation-self-heal.yml` (a red run is visible on the Actions tab / commit status like any
+other main-branch workflow).
 
 ### PR review & testing cadence
 

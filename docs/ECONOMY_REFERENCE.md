@@ -1592,12 +1592,18 @@ Ten PP-funded tiers **KFlops → QFlops** (`COMPUTE_FLOPS_TIER_DEFINITIONS` in `
 - `COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC = 0.0001` — each owned unit adds 0.01%/real-second to
   that tier's cumulative boost on the matching Factory tier (linear in owned count).
 
-**Buying:** `buyComputeFlopsTier(flopId)` spends PP from `prestige.points` at the tier's current
-per-unit price. Unlike Factory tiers (same `getTierCost` / `getCostEpochExponent` formula but
-level advances only after each 8-purchase block), Flops uses **one cost epoch per owned unit** —
-the price for the next purchase is `getComputeFlopsTierCost(flopTier, owned)` =
-`getTierCost({ baseCost: flopTier.baseCostPP }, owned + 1)`. No-op if unaffordable. Owned counts
-live in `computeFlops.owned` and are **permanent across Prestige** (carried by `prestigeGame`).
+**Buying:** `buyComputeFlopsTier(flopId, quantity = 1)` spends PP from `prestige.points` at the
+tier's current per-unit price, buying up to `quantity` units in one call. Unlike Factory tiers (same
+`getTierCost` / `getCostEpochExponent` formula but level advances only after each 8-purchase block),
+Flops uses **one cost epoch per owned unit** — the price for the next purchase is
+`getComputeFlopsTierCost(flopTier, owned)` = `getTierCost({ baseCost: flopTier.baseCostPP },
+owned + 1)`. `getComputeFlopsAffordableQuantity(flopTier, ownedCount, spendable, requestedQuantity)`
+walks the escalating per-unit price and returns `{ affordable, totalCost }` — however many of
+`requestedQuantity` the `spendable` balance actually covers (a partial fill when it covers fewer than
+requested, not all-or-nothing) and their combined cost; `buyComputeFlopsTier` spends `totalCost` and
+credits `affordable` units in one state update, and no-ops (same state reference) when `affordable`
+is 0. Owned counts live in `computeFlops.owned` and are **permanent across Prestige** (carried by
+`prestigeGame`).
 
 **Ticking:** `tickComputeFlops(elapsedSeconds)` runs inside `tickGame` (after intro/disk/compute-core
 ticks, before autobuyers). For each Flops tier with owned &gt; 0, adds
@@ -1665,7 +1671,13 @@ Eons balance (+ award), hyperscalers, Eon upgrade levels, Flops autobuyer unlock
 
 **Flops autobuyer milestones:** Era *N* free-unlocks the *N*th Flops tier's autobuyer
 (`getFlopsAutobuyerUnlockEra`, applied in `eraGame` via `applyFlopsAutobuyerMilestones`).
-`tickComputeFlopsAutobuyers` runs inside `tickGame` after `tickComputeFlops`.
+`tickComputeFlopsAutobuyers` runs inside `tickGame` after `tickComputeFlops`; each enabled,
+unlocked tier accumulates a per-tier `computeFlopsAutobuyerAttemptBudgets` balance by
+`elapsedSeconds` every tick and, once it reaches 1, converts the whole floored attempt count into a
+single batched `buyComputeFlopsTier(flopId, attempts)` call (via `getComputeFlopsAffordableQuantity`)
+rather than one purchase per attempt — a large elapsed gap (e.g. offline progress) buys every
+affordable unit in one state update instead of looping. Any attempts left unaffordable simply stay
+banked in the budget for a later tick, same end result as buying one at a time.
 
 **Hyperscalers:** `buyHyperscaler` spends escalating Eons (`HYPERSCALER_EON_COST_BASE` ×
 `HYPERSCALER_EON_COST_MULTIPLIER^owned`). Each adds permanent rate via
