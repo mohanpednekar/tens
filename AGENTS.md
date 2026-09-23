@@ -223,6 +223,10 @@ sections. To cut Unreleased into a dated release on a PR branch, run `yarn bump-
 - Whoever files a `claude-task` issue should also apply a `size:S`/`size:M`/`size:L` label (S = a
   single small focused change; M = a normal run-sized task; L = large, likely needs a partial
   `Part of #N` slice) — Phase A weighs this against its own remaining budget when picking a task.
+- `bug`-labeled `claude-task` issues are filed by automation runs that spot a defect outside their
+  task's scope, or by the code-scanning/secret-scanning alert-to-bug wiring (#55) — each carries an
+  explicit **Impact** line that Phase A may weigh to reorder *within* a priority tier
+  (`priority:high` still jumps outright).
 - **GitHub Milestones vs Project `Track`:** complementary axes, not duplicates. A Milestone
   targets one planned release (due date + automatic X/Y-closed progress); `Track` groups issues by
   theme/dependency chain and can span multiple releases. Interactive sessions and Planning (#53)
