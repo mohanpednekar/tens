@@ -919,20 +919,21 @@ would now be refused.
 
 ### Pool-local resets
 
-Each Storage pool has an independent end-of-progression reset. Reset is offered only at 9/9/9
-disks, with a completely full Data Lake, when the next Booster costs more than that lake can hold.
-It empties only that pool's disks, buffer, and lake; Booster state and prior reset rewards remain.
-Each reset permanently adds 1,000 units of lake-only capacity. The first reset fixes lake overflow
-speed at 50%; the second and later resets also advance the pool through the existing bandwidth
-steps, with non-final reward growth limited dynamically by half the following pool's bandwidth.
+Each Storage pool resets independently once terminal (9/9/9 disks, a completely full Data Lake, and
+the next Booster costing more than that lake can hold): only that pool's disks/buffer/lake are
+emptied — Booster state, prior reset rewards, and every other pool are untouched; pools never
+transfer or share resources through this loop. Each reset permanently adds 1,000 lake-only capacity
+units. The first reset fixes lake overflow speed at 50%; later resets also advance the pool through
+the existing bandwidth steps, with non-final reward growth dynamically capped at half the following
+pool's bandwidth.
 
-After reset the pool provisions its disks automatically and for free, one at a time in normal
-smallest-first order, waiting for the current disk to fill before provisioning the next. While the
-pool is rebuilding, later pools cannot start new provisioning (already-active work may finish).
-Whenever all 9/9/9 disks are provisioned (including before the first reset), the lake's Booster
-control becomes a non-clickable cost label and the lake automatically buys every affordable Booster until slots fill
-or the next cost exceeds capacity; filling the lake at that wall enables the next reset. Pools never
-transfer or share resources through this loop.
+After reset the pool rebuilds automatically and for free — one disk at a time, smallest-first, each
+waiting for the current one to fill before the next starts; later pools can't begin new provisioning
+while this rebuild is in progress (already-active work may still finish). Whenever all 9/9/9 disks
+are provisioned (including before the first reset), the lake's Booster control becomes a
+non-clickable cost label and auto-buys every affordable Booster until slots fill or the next cost
+exceeds capacity; filling the lake at that wall enables the next reset. Full reset-reward derivation:
+`docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" section.
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). Every tier is bought
@@ -1165,20 +1166,13 @@ waits for the next real Prestige to reset purchase levels and reopen its own pul
 Full overflow-segment math, the disk-breakdown mixed-radix proof, and every gating predicate are in
 `docs/ECONOMY_REFERENCE.md`.
 
-**Display conventions — bare disk labels, fixed-unit pool/lake balances.** A Disk's own visible
-size label (the small text inside each `DiskArrayRow`/`DataLakePanel` square) is a bare number with
-no unit suffix (`formatDiskSizeBare` in `engine.js`) — the surrounding pool/lake card already
-establishes the scale (e.g. a "KB Pool" card's own disks are implicitly KB-denominated), so
-repeating the unit on every square would be redundant; aria-labels/tooltips keep the full
-unit-suffixed `formatDiskSize` form for accessibility. A pool's or Data Lake's own CAPACITY (and a
-Data Lake's own balance) always renders in that pool's/lake's own fixed unit (`formatDiskSizeInPoolUnit`)
-rather than `formatDiskSize`'s auto-nearest-unit pick — never auto-converting up to the next unit
-even once the value reaches 1000x this one (a maxed KB Data Lake's own capacity reads "1000 KB",
-never "1 MB"). A Storage pool's own buffer BALANCE (`PoolBalanceText` in `ByteFoundryPage`) instead
-self-sizes below that fixed unit (`formatPoolBalance`/`formatPoolBalanceStable`) — the buffer spends
-most of its life below the pool's own fixed unit (e.g. filling toward a "1 MB" capacity), so pinning
-it to that same fixed unit would floor it below 1 and misrender it as a raw bit count instead of a
-finer named unit (e.g. "398.375 KB / 1 MB", not "3.187e6 bits / 1 MB").
+**Display conventions.** A Disk's own in-square size label omits its unit (`formatDiskSizeBare`) —
+the pool/lake card already establishes the scale — while aria-labels/tooltips keep the unit-suffixed
+`formatDiskSize` form. A pool's/Data Lake's own CAPACITY (and Data Lake balance) is pinned to that
+pool's own fixed SI unit (`formatDiskSizeInPoolUnit`), never auto-converting up even past 1000x; a
+pool's own buffer BALANCE (`PoolBalanceText` in `ByteFoundryPage`) instead self-sizes to a finer unit
+below that fixed one (`formatPoolBalance`/`formatPoolBalanceStable`). Full rationale/examples:
+`docs/ECONOMY_REFERENCE.md`'s function table.
 
 **The above is a summary only.** The full mechanic reference — the complete tap/combine/Speed
 loop, auto-convert conversion mechanics, Storage's build/auto-fill/redeem lifecycle, Compute
@@ -1315,13 +1309,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-<<<<<<< HEAD
-- `yarn test` is green (1839 tests). The four core test files (`engine.test.js`, `layers.test.js`,
-- `yarn test` is green (1834 tests). The four core test files (`engine.test.js`, `layers.test.js`,
->>>>>>> origin/main
-=======
-- `yarn test` is green (1844 tests). The four core test files (`engine.test.js`, `layers.test.js`,
->>>>>>> main
+- `yarn test` is green (1849 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
