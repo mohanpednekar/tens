@@ -28,3 +28,7 @@
 **Vulnerability:** No Referrer Policy meta tag was present.
 **Learning:** Adding a Referrer Policy is a defense-in-depth measure that prevents the application's URL and potentially sensitive query parameters from being leaked in the `Referer` header when navigating to external links.
 **Prevention:** Always include a strict Referrer Policy meta tag (e.g., `no-referrer` or `strict-origin-when-cross-origin`).
+## 2024-12-07 - Content Security Policy (CSP) unsafe-inline
+**Vulnerability:** The Content Security Policy in `index.html` included `'unsafe-inline'` in the `script-src` directive.
+**Learning:** This directive allows execution of inline scripts and event handlers (e.g., `<script>...</script>`, `onclick="..."`), which opens up the potential for severe Cross-Site Scripting (XSS) attacks if any unsanitized user input is reflected into the HTML. Even if no immediate vector exists, it violates the principle of least privilege.
+**Prevention:** Implement strict CSP rules by default, explicitly denying `'unsafe-inline'` for `script-src` to enforce the execution of external, trusted scripts only.
