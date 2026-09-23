@@ -1315,7 +1315,13 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
+<<<<<<< HEAD
+- `yarn test` is green (1839 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1834 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+>>>>>>> origin/main
+=======
 - `yarn test` is green (1844 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+>>>>>>> main
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
