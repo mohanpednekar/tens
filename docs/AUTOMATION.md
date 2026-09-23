@@ -20,6 +20,13 @@ guard step's `gh issue list --label claude-task` doesn't silently return empty) 
 `security-events: read` (so its guard step's default-`GITHUB_TOKEN` call to the Dependabot alerts
 REST API, used by Phase 0(c)/Phase B item 2 below, doesn't come back empty or 403 — GitHub enables
 Dependabot alerts by default for public repos, so no separate manual step is needed for this one).
+The code-scanning/secret-scanning alert feeds (#55's alert-to-bug wiring, both engines' guard
+steps) instead authenticate as `GH_AUTOMATION_PAT` — secret-scanning alerts have no
+`GITHUB_TOKEN` scope at all — and depend on the PAT's "Code scanning alerts: read" /
+"Secret scanning alerts: read" scopes tracked in #62's checklist; each feed fails soft on
+any API error — a `::warning` in the step log plus an explicit `(unavailable — fetch
+failed)` marker in the feed — so a missing scope or outage never turns a run red, but is
+also never indistinguishable from "no alerts".
 `automation-self-heal.yml` also needs `issues: write` so it can file `automation-failure` triage
 issues when a config-level fix isn't confident.
 
@@ -100,7 +107,8 @@ not an error, on any repo with more open items than that. This repo hit it for r
 `claude-task` issues, the guard step's unlimited `gh issue list` call silently dropped every issue
 below the cutoff, including several `priority:high` ones (#45-49) that should have outranked what
 Phase A was actually shown (see #45/#81's comment history). Every `gh issue list`/`gh pr list` call in
-the guard step now passes an explicit `--limit` (200 for the task backlog, 100 elsewhere) well above
+the guard step now passes an explicit `--limit` (200 for the task backlog, 500 for the bug feed,
+100 elsewhere) well above
 this solo project's realistic backlog size, so the CLI itself never silently drops an item. The task
 backlog is additionally capped for *display* at 30 entries — sorted `priority:high` first, then
 normal, then `priority:low`, each tier by ascending issue number (mirroring Phase A's own walk order)
@@ -113,8 +121,13 @@ exist yet; see #81's Dependencies for why that fuller chain is still blocked).
 
 That capping is also a **standing constraint on any future guard-step feed**, not just a description
 of today's set — the part of #81 that can land ahead of its still-blocked audit. Whenever a later
+issue adds a context feed (the bug/security-alert lists #55 — landed; the Project summary #53,
+automation-retro list #57, checklist status #63, Discussions ideas #66, or anything else), it must
+arrive bounded: an
+
 issue adds a context feed (the Project summary #53, bug/security-alert lists #55, checklist status
 #63, Discussions ideas #66, or anything else), it must arrive bounded: an
+
 explicit `--limit` on the underlying `gh` call and a hard display cap with a "+N more, see the
 tracker directly" note. *List-type* feeds render items as number + title + labels only (never full
 bodies); status feeds bounded by design instead (Project field values, checklist state) keep to a
@@ -123,6 +136,32 @@ tracking surfaces accumulate. The rule applies to both engines' guard steps;
 `devin-autonomous-maintenance.yml` `--limit`s and summarises its feeds but its backlog feed still
 lacks the "+N more" overflow note — a known gap for the future audit to close, not a compliant
 example.
+
+**Bug filing and alert-to-bug wiring (#55) apply to every phase, in both engines.** Any run —
+Phase A task or Phase B menu item — that notices a genuine bug unrelated to (or beyond the scope
+of) its current work files a `claude-task` + `bug` issue for it instead of fixing it in the same
+run (a bug already directly in-scope is just normal work). The filed issue carries the usual
+template sections plus an explicit **Impact** line — one sentence on who/what is affected and how
+badly — which is what Phase A weighs (below) when ordering same-priority candidates. Dedup is
+against the guard step's open-`bug` feed plus an `in:body` search before filing. The same rule
+extends mechanically to the guard step's code-scanning (CodeQL) and secret-scanning alert feeds —
+both rendered severity/validity-first (critical→high→…, active→unknown→inactive) with the
+interpolated free-text metadata (rule IDs/descriptions, secret-type names) stripped of
+control characters and length-capped, since alert text is untrusted content entering a
+privileged prompt. Each open alert not already tracked by an open
+`bug` issue gets one `claude-task` + `bug` issue linking it — dedup is by the alert's own URL or
+number, never a shared rule ID — with Impact set from severity (`critical`/`high` noted
+explicitly and a `priority:high` candidate; secret-scanning has no severity so `active`/`valid`
+validity takes that slot, meaning an urgent-rotation note in the body). A secret-scanning filing
+never lets the detected value reach the issue *or* the run's own transcript — file/commit detail
+comes from the `/locations` endpoint (paths + commit SHAs, no secret field), never the alert
+detail endpoint, and the guard-step feed itself also calls the list API with `hide_secret=true`.
+Overflow beyond the feed cap becomes ONE umbrella triage issue linking the Security tab rather
+than the agent paging raw alert data. Dependabot security alerts
+are deliberately NOT in this pipeline: Phase 0(c)/Phase B item 2 already own those (direct fix or
+a `claude-task` + `priority:high` + `security` issue) — filing a second `bug` issue for them would
+duplicate that coverage. All of this filing is cheap housekeeping alongside the run's real task,
+never its unit of work.
 
 `blocked` covers two distinct situations, not just one: an environment/permission restriction of the
 unattended session itself (the original use case), and — per Phase A's comment-history check below —
@@ -234,7 +273,11 @@ elevated here. If none of (a)/(b)/(c) apply, falls through to Phase A.
 issues last (only picked once no `priority:high` or normal-priority eligible issue remains open —
 this governs default autonomous ordering, not an absolute ban: a maintainer or interactive session
 can still ask for a `priority:low` issue directly, and it's also picked early if it's genuinely the
-only eligible candidate left) — skipping tasks already covered by an open autonomous
+only eligible candidate left). Within a single nominal priority tier, a `bug`-labeled issue's
+described **Impact** may be weighed to pick a more-impactful bug ahead of a lower-impact issue
+filed earlier — `priority:high` still jumps the queue outright; this only refines ordering
+*within* a tier, and a run that deviates from strict lowest-number ordering this way says so
+explicitly in the PR body or an issue comment — skipping tasks already covered by an open autonomous
 PR and tasks with an open "Blocked by #N" dependency — and implements the first candidate that's
 actually implementable, rather than stopping at the first one it tries. For each candidate in turn:
 checks the issue's own comment history for a prior automated investigation before diving in (see
@@ -293,7 +336,11 @@ Each run installs the Devin CLI (credentials from the `DEVIN_CLI_CREDENTIALS` re
 `main` CI first, else pick the top eligible `claude-task` issue and implement it on a
 `devin/auto-<issue>-<slug>` branch with a PR into `main`. The guard step counts `devin/auto-*`
 and `claude/auto-*` open PRs together toward the shared 5-PR ceiling (a red main bypasses it)
-and sorts the backlog `priority:high` → normal → `priority:low` with `blocked` excluded.
+and sorts the backlog `priority:high` → normal → `priority:low` with `blocked` excluded. Its
+guard step and prompt also mirror the #55 pieces — the open-`bug` feed, the code-scanning and
+secret-scanning alert feeds (same `GH_AUTOMATION_PAT` auth and fail-soft posture), the
+bug-filing rule, the alert-to-bug wiring, and Phase A's within-tier Impact weighing — minus
+Dependabot alerts, which stay the Claude engine's Phase 0(c)/Phase B item 2 job.
 
 Unlike the Claude counterpart, the Devin agent runs under `--permission-mode dangerous` rather
 than a settings deny-list, and its prompt places **no file-scope restriction**: it may modify

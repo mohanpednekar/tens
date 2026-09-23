@@ -292,7 +292,13 @@ Dependabot security alert, severity-sorted the same way Phase A sorts priority l
 outranks Phase A (task backlog, ordered `priority:high` → normal/FIFO → `priority:low`), which
 always outranks Phase B (a maintenance menu: test coverage, dependency/security — including any
 medium/low-severity Dependabot alerts Phase 0 didn't need to handle — code quality, doc sync,
-workflow self-improvement, gap analysis).
+workflow self-improvement, gap analysis). Any run in either engine that notices a genuine bug
+outside its current task's scope files a `claude-task` + `bug` issue for it (with an explicit
+**Impact** line) rather than fixing it mid-run, and the guard step's code-scanning/secret-scanning
+alert feeds get the same `claude-task` + `bug` treatment for alerts not already tracked —
+Dependabot alerts stay with Phase 0(c)/Phase B instead. Phase A may weigh a `bug` issue's
+described Impact to reorder *within* a priority tier (`priority:high` still jumps outright), saying
+so explicitly when it deviates from lowest-number order.
 `devin-autonomous-maintenance.yml` is the Devin-CLI counterpart: every 4 hours (UTC :17) it runs
 `devin -p --prompt-file <file> --model swe --permission-mode dangerous --respect-workspace-trust false` to pick the top eligible `claude-task` issue and
 open a `devin/auto-*` PR; git/`gh` authenticate via `GH_AUTOMATION_PAT` so PRs trigger CI, and the
