@@ -923,8 +923,17 @@ Each Storage pool resets independently once terminal (9/9/9 disks, a completely 
 the next Booster costing more than that lake can hold): only that pool's disks/buffer/lake are
 emptied — Booster state, prior reset rewards, and every other pool are untouched; pools never
 transfer or share resources through this loop. Each reset permanently adds 1,000 lake-only capacity
-units, then the pool free-rebuilds automatically. Full reset-reward/rebuild-ordering/auto-buy
-mechanic: `docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" section.
+units. The first reset fixes lake overflow speed at 50%; later resets also advance the pool through
+the existing bandwidth steps, with non-final reward growth dynamically capped at half the following
+pool's bandwidth.
+
+After reset the pool rebuilds automatically and for free — one disk at a time, smallest-first, each
+waiting for the current one to fill before the next starts; later pools can't begin new provisioning
+while this rebuild is in progress (already-active work may still finish). Whenever all 9/9/9 disks
+are provisioned (including before the first reset), the lake's Booster control becomes a
+non-clickable cost label and auto-buys every affordable Booster until slots fill or the next cost
+exceeds capacity; filling the lake at that wall enables the next reset. Full reset-reward derivation:
+`docs/ECONOMY_REFERENCE.md`'s "Pool-local reset loop" section.
 
 There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/game/layers.js`), with
 display names `Kilobytes` through `Quettabytes` (a byte-scale/computing theme). Every tier is bought
