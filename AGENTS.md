@@ -266,7 +266,10 @@ ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `pr-conflict-swe
 every push to `main` and comments on any open PR that became conflicted (the comment triggers the
 follow-up agent on automation branches). `devin-workflow-health.yml` runs daily at
 midnight UTC, filing an `automation-failure` issue when the workflow file stops parsing, no run
-has started in >26h, or the latest run didn't succeed.
+has started in >26h, or the latest run didn't succeed. `release.yml` (deterministic, no agent)
+fires on pushes to `main` that touch `package.json`: it pushes annotated tag `v<x.y.z>` and
+creates a GitHub Release from that version's `CHANGELOG.md` section when the tag doesn't already
+exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
 
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.

@@ -304,6 +304,29 @@ jobs:
             echo "secret_scanning_alerts<<SSALERT_EOF"
             echo "$secret_scanning_alerts"
             echo "SSALERT_EOF"
+
+          # Same shape for already-open automation-retro reports (#57): a run about to
+          # file one dedups against — or extends — an existing report rather than piling
+          # on duplicates, and a visible cluster of similar reports is itself the
+          # recurrence-pattern signal the channel exists to surface. Bounded per the
+          # standing guard-step feed rule (#81, docs/AUTOMATION.md): explicit --limit on
+          # the gh call plus a display cap with a "+N more" overflow note.
+          RETRO_DISPLAY_CAP=30
+          open_retro_json=$(gh issue list --label automation-retro --state open --limit 100 \
+            --json number,title)
+          open_retro_count=$(jq 'length' <<<"$open_retro_json")
+          open_retro_issues=$(jq -r --argjson cap "$RETRO_DISPLAY_CAP" '
+            (sort_by(.number))[0:$cap][] | "- #\(.number): \(.title)"' <<<"$open_retro_json")
+          if [ "$open_retro_count" -gt "$RETRO_DISPLAY_CAP" ]; then
+            hidden=$((open_retro_count - RETRO_DISPLAY_CAP))
+            open_retro_issues="$open_retro_issues
+            - (+$hidden more open automation-retro issue(s) not shown — see \`gh issue list --label automation-retro --state open\` for the rest)"
+          fi
+          {
+            echo "open_retro_issues<<RETRO_EOF"
+            echo "$open_retro_issues"
+            echo "RETRO_EOF"
+
           } >> "$GITHUB_OUTPUT"
 
       - name: Surface a broken deploy.yml run
@@ -386,6 +409,9 @@ jobs:
           OPEN_TASKS: ${{ steps.guard.outputs.open_tasks }}
           OPEN_GAP_ISSUES: ${{ steps.guard.outputs.open_gap_issues }}
           OPEN_BUG_ISSUES: ${{ steps.guard.outputs.open_bug_issues }}
+
+          OPEN_RETRO_ISSUES: ${{ steps.guard.outputs.open_retro_issues }}
+
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
           MAIN_CI_RUN_URL: ${{ steps.guard.outputs.main_ci_run_url }}
           FAILING_PRS: ${{ steps.guard.outputs.failing_prs }}
@@ -416,6 +442,9 @@ jobs:
           : "${OPEN_TASKS:=(none)}"
           : "${OPEN_GAP_ISSUES:=(none)}"
           : "${OPEN_BUG_ISSUES:=(none)}"
+
+          : "${OPEN_RETRO_ISSUES:=(none)}"
+
           : "${FAILING_PRS:=(none)}"
           : "${DEPENDABOT_ALERTS:=(none)}"
           : "${DEPENDABOT_PRS:=(none)}"
@@ -459,6 +488,11 @@ jobs:
           bug-filing rule below, and Phase A may weigh their described Impact within a
           priority tier:
           $OPEN_BUG_ISSUES
+
+          Currently-open automation-retro reports (number: title), filed by a previous run's
+          automation-retro reporting (see AUTOMATION-RETRO REPORTING below):
+          $OPEN_RETRO_ISSUES
+
 
           Main branch CI status: the latest completed run of ci.yml on main
           $MAIN_CI_STATUS_LINE
@@ -777,6 +811,41 @@ jobs:
              (idempotent: `gh label create gap-analysis --color 0e8a16 --description
              "Proposal filed by a gap-analysis run" --force`).
 
+          AUTOMATION-RETRO REPORTING — a standing channel orthogonal to whichever phase
+          you ran above. Whenever a run observes the automation itself misbehaving — a
+          budget/turn overrun despite the self-estimated 50% target, an auto-merge that
+          shouldn't have fired, the duplicate-PR guard failing to prevent overlap, a
+          tag/Project/release-automation step erroring or producing wrong output — file a
+          GitHub issue labeled `claude-task` + `automation-retro` describing what happened,
+          what should have happened instead, and — if apparent — a suggested
+          process/workflow fix. This is distinct from the other two filing channels: a bug
+          in the game goes through the `bug`-labeled issue pipeline, and a missing repo
+          capability is Phase B item 6's gap-analysis — a retro is only for the
+          automation's own machinery misfiring. Rules:
+          - Ensure the label exists first (idempotent): `gh label create automation-retro
+            --color 6f42c1 --description "Post-mortem of an automation misfire, filed by a
+            run" --force`.
+          - Link the specific GitHub Actions run/job URL as evidence rather than pasting
+            raw error output — the issue body is for the interpretation and the lesson,
+            not a log dump.
+          - Check the "Currently-open automation-retro reports" list above before filing:
+            extend an existing report (comment on it) rather than opening a duplicate, and
+            treat a cluster of similar reports as the pattern signal this channel exists
+            to surface.
+          - Quota-wall classification: a run dying on a transient Claude-side 429/5xx is
+            already downgraded to a warning by the "Classify Claude step failure" step —
+            a single such occurrence needs no retro at all. File one only when several
+            transient-downgraded runs accumulate into a recurrence pattern, and say so
+            plainly in the issue: likely transient, not a code defect, unless the pattern
+            indicates otherwise.
+          - A retro proposes; it doesn't fix. Don't attempt a live automation fix in the
+            same pass unless it's trivial and squarely in scope for the task you're
+            already implementing. Any retro that does result in a workflow-file change is
+            still bound by Phase B item 5's restrictions (may not weaken the duplicate-PR
+            guard, the usage-window budget cap, the never-self-merge rule, the
+            always-open-a-PR rule, or Phase A's priority over the menu) unless that
+            issue's own Explicit Authorizations section says otherwise.
+
           Hard constraints, no exceptions:
           - Never add, remove, or reorder entries in TIER_DEFINITIONS (src/game/layers.js), and
             never make game-design/economy-rule changes, UNLESS you are implementing a Phase A
@@ -848,6 +917,9 @@ jobs:
           prompt_text=${prompt_text//'$OPEN_TASKS'/$OPEN_TASKS}
           prompt_text=${prompt_text//'$OPEN_GAP_ISSUES'/$OPEN_GAP_ISSUES}
           prompt_text=${prompt_text//'$OPEN_BUG_ISSUES'/$OPEN_BUG_ISSUES}
+
+          prompt_text=${prompt_text//'$OPEN_RETRO_ISSUES'/$OPEN_RETRO_ISSUES}
+
           prompt_text=${prompt_text//'$FAILING_PRS'/$FAILING_PRS}
           prompt_text=${prompt_text//'$DEPENDABOT_ALERTS'/$DEPENDABOT_ALERTS}
           prompt_text=${prompt_text//'$DEPENDABOT_PRS'/$DEPENDABOT_PRS}

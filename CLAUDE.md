@@ -281,8 +281,8 @@ used only on trusted refs — the PR-follow-up workflows keep setup inline becau
 checkout is untrusted PR code), `scripts/pr-head-guard.sh` (fork + branch-prefix check run
 from a sparse **main** checkout before the pinned-SHA checkout), and
 `scripts/claude-deny-settings.sh` (generates the claude-code-action `settings` deny JSON;
-base list always protects `ci.yml`/`deploy.yml`/`automation-self-heal.yml`, callers pass
-extra files). See `docs/AUTOMATION.md` "Shared workflow helpers".
+base list always protects `ci.yml`/`deploy.yml`/`release.yml`/`automation-self-heal.yml`,
+callers pass extra files). See `docs/AUTOMATION.md` "Shared workflow helpers".
 
 **Orchestration model.** The maintainer orchestrates; the scheduled workflow develops. `claude-task`-
 labeled GitHub issues (via `.github/ISSUE_TEMPLATE/claude-task.yml`) are the work backlog for
@@ -315,6 +315,11 @@ filing an `automation-failure` issue otherwise. Its prompt also applies the Pull
 convention above to its own PRs: check review feedback (human + bot, incl. Devin Review) and CI
 before ending the run, address and resolve every thread, and iterate until the PR is mergeable —
 post-run feedback stays `autonomous-pr-followup.yml`'s job.
+`release.yml` is likewise deterministic (no agent): on a push to `main` that touches
+`package.json` it reads the version, pushes annotated tag `v<x.y.z>` if that tag doesn't already
+exist, and creates a GitHub Release whose notes come from that version's `CHANGELOG.md` section —
+the post-merge half of #52 (the pre-merge half is `yarn bump-version`; see "Changelog convention"
+and `docs/AUTOMATION.md`).
 `autonomous-pr-followup.yml` closes the loop on review comments/CI failures on `claude/auto-*` and
 `devin/auto-*` PRs.
 `dependabot-pr-followup.yml` does the same for failing checks on `dependabot/*` PRs when the bump
@@ -399,8 +404,10 @@ final step on that PR's own branch — it reads Unreleased, chooses **minor** if
 `### Removed` has entries (otherwise **patch**; major is never auto-selected), writes the new
 `package.json` version, moves Unreleased into `## [x.y.z] - YYYY-MM-DD`, and resets Unreleased to
 empty subheadings. No-op (exit 0) when Unreleased has no bullet entries. The bump lands in the PR
-diff like any other change (never a direct commit to `main`). Post-merge tag push + GitHub Release
-creation is the remaining half of #52 (`release.yml`), blocked on historical tags from #51.
+diff like any other change (never a direct commit to `main`). Once that PR merges,
+`release.yml` (push-to-`main`, `paths: ['package.json']`, deterministic — no agent) pushes the
+annotated `v<x.y.z>` tag and creates the GitHub Release from that version's changelog section;
+see `docs/AUTOMATION.md`'s "Release" entry.
 
 ## AI-instruction file cost hygiene
 
@@ -623,8 +630,8 @@ e2e/
 scripts/
   bump-version.mjs (+ `.test.js`) ← `yarn bump-version`: cut CHANGELOG ## [Unreleased] into a
                                dated ## [x.y.z] section and bump package.json (minor if
-                               Added/Removed entries, else patch; no-op if empty) — Part of #52;
-                               post-merge tag/Release workflow still deferred
+                               Added/Removed entries, else patch; no-op if empty) — #52;
+                               `release.yml` handles the post-merge tag + GitHub Release
   generate-pwa-icons.mjs     ← one-off Node script (run via `yarn gen-pwa-icons`) that rasterizes an
                                inline "byte grid" SVG (see `docs/PWA_REFERENCE.md`) with `sharp` into
                                public/pwa-*.png + apple-touch-icon.png, and hand-assembles
@@ -1308,7 +1315,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1834 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1844 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
