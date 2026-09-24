@@ -2759,6 +2759,9 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // (fillDataLakeManually/isDataLakeManualFillAvailable below) — see docs/DESIGN_HISTORY.md.
     // Same "leave bits untouched" treatment as the not-ready case above.
     if (!isStoragePoolFullyBuilt(state, poolIndex)) continue
+    // tickDataLakePoolDrain (run right after this) already feeds this lake from the buffer at the
+    // pool's Bandwidth this tick — overflowing here too would credit the same interval twice.
+    if (isDataLakePoolDrainAvailable(state, poolIndex)) continue
 
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
@@ -5269,12 +5272,14 @@ export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
 
 // Pool buffer priority: disk filling > provisioning in progress > Data Lake filling. The lake may
 // draw from its own pool only once every built disk is full and no build is in progress there —
-// and only while the lake itself still has an open slot to fill.
+// and only while the lake itself still has an open slot to fill and the buffer holds more than the
+// read cache's own reservation (otherwise the drain has nothing to move).
 export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
   isDataLakePoolReady(state, poolIndex) &&
   getDataLakeCurrentFillSubSize(state, poolIndex) !== null &&
   areStoragePoolDisksFull(state, poolIndex) &&
-  !isStoragePoolProvisioningInProgress(state, poolIndex)
+  !isStoragePoolProvisioningInProgress(state, poolIndex) &&
+  getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
 
 // A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), at the pool's raw
 // Bandwidth, every tick — independent of the Data Stream. This keeps lakes filling while an armed

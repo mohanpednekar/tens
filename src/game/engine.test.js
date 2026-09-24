@@ -1483,9 +1483,23 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     expect(tickDataLakePoolDrain(1e6)(maxed)).toBe(maxed)
   })
 
-  it('leaves the read cache\'s own refill claim in the buffer', () => {
+  it('leaves the read cache\'s own refill claim in the buffer (and reports nothing to drain)', () => {
     const state = pool({ diskCache: {}, poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS } })
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
     expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('a full eligible pool feeds its lake at most once per tick (overflow yields to the drain)', () => {
+    const seed = pool({ bits: 1e9, capacity: 32_000_000 })
+    const state = { ...seed, intro: { ...seed.intro, poolBuffers: { 1: getPoolBufferCapacity(seed, 1) } } }
+    const rate = getStoragePoolBandwidth(state, 1)
+    const dt = 0.001
+    const before = getDataLakeDepositedUnits(1)(state) * DISK_LADDER_BASE_SIZE_BITS + (state.intro.dataLakes?.[1]?.fillBits ?? 0)
+    const after = tickDataLakePoolDrain(dt)(tickPoolBufferFill(dt)(state))
+    const lake = after.intro.dataLakes[1]
+    const gained = getDataLakeDepositedUnits(1)(after) * DISK_LADDER_BASE_SIZE_BITS + (lake?.fillBits ?? 0) - before
+    expect(gained).toBeGreaterThan(0)
+    expect(gained).toBeLessThanOrEqual(rate * dt + 1e-6)
   })
 
   it('is paced by the pool\'s Bandwidth', () => {

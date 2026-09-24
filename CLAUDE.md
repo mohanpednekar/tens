@@ -1131,7 +1131,9 @@ AUTOMATICALLY** from that pool's buffer
 the lake draws directly from its pool's own buffer at the pool's Bandwidth (`tickDataLakePoolDrain`,
 right after `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in
 progress > lake filling — i.e. only while every BUILT disk is full and no build is in progress in
-that pool and the lake has room (`isDataLakePoolDrainAvailable`; unprovisioned slots don't block it,
+that pool, the lake has room and the buffer holds more than the read cache's reservation
+(`isDataLakePoolDrainAvailable`; while it applies, the full-buffer overflow yields to it so the
+same tick isn't credited twice; unprovisioned slots don't block it,
 even before the pool is complete, and the read cache's refill reservation is left alone). It's independent of the Data Stream, so lakes keep filling while
 an armed Upgrade Data Stream pauses Data Stream outflow. Manual fill
 (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends directly from that pool's own
@@ -1330,7 +1332,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1865 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1866 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
