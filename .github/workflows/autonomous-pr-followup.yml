@@ -25,11 +25,19 @@ jobs:
     # access reach the checkout-and-execute steps below (check_suite has no such actor, so
     # it isn't gated here — it's already restricted by the same-repo + branch-prefix checks
     # inside the "Resolve target PR" step).
+    # A named allowlist of review/automation bot logins also passes: those apps post with
+    # author_association NONE/CONTRIBUTOR, which the association gate would otherwise drop,
+    # stalling autonomous PRs whose only feedback is bot review (#731). Keying on the exact
+    # user.login keeps the pwn-request guard intact — a login is only spoofable by the app
+    # itself — unlike broadening the accepted association values, which would also cover
+    # arbitrary humans. Allowlist verified against this repo's real review/comment authors.
     if: >
       (github.event_name != 'issue_comment' ||
-       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association)) &&
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association) ||
+       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "google-labs-jules[bot]", "Copilot"]'), github.event.comment.user.login)) &&
       (github.event_name != 'pull_request_review' ||
-       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association))
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association) ||
+       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "google-labs-jules[bot]", "Copilot"]'), github.event.review.user.login))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

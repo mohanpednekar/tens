@@ -391,7 +391,12 @@ branch — it never opens a new PR and never merges or approves. Same hard const
 workflow (no `--no-verify`, no faking a check green, no touching other workflow files). It resolves
 the target branch via `gh pr view --json headRefName,isCrossRepository` (refusing fork PRs), passes
 untrusted event fields through `env:` (not shell interpolation), gates on the triggering commenter
-having write access via a native workflow `if:`, and checks out the exact commit SHA rather than the
+having write access via a native workflow `if:` — or being one of a named allowlist of
+review/automation bot logins (`chatgpt-codex-connector[bot]`, `devin-ai-integration[bot]`,
+`google-labs-jules[bot]`, `Copilot`), whose `NONE`/`CONTRIBUTOR` author_association would otherwise
+stall autonomous PRs whose only feedback is bot review (#731); the allowlist keys on exact
+`user.login`, which only the real GitHub App can post under, so the pwn-request guard is preserved
+— and checks out the exact commit SHA rather than the
 branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 `docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
 
