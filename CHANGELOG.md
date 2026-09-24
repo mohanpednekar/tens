@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   full arms the upgrade and pauses all outflow from the Data Stream (pool buffers, Data Lakes,
   Kilobyte auto-convert) until the Buffer fills and the upgrade completes — fixing a Data Stream
   stuck below full because Data Lakes kept drawing from it. An armed upgrade survives
-  a reload and a Prestige; click the button again while it's queued to cancel.
+  a reload and a Prestige. While armed, the upgrade button is hidden and the Data Stream tile
+  itself shows the upgrade status (outlined, "Upgrading to … · outflow paused"), with a small
+  "Cancel upgrade" control to back out.
 - **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
   own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
   economically substitutes for the missing 10th unit. A Data Lake's overflow fill no longer tapers

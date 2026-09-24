@@ -994,7 +994,8 @@ purchased progression variable. The button is clickable at any fill
 it (`intro.capacityUpgradeQueued`) and pauses every Data Stream outflow (`isDataStreamOutflowPaused`
 — `tickPoolBufferFill`/Data Lake overflow, `tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade`
 fires it, so continuous pool/lake draw can't hold the Buffer below full indefinitely. The arm
-survives load and Prestige; clicking the armed button cancels it (`clearIntroCapacityUpgradeQueue`). The displayed Speed is purely *derived* from Capacity
+survives load and Prestige. While armed the button is hidden, the Data Stream tile shows the upgrade
+status, and a "Cancel upgrade" control disarms it (`clearIntroCapacityUpgradeQueue`). The displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd
 powers the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3
 growth, exactly ×2 per two upgrades. Plus —

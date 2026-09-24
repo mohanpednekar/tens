@@ -210,6 +210,15 @@ const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
+// Data Stream tile's own status line while an Upgrade Data Stream is armed (the button itself is
+// hidden then — see capacityUpgradeQueued below).
+const UpgradeStatusText = styled.span`
+  color: ${props => props.theme.color.warn};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 600;
+  text-align: center;
+`
+
 const SpeedText = styled.span`
   flex-shrink: 0;
   color: ${props => props.theme.color.textMuted};
@@ -242,6 +251,10 @@ const FillableStatCard = styled.div`
   border-radius: ${props => props.theme.radius.sm};
   color: ${props => props.theme.color.text};
   ${progressFill}
+
+  ${props => props.$upgrading && `
+    box-shadow: inset 0 0 0 2px ${props.theme.color.warn};
+  `}
 
   ${props => props.$tappable && `
     cursor: pointer;
@@ -670,8 +683,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
           aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
           title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+          aria-describedby={capacityUpgradeQueued ? 'data-stream-upgrade-status' : undefined}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
+          $upgrading={capacityUpgradeQueued}
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
@@ -684,6 +699,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             )}{' '}
             <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
           </BalanceText>
+          {capacityUpgradeQueued && (
+            <UpgradeStatusText id="data-stream-upgrade-status">
+              ⏫ Upgrading to {formatMemoryCapacityValue(intro.capacity * 2, true)} · outflow paused
+            </UpgradeStatusText>
+          )}
           {intro.byteCreated && (
             <MultiplierBar
               basePercent={dataStreamBaseMultiplierPercent}
@@ -721,31 +741,42 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
-          {intro.byteCreated && (
+          {intro.byteCreated && !capacityUpgradeQueued && (
             <MilestonesRow>
               <Button
-                aria-label={capacityUpgradeQueued ? 'upgrade data stream (armed, outflow paused; click to cancel)' : 'upgrade data stream'}
-                disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}
-                onClick={capacityUpgradeQueued ? actions.clearIntroCapacityUpgradeQueue : actions.pickIntroCapacityMilestone}
+                aria-label="upgrade data stream"
+                disabled={!capacityUpgradeClickable}
+                onClick={actions.pickIntroCapacityMilestone}
                 title={
-                  capacityUpgradeQueued
-                    ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes. Click to cancel'
-                    : capacityUpgradeAvailable
-                      ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                      : capacityUpgradeArmable
-                        ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
-                        : 'Capacity is already at its maximum'
+                  capacityUpgradeAvailable
+                    ? 'The Data Stream Buffer is full; drain it to double Capacity'
+                    : capacityUpgradeArmable
+                      ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
+                      : 'Capacity is already at its maximum'
                 }
                 type="button"
-                variant={capacityUpgradeClickable || capacityUpgradeQueued ? 'prestige' : 'neutral'}
+                variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
                 $progress={capacityUpgradeProgress}
               >
                 <MilestoneButtonContent>
-                  <span>{capacityUpgradeQueued ? 'Upgrading Data Stream…' : 'Upgrade Data Stream'}</span>
+                  <span>Upgrade Data Stream</span>
                   <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
                 </MilestoneButtonContent>
               </Button>
             </MilestonesRow>
+          )}
+          {/* While armed, the Data Stream tile itself shows the upgrade status; this small control
+              is the only way to back out of it (see clearIntroCapacityUpgradeQueue). */}
+          {capacityUpgradeQueued && (
+            <Button
+              aria-label="cancel data stream upgrade"
+              onClick={actions.clearIntroCapacityUpgradeQueue}
+              title="Cancel the armed upgrade and resume Data Stream outflow"
+              type="button"
+              variant="neutral"
+            >
+              <ButtonContent>✕ Cancel upgrade</ButtonContent>
+            </Button>
           )}
 
         </ActionsRow>

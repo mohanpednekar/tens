@@ -8753,7 +8753,9 @@ lake overflow) and `tickIntroAutoInvest` until `tickQueuedCapacityUpgrade` fires
 fire (no byte yet, or Capacity at cap), and `prestigeGame` carries it through a real Prestige (like
 `diskBuildQueued`) so the player's explicit arm isn't silently dropped. Because a carried arm keeps
 tier01 auto-invest paused at the start of the new cycle until the fresh Buffer fills, clicking the
-armed button cancels it (`clearIntroCapacityUpgradeQueue`).
+armed button cancels it (`clearIntroCapacityUpgradeQueue`). Later, per maintainer request, the upgrade
+button is hidden while armed: the Data Stream tile itself shows the status (outline + "Upgrading to …
+· outflow paused" line) and a small "Cancel upgrade" control replaces the button.
 
 **Rejected: a 99% arm threshold.** First implemented as requested, but an adversarial-review
 simulation with fully built pools showed the Buffer plateauing at 7–73% for hours, so a 99% button

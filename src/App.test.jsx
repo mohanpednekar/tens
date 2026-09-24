@@ -2744,23 +2744,24 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   expect(upgradeButton).toBeEnabled()
 })
 
-test('Upgrade Data Stream is clickable below a full Buffer; a click arms it, and clicking again cancels', () => {
+test('arming Upgrade Data Stream hides the button and the Data Stream tile shows the status; Cancel disarms', () => {
   vi.useFakeTimers()
   // 1000 bits capacity, 400 banked: not a full Buffer, but armable at any fill.
   seedIntroState({ capacity: 1000, bits: 400, byteCreated: true })
   const { unmount } = render(<App />)
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
 
-  const armed = screen.getByRole('button', { name: /upgrade data stream \(armed/i })
-  expect(armed).toHaveTextContent('Upgrading Data Stream…')
-  // Clicking the armed button cancels the arm and resumes outflow.
-  expect(armed).toBeEnabled()
-  fireEvent.click(armed)
-  const disarmed = screen.getByRole('button', { name: /^upgrade data stream$/i })
-  expect(disarmed).toHaveTextContent('Upgrade Data Stream')
+  // The upgrade button is gone while armed; the tile carries the status instead.
+  expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
+  const dataStream = screen.getByRole('region', { name: 'Data Stream' })
+  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
+
+  fireEvent.click(screen.getByRole('button', { name: /cancel data stream upgrade/i }))
+  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBeEnabled()
+  expect(dataStream).not.toHaveTextContent(/outflow paused/)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()
