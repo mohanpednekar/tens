@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -579,6 +579,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
+  const capacityUpgradeArmable = isMemoryCapacityUpgradeArmable(state)
+  const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
+  const capacityUpgradeClickable = capacityUpgradeAvailable || capacityUpgradeArmable
   const capacityUpgradeCost = intro.capacity
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
@@ -722,21 +725,25 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <MilestonesRow>
               <Button
                 aria-label="upgrade data stream"
-                disabled={!capacityUpgradeAvailable}
+                disabled={!capacityUpgradeClickable}
                 onClick={actions.pickIntroCapacityMilestone}
                 title={
                   capacityUpgradeAvailable
                     ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                    : intro.bits < intro.capacity
-                      ? 'Fill the Data Stream Buffer completely before upgrading the Data Stream'
-                      : 'Capacity is already at its maximum'
+                    : capacityUpgradeQueued
+                      ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes'
+                      : capacityUpgradeArmable
+                        ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
+                        : intro.bits < intro.capacity
+                          ? 'Fill the Data Stream Buffer to 99% before upgrading the Data Stream'
+                          : 'Capacity is already at its maximum'
                 }
                 type="button"
-                variant={capacityUpgradeAvailable ? 'prestige' : 'neutral'}
+                variant={capacityUpgradeClickable || capacityUpgradeQueued ? 'prestige' : 'neutral'}
                 $progress={capacityUpgradeProgress}
               >
                 <MilestoneButtonContent>
-                  <span>Upgrade Data Stream</span>
+                  <span>{capacityUpgradeQueued ? 'Upgrading Data Stream…' : 'Upgrade Data Stream'}</span>
                   <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
                 </MilestoneButtonContent>
               </Button>
