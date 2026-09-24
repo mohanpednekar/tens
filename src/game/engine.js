@@ -3241,7 +3241,8 @@ export const eraseAllComputeTokens = state => {
   return { ...state, intro: next }
 }
 
-// Fires a queued Capacity upgrade once its full-buffer and priority conditions are met.
+// Fires a queued Capacity upgrade once the Buffer is full (Upgrade Data Stream is outside the
+// forced priority order).
 export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
   if (!isMemoryCapacityUpgradeAvailable({
