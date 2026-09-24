@@ -1400,6 +1400,13 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(tickPoolBufferFill(1)(unarmed)).not.toBe(unarmed)
   })
 
+  it('an armed upgrade carries through a real Prestige', () => {
+    const armed = pickIntroCapacityMilestone(armState(capacity / 2))
+    const after = prestigeGame(withMoney(armed, PRESTIGE_THRESHOLD))
+    expect(after.intro.capacityUpgradeQueued).toBe(true)
+    expect(after.intro.capacity).toBe(capacity)
+  })
+
   it('tickGame tops the Buffer off and fires the armed upgrade, then resumes outflow', () => {
     let state = pickIntroCapacityMilestone(armState(capacity / 2))
     for (let i = 0; i < 10_000 && state.intro.capacity === capacity; i += 1) {

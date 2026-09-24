@@ -8750,7 +8750,8 @@ Buffer a click arms `intro.capacityUpgradeQueued` (`pickIntroCapacityMilestone` 
 `queueIntroCapacityUpgrade`), and `isDataStreamOutflowPaused` gates `tickPoolBufferFill` (including
 lake overflow) and `tickIntroAutoInvest` until `tickQueuedCapacityUpgrade` fires on a full Buffer.
 `normalizePoolMemoryCapacity` now keeps the flag across load, clearing it only when it could never
-fire (no byte yet, or Capacity at cap).
+fire (no byte yet, or Capacity at cap), and `prestigeGame` carries it through a real Prestige (like
+`diskBuildQueued`) so the player's explicit arm isn't silently dropped.
 
 **Rejected: a 99% arm threshold.** First implemented as requested, but an adversarial-review
 simulation with fully built pools showed the Buffer plateauing at 7–73% for hours, so a 99% button

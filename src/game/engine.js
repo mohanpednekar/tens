@@ -6472,6 +6472,9 @@ export const prestigeGame = state => {
       // permanence as the disk state it's arming.
       diskBuildQueued: state.intro?.diskBuildQueued ?? initial.intro.diskBuildQueued,
       diskBuildQueuedByReplay: state.intro?.diskBuildQueuedByReplay ?? initial.intro.diskBuildQueuedByReplay,
+      // An armed Upgrade Data Stream is the player's explicit intent — it carries through, like
+      // diskBuildQueued, and fires once the fresh Buffer fills (outflow stays paused until then).
+      capacityUpgradeQueued: state.intro?.capacityUpgradeQueued ?? initial.intro.capacityUpgradeQueued,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       // In-flight cache transfers are just as permanent as the Disks/build state they operate on
       // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond
