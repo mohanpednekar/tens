@@ -995,21 +995,8 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
   const flopTier = COMPUTE_FLOPS_TIER_BY_ID[flopId]
   if (!flopTier) return { affordable: 0, totalCost: 0 }
   const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
-  let spendable = clampNonNegative(state.prestige?.points ?? 0)
-
-  let quantity = 0
-  let totalCost = 0
-
-  while (quantity < maxQuantity) {
-    const cost = getComputeFlopsTierCost(flopTier, owned + quantity)
-    if (spendable < cost) break
-    spendable -= cost
-    totalCost += cost
-    quantity++
-  }
-
-
-  return { affordable: quantity, totalCost }
+  const spendable = clampNonNegative(state.prestige?.points ?? 0)
+  return getComputeFlopsAffordableQuantity(flopTier, owned, spendable, maxQuantity)
 }
 
 export const buyComputeFlopsTierQuantity = (flopId, quantity, totalCost) => state => {
@@ -1042,19 +1029,25 @@ export const canBuyComputeFlopsTier = (state, flopId) => {
 }
 
 export const getComputeFlopsAffordableQuantity = (flopTier, ownedCount, spendable, requestedQuantity) => {
+  if (requestedQuantity <= 0) return { affordable: 0, totalCost: 0 }
+  // ⚡ Bolt Optimization: O(1) mathematical bounds for massive/offline calculations
+  // E(L) grows quadratically, meaning C(L) reaches Infinity at L=27.
+  // If spendable is finite, the loop naturally bounds to O(1) (<27 iterations) when cost hits Infinity.
+  // If spendable is Infinity, the loop would execute up to 86400 times and corrupt totalCost via `Infinity - Infinity = NaN`.
+  if (spendable === Infinity) return { affordable: requestedQuantity, totalCost: 0 } // cost 0 safely preserves Infinity
+
   let affordable = 0
   let remainingSpendable = spendable
   let currentOwned = ownedCount
   
   while (affordable < requestedQuantity) {
     const cost = getComputeFlopsTierCost(flopTier, currentOwned)
-    if (remainingSpendable >= cost) {
-      remainingSpendable -= cost
-      affordable++
-      currentOwned++
-    } else {
+    if (cost === Infinity || remainingSpendable < cost) {
       break
     }
+    remainingSpendable -= cost
+    affordable++
+    currentOwned++
   }
   return { affordable, totalCost: spendable - remainingSpendable }
 }
