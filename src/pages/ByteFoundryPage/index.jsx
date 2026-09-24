@@ -724,14 +724,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {intro.byteCreated && (
             <MilestonesRow>
               <Button
-                aria-label={capacityUpgradeQueued ? 'upgrade data stream (armed, outflow paused)' : 'upgrade data stream'}
-                disabled={!capacityUpgradeClickable}
-                onClick={actions.pickIntroCapacityMilestone}
+                aria-label={capacityUpgradeQueued ? 'upgrade data stream (armed, outflow paused; click to cancel)' : 'upgrade data stream'}
+                disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}
+                onClick={capacityUpgradeQueued ? actions.clearIntroCapacityUpgradeQueue : actions.pickIntroCapacityMilestone}
                 title={
                   capacityUpgradeAvailable
                     ? 'The Data Stream Buffer is full; drain it to double Capacity'
                     : capacityUpgradeQueued
-                      ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes'
+                      ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes. Click to cancel'
                       : capacityUpgradeArmable
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'

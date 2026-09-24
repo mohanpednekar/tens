@@ -205,7 +205,7 @@ const InfoPage = () => {
             <strong>Upgrade Data Stream</strong> is the single Data Stream upgrade: it costs your
             current Capacity in bits (draining a full Buffer) and doubles Capacity each purchase.
             Pressing it before the Buffer is full arms it: everything drawing from the Data Stream
-            pauses until the Buffer fills and the upgrade completes.
+            pauses until the Buffer fills and the upgrade completes. Press it again to cancel.
             Speed is derived from Capacity — never upgraded separately — at{' '}
             √(Capacity in Bytes) per second on even doublings, alternating ×1.5 and ×4/3 growth
             (exactly ×2 every two upgrades).

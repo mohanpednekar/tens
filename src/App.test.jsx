@@ -2744,7 +2744,7 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   expect(upgradeButton).toBeEnabled()
 })
 
-test('Upgrade Data Stream is clickable below a full Buffer; a click arms it and it reads as upgrading', () => {
+test('Upgrade Data Stream is clickable below a full Buffer; a click arms it, and clicking again cancels', () => {
   vi.useFakeTimers()
   // 1000 bits capacity, 400 banked: not a full Buffer, but armable at any fill.
   seedIntroState({ capacity: 1000, bits: 400, byteCreated: true })
@@ -2756,7 +2756,12 @@ test('Upgrade Data Stream is clickable below a full Buffer; a click arms it and 
 
   const armed = screen.getByRole('button', { name: /upgrade data stream \(armed/i })
   expect(armed).toHaveTextContent('Upgrading Data Stream…')
-  expect(armed).toBeDisabled()
+  // Clicking the armed button cancels the arm and resumes outflow.
+  expect(armed).toBeEnabled()
+  fireEvent.click(armed)
+  const disarmed = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  expect(disarmed).toHaveTextContent('Upgrade Data Stream')
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()
   vi.useRealTimers()

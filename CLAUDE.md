@@ -758,7 +758,8 @@ Strict three-layer separation:
    see the "Disks" entry under "Economy model" below for how a click arms it, and
    `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section for what the button's own progress
    fill shows; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
-   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade`. Every
+   their own UI control (unlike Capacity's `queueIntroCapacityUpgrade`, which the Upgrade Data Stream
+button now drives). Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases, its
    own capacity Upgrade, and Upgrade Data Stream itself are the three exceptions, each arbitrated
@@ -992,7 +993,8 @@ purchased progression variable. The button is clickable at any fill
 (`isMemoryCapacityUpgradeArmable`): a click below 100% arms
 it (`intro.capacityUpgradeQueued`) and pauses every Data Stream outflow (`isDataStreamOutflowPaused`
 — `tickPoolBufferFill`/Data Lake overflow, `tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade`
-fires it, so continuous pool/lake draw can't hold the Buffer below full indefinitely. The displayed Speed is purely *derived* from Capacity
+fires it, so continuous pool/lake draw can't hold the Buffer below full indefinitely. The arm
+survives load and Prestige; clicking the armed button cancels it (`clearIntroCapacityUpgradeQueue`). The displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd
 powers the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3
 growth, exactly ×2 per two upgrades. Plus —

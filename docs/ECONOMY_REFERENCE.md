@@ -2579,8 +2579,10 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // routing gate. NOT a freeze flag — the Byte
                                                           // Foundry stays fully interactive well past this
                                                           // point
-    capacityUpgradeQueued: false,                         // Queued Capacity ×2 request; cleared on load /
-                                                          // Reset / Prestige / Era when no longer applicable.
+    capacityUpgradeQueued: false,                         // Armed Upgrade Data Stream (outflow paused).
+                                                          // Survives Prestige; cleared by Reset Byte
+                                                          // Foundry / Era, by clicking the armed button,
+                                                          // and on load only if it can never fire.
     disks: {},                                            // PERMANENT. { [capacityBits]: count } of
                                                           // currently-FULL Disks of that size — see
                                                           // tickDiskAutoFill/pullDiskForCurrentLevel. A full
@@ -2828,7 +2830,7 @@ purchases were manual or automatic.
 | `isMemoryCapacityUpgradeArmable` | `state → bool` | Upgrade Data Stream can be armed: byte combined, not already armed, not at cap — any fill level (with fully built pools feeding lakes, the fill-based multiplier can hold the Buffer at an equilibrium far below full) |
 | `isDataStreamOutflowPaused` | `state → bool` | `intro.capacityUpgradeQueued` — an armed upgrade holds every Data Stream outflow |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full (`tickQueuedCapacityUpgrade`); while set, every Data Stream outflow is paused (`isDataStreamOutflowPaused`) |
-| `clearIntroCapacityUpgradeQueue` | `state → state` | Clears the armed-upgrade `capacityUpgradeQueued` flag. Same-reference no-op when already false |
+| `clearIntroCapacityUpgradeQueue` | `state → state` | Clears the armed-upgrade `capacityUpgradeQueued` flag — the armed Upgrade Data Stream button's cancel action (`actions.clearIntroCapacityUpgradeQueue`). Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
 | `resetByteFoundry` | `state → state` | Settings → Danger zone: fresh `intro` (Data Stream Buffer/upgrades/Disks/Compute wiped to scratch), records `foundryResetCaps` high-water marks. Preserves `mainGameUnlocked` when already true. Leaves every non-`intro` field untouched |
 | `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, bit-funded Speed / Invest, and Provision Disk up to those caps. Capacity remains on its doubling ladder; its replay only fires `upgradePoolCapacity` on a full Buffer — it never arms the upgrade (that would pause every Data Stream outflow for the whole replay). Its own Provision Disk call passes a `getDiskReplayPassAllowance`-derived `maxPasses` so it can't overshoot the cap in one call, and re-marks `intro.diskBuildQueuedByReplay` true on a partial result (overriding `provisionDisk`'s own default `false`) so `tickQueuedDiskBuild` keeps enforcing this same cap on later ticks |

@@ -104,7 +104,8 @@ after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpg
 isMemoryCapacityUpgradeAvailable(state) || isMemoryCapacityUpgradeArmable(state)`: a full Buffer
 upgrades immediately; below full (any fill, byte combined, not at cap, not already armed) a click
 arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
-fills and it fires. Upgrade Data Stream sits outside the forced priority order (see
+fills and it fires. While armed the button stays enabled and a click cancels the arm
+(`actions.clearIntroCapacityUpgradeQueue`). Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
