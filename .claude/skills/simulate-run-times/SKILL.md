@@ -52,8 +52,11 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   Memory → Kilobytes until the gate opens; the convert-before-pull ordering that used to matter for
   avoiding a Foundry-gate softlock is now an engine-level fact (`tickDiskPull` runs at the very end
   of `tickGame`'s own pipeline, after `tickIntroAutoInvest`), not something bot strategy can
-  influence either way. After unlock: Disk Fill → Disk Build → **queue the Data Stream upgrade**
-  when the Buffer isn't full yet →
+  influence either way. After unlock: Disk Fill → Disk Build → **Upgrade Data Stream**: upgrade
+  immediately on a full Buffer; otherwise **queue** it only once the Buffer has stalled (gained
+  < 0.1% of Capacity since the previous tick) at ≥ 99% full (`actCapacityUpgrade` — the fastest of
+  the thresholds tried; queueing on any stall was ~3h slower per cycle), since a queued upgrade pauses
+  every Data Stream outflow (pool buffers, Data Lake overflow, tier01 auto-invest) until it fires →
   `tickQueuedCapacityUpgrade` (fires on full Memory, **erases all Compute tokens**, then Sacrifices)
   → convert → **Data Lake manual Fill** (`fillDataLakeManually`, capped at the next Booster's cost —
   a lake's only income source until its own pool's Storage array is entirely complete; automatic
