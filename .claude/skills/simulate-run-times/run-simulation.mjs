@@ -360,6 +360,7 @@ function countUnlockedAutobuyers(state) {
 }
 
 function simulateCycle(startingState, { maxTicks = MAX_TICKS, capacityCapBits = null } = {}) {
+  lastIntroSample = null // actCapacityUpgrade's stall detection starts fresh each cycle
   let state = startingState
   let ticks = 0
   let foundryTicks = null

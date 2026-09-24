@@ -49,7 +49,8 @@ Reports **Foundry** time (ticks until `intro.mainGameUnlocked`) and **Main → G
   #571): a full permanent Disk carried across Prestige, sitting at tier01's fresh level-1 cost with
   zero purchase-level progress, gets pulled the very next tick regardless of bot strategy, so there
   is nothing left to pause or redeem manually here. While `mainGameUnlocked` is false, convert
-  Memory → Kilobytes until the gate opens; the convert-before-pull ordering that used to matter for
+  Memory → Kilobytes (and apply the same Upgrade Data Stream rule below) until the gate opens; the
+  convert-before-pull ordering that used to matter for
   avoiding a Foundry-gate softlock is now an engine-level fact (`tickDiskPull` runs at the very end
   of `tickGame`'s own pipeline, after `tickIntroAutoInvest`), not something bot strategy can
   influence either way. After unlock: Disk Fill → Disk Build → **Upgrade Data Stream**: upgrade
