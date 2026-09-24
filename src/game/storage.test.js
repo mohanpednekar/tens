@@ -30,6 +30,14 @@ describe('loadGameState', () => {
     expect(loadGameState(unavailableStorage)).toBeNull()
   })
 
+  it('returns null (rather than throwing) when a malformed saved field crashes the migration check', () => {
+    // `intro: null` (rather than absent/an object) makes getSaveIncompatibilityReason's own
+    // `intro.completed` read throw a TypeError — this exercises loadGameState's outer catch,
+    // distinct from readActiveSavePayload's own inner catch (already covered above).
+    localStorage.setItem('tens_game_state', JSON.stringify({ intro: null }))
+    expect(loadGameState()).toBeNull()
+  })
+
   it('strips __proto__ / constructor / prototype from polluted save JSON without polluting Object.prototype', () => {
     localStorage.setItem(
       'tens_game_state',
@@ -689,6 +697,28 @@ describe('supporter unlock + save slots', () => {
     expect(meta.activeSlotId).toBe('0')
   })
 
+  it('skips null / non-object entries in a corrupted tens_saves_meta slots array', () => {
+    localStorage.setItem(
+      'tens_saves_meta',
+      JSON.stringify({
+        activeSlotId: '0',
+        slots: [null, 'not-an-object', { id: '0', name: 'Kept' }],
+      }),
+    )
+    const meta = loadSavesMeta()
+    expect(meta.slots.map(s => s.id)).toEqual(['0'])
+    expect(meta.slots[0].name).toBe('Kept')
+  })
+
+  it('listSaveSlots reports every slot as empty (rather than throwing) when localStorage.getItem throws', () => {
+    saveGameState(createInitialGameState())
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: private browsing')
+    })
+    expect(() => listSaveSlots()).not.toThrow()
+    expect(listSaveSlots().every(s => s.isEmpty)).toBe(true)
+  })
+
   it('rejects an invalid unlock code', () => {
     expect(redeemSupporterUnlockCode('nope').ok).toBe(false)
     expect(isSupporterUnlocked()).toBe(false)
@@ -789,6 +819,16 @@ describe('supporter unlock + save slots', () => {
     expect(isSupporterUnlocked()).toBe(true)
   })
 
+  it('clearSaveSlot refuses a locked/out-of-range slot id without touching storage', () => {
+    saveGameState({
+      ...createInitialGameState(),
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 111 },
+    })
+    const result = clearSaveSlot(String(SUPPORTER_SLOT_COUNT))
+    expect(result).toEqual({ ok: false, reason: 'locked' })
+    expect(loadGameState().resources[MONEY_ID]).toBe(111)
+  })
+
   it('clearAllSaveProgress wipes every slot but keeps supporterUnlocked', () => {
     redeemSupporterUnlockCode(SUPPORTER_UNLOCK_CODE)
     renameSaveSlot('1', 'Alt')
@@ -864,6 +904,13 @@ describe('theme preference', () => {
     saveGameState(createInitialGameState())
     clearGameState()
     expect(loadThemePreference()).toBe('dark')
+  })
+
+  it('loadThemePreference returns system (rather than throwing) when localStorage.getItem throws', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError: private browsing')
+    })
+    expect(loadThemePreference()).toBe('system')
   })
 })
 
