@@ -2780,7 +2780,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   return { ...state, intro: { ...state.intro, bits, poolBuffers, dataLakes } }
 }
 
-// Clears any stale queued-Capacity-upgrade flag on save load and sanitizes a missing/negative
+// Clears a queued-Capacity-upgrade flag that can never fire on save load and sanitizes a missing/negative
 // intro.capacity back to a sane floor. No longer clamps capacity to any pool boundary here —
 // intro.capacity itself isn't bound by a pool's window any more (see upgradePoolCapacity);
 // getStoragePoolCapacity derives each pool's own decade-power Capacity from it and clamps THAT to
@@ -2790,8 +2790,12 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
 // array bounds.
 export const normalizePoolMemoryCapacity = state => {
   if (!state?.intro) return state
-  let changed = state.intro.capacityUpgradeQueued ?? false
-  const nextIntro = { ...state.intro, capacityUpgradeQueued: false }
+  // An armed Upgrade Data Stream (see pickIntroCapacityMilestone) survives a reload; only a flag
+  // that could never fire (no byte yet, or Capacity already at its cap) is cleared.
+  const staleQueue = Boolean(state.intro.capacityUpgradeQueued) &&
+    (!state.intro.byteCreated || isMemoryCapacityAtCap(state))
+  let changed = staleQueue
+  const nextIntro = staleQueue ? { ...state.intro, capacityUpgradeQueued: false } : { ...state.intro }
   const capacity = Math.max(0, nextIntro.capacity ?? INTRO_STARTING_CAPACITY)
   if (capacity !== nextIntro.capacity) {
     changed = true

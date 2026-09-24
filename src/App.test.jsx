@@ -2742,6 +2742,24 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   expect(upgradeButton).toBeDisabled()
 })
 
+test('Upgrade Data Stream is clickable at 99% full; a click arms it and it reads as upgrading', () => {
+  vi.useFakeTimers()
+  // 1000 bits capacity, 990 banked (99%): not a full Buffer, but armable.
+  seedIntroState({ capacity: 1000, bits: 990, byteCreated: true })
+  const { unmount } = render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toBeEnabled()
+  fireEvent.click(upgradeButton)
+
+  const armed = screen.getByRole('button', { name: /upgrade data stream \(armed/i })
+  expect(armed).toHaveTextContent('Upgrading Data Stream…')
+  expect(armed).toBeDisabled()
+
+  unmount()
+  vi.useRealTimers()
+})
+
 test('the Combine button shows fill progress toward INTRO_BYTE_COMBINE_COST', () => {
   // The Combine button only ever renders once bits >= INTRO_BYTE_COMBINE_COST (its own condition
   // for appearing at all) — since capacity starts exactly equal to that cost, it's only ever

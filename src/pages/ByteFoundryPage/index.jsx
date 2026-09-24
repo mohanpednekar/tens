@@ -724,7 +724,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {intro.byteCreated && (
             <MilestonesRow>
               <Button
-                aria-label="upgrade data stream"
+                aria-label={capacityUpgradeQueued ? 'upgrade data stream (armed, outflow paused)' : 'upgrade data stream'}
                 disabled={!capacityUpgradeClickable}
                 onClick={actions.pickIntroCapacityMilestone}
                 title={

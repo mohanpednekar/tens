@@ -1065,7 +1065,16 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     const after = normalizePoolMemoryCapacity(state)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
-    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.capacityUpgradeQueued).toBe(true) // an armed upgrade survives a reload
+  })
+
+  it('normalizePoolMemoryCapacity clears an armed upgrade that can never fire', () => {
+    const noByte = withIntro(createInitialGameState(), { capacityUpgradeQueued: true })
+    expect(normalizePoolMemoryCapacity(noByte).intro.capacityUpgradeQueued).toBe(false)
+    const atCap = withIntro(createInitialGameState(), {
+      byteCreated: true, capacity: getFinalPoolCapacityCapBits(), capacityUpgradeQueued: true,
+    })
+    expect(normalizePoolMemoryCapacity(atCap).intro.capacityUpgradeQueued).toBe(false)
   })
 
   it('normalizePoolMemoryCapacity is a no-op before Combine', () => {
