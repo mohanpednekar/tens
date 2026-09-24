@@ -299,7 +299,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_CAPACITY_UPGRADE_ARM_FRACTION, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1367,20 +1367,23 @@ describe('pickIntroCapacityMilestone', () => {
   })
 })
 
-describe('Upgrade Data Stream arming at 99% (isMemoryCapacityUpgradeArmable)', () => {
+describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
   const capacity = 8 * 2 ** 16
   const armState = bits => withIntro(createInitialGameState(), {
     bits, capacity, byteCreated: true, mainGameUnlocked: true,
   })
 
-  it('is not armable below 99% of Capacity', () => {
-    const state = armState(Math.floor(capacity * INTRO_CAPACITY_UPGRADE_ARM_FRACTION) - 1)
-    expect(isMemoryCapacityUpgradeArmable(state)).toBe(false)
-    expect(pickIntroCapacityMilestone(state)).toBe(state)
+  it('is not armable before Combine or at the Capacity cap', () => {
+    const noByte = withIntro(createInitialGameState(), { bits: 0 })
+    expect(isMemoryCapacityUpgradeArmable(noByte)).toBe(false)
+    const atCap = withIntro(createInitialGameState(), { byteCreated: true, capacity: getFinalPoolCapacityCapBits() })
+    expect(isMemoryCapacityUpgradeArmable(atCap)).toBe(false)
+    expect(pickIntroCapacityMilestone(atCap)).toBe(atCap)
   })
 
-  it('arms (queues) instead of upgrading at 99% of Capacity', () => {
-    const state = armState(capacity * INTRO_CAPACITY_UPGRADE_ARM_FRACTION)
+  it('arms (queues) instead of upgrading below a full Buffer, even when empty', () => {
+    expect(pickIntroCapacityMilestone(armState(0)).intro.capacityUpgradeQueued).toBe(true)
+    const state = armState(capacity / 2)
     expect(isMemoryCapacityUpgradeArmable(state)).toBe(true)
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.capacityUpgradeQueued).toBe(true)
@@ -1390,7 +1393,7 @@ describe('Upgrade Data Stream arming at 99% (isMemoryCapacityUpgradeArmable)', (
   })
 
   it('pauses pool-buffer fill and tier01 auto-invest while armed', () => {
-    const armed = pickIntroCapacityMilestone(armState(capacity * INTRO_CAPACITY_UPGRADE_ARM_FRACTION))
+    const armed = pickIntroCapacityMilestone(armState(capacity / 2))
     expect(tickPoolBufferFill(1)(armed)).toBe(armed)
     expect(tickIntroAutoInvest(armed)).toBe(armed)
     const unarmed = { ...armed, intro: { ...armed.intro, capacityUpgradeQueued: false } }
@@ -1398,7 +1401,7 @@ describe('Upgrade Data Stream arming at 99% (isMemoryCapacityUpgradeArmable)', (
   })
 
   it('tickGame tops the Buffer off and fires the armed upgrade, then resumes outflow', () => {
-    let state = pickIntroCapacityMilestone(armState(capacity * INTRO_CAPACITY_UPGRADE_ARM_FRACTION))
+    let state = pickIntroCapacityMilestone(armState(capacity / 2))
     for (let i = 0; i < 10_000 && state.intro.capacity === capacity; i += 1) {
       state = tickGame(1)(state)
     }

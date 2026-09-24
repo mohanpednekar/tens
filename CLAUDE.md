@@ -988,11 +988,11 @@ with the rest of the Foundry (`buildEraIntroReset`) — Capacity has to be rebui
 Era, but Factory access itself never goes away again once earned.
 Production and storage grow via a single **Upgrade Data Stream** action: it requires a full
 Buffer, drains it (cost = current capacity), and doubles `intro.capacity` — Capacity is the only
-purchased progression variable. The button is clickable from 99% full
-(`INTRO_CAPACITY_UPGRADE_ARM_FRACTION`, `isMemoryCapacityUpgradeArmable`): a click below 100% arms
+purchased progression variable. The button is clickable at any fill
+(`isMemoryCapacityUpgradeArmable`): a click below 100% arms
 it (`intro.capacityUpgradeQueued`) and pauses every Data Stream outflow (`isDataStreamOutflowPaused`
 — `tickPoolBufferFill`/Data Lake overflow, `tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade`
-fires it, so continuous pool/lake draw can't hold the Buffer just short of full. The displayed Speed is purely *derived* from Capacity
+fires it, so continuous pool/lake draw can't hold the Buffer below full indefinitely. The displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd
 powers the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3
 growth, exactly ×2 per two upgrades. Plus —

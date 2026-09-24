@@ -734,9 +734,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes'
                       : capacityUpgradeArmable
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
-                        : intro.bits < intro.capacity
-                          ? 'Fill the Data Stream Buffer to 99% before upgrading the Data Stream'
-                          : 'Capacity is already at its maximum'
+                        : 'Capacity is already at its maximum'
                 }
                 type="button"
                 variant={capacityUpgradeClickable || capacityUpgradeQueued ? 'prestige' : 'neutral'}

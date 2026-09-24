@@ -115,11 +115,6 @@ export const INTRO_STARTING_CAPACITY = 8
 // describe the common level table pools draw start/end bounds from — not a player-facing Sacrifice
 // multiplier anymore (#506 / Revision 2 of #456). Kept so docs/tests can name the ladder spacing.
 export const INTRO_CAPACITY_DOUBLING_STEP = 2
-// Fraction of a full Data Stream Buffer at which Upgrade Data Stream becomes clickable. Clicking
-// below 100% arms the upgrade (intro.capacityUpgradeQueued) and pauses every outflow from the Data
-// Stream until the Buffer tops off and the upgrade fires — otherwise continuous pool-buffer / Data
-// Lake draw could hold the Buffer just short of full forever (see isMemoryCapacityUpgradeArmable).
-export const INTRO_CAPACITY_UPGRADE_ARM_FRACTION = 0.99
 // Shared binary-unit ladder step for Data Stream Buffer display ONLY — 1 KiB = 1024 Bytes (vs. a
 // Disk's own SI 1 KB = 1000 Bytes; see MEMORY_BINARY_UNIT_SYMBOLS/getMemoryUnit in engine.js). The
 // Data Stream card's own balance/Buffer figure stays binary-denominated — this step governs that
