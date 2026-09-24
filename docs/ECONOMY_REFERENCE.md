@@ -822,7 +822,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Speed/Bandwidth multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's
    value — even though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the
    bar switches from the fill-based multiplier reading to this lake overflow indicator
-   (`mode="lake"`, rendered in `theme.color.info`) once that pool's own Memory buffer is completely
+   (`mode="lake"`, rendered in `theme.color.info`) whenever `isDataLakePoolDrainAvailable` (the lake
+   drains the buffer via `tickDataLakePoolDrain`, holding it below full; the pool tile's tap is then
+   disabled), or once that pool's own Memory buffer is completely
    full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
    ALL fully built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself
    won't credit a lake until both those conditions hold (see "manual vs. automatic fill" below), and
@@ -909,6 +911,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Booster, until its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt(state,
    poolIndex)` — every one of that pool's three ladder sizes fully built at `DISK_ARRAY_LADDER_CAP`);
    only once complete does it switch to filling AUTOMATICALLY from that pool's buffer overflow.
+   **Exception — the direct pool drain:** independent of completion, `tickDataLakePoolDrain` also
+   fills the lake automatically from its pool's buffer whenever `isDataLakePoolDrainAvailable`
+   (every BUILT disk full, no build in progress in that pool, lake has an open slot).
    `isDataLakeManualFillAvailable(state, tierIndex)` requires `isDataLakePoolReady` AND
    `!isStoragePoolFullyBuilt`, at least one more unit needed for the next Booster
    (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), that the next Booster's cost is
@@ -2581,7 +2586,7 @@ Danger-zone actions stay disabled while production is frozen at the Prestige thr
                                                           // point
     capacityUpgradeQueued: false,                         // Armed Upgrade Data Stream (outflow paused).
                                                           // Survives Prestige; cleared by Reset Byte
-                                                          // Foundry / Era, by clicking the armed button,
+                                                          // Foundry / Era, by "Cancel upgrade",
                                                           // and on load only if it can never fire.
     disks: {},                                            // PERMANENT. { [capacityBits]: count } of
                                                           // currently-FULL Disks of that size — see
@@ -2830,7 +2835,11 @@ purchases were manual or automatic.
 | `isMemoryCapacityUpgradeArmable` | `state → bool` | Upgrade Data Stream can be armed: byte combined, not already armed, not at cap — any fill level (with fully built pools feeding lakes, the fill-based multiplier can hold the Buffer at an equilibrium far below full) |
 | `isDataStreamOutflowPaused` | `state → bool` | `intro.capacityUpgradeQueued` — an armed upgrade holds every Data Stream outflow |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full (`tickQueuedCapacityUpgrade`); while set, every Data Stream outflow is paused (`isDataStreamOutflowPaused`) |
-| `clearIntroCapacityUpgradeQueue` | `state → state` | Clears the armed-upgrade `capacityUpgradeQueued` flag — the armed Upgrade Data Stream button's cancel action (`actions.clearIntroCapacityUpgradeQueue`). Same-reference no-op when already false |
+| `areStoragePoolDisksFull` | `(state, poolIndex) → bool` | Every BUILT disk of the pool's three sizes is full (`disks[size] >= disksBuiltTotal[size]`); unprovisioned slots don't count |
+| `isStoragePoolProvisioningInProgress` | `(state, poolIndex) → bool` | A started, unfinished build in the pool: partial `diskProvisionPasses` on one of its sizes, `diskBuildQueued` on its current `getDiskSize`, a legacy `diskBuild`, or a pool-local reset rebuild. Merely being able to provision doesn't count |
+| `isDataLakePoolDrainAvailable` | `(state, poolIndex) → bool` | Pool-buffer priority (disk filling > provisioning in progress > lake): `isDataLakePoolReady` AND the lake has an open slot (`getDataLakeCurrentFillSubSize !== null`) AND `areStoragePoolDisksFull` AND NOT `isStoragePoolProvisioningInProgress` AND the buffer exceeds `getPoolCacheReservationBits`. While true, `tickPoolBufferFill`'s full-buffer overflow skips that pool so the drain and overflow never credit the same interval twice |
+| `tickDataLakePoolDrain` | `elapsedSeconds → state → state` | For every visible pool where `isDataLakePoolDrainAvailable`: moves bits from that pool's own buffer (minus `getPoolCacheReservationBits`) into its Data Lake via `applyDataLakeOverflow` at the pool's raw `getStoragePoolBandwidth`. Runs in `tickGame` right after `tickPoolBufferFill` and is NOT gated on `isDataStreamOutflowPaused`, so lakes keep filling while an Upgrade Data Stream is armed |
+| `clearIntroCapacityUpgradeQueue` | `state → state` | Clears the armed-upgrade `capacityUpgradeQueued` flag — the Data Stream section's "✕ Cancel upgrade" action (`actions.clearIntroCapacityUpgradeQueue`). Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
 | `resetByteFoundry` | `state → state` | Settings → Danger zone: fresh `intro` (Data Stream Buffer/upgrades/Disks/Compute wiped to scratch), records `foundryResetCaps` high-water marks. Preserves `mainGameUnlocked` when already true. Leaves every non-`intro` field untouched |
 | `tickFoundryResetConvenience` | `state → state` | While `foundryResetCaps` is set: auto-press Combine, bit-funded Speed / Invest, and Provision Disk up to those caps. Capacity remains on its doubling ladder; its replay only fires `upgradePoolCapacity` on a full Buffer — it never arms the upgrade (that would pause every Data Stream outflow for the whole replay). Its own Provision Disk call passes a `getDiskReplayPassAllowance`-derived `maxPasses` so it can't overshoot the cap in one call, and re-marks `intro.diskBuildQueuedByReplay` true on a partial result (overriding `provisionDisk`'s own default `false`) so `tickQueuedDiskBuild` keeps enforcing this same cap on later ticks |

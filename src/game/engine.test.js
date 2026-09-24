@@ -57,6 +57,10 @@ import {
   pickIntroCapacityMilestone,
   isMemoryCapacityUpgradeArmable,
   isDataStreamOutflowPaused,
+  areStoragePoolDisksFull,
+  isStoragePoolProvisioningInProgress,
+  isDataLakePoolDrainAvailable,
+  tickDataLakePoolDrain,
   tickIntroProduction,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
@@ -1414,6 +1418,95 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     }
     expect(state.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
     expect(state.intro.capacityUpgradeQueued).toBe(false)
+  })
+})
+
+describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in progress > lake)', () => {
+  const sizes = [
+    DISK_LADDER_BASE_SIZE_BITS,
+    DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER,
+    DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER ** 2,
+  ]
+  const full = Object.fromEntries(sizes.map(size => [size, DISK_ARRAY_LADDER_CAP]))
+  const pool = (extra = {}) => withIntro(createInitialGameState(), {
+    byteCreated: true,
+    mainGameUnlocked: true,
+    bits: 0,
+    capacity: 8 * 2 ** 16,
+    disksBuiltTotal: full,
+    disks: full,
+    diskCache: { [DISK_LADDER_BASE_SIZE_BITS]: DISK_LADDER_BASE_SIZE_BITS },
+    poolBuffers: { 1: 80_000 },
+    ...extra,
+  })
+
+  it('drains even when the pool is only partly provisioned, as long as every BUILT disk is full', () => {
+    const partial = { [sizes[0]]: 3 }
+    const state = pool({ disksBuiltTotal: partial, disks: partial })
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(true)
+    expect(getDataLakeDepositedUnits(1)(tickDataLakePoolDrain(1e6)(state))).toBe(1)
+  })
+
+  it('moves bits from the pool buffer into its lake, even while an armed upgrade pauses the Data Stream', () => {
+    const state = pool({ capacityUpgradeQueued: true })
+    expect(isDataStreamOutflowPaused(state)).toBe(true)
+    const after = tickDataLakePoolDrain(1e6)(state)
+    // A fresh lake holds exactly 1 unit (one smallest-disk's worth of bits).
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(after.intro.poolBuffers[1]).toBe(80_000 - DISK_LADDER_BASE_SIZE_BITS)
+    expect(after.intro.bits).toBe(0) // the Data Stream itself is untouched
+  })
+
+  it('waits while any built disk in the pool is still empty (disk filling comes first)', () => {
+    const state = pool({ disks: { ...full, [sizes[1]]: 0 } })
+    expect(areStoragePoolDisksFull(state, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('waits while a disk build is in progress in the pool (provisioning comes before the lake)', () => {
+    const partial = { [sizes[0]]: 3 }
+    const base = { disksBuiltTotal: partial, disks: partial }
+    const funding = pool({ ...base, diskProvisionPasses: { [sizes[0]]: 1 } })
+    expect(isStoragePoolProvisioningInProgress(funding, 1)).toBe(true)
+    expect(tickDataLakePoolDrain(1e6)(funding)).toBe(funding)
+    const queued = pool({ ...base, diskBuildQueued: true })
+    expect(isStoragePoolProvisioningInProgress(queued, 1)).toBe(true)
+    expect(tickDataLakePoolDrain(1e6)(queued)).toBe(queued)
+    // Merely being able to provision another disk isn't "in progress".
+    expect(isStoragePoolProvisioningInProgress(pool(base), 1)).toBe(false)
+  })
+
+  it('is unavailable once the lake has no open slot left', () => {
+    const maxed = tickDataLakePoolDrain(1e6)(pool()) // a fresh lake holds exactly 1 unit
+    expect(getDataLakeDepositedUnits(1)(maxed)).toBe(1)
+    expect(isDataLakePoolDrainAvailable(maxed, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(maxed)).toBe(maxed)
+  })
+
+  it('leaves the read cache\'s own refill claim in the buffer (and reports nothing to drain)', () => {
+    const state = pool({ diskCache: {}, poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS } })
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('a full eligible pool feeds its lake at most once per tick (overflow yields to the drain)', () => {
+    const seed = pool({ bits: 1e9, capacity: 32_000_000 })
+    const state = { ...seed, intro: { ...seed.intro, poolBuffers: { 1: getPoolBufferCapacity(seed, 1) } } }
+    const rate = getStoragePoolBandwidth(state, 1)
+    const dt = 0.001
+    const before = getDataLakeDepositedUnits(1)(state) * DISK_LADDER_BASE_SIZE_BITS + (state.intro.dataLakes?.[1]?.fillBits ?? 0)
+    const after = tickDataLakePoolDrain(dt)(tickPoolBufferFill(dt)(state))
+    const lake = after.intro.dataLakes[1]
+    const gained = getDataLakeDepositedUnits(1)(after) * DISK_LADDER_BASE_SIZE_BITS + (lake?.fillBits ?? 0) - before
+    expect(gained).toBeGreaterThan(0)
+    expect(gained).toBeLessThanOrEqual(rate * dt + 1e-6)
+  })
+
+  it('is paced by the pool\'s Bandwidth', () => {
+    const state = pool()
+    const rate = getStoragePoolBandwidth(state, 1)
+    const after = tickDataLakePoolDrain(0.001)(state)
+    expect(80_000 - after.intro.poolBuffers[1]).toBeCloseTo(rate * 0.001, 6)
   })
 })
 

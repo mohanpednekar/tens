@@ -1660,7 +1660,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // throughput, never competing with the main-game-unlock gate or a Capacity doubling in flight.
   // One tick's lag before a topped-up buffer is visible to that same tick's own cache fill
   // (tickDiskAutoFill, which already ran earlier this tick) is imperceptible at TICK_RATE_MS.
-  const stateAfterPoolBufferFill = tickPoolBufferFill(elapsedSeconds)(stateAfterIntro)
+  const stateAfterPoolBufferFill = tickDataLakePoolDrain(elapsedSeconds)(tickPoolBufferFill(elapsedSeconds)(stateAfterIntro))
   // Advances every lake's own one-shot autoConvertActive automation, now that this tick's own
   // overflow fill above has had its chance to fund it — see tickDataLakeAutoConvert/buyBooster.
   const stateAfterDataLakeAutoConvert = tickDataLakeAutoConvert(stateAfterPoolBufferFill)
@@ -2759,6 +2759,9 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // (fillDataLakeManually/isDataLakeManualFillAvailable below) — see docs/DESIGN_HISTORY.md.
     // Same "leave bits untouched" treatment as the not-ready case above.
     if (!isStoragePoolFullyBuilt(state, poolIndex)) continue
+    // tickDataLakePoolDrain (run right after this) already feeds this lake from the buffer at the
+    // pool's Bandwidth this tick — overflowing here too would credit the same interval twice.
+    if (isDataLakePoolDrainAvailable(state, poolIndex)) continue
 
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
@@ -5246,6 +5249,65 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
   }
 
   return { lake, remainingBits, changed }
+}
+
+// Every disk pool `poolIndex` has BUILT is currently full (unprovisioned slots don't count). A disk
+// pulled into a Factory tier level leaves an empty slot, so this drops back to false until it
+// refills.
+export const areStoragePoolDisksFull = (state, poolIndex) =>
+  getStoragePoolSizes(poolIndex).every(size =>
+    (state.intro?.disks?.[size] ?? 0) >= (state.intro?.disksBuiltTotal?.[size] ?? 0))
+
+// Whether a disk build in pool `poolIndex` has been STARTED and not finished: a queued/partially
+// funded Provision Disk on one of its sizes, a legacy timed build, or a pool-local reset rebuild.
+// Merely being able to provision another disk doesn't count.
+export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
+  const intro = state.intro ?? {}
+  if (isStoragePoolRebuilding(state, poolIndex)) return true
+  if (intro.diskBuild && getPoolIndexForDiskSize(intro.diskBuild.size) === poolIndex) return true
+  const sizes = getStoragePoolSizes(poolIndex)
+  if (sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
+  return Boolean(intro.diskBuildQueued) && sizes.includes(getDiskSize(state))
+}
+
+// Pool buffer priority: disk filling > provisioning in progress > Data Lake filling. The lake may
+// draw from its own pool only once every built disk is full and no build is in progress there —
+// and only while the lake itself still has an open slot to fill and the buffer holds more than the
+// read cache's own reservation (otherwise the drain has nothing to move).
+export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
+  isDataLakePoolReady(state, poolIndex) &&
+  getDataLakeCurrentFillSubSize(state, poolIndex) !== null &&
+  areStoragePoolDisksFull(state, poolIndex) &&
+  !isStoragePoolProvisioningInProgress(state, poolIndex) &&
+  getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
+
+// A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), at the pool's raw
+// Bandwidth, every tick — independent of the Data Stream. This keeps lakes filling while an armed
+// Upgrade Data Stream pauses Data Stream outflow (isDataStreamOutflowPaused only gates
+// tickPoolBufferFill/tickIntroAutoInvest), and generally lets a finished pool keep converting its
+// throughput into lake units rather than only via tickPoolBufferFill's full-buffer overflow. The
+// read cache's own refill claim (getPoolCacheReservationBits) is left untouched, and the whole pass
+// waits while any built disk is empty or a build is in progress in that pool (buffer priority).
+export const tickDataLakePoolDrain = elapsedSeconds => state => {
+  if (!(elapsedSeconds > 0)) return state
+  const visible = getVisibleStoragePoolCount(state)
+  let poolBuffers = null
+  let dataLakes = null
+  for (let poolIndex = 1; poolIndex <= visible; poolIndex += 1) {
+    if (!isDataLakePoolDrainAvailable(state, poolIndex)) continue
+    const buffer = getPoolBufferBits(state, poolIndex)
+    const spendable = Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
+    if (spendable <= 0) continue
+    const rate = getStoragePoolBandwidth(state, poolIndex)
+    const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable)
+    if (!changed) continue
+    poolBuffers = poolBuffers ?? { ...(state.intro.poolBuffers ?? {}) }
+    dataLakes = dataLakes ?? { ...state.intro.dataLakes }
+    poolBuffers[poolIndex] = buffer - (spendable - remainingBits)
+    dataLakes[poolIndex] = lake
+  }
+  if (!poolBuffers) return state
+  return { ...state, intro: { ...state.intro, poolBuffers, dataLakes } }
 }
 
 // Display-only: the real amount (in bits) upgrading will actually drain right now — whatever this
