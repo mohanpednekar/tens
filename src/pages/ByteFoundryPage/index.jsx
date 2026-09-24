@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -827,7 +827,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // isDataLakeManualFillAvailable in engine.js), so showing an "incoming rate" here would be
         // just as misleading as it would be for a pool that's never built a disk at all.
         const poolReady = isDataLakePoolReady(state, poolIndex) && isStoragePoolFullyBuilt(state, poolIndex)
-        const showLakeMode = poolBufferFull && poolReady
+        // tickDataLakePoolDrain (engine.js) also feeds the lake straight from this pool's buffer
+        // whenever isDataLakePoolDrainAvailable — which keeps the buffer below full (it settles
+        // near 50%), so lake mode must key on that too, not only on a full buffer. A tap can't
+        // speed the lake up then (the drain is capped at Bandwidth), so the tile is disabled.
+        const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)
+        const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -850,7 +855,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               as="button"
               type="button"
               onClick={() => actions.tapPoolBuffer(poolIndex)}
-              disabled={poolBufferFull || poolMultiplierCapped}
+              disabled={poolBufferFull || lakeDraining || poolMultiplierCapped}
               aria-label={`tap pool ${poolIndex} memory`}
               title={
                 poolBufferFull

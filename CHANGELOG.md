@@ -23,9 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   a reload and a Prestige. While armed, the upgrade button is hidden and the Data Stream tile
   itself shows the upgrade status (outlined, "Upgrading to … · outflow paused"), with a small
   "Cancel upgrade" control to back out.
-- **A Data Lake now draws from its own Storage pool's buffer** whenever that pool is fully
-  provisioned and all its disks are full — including while an armed Upgrade Data Stream has paused
-  the Data Stream.
+- **A Data Lake now draws from its own Storage pool's buffer**, lowest in that pool's priority:
+  disk filling first, then any disk build in progress, then the lake — so it fills whenever every
+  built disk is full and no build is underway (unprovisioned disks don't block it), including while
+  an armed Upgrade Data Stream has paused the Data Stream.
 - **Storage disk arrays and Data Lakes now build/hold 9 disks per size instead of 10** — the array's
   own always-full cache (Storage side) or the lake's own retained fill buffer (Data Lake side)
   economically substitutes for the missing 10th unit. A Data Lake's overflow fill no longer tapers

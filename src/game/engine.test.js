@@ -57,7 +57,9 @@ import {
   pickIntroCapacityMilestone,
   isMemoryCapacityUpgradeArmable,
   isDataStreamOutflowPaused,
-  isStoragePoolSaturated,
+  areStoragePoolDisksFull,
+  isStoragePoolProvisioningInProgress,
+  isDataLakePoolDrainAvailable,
   tickDataLakePoolDrain,
   tickIntroProduction,
   queueIntroCapacityUpgrade,
@@ -1419,14 +1421,14 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
   })
 })
 
-describe('tickDataLakePoolDrain (a saturated pool feeds its own lake from its own buffer)', () => {
+describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in progress > lake)', () => {
   const sizes = [
     DISK_LADDER_BASE_SIZE_BITS,
     DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER,
     DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER ** 2,
   ]
   const full = Object.fromEntries(sizes.map(size => [size, DISK_ARRAY_LADDER_CAP]))
-  const saturated = (extra = {}) => withIntro(createInitialGameState(), {
+  const pool = (extra = {}) => withIntro(createInitialGameState(), {
     byteCreated: true,
     mainGameUnlocked: true,
     bits: 0,
@@ -1438,14 +1440,15 @@ describe('tickDataLakePoolDrain (a saturated pool feeds its own lake from its ow
     ...extra,
   })
 
-  it('is saturated only when fully built AND every built disk is full', () => {
-    expect(isStoragePoolSaturated(saturated(), 1)).toBe(true)
-    expect(isStoragePoolSaturated(saturated({ disks: { ...full, [sizes[0]]: DISK_ARRAY_LADDER_CAP - 1 } }), 1)).toBe(false)
-    expect(isStoragePoolSaturated(saturated({ disksBuiltTotal: { ...full, [sizes[2]]: 1 } }), 1)).toBe(false)
+  it('drains even when the pool is only partly provisioned, as long as every BUILT disk is full', () => {
+    const partial = { [sizes[0]]: 3 }
+    const state = pool({ disksBuiltTotal: partial, disks: partial })
+    expect(isDataLakePoolDrainAvailable(state, 1)).toBe(true)
+    expect(getDataLakeDepositedUnits(1)(tickDataLakePoolDrain(1e6)(state))).toBe(1)
   })
 
   it('moves bits from the pool buffer into its lake, even while an armed upgrade pauses the Data Stream', () => {
-    const state = saturated({ capacityUpgradeQueued: true })
+    const state = pool({ capacityUpgradeQueued: true })
     expect(isDataStreamOutflowPaused(state)).toBe(true)
     const after = tickDataLakePoolDrain(1e6)(state)
     // A fresh lake holds exactly 1 unit (one smallest-disk's worth of bits).
@@ -1454,18 +1457,32 @@ describe('tickDataLakePoolDrain (a saturated pool feeds its own lake from its ow
     expect(after.intro.bits).toBe(0) // the Data Stream itself is untouched
   })
 
-  it('does nothing while any disk in the pool is still empty', () => {
-    const state = saturated({ disks: { ...full, [sizes[1]]: 0 } })
+  it('waits while any built disk in the pool is still empty (disk filling comes first)', () => {
+    const state = pool({ disks: { ...full, [sizes[1]]: 0 } })
+    expect(areStoragePoolDisksFull(state, 1)).toBe(false)
     expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
   })
 
+  it('waits while a disk build is in progress in the pool (provisioning comes before the lake)', () => {
+    const partial = { [sizes[0]]: 3 }
+    const base = { disksBuiltTotal: partial, disks: partial }
+    const funding = pool({ ...base, diskProvisionPasses: { [sizes[0]]: 1 } })
+    expect(isStoragePoolProvisioningInProgress(funding, 1)).toBe(true)
+    expect(tickDataLakePoolDrain(1e6)(funding)).toBe(funding)
+    const queued = pool({ ...base, diskBuildQueued: true })
+    expect(isStoragePoolProvisioningInProgress(queued, 1)).toBe(true)
+    expect(tickDataLakePoolDrain(1e6)(queued)).toBe(queued)
+    // Merely being able to provision another disk isn't "in progress".
+    expect(isStoragePoolProvisioningInProgress(pool(base), 1)).toBe(false)
+  })
+
   it('leaves the read cache\'s own refill claim in the buffer', () => {
-    const state = saturated({ diskCache: {}, poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS } })
+    const state = pool({ diskCache: {}, poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS } })
     expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
   })
 
   it('is paced by the pool\'s Bandwidth', () => {
-    const state = saturated()
+    const state = pool()
     const rate = getStoragePoolBandwidth(state, 1)
     const after = tickDataLakePoolDrain(0.001)(state)
     expect(80_000 - after.intro.poolBuffers[1]).toBeCloseTo(rate * 0.001, 6)

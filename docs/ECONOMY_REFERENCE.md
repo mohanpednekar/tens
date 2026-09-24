@@ -822,7 +822,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Speed/Bandwidth multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's
    value — even though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the
    bar switches from the fill-based multiplier reading to this lake overflow indicator
-   (`mode="lake"`, rendered in `theme.color.info`) once that pool's own Memory buffer is completely
+   (`mode="lake"`, rendered in `theme.color.info`) whenever `isDataLakePoolDrainAvailable` (the lake
+   drains the buffer via `tickDataLakePoolDrain`, holding it near 50%; the pool tile's tap is then
+   disabled), or once that pool's own Memory buffer is completely
    full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
    ALL fully built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself
    won't credit a lake until both those conditions hold (see "manual vs. automatic fill" below), and
@@ -2830,8 +2832,10 @@ purchases were manual or automatic.
 | `isMemoryCapacityUpgradeArmable` | `state → bool` | Upgrade Data Stream can be armed: byte combined, not already armed, not at cap — any fill level (with fully built pools feeding lakes, the fill-based multiplier can hold the Buffer at an equilibrium far below full) |
 | `isDataStreamOutflowPaused` | `state → bool` | `intro.capacityUpgradeQueued` — an armed upgrade holds every Data Stream outflow |
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full (`tickQueuedCapacityUpgrade`); while set, every Data Stream outflow is paused (`isDataStreamOutflowPaused`) |
-| `isStoragePoolSaturated` | `(state, poolIndex) → bool` | `isStoragePoolFullyBuilt` AND every built disk of the pool's three sizes is full (`disks[size] >= disksBuiltTotal[size]`) |
-| `tickDataLakePoolDrain` | `elapsedSeconds → state → state` | For every visible, lake-ready, saturated pool: moves bits from that pool's own buffer (minus `getPoolCacheReservationBits`) into its Data Lake via `applyDataLakeOverflow` at the pool's raw `getStoragePoolBandwidth`. Runs in `tickGame` right after `tickPoolBufferFill` and is NOT gated on `isDataStreamOutflowPaused`, so lakes keep filling while an Upgrade Data Stream is armed |
+| `areStoragePoolDisksFull` | `(state, poolIndex) → bool` | Every BUILT disk of the pool's three sizes is full (`disks[size] >= disksBuiltTotal[size]`); unprovisioned slots don't count |
+| `isStoragePoolProvisioningInProgress` | `(state, poolIndex) → bool` | A started, unfinished build in the pool: partial `diskProvisionPasses` on one of its sizes, `diskBuildQueued` on its current `getDiskSize`, a legacy `diskBuild`, or a pool-local reset rebuild. Merely being able to provision doesn't count |
+| `isDataLakePoolDrainAvailable` | `(state, poolIndex) → bool` | Pool-buffer priority (disk filling > provisioning in progress > lake): `isDataLakePoolReady` AND `areStoragePoolDisksFull` AND NOT `isStoragePoolProvisioningInProgress` |
+| `tickDataLakePoolDrain` | `elapsedSeconds → state → state` | For every visible pool where `isDataLakePoolDrainAvailable`: moves bits from that pool's own buffer (minus `getPoolCacheReservationBits`) into its Data Lake via `applyDataLakeOverflow` at the pool's raw `getStoragePoolBandwidth`. Runs in `tickGame` right after `tickPoolBufferFill` and is NOT gated on `isDataStreamOutflowPaused`, so lakes keep filling while an Upgrade Data Stream is armed |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears the armed-upgrade `capacityUpgradeQueued` flag — the Data Stream section's "✕ Cancel upgrade" action (`actions.clearIntroCapacityUpgradeQueue`). Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |
 | `resetByteFoundry` | `state → state` | Settings → Danger zone: fresh `intro` (Data Stream Buffer/upgrades/Disks/Compute wiped to scratch), records `foundryResetCaps` high-water marks. Preserves `mainGameUnlocked` when already true. Leaves every non-`intro` field untouched |

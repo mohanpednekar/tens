@@ -37,6 +37,7 @@ import {
   PRESTIGE_THRESHOLD,
   TICK_RATE_MS,
   TIER_DEFINITIONS,
+  DISK_LADDER_BASE_SIZE_BITS,
 } from 'game/layers'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
@@ -3092,6 +3093,25 @@ test('a maxed pre-reset Data Lake retains its 5% speed floor', () => {
   expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
   expect(within(pool1).getByRole('progressbar', { name: /data lake overflow rate/i })).toHaveAttribute('aria-valuenow', '5')
   expect(within(pool1).getByText('5%')).toBeInTheDocument()
+})
+
+test('the pool bar shows the Data Lake rate (and the tile is inert) while the lake drains a half-full buffer — every built disk full, no build in progress', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity / 2 },
+    disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 2 },
+    disks: { [DISK_LADDER_BASE_SIZE_BITS]: 2 },
+    diskCache: { [DISK_LADDER_BASE_SIZE_BITS]: DISK_LADDER_BASE_SIZE_BITS },
+  })
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
+  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {

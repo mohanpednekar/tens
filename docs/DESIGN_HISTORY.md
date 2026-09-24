@@ -8769,6 +8769,8 @@ only) instead; arming is reserved for an explicit player click.
 **Lakes keep filling from their own pool while the Data Stream is paused.** With outflow paused,
 `tickPoolBufferFill` (and so its full-buffer lake overflow) doesn't run, which starved every Data
 Lake for the whole wait. Per maintainer request, a lake now also draws straight from its own pool's
-buffer whenever that pool is fully provisioned and every disk is full (`isStoragePoolSaturated` /
-`tickDataLakePoolDrain`) — always, not only while paused — at the pool's Bandwidth, leaving the read
-cache's reservation alone.
+buffer (`tickDataLakePoolDrain`) — always, not only while paused — at the pool's Bandwidth, leaving
+the read cache's reservation alone. A first cut required the pool to be fully provisioned; the
+maintainer then set the rule as a pool-buffer priority instead — disk filling > provisioning in
+progress > lake filling — so unprovisioned slots don't block the lake, but any empty built disk or a
+started build does (`isDataLakePoolDrainAvailable`).
