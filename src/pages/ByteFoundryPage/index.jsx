@@ -728,10 +728,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}
                 onClick={capacityUpgradeQueued ? actions.clearIntroCapacityUpgradeQueue : actions.pickIntroCapacityMilestone}
                 title={
-                  capacityUpgradeAvailable
-                    ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                    : capacityUpgradeQueued
-                      ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes. Click to cancel'
+                  capacityUpgradeQueued
+                    ? 'Upgrade armed: Data Stream outflow is paused until the Buffer fills and the upgrade completes. Click to cancel'
+                    : capacityUpgradeAvailable
+                      ? 'The Data Stream Buffer is full; drain it to double Capacity'
                       : capacityUpgradeArmable
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'

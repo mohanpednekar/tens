@@ -759,7 +759,7 @@ Strict three-layer separation:
    `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section for what the button's own progress
    fill shows; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
    their own UI control (unlike Capacity's `queueIntroCapacityUpgrade`, which the Upgrade Data Stream
-button now drives). Every
+   button now drives). Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases, its
    own capacity Upgrade, and Upgrade Data Stream itself are the three exceptions, each arbitrated

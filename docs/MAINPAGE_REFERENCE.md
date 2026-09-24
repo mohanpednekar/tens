@@ -100,7 +100,7 @@ never purchased — `getDataStreamSpeedBytesPerSecond(capacityBits)` returns `sq
 B/s at even `log2` exponents and the arithmetic mean of the two neighbouring even-exponent speeds at
 odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
-after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
+after-upgrade preview. `disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeAvailable(state) || isMemoryCapacityUpgradeArmable(state)`: a full Buffer
 upgrades immediately; below full (any fill, byte combined, not at cap, not already armed) a click
 arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
