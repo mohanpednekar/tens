@@ -2387,6 +2387,22 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.bits).toBe(0)
   })
 
+  it('never arms (pauses outflow for) a Capacity replay below a full Buffer', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 1,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        disksBuiltTotal: {},
+        capacity: INTRO_CAPACITY_CAP_BITS,
+      },
+    })
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(isDataStreamOutflowPaused(after)).toBe(false)
+  })
+
   it('auto-Combine during convenience leaves Capacity on the doubling ladder', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_BYTE_COMBINE_COST,

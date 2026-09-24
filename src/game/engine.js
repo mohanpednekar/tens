@@ -6366,7 +6366,9 @@ export const tickFoundryResetConvenience = state => {
   }
 
   if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
-    const upgraded = pickIntroCapacityMilestone(next)
+    // Full-Buffer upgrade only — never arm (pickIntroCapacityMilestone would pause every Data
+    // Stream outflow for the whole replay, starving pool buffers and tier01 auto-invest).
+    const upgraded = upgradePoolCapacity(next)
     if (upgraded !== next) {
       next = upgraded
       changed = true
