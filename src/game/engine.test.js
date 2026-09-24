@@ -102,6 +102,7 @@ import {
   getDiskProvisionPassesRequired,
   getDiskLadderSizeBits,
   getNextDiskLadderSize,
+  canDiskSizeFeedWriteCache,
   getDiskRedeemTierName,
   getDiskSize,
   getPoolIndexForDiskSize,
@@ -4307,6 +4308,14 @@ describe('tickDiskWriteCache', () => {
     const after = tickDiskWriteCache(0)(state)
     expect(getDiskWriteCacheMerge(after, megabyteSize)).toBeNull()
     expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+  })
+
+  it('canDiskSizeFeedWriteCache is false only for each pool\'s largest size', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    expect(canDiskSizeFeedWriteCache(FIRST_DISK_SIZE)).toBe(true)
+    expect(canDiskSizeFeedWriteCache(level2Size)).toBe(true)
+    expect(canDiskSizeFeedWriteCache(level3Size)).toBe(false)
+    expect(canDiskSizeFeedWriteCache(megabyteSize)).toBe(true)
   })
 
   it('cancels a legacy in-flight cross-pool merge and returns its collected disks to the source pool', () => {

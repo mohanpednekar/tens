@@ -3884,6 +3884,13 @@ export const getNextDiskLadderSize = sourceSize => {
   return getDiskLadderSizeBits(step + 1)
 }
 
+// Whether `size` has a next size up in its OWN pool to feed via the write cache — false for each
+// pool's largest size (pool isolation: merges never cross a pool boundary).
+export const canDiskSizeFeedWriteCache = size => {
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return Boolean(poolIndex) && getPoolIndexForDiskSize(getNextDiskLadderSize(size)) === poolIndex
+}
+
 export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
 
@@ -4049,7 +4056,6 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   for (const targetSize of Object.keys(diskWriteCache).map(Number).sort((a, b) => a - b)) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
-
 
     if (merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }
