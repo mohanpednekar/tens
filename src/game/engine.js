@@ -3992,15 +3992,18 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   let changed = false
   let poolBuffers = null
 
-  // A cross-pool merge can only come from a save predating pool isolation: cancel it BEFORE any new
-  // merge starts (so none targets a source array this refill is about to fill) and return what it
-  // collected to its own pool — as full source disks up to what was ever built there, and any
-  // excess (the slots may have been refilled meanwhile) as bits into that pool's own buffer.
+  // A cross-pool merge can only come from a save predating pool isolation. One already in its flush
+  // phase has finished taking from the lower pool, so it simply completes (nothing more is consumed
+  // and nothing is lost). One still collecting is cancelled BEFORE any new merge starts (so none
+  // targets a source array this refill is about to fill): its collected disks return to the source
+  // array up to what was ever built there; any excess (the slots were refilled meanwhile) becomes
+  // bits in that pool's own buffer, clamped to its ceiling like every other buffer value.
   for (const targetSize of Object.keys(diskWriteCache).map(Number)) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
     const sourcePool = getPoolIndexForDiskSize(merge.sourceSize)
     if (sourcePool === getPoolIndexForDiskSize(targetSize)) continue
+    if ((merge.segmentsCollected ?? 0) >= DISK_LADDER_SIZE_MULTIPLIER) continue
     const collected = Math.max(0, merge.segmentsCollected ?? 0)
     const full = disks[merge.sourceSize] ?? 0
     const room = Math.max(0, (intro.disksBuiltTotal?.[merge.sourceSize] ?? 0) - full)

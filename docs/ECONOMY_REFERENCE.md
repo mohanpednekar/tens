@@ -644,9 +644,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    stranded — it may still be a necessary stepping stone toward a further, still-useful size in the
    SAME pool. Merges never cross a pool boundary (pool isolation: a pool's largest size, e.g. 100 KB,
    never feeds the next pool's smallest, e.g. 1 MB, which fills only from its own read cache; a legacy
-   in-flight cross-pool merge is cancelled before any new merge starts, its collected source disks
-   returned up to the source array's built count and any excess credited as bits to that pool's own
-   buffer);
+   cross-pool merge already flushing completes (nothing more is taken); one still collecting is
+   cancelled before any new merge starts, its collected source disks returned up to the source
+   array's built count and any excess credited as bits to that pool's own buffer, clamped to its
+   ceiling);
    see `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts — refusing a
    stranded source outright first, then refusing a stranded target, each permanently starved a
    different part of the ladder). Collect runs `DISK_LADDER_SIZE_MULTIPLIER` (10 — the source→target

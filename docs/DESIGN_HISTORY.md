@@ -8785,8 +8785,12 @@ tier02's 1 MB); it also emptied pool N's top array (blocking its lake drain via
 `areStoragePoolDisksFull`) and let a reset of pool N+1 discard disks already collected from pool N.
 `canStartDiskWriteCacheMerge` now refuses cross-pool merges; the next pool's smallest size still
 fills from its own read cache (`isDiskReadCacheEligible`). Legacy in-flight cross-pool merges are
-cancelled before any new merge starts in that tick (so no fresh merge targets the array being
-refilled); collected segments return to the source array up to `disksBuiltTotal`, and any excess
-is credited as bits to the source pool's own buffer (clamped like the `diskCache` self-heal).
+handled before any new merge starts in that tick (so no fresh merge targets the array being
+refilled). One already in its flush phase has finished taking from the lower pool, so it completes
+losslessly. One still collecting is cancelled: its segments return to the source array up to
+`disksBuiltTotal`, and any excess (only possible if the source array was refilled mid-collect) is
+credited as bits to the source pool's own buffer, clamped to that buffer's ceiling — a deliberate,
+bounded loss for a one-time legacy edge case, since an over-ceiling buffer would be clamped again by
+`normalizePoolMemoryCapacity` on the next load anyway.
 Non-consuming links were audited and kept: the reset-bandwidth cap reading the next pool's
 bandwidth, `isLaterPoolProvisioningLocked`, and pool-1-first allocation of the shared Data Stream.

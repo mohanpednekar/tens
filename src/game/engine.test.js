@@ -4381,8 +4381,32 @@ describe('tickDiskWriteCache', () => {
     })
     const after = tickDiskWriteCache(0)(state)
     expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
-    expect(after.intro.poolBuffers[1]).toBe(Math.min(2 * level3Size, getPoolBufferCapacity(after, 1)))
-    expect(after.intro.poolBuffers[1]).toBeGreaterThan(0)
+    // 2 of the 3 collected disks don't fit back; they become pool-1 buffer bits, clamped to its ceiling.
+    const ceiling = getPoolBufferCapacity(after, 1)
+    expect(ceiling).toBeLessThan(2 * level3Size)
+    expect(after.intro.poolBuffers[1]).toBe(ceiling)
+  })
+
+  it('lets a legacy cross-pool merge already in its flush phase complete losslessly without consuming more source disks', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
+      disks: { [level3Size]: DISK_ARRAY_LADDER_CAP },
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
+          segmentRemainingSeconds: 0,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 1,
+          flushTotalSeconds: 1,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(1)(state)
+    expect(getDiskWriteCacheMerge(after, megabyteSize)).toBeNull()
+    expect(after.intro.disks[megabyteSize]).toBe(1)
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
   it('resumes collection once the source becomes stranded mid-merge — progress already collected stays banked and collection continues using the stranded source', () => {
