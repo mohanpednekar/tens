@@ -1,0 +1,136 @@
+name: Release
+
+# Post-merge half of #52: when a push to main changes package.json's "version",
+# tag it and create a GitHub Release. The pre-merge half (PR authors running
+# `yarn bump-version` — scripts/bump-version.mjs) already landed the version
+# bump inside the merged PR diff, so this workflow only ever *reads* main and
+# pushes a tag + Release — never a commit, never a PR.
+# Deterministic shell only, no agent — matching pr-auto-merge.yml's rationale
+# (speed, determinism, no model-quota spend on a mechanical check).
+#
+# No concurrency group on purpose: each run tags the version found at its own
+# pushed SHA, so serializing with a single-slot queue could drop a middle
+# version bump entirely. Runs are idempotent instead.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+
+# GITHUB_TOKEN needs nothing beyond read here — every write (tag push, Release)
+# goes through GH_AUTOMATION_PAT like the other automation workflows.
+permissions:
+  contents: read
+
+jobs:
+  tag-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (automation PAT so the tag push can create refs)
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GH_AUTOMATION_PAT }}
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Tag new version and create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          head_sha=$(git rev-parse HEAD)
+          version=$(node -p "require('./package.json').version")
+          tag="v${version}"
+          echo "package.json version at this main HEAD: ${version} (${tag} @ ${head_sha})"
+
+          # paths: ['package.json'] also fires on dependency bumps and other
+          # non-version edits — only act when this push actually bumped the
+          # version field, so an unrelated merge can't tag the current version
+          # at a non-release commit (which would also preempt #51's historical
+          # placement of the retroactive tags).
+          if [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            old_version=$(git show "$BEFORE_SHA:package.json" \
+              | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
+            if [ "$old_version" = "$version" ]; then
+              echo "Version unchanged by this push ($old_version -> $version) — nothing to tag."
+              exit 0
+            fi
+            VERSION="$version" OLD_VERSION="$old_version" node --input-type=module -e '
+              import { parseSemver } from "./scripts/bump-version.mjs";
+              const o = parseSemver(process.env.OLD_VERSION);
+              const n = parseSemver(process.env.VERSION);
+              const bumped = n.major > o.major ||
+                (n.major === o.major && (n.minor > o.minor ||
+                  (n.minor === o.minor && n.patch > o.patch)));
+              if (!bumped) {
+                console.error(
+                  `version moved backward or sideways ` +
+                  `(${process.env.OLD_VERSION} -> ${process.env.VERSION}) — refusing to tag`);
+                process.exit(1);
+              }'
+            echo "Version bumped by this push: $old_version -> $version"
+          fi
+
+          # Peeled (^{}) form resolves an annotated tag to its target commit; a
+          # lightweight tag answers the plain ref instead.
+          remote_tag=$(git ls-remote --tags origin "refs/tags/${tag}" "refs/tags/${tag}^{}")
+          tag_target=$(printf '%s\n' "$remote_tag" | awk -v t="refs/tags/${tag}^{}" '$2==t {print $1}')
+          if [ -z "$tag_target" ]; then
+            tag_target=$(printf '%s\n' "$remote_tag" | awk -v t="refs/tags/${tag}" '$2==t {print $1}')
+          fi
+
+          tag_exists=false
+          if [ -n "$tag_target" ]; then
+            tag_exists=true
+            # Verified BEFORE the Release check below: a tag (with or without a
+            # Release) pointing at a different commit means a manual/historical
+            # tag — never silently accept or attach anything to it.
+            if [ "$tag_target" != "$head_sha" ]; then
+              echo "ERROR: tag ${tag} already exists but points at ${tag_target}, not this push's ${head_sha} — refusing to release another commit's tag."
+              exit 1
+            fi
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Tag and Release ${tag} already exist at this commit — nothing to do."
+            exit 0
+          fi
+
+          if [ "$tag_exists" = true ]; then
+            # Resumable: a previous run may have pushed the tag but failed
+            # before creating the Release — fall through and finish it.
+            echo "Tag ${tag} already exists at this commit but has no Release yet."
+          fi
+
+          # One extraction path for both the tag message and the Release body:
+          # reuse bump-version.mjs's changelog section parser rather than
+          # duplicating it. Fails loudly if the version has no changelog
+          # section or one with no bullet entries (e.g. only empty ###
+          # headings from a hand-edit) — a version bump without release notes
+          # means the pre-merge bump step was skipped or hand-edited, and a
+          # human should look.
+          VERSION="$version" node --input-type=module -e '
+            import { extractVersionSection, subsectionHasEntries } from "./scripts/bump-version.mjs";
+            import fs from "node:fs";
+            const section = extractVersionSection(
+              fs.readFileSync("CHANGELOG.md", "utf8"), process.env.VERSION);
+            if (!section || !subsectionHasEntries(section.body.split("\n"))) {
+              console.error(
+                `CHANGELOG.md has no ## [${process.env.VERSION}] section with notes — ` +
+                "refusing to tag a noteless release");
+              process.exit(1);
+            }
+            fs.writeFileSync("release-notes.md", section.body.trim() + "\n");
+          '
+
+          if [ "$tag_exists" = false ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$tag" -F release-notes.md
+            git push origin "$tag"
+          fi
+          gh release create "$tag" --title "$tag" --notes-file release-notes.md

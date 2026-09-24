@@ -223,6 +223,10 @@ sections. To cut Unreleased into a dated release on a PR branch, run `yarn bump-
 - Whoever files a `claude-task` issue should also apply a `size:S`/`size:M`/`size:L` label (S = a
   single small focused change; M = a normal run-sized task; L = large, likely needs a partial
   `Part of #N` slice) — Phase A weighs this against its own remaining budget when picking a task.
+- `bug`-labeled `claude-task` issues are filed by automation runs that spot a defect outside their
+  task's scope, or by the code-scanning/secret-scanning alert-to-bug wiring (#55) — each carries an
+  explicit **Impact** line that Phase A may weigh to reorder *within* a priority tier
+  (`priority:high` still jumps outright).
 - **GitHub Milestones vs Project `Track`:** complementary axes, not duplicates. A Milestone
   targets one planned release (due date + automatic X/Y-closed progress); `Track` groups issues by
   theme/dependency chain and can span multiple releases. Interactive sessions and Planning (#53)
@@ -262,7 +266,10 @@ ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `pr-conflict-swe
 every push to `main` and comments on any open PR that became conflicted (the comment triggers the
 follow-up agent on automation branches). `devin-workflow-health.yml` runs daily at
 midnight UTC, filing an `automation-failure` issue when the workflow file stops parsing, no run
-has started in >26h, or the latest run didn't succeed.
+has started in >26h, or the latest run didn't succeed. `release.yml` (deterministic, no agent)
+fires on pushes to `main` that touch `package.json`: it pushes annotated tag `v<x.y.z>` and
+creates a GitHub Release from that version's `CHANGELOG.md` section when the tag doesn't already
+exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
 
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
