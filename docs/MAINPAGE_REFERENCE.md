@@ -138,8 +138,7 @@ or tier name in the visible text) on the left, and Bandwidth on the right. Its s
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
 above. Its third line, below the balance, is the pool's own `MultiplierBar` (switching to
 `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow, or
-whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests near
-50% and the tile's tap is disabled (`lakeDraining`) —
+whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests below full and the tile's tap is disabled (`lakeDraining`) —
 see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
 bar itself. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked

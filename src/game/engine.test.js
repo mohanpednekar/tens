@@ -1476,6 +1476,13 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     expect(isStoragePoolProvisioningInProgress(pool(base), 1)).toBe(false)
   })
 
+  it('is unavailable once the lake has no open slot left', () => {
+    const maxed = tickDataLakePoolDrain(1e6)(pool()) // a fresh lake holds exactly 1 unit
+    expect(getDataLakeDepositedUnits(1)(maxed)).toBe(1)
+    expect(isDataLakePoolDrainAvailable(maxed, 1)).toBe(false)
+    expect(tickDataLakePoolDrain(1e6)(maxed)).toBe(maxed)
+  })
+
   it('leaves the read cache\'s own refill claim in the buffer', () => {
     const state = pool({ diskCache: {}, poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS } })
     expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)

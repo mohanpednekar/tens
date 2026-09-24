@@ -5268,9 +5268,11 @@ export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
 }
 
 // Pool buffer priority: disk filling > provisioning in progress > Data Lake filling. The lake may
-// draw from its own pool only once every built disk is full and no build is in progress there.
+// draw from its own pool only once every built disk is full and no build is in progress there —
+// and only while the lake itself still has an open slot to fill.
 export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
   isDataLakePoolReady(state, poolIndex) &&
+  getDataLakeCurrentFillSubSize(state, poolIndex) !== null &&
   areStoragePoolDisksFull(state, poolIndex) &&
   !isStoragePoolProvisioningInProgress(state, poolIndex)
 

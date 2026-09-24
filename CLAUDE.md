@@ -1039,7 +1039,7 @@ center), rendered below that section's own balance with its own percent readout 
 a pool specifically, once that pool's buffer is full AND its Data Lake can actually receive
 AUTOMATIC overflow (`isDataLakePoolReady` AND `isStoragePoolFullyBuilt` — see "Data Lakes" below),
 the same bar switches `mode="lake"` (also whenever `isDataLakePoolDrainAvailable` — the lake then
-drains the buffer so it settles near 50%, and the tile's tap is disabled) to show that pool's Data Lake overflow
+drains the buffer so it rests below full, and the tile's tap is disabled) to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
 itself). The title row places Speed/Bandwidth at top-right and omits disk counts; balance and
@@ -1122,16 +1122,17 @@ are in `docs/ECONOMY_REFERENCE.md`.
 **Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
 `tickDataLakeAutoConvert` in `engine.js`) — ten permanent lakes (KB…QB), fully decoupled from Disk builds
 themselves. A lake is gated on its pool having built at least one real disk (`isDataLakePoolReady`);
-before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than live progress. **A lake
-fills MANUALLY, capped at just enough for its own next Booster, until its matching Storage pool is
-entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's three ladder sizes fully
-built); only once complete does it fill AUTOMATICALLY** from that pool's buffer OVERFLOW
+before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than live progress. Its
+**Booster-conversion control fills MANUALLY, capped at just enough for its own next Booster, until
+its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's
+three ladder sizes fully built); only once complete does full-buffer OVERFLOW also fill it
+AUTOMATICALLY** from that pool's buffer
 (`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Separately,
 the lake draws directly from its pool's own buffer at the pool's Bandwidth (`tickDataLakePoolDrain`,
 right after `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in
 progress > lake filling — i.e. only while every BUILT disk is full and no build is in progress in
-that pool (`isDataLakePoolDrainAvailable`; unprovisioned slots don't block it, and the read cache's
-refill reservation is left alone). It's independent of the Data Stream, so lakes keep filling while
+that pool and the lake has room (`isDataLakePoolDrainAvailable`; unprovisioned slots don't block it,
+even before the pool is complete, and the read cache's refill reservation is left alone). It's independent of the Data Stream, so lakes keep filling while
 an armed Upgrade Data Stream pauses Data Stream outflow. Manual fill
 (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends directly from that pool's own
 buffer — the same source overflow itself would use — up to however many units the next Booster
@@ -1329,7 +1330,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1864 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1865 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

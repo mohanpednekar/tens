@@ -823,7 +823,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    value — even though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the
    bar switches from the fill-based multiplier reading to this lake overflow indicator
    (`mode="lake"`, rendered in `theme.color.info`) whenever `isDataLakePoolDrainAvailable` (the lake
-   drains the buffer via `tickDataLakePoolDrain`, holding it near 50%; the pool tile's tap is then
+   drains the buffer via `tickDataLakePoolDrain`, holding it below full; the pool tile's tap is then
    disabled), or once that pool's own Memory buffer is completely
    full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
    ALL fully built) — not the buffer alone, since `tickPoolBufferFill`'s overflow branch itself
@@ -911,6 +911,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    Booster, until its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt(state,
    poolIndex)` — every one of that pool's three ladder sizes fully built at `DISK_ARRAY_LADDER_CAP`);
    only once complete does it switch to filling AUTOMATICALLY from that pool's buffer overflow.
+   **Exception — the direct pool drain:** independent of completion, `tickDataLakePoolDrain` also
+   fills the lake automatically from its pool's buffer whenever `isDataLakePoolDrainAvailable`
+   (every BUILT disk full, no build in progress in that pool, lake has an open slot).
    `isDataLakeManualFillAvailable(state, tierIndex)` requires `isDataLakePoolReady` AND
    `!isStoragePoolFullyBuilt`, at least one more unit needed for the next Booster
    (`getBoosterPurchaseCost - getDataLakeDepositedUnits > 0`), that the next Booster's cost is
@@ -2834,7 +2837,7 @@ purchases were manual or automatic.
 | `queueIntroCapacityUpgrade` | `state → state` | Sets `intro.capacityUpgradeQueued = true` so the next available Capacity ×2 fires automatically once the Buffer is full (`tickQueuedCapacityUpgrade`); while set, every Data Stream outflow is paused (`isDataStreamOutflowPaused`) |
 | `areStoragePoolDisksFull` | `(state, poolIndex) → bool` | Every BUILT disk of the pool's three sizes is full (`disks[size] >= disksBuiltTotal[size]`); unprovisioned slots don't count |
 | `isStoragePoolProvisioningInProgress` | `(state, poolIndex) → bool` | A started, unfinished build in the pool: partial `diskProvisionPasses` on one of its sizes, `diskBuildQueued` on its current `getDiskSize`, a legacy `diskBuild`, or a pool-local reset rebuild. Merely being able to provision doesn't count |
-| `isDataLakePoolDrainAvailable` | `(state, poolIndex) → bool` | Pool-buffer priority (disk filling > provisioning in progress > lake): `isDataLakePoolReady` AND `areStoragePoolDisksFull` AND NOT `isStoragePoolProvisioningInProgress` |
+| `isDataLakePoolDrainAvailable` | `(state, poolIndex) → bool` | Pool-buffer priority (disk filling > provisioning in progress > lake): `isDataLakePoolReady` AND the lake has an open slot (`getDataLakeCurrentFillSubSize !== null`) AND `areStoragePoolDisksFull` AND NOT `isStoragePoolProvisioningInProgress` |
 | `tickDataLakePoolDrain` | `elapsedSeconds → state → state` | For every visible pool where `isDataLakePoolDrainAvailable`: moves bits from that pool's own buffer (minus `getPoolCacheReservationBits`) into its Data Lake via `applyDataLakeOverflow` at the pool's raw `getStoragePoolBandwidth`. Runs in `tickGame` right after `tickPoolBufferFill` and is NOT gated on `isDataStreamOutflowPaused`, so lakes keep filling while an Upgrade Data Stream is armed |
 | `clearIntroCapacityUpgradeQueue` | `state → state` | Clears the armed-upgrade `capacityUpgradeQueued` flag — the Data Stream section's "✕ Cancel upgrade" action (`actions.clearIntroCapacityUpgradeQueue`). Same-reference no-op when already false |
 | `eraseAllComputeTokens` | `state → state` | Zeros every `COMPUTE_BOOST_TIER_FIELDS` balance, clears active Boost fields, and zeros in-flight merge timers. Does **not** touch permanent auto-claim/auto-merge unlocks or `computeCoresEverEarned`/`computeMergePageUnlocked` |

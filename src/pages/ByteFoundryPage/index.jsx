@@ -828,8 +828,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // just as misleading as it would be for a pool that's never built a disk at all.
         const poolReady = isDataLakePoolReady(state, poolIndex) && isStoragePoolFullyBuilt(state, poolIndex)
         // tickDataLakePoolDrain (engine.js) also feeds the lake straight from this pool's buffer
-        // whenever isDataLakePoolDrainAvailable — which keeps the buffer below full (it settles
-        // near 50%), so lake mode must key on that too, not only on a full buffer. A tap can't
+        // whenever isDataLakePoolDrainAvailable — which keeps the buffer below full, so lake mode must key on that too, not only on a full buffer. A tap can't
         // speed the lake up then (the drain is capped at Bandwidth), so the tile is disabled.
         const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)
         const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
