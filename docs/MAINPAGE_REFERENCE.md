@@ -91,7 +91,8 @@ used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
-(`aria-label="upgrade data stream"`, no icon) consolidates the former paired Speed ×2 (Invest) and
+(`aria-label="upgrade data stream"`, or `"upgrade data stream (armed, outflow paused)"` with label
+text "Upgrading Data Stream…" while armed; no icon) consolidates the former paired Speed ×2 (Invest) and
 Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
 button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
 `intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from Capacity,
@@ -99,10 +100,13 @@ never purchased — `getDataStreamSpeedBytesPerSecond(capacityBits)` returns `sq
 B/s at even `log2` exponents and the arithmetic mean of the two neighbouring even-exponent speeds at
 odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
-after-upgrade preview. `disabled={!capacityUpgradeAvailable}` where `capacityUpgradeAvailable =
-isMemoryCapacityUpgradeAvailable(state)` — a full Buffer, not mid-build, and no higher-priority
-action (Disk Fill, Provision Disk, Compute) currently available — Upgrade Data Stream is now the
-LOWEST-priority action in the forced order (see "Forced priority order" in docs/ECONOMY_REFERENCE.md).
+after-upgrade preview. `disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}` where `capacityUpgradeClickable =
+isMemoryCapacityUpgradeAvailable(state) || isMemoryCapacityUpgradeArmable(state)`: a full Buffer
+upgrades immediately; below full (any fill, byte combined, not at cap, not already armed) a click
+arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
+fills and it fires. While armed the button stays enabled and a click cancels the arm
+(`actions.clearIntroCapacityUpgradeQueue`). Upgrade Data Stream sits outside the forced priority order (see
+docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
 once revealed (`computeCoreRevealed`, `isComputeCoreConversionUnlocked(state)` — `capacity >=

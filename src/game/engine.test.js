@@ -55,6 +55,8 @@ import {
   isStorageUnlocked,
   latchMainGameUnlocked,
   pickIntroCapacityMilestone,
+  isMemoryCapacityUpgradeArmable,
+  isDataStreamOutflowPaused,
   tickIntroProduction,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
@@ -1063,7 +1065,16 @@ describe('isMemoryCapacityAtCap / normalizePoolMemoryCapacity', () => {
     })
     const after = normalizePoolMemoryCapacity(state)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY)
-    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(after.intro.capacityUpgradeQueued).toBe(true) // an armed upgrade survives a reload
+  })
+
+  it('normalizePoolMemoryCapacity clears an armed upgrade that can never fire', () => {
+    const noByte = withIntro(createInitialGameState(), { capacityUpgradeQueued: true })
+    expect(normalizePoolMemoryCapacity(noByte).intro.capacityUpgradeQueued).toBe(false)
+    const atCap = withIntro(createInitialGameState(), {
+      byteCreated: true, capacity: getFinalPoolCapacityCapBits(), capacityUpgradeQueued: true,
+    })
+    expect(normalizePoolMemoryCapacity(atCap).intro.capacityUpgradeQueued).toBe(false)
   })
 
   it('normalizePoolMemoryCapacity is a no-op before Combine', () => {
@@ -1353,6 +1364,56 @@ describe('pickIntroCapacityMilestone', () => {
     // The true cap is the FINAL pool's own end bound, not pool 1's — raw capacity keeps growing
     // past pool 1's ceiling toward further pools' own thresholds, so the upgrade stays available.
     expect(isMemoryCapacityAtCap(after)).toBe(false)
+  })
+})
+
+describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
+  const capacity = 8 * 2 ** 16
+  const armState = bits => withIntro(createInitialGameState(), {
+    bits, capacity, byteCreated: true, mainGameUnlocked: true,
+  })
+
+  it('is not armable before Combine or at the Capacity cap', () => {
+    const noByte = withIntro(createInitialGameState(), { bits: 0 })
+    expect(isMemoryCapacityUpgradeArmable(noByte)).toBe(false)
+    const atCap = withIntro(createInitialGameState(), { byteCreated: true, capacity: getFinalPoolCapacityCapBits() })
+    expect(isMemoryCapacityUpgradeArmable(atCap)).toBe(false)
+    expect(pickIntroCapacityMilestone(atCap)).toBe(atCap)
+  })
+
+  it('arms (queues) instead of upgrading below a full Buffer, even when empty', () => {
+    expect(pickIntroCapacityMilestone(armState(0)).intro.capacityUpgradeQueued).toBe(true)
+    const state = armState(capacity / 2)
+    expect(isMemoryCapacityUpgradeArmable(state)).toBe(true)
+    const after = pickIntroCapacityMilestone(state)
+    expect(after.intro.capacityUpgradeQueued).toBe(true)
+    expect(after.intro.capacity).toBe(capacity)
+    expect(isDataStreamOutflowPaused(after)).toBe(true)
+    expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
+  })
+
+  it('pauses pool-buffer fill and tier01 auto-invest while armed', () => {
+    const armed = pickIntroCapacityMilestone(armState(capacity / 2))
+    expect(tickPoolBufferFill(1)(armed)).toBe(armed)
+    expect(tickIntroAutoInvest(armed)).toBe(armed)
+    const unarmed = { ...armed, intro: { ...armed.intro, capacityUpgradeQueued: false } }
+    expect(tickPoolBufferFill(1)(unarmed)).not.toBe(unarmed)
+  })
+
+  it('an armed upgrade carries through a real Prestige', () => {
+    const armed = pickIntroCapacityMilestone(armState(capacity / 2))
+    const after = prestigeGame(withMoney(armed, PRESTIGE_THRESHOLD))
+    expect(after.intro.capacityUpgradeQueued).toBe(true)
+    expect(after.intro.capacity).toBe(capacity)
+  })
+
+  it('tickGame tops the Buffer off and fires the armed upgrade, then resumes outflow', () => {
+    let state = pickIntroCapacityMilestone(armState(capacity / 2))
+    for (let i = 0; i < 10_000 && state.intro.capacity === capacity; i += 1) {
+      state = tickGame(1)(state)
+    }
+    expect(state.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
+    expect(state.intro.capacityUpgradeQueued).toBe(false)
   })
 })
 
@@ -2331,6 +2392,22 @@ describe('tickFoundryResetConvenience', () => {
     const after = tickFoundryResetConvenience(state)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * 2)
     expect(after.intro.bits).toBe(0)
+  })
+
+  it('never arms (pauses outflow for) a Capacity replay below a full Buffer', () => {
+    const state = withIntro(createInitialGameState(), {
+      bits: 1,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      foundryResetCaps: {
+        byteCreated: true,
+        disksBuiltTotal: {},
+        capacity: INTRO_CAPACITY_CAP_BITS,
+      },
+    })
+    const after = tickFoundryResetConvenience(state)
+    expect(after.intro.capacityUpgradeQueued).toBe(false)
+    expect(isDataStreamOutflowPaused(after)).toBe(false)
   })
 
   it('auto-Combine during convenience leaves Capacity on the doubling ladder', () => {
