@@ -1125,7 +1125,11 @@ before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than liv
 fills MANUALLY, capped at just enough for its own next Booster, until its matching Storage pool is
 entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's three ladder sizes fully
 built); only once complete does it fill AUTOMATICALLY** from that pool's buffer OVERFLOW
-(`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Manual fill
+(`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Separately,
+whenever its pool is fully provisioned AND every built disk is full (`isStoragePoolSaturated`), the
+lake draws directly from that pool's own buffer at the pool's Bandwidth (`tickDataLakePoolDrain`,
+right after `tickPoolBufferFill`; leaves the read cache's refill reservation alone) — independent of
+the Data Stream, so lakes keep filling while an armed Upgrade Data Stream pauses Data Stream outflow. Manual fill
 (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends directly from that pool's own
 buffer — the same source overflow itself would use — up to however many units the next Booster
 still needs; outside the forced priority order, same as Buy. It's no longer a standalone UI action
@@ -1322,7 +1326,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1857 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1862 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

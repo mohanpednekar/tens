@@ -57,6 +57,8 @@ import {
   pickIntroCapacityMilestone,
   isMemoryCapacityUpgradeArmable,
   isDataStreamOutflowPaused,
+  isStoragePoolSaturated,
+  tickDataLakePoolDrain,
   tickIntroProduction,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
@@ -1414,6 +1416,59 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     }
     expect(state.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
     expect(state.intro.capacityUpgradeQueued).toBe(false)
+  })
+})
+
+describe('tickDataLakePoolDrain (a saturated pool feeds its own lake from its own buffer)', () => {
+  const sizes = [
+    DISK_LADDER_BASE_SIZE_BITS,
+    DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER,
+    DISK_LADDER_BASE_SIZE_BITS * DISK_LADDER_SIZE_MULTIPLIER ** 2,
+  ]
+  const full = Object.fromEntries(sizes.map(size => [size, DISK_ARRAY_LADDER_CAP]))
+  const saturated = (extra = {}) => withIntro(createInitialGameState(), {
+    byteCreated: true,
+    mainGameUnlocked: true,
+    bits: 0,
+    capacity: 8 * 2 ** 16,
+    disksBuiltTotal: full,
+    disks: full,
+    diskCache: { [DISK_LADDER_BASE_SIZE_BITS]: DISK_LADDER_BASE_SIZE_BITS },
+    poolBuffers: { 1: 80_000 },
+    ...extra,
+  })
+
+  it('is saturated only when fully built AND every built disk is full', () => {
+    expect(isStoragePoolSaturated(saturated(), 1)).toBe(true)
+    expect(isStoragePoolSaturated(saturated({ disks: { ...full, [sizes[0]]: DISK_ARRAY_LADDER_CAP - 1 } }), 1)).toBe(false)
+    expect(isStoragePoolSaturated(saturated({ disksBuiltTotal: { ...full, [sizes[2]]: 1 } }), 1)).toBe(false)
+  })
+
+  it('moves bits from the pool buffer into its lake, even while an armed upgrade pauses the Data Stream', () => {
+    const state = saturated({ capacityUpgradeQueued: true })
+    expect(isDataStreamOutflowPaused(state)).toBe(true)
+    const after = tickDataLakePoolDrain(1e6)(state)
+    // A fresh lake holds exactly 1 unit (one smallest-disk's worth of bits).
+    expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
+    expect(after.intro.poolBuffers[1]).toBe(80_000 - DISK_LADDER_BASE_SIZE_BITS)
+    expect(after.intro.bits).toBe(0) // the Data Stream itself is untouched
+  })
+
+  it('does nothing while any disk in the pool is still empty', () => {
+    const state = saturated({ disks: { ...full, [sizes[1]]: 0 } })
+    expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('leaves the read cache\'s own refill claim in the buffer', () => {
+    const state = saturated({ diskCache: {}, poolBuffers: { 1: DISK_LADDER_BASE_SIZE_BITS } })
+    expect(tickDataLakePoolDrain(1e6)(state)).toBe(state)
+  })
+
+  it('is paced by the pool\'s Bandwidth', () => {
+    const state = saturated()
+    const rate = getStoragePoolBandwidth(state, 1)
+    const after = tickDataLakePoolDrain(0.001)(state)
+    expect(80_000 - after.intro.poolBuffers[1]).toBeCloseTo(rate * 0.001, 6)
   })
 })
 

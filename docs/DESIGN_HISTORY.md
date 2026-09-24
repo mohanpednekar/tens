@@ -8765,3 +8765,10 @@ never unlocked. The maintainer approved arming at any fill instead.
 called `pickIntroCapacityMilestone`, which re-armed every tick and paused all outflow for the whole
 Capacity replay (no pool buffers, no tier01 auto-invest). It calls `upgradePoolCapacity` (full-Buffer
 only) instead; arming is reserved for an explicit player click.
+
+**Lakes keep filling from their own pool while the Data Stream is paused.** With outflow paused,
+`tickPoolBufferFill` (and so its full-buffer lake overflow) doesn't run, which starved every Data
+Lake for the whole wait. Per maintainer request, a lake now also draws straight from its own pool's
+buffer whenever that pool is fully provisioned and every disk is full (`isStoragePoolSaturated` /
+`tickDataLakePoolDrain`) — always, not only while paused — at the pool's Bandwidth, leaving the read
+cache's reservation alone.

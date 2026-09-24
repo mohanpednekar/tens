@@ -107,7 +107,9 @@ fills and it fires. While armed the button is hidden and the Data Stream tile it
 status instead: a `warn`-colored inset outline (`$upgrading`) plus an `UpgradeStatusText` line
 "⏫ Upgrading to <next capacity> · outflow paused" (id `data-stream-upgrade-status`, wired to the tile
 via `aria-describedby`). A small neutral "✕ Cancel upgrade" button (`aria-label="cancel data stream
-upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then. Upgrade Data Stream sits outside the forced priority order (see
+upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then —
+rendered as the SAME keyed `Button` element in the same slot, so arming or cancelling never unmounts
+the focused control (keyboard focus stays put). Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav

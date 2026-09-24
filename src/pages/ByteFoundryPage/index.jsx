@@ -741,42 +741,47 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
-          {intro.byteCreated && !capacityUpgradeQueued && (
+          {/* One stable Button element for both states, so pressing Upgrade (arming) or Cancel
+              never unmounts the focused control — keyboard focus stays put. While armed, the
+              Data Stream tile itself shows the upgrade status and this slot becomes a small
+              neutral Cancel control (see clearIntroCapacityUpgradeQueue). */}
+          {intro.byteCreated && (
             <MilestonesRow>
-              <Button
-                aria-label="upgrade data stream"
-                disabled={!capacityUpgradeClickable}
-                onClick={actions.pickIntroCapacityMilestone}
-                title={
-                  capacityUpgradeAvailable
-                    ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                    : capacityUpgradeArmable
-                      ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
-                      : 'Capacity is already at its maximum'
-                }
-                type="button"
-                variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
-                $progress={capacityUpgradeProgress}
-              >
-                <MilestoneButtonContent>
-                  <span>Upgrade Data Stream</span>
-                  <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
-                </MilestoneButtonContent>
-              </Button>
+              {capacityUpgradeQueued ? (
+                <Button
+                  key="data-stream-upgrade"
+                  aria-label="cancel data stream upgrade"
+                  onClick={actions.clearIntroCapacityUpgradeQueue}
+                  title="Cancel the armed upgrade and resume Data Stream outflow"
+                  type="button"
+                  variant="neutral"
+                >
+                  <ButtonContent>✕ Cancel upgrade</ButtonContent>
+                </Button>
+              ) : (
+                <Button
+                  key="data-stream-upgrade"
+                  aria-label="upgrade data stream"
+                  disabled={!capacityUpgradeClickable}
+                  onClick={actions.pickIntroCapacityMilestone}
+                  title={
+                    capacityUpgradeAvailable
+                      ? 'The Data Stream Buffer is full; drain it to double Capacity'
+                      : capacityUpgradeArmable
+                        ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
+                        : 'Capacity is already at its maximum'
+                  }
+                  type="button"
+                  variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
+                  $progress={capacityUpgradeProgress}
+                >
+                  <MilestoneButtonContent>
+                    <span>Upgrade Data Stream</span>
+                    <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
+                  </MilestoneButtonContent>
+                </Button>
+              )}
             </MilestonesRow>
-          )}
-          {/* While armed, the Data Stream tile itself shows the upgrade status; this small control
-              is the only way to back out of it (see clearIntroCapacityUpgradeQueue). */}
-          {capacityUpgradeQueued && (
-            <Button
-              aria-label="cancel data stream upgrade"
-              onClick={actions.clearIntroCapacityUpgradeQueue}
-              title="Cancel the armed upgrade and resume Data Stream outflow"
-              type="button"
-              variant="neutral"
-            >
-              <ButtonContent>✕ Cancel upgrade</ButtonContent>
-            </Button>
           )}
 
         </ActionsRow>

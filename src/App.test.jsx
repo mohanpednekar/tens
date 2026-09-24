@@ -2747,8 +2747,9 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
 test('arming Upgrade Data Stream hides the button and the Data Stream tile shows the status; Cancel disarms', () => {
   vi.useFakeTimers()
   // 1000 bits capacity, 400 banked: not a full Buffer, but armable at any fill.
-  seedIntroState({ capacity: 1000, bits: 400, byteCreated: true })
+  seedIntroState({ capacity: 1000, bits: 400, byteCreated: true, mainGameUnlocked: true })
   const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
   expect(upgradeButton).toBeEnabled()
@@ -2758,9 +2759,14 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
   expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
 
-  fireEvent.click(screen.getByRole('button', { name: /cancel data stream upgrade/i }))
-  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBeEnabled()
+  // The same DOM node flips role in place, so keyboard focus is never dropped.
+  const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
+  expect(cancel).toBe(upgradeButton)
+  fireEvent.click(cancel)
+  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
+  expect(upgradeButton).toBeEnabled()
   expect(dataStream).not.toHaveTextContent(/outflow paused/)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
