@@ -3921,15 +3921,16 @@ export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
 // productive thing left to do with it — the "simply ignored"/"never destroyed" rule
 // (docs/DESIGN_HISTORY.md) is about never converting a disk to Bits or otherwise discarding it, not
 // about refusing to let it feed a real disk array. Checking the TARGET's own stranded status was
-// tried next and ALSO reverted (a Devin Review finding on PR #603): the write-cache ladder is a
-// multi-step chain that can cross a tier-group boundary (e.g. 100 KB is tier01's own last step,
-// but is also the fixed SOURCE that 1 MB — tier02's first step — depends on), so a target stranded
-// relative to its OWN tier can still be a necessary stepping stone toward a further tier that isn't
-// stranded at all; blocking on it broke exactly that cross-boundary case. There is no lookahead
+// tried next and ALSO reverted (a Devin Review finding on PR #603). The chain never crosses a pool
+// boundary (pool isolation — see docs/DESIGN_HISTORY.md): each pool's largest size is the end of
+// its own chain, and the next pool's smallest size fills only via its own read cache. There is no lookahead
 // needed to get this right: since every built container is PERMANENT progress regardless of
 // whether ITS OWN tier can currently redeem it, there is simply no case where filling one is worse
 // than leaving a source's otherwise-idle full disks sitting unused.
 const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
+  // Pool isolation: no pool ever consumes another pool's disks. A pool's largest size is the top of
+  // its own chain; the next pool's smallest size fills only from its own read cache.
+  if (getPoolIndexForDiskSize(sourceSize) !== getPoolIndexForDiskSize(targetSize)) return false
   if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
   // Only starts once the SOURCE array is entirely full (DISK_ARRAY_LADDER_CAP, 9) — a different
@@ -4016,6 +4017,18 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   for (const targetSize of Object.keys(diskWriteCache).map(Number).sort((a, b) => a - b)) {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
+
+    // A cross-pool merge can only come from a save predating pool isolation: cancel it and return
+    // the source disks it already collected to their own pool (capped at what was ever built).
+    if (getPoolIndexForDiskSize(merge.sourceSize) !== getPoolIndexForDiskSize(targetSize)) {
+      const builtAtSource = intro.disksBuiltTotal?.[merge.sourceSize] ?? 0
+      const restored = Math.min(builtAtSource, (disks[merge.sourceSize] ?? 0) + (merge.segmentsCollected ?? 0))
+      if (restored > 0) disks = { ...disks, [merge.sourceSize]: restored }
+      const { [targetSize]: _cancelled, ...rest } = diskWriteCache
+      diskWriteCache = rest
+      changed = true
+      continue
+    }
 
     if (merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }

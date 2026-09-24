@@ -641,8 +641,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    own tier again this cycle once stranded, so folding it into the array above is exactly the
    productive use write-cache exists for, and since `disks`/`disksBuiltTotal`/`diskWriteCache` are
    all Prestige-permanent, that progress is never wasted even if the target is ALSO currently
-   stranded — it may still be a necessary stepping stone toward a further, still-useful tier (e.g. a
-   stranded 100 KB disk is still required to build 1 MB for the NEXT Factory tier's own first level;
+   stranded — it may still be a necessary stepping stone toward a further, still-useful size in the
+   SAME pool. Merges never cross a pool boundary (pool isolation: a pool's largest size, e.g. 100 KB,
+   never feeds the next pool's smallest, e.g. 1 MB, which fills only from its own read cache; a legacy
+   in-flight cross-pool merge is cancelled and its collected source disks returned);
    see `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts — refusing a
    stranded source outright first, then refusing a stranded target, each permanently starved a
    different part of the ladder). Collect runs `DISK_LADDER_SIZE_MULTIPLIER` (10 — the source→target
