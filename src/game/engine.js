@@ -3990,6 +3990,35 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   let disks = intro.disks ?? {}
   let diskWriteCache = { ...(intro.diskWriteCache ?? {}) }
   let changed = false
+  let poolBuffers = null
+
+  // A cross-pool merge can only come from a save predating pool isolation: cancel it BEFORE any new
+  // merge starts (so none targets a source array this refill is about to fill) and return what it
+  // collected to its own pool — as full source disks up to what was ever built there, and any
+  // excess (the slots may have been refilled meanwhile) as bits into that pool's own buffer.
+  for (const targetSize of Object.keys(diskWriteCache).map(Number)) {
+    const merge = diskWriteCache[targetSize]
+    if (!merge) continue
+    const sourcePool = getPoolIndexForDiskSize(merge.sourceSize)
+    if (sourcePool === getPoolIndexForDiskSize(targetSize)) continue
+    const collected = Math.max(0, merge.segmentsCollected ?? 0)
+    const full = disks[merge.sourceSize] ?? 0
+    const room = Math.max(0, (intro.disksBuiltTotal?.[merge.sourceSize] ?? 0) - full)
+    const restoredDisks = Math.min(room, collected)
+    if (restoredDisks > 0) disks = { ...disks, [merge.sourceSize]: full + restoredDisks }
+    const excessBits = (collected - restoredDisks) * merge.sourceSize
+    if (excessBits > 0 && sourcePool) {
+      poolBuffers = poolBuffers ?? { ...(intro.poolBuffers ?? {}) }
+      poolBuffers[sourcePool] = Math.min(
+        (poolBuffers[sourcePool] ?? 0) + excessBits,
+        getPoolBufferClampCeilingBits(state, sourcePool),
+      )
+    }
+    const { [targetSize]: _cancelled, ...rest } = diskWriteCache
+    diskWriteCache = rest
+    changed = true
+  }
+  if (poolBuffers) intro = { ...intro, poolBuffers }
 
   const builtSizes = Object.keys(intro.disksBuiltTotal ?? {})
     .map(Number)
@@ -4018,17 +4047,6 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
     const merge = diskWriteCache[targetSize]
     if (!merge) continue
 
-    // A cross-pool merge can only come from a save predating pool isolation: cancel it and return
-    // the source disks it already collected to their own pool (capped at what was ever built).
-    if (getPoolIndexForDiskSize(merge.sourceSize) !== getPoolIndexForDiskSize(targetSize)) {
-      const builtAtSource = intro.disksBuiltTotal?.[merge.sourceSize] ?? 0
-      const restored = Math.min(builtAtSource, (disks[merge.sourceSize] ?? 0) + (merge.segmentsCollected ?? 0))
-      if (restored > 0) disks = { ...disks, [merge.sourceSize]: restored }
-      const { [targetSize]: _cancelled, ...rest } = diskWriteCache
-      diskWriteCache = rest
-      changed = true
-      continue
-    }
 
     if (merge.segmentsCollected < DISK_LADDER_SIZE_MULTIPLIER) {
       const mergeSnapshot = { ...state, intro: { ...intro, disks, diskWriteCache } }

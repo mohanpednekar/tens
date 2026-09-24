@@ -1176,7 +1176,8 @@ folding a stranded disk into the next size up is always its one remaining produc
 wasted even if that next size is also currently stranded. **Pool isolation:** no pool ever consumes
 anything from another pool — a merge never crosses a pool boundary (`canStartDiskWriteCacheMerge`
 compares `getPoolIndexForDiskSize` of source/target; `tickDiskWriteCache` cancels a legacy in-flight
-cross-pool merge and returns its collected disks), so each pool's largest size ends its own chain and
+cross-pool merge before starting new ones, returning collected disks to the source array and any
+excess as bits to the source pool's buffer), so each pool's largest size ends its own chain and
 the next pool's smallest size fills only via its own read cache. The only thing that still pauses a merge is an ACTIVE tier claim on the source (the one real
 contention — Factory gets first crack at a disk it could pull this exact tick); see
 `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts. Either way, a disk
@@ -1334,7 +1335,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1867 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1869 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names

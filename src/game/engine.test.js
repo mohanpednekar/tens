@@ -4331,6 +4331,60 @@ describe('tickDiskWriteCache', () => {
     expect(after.intro.disks[megabyteSize] ?? 0).toBe(0)
   })
 
+  it('cancels a legacy cross-pool merge before starting new merges, so none targets the refilled source array', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [level2Size]: DISK_ARRAY_LADDER_CAP,
+        [level3Size]: DISK_ARRAY_LADDER_CAP,
+        [megabyteSize]: 1,
+      },
+      disks: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [level2Size]: DISK_ARRAY_LADDER_CAP,
+        [level3Size]: DISK_ARRAY_LADDER_CAP - 3,
+      },
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: 3,
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(0)(state)
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(after.intro.diskWriteCache).toEqual({})
+  })
+
+  it('credits a legacy cross-pool merge refund that exceeds the source array\'s empty slots to the source pool buffer', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      capacity: getPoolCapacityUnlockThresholdBits(2),
+      disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
+      disks: { [level3Size]: DISK_ARRAY_LADDER_CAP - 1 },
+      poolBuffers: {},
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: 3,
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(0)(state)
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(after.intro.poolBuffers[1]).toBe(Math.min(2 * level3Size, getPoolBufferCapacity(after, 1)))
+    expect(after.intro.poolBuffers[1]).toBeGreaterThan(0)
+  })
+
   it('resumes collection once the source becomes stranded mid-merge — progress already collected stays banked and collection continues using the stranded source', () => {
     const flushTotalSeconds = 10
     const segmentTotalSeconds = flushTotalSeconds / DISK_LADDER_SIZE_MULTIPLIER
