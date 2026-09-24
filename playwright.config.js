@@ -8,6 +8,15 @@ export default defineConfig({
   testMatch: '**/*.e2e.js',
   fullyParallel: true,
   reporter: 'list',
+  expect: {
+    toHaveScreenshot: {
+      // Deterministic capture for the visual-regression spec (#593): freeze CSS
+      // animations/transitions, and allow a small diff headroom so cross-runner font
+      // antialiasing noise doesn't flake while real layout regressions still fail.
+      animations: 'disabled',
+      maxDiffPixelRatio: 0.005,
+    },
+  },
   use: {
     baseURL: BASE_URL,
   },
