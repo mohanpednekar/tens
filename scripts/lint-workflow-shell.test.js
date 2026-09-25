@@ -32,12 +32,18 @@ describe('extractRunBlocks', () => {
     expect(blocks).toHaveLength(2);
     expect(blocks[0].line).toBe(10);
     expect(blocks[0].script).toBe('echo "hello"\nyarn test');
-    expect(blocks[1]).toEqual({ line: 14, script: 'yarn build' });
+    expect(blocks[1]).toEqual({ line: 14, inline: true, script: 'yarn build' });
   });
 
   it('supports folded scalars and chomping indicators', () => {
-    const text = `steps:\n  - run: >-\n      echo one\n      echo two\n`;
-    expect(extractRunBlocks(text)[0].script.trim()).toBe('echo one\necho two');
+    // `>` folds lines together with spaces — linting them newline-separated
+    // would pass scripts that are actually broken once folded.
+    const text = `steps:\n  - run: >-\n      if true; then\n        echo one\n      fi\n`;
+    const script = extractRunBlocks(text)[0].script;
+    expect(script.replace(/ +/g, ' ')).toBe('if true; then echo one fi');
+    // the folded value is broken bash (`fi` reads as an echo argument) — the
+    // lint must see it that way too, not pass the line-wise version.
+    expect(bashSyntaxError(script)).not.toBeNull();
   });
 
   it('supports an explicit indentation indicator (run: |2)', () => {
@@ -57,6 +63,23 @@ describe('extractRunBlocks', () => {
   it('skips a bare run: mapping (defaults.run.shell)', () => {
     const text = `defaults:\n  run:\n    shell: bash\n`;
     expect(extractRunBlocks(text)).toHaveLength(0);
+  });
+
+  it('does not let a trailing comment on a parent key swallow nested run: steps', () => {
+    // `steps: # build` — the `#` must not read as a scalar value, or every
+    // nested run: would be silently skipped as a "continuation".
+    const text = `steps: # build\n  - run: |\n      echo hi\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo hi');
+  });
+
+  it('appends deeper-indented continuation lines to an inline run value', () => {
+    const text = `steps:\n  - run: echo a &&\n        echo b\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('echo a && echo b');
+    expect(bashSyntaxError(blocks[0].script)).toBeNull();
   });
 
   it('does not treat a run: inside a block scalar as a new key', () => {
@@ -135,6 +158,8 @@ describe('lintFiles', () => {
       expect(failures).toHaveLength(1);
       expect(failures[0].file).toBe(bad);
       expect(failures[0].line).toBe(4);
+      // bash's extracted-script line is mapped back to the file's line numbering.
+      expect(failures[0].error).toMatch(/file line ~/);
     });
   });
 
@@ -167,7 +192,9 @@ describe('real repository lint', () => {
     expect(paths.some((p) => p.includes('workflows'))).toBe(true);
     expect(paths.some((p) => p.includes(path.join('actions', 'setup-node-yarn')))).toBe(true);
     const { blocks, failures } = lintFiles(paths);
-    expect(blocks).toBeGreaterThan(0);
+    // A floor, not an exact count — a regression that silently drops blocks
+    // fails loudly, while new legit run: blocks don't require a test bump.
+    expect(blocks).toBeGreaterThanOrEqual(34);
     expect(failures).toEqual([]);
   });
 });

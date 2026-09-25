@@ -12,19 +12,24 @@
  * scalar shapes that can contain — or masquerade as — a script:
  *  - `run:` followed by a block-scalar header (`|`/`>` with optional chomping
  *    `+`/`-` and indentation `1-9` indicators) owns every following line indented
- *    deeper than the `run` key column;
- *  - `run:` with an inline value is a one-line script.
- * A bare `run:` (a mapping, e.g. `defaults.run.shell`) is skipped, and lines that
- * live inside *other* scalars — `prompt: |`/`body: >` block scalars, or the
- * deeper-indented continuation lines of any plain `key: value` — are never
- * mistaken for `run:` keys, so embedded example YAML/prose can't false-positive.
- * `${{ ... }}` GitHub expressions are replaced with a placeholder before parsing
- * — Actions substitutes them at runtime; they are not bash and would otherwise
- * read as a `bad substitution` syntax error.
+ *    deeper than the `run` key column — `>`-folded scalars are folded (lines
+ *    joined with spaces, blank-line paragraph breaks) before linting;
+ *  - `run:` with an inline value is a script possibly continued by deeper-
+ *    indented folded lines, which are appended before linting.
+ * A bare `run:` (a mapping, e.g. `defaults.run.shell`, or `run:` with only a
+ * `# comment`) is skipped, and lines that live inside *other* scalars —
+ * `prompt: |`/`body: >` block scalars, or the deeper-indented continuation
+ * lines of any plain `key: value` — are never mistaken for `run:` keys, so
+ * embedded example YAML/prose can't false-positive. `${{ ... }}` GitHub
+ * expressions are replaced with a placeholder before parsing — Actions
+ * substitutes them at runtime; they are not bash and would otherwise read as a
+ * `bad substitution` syntax error.
  *
- * Assumes every `run:` is bash — true for this repo today (the only `shell:` keys
- * anywhere set `shell: bash`). A future `shell: python`/`pwsh` step would need an
- * exemption added here.
+ * Known approximations: every `run:` is assumed bash — true for this repo today
+ * (the only `shell:` keys anywhere set `shell: bash`); a future
+ * `shell: python`/`pwsh` step would need an exemption. A `run:` key nested
+ * under a non-step mapping (`with.run`, `env.run`) would be linted as bash too —
+ * none exist in this repo, and most such values still parse harmlessly.
  *
  * Usage: yarn lint:workflows
  */
@@ -39,17 +44,17 @@ import { fileURLToPath } from 'node:url';
 // scalar's content is everything indented strictly deeper than that (verified
 // against PyYAML: content at exactly the key column is a scanner error).
 const RUN_KEY_RE = /^(\s*)(-[ \t]+)?run:[ \t]*(.*)$/;
-// Any other `key:` opening a block scalar (`prompt: |`, `body: >-`, ...) — its
-// content must be skipped so a `run:`-looking line inside it is never linted.
-const BLOCK_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*:[ \t]*[|>][0-9+-]*\s*(#.*)?$/;
-// Any `key:` with a non-empty plain value — deeper-indented following lines are
-// folded continuations of that value, not new keys.
-const PLAIN_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*:[ \t]*\S/;
+// Any other `key:` line. If it carries a non-empty value — a block-scalar
+// header (`|`, `>-`, `|2`, ...) or a plain scalar — deeper-indented following
+// lines belong to that value (block content or folded continuation) and are
+// skipped so a `run:`-looking line inside them is never linted. A bare `key:`
+// (or `key:` with only a `# comment`) is a mapping: its children are real keys.
+const ANY_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*:[ \t]*(.*)$/;
 // A `- scalar` sequence entry that isn't a `key:` line — same continuation rule.
 const DASH_SCALAR_RE = /^(\s*)-[ \t]+\S/;
 // Block-scalar header: `|` or `>`, optional chomping (`-`/`+`) and a single
 // explicit-indent digit, in either order (`|2-` and `|-2` are both valid).
-const BLOCK_HEADER_RE = /^[|>]([+-]*)(\d?)([+-]*)$/;
+const BLOCK_HEADER_RE = /^([|>])([+-]*)(\d?)([+-]*)$/;
 const GH_EXPR_RE = /\$\{\{[\s\S]*?\}\}/g;
 const EXPR_PLACEHOLDER = 'GH_EXPR';
 
@@ -66,6 +71,22 @@ function keyColumn(m) {
  * @param {string} yamlText
  * @returns {{line: number, script: string}[]} line = 1-based line of the `run:` key
  */
+/** YAML `>`-fold: non-blank lines join with a space, blank lines split paragraphs. */
+function foldScalar(lines) {
+  const paragraphs = [];
+  let cur = [];
+  for (const l of lines) {
+    if (l === '') {
+      if (cur.length) paragraphs.push(cur.join(' '));
+      cur = [];
+    } else {
+      cur.push(l);
+    }
+  }
+  if (cur.length) paragraphs.push(cur.join(' '));
+  return paragraphs.join('\n');
+}
+
 export function extractRunBlocks(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   const blocks = [];
@@ -85,7 +106,8 @@ export function extractRunBlocks(yamlText) {
     if (m) {
       const keyIndent = keyColumn(m);
       const rest = m[3].trim();
-      if (rest === '') continue; // mapping value (e.g. defaults.run.shell), not a script
+      // bare `run:` or `run: # comment` — a mapping (e.g. defaults.run.shell), not a script
+      if (rest === '' || rest.startsWith('#')) continue;
       const header = BLOCK_HEADER_RE.exec(rest.split(/\s/)[0]);
       if (header) {
         const raw = [];
@@ -99,29 +121,39 @@ export function extractRunBlocks(yamlText) {
           if (indentOf(l) > keyIndent) raw.push(l);
           else break;
         }
-        const explicit = header[2] === '' ? null : keyIndent + Number(header[2]);
+        const explicit = header[3] === '' ? null : keyIndent + Number(header[3]);
         const first = raw.find((l) => l.trim() !== '');
         const base =
           explicit ?? (first === undefined ? keyIndent + 1 : indentOf(first));
+        const content = raw.map((l) => (l.trim() === '' ? '' : l.slice(base)));
         blocks.push({
           line: i + 1,
-          script: raw.map((l) => (l.trim() === '' ? '' : l.slice(base))).join('\n'),
+          script: header[1] === '>' ? foldScalar(content) : content.join('\n'),
         });
         i = j - 1;
       } else {
-        blocks.push({ line: i + 1, script: rest });
-        skipBelow = keyIndent; // deeper lines are continuations of the inline value
+        // inline scalar — deeper-indented following lines are folded
+        // continuations of the value, so append them to the script.
+        const cont = [];
+        let j = i + 1;
+        for (; j < lines.length; j++) {
+          const l = lines[j];
+          if (l.trim() !== '' && indentOf(l) > keyIndent) cont.push(l.trim());
+          else break;
+        }
+        blocks.push({
+          line: i + 1,
+          inline: true,
+          script: cont.length ? `${rest} ${cont.join(' ')}` : rest,
+        });
+        i = j - 1;
       }
       continue;
     }
-    const blockKey = BLOCK_KEY_RE.exec(line);
-    if (blockKey) {
-      skipBelow = keyColumn(blockKey);
-      continue;
-    }
-    const plainKey = PLAIN_KEY_RE.exec(line);
-    if (plainKey) {
-      skipBelow = keyColumn(plainKey);
+    const km = ANY_KEY_RE.exec(line);
+    if (km) {
+      const val = km[3].trim();
+      if (val !== '' && !val.startsWith('#')) skipBelow = keyColumn(km);
       continue;
     }
     const dashScalar = DASH_SCALAR_RE.exec(line);
@@ -169,9 +201,14 @@ export function lintFiles(paths) {
       }
       const error = bashSyntaxError(block.script);
       if (error !== null) {
-        // bash's `line N` is relative to the extracted script; script line 1 sits
-        // on file line `block.line + 1`, so map it back for the reader.
-        const mapped = error.replace(/line (\d+)/g, (_, n) => `line ${n} (file line ~${block.line + Number(n)})`);
+        // bash's `line N` is relative to the extracted script: for a block
+        // scalar, script line 1 sits on file line `block.line + 1`; for an
+        // inline `run:` value it sits on the key line itself.
+        const offset = block.inline ? 0 : 1;
+        const mapped = error.replace(
+          /line (\d+)/g,
+          (_, n) => `line ${n} (file line ~${block.line + Number(n) - 1 + offset})`,
+        );
         failures.push({ file, line: block.line, error: mapped });
       }
     }
