@@ -37,6 +37,7 @@ import {
   PRESTIGE_THRESHOLD,
   TICK_RATE_MS,
   TIER_DEFINITIONS,
+  DISK_LADDER_BASE_SIZE_BITS,
 } from 'game/layers'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
@@ -2744,23 +2745,30 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   expect(upgradeButton).toBeEnabled()
 })
 
-test('Upgrade Data Stream is clickable below a full Buffer; a click arms it, and clicking again cancels', () => {
+test('arming Upgrade Data Stream hides the button and the Data Stream tile shows the status; Cancel disarms', () => {
   vi.useFakeTimers()
   // 1000 bits capacity, 400 banked: not a full Buffer, but armable at any fill.
-  seedIntroState({ capacity: 1000, bits: 400, byteCreated: true })
+  seedIntroState({ capacity: 1000, bits: 400, byteCreated: true, mainGameUnlocked: true })
   const { unmount } = render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
-  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  const upgradeButton = screen.getByRole('button', { name: /^upgrade data stream$/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
 
-  const armed = screen.getByRole('button', { name: /upgrade data stream \(armed/i })
-  expect(armed).toHaveTextContent('Upgrading Data Stream…')
-  // Clicking the armed button cancels the arm and resumes outflow.
-  expect(armed).toBeEnabled()
-  fireEvent.click(armed)
-  const disarmed = screen.getByRole('button', { name: /^upgrade data stream$/i })
-  expect(disarmed).toHaveTextContent('Upgrade Data Stream')
+  // The upgrade button is gone while armed; the tile carries the status instead.
+  expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
+  const dataStream = screen.getByRole('region', { name: 'Data Stream' })
+  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
+
+  // The same DOM node flips role in place, so keyboard focus is never dropped.
+  const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
+  expect(cancel).toBe(upgradeButton)
+  fireEvent.click(cancel)
+  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
+  expect(upgradeButton).toBeEnabled()
+  expect(dataStream).not.toHaveTextContent(/outflow paused/)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()
@@ -3085,6 +3093,25 @@ test('a maxed pre-reset Data Lake retains its 5% speed floor', () => {
   expect(within(pool1).queryByRole('progressbar', { name: /fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
   expect(within(pool1).getByRole('progressbar', { name: /data lake overflow rate/i })).toHaveAttribute('aria-valuenow', '5')
   expect(within(pool1).getByText('5%')).toBeInTheDocument()
+})
+
+test('the pool bar shows the Data Lake rate (and the tile is inert) while the lake drains a half-full buffer — every built disk full, no build in progress', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity / 2 },
+    disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 2 },
+    disks: { [DISK_LADDER_BASE_SIZE_BITS]: 2 },
+    diskCache: { [DISK_LADDER_BASE_SIZE_BITS]: DISK_LADDER_BASE_SIZE_BITS },
+  })
+  render(<App />)
+
+  const pool1 = screen.getByRole('region', { name: 'pool 1' })
+  expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
+  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {

@@ -8753,7 +8753,9 @@ lake overflow) and `tickIntroAutoInvest` until `tickQueuedCapacityUpgrade` fires
 fire (no byte yet, or Capacity at cap), and `prestigeGame` carries it through a real Prestige (like
 `diskBuildQueued`) so the player's explicit arm isn't silently dropped. Because a carried arm keeps
 tier01 auto-invest paused at the start of the new cycle until the fresh Buffer fills, clicking the
-armed button cancels it (`clearIntroCapacityUpgradeQueue`).
+armed button cancels it (`clearIntroCapacityUpgradeQueue`). Later, per maintainer request, the upgrade
+button is hidden while armed: the Data Stream tile itself shows the status (outline + "Upgrading to …
+· outflow paused" line) and a small "Cancel upgrade" control replaces the button.
 
 **Rejected: a 99% arm threshold.** First implemented as requested, but an adversarial-review
 simulation with fully built pools showed the Buffer plateauing at 7–73% for hours, so a 99% button
@@ -8763,3 +8765,12 @@ never unlocked. The maintainer approved arming at any fill instead.
 called `pickIntroCapacityMilestone`, which re-armed every tick and paused all outflow for the whole
 Capacity replay (no pool buffers, no tier01 auto-invest). It calls `upgradePoolCapacity` (full-Buffer
 only) instead; arming is reserved for an explicit player click.
+
+**Lakes keep filling from their own pool while the Data Stream is paused.** With outflow paused,
+`tickPoolBufferFill` (and so its full-buffer lake overflow) doesn't run, which starved every Data
+Lake for the whole wait. Per maintainer request, a lake now also draws straight from its own pool's
+buffer (`tickDataLakePoolDrain`) — always, not only while paused — at the pool's Bandwidth, leaving
+the read cache's reservation alone. A first cut required the pool to be fully provisioned; the
+maintainer then set the rule as a pool-buffer priority instead — disk filling > provisioning in
+progress > lake filling — so unprovisioned slots don't block the lake, but any empty built disk or a
+started build does (`isDataLakePoolDrainAvailable`).

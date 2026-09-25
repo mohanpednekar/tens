@@ -91,8 +91,7 @@ used to double as the button's base fill). A "Combine into a
 Byte" button (`aria-label="combine 8 bits into a Byte"`, calling `actions.combineIntroByte`,
 `$progress` toward `INTRO_BYTE_COMBINE_COST`) shown only while `!byteCreated && bits >=
 INTRO_BYTE_COMBINE_COST`. Once `byteCreated`, a single **"Upgrade Data Stream"** button
-(`aria-label="upgrade data stream"`, or `"upgrade data stream (armed, outflow paused)"` with label
-text "Upgrading Data Stream…" while armed; no icon) consolidates the former paired Speed ×2 (Invest) and
+(`aria-label="upgrade data stream"`, no icon; not rendered while an upgrade is armed) consolidates the former paired Speed ×2 (Invest) and
 Capacity ×2 actions into one purchase: **Capacity is the only bought progression variable** — the
 button costs exactly the current capacity (a full Buffer, drained on purchase) and doubles
 `intro.capacity` (`INTRO_CAPACITY_DOUBLING_STEP`). The displayed Speed is *derived* from Capacity,
@@ -100,12 +99,17 @@ never purchased — `getDataStreamSpeedBytesPerSecond(capacityBits)` returns `sq
 B/s at even `log2` exponents and the arithmetic mean of the two neighbouring even-exponent speeds at
 odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
-after-upgrade preview. `disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}` where `capacityUpgradeClickable =
+after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
 isMemoryCapacityUpgradeAvailable(state) || isMemoryCapacityUpgradeArmable(state)`: a full Buffer
 upgrades immediately; below full (any fill, byte combined, not at cap, not already armed) a click
 arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
-fills and it fires. While armed the button stays enabled and a click cancels the arm
-(`actions.clearIntroCapacityUpgradeQueue`). Upgrade Data Stream sits outside the forced priority order (see
+fills and it fires. While armed the button is hidden and the Data Stream tile itself reflects the
+status instead: a `warn`-colored inset outline (`$upgrading`) plus an `UpgradeStatusText` line
+"⏫ Upgrading to <next capacity> · outflow paused" (id `data-stream-upgrade-status`, wired to the tile
+via `aria-describedby`). A small neutral "✕ Cancel upgrade" button (`aria-label="cancel data stream
+upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then —
+rendered as the SAME keyed `Button` element in the same slot, so arming or cancelling never unmounts
+the focused control (keyboard focus stays put). Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
@@ -133,7 +137,8 @@ title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].sym
 or tier name in the visible text) on the left, and Bandwidth on the right. Its second line is the
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
 above. Its third line, below the balance, is the pool's own `MultiplierBar` (switching to
-`mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow —
+`mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow, or
+whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests below full and the tile's tap is disabled (`lakeDraining`) —
 see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
 bar itself. Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
