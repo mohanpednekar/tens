@@ -163,6 +163,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          allowed_bots: "*"
           claude_args: |
             --max-turns 40
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
