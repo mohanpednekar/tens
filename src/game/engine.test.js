@@ -102,6 +102,7 @@ import {
   getDiskProvisionPassesRequired,
   getDiskLadderSizeBits,
   getNextDiskLadderSize,
+  canDiskSizeFeedWriteCache,
   getDiskRedeemTierName,
   getDiskSize,
   getPoolIndexForDiskSize,
@@ -4297,22 +4298,124 @@ describe('tickDiskWriteCache', () => {
     expect(merge.segmentsCollected).toBe(0)
   })
 
-  it('starts a merge across a tier-group boundary even when BOTH sides are stranded under their own (different) tiers: 100 KB stranded under tier01, 1 MB stranded under tier02 — this genuinely fails under the immediately-preceding target-stranded-check fix (confirmed by reverting to it), unlike a same-tier-group double-stranded case, which that fix already allowed to be checked independently', () => {
-    const megabytesTier = TIER_DEFINITIONS[1]
-    const megabyteSize = getTierCost(megabytesTier, 1) * BITS_PER_BYTE // disk ladder step 4
-    const state = withIntro(
-      withPurchaseLevel(withPurchaseLevel(createInitialGameState(), tensTier.id, 4), megabytesTier.id, 2),
-      {
-        disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
-        disks: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 0 },
-      }
-    )
-    expect(isDiskStrandedByAdvancedTier(state, level3Size)).toBe(true) // 100 KB stranded under tier01
-    expect(isDiskStrandedByAdvancedTier(state, megabyteSize)).toBe(true) // 1 MB ALSO stranded, under tier02
+  it('never starts a merge across a pool boundary: a full 100 KB array (pool 1) never feeds 1 MB (pool 2)', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE // disk ladder step 4
+    expect(getNextDiskLadderSize(level3Size)).toBe(megabyteSize)
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
+      disks: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 0 },
+    })
     const after = tickDiskWriteCache(0)(state)
-    const merge = getDiskWriteCacheMerge(after, megabyteSize)
-    expect(merge).toBeTruthy()
-    expect(merge.sourceSize).toBe(level3Size)
+    expect(getDiskWriteCacheMerge(after, megabyteSize)).toBeNull()
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+  })
+
+  it('canDiskSizeFeedWriteCache is false only for each pool\'s largest size', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    expect(canDiskSizeFeedWriteCache(FIRST_DISK_SIZE)).toBe(true)
+    expect(canDiskSizeFeedWriteCache(level2Size)).toBe(true)
+    expect(canDiskSizeFeedWriteCache(level3Size)).toBe(false)
+    expect(canDiskSizeFeedWriteCache(megabyteSize)).toBe(true)
+  })
+
+  it('cancels a legacy in-flight cross-pool merge and returns its collected disks to the source pool', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
+      disks: { [level3Size]: DISK_ARRAY_LADDER_CAP - 3 },
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: 3,
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(0)(state)
+    expect(getDiskWriteCacheMerge(after, megabyteSize)).toBeNull()
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(after.intro.disks[megabyteSize] ?? 0).toBe(0)
+  })
+
+  it('cancels a legacy cross-pool merge before starting new merges, so none targets the refilled source array', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [level2Size]: DISK_ARRAY_LADDER_CAP,
+        [level3Size]: DISK_ARRAY_LADDER_CAP,
+        [megabyteSize]: 1,
+      },
+      disks: {
+        [FIRST_DISK_SIZE]: DISK_ARRAY_LADDER_CAP,
+        [level2Size]: DISK_ARRAY_LADDER_CAP,
+        [level3Size]: DISK_ARRAY_LADDER_CAP - 3,
+      },
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: 3,
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(0)(state)
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+    expect(after.intro.diskWriteCache).toEqual({})
+  })
+
+  it('credits a legacy cross-pool merge refund that exceeds the source array\'s empty slots to the source pool buffer', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      capacity: getPoolCapacityUnlockThresholdBits(2),
+      disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
+      disks: { [level3Size]: DISK_ARRAY_LADDER_CAP - 1 },
+      poolBuffers: {},
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: 3,
+          segmentRemainingSeconds: 1,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 10,
+          flushTotalSeconds: 10,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(0)(state)
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
+    // 2 of the 3 collected disks don't fit back; they become pool-1 buffer bits, clamped to its ceiling.
+    const ceiling = getPoolBufferCapacity(after, 1)
+    expect(ceiling).toBeLessThan(2 * level3Size)
+    expect(after.intro.poolBuffers[1]).toBe(ceiling)
+  })
+
+  it('lets a legacy cross-pool merge already in its flush phase complete losslessly without consuming more source disks', () => {
+    const megabyteSize = getTierCost(TIER_DEFINITIONS[1], 1) * BITS_PER_BYTE
+    const state = withIntro(createInitialGameState(), {
+      disksBuiltTotal: { [level3Size]: DISK_ARRAY_LADDER_CAP, [megabyteSize]: 1 },
+      disks: { [level3Size]: DISK_ARRAY_LADDER_CAP },
+      diskWriteCache: {
+        [megabyteSize]: {
+          sourceSize: level3Size,
+          segmentsCollected: DISK_LADDER_SIZE_MULTIPLIER,
+          segmentRemainingSeconds: 0,
+          segmentTotalSeconds: 1,
+          flushRemainingSeconds: 1,
+          flushTotalSeconds: 1,
+        },
+      },
+    })
+    const after = tickDiskWriteCache(1)(state)
+    expect(getDiskWriteCacheMerge(after, megabyteSize)).toBeNull()
+    expect(after.intro.disks[megabyteSize]).toBe(1)
+    expect(after.intro.disks[level3Size]).toBe(DISK_ARRAY_LADDER_CAP)
   })
 
   it('resumes collection once the source becomes stranded mid-merge — progress already collected stays banked and collection continues using the stranded source', () => {
