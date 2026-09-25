@@ -3,7 +3,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
@@ -210,6 +210,15 @@ const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
+// Data Stream tile's own status line while an Upgrade Data Stream is armed (the button itself is
+// hidden then — see capacityUpgradeQueued below).
+const UpgradeStatusText = styled.span`
+  color: ${props => props.theme.color.warn};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 600;
+  text-align: center;
+`
+
 const SpeedText = styled.span`
   flex-shrink: 0;
   color: ${props => props.theme.color.textMuted};
@@ -242,6 +251,10 @@ const FillableStatCard = styled.div`
   border-radius: ${props => props.theme.radius.sm};
   color: ${props => props.theme.color.text};
   ${progressFill}
+
+  ${props => props.$upgrading && `
+    box-shadow: inset 0 0 0 2px ${props.theme.color.warn};
+  `}
 
   ${props => props.$tappable && `
     cursor: pointer;
@@ -579,6 +592,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
   const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
+  const capacityUpgradeArmable = isMemoryCapacityUpgradeArmable(state)
+  const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
+  const capacityUpgradeClickable = capacityUpgradeAvailable || capacityUpgradeArmable
   const capacityUpgradeCost = intro.capacity
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
@@ -667,8 +683,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
           aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
           title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
+          aria-describedby={capacityUpgradeQueued ? 'data-stream-upgrade-status' : undefined}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
+          $upgrading={capacityUpgradeQueued}
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
@@ -681,6 +699,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             )}{' '}
             <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
           </BalanceText>
+          {capacityUpgradeQueued && (
+            <UpgradeStatusText id="data-stream-upgrade-status">
+              ⏫ Upgrading to {formatMemoryCapacityValue(intro.capacity * 2, true)} · outflow paused
+            </UpgradeStatusText>
+          )}
           {intro.byteCreated && (
             <MultiplierBar
               basePercent={dataStreamBaseMultiplierPercent}
@@ -718,28 +741,46 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
+          {/* One stable Button element for both states, so pressing Upgrade (arming) or Cancel
+              never unmounts the focused control — keyboard focus stays put. While armed, the
+              Data Stream tile itself shows the upgrade status and this slot becomes a small
+              neutral Cancel control (see clearIntroCapacityUpgradeQueue). */}
           {intro.byteCreated && (
             <MilestonesRow>
-              <Button
-                aria-label="upgrade data stream"
-                disabled={!capacityUpgradeAvailable}
-                onClick={actions.pickIntroCapacityMilestone}
-                title={
-                  capacityUpgradeAvailable
-                    ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                    : intro.bits < intro.capacity
-                      ? 'Fill the Data Stream Buffer completely before upgrading the Data Stream'
-                      : 'Capacity is already at its maximum'
-                }
-                type="button"
-                variant={capacityUpgradeAvailable ? 'prestige' : 'neutral'}
-                $progress={capacityUpgradeProgress}
-              >
-                <MilestoneButtonContent>
-                  <span>Upgrade Data Stream</span>
-                  <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
-                </MilestoneButtonContent>
-              </Button>
+              {capacityUpgradeQueued ? (
+                <Button
+                  key="data-stream-upgrade"
+                  aria-label="cancel data stream upgrade"
+                  onClick={actions.clearIntroCapacityUpgradeQueue}
+                  title="Cancel the armed upgrade and resume Data Stream outflow"
+                  type="button"
+                  variant="neutral"
+                >
+                  <ButtonContent>✕ Cancel upgrade</ButtonContent>
+                </Button>
+              ) : (
+                <Button
+                  key="data-stream-upgrade"
+                  aria-label="upgrade data stream"
+                  disabled={!capacityUpgradeClickable}
+                  onClick={actions.pickIntroCapacityMilestone}
+                  title={
+                    capacityUpgradeAvailable
+                      ? 'The Data Stream Buffer is full; drain it to double Capacity'
+                      : capacityUpgradeArmable
+                        ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
+                        : 'Capacity is already at its maximum'
+                  }
+                  type="button"
+                  variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
+                  $progress={capacityUpgradeProgress}
+                >
+                  <MilestoneButtonContent>
+                    <span>Upgrade Data Stream</span>
+                    <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
+                  </MilestoneButtonContent>
+                </Button>
+              )}
             </MilestonesRow>
           )}
 
@@ -786,7 +827,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // isDataLakeManualFillAvailable in engine.js), so showing an "incoming rate" here would be
         // just as misleading as it would be for a pool that's never built a disk at all.
         const poolReady = isDataLakePoolReady(state, poolIndex) && isStoragePoolFullyBuilt(state, poolIndex)
-        const showLakeMode = poolBufferFull && poolReady
+        // tickDataLakePoolDrain (engine.js) also feeds the lake straight from this pool's buffer
+        // whenever isDataLakePoolDrainAvailable — which keeps the buffer below full, so lake mode must key on that too, not only on a full buffer. A tap can't
+        // speed the lake up then (the drain is capped at Bandwidth), so the tile is disabled.
+        const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)
+        const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         // The shared Provision Disk control always targets whichever size the disk ladder
@@ -809,7 +854,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               as="button"
               type="button"
               onClick={() => actions.tapPoolBuffer(poolIndex)}
-              disabled={poolBufferFull || poolMultiplierCapped}
+              disabled={poolBufferFull || lakeDraining || poolMultiplierCapped}
               aria-label={`tap pool ${poolIndex} memory`}
               title={
                 poolBufferFull
