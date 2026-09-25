@@ -1173,9 +1173,14 @@ stranded disk is NOT otherwise untouchable: `tickDiskWriteCache`/`canStartDiskWr
 `isDiskWriteCacheCollectPaused` never gate on stranded status at all any more, source or target —
 folding a stranded disk into the next size up is always its one remaining productive use, since
 `disks`/`disksBuiltTotal`/`diskWriteCache` are all Prestige-permanent, so the progress is never
-wasted even if that next size is also currently stranded (it may still be a necessary stepping
-stone toward a further, still-useful tier — e.g. a stranded 100 KB feeding 1 MB for the next Factory
-tier). The only thing that still pauses a merge is an ACTIVE tier claim on the source (the one real
+wasted even if that next size is also currently stranded. **Pool isolation:** no pool ever consumes
+anything from another pool — a merge never crosses a pool boundary (`canStartDiskWriteCacheMerge`
+compares `getPoolIndexForDiskSize` of source/target; `canDiskSizeFeedWriteCache(size)` is false for
+each pool's largest size and gates `DiskArrayRow`'s stranded-disk tooltip; `tickDiskWriteCache` cancels a legacy in-flight
+cross-pool merge that is still collecting before starting new ones, returning collected disks to the source
+array and any excess as clamped bits to the source pool's buffer; one already flushing completes),
+so each pool's largest size ends its own chain and
+the next pool's smallest size fills only via its own read cache. The only thing that still pauses a merge is an ACTIVE tier claim on the source (the one real
 contention — Factory gets first crack at a disk it could pull this exact tick); see
 `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts. Either way, a disk
 waits for the next real Prestige to reset purchase levels and reopen its own pull window.
@@ -1332,7 +1337,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1866 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1871 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
