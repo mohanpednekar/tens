@@ -6098,8 +6098,8 @@ export const canReclaimComputeBoost = state => {
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
-// the active boost's own funding tier (capped at COMPUTE_ENTITY_CAP, in case more were earned
-// while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
+// the active boost's own funding tier (capped at that tier's effective cap, never lowering a count
+// that grew past it while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
 // back out of computeBoostRemainingSeconds, decrementing computeBoostStacks by 1.
 // canReclaimComputeBoost's own gate (>1 stack AND enough pooled time that this subtraction can't
 // zero it out) means nextStacks is always >= 1 and the resulting remaining time is always > 0 here
