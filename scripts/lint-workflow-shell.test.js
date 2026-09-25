@@ -146,6 +146,26 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(block.script)).not.toBeNull();
   });
 
+  it('keeps #-prefixed lines inside an unterminated quoted scalar', () => {
+    // inside an open quote the `#` line is scalar content, not a YAML comment —
+    // dropping it hides that the folded value is broken bash.
+    const text = `steps:\n  - run: "if true; then\n        # text\n        :; fi"\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toContain('# text');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
+  it('does not mistake a colon-word scalar for a child mapping after bare run:', () => {
+    // `if:true; then` is a plain scalar (no separator after the colon), not a
+    // `key:` child — the bare run:'s value must still be linted.
+    const text = `steps:\n  - run:\n        if:true; then\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('if:true; then');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
   it('does not let a trailing comment on a parent key swallow nested run: steps', () => {
     // `steps: # build` — the `#` must not read as a scalar value, or every
     // nested run: would be silently skipped as a "continuation".

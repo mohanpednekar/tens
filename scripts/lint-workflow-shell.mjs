@@ -57,16 +57,12 @@ const FLOW_RUN_RE = /\brun[ \t]*:[ \t]*/;
 // lines belong to that value (block content or folded continuation) and are
 // skipped so a `run:`-looking line inside them is never linted. A bare `key:`
 // (or `key:` with only a `# comment`) is a mapping: its children are real keys.
-const ANY_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*[ \t]*:[ \t]*(.*)$/;
+const ANY_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*[ \t]*:(?:[ \t]+(.*)|[ \t]*$)/;
 // A `- scalar` sequence entry that isn't a `key:` line — same continuation rule.
 const DASH_SCALAR_RE = /^(\s*)-[ \t]+\S/;
 // Block-scalar header: `|` or `>`, optional chomping (`-`/`+`) and a single
 // explicit-indent digit, in either order (`|2-` and `|-2` are both valid).
 const BLOCK_HEADER_RE = /^([|>])([+-]*)(\d?)([+-]*)$/;
-// `${{ ... }}` — the expression body is non-brace chars or a single-quoted
-// string (which may itself contain `}}`, e.g. `${{ '}}' }}`); quoted parts use
-// `''` escaping per Actions expression rules.
-const GH_EXPR_RE = /\$\{\{(?:'(?:[^']|'')*'|[^{}])*\}\}/g;
 const EXPR_PLACEHOLDER = 'GH_EXPR';
 
 // YAML double-quoted escape set (single-quoted scalars only escape `''`).
@@ -128,10 +124,11 @@ function unquote(text) {
 
 /**
  * Collect a plain/quoted scalar's folded continuation lines: deeper-indented
- * non-blank lines (blank lines span, `#` lines are YAML comments). Stops at the
+ * non-blank lines (blank lines span, `#` lines are YAML comments — unless the
+ * scalar is an unterminated quote, where `#` is literal content). Stops at the
  * first dedented non-blank line.
  */
-function collectContinuation(lines, j, keyIndent) {
+function collectContinuation(lines, j, keyIndent, { keepHash = false } = {}) {
   const cont = [];
   for (; j < lines.length; j++) {
     const l = lines[j];
@@ -140,7 +137,7 @@ function collectContinuation(lines, j, keyIndent) {
       cont.push('');
       continue;
     }
-    if (t.startsWith('#')) continue;
+    if (!keepHash && t.startsWith('#')) continue;
     if (indentOf(l) > keyIndent) cont.push(t);
     else break;
   }
@@ -214,7 +211,9 @@ export function extractRunBlocks(yamlText) {
       if (rest === '' || rest.startsWith('#')) {
         const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
         const first = cont.find((l) => l !== '');
-        if (first !== undefined && !/^[A-Za-z_][\w.-]*[ \t]*:/.test(first)) {
+        // key-shaped requires a YAML separator after the colon — `if:true` is
+        // a plain scalar, not a `key:` line.
+        if (first !== undefined && !/^[A-Za-z_][\w.-]*[ \t]*:(\s|$)/.test(first)) {
           const script = unquote(foldScalar(cont));
           blocks.push({ line: i + 1, script });
           i = next - 1;
@@ -249,7 +248,14 @@ export function extractRunBlocks(yamlText) {
         // inline scalar — deeper-indented following lines are folded
         // continuations of the value, so append them; a quoted value is then
         // unquoted so `bash -n` sees the real script, not an opaque quoted word.
-        const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
+        // inside an unterminated quote, `#` lines are literal scalar content,
+        // not YAML comments — keep them so the lint sees the real folded value.
+        const inOpenQuote =
+          (rest.startsWith('"') || rest.startsWith("'")) &&
+          parseQuotedScalar(rest) === null;
+        const { cont, next } = collectContinuation(lines, i + 1, keyIndent, {
+          keepHash: inOpenQuote,
+        });
         const extra = foldScalar(cont);
         // a paragraph break folds to a bare newline — no space separator
         const joined =
@@ -274,7 +280,7 @@ export function extractRunBlocks(yamlText) {
     }
     const km = ANY_KEY_RE.exec(line);
     if (km) {
-      const val = km[3].trim();
+      const val = (km[3] ?? '').trim();
       if (val !== '' && !val.startsWith('#')) skipBelow = keyColumn(km);
       continue;
     }
@@ -284,9 +290,51 @@ export function extractRunBlocks(yamlText) {
   return blocks;
 }
 
-/** Replace `${{ ... }}` GitHub expressions with a bash-safe placeholder. */
+/**
+ * Replace `${{ ... }}` GitHub expressions with a bash-safe placeholder.
+ * Hand-scanned rather than regex (a nested alternation trips ReDoS lint):
+ * expression bodies may contain `}}` inside single-quoted string literals
+ * (e.g. `${{ '}}' }}`), and `''` is an escaped quote. An unterminated `${{` is
+ * left verbatim so `bash -n` flags it rather than silently passing.
+ */
 export function sanitizeExpressions(script) {
-  return script.replace(GH_EXPR_RE, EXPR_PLACEHOLDER);
+  let out = '';
+  let i = 0;
+  while (i < script.length) {
+    if (!script.startsWith('${{', i)) {
+      out += script[i++];
+      continue;
+    }
+    let j = i + 3;
+    let inStr = false;
+    let closed = false;
+    while (j < script.length) {
+      const c = script[j];
+      if (inStr) {
+        if (c === "'" && script[j + 1] === "'") {
+          j += 2;
+          continue;
+        }
+        if (c === "'") inStr = false;
+        j++;
+        continue;
+      }
+      if (c === "'") {
+        inStr = true;
+        j++;
+        continue;
+      }
+      if (c === '}' && script[j + 1] === '}') {
+        j += 2;
+        closed = true;
+        break;
+      }
+      j++;
+    }
+    out += closed ? EXPR_PLACEHOLDER : script.slice(i, j);
+    i = j;
+  }
+  return out;
 }
 
 /**
