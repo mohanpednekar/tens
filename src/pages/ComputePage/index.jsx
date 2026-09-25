@@ -1,5 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeMergeDurationSeconds, getComputeReserveHeld, getNextComputeMergeDurationUpgradeIndex, isComputeBoostTurnAvailable, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, getNextComputeMergeDurationUpgradeIndex, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
 import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
@@ -460,10 +460,11 @@ const ENTITY_ROWS = [
 ]
 
 // Whether merging COMPUTE_MERGE_RATIO of `input` into 1 more of `output` would do anything right
-// now — same "at least one full group, and room under the cap" shape the engine's own
-// mergeComputeEntities enforces — this is only a UI mirror of that gate, not a replacement for it;
-// the engine re-validates on every call regardless (see "Security notes" in CLAUDE.md).
-const canMerge = (input, output) => input >= COMPUTE_MERGE_RATIO && output < COMPUTE_ENTITY_CAP
+// now — same "at least one full group, and room under the output's effective cap" shape the
+// engine's own mergeComputeEntities enforces — this is only a UI mirror of that gate, not a
+// replacement for it; the engine re-validates on every call regardless (see "Security notes" in
+// CLAUDE.md).
+const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && output < outputCap
 
 // Compute's own dedicated screen — split out of ByteFoundryPage (see "Byte Foundry" in CLAUDE.md)
 // once revealed (isComputeCoreConversionUnlocked), reached via AppNav. Activation is still gated
@@ -508,13 +509,17 @@ const ComputePage = ({ game }) => {
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
-  // Once a boost is active, its own funding tier is what Stack/Reclaim and the preset buttons'
-  // preview all act on, regardless of which row a player might click next (issue #326 — Stack
-  // always extends the currently active boost, never a freshly-selected tier).
-  const armedTierIndex = boostActive
-    // `?? 1` defensively falls back to Core for a save from before issue #326 existed.
-    ? (intro.computeBoostTierIndex ?? 1)
-    : (intro.computeMergePageUnlocked ? selectedBoostTierIndex : 1)
+  // Once a boost is active, its own funding tier is what Stack/Reclaim act on, regardless of which
+  // row a player clicks next (issue #326 — Stack always extends the currently active boost).
+  // `?? 1` defensively falls back to Core for a save from before issue #326 existed.
+  const activeTierIndex = boostActive ? (intro.computeBoostTierIndex ?? 1) : null
+  const activeRow = activeTierIndex ? ENTITY_ROWS[activeTierIndex - 1] : null
+  // A tier row the player clicks always arms the presets — even mid-boost, where picking a
+  // different tier arms a confirmed forfeit-and-switch (canActivateComputeBoost allows it at 1
+  // stack). With nothing clicked, the active boost's own tier stays armed.
+  const armedTierIndex = intro.computeMergePageUnlocked
+    ? (selectedBoostTierIndex ?? activeTierIndex)
+    : 1
   const armedRow = armedTierIndex ? ENTITY_ROWS[armedTierIndex - 1] : null
   const armedHeld = armedRow ? (intro[armedRow.countField] ?? 0) : 0
 
@@ -527,9 +532,9 @@ const ComputePage = ({ game }) => {
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
         <ActiveBoostRow aria-label="active compute boost">
           <span
-            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${armedRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, armedTierIndex)} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
+            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
           >
-            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ×${getComputeBoostTierMultiplier(intro.computeBoostType, armedTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} · ${intro.computeBoostStacks}×`}
+            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} · ${intro.computeBoostStacks}×`}
           </span>
         </ActiveBoostRow>
       )}
@@ -546,7 +551,7 @@ const ComputePage = ({ game }) => {
           const needsForfeit = boostActive
           const sameAsActive = needsForfeit
             && intro.computeBoostType === boostType
-            && (intro.computeBoostTierIndex ?? 1) === armedTierIndex
+            && activeTierIndex === armedTierIndex
           // Fresh start, or a different preset/tier that would forfeit (confirm happens on click).
           const turnAvailable = armedTierIndex !== null
             && !sameAsActive
@@ -583,7 +588,7 @@ const ComputePage = ({ game }) => {
                     : needsForfeit && intro.computeBoostStacks > 1
                       ? 'Reclaim down to the last stack first — switching to a different boost forfeits everything currently held, same as the standalone Forfeit button'
                       : canActivateComputeBoost(state, boostType, armedTierIndex, needsForfeit) && blockedByPriority
-                        ? 'Take a higher-priority upgrade first (Disk Fill, Speed, or Provision Disk)'
+                        ? 'Take a higher-priority upgrade first (Disk Fill or Provision Disk)'
                         : needsForfeit
                           ? `Forfeit active boost (no refund) and start ${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)} — asks for confirmation`
                           : `${COMPUTE_BOOST_DISPLAY[boostType].label}: spend 1 ${singularize(armedRow?.label ?? 'Core')} for ×${multiplier} production, ${formatOfflineDuration(durationSeconds)}`
@@ -603,7 +608,7 @@ const ComputePage = ({ game }) => {
             aria-label="stack the active compute boost"
             disabled={!isStackComputeBoostTurnAvailable(state)}
             onClick={actions.stackComputeBoost}
-            title={`Stack: spend 1 more ${singularize(armedRow?.label ?? 'Core')} to extend the active boost by its own duration again — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
+            title={`Stack: spend 1 more ${singularize(activeRow?.label ?? 'Core')} to extend the active boost by its own duration again — up to ${COMPUTE_BOOST_MAX_STACKS}x`}
             type="button"
             variant="prestige"
           >
@@ -622,7 +627,7 @@ const ComputePage = ({ game }) => {
               aria-label="reclaim one stack of the active compute boost"
               disabled={!canReclaimComputeBoost(state)}
               onClick={actions.reclaimComputeBoost}
-              title={`Reclaim the most recent unused stack: refunds 1 ${singularize(armedRow?.label ?? 'Core')} and its duration — one at a time`}
+              title={`Reclaim the most recent unused stack: refunds 1 ${singularize(activeRow?.label ?? 'Core')} and its duration — one at a time`}
               type="button"
               variant="neutral"
             >
@@ -707,7 +712,7 @@ const ComputePage = ({ game }) => {
                     onClick={actions.upgradeComputeMergeDuration}
                     title={
                       canUpgrade
-                        ? `Sacrifice all ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
+                        ? `Sacrifice ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
                         : `Next duration upgrade: ${nextRow.label} → ${nextRow.mergeOutputLabel}. Needs auto-merge unlocked and ${COMPUTE_ENTITY_CAP} held ${nextRow.label}`
                     }
                     type="button"
@@ -728,7 +733,8 @@ const ComputePage = ({ game }) => {
               const autoUnlockProgress = Math.min(100, (autoCostHeld / COMPUTE_ENTITY_CAP) * 100)
               const remainingSeconds = row.timerField ? (intro[row.timerField] ?? 0) : 0
               const merging = remainingSeconds > 0
-              const startAvailable = autoEnabled && !merging && count >= COMPUTE_MERGE_RATIO && (intro[row.mergeOutputField] ?? 0) < COMPUTE_ENTITY_CAP
+              const outputCap = hasMergeRow ? getComputeFieldEffectiveCap(state, row.mergeOutputField) : COMPUTE_ENTITY_CAP
+              const startAvailable = hasMergeRow && isComputeMergeStartAvailableAtBoundary(state, rowIndex)
               // Once auto-merge is unlocked, `count` can climb past COMPUTE_ENTITY_CAP into the
               // boundary's own gradually-filling reserve (see getComputeReserveHeld) — the primary
               // slot row always reads at most COMPUTE_ENTITY_CAP/COMPUTE_ENTITY_CAP; the "extra"
@@ -741,11 +747,11 @@ const ComputePage = ({ game }) => {
                   <TierHeaderRow>
                     <TierSelectButton
                       type="button"
-                      onClick={() => setSelectedBoostTierIndex(prev => (prev === tierIndex ? null : tierIndex))}
-                      aria-pressed={selectedBoostTierIndex === tierIndex}
+                      onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
+                      aria-pressed={armedTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
                       title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
-                      $selected={selectedBoostTierIndex === tierIndex}
+                      $selected={armedTierIndex === tierIndex}
                     >
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
                       <TierLabel>{`${row.label} ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
@@ -774,7 +780,9 @@ const ComputePage = ({ game }) => {
                               ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
                               : startAvailable
                                 ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a timed merge into 1 ${row.mergeOutputLabel}`
-                                : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                                : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                                  ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                                  : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots (and a running Byte generator) — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           type="button"
                         >
@@ -787,11 +795,11 @@ const ComputePage = ({ game }) => {
                         <>
                           <TierActionButton
                             aria-label={`merge ${COMPUTE_MERGE_RATIO} ${row.label.toLowerCase()} into 1 ${row.mergeOutputLabel.toLowerCase()}`}
-                            disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0)}
+                            disabled={!canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)}
                             onClick={() => actions[row.mergeAction]()}
                             title={
-                              (intro[row.mergeOutputField] ?? 0) >= COMPUTE_ENTITY_CAP
-                                ? `${row.mergeOutputLabel} is already at the max of ${COMPUTE_ENTITY_CAP}`
+                              (intro[row.mergeOutputField] ?? 0) >= outputCap
+                                ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
                                 : `Merge: spend ${COMPUTE_MERGE_RATIO} ${row.label} for 1 ${row.mergeOutputLabel}`
                             }
                             type="button"
