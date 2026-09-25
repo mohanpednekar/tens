@@ -540,10 +540,13 @@ not at the bottom"):
    active or the merge chain has unlocked yet:
    a. An `ArmedStatusText` line (`"Armed: <symbol> <Label> (<N> held)"`, or a prompt to click a tier
       row if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
-      `intro.computeBoostTierIndex` while a boost is active (the boost's own funding tier — a
-      player can't re-arm mid-boost), otherwise local component state (`selectedBoostTierIndex`, set
-      by clicking a tier row below — see 3), defaulting to Cores (tier 1) before
-      `intro.computeMergePageUnlocked` since it's the only tier that can hold a balance that early.
+      local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
+      falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
+      clicked; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      tier that can hold a balance that early. Clicking a different tier mid-boost arms a
+      confirmed forfeit-and-switch (only at 1 stack, per `canActivateComputeBoost`); the active-boost
+      line, Stack, and Reclaim always describe the ACTIVE tier, not the armed one. The row
+      highlight (`aria-pressed`) tracks `armedTierIndex`.
    b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon>×<multiplier>"` computed

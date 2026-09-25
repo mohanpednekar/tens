@@ -5135,6 +5135,60 @@ describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues
     expect(upgradeComputeMergeDuration(tooFew)).toBe(tooFew)
   })
 
+  it('upgrade spends exactly COMPUTE_ENTITY_CAP, keeping reserve progress past it (#740)', () => {
+    const state = withIntro(createInitialGameState(), {
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_ENTITY_CAP + 5,
+    })
+    expect(upgradeComputeMergeDuration(state).intro.computeCores).toBe(5)
+  })
+
+  it('manual merge fills the output tier\'s reserve once its own auto-merge is unlocked (#740)', () => {
+    const state = withIntro(createInitialGameState(), {
+      autoMergeNodesIntoCluster: true,
+      computeCores: COMPUTE_MERGE_RATIO,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    expect(mergeComputeCoresIntoNode(state).intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+    const full = withIntro(state, { computeNodes: COMPUTE_ENTITY_AUTO_MERGE_CAP })
+    expect(mergeComputeCoresIntoNode(full)).toBe(full)
+  })
+
+  it('reserve merge starts into, and completes into, the output tier\'s reserve (#740)', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      byteCreated: true,
+      autoMergeCoresIntoNode: true,
+      autoMergeNodesIntoCluster: true,
+      computeCores: COMPUTE_MERGE_RATIO,
+      computeNodes: COMPUTE_ENTITY_CAP,
+    })
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(true)
+    const started = startComputeCoresMerge(state)
+    expect(started).not.toBe(state)
+    const remaining = started.intro.computeCoresMergeRemainingSeconds
+    const done = tickAutoMergeCoresIntoNode(remaining)(started)
+    expect(done.intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 1)
+  })
+
+  it('completing a reserve merge never lowers an output that grew past its cap mid-merge (#740)', () => {
+    const state = withIntro(createInitialGameState(), {
+      computeCoresMergeRemainingSeconds: 1,
+      computeNodes: COMPUTE_ENTITY_CAP + 5,
+    })
+    expect(tickAutoMergeCoresIntoNode(1)(state).intro.computeNodes).toBe(COMPUTE_ENTITY_CAP + 5)
+  })
+
+  it('manual reserve start is unavailable while the live merge duration is 0 (#740)', () => {
+    const state = withIntro(createInitialGameState(), {
+      capacity: 0,
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_MERGE_RATIO,
+    })
+    expect(isComputeCoresMergeStartAvailable(state)).toBe(false)
+    expect(startComputeCoresMerge(state)).toBe(state)
+  })
+
   it('the upgrade count is permanent across Prestige', () => {
     const state = withMoney(withIntro(createInitialGameState(), {
       computeMergeDurationUpgrades: 3,
