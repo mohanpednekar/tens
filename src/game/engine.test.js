@@ -4833,6 +4833,18 @@ describe('Compute Boost reclaim (reclaimComputeBoost / canReclaimComputeBoost)',
     expect(reclaimed.intro.computeBoostRemainingSeconds).toBe(activated.intro.computeBoostRemainingSeconds)
   })
 
+  it('refund never lowers a count that grew into the reserve while the boost was running (#740)', () => {
+    const state = withIntro(createInitialGameState(), {
+      autoMergeCoresIntoNode: true,
+      computeCores: COMPUTE_ENTITY_CAP + 5,
+      computeBoostType: 'sustain',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 2,
+      computeBoostRemainingSeconds: getComputeBoostTierDurationSeconds('sustain', 1) * 2,
+    })
+    expect(reclaimComputeBoost(state).intro.computeCores).toBe(COMPUTE_ENTITY_CAP + 6)
+  })
+
   it('refund never exceeds COMPUTE_ENTITY_CAP even if more tokens were earned while the boost was running', () => {
     const state = withIntro(createInitialGameState(), {
       computeCores: COMPUTE_ENTITY_CAP,

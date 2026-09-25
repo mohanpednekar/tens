@@ -96,7 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   merge-duration upgrade now spends exactly 10 instead of wiping reserve progress. Clicking a
   different tier during an active boost now arms it for a confirmed switch, and the active-boost
   line keeps describing the running boost. The reserve Start control stays disabled when a merge
-  couldn't actually start.
+  couldn't actually start. Reclaiming a boost stack no longer cuts a tier that grew into its
+  reserve back down to 10.
 - **Fixed a crash on the Foundry screen** (`ReferenceError: LakeActionsRow is not defined`,
   triggered the instant any Data Lake panel rendered) caused by a stray leftover reference to a
   removed control from the Data Lake conversion redesign above.

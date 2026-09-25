@@ -5460,7 +5460,8 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // #280/#321) — before that boundary's own auto-merge is unlocked (autoFlagField below), this is
 // the ONLY way that boundary's tokens ever move: an explicit player click, converting every
 // complete group of COMPUTE_MERGE_RATIO (8) of the input entity into 1 of the output entity in a
-// single, instant call, capped at whatever room remains under COMPUTE_ENTITY_CAP on the output —
+// single, instant call, capped at whatever room remains under the output's effective cap
+// (getComputeFieldEffectiveCap — 18 once the output's own auto-merge is unlocked) —
 // the same "batch, but cap-bounded, surplus left unconverted" shape every tick-based conversion in
 // this file uses. A same-reference no-op below one full group of 8 of the input, once the output
 // is already at cap, OR — the key change from issue #321 — once autoFlagField has ever flipped
@@ -5551,9 +5552,8 @@ const startComputeMergeReserve = (inputField, outputField, autoFlagField, timerF
 // Counts an in-flight reserve merge's remaining duration down by `elapsedSeconds`, frozen or not
 // (same posture as every other Byte Foundry mechanic) — a same-reference no-op while no merge is
 // in flight (timerField === 0). On completion (remaining <= 0), grants 1 of the output entity
-// (capped at COMPUTE_ENTITY_CAP, defensively — the start-time guard above already checked this,
-// but nothing prevents the output from having filled some other way in the meantime) and clears
-// the timer back to 0, freeing the reserve for the next merge.
+// (capped at its effective cap, but never LOWERING a count that grew past that cap some other way
+// in the meantime) and clears the timer back to 0, freeing the reserve for the next merge.
 const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) => state => {
   const remaining = state.intro?.[timerField] ?? 0
   if (remaining <= 0) return state
@@ -5648,7 +5648,7 @@ export const getNextComputeMergeDurationUpgradeIndex = state => {
   return nextIndex
 }
 
-// Sacrifices ALL COMPUTE_ENTITY_CAP of the next sequential boundary's input layer so that
+// Sacrifices exactly COMPUTE_ENTITY_CAP of the next sequential boundary's input layer so that
 // boundary becomes ×5 (not ×10) vs Core earn / the previous layer — later boundaries rescale from
 // the new chain. Same-reference no-op below isUpgradeComputeMergeDurationAvailable.
 export const upgradeComputeMergeDuration = state => {
@@ -6115,7 +6115,10 @@ export const reclaimComputeBoost = state => {
   const tierIndex = state.intro.computeBoostTierIndex ?? 1
   const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
-  const refunded = Math.min(COMPUTE_ENTITY_CAP, (state.intro[field] ?? 0) + 1)
+  // Capped at the tier's effective cap (18 with its reserve open), never LOWERING a count that
+  // grew past it while the boost was running.
+  const held = state.intro[field] ?? 0
+  const refunded = Math.max(held, Math.min(getComputeEntityEffectiveCap(state, tierIndex), held + 1))
 
   return {
     ...state,

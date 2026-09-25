@@ -613,7 +613,8 @@ not at the bottom"):
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
          `variant="prestige"`, visible content "⬆ Merge", `aria-label` spelling out the full action
          e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
-         tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
+         tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
+         once that tier's own auto-merge is unlocked), calling the matching
          `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
          other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
@@ -634,7 +635,8 @@ not at the bottom"):
          allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
          SAME, lower threshold as before this row existed, deliberately NOT the stricter
          `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) the automatic trigger itself now waits for — no merge
-         already in flight, room under `COMPUTE_ENTITY_CAP` on the output). While a merge is in
+         already in flight, room under the output's effective cap, and a live merge duration > 0 —
+         `isComputeMergeStartAvailableAtBoundary`). While a merge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count.

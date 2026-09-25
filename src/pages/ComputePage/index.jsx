@@ -509,9 +509,8 @@ const ComputePage = ({ game }) => {
 
   const blockedByPriority = isDiskFillAvailable(state) || isProvisionDiskAvailable(state)
   const boostActive = Boolean(intro.computeBoostType)
-  // Once a boost is active, its own funding tier is what Stack/Reclaim and the preset buttons'
-  // preview all act on, regardless of which row a player might click next (issue #326 — Stack
-  // always extends the currently active boost, never a freshly-selected tier).
+  // Once a boost is active, its own funding tier is what Stack/Reclaim act on, regardless of which
+  // row a player clicks next (issue #326 — Stack always extends the currently active boost).
   // `?? 1` defensively falls back to Core for a save from before issue #326 existed.
   const activeTierIndex = boostActive ? (intro.computeBoostTierIndex ?? 1) : null
   const activeRow = activeTierIndex ? ENTITY_ROWS[activeTierIndex - 1] : null
@@ -713,7 +712,7 @@ const ComputePage = ({ game }) => {
                     onClick={actions.upgradeComputeMergeDuration}
                     title={
                       canUpgrade
-                        ? `Sacrifice all ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
+                        ? `Sacrifice ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
                         : `Next duration upgrade: ${nextRow.label} → ${nextRow.mergeOutputLabel}. Needs auto-merge unlocked and ${COMPUTE_ENTITY_CAP} held ${nextRow.label}`
                     }
                     type="button"
@@ -781,7 +780,9 @@ const ComputePage = ({ game }) => {
                               ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
                               : startAvailable
                                 ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a timed merge into 1 ${row.mergeOutputLabel}`
-                                : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                                : (intro[row.mergeOutputField] ?? 0) >= outputCap
+                                  ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
+                                  : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots (and a running Byte generator) — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           type="button"
                         >
