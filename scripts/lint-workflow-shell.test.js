@@ -74,6 +74,26 @@ describe('extractRunBlocks', () => {
     expect(extractRunBlocks(text)).toHaveLength(0);
   });
 
+  it('lints a next-line plain scalar as a bare run: value', () => {
+    // `run:` ⏎ `        echo a &&` is valid YAML — the value is the folded
+    // scalar, not null (verified vs PyYAML).
+    const text = `steps:\n  - run:\n        echo a &&\n        echo b\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('echo a && echo b');
+    expect(bashSyntaxError(blocks[0].script)).toBeNull();
+  });
+
+  it('unquotes quoted run: values so bash -n sees the real script', () => {
+    // a quoted value lints as one opaque word otherwise — silent false-pass.
+    expect(extractRunBlocks(`steps:\n  - run: 'echo hi'\n`)[0].script).toBe('echo hi');
+    const broken = extractRunBlocks(`steps:\n  - run: "echo 'unterminated"\n`)[0];
+    expect(bashSyntaxError(broken.script)).not.toBeNull();
+    // multi-line double-quoted scalar — continuations fold inside the quotes.
+    const multi = extractRunBlocks(`steps:\n  - run: "echo a\n        echo b"\n`)[0];
+    expect(multi.script).toBe('echo a echo b');
+  });
+
   it('does not let a trailing comment on a parent key swallow nested run: steps', () => {
     // `steps: # build` — the `#` must not read as a scalar value, or every
     // nested run: would be silently skipped as a "continuation".

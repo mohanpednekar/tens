@@ -60,6 +60,69 @@ const BLOCK_HEADER_RE = /^([|>])([+-]*)(\d?)([+-]*)$/;
 const GH_EXPR_RE = /\$\{\{[\s\S]*?\}\}/g;
 const EXPR_PLACEHOLDER = 'GH_EXPR';
 
+const YAML_UNESCAPE = { n: '\n', r: '\r', t: '\t', '"': '"', "'": "'", '\\': '\\' };
+
+/**
+ * Parse a YAML quoted scalar starting at s[0] (`"` or `'`). Returns the
+ * unquoted value, or null when the quote never closes — left for the caller to
+ * lint raw so `bash -n` flags it rather than silently passing.
+ */
+function parseQuotedScalar(s) {
+  const q = s[0];
+  let out = '';
+  let i = 1;
+  while (i < s.length) {
+    const c = s[i];
+    if (q === "'" && c === "'") {
+      if (s[i + 1] === "'") {
+        out += "'";
+        i += 2;
+        continue;
+      }
+      return out;
+    }
+    if (q === '"' && c === '\\') {
+      out += YAML_UNESCAPE[s[i + 1]] ?? s[i + 1];
+      i += 2;
+      continue;
+    }
+    if (q === '"' && c === '"') return out;
+    out += c;
+    i++;
+  }
+  return null;
+}
+
+/** Unquote a scalar text when it is quoted; otherwise return it unchanged. */
+function unquote(text) {
+  const t = text.trim();
+  if (t.startsWith('"') || t.startsWith("'")) {
+    return parseQuotedScalar(t) ?? t;
+  }
+  return text;
+}
+
+/**
+ * Collect a plain/quoted scalar's folded continuation lines: deeper-indented
+ * non-blank lines (blank lines span, `#` lines are YAML comments). Stops at the
+ * first dedented non-blank line.
+ */
+function collectContinuation(lines, j, keyIndent) {
+  const cont = [];
+  for (; j < lines.length; j++) {
+    const l = lines[j];
+    const t = l.trim();
+    if (t === '') {
+      cont.push('');
+      continue;
+    }
+    if (t.startsWith('#')) continue;
+    if (indentOf(l) > keyIndent) cont.push(t);
+    else break;
+  }
+  return { cont, next: j };
+}
+
 function indentOf(line) {
   return line.length - line.trimStart().length;
 }
@@ -119,8 +182,20 @@ export function extractRunBlocks(yamlText) {
     if (m) {
       const keyIndent = keyColumn(m);
       const rest = m[3].trim();
-      // bare `run:` or `run: # comment` — a mapping (e.g. defaults.run.shell), not a script
-      if (rest === '' || rest.startsWith('#')) continue;
+      // bare `run:` or `run: # comment` — either a mapping (defaults.run.shell,
+      // whose children are key-shaped) or a next-line scalar value
+      // (`run:` ⏎ `        if true; then` is valid YAML — verified vs PyYAML).
+      if (rest === '' || rest.startsWith('#')) {
+        const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
+        const first = cont.find((l) => l !== '');
+        if (first !== undefined && !/^[A-Za-z_][\w.-]*:/.test(first)) {
+          const script = unquote(foldScalar(cont));
+          blocks.push({ line: i + 1, script });
+          i = next - 1;
+        }
+        // mapping: leave children to the main loop — their own keys still scan
+        continue;
+      }
       const header = BLOCK_HEADER_RE.exec(rest.split(/\s/)[0]);
       if (header) {
         const raw = [];
@@ -146,28 +221,16 @@ export function extractRunBlocks(yamlText) {
         i = j - 1;
       } else {
         // inline scalar — deeper-indented following lines are folded
-        // continuations of the value (blank lines span, each folding to a
-        // newline; `#` lines are YAML comments, never content), so append them.
-        const cont = [];
-        let j = i + 1;
-        for (; j < lines.length; j++) {
-          const l = lines[j];
-          const t = l.trim();
-          if (t === '') {
-            cont.push('');
-            continue;
-          }
-          if (t.startsWith('#')) continue;
-          if (indentOf(l) > keyIndent) cont.push(t);
-          else break;
-        }
+        // continuations of the value, so append them; a quoted value is then
+        // unquoted so `bash -n` sees the real script, not an opaque quoted word.
+        const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
         const extra = foldScalar(cont);
         blocks.push({
           line: i + 1,
           inline: true,
-          script: extra === '' ? rest : `${rest} ${extra}`,
+          script: unquote(extra === '' ? rest : `${rest} ${extra}`),
         });
-        i = j - 1;
+        i = next - 1;
       }
       continue;
     }
