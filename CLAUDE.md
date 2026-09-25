@@ -1179,9 +1179,14 @@ stranded disk is NOT otherwise untouchable: `tickDiskWriteCache`/`canStartDiskWr
 `isDiskWriteCacheCollectPaused` never gate on stranded status at all any more, source or target —
 folding a stranded disk into the next size up is always its one remaining productive use, since
 `disks`/`disksBuiltTotal`/`diskWriteCache` are all Prestige-permanent, so the progress is never
-wasted even if that next size is also currently stranded (it may still be a necessary stepping
-stone toward a further, still-useful tier — e.g. a stranded 100 KB feeding 1 MB for the next Factory
-tier). The only thing that still pauses a merge is an ACTIVE tier claim on the source (the one real
+wasted even if that next size is also currently stranded. **Pool isolation:** no pool ever consumes
+anything from another pool — a merge never crosses a pool boundary (`canStartDiskWriteCacheMerge`
+compares `getPoolIndexForDiskSize` of source/target; `canDiskSizeFeedWriteCache(size)` is false for
+each pool's largest size and gates `DiskArrayRow`'s stranded-disk tooltip; `tickDiskWriteCache` cancels a legacy in-flight
+cross-pool merge that is still collecting before starting new ones, returning collected disks to the source
+array and any excess as clamped bits to the source pool's buffer; one already flushing completes),
+so each pool's largest size ends its own chain and
+the next pool's smallest size fills only via its own read cache. The only thing that still pauses a merge is an ACTIVE tier claim on the source (the one real
 contention — Factory gets first crack at a disk it could pull this exact tick); see
 `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts. Either way, a disk
 waits for the next real Prestige to reset purchase levels and reopen its own pull window.
