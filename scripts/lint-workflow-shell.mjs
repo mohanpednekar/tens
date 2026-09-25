@@ -29,7 +29,9 @@
  * (the only `shell:` keys anywhere set `shell: bash`); a future
  * `shell: python`/`pwsh` step would need an exemption. A `run:` key nested
  * under a non-step mapping (`with.run`, `env.run`) would be linted as bash too —
- * none exist in this repo, and most such values still parse harmlessly.
+ * none exist in this repo, and most such values still parse harmlessly. YAML
+ * anchors/tags/aliases (`key: &a`, `!!t`, `*a`) and quoted keys (`'run':`) are
+ * unsupported GitHub Actions features and not handled.
  *
  * Usage: yarn lint:workflows
  */
@@ -71,20 +73,31 @@ function keyColumn(m) {
  * @param {string} yamlText
  * @returns {{line: number, script: string}[]} line = 1-based line of the `run:` key
  */
-/** YAML `>`-fold: non-blank lines join with a space, blank lines split paragraphs. */
+/**
+ * YAML folded-scalar (`>`) and plain-scalar folding: same-indent lines join
+ * with ' ', each blank line emits a '\n', and lines deeper than the scalar's
+ * base indent (still leading-spaced after the base slice — block scalars only;
+ * plain scalars fold everything) are preserved verbatim with their newlines.
+ * Trailing blank runs are dropped.
+ */
 function foldScalar(lines) {
-  const paragraphs = [];
-  let cur = [];
+  let out = '';
+  let prev = null; // 'text' | 'lit' | 'blank'
   for (const l of lines) {
     if (l === '') {
-      if (cur.length) paragraphs.push(cur.join(' '));
-      cur = [];
+      out += '\n';
+      prev = 'blank';
+    } else if (l.startsWith(' ')) {
+      if (prev === 'text') out += '\n';
+      out += `${l}\n`;
+      prev = 'lit';
     } else {
-      cur.push(l);
+      if (prev === 'text') out += ' ';
+      out += l;
+      prev = 'text';
     }
   }
-  if (cur.length) paragraphs.push(cur.join(' '));
-  return paragraphs.join('\n');
+  return out.replace(/\n+$/, '');
 }
 
 export function extractRunBlocks(yamlText) {
@@ -133,18 +146,26 @@ export function extractRunBlocks(yamlText) {
         i = j - 1;
       } else {
         // inline scalar — deeper-indented following lines are folded
-        // continuations of the value, so append them to the script.
+        // continuations of the value (blank lines span, each folding to a
+        // newline; `#` lines are YAML comments, never content), so append them.
         const cont = [];
         let j = i + 1;
         for (; j < lines.length; j++) {
           const l = lines[j];
-          if (l.trim() !== '' && indentOf(l) > keyIndent) cont.push(l.trim());
+          const t = l.trim();
+          if (t === '') {
+            cont.push('');
+            continue;
+          }
+          if (t.startsWith('#')) continue;
+          if (indentOf(l) > keyIndent) cont.push(t);
           else break;
         }
+        const extra = foldScalar(cont);
         blocks.push({
           line: i + 1,
           inline: true,
-          script: cont.length ? `${rest} ${cont.join(' ')}` : rest,
+          script: extra === '' ? rest : `${rest} ${extra}`,
         });
         i = j - 1;
       }

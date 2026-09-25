@@ -36,14 +36,23 @@ describe('extractRunBlocks', () => {
   });
 
   it('supports folded scalars and chomping indicators', () => {
-    // `>` folds lines together with spaces — linting them newline-separated
-    // would pass scripts that are actually broken once folded.
-    const text = `steps:\n  - run: >-\n      if true; then\n        echo one\n      fi\n`;
+    // `>` folds same-indent lines together with spaces — linting them
+    // newline-separated would pass scripts that are broken once folded.
+    const text = `steps:\n  - run: >-\n      if true; then\n      echo one\n      fi\n`;
     const script = extractRunBlocks(text)[0].script;
-    expect(script.replace(/ +/g, ' ')).toBe('if true; then echo one fi');
+    expect(script).toBe('if true; then echo one fi');
     // the folded value is broken bash (`fi` reads as an echo argument) — the
     // lint must see it that way too, not pass the line-wise version.
     expect(bashSyntaxError(script)).not.toBeNull();
+  });
+
+  it('keeps more-indented lines literal inside a folded scalar', () => {
+    // YAML preserves newlines around lines deeper than the block's base
+    // indent — folding them flat would false-fail valid bash.
+    const text = `steps:\n  - run: >\n      if true; then\n        echo one\n      fi\n`;
+    const script = extractRunBlocks(text)[0].script;
+    expect(script).toBe('if true; then\n  echo one\nfi');
+    expect(bashSyntaxError(script)).toBeNull();
   });
 
   it('supports an explicit indentation indicator (run: |2)', () => {
@@ -80,6 +89,22 @@ describe('extractRunBlocks', () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0].script).toBe('echo a && echo b');
     expect(bashSyntaxError(blocks[0].script)).toBeNull();
+  });
+
+  it('spans blank lines and skips # comment lines inside an inline continuation', () => {
+    // YAML plain scalars continue across blank lines and `#` lines are
+    // comments, never content — gluing them in would corrupt the linted
+    // script in both directions (false pass and false fail).
+    const text = `steps:\n  - run: if true; then\n        # why\n\n        echo ok\n      fi\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).not.toContain('# why');
+    expect(blocks[0].script).toContain('echo ok');
+    expect(blocks[0].script).toContain('fi');
+    // under real YAML semantics this value folds to broken bash (`fi` reads as
+    // an echo argument) — the lint must see the same broken shape, not a
+    // truncated prefix that happens to parse.
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
   it('does not treat a run: inside a block scalar as a new key', () => {
@@ -158,8 +183,10 @@ describe('lintFiles', () => {
       expect(failures).toHaveLength(1);
       expect(failures[0].file).toBe(bad);
       expect(failures[0].line).toBe(4);
-      // bash's extracted-script line is mapped back to the file's line numbering.
-      expect(failures[0].error).toMatch(/file line ~/);
+      // bash's extracted-script line is mapped back to the file's line numbering:
+      // run key at file line 4, 2-line script, bash reports EOF at script line 3
+      // → file line ~7.
+      expect(failures[0].error).toMatch(/file line ~7/);
     });
   });
 
