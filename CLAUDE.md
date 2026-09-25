@@ -758,7 +758,8 @@ Strict three-layer separation:
    see the "Disks" entry under "Economy model" below for how a click arms it, and
    `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section for what the button's own progress
    fill shows; `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but not exposed as
-   their own UI control, same posture as Capacity's own `queueIntroCapacityUpgrade`. Every
+   their own UI control (unlike Capacity's `queueIntroCapacityUpgrade`, which the Upgrade Data Stream
+   button now drives). Every
    action here or on either dedicated screen stays
    gated by the forced priority order (see "Economy model" below) — Data Lake Booster purchases, its
    own capacity Upgrade, and Upgrade Data Stream itself are the three exceptions, each arbitrated
@@ -988,7 +989,13 @@ with the rest of the Foundry (`buildEraIntroReset`) — Capacity has to be rebui
 Era, but Factory access itself never goes away again once earned.
 Production and storage grow via a single **Upgrade Data Stream** action: it requires a full
 Buffer, drains it (cost = current capacity), and doubles `intro.capacity` — Capacity is the only
-purchased progression variable. The displayed Speed is purely *derived* from Capacity
+purchased progression variable. The button is clickable at any fill
+(`isMemoryCapacityUpgradeArmable`): a click below 100% arms
+it (`intro.capacityUpgradeQueued`) and pauses every Data Stream outflow (`isDataStreamOutflowPaused`
+— `tickPoolBufferFill`/Data Lake overflow, `tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade`
+fires it, so continuous pool/lake draw can't hold the Buffer below full indefinitely. The arm
+survives load and Prestige. While armed the button is hidden, the Data Stream tile shows the upgrade
+status, and a "Cancel upgrade" control disarms it (`clearIntroCapacityUpgradeQueue`). The displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd
 powers the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3
 growth, exactly ×2 per two upgrades. Plus —
@@ -1031,7 +1038,8 @@ grows/shrinks from the middle (200% fills the full track width, 0% is a zero-wid
 center), rendered below that section's own balance with its own percent readout below the bar; for
 a pool specifically, once that pool's buffer is full AND its Data Lake can actually receive
 AUTOMATIC overflow (`isDataLakePoolReady` AND `isStoragePoolFullyBuilt` — see "Data Lakes" below),
-the same bar switches `mode="lake"` to show that pool's Data Lake overflow
+the same bar switches `mode="lake"` (also whenever `isDataLakePoolDrainAvailable` — the lake then
+drains the buffer so it rests below full, and the tile's tap is disabled) to show that pool's Data Lake overflow
 RATE instead (`components/DataLakePanel`'s own `LakePoolTile`, shown once that pool's card is
 expanded, tracks the lake's fill LEVEL instead — not a second always-visible tile on the pool card
 itself). The title row places Speed/Bandwidth at top-right and omits disk counts; balance and
@@ -1114,11 +1122,20 @@ are in `docs/ECONOMY_REFERENCE.md`.
 **Data Lakes** (`intro.dataLakes`, `DATA_LAKE_*` in `layers.js`, `fillDataLakeDisks`/`buyBooster`/
 `tickDataLakeAutoConvert` in `engine.js`) — ten permanent lakes (KB…QB), fully decoupled from Disk builds
 themselves. A lake is gated on its pool having built at least one real disk (`isDataLakePoolReady`);
-before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than live progress. **A lake
-fills MANUALLY, capped at just enough for its own next Booster, until its matching Storage pool is
-entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's three ladder sizes fully
-built); only once complete does it fill AUTOMATICALLY** from that pool's buffer OVERFLOW
-(`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Manual fill
+before that, `DataLakePanel`'s fill tile reads a static "Locked" rather than live progress. Its
+**Booster-conversion control fills MANUALLY, capped at just enough for its own next Booster, until
+its matching Storage pool is entirely COMPLETE (`isStoragePoolFullyBuilt` — every one of that pool's
+three ladder sizes fully built); only once complete does full-buffer OVERFLOW also fill it
+AUTOMATICALLY** from that pool's buffer
+(`tickPoolBufferFill`'s overflow branch, now also gated on `isStoragePoolFullyBuilt`). Separately,
+the lake draws directly from its pool's own buffer at the pool's Bandwidth (`tickDataLakePoolDrain`,
+right after `tickPoolBufferFill`) under a fixed pool-buffer priority: disk filling > provisioning in
+progress > lake filling — i.e. only while every BUILT disk is full and no build is in progress in
+that pool, the lake has room and the buffer holds more than the read cache's reservation
+(`isDataLakePoolDrainAvailable`; while it applies, the full-buffer overflow yields to it so the
+same tick isn't credited twice; unprovisioned slots don't block it,
+even before the pool is complete, and the read cache's refill reservation is left alone). It's independent of the Data Stream, so lakes keep filling while
+an armed Upgrade Data Stream pauses Data Stream outflow. Manual fill
 (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends directly from that pool's own
 buffer — the same source overflow itself would use — up to however many units the next Booster
 still needs; outside the forced priority order, same as Buy. It's no longer a standalone UI action
@@ -1315,13 +1332,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-<<<<<<< HEAD
-- `yarn test` is green (1839 tests). The four core test files (`engine.test.js`, `layers.test.js`,
-- `yarn test` is green (1834 tests). The four core test files (`engine.test.js`, `layers.test.js`,
->>>>>>> origin/main
-=======
-- `yarn test` is green (1844 tests). The four core test files (`engine.test.js`, `layers.test.js`,
->>>>>>> main
+- `yarn test` is green (1866 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
