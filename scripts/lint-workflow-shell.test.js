@@ -55,6 +55,16 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(script)).toBeNull();
   });
 
+  it('emits two newlines for a blank line followed by a more-indented line', () => {
+    // PyYAML: 'echo start\\\n\n  && echo y' — the paragraph break AND the
+    // literal-line boundary are both real newlines; collapsing them lets a
+    // backslash escape swallow the `&&` line (silent false-pass).
+    const text = `steps:\n  - run: >\n      echo start\\\n\n        && echo y\n`;
+    const script = extractRunBlocks(text)[0].script;
+    expect(script).toBe('echo start\\\n\n  && echo y');
+    expect(bashSyntaxError(script)).not.toBeNull();
+  });
+
   it('supports an explicit indentation indicator (run: |2)', () => {
     const text = `steps:\n  - run: |2\n        echo hi\n`;
     const blocks = extractRunBlocks(text);
@@ -93,6 +103,31 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(blocks[0].script)).toBeNull();
   });
 
+  it('joins an inline paragraph break with a bare newline, not a space', () => {
+    // real value: 'echo a\\\necho b' (backslash-newline continuation, valid);
+    // inserting a space makes `fi`-style fragments falsely broken.
+    const text = `steps:\n  - run: echo a\\\n\n        echo b\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('echo a\\\necho b');
+    expect(bashSyntaxError(blocks[0].script)).toBeNull();
+  });
+
+  it('extracts quoted run keys ("run": |)', () => {
+    const text = `steps:\n  - "run": |\n      echo hi\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo hi');
+  });
+
+  it('extracts run values from flow-style step mappings', () => {
+    const ok = extractRunBlocks(`steps:\n  - {name: x, run: echo hi}\n`);
+    expect(ok).toHaveLength(1);
+    expect(ok[0].script).toBe('echo hi');
+    const broken = extractRunBlocks(`steps:\n  - {name: x, run: if true; then}\n`);
+    expect(bashSyntaxError(broken[0].script)).not.toBeNull();
+  });
+
   it('unquotes quoted run: values so bash -n sees the real script', () => {
     // a quoted value lints as one opaque word otherwise — silent false-pass.
     expect(extractRunBlocks(`steps:\n  - run: 'echo hi'\n`)[0].script).toBe('echo hi');
@@ -101,6 +136,14 @@ describe('extractRunBlocks', () => {
     // multi-line double-quoted scalar — continuations fold inside the quotes.
     const multi = extractRunBlocks(`steps:\n  - run: "echo a\n        echo b"\n`)[0];
     expect(multi.script).toBe('echo a echo b');
+  });
+
+  it('decodes hex/unicode escapes inside double-quoted run values', () => {
+    // `\\x3b` resolves to `;` — linting the raw text would pass `echo hix3b`
+    // while the real value `echo hi; then` is broken bash.
+    const block = extractRunBlocks(`steps:\n  - run: "echo hi\\x3b then"\n`)[0];
+    expect(block.script).toBe('echo hi; then');
+    expect(bashSyntaxError(block.script)).not.toBeNull();
   });
 
   it('does not let a trailing comment on a parent key swallow nested run: steps', () => {
@@ -170,6 +213,13 @@ describe('sanitizeExpressions', () => {
   it('replaces ${{ }} expressions so bash -n does not see bad substitution', () => {
     expect(sanitizeExpressions('echo ${{ github.sha }}')).toBe('echo GH_EXPR');
     expect(sanitizeExpressions('a\n${{\n  multiline\n}}\nb')).toBe('a\nGH_EXPR\nb');
+  });
+
+  it('does not truncate expressions containing }} inside a string literal', () => {
+    // `${{ '}}' }}` — the first `}}` is inside the expression's own string
+    // literal; stopping there leaves a dangling quote that false-fails bash -n.
+    expect(sanitizeExpressions("echo '${{ '}}' }}'")).toBe("echo 'GH_EXPR'");
+    expect(bashSyntaxError(sanitizeExpressions("echo '${{ '}}' }}'"))).toBeNull();
   });
 });
 

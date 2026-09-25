@@ -47,7 +47,11 @@ import { fileURLToPath } from 'node:url';
 // is where `run` itself starts; a block scalar's content is everything indented
 // strictly deeper than that (content at exactly the key column is a scanner
 // error).
-const RUN_KEY_RE = /^(\s*)(-[ \t]+)?run[ \t]*:[ \t]*(.*)$/;
+const RUN_KEY_RE = /^(\s*)(-[ \t]+)?(?:"run"|'run'|run)[ \t]*:[ \t]*(.*)$/;
+// Flow-style step entry `- { name: x, run: cmd }` — valid YAML; extract the
+// inline `run:` value (plain text up to `,`/`}`, or a quoted scalar).
+const FLOW_STEP_RE = /^\s*-[ \t]*\{/;
+const FLOW_RUN_RE = /\brun[ \t]*:[ \t]*/;
 // Any other `key:` line. If it carries a non-empty value — a block-scalar
 // header (`|`, `>-`, `|2`, ...) or a plain scalar — deeper-indented following
 // lines belong to that value (block content or folded continuation) and are
@@ -59,10 +63,18 @@ const DASH_SCALAR_RE = /^(\s*)-[ \t]+\S/;
 // Block-scalar header: `|` or `>`, optional chomping (`-`/`+`) and a single
 // explicit-indent digit, in either order (`|2-` and `|-2` are both valid).
 const BLOCK_HEADER_RE = /^([|>])([+-]*)(\d?)([+-]*)$/;
-const GH_EXPR_RE = /\$\{\{[\s\S]*?\}\}/g;
+// `${{ ... }}` — the expression body is non-brace chars or a single-quoted
+// string (which may itself contain `}}`, e.g. `${{ '}}' }}`); quoted parts use
+// `''` escaping per Actions expression rules.
+const GH_EXPR_RE = /\$\{\{(?:'(?:[^']|'')*'|[^{}])*\}\}/g;
 const EXPR_PLACEHOLDER = 'GH_EXPR';
 
-const YAML_UNESCAPE = { n: '\n', r: '\r', t: '\t', '"': '"', "'": "'", '\\': '\\' };
+// YAML double-quoted escape set (single-quoted scalars only escape `''`).
+const YAML_UNESCAPE = {
+  '0': '\0', a: '\x07', b: '\b', t: '\t', n: '\n', v: '\v', f: '\f', r: '\r',
+  e: '\x1b', ' ': ' ', '"': '"', "'": "'", '/': '/', '\\': '\\',
+  N: '\u0085', _: ' ', L: '\u2028', P: '\u2029',
+};
 
 /**
  * Parse a YAML quoted scalar starting at s[0] (`"` or `'`). Returns the
@@ -84,7 +96,17 @@ function parseQuotedScalar(s) {
       return out;
     }
     if (q === '"' && c === '\\') {
-      out += YAML_UNESCAPE[s[i + 1]] ?? s[i + 1];
+      const esc = s[i + 1];
+      if (esc === 'x' || esc === 'u' || esc === 'U') {
+        const len = esc === 'x' ? 2 : esc === 'u' ? 4 : 8;
+        const hex = s.slice(i + 2, i + 2 + len);
+        if (hex.length === len && /^[0-9a-fA-F]+$/.test(hex)) {
+          out += String.fromCodePoint(parseInt(hex, 16));
+          i += 2 + len;
+          continue;
+        }
+      }
+      out += YAML_UNESCAPE[esc] ?? esc;
       i += 2;
       continue;
     }
@@ -153,7 +175,9 @@ function foldScalar(lines) {
       out += '\n';
       prev = 'blank';
     } else if (l.startsWith(' ')) {
-      if (prev === 'text') out += '\n';
+      // A more-indented line is literal — YAML emits a boundary newline before
+      // it even after a paragraph-break newline (blank + lit = two newlines).
+      if (prev === 'text' || prev === 'blank') out += '\n';
       out += `${l}\n`;
       prev = 'lit';
     } else {
@@ -227,12 +251,24 @@ export function extractRunBlocks(yamlText) {
         // unquoted so `bash -n` sees the real script, not an opaque quoted word.
         const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
         const extra = foldScalar(cont);
-        blocks.push({
-          line: i + 1,
-          inline: true,
-          script: unquote(extra === '' ? rest : `${rest} ${extra}`),
-        });
+        // a paragraph break folds to a bare newline — no space separator
+        const joined =
+          extra === '' ? rest : extra.startsWith('\n') ? rest + extra : `${rest} ${extra}`;
+        blocks.push({ line: i + 1, inline: true, script: unquote(joined) });
         i = next - 1;
+      }
+      continue;
+    }
+    // flow-style step `- { name: x, run: cmd }` — extract the run value.
+    if (FLOW_STEP_RE.test(line)) {
+      const rm = FLOW_RUN_RE.exec(line);
+      if (rm) {
+        const after = line.slice(rm.index + rm[0].length);
+        const script =
+          after.startsWith('"') || after.startsWith("'")
+            ? (parseQuotedScalar(after) ?? after)
+            : after.split(/[,}]/)[0].trim();
+        if (script !== '') blocks.push({ line: i + 1, inline: true, script });
       }
       continue;
     }
