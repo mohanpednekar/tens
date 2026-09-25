@@ -1660,7 +1660,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // throughput, never competing with the main-game-unlock gate or a Capacity doubling in flight.
   // One tick's lag before a topped-up buffer is visible to that same tick's own cache fill
   // (tickDiskAutoFill, which already ran earlier this tick) is imperceptible at TICK_RATE_MS.
-  const stateAfterPoolBufferFill = tickPoolBufferFill(elapsedSeconds)(stateAfterIntro)
+  const stateAfterPoolBufferFill = tickDataLakePoolDrain(elapsedSeconds)(tickPoolBufferFill(elapsedSeconds)(stateAfterIntro))
   // Advances every lake's own one-shot autoConvertActive automation, now that this tick's own
   // overflow fill above has had its chance to fund it — see tickDataLakeAutoConvert/buyBooster.
   const stateAfterDataLakeAutoConvert = tickDataLakeAutoConvert(stateAfterPoolBufferFill)
@@ -2689,6 +2689,8 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   // always structurally "unlocked" (see isStoragePoolUnlocked), which would silently start
   // siphoning bits into an invisible buffer from the very start of a cycle without this gate.
   if (!isStorageUnlocked(state)) return state
+  // An armed Upgrade Data Stream holds every outflow until it fires (see pickIntroCapacityMilestone).
+  if (isDataStreamOutflowPaused(state)) return state
   // Which pools' buffers actively fill — Capacity-only (getVisibleStoragePoolCount), NOT the
   // disk-build-only getUnlockedStoragePoolCount: a pool's buffer (and so its Bandwidth/read cache)
   // comes alive the instant its own Capacity threshold is reached, independent of how much of any
@@ -2757,6 +2759,9 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
     // (fillDataLakeManually/isDataLakeManualFillAvailable below) — see docs/DESIGN_HISTORY.md.
     // Same "leave bits untouched" treatment as the not-ready case above.
     if (!isStoragePoolFullyBuilt(state, poolIndex)) continue
+    // tickDataLakePoolDrain (run right after this) already feeds this lake from the buffer at the
+    // pool's Bandwidth this tick — overflowing here too would credit the same interval twice.
+    if (isDataLakePoolDrainAvailable(state, poolIndex)) continue
 
     // The buffer is completely full — this pool's own reserved share of the rate (for whatever
     // portion of this tick's interval remains) has nowhere left to go. Rather than wasting it, a
@@ -2778,7 +2783,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
   return { ...state, intro: { ...state.intro, bits, poolBuffers, dataLakes } }
 }
 
-// Clears any stale queued-Capacity-upgrade flag on save load and sanitizes a missing/negative
+// Clears a queued-Capacity-upgrade flag that can never fire on save load and sanitizes a missing/negative
 // intro.capacity back to a sane floor. No longer clamps capacity to any pool boundary here —
 // intro.capacity itself isn't bound by a pool's window any more (see upgradePoolCapacity);
 // getStoragePoolCapacity derives each pool's own decade-power Capacity from it and clamps THAT to
@@ -2788,8 +2793,12 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
 // array bounds.
 export const normalizePoolMemoryCapacity = state => {
   if (!state?.intro) return state
-  let changed = state.intro.capacityUpgradeQueued ?? false
-  const nextIntro = { ...state.intro, capacityUpgradeQueued: false }
+  // An armed Upgrade Data Stream (see pickIntroCapacityMilestone) survives a reload; only a flag
+  // that could never fire (no byte yet, or Capacity already at its cap) is cleared.
+  const staleQueue = Boolean(state.intro.capacityUpgradeQueued) &&
+    (!state.intro.byteCreated || isMemoryCapacityAtCap(state))
+  let changed = staleQueue
+  const nextIntro = staleQueue ? { ...state.intro, capacityUpgradeQueued: false } : { ...state.intro }
   const capacity = Math.max(0, nextIntro.capacity ?? INTRO_STARTING_CAPACITY)
   if (capacity !== nextIntro.capacity) {
     changed = true
@@ -3150,10 +3159,33 @@ export const upgradePoolCapacity = state => {
   })
 }
 
-export const pickIntroCapacityMilestone = state => upgradePoolCapacity(state)
+// Whether the Upgrade Data Stream button can arm the upgrade at the current (non-full) fill: the
+// byte has been combined, Capacity isn't at its cap, and no upgrade is already armed. Any fill level
+// qualifies — with fully built pools feeding their Data Lakes, the fill-based multiplier can settle
+// the Buffer at an equilibrium far below full, so a high threshold would never be reached.
+export const isMemoryCapacityUpgradeArmable = state => {
+  const intro = state.intro ?? {}
+  if (intro.capacityUpgradeQueued) return false
+  if (!intro.byteCreated) return false
+  return !isMemoryCapacityAtCap(state)
+}
+
+// Upgrade Data Stream click: upgrades immediately when the Buffer is full, otherwise arms the
+// upgrade (at any fill level). While armed, every Data Stream outflow
+// (tickIntroAutoInvest, tickPoolBufferFill and its Data Lake overflow) is paused
+// (isDataStreamOutflowPaused), so the Buffer tops off and tickQueuedCapacityUpgrade fires it.
+export const pickIntroCapacityMilestone = state => {
+  const upgraded = upgradePoolCapacity(state)
+  if (upgraded !== state) return upgraded
+  if (!isMemoryCapacityUpgradeArmable(state)) return state
+  return queueIntroCapacityUpgrade(state)
+}
+
+// True while an Upgrade Data Stream is armed but not yet fired — Data Stream outflows hold off.
+export const isDataStreamOutflowPaused = state => Boolean(state.intro?.capacityUpgradeQueued)
 
 // Commit to the next Capacity upgrade before Memory is full. The queued action fires once the
-// balance fills and higher-priority Storage actions no longer have work to do.
+// balance fills; while queued, Data Stream outflows are paused (isDataStreamOutflowPaused).
 export const queueIntroCapacityUpgrade = state => {
   if (state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return state
@@ -3212,7 +3244,8 @@ export const eraseAllComputeTokens = state => {
   return { ...state, intro: next }
 }
 
-// Fires a queued Capacity upgrade once its full-buffer and priority conditions are met.
+// Fires a queued Capacity upgrade once the Buffer is full (Upgrade Data Stream is outside the
+// forced priority order).
 export const tickQueuedCapacityUpgrade = state => {
   if (!(state.intro?.capacityUpgradeQueued ?? false)) return state
   if (!isMemoryCapacityUpgradeAvailable({
@@ -3462,6 +3495,7 @@ export const tickIntroProduction = elapsedSeconds => state => {
 // unbounded number of times in a single tick; a jump spanning more than one level's worth of units
 // completes the rest on the following ticks instead, same as any other autobuyer catching up.
 export const tickIntroAutoInvest = state => {
+  if (isDataStreamOutflowPaused(state)) return state
   const firstTierId = TIER_DEFINITIONS[0].id
   const levelProgress = state.purchaseLevelProgress?.[firstTierId] ?? 0
   const blockSize = getPurchaseBlockSize(state)
@@ -5217,6 +5251,65 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
   return { lake, remainingBits, changed }
 }
 
+// Every disk pool `poolIndex` has BUILT is currently full (unprovisioned slots don't count). A disk
+// pulled into a Factory tier level leaves an empty slot, so this drops back to false until it
+// refills.
+export const areStoragePoolDisksFull = (state, poolIndex) =>
+  getStoragePoolSizes(poolIndex).every(size =>
+    (state.intro?.disks?.[size] ?? 0) >= (state.intro?.disksBuiltTotal?.[size] ?? 0))
+
+// Whether a disk build in pool `poolIndex` has been STARTED and not finished: a queued/partially
+// funded Provision Disk on one of its sizes, a legacy timed build, or a pool-local reset rebuild.
+// Merely being able to provision another disk doesn't count.
+export const isStoragePoolProvisioningInProgress = (state, poolIndex) => {
+  const intro = state.intro ?? {}
+  if (isStoragePoolRebuilding(state, poolIndex)) return true
+  if (intro.diskBuild && getPoolIndexForDiskSize(intro.diskBuild.size) === poolIndex) return true
+  const sizes = getStoragePoolSizes(poolIndex)
+  if (sizes.some(size => getDiskProvisionPassesCollected(state, size) > 0)) return true
+  return Boolean(intro.diskBuildQueued) && sizes.includes(getDiskSize(state))
+}
+
+// Pool buffer priority: disk filling > provisioning in progress > Data Lake filling. The lake may
+// draw from its own pool only once every built disk is full and no build is in progress there —
+// and only while the lake itself still has an open slot to fill and the buffer holds more than the
+// read cache's own reservation (otherwise the drain has nothing to move).
+export const isDataLakePoolDrainAvailable = (state, poolIndex) =>
+  isDataLakePoolReady(state, poolIndex) &&
+  getDataLakeCurrentFillSubSize(state, poolIndex) !== null &&
+  areStoragePoolDisksFull(state, poolIndex) &&
+  !isStoragePoolProvisioningInProgress(state, poolIndex) &&
+  getPoolBufferBits(state, poolIndex) > getPoolCacheReservationBits(state, poolIndex)
+
+// A Data Lake draws directly from its pool's OWN buffer (isDataLakePoolDrainAvailable), at the pool's raw
+// Bandwidth, every tick — independent of the Data Stream. This keeps lakes filling while an armed
+// Upgrade Data Stream pauses Data Stream outflow (isDataStreamOutflowPaused only gates
+// tickPoolBufferFill/tickIntroAutoInvest), and generally lets a finished pool keep converting its
+// throughput into lake units rather than only via tickPoolBufferFill's full-buffer overflow. The
+// read cache's own refill claim (getPoolCacheReservationBits) is left untouched, and the whole pass
+// waits while any built disk is empty or a build is in progress in that pool (buffer priority).
+export const tickDataLakePoolDrain = elapsedSeconds => state => {
+  if (!(elapsedSeconds > 0)) return state
+  const visible = getVisibleStoragePoolCount(state)
+  let poolBuffers = null
+  let dataLakes = null
+  for (let poolIndex = 1; poolIndex <= visible; poolIndex += 1) {
+    if (!isDataLakePoolDrainAvailable(state, poolIndex)) continue
+    const buffer = getPoolBufferBits(state, poolIndex)
+    const spendable = Math.max(0, buffer - getPoolCacheReservationBits(state, poolIndex))
+    if (spendable <= 0) continue
+    const rate = getStoragePoolBandwidth(state, poolIndex)
+    const { lake, remainingBits, changed } = applyDataLakeOverflow(state, poolIndex, rate, elapsedSeconds, spendable)
+    if (!changed) continue
+    poolBuffers = poolBuffers ?? { ...(state.intro.poolBuffers ?? {}) }
+    dataLakes = dataLakes ?? { ...state.intro.dataLakes }
+    poolBuffers[poolIndex] = buffer - (spendable - remainingBits)
+    dataLakes[poolIndex] = lake
+  }
+  if (!poolBuffers) return state
+  return { ...state, intro: { ...state.intro, poolBuffers, dataLakes } }
+}
+
 // Display-only: the real amount (in bits) upgrading will actually drain right now — whatever this
 // lake currently has deposited, not the level's own full capacity (upgrading no longer requires
 // the lake to be full first — see isDataLakeCapacityDoublingAvailable below).
@@ -6336,7 +6429,9 @@ export const tickFoundryResetConvenience = state => {
   }
 
   if ((caps.capacity ?? 0) > (next.intro?.capacity ?? 0)) {
-    const upgraded = pickIntroCapacityMilestone(next)
+    // Full-Buffer upgrade only — never arm (pickIntroCapacityMilestone would pause every Data
+    // Stream outflow for the whole replay, starving pool buffers and tier01 auto-invest).
+    const upgraded = upgradePoolCapacity(next)
     if (upgraded !== next) {
       next = upgraded
       changed = true
@@ -6439,6 +6534,9 @@ export const prestigeGame = state => {
       // permanence as the disk state it's arming.
       diskBuildQueued: state.intro?.diskBuildQueued ?? initial.intro.diskBuildQueued,
       diskBuildQueuedByReplay: state.intro?.diskBuildQueuedByReplay ?? initial.intro.diskBuildQueuedByReplay,
+      // An armed Upgrade Data Stream is the player's explicit intent — it carries through, like
+      // diskBuildQueued, and fires once the fresh Buffer fills (outflow stays paused until then).
+      capacityUpgradeQueued: state.intro?.capacityUpgradeQueued ?? initial.intro.capacityUpgradeQueued,
       poolBuffers: state.intro?.poolBuffers ?? initial.intro.poolBuffers,
       // In-flight cache transfers are just as permanent as the Disks/build state they operate on
       // above (diskBuild already was) — a real Prestige must never affect the Byte Foundry beyond

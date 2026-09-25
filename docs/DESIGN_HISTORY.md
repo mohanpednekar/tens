@@ -1196,7 +1196,9 @@ unconditionally cleared on every save load by `normalizePoolMemoryCapacity` and,
 **was never wired to any UI control at all** — `queueIntroCapacityUpgrade`/`clearIntroCapacityUpgradeQueue`
 exist only in `engine.js` and its tests, with no button anywhere calling them, so in live gameplay
 today it can only ever be set via Dev Mode or a legacy save and is otherwise dead from the player's
-perspective):
+perspective — *as of this entry; since superseded, see "Upgrade Data Stream arms below a full
+Buffer" below, which wires the Capacity queue to the Upgrade Data Stream button and keeps it across
+save load*):
 1. **`diskBuildQueued` is NOT cleared on save load.** The entire point is a persistent "keep
    building for me" intent; clearing it on every reload would force re-arming every session,
    defeating the purpose for a page players may not revisit often. `mergeState`'s ordinary
@@ -8735,3 +8737,40 @@ shipped it to `1.1` — corrected to the current `1.25` in the same commit.
 
 **Verification.** `yarn test`: 1798/1798. `simulate-run-times` re-run and published to the
 `ideal-run-strategy` orphan branch at the final `1.25` value per this repo's own convention.
+
+### Upgrade Data Stream arms below a full Buffer (outflow pause)
+
+**Problem:** the Data Stream could stall below full forever. Pool buffers and — once a pool is fully
+built — its Data Lake's overflow draw from `intro.bits` every tick, while the fill-based multiplier
+slows Data Stream production as the Buffer fills. The two settle at an equilibrium below full, so
+Upgrade Data Stream (which requires a full Buffer) never became clickable.
+
+**Fix:** the Upgrade Data Stream button now wires up the long-dormant Capacity queue. Below a full
+Buffer a click arms `intro.capacityUpgradeQueued` (`pickIntroCapacityMilestone` →
+`queueIntroCapacityUpgrade`), and `isDataStreamOutflowPaused` gates `tickPoolBufferFill` (including
+lake overflow) and `tickIntroAutoInvest` until `tickQueuedCapacityUpgrade` fires on a full Buffer.
+`normalizePoolMemoryCapacity` now keeps the flag across load, clearing it only when it could never
+fire (no byte yet, or Capacity at cap), and `prestigeGame` carries it through a real Prestige (like
+`diskBuildQueued`) so the player's explicit arm isn't silently dropped. Because a carried arm keeps
+tier01 auto-invest paused at the start of the new cycle until the fresh Buffer fills, clicking the
+armed button cancels it (`clearIntroCapacityUpgradeQueue`). Later, per maintainer request, the upgrade
+button is hidden while armed: the Data Stream tile itself shows the status (outline + "Upgrading to …
+· outflow paused" line) and a small "Cancel upgrade" control replaces the button.
+
+**Rejected: a 99% arm threshold.** First implemented as requested, but an adversarial-review
+simulation with fully built pools showed the Buffer plateauing at 7–73% for hours, so a 99% button
+never unlocked. The maintainer approved arming at any fill instead.
+
+**Rejected: letting the Reset Byte Foundry replay arm too.** `tickFoundryResetConvenience` briefly
+called `pickIntroCapacityMilestone`, which re-armed every tick and paused all outflow for the whole
+Capacity replay (no pool buffers, no tier01 auto-invest). It calls `upgradePoolCapacity` (full-Buffer
+only) instead; arming is reserved for an explicit player click.
+
+**Lakes keep filling from their own pool while the Data Stream is paused.** With outflow paused,
+`tickPoolBufferFill` (and so its full-buffer lake overflow) doesn't run, which starved every Data
+Lake for the whole wait. Per maintainer request, a lake now also draws straight from its own pool's
+buffer (`tickDataLakePoolDrain`) — always, not only while paused — at the pool's Bandwidth, leaving
+the read cache's reservation alone. A first cut required the pool to be fully provisioned; the
+maintainer then set the rule as a pool-buffer priority instead — disk filling > provisioning in
+progress > lake filling — so unprovisioned slots don't block the lake, but any empty built disk or a
+started build does (`isDataLakePoolDrainAvailable`).
