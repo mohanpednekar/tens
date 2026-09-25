@@ -30,8 +30,8 @@
  * `shell: python`/`pwsh` step would need an exemption. A `run:` key nested
  * under a non-step mapping (`with.run`, `env.run`) would be linted as bash too —
  * none exist in this repo, and most such values still parse harmlessly. YAML
- * anchors/tags/aliases (`key: &a`, `!!t`, `*a`) and quoted keys (`'run':`) are
- * unsupported GitHub Actions features and not handled.
+ * anchors/tags/aliases (`key: &a`, `!!t`, `*a`) are unsupported GitHub Actions
+ * features and not handled.
  *
  * Usage: yarn lint:workflows
  */
@@ -153,11 +153,6 @@ function keyColumn(m) {
 }
 
 /**
- * Extract every `run:` script from a workflow/action file's text.
- * @param {string} yamlText
- * @returns {{line: number, script: string}[]} line = 1-based line of the `run:` key
- */
-/**
  * YAML folded-scalar (`>`) and plain-scalar folding: same-indent lines join
  * with ' ', each blank line emits a '\n', and lines deeper than the scalar's
  * base indent (still leading-spaced after the base slice — block scalars only;
@@ -186,6 +181,11 @@ function foldScalar(lines) {
   return out.replace(/\n+$/, '');
 }
 
+/**
+ * Extract every `run:` script from a workflow/action file's text.
+ * @param {string} yamlText
+ * @returns {{line: number, script: string}[]} line = 1-based line of the `run:` key
+ */
 export function extractRunBlocks(yamlText) {
   const lines = yamlText.split(/\r?\n/);
   const blocks = [];
@@ -265,10 +265,12 @@ export function extractRunBlocks(yamlText) {
       }
       continue;
     }
-    // flow-style step `- { name: x, run: cmd }` — extract the run value.
+    // flow-style step `- { name: x, run: cmd }` — extract the run value. Last
+    // `run:` match wins (earlier ones may be inside quoted flow values).
     if (FLOW_STEP_RE.test(line)) {
-      const rm = FLOW_RUN_RE.exec(line);
-      if (rm) {
+      const matches = [...line.matchAll(new RegExp(FLOW_RUN_RE, 'g'))];
+      if (matches.length) {
+        const rm = matches[matches.length - 1];
         const after = line.slice(rm.index + rm[0].length);
         const script =
           after.startsWith('"') || after.startsWith("'")
