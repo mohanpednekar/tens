@@ -42,16 +42,18 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 // `run:` as a YAML key — plain (`        run: |`) or as a step's first key
-// (`      - run: |`). The key column is where `run` itself starts; a block
-// scalar's content is everything indented strictly deeper than that (verified
-// against PyYAML: content at exactly the key column is a scanner error).
-const RUN_KEY_RE = /^(\s*)(-[ \t]+)?run:[ \t]*(.*)$/;
+// (`      - run: |`), including the `run :` typo shape (whitespace before the
+// colon is valid YAML that GitHub accepts — verified vs PyYAML). The key column
+// is where `run` itself starts; a block scalar's content is everything indented
+// strictly deeper than that (content at exactly the key column is a scanner
+// error).
+const RUN_KEY_RE = /^(\s*)(-[ \t]+)?run[ \t]*:[ \t]*(.*)$/;
 // Any other `key:` line. If it carries a non-empty value — a block-scalar
 // header (`|`, `>-`, `|2`, ...) or a plain scalar — deeper-indented following
 // lines belong to that value (block content or folded continuation) and are
 // skipped so a `run:`-looking line inside them is never linted. A bare `key:`
 // (or `key:` with only a `# comment`) is a mapping: its children are real keys.
-const ANY_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*:[ \t]*(.*)$/;
+const ANY_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*[ \t]*:[ \t]*(.*)$/;
 // A `- scalar` sequence entry that isn't a `key:` line — same continuation rule.
 const DASH_SCALAR_RE = /^(\s*)-[ \t]+\S/;
 // Block-scalar header: `|` or `>`, optional chomping (`-`/`+`) and a single
@@ -188,7 +190,7 @@ export function extractRunBlocks(yamlText) {
       if (rest === '' || rest.startsWith('#')) {
         const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
         const first = cont.find((l) => l !== '');
-        if (first !== undefined && !/^[A-Za-z_][\w.-]*:/.test(first)) {
+        if (first !== undefined && !/^[A-Za-z_][\w.-]*[ \t]*:/.test(first)) {
           const script = unquote(foldScalar(cont));
           blocks.push({ line: i + 1, script });
           i = next - 1;

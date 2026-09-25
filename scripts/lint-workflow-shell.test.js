@@ -62,6 +62,15 @@ describe('extractRunBlocks', () => {
     expect(blocks[0].script.trim()).toBe('echo hi');
   });
 
+  it('accepts whitespace before the colon (run : is valid YAML)', () => {
+    // GitHub Actions parses `run :` as the run key — a mundane typo that must
+    // not silently bypass the lint.
+    const text = `steps:\n  - run : |\n      echo hi\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo hi');
+  });
+
   it('handles CRLF line endings', () => {
     const text = 'steps:\r\n  - run: |\r\n      echo hi\r\n';
     const blocks = extractRunBlocks(text);
