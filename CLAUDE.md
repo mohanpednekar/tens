@@ -50,7 +50,7 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
-yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml (#738)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
@@ -86,9 +86,10 @@ workflow.
 
 There is no general lint script (`yarn lint` does not exist). The one lint CI does run is
 `yarn lint:workflows` (`scripts/lint-workflow-shell.mjs`) — a `bash -n` pass over every `run:` block
-embedded in `.github/workflows/*.yml`, wired as a step in `ci.yml`'s required `test` job so a broken
-workflow script fails the PR that introduces it (#738, after #709's unclosed-brace outage took every
-scheduled `autonomous-maintenance.yml` run down for two days). Otherwise CI only runs `yarn test`.
+embedded in `.github/workflows/*.yml` and `.github/actions/**`, wired as a step in `ci.yml`'s
+required `test` job so a broken workflow script fails the PR that introduces it (#738, after #709's
+unclosed-brace outage took every scheduled `autonomous-maintenance.yml` run down for two days).
+Otherwise CI only runs `yarn test`.
 `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.

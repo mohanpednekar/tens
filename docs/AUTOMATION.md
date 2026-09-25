@@ -104,10 +104,13 @@ substituted via bash parameter expansion), not as an inline `${{ }}` back in the
 A second incident in the same class — #709's dropped `}` closer inside a guard-step `run: |` block,
 which silently failed every scheduled run for two days (#738) — is closed by a different guard:
 `scripts/lint-workflow-shell.mjs` (`yarn lint:workflows`) extracts every `run:` block in
-`.github/workflows/*.yml` and runs `bash -n` on each, wired as a step in `ci.yml`'s required `test`
-job. It lives inside that job (not as its own job) so the check is merge-blocking under the existing
-branch-protection requirement without a settings change. Extraction is indentation-based with no YAML
-dependency; `${{ }}` expressions are placeholder-substituted before parsing.
+`.github/workflows/*.yml` and `.github/actions/**` (composite actions included — a broken one takes
+every workflow down identically) and runs `bash -n` on each, wired as a step in `ci.yml`'s required
+`test` job. It lives inside that job (not as its own job) so the check is merge-blocking under the
+existing branch-protection requirement without a settings change. Extraction is indentation-based
+with no YAML dependency — it also skips `run:`-looking text inside *other* scalars (`prompt: |`,
+plain-value continuations) so embedded example YAML can't false-positive — and `${{ }}` expressions
+are placeholder-substituted before parsing.
 
 **Guard-step list feeds are explicitly `--limit`-ed and, for the task backlog, capped/sorted for
 display.** `gh issue list`/`gh pr list` default to `--limit 30`, newest-first — a silent truncation,

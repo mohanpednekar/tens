@@ -3,8 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   bashSyntaxError,
+  collectYamlFiles,
+  defaultLintPaths,
   extractRunBlocks,
-  lintWorkflowDir,
+  lintFiles,
   sanitizeExpressions,
 } from './lint-workflow-shell.mjs';
 
@@ -38,6 +40,20 @@ describe('extractRunBlocks', () => {
     expect(extractRunBlocks(text)[0].script.trim()).toBe('echo one\necho two');
   });
 
+  it('supports an explicit indentation indicator (run: |2)', () => {
+    const text = `steps:\n  - run: |2\n        echo hi\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo hi');
+  });
+
+  it('handles CRLF line endings', () => {
+    const text = 'steps:\r\n  - run: |\r\n      echo hi\r\n';
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo hi');
+  });
+
   it('skips a bare run: mapping (defaults.run.shell)', () => {
     const text = `defaults:\n  run:\n    shell: bash\n`;
     expect(extractRunBlocks(text)).toHaveLength(0);
@@ -48,6 +64,20 @@ describe('extractRunBlocks', () => {
     const blocks = extractRunBlocks(text);
     expect(blocks).toHaveLength(1);
     expect(blocks[0].script).toContain('run: not-a-key');
+  });
+
+  it('does not lint run:-shaped text inside a non-run block scalar', () => {
+    const text = `steps:\n  - uses: some/action\n    with:\n      prompt: |\n        example:\n          run: |\n            this is prose not bash(((\n  - run: |\n      echo real\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo real');
+  });
+
+  it('does not lint run:-shaped continuation lines of a plain scalar', () => {
+    const text = `steps:\n  - name: a title that wraps\n      run: still-the-name-value\n    run: |\n      echo real\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo real');
   });
 
   it('stops a block at the next same-or-shallower-indent key', () => {
@@ -82,7 +112,7 @@ describe('bashSyntaxError', () => {
   });
 });
 
-describe('lintWorkflowDir', () => {
+describe('lintFiles', () => {
   function withTempDir(fn) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wf-lint-'));
     try {
@@ -94,21 +124,49 @@ describe('lintWorkflowDir', () => {
 
   it('reports the file and run-key line of a broken block', () => {
     withTempDir((dir) => {
+      const bad = path.join(dir, 'bad.yml');
+      const good = path.join(dir, 'good.yml');
       fs.writeFileSync(
-        path.join(dir, 'bad.yml'),
+        bad,
         `jobs:\n  t:\n    steps:\n      - run: |\n          if true; then\n            echo hi\n`,
       );
-      fs.writeFileSync(path.join(dir, 'good.yml'), SAMPLE);
-      const { failures } = lintWorkflowDir(dir);
+      fs.writeFileSync(good, SAMPLE);
+      const { failures } = lintFiles([bad, good]);
       expect(failures).toHaveLength(1);
-      expect(failures[0].file).toBe('bad.yml');
+      expect(failures[0].file).toBe(bad);
       expect(failures[0].line).toBe(4);
     });
   });
 
-  it('passes on the repo\'s real .github/workflows directory', () => {
-    const { files, blocks, failures } = lintWorkflowDir('.github/workflows');
-    expect(files).toBeGreaterThan(0);
+  it('flags an extracted empty run: block rather than silently passing', () => {
+    withTempDir((dir) => {
+      const empty = path.join(dir, 'empty.yml');
+      fs.writeFileSync(empty, `steps:\n  - run: |\n`);
+      fs.writeFileSync(path.join(dir, 'good.yml'), SAMPLE);
+      const { failures } = lintFiles(collectYamlFiles(dir));
+      expect(failures).toHaveLength(1);
+      expect(failures[0].file).toBe(empty);
+      expect(failures[0].error).toMatch(/empty run: script/);
+    });
+  });
+
+  it('collectYamlFiles recurses composite-action directories', () => {
+    withTempDir((dir) => {
+      fs.mkdirSync(path.join(dir, 'setup'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'top.yml'), SAMPLE);
+      fs.writeFileSync(path.join(dir, 'setup', 'action.yml'), SAMPLE);
+      expect(collectYamlFiles(dir, { recursive: true })).toHaveLength(2);
+      expect(collectYamlFiles(dir)).toHaveLength(1);
+    });
+  });
+});
+
+describe('real repository lint', () => {
+  it('discovers workflow + composite-action files and finds no broken blocks', () => {
+    const paths = defaultLintPaths();
+    expect(paths.some((p) => p.includes('workflows'))).toBe(true);
+    expect(paths.some((p) => p.includes(path.join('actions', 'setup-node-yarn')))).toBe(true);
+    const { blocks, failures } = lintFiles(paths);
     expect(blocks).toBeGreaterThan(0);
     expect(failures).toEqual([]);
   });

@@ -41,7 +41,7 @@ yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
 yarn audit        # dependency audit
-yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml (#738)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
 yarn bump-version # cut CHANGELOG Unreleased → dated release + bump package.json
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico
 ```

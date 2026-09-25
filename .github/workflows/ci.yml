@@ -20,10 +20,11 @@ jobs:
 
       - uses: ./.github/actions/setup-node-yarn
 
-      # bash -n every run: block in .github/workflows/*.yml — catches a broken embedded
-      # script on the PR that introduces it, not days later when the workflow next runs
-      # (see #709's unclosed-brace outage / #738). Lives inside the required `test` job
-      # so the check is merge-blocking without a branch-protection change.
+      # bash -n every run: block in .github/workflows/*.yml + .github/actions/** —
+      # catches a broken embedded script on the PR that introduces it, not days later
+      # when the workflow next runs (see #709's unclosed-brace outage / #738). Lives
+      # inside the required `test` job so the check is merge-blocking without a
+      # branch-protection change.
       - name: Lint workflow shell blocks
         run: yarn lint:workflows
 
