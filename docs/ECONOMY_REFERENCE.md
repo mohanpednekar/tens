@@ -641,8 +641,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    own tier again this cycle once stranded, so folding it into the array above is exactly the
    productive use write-cache exists for, and since `disks`/`disksBuiltTotal`/`diskWriteCache` are
    all Prestige-permanent, that progress is never wasted even if the target is ALSO currently
-   stranded — it may still be a necessary stepping stone toward a further, still-useful tier (e.g. a
-   stranded 100 KB disk is still required to build 1 MB for the NEXT Factory tier's own first level;
+   stranded — it may still be a necessary stepping stone toward a further, still-useful size in the
+   SAME pool. Merges never cross a pool boundary (pool isolation: a pool's largest size, e.g. 100 KB,
+   never feeds the next pool's smallest, e.g. 1 MB, which fills only from its own read cache; a legacy
+   cross-pool merge already flushing completes (nothing more is taken); one still collecting is
+   cancelled before any new merge starts, its collected source disks returned up to the source
+   array's built count and any excess credited as bits to that pool's own buffer, clamped to its
+   ceiling);
    see `docs/DESIGN_HISTORY.md` for the two rounds of over-restriction this reverts — refusing a
    stranded source outright first, then refusing a stranded target, each permanently starved a
    different part of the ladder). Collect runs `DISK_LADDER_SIZE_MULTIPLIER` (10 — the source→target
@@ -1076,8 +1081,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    levels and reopens that size's redemption window — UNLESS the write cache picks it up first: a
    stranded disk still has one real, non-destructive use left (folding into the next disk size up via
    `tickDiskWriteCache`, above), which it remains eligible for unconditionally — even when that next
-   size is ALSO already stranded, since the progress is Prestige-permanent either way and may still
-   feed a further, still-useful tier. An earlier version ("idle disk liquidation") swept such stranded,
+   size is ALSO already stranded, since the progress is Prestige-permanent either way (merges never
+   leave the disk's own pool — see pool isolation above). An earlier version ("idle disk liquidation") swept such stranded,
    fully-built disks straight into `intro.bits` instead once the Foundry had nothing higher-priority
    to do; this was removed per the maintainer's explicit instruction — destroying a
    disk the player actually built, just because an unrelated tier's own (much faster) autobuyer
