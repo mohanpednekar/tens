@@ -25,11 +25,22 @@ jobs:
     # access reach the checkout-and-execute steps below (check_suite has no such actor, so
     # it isn't gated here — it's already restricted by the same-repo + branch-prefix checks
     # inside the "Resolve target PR" step).
+    # A named allowlist of review/automation bot logins also passes: those apps post with
+    # author_association NONE/CONTRIBUTOR, which the association gate would otherwise drop,
+    # stalling autonomous PRs whose only feedback is bot review (#731). Keying on the exact
+    # user.login keeps the pwn-request guard intact — a login is only spoofable by the app
+    # itself — unlike broadening the accepted association values, which would also cover
+    # arbitrary humans. Allowlist verified against this repo's real review/comment authors.
+    # google-labs-jules[bot] is deliberately NOT allowlisted: whether it should retain repo
+    # access is an unresolved maintainer decision (docs/DESIGN_HISTORY.md's Jules incident),
+    # so it must not trigger this secrets-bearing workflow until that's resolved.
     if: >
       (github.event_name != 'issue_comment' ||
-       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association)) &&
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association) ||
+       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "Copilot"]'), github.event.comment.user.login)) &&
       (github.event_name != 'pull_request_review' ||
-       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association))
+       contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association) ||
+       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "Copilot"]'), github.event.review.user.login))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -155,6 +166,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GH_AUTOMATION_PAT }}
+          allowed_bots: "*"
           claude_args: |
             --max-turns 40
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(yarn:*),Bash(git:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh api repos/*/pulls/*/comments:*),Bash(scripts/resolve-pr-threads.sh:*),Bash(./scripts/resolve-pr-threads.sh:*)"
