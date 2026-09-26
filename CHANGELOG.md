@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+- **Pools are fully isolated.** A pool's largest disks no longer merge into the next pool's smallest
+  disks; each pool's disks fill only from its own resources. An in-progress cross-pool merge from an
+  older save is cancelled and its collected disks returned to the lower pool (one already
+  finishing is allowed to complete).
 - **Upgrade Data Stream is clickable before the Buffer is full.** Clicking it before the Buffer is completely
   full arms the upgrade and pauses all outflow from the Data Stream (pool buffers, Data Lakes,
   Kilobyte auto-convert) until the Buffer fills and the upgrade completes — fixing a Data Stream
@@ -86,6 +90,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+- **Boosters page (#740).** A lower-tier merge now fills the next tier's reserve (up to 18) once
+  that tier has auto-merge unlocked, so chained auto-merges keep going instead of stalling at 10.
+  A timed merge finishing no longer cuts an output that grew past 10 back down to 10. The
+  merge-duration upgrade now spends exactly 10 instead of wiping reserve progress. Clicking a
+  different tier during an active boost now arms it for a confirmed switch, and the active-boost
+  line keeps describing the running boost. The reserve Start control stays disabled when a merge
+  couldn't actually start. Reclaiming a boost stack no longer cuts a tier that grew into its
+  reserve back down to 10.
 - **Fixed a crash on the Foundry screen** (`ReferenceError: LakeActionsRow is not defined`,
   triggered the instant any Data Lake panel rendered) caused by a stray leftover reference to a
   removed control from the Data Lake conversion redesign above.

@@ -222,6 +222,28 @@ describe('navAttention', () => {
     expect(getNavAttention(state).boosters).toBe(ATTENTION_HIGH)
   })
 
+  it('lights Compute at high for an instant merge into an output reserve open past 10 (#740)', () => {
+    // Nodes at 10 with Node→Cluster auto-merge unlocked (cap 18), so 8 Cores can still merge.
+    // Boosts are blocked (max-stacked Core boost) and the Node reserve merge is in flight, so only
+    // the instant merge (high) and Core→Node auto-merge unlock (normal) remain.
+    const state = withIntro({
+      capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+      bits: 0,
+      byteCreated: true,
+      productionMilestoneTierClaims: 2,
+      computeCores: COMPUTE_MERGE_RATIO,
+      computeNodes: 10,
+      autoMergeCoresIntoNode: false,
+      autoMergeNodesIntoCluster: true,
+      computeNodesMergeRemainingSeconds: 100,
+      computeBoostType: 'burst',
+      computeBoostTierIndex: 1,
+      computeBoostStacks: 10,
+      computeBoostRemainingSeconds: 60,
+    })
+    expect(getNavAttention(state).boosters).toBe(ATTENTION_HIGH)
+  })
+
   it('lights Compute at normal when Core→Node auto-merge unlock is available', () => {
     // 10 Nodes unlocks Core→Node auto-merge, but also funds a Node-tier Boost (high). An already-
     // active max-stacked boost blocks starting a new one; zero Cores blocks Stack / Core merges.

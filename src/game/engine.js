@@ -3877,6 +3877,13 @@ export const getNextDiskLadderSize = sourceSize => {
   return getDiskLadderSizeBits(step + 1)
 }
 
+// Whether `size` has a next size up in its OWN pool to feed via the write cache — false for each
+// pool's largest size (pool isolation: merges never cross a pool boundary).
+export const canDiskSizeFeedWriteCache = size => {
+  const poolIndex = getPoolIndexForDiskSize(size)
+  return Boolean(poolIndex) && getPoolIndexForDiskSize(getNextDiskLadderSize(size)) === poolIndex
+}
+
 export const getDiskWriteCacheMerge = (state, targetSize) =>
   state.intro?.diskWriteCache?.[targetSize] ?? null
 
@@ -3914,15 +3921,16 @@ export const isDiskWriteCacheCollectPaused = (state, targetSize) => {
 // productive thing left to do with it — the "simply ignored"/"never destroyed" rule
 // (docs/DESIGN_HISTORY.md) is about never converting a disk to Bits or otherwise discarding it, not
 // about refusing to let it feed a real disk array. Checking the TARGET's own stranded status was
-// tried next and ALSO reverted (a Devin Review finding on PR #603): the write-cache ladder is a
-// multi-step chain that can cross a tier-group boundary (e.g. 100 KB is tier01's own last step,
-// but is also the fixed SOURCE that 1 MB — tier02's first step — depends on), so a target stranded
-// relative to its OWN tier can still be a necessary stepping stone toward a further tier that isn't
-// stranded at all; blocking on it broke exactly that cross-boundary case. There is no lookahead
+// tried next and ALSO reverted (a Devin Review finding on PR #603). The chain never crosses a pool
+// boundary (pool isolation — see docs/DESIGN_HISTORY.md): each pool's largest size is the end of
+// its own chain, and the next pool's smallest size fills only via its own read cache. There is no lookahead
 // needed to get this right: since every built container is PERMANENT progress regardless of
 // whether ITS OWN tier can currently redeem it, there is simply no case where filling one is worse
 // than leaving a source's otherwise-idle full disks sitting unused.
 const canStartDiskWriteCacheMerge = (state, sourceSize, targetSize) => {
+  // Pool isolation: no pool ever consumes another pool's disks. A pool's largest size is the top of
+  // its own chain; the next pool's smallest size fills only from its own read cache.
+  if (getPoolIndexForDiskSize(sourceSize) !== getPoolIndexForDiskSize(targetSize)) return false
   if (state.intro.diskBuild?.size === sourceSize || state.intro.diskBuild?.size === targetSize) return false
   if (state.intro.diskWriteCache?.[targetSize]) return false
   // Only starts once the SOURCE array is entirely full (DISK_ARRAY_LADDER_CAP, 9) — a different
@@ -3982,6 +3990,38 @@ export const tickDiskWriteCache = elapsedSeconds => state => {
   let disks = intro.disks ?? {}
   let diskWriteCache = { ...(intro.diskWriteCache ?? {}) }
   let changed = false
+  let poolBuffers = null
+
+  // A cross-pool merge can only come from a save predating pool isolation. One already in its flush
+  // phase has finished taking from the lower pool, so it simply completes (nothing more is consumed
+  // and nothing is lost). One still collecting is cancelled BEFORE any new merge starts (so none
+  // targets a source array this refill is about to fill): its collected disks return to the source
+  // array up to what was ever built there; any excess (the slots were refilled meanwhile) becomes
+  // bits in that pool's own buffer, clamped to its ceiling like every other buffer value.
+  for (const targetSize of Object.keys(diskWriteCache).map(Number)) {
+    const merge = diskWriteCache[targetSize]
+    if (!merge) continue
+    const sourcePool = getPoolIndexForDiskSize(merge.sourceSize)
+    if (sourcePool === getPoolIndexForDiskSize(targetSize)) continue
+    if ((merge.segmentsCollected ?? 0) >= DISK_LADDER_SIZE_MULTIPLIER) continue
+    const collected = Math.max(0, merge.segmentsCollected ?? 0)
+    const full = disks[merge.sourceSize] ?? 0
+    const room = Math.max(0, (intro.disksBuiltTotal?.[merge.sourceSize] ?? 0) - full)
+    const restoredDisks = Math.min(room, collected)
+    if (restoredDisks > 0) disks = { ...disks, [merge.sourceSize]: full + restoredDisks }
+    const excessBits = (collected - restoredDisks) * merge.sourceSize
+    if (excessBits > 0 && sourcePool) {
+      poolBuffers = poolBuffers ?? { ...(intro.poolBuffers ?? {}) }
+      poolBuffers[sourcePool] = Math.min(
+        (poolBuffers[sourcePool] ?? 0) + excessBits,
+        getPoolBufferClampCeilingBits(state, sourcePool),
+      )
+    }
+    const { [targetSize]: _cancelled, ...rest } = diskWriteCache
+    diskWriteCache = rest
+    changed = true
+  }
+  if (poolBuffers) intro = { ...intro, poolBuffers }
 
   const builtSizes = Object.keys(intro.disksBuiltTotal ?? {})
     .map(Number)
@@ -4769,6 +4809,12 @@ export const isComputeEntityAutoMergeUnlocked = (state, tierIndex) => {
 const getComputeEntityEffectiveCap = (state, tierIndex) =>
   isComputeEntityAutoMergeUnlocked(state, tierIndex) ? COMPUTE_ENTITY_AUTO_MERGE_CAP : COMPUTE_ENTITY_CAP
 
+// Same effective cap, keyed by the entity's intro field (e.g. 'computeNodes') — what every merge's
+// OUTPUT is capped at, so a lower-tier merge can fill the output tier's own reserve (10→18) once
+// that output tier's outbound auto-merge is unlocked, instead of stalling the chain at 10.
+export const getComputeFieldEffectiveCap = (state, field) =>
+  getComputeEntityEffectiveCap(state, COMPUTE_BOOST_TIER_FIELDS.indexOf(field) + 1)
+
 // Boosters pause once their own compute-ladder entity is already at its effective cap — COMPUTE_ENTITY_CAP
 // (10) normally, or the extended COMPUTE_ENTITY_AUTO_MERGE_CAP (18) once that tier's own outbound
 // merge boundary has auto-merge unlocked, since the "extra" 8 held past 10 there are the boundary's
@@ -5407,7 +5453,8 @@ export const isComputeCoreConversionUnlocked = state => (state.intro?.capacity ?
 // #280/#321) — before that boundary's own auto-merge is unlocked (autoFlagField below), this is
 // the ONLY way that boundary's tokens ever move: an explicit player click, converting every
 // complete group of COMPUTE_MERGE_RATIO (8) of the input entity into 1 of the output entity in a
-// single, instant call, capped at whatever room remains under COMPUTE_ENTITY_CAP on the output —
+// single, instant call, capped at whatever room remains under the output's effective cap
+// (getComputeFieldEffectiveCap — 18 once the output's own auto-merge is unlocked) —
 // the same "batch, but cap-bounded, surplus left unconverted" shape every tick-based conversion in
 // this file uses. A same-reference no-op below one full group of 8 of the input, once the output
 // is already at cap, OR — the key change from issue #321 — once autoFlagField has ever flipped
@@ -5419,7 +5466,7 @@ const mergeComputeEntities = (inputField, outputField, autoFlagField) => state =
   if (state.intro?.[autoFlagField]) return state
   const input = state.intro?.[inputField] ?? 0
   const output = state.intro?.[outputField] ?? 0
-  const roomForOutput = Math.max(0, COMPUTE_ENTITY_CAP - output)
+  const roomForOutput = Math.max(0, getComputeFieldEffectiveCap(state, outputField) - output)
   const outputGained = Math.min(roomForOutput, Math.floor(input / COMPUTE_MERGE_RATIO))
   if (outputGained <= 0) return state
 
@@ -5477,13 +5524,13 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // Shared by both the auto-trigger (threshold COMPUTE_ENTITY_AUTO_MERGE_CAP, 18) and the manual
 // click-to-start action (threshold COMPUTE_MERGE_RATIO, 8) below — a same-reference no-op while
 // auto-merge isn't unlocked for this boundary, a merge is already in flight (timerField > 0), input
-// is below `threshold`, or output is already at COMPUTE_ENTITY_CAP. Otherwise moves exactly
+// is below `threshold`, or output is already at its effective cap. Otherwise moves exactly
 // COMPUTE_MERGE_RATIO out of the input entity and starts the timer at `durationSeconds`.
 const startComputeMergeReserve = (inputField, outputField, autoFlagField, timerField, durationSeconds, threshold) => state => {
   if (!(state.intro?.[autoFlagField] ?? false)) return state
   if ((state.intro?.[timerField] ?? 0) > 0) return state
   if ((state.intro?.[inputField] ?? 0) < threshold) return state
-  if ((state.intro?.[outputField] ?? 0) >= COMPUTE_ENTITY_CAP) return state
+  if ((state.intro?.[outputField] ?? 0) >= getComputeFieldEffectiveCap(state, outputField)) return state
   if (!(durationSeconds > 0)) return state
   return {
     ...state,
@@ -5498,9 +5545,8 @@ const startComputeMergeReserve = (inputField, outputField, autoFlagField, timerF
 // Counts an in-flight reserve merge's remaining duration down by `elapsedSeconds`, frozen or not
 // (same posture as every other Byte Foundry mechanic) — a same-reference no-op while no merge is
 // in flight (timerField === 0). On completion (remaining <= 0), grants 1 of the output entity
-// (capped at COMPUTE_ENTITY_CAP, defensively — the start-time guard above already checked this,
-// but nothing prevents the output from having filled some other way in the meantime) and clears
-// the timer back to 0, freeing the reserve for the next merge.
+// (capped at its effective cap, but never LOWERING a count that grew past that cap some other way
+// in the meantime) and clears the timer back to 0, freeing the reserve for the next merge.
 const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) => state => {
   const remaining = state.intro?.[timerField] ?? 0
   if (remaining <= 0) return state
@@ -5515,7 +5561,12 @@ const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) =
     intro: {
       ...state.intro,
       [timerField]: 0,
-      [outputField]: Math.min(COMPUTE_ENTITY_CAP, (state.intro?.[outputField] ?? 0) + 1),
+      // Capped at the output's effective cap, but never LOWERED: the output may have grown past
+      // its primary 10 into its own reserve (Boosters) while this merge was in flight.
+      [outputField]: Math.max(
+        state.intro?.[outputField] ?? 0,
+        Math.min(getComputeFieldEffectiveCap(state, outputField), (state.intro?.[outputField] ?? 0) + 1),
+      ),
     },
   }
 }
@@ -5590,7 +5641,7 @@ export const getNextComputeMergeDurationUpgradeIndex = state => {
   return nextIndex
 }
 
-// Sacrifices ALL COMPUTE_ENTITY_CAP of the next sequential boundary's input layer so that
+// Sacrifices exactly COMPUTE_ENTITY_CAP of the next sequential boundary's input layer so that
 // boundary becomes ×5 (not ×10) vs Core earn / the previous layer — later boundaries rescale from
 // the new chain. Same-reference no-op below isUpgradeComputeMergeDurationAvailable.
 export const upgradeComputeMergeDuration = state => {
@@ -5601,7 +5652,9 @@ export const upgradeComputeMergeDuration = state => {
     ...state,
     intro: {
       ...state.intro,
-      [boundary.inputField]: 0,
+      // Exactly COMPUTE_ENTITY_CAP — not the whole field, which may also hold up to
+      // COMPUTE_MERGE_RESERVE_CAP of reserve progress (same reasoning as enableAutoMerge).
+      [boundary.inputField]: (state.intro?.[boundary.inputField] ?? 0) - COMPUTE_ENTITY_CAP,
       computeMergeDurationUpgrades: nextIndex + 1,
     },
   }
@@ -5636,12 +5689,22 @@ const enableAutoMerge = (outputField, autoFlagField) => state => {
 // 8) — whether clicking this boundary's reserve-slot row right now ("the button is enabled only
 // when there are at least 8 tokens available across all the 18 slots" — issue #321) would start a
 // new merge: auto-merge unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the
-// input held, and the output isn't already at COMPUTE_ENTITY_CAP.
+// input held, the output has room under its effective cap, and the live duration is positive
+// (startComputeMergeReserve no-ops at 0).
 const isComputeMergeReserveStartAvailable = (state, inputField, outputField, autoFlagField, timerField) =>
   (state.intro?.[autoFlagField] ?? false) &&
   (state.intro?.[timerField] ?? 0) === 0 &&
   (state.intro?.[inputField] ?? 0) >= COMPUTE_MERGE_RATIO &&
-  (state.intro?.[outputField] ?? 0) < COMPUTE_ENTITY_CAP
+  (state.intro?.[outputField] ?? 0) < getComputeFieldEffectiveCap(state, outputField) &&
+  getComputeMergeDurationSeconds(state, COMPUTE_BOOST_TIER_FIELDS.indexOf(inputField)) > 0
+
+// Boundary-index form of the per-boundary isCompute*MergeStartAvailable exports below, so
+// ComputePage can iterate COMPUTE_MERGE_BOUNDARIES without naming all nine.
+export const isComputeMergeStartAvailableAtBoundary = (state, boundaryIndex) => {
+  const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
+  if (!boundary) return false
+  return isComputeMergeReserveStartAvailable(state, boundary.inputField, boundary.outputField, boundary.autoFlagField, boundary.timerField)
+}
 
 // Manual start that reads the live (possibly step-upgraded) duration from state and snapshots it
 // onto the timer field.
@@ -6028,8 +6091,8 @@ export const canReclaimComputeBoost = state => {
 
 // Reclaims the most recently added, still-unused stack of the active Compute Boost — one at a
 // time — the exact inverse of one activateComputeBoost/stackComputeBoost call: refunds 1 token of
-// the active boost's own funding tier (capped at COMPUTE_ENTITY_CAP, in case more were earned
-// while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
+// the active boost's own funding tier (capped at that tier's effective cap, never lowering a count
+// that grew past it while the boost was running) and subtracts that tier's own getComputeBoostTierDurationSeconds
 // back out of computeBoostRemainingSeconds, decrementing computeBoostStacks by 1.
 // canReclaimComputeBoost's own gate (>1 stack AND enough pooled time that this subtraction can't
 // zero it out) means nextStacks is always >= 1 and the resulting remaining time is always > 0 here
@@ -6045,7 +6108,10 @@ export const reclaimComputeBoost = state => {
   const tierIndex = state.intro.computeBoostTierIndex ?? 1
   const field = getComputeBoostTierField(tierIndex)
   const nextStacks = (state.intro.computeBoostStacks ?? 0) - 1
-  const refunded = Math.min(COMPUTE_ENTITY_CAP, (state.intro[field] ?? 0) + 1)
+  // Capped at the tier's effective cap (18 with its reserve open), never LOWERING a count that
+  // grew past it while the boost was running.
+  const held = state.intro[field] ?? 0
+  const refunded = Math.max(held, Math.min(getComputeEntityEffectiveCap(state, tierIndex), held + 1))
 
   return {
     ...state,
