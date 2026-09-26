@@ -4026,6 +4026,32 @@ describe('Byte Foundry Compute Boost', () => {
     expect(saved.intro.computeBoostRemainingSeconds).toBe(5 + COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
+  test('clicking a different tier mid-boost arms it for a confirmed forfeit-and-switch (#740)', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    seedIntroState({
+      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true,
+      computeMergePageUnlocked: true, computeCores: 3, computeNodes: 2,
+      computeBoostType: 'burst', computeBoostTierIndex: 1, computeBoostStacks: 1, computeBoostRemainingSeconds: 5,
+    })
+    render(<App />)
+    openBoosters()
+
+    // Active tier armed by default; the active status line keeps describing the Core boost.
+    expect(screen.getByRole('button', { name: /select cores to fund a compute boost/i })).toHaveAttribute('aria-pressed', 'true')
+    const nodesRow = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
+    fireEvent.click(nodesRow)
+    expect(nodesRow).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText(/^active compute boost$/i).firstChild.title).toMatch(/\(Cores\) active/)
+
+    // Same preset, different tier → forfeit-replace, funded by Nodes.
+    fireEvent.click(screen.getByRole('button', { name: /forfeit active boost and activate burst/i }))
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.intro.computeBoostTierIndex).toBe(2)
+    expect(saved.intro.computeNodes).toBe(1)
+    expect(saved.intro.computeCores).toBe(3)
+    confirmSpy.mockRestore()
+  })
+
   test('forfeit-replace of a different preset asks for confirmation; cancel keeps the active boost', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     seedIntroState({
