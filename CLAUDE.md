@@ -50,6 +50,7 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
@@ -83,8 +84,13 @@ workflow.
 > be named `.jsx`, not `.js`, or the build/tests will fail. Plain styled-components definitions (no JSX)
 > stay `.js` (see `src/components/*/index.js`).
 
-There is no configured lint script (`yarn lint` does not exist) and no CI job for linting — CI only runs
-`yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
+There is no general lint script (`yarn lint` does not exist). The one lint CI does run is
+`yarn lint:workflows` (`scripts/lint-workflow-shell.mjs`) — a `bash -n` pass over every `run:` block
+embedded in `.github/workflows/*.yml` and `.github/actions/**`, wired as a step in `ci.yml`'s
+required `test` job so a broken workflow script fails the PR that introduces it (#738, after #709's
+unclosed-brace outage took every scheduled `autonomous-maintenance.yml` run down for two days).
+Otherwise CI only runs `yarn test`.
+`.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.
 
@@ -1337,7 +1343,8 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1903 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1903 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
