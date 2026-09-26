@@ -273,7 +273,11 @@ exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
 
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
-Shared helpers: `.github/actions/setup-node-yarn` (composite setup for trusted refs only),
+Both engines' guard steps also render an orphaned-branch feed (#59,
+`scripts/orphan-branch-scan.sh`): remote `claude/*`/`devin/*`/`cursor/*` branches with no open PR —
+a run deletes merged/closed-issue stale ones and prefers resuming a still-open-issue branch over
+picking a new task. Shared helpers: `.github/actions/setup-node-yarn` (composite setup for trusted
+refs only),
 `scripts/pr-head-guard.sh` (fork/branch check sourced from main), and
 `scripts/claude-deny-settings.sh` (shared deny-list JSON for claude-code-action).
 
