@@ -627,6 +627,9 @@ e2e/
   data-lake.e2e.js            ← a seeded KB Data Lake renders its own disk-square breakdown on
                                Foundry, then a manual Buy Booster click there grants a Core
                                (verified on the Boosters page)
+  visual-regression.e2e.js    ← full-page screenshot baselines (Foundry + Factory, both themes);
+                               see "End-to-end testing" under "Testing" and e2e/README.md
+  README.md                   ← e2e conventions + how to regenerate visual baselines
 scripts/
   bump-version.mjs (+ `.test.js`) ← `yarn bump-version`: cut CHANGELOG ## [Unreleased] into a
                                dated ## [x.y.z] section and bump package.json (minor if
@@ -1388,7 +1391,17 @@ existing dev/test server convention, and targets the app's real `/tens/` base pa
   without being silently relocked), `e2e/prestige.e2e.js` (seeding Money ≥ `PRESTIGE_THRESHOLD`,
   prestiging from the first-time `FullScreenOverlay`, and confirming resources reset and Prestige Points
   are awarded), and `e2e/meta-prestige.e2e.js` (seed at 1 Googol PP → Settings Era ascension → assert
-  `era.count`, Eons award, and the permanent `intro.mainGameUnlocked` latch carrying forward).
+  `era.count`, Eons award, and the permanent `intro.mainGameUnlocked` latch carrying forward), and
+  `e2e/visual-regression.e2e.js` (full-page screenshot baselines of the Byte Foundry and Byte
+  Factory pages in both themes — see below).
+- **Visual-regression baselines** (#593): `visual-regression.e2e.js` uses `toHaveScreenshot` with
+  `playwright.config.js`'s `expect` defaults — CSS animations/transitions disabled during capture,
+  `maxDiffPixelRatio: 0.005` headroom for cross-runner font-antialiasing noise. Baselines are
+  Linux-generated (matching the CI `ubuntu-latest` platform) and committed under
+  `e2e/visual-regression.e2e.js-snapshots/`; the spec skips on non-Linux platforms so local macOS/
+  Windows e2e runs stay green. A PR that intentionally changes the UI regenerates baselines via
+  `npx playwright test e2e/visual-regression.e2e.js --update-snapshots` and commits them in the
+  same PR — full process in `e2e/README.md`.
 - **Not wired into `ci.yml`** — deliberately. Wiring this suite into CI (installing Playwright's browser on
   the runner, adding a job/step) is real follow-up work, but it means editing `ci.yml`, which is off-limits
   to `autonomous-maintenance.yml` (see docs/AUTOMATION.md) — a human needs to do that wiring
