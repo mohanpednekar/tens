@@ -220,6 +220,64 @@ describe('extractRunBlocks', () => {
     expect(blocks[0].script.trim()).toBe('echo real');
   });
 
+  it('extracts a quoted run key in a flow-style step ({"run": ...})', () => {
+    // the flow matcher used to only accept the bare `run:` spelling — a quoted
+    // key is equivalent YAML and must not bypass the lint.
+    const blocks = extractRunBlocks(`steps:\n  - {"run": "if true; then"}\n`);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('if true; then');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
+  it('does not lint run:-shaped text inside a quoted key\'s block scalar', () => {
+    // `"prompt": |` is the same key as `prompt: |` — its body must be skipped
+    // like any other non-run scalar, not scanned for a nested `run:`.
+    const text = `steps:\n  - uses: some/action\n    with:\n      "prompt": |\n        run: this is prose(((\n  - run: |\n      echo real\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo real');
+  });
+
+  it('selects the real run key, not run: text inside a quoted flow value', () => {
+    // the last textual match is inside name's quoted string — picking it
+    // lints `if true; then"` instead of the executed `echo ok`.
+    const blocks = extractRunBlocks(
+      `steps:\n  - {run: echo ok, name: "run: if true; then"}\n`,
+    );
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('echo ok');
+    expect(bashSyntaxError(blocks[0].script)).toBeNull();
+  });
+
+  it('glues a double-quoted escaped line break with no space', () => {
+    // PyYAML: "if true; then\<eol>echo ok; fi" → 'if true; thenecho ok; fi' —
+    // folding with a space produces a DIFFERENT script that happens to parse.
+    const text = `steps:\n  - run: "if true; then\\\n        echo ok; fi"\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('if true; thenecho ok; fi');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
+  it('strips YAML comments from plain run scalars (inner quotes do not protect #)', () => {
+    // `run: echo " # text"` resolves to `echo "` (PyYAML-verified) — keeping
+    // the comment lints the longer valid-looking `echo " # text"` instead.
+    const blocks = extractRunBlocks(`steps:\n  - run: echo " # text"\n`);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('echo "');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
+  it('reads a block-scalar header placed on the line below run:', () => {
+    // `run:` ⏎ `|` ⏎ `  echo hi` resolves to 'echo hi\n' (PyYAML-verified) —
+    // treating `|` as scalar text lints `| echo hi` and false-fails a valid
+    // workflow.
+    const blocks = extractRunBlocks(`steps:\n  - run:\n      |\n        echo hi\n`);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script.trim()).toBe('echo hi');
+    expect(bashSyntaxError(blocks[0].script)).toBeNull();
+  });
+
   it('stops a block at the next same-or-shallower-indent key', () => {
     const text = `steps:\n  - run: |\n      echo hi\n    env:\n      X: 1\n  - run: echo bye\n`;
     const blocks = extractRunBlocks(text);
@@ -256,6 +314,13 @@ describe('bashSyntaxError', () => {
 
   it('flags an unterminated if', () => {
     expect(bashSyntaxError('if true; then\n  echo hi\n')).not.toBeNull();
+  });
+
+  it('fails on an unterminated heredoc that bash -n only warns about', () => {
+    // `bash -n` exits 0 with an EOF warning here, but Actions still runs the
+    // block — swallowing the remaining commands as heredoc input. stderr on a
+    // successful parse is a failure, not a pass.
+    expect(bashSyntaxError('cat <<EOF\nx')).not.toBeNull();
   });
 });
 

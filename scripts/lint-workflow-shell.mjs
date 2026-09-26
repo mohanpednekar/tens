@@ -38,7 +38,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 // `run:` as a YAML key — plain (`        run: |`) or as a step's first key
@@ -49,15 +49,18 @@ import { fileURLToPath } from 'node:url';
 // error).
 const RUN_KEY_RE = /^(\s*)(-[ \t]+)?(?:"run"|'run'|run)[ \t]*:[ \t]*(.*)$/;
 // Flow-style step entry `- { name: x, run: cmd }` — valid YAML; extract the
-// inline `run:` value (plain text up to `,`/`}`, or a quoted scalar).
+// inline `run:` value (plain text up to `,`/`}`, or a quoted scalar). The key
+// itself may be quoted (`{"run": cmd}`) — RUN_KEY_RE accepts the same forms.
 const FLOW_STEP_RE = /^\s*-[ \t]*\{/;
-const FLOW_RUN_RE = /\brun[ \t]*:[ \t]*/;
-// Any other `key:` line. If it carries a non-empty value — a block-scalar
-// header (`|`, `>-`, `|2`, ...) or a plain scalar — deeper-indented following
-// lines belong to that value (block content or folded continuation) and are
-// skipped so a `run:`-looking line inside them is never linted. A bare `key:`
-// (or `key:` with only a `# comment`) is a mapping: its children are real keys.
-const ANY_KEY_RE = /^(\s*)(-[ \t]+)?[A-Za-z_][\w.-]*[ \t]*:(?:[ \t]+(.*)|[ \t]*$)/;
+const FLOW_RUN_RE = /(?:"run"|'run'|\brun)[ \t]*:[ \t]*/;
+// Any other `key:` line, plain or quoted (`"prompt":`). If it carries a
+// non-empty value — a block-scalar header (`|`, `>-`, `|2`, ...) or a plain
+// scalar — deeper-indented following lines belong to that value (block
+// content or folded continuation) and are skipped so a `run:`-looking line
+// inside them is never linted. A bare `key:` (or `key:` with only a
+// `# comment`) is a mapping: its children are real keys.
+const ANY_KEY_RE =
+  /^(\s*)(-[ \t]+)?(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[A-Za-z_][\w.-]*)[ \t]*:(?:[ \t]+(.*)|[ \t]*$)/;
 // A `- scalar` sequence entry that isn't a `key:` line — same continuation rule.
 const DASH_SCALAR_RE = /^(\s*)-[ \t]+\S/;
 // Block-scalar header: `|` or `>`, optional chomping (`-`/`+`) and a single
@@ -123,6 +126,69 @@ function unquote(text) {
 }
 
 /**
+ * Truncate a PLAIN scalar's text at a YAML comment: `#` preceded by separation
+ * whitespace (or at position 0) starts one — inner quote characters don't
+ * protect it, plain scalars have no quoting. `echo " # x"` resolves to
+ * `echo "` (verified vs PyYAML), so keeping the comment would lint a
+ * longer-but-valid script while the real truncated one is broken.
+ */
+function stripPlainComment(s) {
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '#' && (i === 0 || s[i - 1] === ' ' || s[i - 1] === '\t')) {
+      return s.slice(0, i).replace(/[ \t]+$/, '');
+    }
+  }
+  return s;
+}
+
+/**
+ * Quoted-scalar spans in a flow-mapping line: [start, end) index pairs where
+ * `'`/`"` opens a scalar (single-quoted escapes via `''`, double via `\X`).
+ * Used to tell a quoted `run:` KEY (`{"run": x}` — the match starts the span)
+ * from `run:` text inside another key's quoted value (`{name: "run: x"}` —
+ * strictly inside a span, not a key).
+ */
+function quotedSpans(s) {
+  const spans = [];
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i];
+    if (c !== '"' && c !== "'") {
+      i++;
+      continue;
+    }
+    const start = i++;
+    if (c === "'") {
+      while (i < s.length) {
+        if (s[i] === "'") {
+          if (s[i + 1] === "'") {
+            i += 2;
+            continue;
+          }
+          i++;
+          break;
+        }
+        i++;
+      }
+    } else {
+      while (i < s.length) {
+        if (s[i] === '\\') {
+          i += 2;
+          continue;
+        }
+        if (s[i] === '"') {
+          i++;
+          break;
+        }
+        i++;
+      }
+    }
+    spans.push([start, i]);
+  }
+  return spans;
+}
+
+/**
  * Collect a plain/quoted scalar's folded continuation lines: deeper-indented
  * non-blank lines (blank lines span, `#` lines are YAML comments — unless the
  * scalar is an unterminated quote, where `#` is literal content). Stops at the
@@ -142,6 +208,17 @@ function collectContinuation(lines, j, keyIndent, { keepHash = false } = {}) {
     else break;
   }
   return { cont, next: j };
+}
+
+/**
+ * True when `s` ends with an odd number of backslashes — in a YAML
+ * double-quoted scalar an unpaired trailing `\` is an escaped line break
+ * (fold continuation), while an even run is literal `\\` pairs.
+ */
+function oddTrailingBackslashes(s) {
+  let n = 0;
+  for (let i = s.length - 1; i >= 0 && s[i] === '\\'; i--) n++;
+  return n % 2 === 1;
 }
 
 function indentOf(line) {
@@ -204,17 +281,72 @@ export function extractRunBlocks(yamlText) {
     const m = RUN_KEY_RE.exec(line);
     if (m) {
       const keyIndent = keyColumn(m);
-      const rest = m[3].trim();
+      let rest = m[3].trim();
       // bare `run:` or `run: # comment` — either a mapping (defaults.run.shell,
       // whose children are key-shaped) or a next-line scalar value
       // (`run:` ⏎ `        if true; then` is valid YAML — verified vs PyYAML).
       if (rest === '' || rest.startsWith('#')) {
         const { cont, next } = collectContinuation(lines, i + 1, keyIndent);
         const first = cont.find((l) => l !== '');
+        // a `|`/`>` header on the line BELOW `run:` is still a block scalar,
+        // not plain text — `run:` ⏎ `      |` ⏎ `        echo hi` resolves to
+        // 'echo hi\n' (verified vs PyYAML); linting `| echo hi` as the script
+        // would false-fail a valid workflow.
+        const hdrTok = first === undefined ? '' : first.split(/\s/)[0];
+        const hdrRest = first === undefined ? '' : first.slice(hdrTok.length).trim();
+        const nextHeader = BLOCK_HEADER_RE.exec(hdrTok);
+        if (nextHeader && (hdrRest === '' || hdrRest.startsWith('#'))) {
+          // find the header's own line: the first non-blank, non-# deeper
+          // line (the same span collectContinuation covered).
+          let h = i + 1;
+          while (h < next) {
+            const t = lines[h].trim();
+            if (t !== '' && !t.startsWith('#')) break;
+            h++;
+          }
+          const raw = [];
+          let j = h + 1;
+          for (; j < lines.length; j++) {
+            const l = lines[j];
+            if (l.trim() === '') {
+              raw.push('');
+              continue;
+            }
+            if (indentOf(l) > keyIndent) raw.push(l);
+            else break;
+          }
+          const explicit = nextHeader[3] === '' ? null : keyIndent + Number(nextHeader[3]);
+          const firstBody = raw.find((l) => l.trim() !== '');
+          const base =
+            explicit ?? (firstBody === undefined ? keyIndent + 1 : indentOf(firstBody));
+          const content = raw.map((l) => (l.trim() === '' ? '' : l.slice(base)));
+          blocks.push({
+            line: i + 1,
+            script: nextHeader[1] === '>' ? foldScalar(content) : content.join('\n'),
+          });
+          i = j - 1;
+          continue;
+        }
         // key-shaped requires a YAML separator after the colon — `if:true` is
-        // a plain scalar, not a `key:` line.
-        if (first !== undefined && !/^[A-Za-z_][\w.-]*[ \t]*:(\s|$)/.test(first)) {
-          const script = unquote(foldScalar(cont));
+        // a plain scalar, not a `key:` line. Quoted keys count too.
+        if (
+          first !== undefined &&
+          !/^(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|[A-Za-z_][\w.-]*)[ \t]*:(\s|$)/.test(first)
+        ) {
+          const plainFirst = !first.startsWith('"') && !first.startsWith("'");
+          // double-quoted escaped line breaks glue here too ("a\<eol>b" → 'ab').
+          if (first.startsWith('"')) {
+            for (let k = 0; k + 1 < cont.length; k++) {
+              if (oddTrailingBackslashes(cont[k]) && cont[k + 1] !== '') {
+                cont[k] = cont[k].slice(0, -1) + cont[k + 1];
+                cont.splice(k + 1, 1);
+                k--;
+              }
+            }
+          }
+          const script = unquote(
+            foldScalar(plainFirst ? cont.map(stripPlainComment) : cont),
+          );
           blocks.push({ line: i + 1, script });
           i = next - 1;
         }
@@ -256,21 +388,59 @@ export function extractRunBlocks(yamlText) {
         const { cont, next } = collectContinuation(lines, i + 1, keyIndent, {
           keepHash: inOpenQuote,
         });
-        const extra = foldScalar(cont);
-        // a paragraph break folds to a bare newline — no space separator
+        // a ` #` inside a PLAIN scalar is a YAML comment (plain scalars don't
+        // honor inner quotes) — `run: echo " # x"` resolves to `echo "`. Strip
+        // it from the key-line text and each continuation line so truncation
+        // can't hide broken bash. Quoted scalars keep `#` literally.
+        const plain = !rest.startsWith('"') && !rest.startsWith("'");
+        if (plain) rest = stripPlainComment(rest);
+        // in a double-quoted scalar, an unpaired `\` at a physical line's end
+        // is an escaped line break: YAML drops the `\`, the break, AND the
+        // next line's indent — "a\<eol>b" resolves to 'ab' (PyYAML-verified).
+        // Drop the continuation backslash and glue without a space — folding
+        // in a space would unescape `\ ` to a space and pass a script whose
+        // real value is broken (`thenecho`). `\\` is a literal backslash and
+        // folds normally. Single-quoted/plain scalars have no escapes.
+        if (rest.startsWith('"')) {
+          for (let k = 0; k + 1 < cont.length; k++) {
+            if (oddTrailingBackslashes(cont[k]) && cont[k + 1] !== '') {
+              cont[k] = cont[k].slice(0, -1) + cont[k + 1];
+              cont.splice(k + 1, 1);
+              k--;
+            }
+          }
+        }
+        const extra = foldScalar(plain ? cont.map(stripPlainComment) : cont);
+        const dqBreak =
+          extra !== '' && rest.startsWith('"') && oddTrailingBackslashes(rest);
+        // a paragraph break folds to a bare newline — no space separator; a
+        // `\`-terminated double-quoted line glues on without the backslash.
         const joined =
-          extra === '' ? rest : extra.startsWith('\n') ? rest + extra : `${rest} ${extra}`;
+          extra === ''
+            ? rest
+            : dqBreak
+              ? rest.slice(0, -1) + extra
+              : extra.startsWith('\n')
+                ? rest + extra
+                : `${rest} ${extra}`;
         blocks.push({ line: i + 1, inline: true, script: unquote(joined) });
         i = next - 1;
       }
       continue;
     }
-    // flow-style step `- { name: x, run: cmd }` — extract the run value. Last
-    // `run:` match wins (earlier ones may be inside quoted flow values).
+    // flow-style step `- { name: x, run: cmd }` — extract the run value. A
+    // `run:`-shaped string inside another key's quoted value (`name:
+    // "run: x"`) is not a key — drop matches strictly inside a quoted span;
+    // last remaining match wins (a quoted `"run"` key's match starts the span
+    // itself, so it is never dropped).
     if (FLOW_STEP_RE.test(line)) {
       const matches = [...line.matchAll(new RegExp(FLOW_RUN_RE, 'g'))];
-      if (matches.length) {
-        const rm = matches[matches.length - 1];
+      const spans = quotedSpans(line);
+      const real = matches.filter(
+        (mm) => !spans.some(([a, b]) => mm.index > a && mm.index < b),
+      );
+      if (real.length) {
+        const rm = real[real.length - 1];
         const after = line.slice(rm.index + rm[0].length);
         const script =
           after.startsWith('"') || after.startsWith("'")
@@ -344,12 +514,20 @@ export function sanitizeExpressions(script) {
  * @returns {string|null} bash's stderr on a syntax failure, null when it parses
  */
 export function bashSyntaxError(script) {
-  try {
-    execFileSync('bash', ['-n'], { input: sanitizeExpressions(script), encoding: 'utf8' });
-    return null;
-  } catch (err) {
-    return String(err.stderr || err.message).trim();
+  const res = spawnSync('bash', ['-n'], {
+    input: sanitizeExpressions(script),
+    encoding: 'utf8',
+  });
+  if (res.error) return String(res.error.message || res.error).trim();
+  const stderr = String(res.stderr || '').trim();
+  // a 0 exit with stderr output is bash warning about a construct Actions will
+  // still run — just not the way it reads. An unterminated heredoc swallows
+  // the rest of the block as input and `bash -n` only warns, so treat
+  // warning output as a failure rather than a pass.
+  if (res.status !== 0 || stderr !== '') {
+    return stderr || `bash -n exited with status ${res.status}`;
   }
+  return null;
 }
 
 /**
