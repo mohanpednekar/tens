@@ -393,10 +393,12 @@ the target branch via `gh pr view --json headRefName,isCrossRepository` (refusin
 untrusted event fields through `env:` (not shell interpolation), gates on the triggering commenter
 having write access via a native workflow `if:` — or being one of a named allowlist of
 review/automation bot logins (`chatgpt-codex-connector[bot]`, `devin-ai-integration[bot]`,
-`google-labs-jules[bot]`, `Copilot`), whose `NONE`/`CONTRIBUTOR` author_association would otherwise
+`Copilot`), whose `NONE`/`CONTRIBUTOR` author_association would otherwise
 stall autonomous PRs whose only feedback is bot review (#731); the allowlist keys on exact
 `user.login`, which only the real GitHub App can post under, so the pwn-request guard is preserved
-— and checks out the exact commit SHA rather than the
+(`google-labs-jules[bot]` is deliberately excluded — whether it should retain repo access is an
+unresolved maintainer decision, see `docs/DESIGN_HISTORY.md`'s Jules incident — so it cannot
+trigger this secrets-bearing workflow) — and checks out the exact commit SHA rather than the
 branch name before running `git checkout -B <branch>` to un-detach HEAD. See
 `docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
 

@@ -31,13 +31,16 @@ jobs:
     # user.login keeps the pwn-request guard intact — a login is only spoofable by the app
     # itself — unlike broadening the accepted association values, which would also cover
     # arbitrary humans. Allowlist verified against this repo's real review/comment authors.
+    # google-labs-jules[bot] is deliberately NOT allowlisted: whether it should retain repo
+    # access is an unresolved maintainer decision (docs/DESIGN_HISTORY.md's Jules incident),
+    # so it must not trigger this secrets-bearing workflow until that's resolved.
     if: >
       (github.event_name != 'issue_comment' ||
        contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.comment.author_association) ||
-       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "google-labs-jules[bot]", "Copilot"]'), github.event.comment.user.login)) &&
+       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "Copilot"]'), github.event.comment.user.login)) &&
       (github.event_name != 'pull_request_review' ||
        contains(fromJSON('["OWNER", "COLLABORATOR", "MEMBER"]'), github.event.review.author_association) ||
-       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "google-labs-jules[bot]", "Copilot"]'), github.event.review.user.login))
+       contains(fromJSON('["chatgpt-codex-connector[bot]", "devin-ai-integration[bot]", "Copilot"]'), github.event.review.user.login))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
