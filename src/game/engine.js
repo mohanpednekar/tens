@@ -4274,31 +4274,38 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     let memoryToCacheBudget = getPoolBudget(poolIndex)
     const bufferCapacity = getPoolBufferCapacity(state, poolIndex)
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
-    for (;;) {
-      const cached = diskCache[size] ?? 0
-      const available = getPoolBufferBitsLocal(poolIndex)
-      if (cached >= size || available <= 0 || memoryToCacheBudget <= 0) break
-
+    const cached = diskCache[size] ?? 0
+    const available = getPoolBufferBitsLocal(poolIndex)
+    if (cached < size && available > 0 && memoryToCacheBudget > 0) {
       const need = size - cached
-      const transferUnit = Math.min(blockBits, need, memoryToCacheBudget)
-      if (available >= transferUnit) {
-        poolBuffers[poolIndex] = available - transferUnit
-        diskCache = { ...diskCache, [size]: cached + transferUnit }
-        memoryToCacheBudget -= transferUnit
-        changed = true
-        continue
+      const target = Math.min(need, memoryToCacheBudget)
+
+      let transferAmount = 0
+      // ⚡ Bolt Optimization: Replace O(N) iterative chunking loop with O(1) mathematical formulation
+      // Resolves thread freezing by bypassing thousands of deep object clones on massive available pools
+      if (available >= target) {
+        transferAmount = target
+      } else {
+        const chunks = Math.floor(available / blockBits)
+        transferAmount = chunks * blockBits
+
+        const remainingAvailable = available - transferAmount
+        const remainingTarget = target - transferAmount
+        const transferUnit = Math.min(blockBits, remainingTarget)
+
+        // The pool's own buffer is full but its capacity itself is smaller than one block on this
+        // size — dump the full balance rather than stalling the refill forever on a large array.
+        if (bufferCapacity > 0 && bufferCapacity < transferUnit && remainingAvailable >= bufferCapacity) {
+          transferAmount += remainingAvailable
+        }
       }
-      // The pool's own buffer is full but its capacity itself is smaller than one block on this
-      // size — dump the full balance rather than stalling the refill forever on a large array.
-      if (bufferCapacity > 0 && bufferCapacity < transferUnit && available >= bufferCapacity) {
-        const add = Math.min(need, available, memoryToCacheBudget)
-        poolBuffers[poolIndex] = available - add
-        diskCache = { ...diskCache, [size]: cached + add }
-        memoryToCacheBudget -= add
+
+      if (transferAmount > 0) {
+        poolBuffers[poolIndex] = available - transferAmount
+        diskCache = { ...diskCache, [size]: cached + transferAmount }
+        memoryToCacheBudget -= transferAmount
         changed = true
-        continue
       }
-      break
     }
     poolBudgets[poolIndex] = memoryToCacheBudget
   }

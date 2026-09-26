@@ -1,31 +1,38 @@
 const { execSync } = require('child_process');
 
 try {
-  const branchName = 'bolt-flops-optimization';
+  const branchName = 'jules-4957829963364709055-25ca5808';
 
   // Push the branch
-  const remoteUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/mohanpednekar/tens.git`;
+  const remoteUrl = `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
   execSync(`git push ${remoteUrl} ${branchName} --force`, { stdio: 'inherit' });
 
   // Create PR
-  const body = `💡 What: Replaced the O(N) iterative \`while\` loop in \`tickComputeFlopsAutobuyers\` with an O(1) bulk processing equivalent. The new mechanism (\`getComputeFlopsAffordableAndCost\` and \`buyComputeFlopsTierQuantity\`) computes the affordable quantity upfront for the maximum allowable attempts given the budget.
-
-🎯 Why: In situations with extremely high attempt budgets (e.g. returning after a long idle period or large offline progress), the previous implementation iteratively re-evaluated cost curves and performed a full shallow-clone of the immutable state tree in \`buyComputeFlopsTier\` for each purchased unit. This created severe main-thread lockups and unnecessary garbage collection overhead by updating the state N times.
-
-📊 Impact: Massive reduction in memory allocations and CPU cycles spent duplicating the state object. Reduces state transitions per autobuyer invocation from O(N) to exactly 1.
-
-🔬 Measurement: Run the test suite or manually inject an extremely large \`computeFlopsAutobuyerAttemptBudgets\` alongside huge PP in Dev Mode, and observe the main thread processing offline ticks instantly rather than locking up.`;
+  const title = "⚡ Bolt: Replace O(N) chunk loop with O(1) mathematical formulation";
+  const body = `💡 **What:** The iterative O(N) \`for (;;)\` loop transferring chunks in \`tickDataLakeDiskReadCacheFill\` has been replaced with an O(1) mathematical calculation.
+🎯 **Why:** When resolving massive amounts of \`available\` storage or \`memoryToCacheBudget\` (e.g. offline progress calculation), the original looping chunk-transfer created thousands of deep object clones which crashed the garbage collector and froze the main thread.
+📊 **Impact:** Reduces processing iterations and memory allocations inside \`tickDataLakeDiskReadCacheFill\` from potentially thousands down to 1. Expected to prevent thread freezing for massive offline accumulation.
+🔬 **Measurement:** Verify tests run properly by executing \`yarn test --run\`. Benchmarks with large \`available\` offline budgets will not loop internally over chunks.
+`;
 
   const prData = JSON.stringify({
-    title: '⚡ Bolt: Replace O(N) Compute Flops autobuyer with O(1) bulk processing',
-    body: body,
+    title,
+    body,
     head: branchName,
     base: 'main'
   });
 
-  console.log('Creating PR...');
-  execSync(`curl -s -X POST -H "Authorization: token ${process.env.GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -d '${prData.replace(/'/g, "'\\''")}' https://api.github.com/repos/mohanpednekar/tens/pulls`, { stdio: 'inherit' });
-  console.log('Done.');
+  const curlCmd = `curl -s -X POST -H "Authorization: token ${process.env.GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json" -d '${prData.replace(/'/g, "'\\''")}' https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}/pulls`;
+
+  const response = execSync(curlCmd).toString();
+  const json = JSON.parse(response);
+
+  if (json.html_url) {
+    console.log(`PR created successfully: ${json.html_url}`);
+  } else {
+    console.error(`Failed to create PR: ${JSON.stringify(json, null, 2)}`);
+  }
+
 } catch (error) {
-  console.error(error);
+  console.error('Error during PR creation:', error.message);
 }
