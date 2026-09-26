@@ -1,7 +1,6 @@
 import {
   AUTO_SCALE_UP_COST,
   BYTES_ID,
-  COMPUTE_ENTITY_CAP,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -11,6 +10,7 @@ import {
 } from 'game/layers'
 import {
   canBuyComputeFlopsTier,
+  getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
   getGlobalTickspeedMultiplierCost,
   getIntroKilobyteConversionCost,
@@ -222,7 +222,7 @@ const hasInstantMergeAvailable = state =>
     if (state.intro?.[auto]) return false
     const held = state.intro?.[input] ?? 0
     const out = state.intro?.[output] ?? 0
-    return held >= COMPUTE_MERGE_RATIO && out < COMPUTE_ENTITY_CAP
+    return held >= COMPUTE_MERGE_RATIO && out < getComputeFieldEffectiveCap(state, output)
   })
 
 export const hasComputeAttention = state => {
