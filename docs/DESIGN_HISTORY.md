@@ -8774,3 +8774,23 @@ the read cache's reservation alone. A first cut required the pool to be fully pr
 maintainer then set the rule as a pool-buffer priority instead — disk filling > provisioning in
 progress > lake filling — so unprovisioned slots don't block the lake, but any empty built disk or a
 started build does (`isDataLakePoolDrainAvailable`).
+
+### Pool isolation: disk write-cache merges no longer cross pool boundaries
+
+Maintainer rule: no pool shall consume anything from another pool. An audit found exactly one
+violation — `getNextDiskLadderSize` chained a pool's largest size into the next pool's smallest
+(100 KB → 1 MB), so `tickDiskWriteCache` drained pool N's top array to build pool N+1's first disk.
+That crossing had been kept deliberately after PR #603 (a stranded 100 KB as the "stepping stone" to
+tier02's 1 MB); it also emptied pool N's top array (blocking its lake drain via
+`areStoragePoolDisksFull`) and let a reset of pool N+1 discard disks already collected from pool N.
+`canStartDiskWriteCacheMerge` now refuses cross-pool merges; the next pool's smallest size still
+fills from its own read cache (`isDiskReadCacheEligible`). Legacy in-flight cross-pool merges are
+handled before any new merge starts in that tick (so no fresh merge targets the array being
+refilled). One already in its flush phase has finished taking from the lower pool, so it completes
+losslessly. One still collecting is cancelled: its segments return to the source array up to
+`disksBuiltTotal`, and any excess (only possible if the source array was refilled mid-collect) is
+credited as bits to the source pool's own buffer, clamped to that buffer's ceiling — a deliberate,
+bounded loss for a one-time legacy edge case, since an over-ceiling buffer would be clamped again by
+`normalizePoolMemoryCapacity` on the next load anyway.
+Non-consuming links were audited and kept: the reset-bandwidth cap reading the next pool's
+bandwidth, `isLaterPoolProvisioningLocked`, and pool-1-first allocation of the shared Data Stream.
