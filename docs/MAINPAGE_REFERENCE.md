@@ -540,10 +540,13 @@ not at the bottom"):
    active or the merge chain has unlocked yet:
    a. An `ArmedStatusText` line (`"Armed: <symbol> <Label> (<N> held)"`, or a prompt to click a tier
       row if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
-      `intro.computeBoostTierIndex` while a boost is active (the boost's own funding tier — a
-      player can't re-arm mid-boost), otherwise local component state (`selectedBoostTierIndex`, set
-      by clicking a tier row below — see 3), defaulting to Cores (tier 1) before
-      `intro.computeMergePageUnlocked` since it's the only tier that can hold a balance that early.
+      local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
+      falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
+      clicked; always Cores (tier 1) before `intro.computeMergePageUnlocked`, since it's the only
+      tier that can hold a balance that early. Clicking a different tier mid-boost arms a
+      confirmed forfeit-and-switch (only at 1 stack, per `canActivateComputeBoost`); the active-boost
+      line, Stack, and Reclaim always describe the ACTIVE tier, not the armed one. The row
+      highlight (`aria-pressed`) tracks `armedTierIndex`.
    b. A `BoostRow` (`role="group"`, `aria-label="compute boost"`) of the 3 Compute Boost preset
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon>×<multiplier>"` computed
@@ -610,7 +613,8 @@ not at the bottom"):
          look `MainPage`'s own tier-row Buy/Upgrade pair uses, rather than a small icon-only square —
          `variant="prestige"`, visible content "⬆ Merge", `aria-label` spelling out the full action
          e.g. "merge 8 nodes into 1 cluster") — enabled once `COMPUTE_MERGE_RATIO` (8) of the
-         tier is held and the produced tier is under `COMPUTE_ENTITY_CAP`, calling the matching
+         tier is held and the produced tier is under its effective cap (`getComputeFieldEffectiveCap` — 18
+         once that tier's own auto-merge is unlocked), calling the matching
          `game.actions.mergeCompute*Into*` action — plus an Unlock Auto-merge button filling the
          other half (`TierActionButton`, `variant="info"`, `$progress` set to the live percentage
          toward its own unlock cost — the same `Button` `progressFill` mechanic Factory's own Buy
@@ -631,7 +635,8 @@ not at the bottom"):
          allows it (at least `COMPUTE_MERGE_RATIO` (8) held across the normal + reserve slots — the
          SAME, lower threshold as before this row existed, deliberately NOT the stricter
          `COMPUTE_ENTITY_AUTO_MERGE_CAP` (18) the automatic trigger itself now waits for — no merge
-         already in flight, room under `COMPUTE_ENTITY_CAP` on the output). While a merge is in
+         already in flight, room under the output's effective cap, and a live merge duration > 0 —
+         `isComputeMergeStartAvailableAtBoundary`). While a merge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
          live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count.
