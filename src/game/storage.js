@@ -2,6 +2,9 @@ import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameS
 import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
+
+
+
 // Drop __proto__/constructor/prototype at parse time so localStorage/Dev JSON cannot pollute merges.
 const safeJsonParse = jsonString =>
   JSON.parse(jsonString, (key, value) => {
@@ -406,8 +409,9 @@ const mergeTierMap = (freshMap, savedMap) => ({ ...freshMap, ...(savedMap ?? {})
 // those field names exist on the current shape, so a saved tier carrying `deposits` or `transfers`
 // is legacy and needs translating rather than a plain overlay (which would silently keep every
 // field at its fresh-state default, discarding real banked disks/Boosters/capacity progress).
+
 const isLegacyDataLakeTier = tier =>
-  tier != null && typeof tier === 'object' && !('depositedUnits' in tier) &&
+  isPlainObject(tier) && !('depositedUnits' in tier) &&
   ('deposits' in tier || 'transfers' in tier)
 
 // Legacy `transfers` entries (`{ remainingSeconds }`) each represent a Booster already fully PAID
