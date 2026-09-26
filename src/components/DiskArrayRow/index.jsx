@@ -1,4 +1,5 @@
 import {
+  canDiskSizeFeedWriteCache,
   formatCacheSize,
   formatDiskSize,
   formatDiskSizeBare,
@@ -371,7 +372,7 @@ const DiskArrayRow = ({ actions: _actions, size, state }) => {
                     ? (pullEligible
                       ? `Pulling into 1 free ${redeemTierName} — empties it, ready to fill again${hasReadCache ? ' from Memory' : ' from the size below'}`
                       : stranded
-                        ? `${redeemTierName ?? 'Its matching tier'} has already moved past this size — can't fund that tier again until the next Prestige, but may still feed the write cache into the next size up`
+                        ? `${redeemTierName ?? 'Its matching tier'} has already moved past this size — can't fund that tier again until the next Prestige${canDiskSizeFeedWriteCache(size) ? ', but may still feed the write cache into the next size up' : ''}`
                         : redeemable
                           ? 'Waiting its turn — the matching tier already has progress toward this level'
                           : `Pulls automatically once ${sizeLabel}'s own fixed corresponding tier reaches its matching level`)
