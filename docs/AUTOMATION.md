@@ -79,12 +79,19 @@ one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a transient
-Claude-side failure — HTTP 429 ("session limit") or a 5xx server overload (429/500/502/503/529,
-e.g. "Overloaded") — is downgraded to a warning (job stays green) since it made no changes and the
-next scheduled run retries automatically. Confirmed live on 2026-07-29: a run exhausted the SDK's own
+Claude-side failure is downgraded to a warning (job stays green) since it made no changes and the
+next scheduled run retries automatically. The shared classifier
+(`scripts/classify-claude-failure.sh`, also used by `autonomous-pr-followup.yml` since #752)
+recognizes two transient shapes on the last `type:"result"` entry: an `api_error_status` of
+429 ("session limit") or a 5xx server overload (500/502/503/529, e.g. "Overloaded"), and a
+"dead-before-work" shape with no `api_error_status` at all — `is_error:true` with
+`num_turns <= 1`, `total_cost_usd == 0`, and empty `modelUsage`. The first was confirmed live
+on 2026-07-29: a run exhausted the SDK's own
 10-attempt retry budget against a 529 and hard-failed under the classifier's original 429-only check
 — broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
-read as a real break to the next run's Phase 0 CI check.
+read as a real break to the next run's Phase 0 CI check. The second was confirmed live on
+2026-09-27 (#752): two `autonomous-pr-followup.yml` runs died in ~370ms with `num_turns:1` and zero
+cost, carrying no `api_error_status` — invisible to a status-keyed check.
 
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
@@ -380,6 +387,14 @@ copied per-workflow:
   caller-supplied
   extras (follow-up workflows pass every other workflow file since their prompts forbid
   all workflow edits). Run it from the same trusted main checkout as the guard.
+- `scripts/classify-claude-failure.sh [execution-file]` — the shared tolerated-failure
+  classifier paired with `continue-on-error: true` on a claude-code-action step: exits 0
+  (green-with-`::warning::`) for the two transient Claude-side shapes described under
+  "Autonomous maintenance" below, exits 1 for anything else. Both callers stage it into
+  `$RUNNER_TEMP` *before* the Claude step runs — from the sparse `main` checkout in the
+  follow-up workflow (so the pinned PR checkout can't substitute or delete it), and from
+  the workspace in maintenance (so a run that can Edit/Write `scripts/` can't weaken the
+  classification of its own failure). Covered by `classify-claude-failure.test.js`.
 
 ### PR follow-up (`autonomous-pr-followup.yml`)
 
@@ -400,7 +415,12 @@ stall autonomous PRs whose only feedback is bot review (#731); the allowlist key
 unresolved maintainer decision, see `docs/DESIGN_HISTORY.md`'s Jules incident — so it cannot
 trigger this secrets-bearing workflow) — and checks out the exact commit SHA rather than the
 branch name before running `git checkout -B <branch>` to un-detach HEAD. See
-`docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
+`docs/DESIGN_HISTORY.md` for the security reasoning behind each of these. The Claude step also
+carries the same tolerated-failure pair as the maintenance workflow (#752): `continue-on-error:
+true` plus a "Classify Claude step failure" step running the staged `main` copy of
+`scripts/classify-claude-failure.sh`, so a transient engine failure (API 429/5xx, or the
+dead-before-work shape that triggered it — see the classifier's header) downgrades to a warning
+instead of leaving a false red `followup` check on an otherwise-green PR.
 
 ### Dependabot PR follow-up (`dependabot-pr-followup.yml`)
 
