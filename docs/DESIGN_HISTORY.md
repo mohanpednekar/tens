@@ -1612,7 +1612,17 @@ access (`author_association` in `OWNER`/`COLLABORATOR`/`MEMBER`) before checkout
 public repo, anyone can comment on or review a PR without write access, which is the standard "pwn
 request" surface for privileged workflows on these trigger types; a runtime bash check alone isn't
 visible to CodeQL's static analysis, so this authorization check needs to live in the workflow YAML's
-`if:` to actually register as a mitigation. Checkout is pinned to the exact commit SHA (`headRefOid`)
+`if:` to actually register as a mitigation. That gate later gained one narrow exception (#731): a
+named allowlist of review/automation bot logins (`chatgpt-codex-connector[bot]`,
+`devin-ai-integration[bot]`, `Copilot`) also passes, because those apps post with `NONE`/
+`CONTRIBUTOR` author_association and would otherwise stall autonomous PRs whose only feedback is
+bot review. Keying on exact `user.login` — spoofable only by the GitHub App itself — is what makes
+this safe where broadening the accepted `author_association` values would not be (those cover
+arbitrary humans). `google-labs-jules[bot]` was considered and deliberately left off the allowlist:
+an actor whose repo access is under unresolved maintainer review (the Jules merge-conflict
+incident below) must not be able to trigger a workflow carrying `contents: write`,
+`pull-requests: write`, and `id-token: write`. Bot-authored feedback that does pass still enters
+the run as untrusted input, same as before. Checkout is pinned to the exact commit SHA (`headRefOid`)
 resolved at the same time as the authorization check, not the branch name — the branch is mutable, so
 re-resolving "the current tip" at checkout time would reopen a TOCTOU window between authorization and
 execution; a SHA is immutable. Since that leaves a detached HEAD, the prompt has Claude run
