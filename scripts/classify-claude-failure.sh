@@ -14,22 +14,28 @@
 # Exit 1 → real or unclassifiable failure (job goes red). Anything that can't
 # be positively classified as transient fails red — conservative by default.
 #
-# Transient shapes — both require is_error:true on the LAST `type:"result"`
-# entry of the execution JSON (which may be a bare object or an array):
+# Transient shapes — BOTH require is_error:true on the LAST `type:"result"`
+# entry of the execution JSON (which may be a bare object or an array) AND
+# zero-work evidence (num_turns <= 1, total_cost_usd == 0, empty modelUsage):
+# a run that did real work before dying keeps its red check — its partial
+# commits/comments may need a retry pass, which the next trigger (or the
+# check_suite failure itself, for the followup workflow) provides.
 #
 #   1. api_error_status ∈ {429, 500, 502, 503, 529} — usage-quota exhaustion
 #      ("session limit") or an Anthropic-side 5xx overload (e.g. 529
 #      "Overloaded"). Confirmed live 2026-07-29 on autonomous-maintenance.yml —
-#      see docs/AUTOMATION.md / docs/DESIGN_HISTORY.md.
-#   2. Dead-before-work — subtype:"success" with is_error:true, no
-#      api_error_status, num_turns <= 1, total_cost_usd == 0, empty
-#      modelUsage: the engine reported a structured (but errored) result after
-#      dying on startup, before doing any work. Confirmed live 2026-09-27 on
-#      autonomous-pr-followup.yml runs 36286193578 / 36286282545 (#752), whose
-#      result entry carried none of the api_error_status field shape 1 keys
-#      on. The subtype:"success" conjunct keeps unrecognized crash shapes —
-#      including a persistent CLI/action startup regression — failing red
-#      rather than silently downgrading.
+#      see docs/AUTOMATION.md / docs/DESIGN_HISTORY.md. (Stricter than the
+#      pre-#752 inline version, which keyed on the status alone; every
+#      confirmed transient incident was zero-work anyway, so the tightened
+#      predicate loses no real coverage.)
+#   2. Dead-before-work — subtype:"success", no api_error_status: the engine
+#      reported a structured (but errored) result after dying on startup.
+#      Confirmed live 2026-09-27 on autonomous-pr-followup.yml runs
+#      36286193578 / 36286282545 (#752), whose result entry carried none of
+#      the api_error_status field shape 1 keys on. The subtype:"success"
+#      conjunct keeps unrecognized crash shapes — including a persistent
+#      CLI/action startup regression — failing red rather than silently
+#      downgrading.
 #
 # A run that did real work and then hit a real error fails red as before.
 #
@@ -53,15 +59,16 @@ if [ -f "$out" ]; then
         | map(select(.type == "result"))
         | last
         | if (.is_error == true)
-             and (.api_error_status as $s | [429, 500, 502, 503, 529] | index($s) != null)
-          then "transient Claude API error (HTTP \(.api_error_status))"
-          elif (.is_error == true)
-               and (.subtype == "success")
-               and (.api_error_status == null)
-               and ((.num_turns // 999) <= 1)
-               and ((.total_cost_usd // 999) == 0)
-               and (((.modelUsage // {"_": true}) | length) == 0)
-          then "the engine died before doing any work (is_error:true with num_turns <= 1, total_cost_usd == 0, empty modelUsage, no api_error_status)"
+             and ((.num_turns // 999) <= 1)
+             and ((.total_cost_usd // 999) == 0)
+             and (((.modelUsage // {"_": true}) | length) == 0)
+          then
+            if (.api_error_status as $s | [429, 500, 502, 503, 529] | index($s) != null)
+            then "transient Claude API error (HTTP \(.api_error_status))"
+            elif (.api_error_status == null) and (.subtype == "success")
+            then "the engine died before doing any work (is_error:true with num_turns <= 1, total_cost_usd == 0, empty modelUsage, no api_error_status)"
+            else empty
+            end
           else empty
           end
       ' "$out" 2>/dev/null) || reason=""

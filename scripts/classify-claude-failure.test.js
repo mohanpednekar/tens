@@ -40,25 +40,41 @@ function resultEntry(overrides = {}) {
   };
 }
 
+const zeroWork = { num_turns: 1, total_cost_usd: 0, modelUsage: {} };
+
 describe('classify-claude-failure.sh', () => {
   it('downgrades an HTTP 429 quota error to a warning', () => {
-    const r = run(JSON.stringify([resultEntry({ api_error_status: 429 })]));
+    const r = run(
+      JSON.stringify([resultEntry({ ...zeroWork, api_error_status: 429 })]),
+    );
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/::warning::/);
     expect(r.stdout).toMatch(/429/);
   });
 
   it('downgrades a 5xx API overload to a warning', () => {
-    const r = run(JSON.stringify([resultEntry({ api_error_status: 529 })]));
+    const r = run(
+      JSON.stringify([resultEntry({ ...zeroWork, api_error_status: 529 })]),
+    );
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/::warning::/);
     expect(r.stdout).toMatch(/529/);
   });
 
   it('accepts a bare (non-array) result object', () => {
-    const r = run(JSON.stringify(resultEntry({ api_error_status: 503 })));
+    const r = run(
+      JSON.stringify(resultEntry({ ...zeroWork, api_error_status: 503 })),
+    );
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/503/);
+  });
+
+  it('fails red when an API error hit after real work', () => {
+    // api_error_status alone is not enough — a 429 mid-run after billed
+    // turns leaves partial work on the PR and must stay red.
+    const r = run(JSON.stringify([resultEntry({ api_error_status: 429 })]));
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/::error::/);
   });
 
   it('downgrades the dead-before-work shape (no api_error_status)', () => {
@@ -89,7 +105,9 @@ describe('classify-claude-failure.sh', () => {
   });
 
   it('fails red on an unrecognized api_error_status', () => {
-    const r = run(JSON.stringify([resultEntry({ api_error_status: 400 })]));
+    const r = run(
+      JSON.stringify([resultEntry({ ...zeroWork, api_error_status: 400 })]),
+    );
     expect(r.status).toBe(1);
     expect(r.stdout).toMatch(/::error::/);
   });
@@ -143,9 +161,9 @@ describe('classify-claude-failure.sh', () => {
 
   it('classifies only the LAST result entry', () => {
     const entries = [
-      resultEntry({ api_error_status: 429 }),
+      resultEntry({ ...zeroWork, api_error_status: 429 }),
       { type: 'summary', text: 'noise' },
-      resultEntry({ api_error_status: 500 }),
+      resultEntry({ ...zeroWork, api_error_status: 500 }),
     ];
     const r = run(JSON.stringify(entries));
     expect(r.status).toBe(0);

@@ -82,10 +82,12 @@ motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, 
 Claude-side failure is downgraded to a warning (job stays green) since it made no changes and the
 next scheduled run retries automatically. The shared classifier
 (`scripts/classify-claude-failure.sh`, also used by `autonomous-pr-followup.yml` since #752)
-recognizes two transient shapes on the last `type:"result"` entry: an `api_error_status` of
+recognizes two transient shapes on the last `type:"result"` entry — both gated on zero-work
+evidence (`num_turns <= 1`, `total_cost_usd == 0`, empty `modelUsage`, so a run that did real
+work before dying keeps its red check): an `api_error_status` of
 429 ("session limit") or a 5xx server overload (500/502/503/529, e.g. "Overloaded"), and a
-"dead-before-work" shape with no `api_error_status` at all — `is_error:true` with
-`num_turns <= 1`, `total_cost_usd == 0`, and empty `modelUsage`. The first was confirmed live
+"dead-before-work" shape with no `api_error_status` at all — `is_error:true` plus
+`subtype:"success"` so only the confirmed structured-result shape downgrades. The first was confirmed live
 on 2026-07-29: a run exhausted the SDK's own
 10-attempt retry budget against a 529 and hard-failed under the classifier's original 429-only check
 — broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
