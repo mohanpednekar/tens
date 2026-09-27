@@ -21,11 +21,15 @@
 #      ("session limit") or an Anthropic-side 5xx overload (e.g. 529
 #      "Overloaded"). Confirmed live 2026-07-29 on autonomous-maintenance.yml —
 #      see docs/AUTOMATION.md / docs/DESIGN_HISTORY.md.
-#   2. Dead-before-work — no api_error_status, num_turns <= 1,
-#      total_cost_usd == 0, empty modelUsage: the engine errored on startup
-#      before doing any work. Confirmed live 2026-09-27 on
+#   2. Dead-before-work — subtype:"success" with is_error:true, no
+#      api_error_status, num_turns <= 1, total_cost_usd == 0, empty
+#      modelUsage: the engine reported a structured (but errored) result after
+#      dying on startup, before doing any work. Confirmed live 2026-09-27 on
 #      autonomous-pr-followup.yml runs 36286193578 / 36286282545 (#752), whose
-#      result entry carried none of the api_error_status field shape 1 keys on.
+#      result entry carried none of the api_error_status field shape 1 keys
+#      on. The subtype:"success" conjunct keeps unrecognized crash shapes —
+#      including a persistent CLI/action startup regression — failing red
+#      rather than silently downgrading.
 #
 # A run that did real work and then hit a real error fails red as before.
 #
@@ -52,6 +56,7 @@ if [ -f "$out" ]; then
              and (.api_error_status as $s | [429, 500, 502, 503, 529] | index($s) != null)
           then "transient Claude API error (HTTP \(.api_error_status))"
           elif (.is_error == true)
+               and (.subtype == "success")
                and (.api_error_status == null)
                and ((.num_turns // 999) <= 1)
                and ((.total_cost_usd // 999) == 0)

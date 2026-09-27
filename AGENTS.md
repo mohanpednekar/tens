@@ -274,8 +274,9 @@ exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
 Shared helpers: `.github/actions/setup-node-yarn` (composite setup for trusted refs only),
-`scripts/pr-head-guard.sh` (fork/branch check sourced from main), and
-`scripts/claude-deny-settings.sh` (shared deny-list JSON for claude-code-action).
+`scripts/pr-head-guard.sh` (fork/branch check sourced from main),
+`scripts/claude-deny-settings.sh` (shared deny-list JSON for claude-code-action), and
+`scripts/classify-claude-failure.sh` (shared transient-failure classifier for the Claude steps).
 
 ## Reliability: cron dormancy
 

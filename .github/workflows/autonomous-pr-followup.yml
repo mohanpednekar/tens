@@ -136,7 +136,13 @@ jobs:
           # scripts/ would be the PR's own copy (or absent entirely), and a PR
           # must not control whether its own followup failure reads as
           # transient.
-          cp scripts/classify-claude-failure.sh "$RUNNER_TEMP/classify-claude-failure.sh"
+          # Tolerant by design: the script lands on `main` with this change, so
+          # on this very PR (whose head version of this workflow already runs
+          # the staging step while `main` still lacks the file) the cp simply
+          # warns and the classify step below fails closed instead of aborting
+          # the whole job before the Claude step even runs.
+          cp scripts/classify-claude-failure.sh "$RUNNER_TEMP/classify-claude-failure.sh" \
+            || echo "::warning::classifier script not present on main yet — Claude-step failures will stay red this run."
 
       - uses: actions/checkout@v7
         if: steps.pr.outputs.skip != 'true'
@@ -238,4 +244,10 @@ jobs:
         # classifier (scripts/classify-claude-failure.sh) is run from the
         # trusted `main` copy staged earlier, not the PR's checkout.
         if: steps.pr.outputs.skip != 'true' && steps.claude.outcome == 'failure'
-        run: bash "$RUNNER_TEMP/classify-claude-failure.sh" "${{ steps.claude.outputs.execution_file }}"
+        run: |
+          if [ -f "$RUNNER_TEMP/classify-claude-failure.sh" ]; then
+            bash "$RUNNER_TEMP/classify-claude-failure.sh" "${{ steps.claude.outputs.execution_file }}"
+          else
+            echo "::error::Staged classifier missing (script not on main yet?) — failing closed."
+            exit 1
+          fi

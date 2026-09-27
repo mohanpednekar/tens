@@ -368,7 +368,7 @@ open a `claude/self-heal-devin-autonomous-maintenance-*` fix PR.
 
 ### Shared workflow helpers
 
-To keep the workflows DRY and single-responsibility, three pieces are extracted instead of
+To keep the workflows DRY and single-responsibility, four pieces are extracted instead of
 copied per-workflow:
 
 - `.github/actions/setup-node-yarn` — composite action: `corepack enable` →

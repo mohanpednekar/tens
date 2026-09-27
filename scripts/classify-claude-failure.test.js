@@ -103,6 +103,26 @@ describe('classify-claude-failure.sh', () => {
     expect(r.stdout).toMatch(/::error::/);
   });
 
+  it('fails red on a zero-work error with an unrecognized subtype', () => {
+    // Same dead-before-work fields but a non-"success" subtype — e.g. a
+    // persistent CLI/action startup regression — must not downgrade.
+    const r = run(
+      JSON.stringify([
+        {
+          type: 'result',
+          subtype: 'error_during_execution',
+          is_error: true,
+          duration_ms: 200,
+          num_turns: 0,
+          total_cost_usd: 0,
+          modelUsage: {},
+        },
+      ]),
+    );
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/::error::/);
+  });
+
   it('fails red when the run succeeded but the step still failed', () => {
     const r = run(JSON.stringify([resultEntry({ is_error: false })]));
     expect(r.status).toBe(1);
