@@ -997,6 +997,10 @@ export const getComputeFlopsAffordableAndCost = (state, flopId, maxQuantity) => 
   const owned = clampNonNegative(state.computeFlops?.owned?.[flopId] ?? 0)
   let spendable = clampNonNegative(state.prestige?.points ?? 0)
 
+  // ⚡ Bolt Optimization: Infinity check short-circuit
+  // Prevents NaN corruption from Infinity - Infinity and avoids evaluating loop unnecessarily
+  if (spendable === Infinity) return { affordable: maxQuantity, totalCost: 0 }
+
   let quantity = 0
   let totalCost = 0
 
@@ -1042,6 +1046,10 @@ export const canBuyComputeFlopsTier = (state, flopId) => {
 }
 
 export const getComputeFlopsAffordableQuantity = (flopTier, ownedCount, spendable, requestedQuantity) => {
+  // ⚡ Bolt Optimization: Infinity check short-circuit
+  // Prevents NaN corruption from Infinity - Infinity and avoids evaluating loop unnecessarily
+  if (spendable === Infinity) return { affordable: requestedQuantity, totalCost: 0 }
+
   let affordable = 0
   let remainingSpendable = spendable
   let currentOwned = ownedCount
