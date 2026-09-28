@@ -1,4 +1,4 @@
-import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
+import { applyFlopsAutobuyerMilestones, capComputeMergeTimersToCurrentDuration, createEmptyDataLakes, createInitialGameState, normalizePoolMemoryCapacity } from './engine'
 import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
@@ -523,10 +523,12 @@ const mergeState = saved => {
     productionMilestoneTierClaims: _legacyMilestoneTierClaims,
     computeFundedBandwidthClaims: _legacyComputeFundedClaims,
     computeBandwidthSacrificeIndex: _legacySacrificeIndex,
+    // Removed with the merge-duration upgrade (#755).
+    computeMergeDurationUpgrades: _legacyComputeMergeDurationUpgrades,
     ...savedIntroClean
   } = saved.intro ?? {}
 
-  return normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
+  return capComputeMergeTimersToCurrentDuration(normalizePoolMemoryCapacity(applyFlopsAutobuyerMilestones({
     ...fresh,
     ...savedClean,
     scaleUpCount: saved.scaleUpCount ?? legacySpeedUpCount ?? fresh.scaleUpCount,
@@ -583,7 +585,7 @@ const mergeState = saved => {
       owned: { ...fresh.computeFlops.owned, ...(saved.computeFlops?.owned ?? {}) },
       cumulativeBoost: { ...fresh.computeFlops.cumulativeBoost, ...(saved.computeFlops?.cumulativeBoost ?? {}) },
     },
-  }))
+  })))
 }
 
 // Stamps a separate "last save" timestamp on every save (its own key, like the timestamp isn't

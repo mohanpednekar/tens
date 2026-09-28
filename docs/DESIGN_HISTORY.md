@@ -8812,8 +8812,10 @@ rate) for Core→Node and multiply by 10 at every later boundary, with a sacrifi
 (#377/#380) that dropped a boundary to ×5. Deep merges became impractically long, and the upgrade
 existed only to patch that chain. The maintainer asked that a merge take only as long as 8 normal
 disks take to fill, without scaling within the pool. `getComputeMergeDurationSeconds` is now
-`8 × smallestDiskBits / (poolBandwidth × DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)` for the input
-tier's own pool (Cores → pool 1, …), the same rate a read-cache flush fills that disk. The pool's
+`8 × getDiskReadCacheFlushSeconds(smallestDisk)` for the input tier's own pool (Cores → pool 1, …).
+One read-cache flush fills one whole disk. An earlier draft used the flush's per-block rate for the
+whole disk, which was 8× too slow. Timers already in flight under the old chain are capped on load
+(`capComputeMergeTimersToCurrentDuration`). The pool's
 larger ×10/×100 disks are deliberately ignored. The duration upgrade, its state field
 (`intro.computeMergeDurationUpgrades`, now ignored on load), `getCoreEarnTimeSeconds` and the
 ×10/×5 constants were removed. The alternative of keeping the upgrade as a ×0.5 speed-up was

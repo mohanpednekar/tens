@@ -1167,8 +1167,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    tokens out of the input entity and starts the timer at that boundary's live duration from
    `getComputeMergeDurationSeconds`: `COMPUTE_MERGE_RATIO` (8) × the time one of the input tier's
    own pool's SMALLEST disks takes to fill (Cores → pool 1, Nodes → pool 2, …), i.e.
-   `8 × smallestDiskBits / (getStoragePoolBandwidth(pool) × DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)`
-   — the same rate a read-cache flush fills that disk at. The pool's ×10/×100 disks never count, so
+   `8 × getDiskReadCacheFlushSeconds(state, smallestDiskBits)` — one read-cache flush fills one
+   whole disk. On load, `capComputeMergeTimersToCurrentDuration` caps any in-flight timer that
+   was snapshotted under the old, longer formula. The pool's ×10/×100 disks never count, so
    the timer does not escalate within a pool, and there is no boundary-to-boundary multiplier. 0
    (merge unavailable) while that pool has no Bandwidth. Snapshotted at merge start so in-flight
    timers do not rescale mid-merge. There is no merge-duration upgrade (removed, #755).

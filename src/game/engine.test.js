@@ -10,6 +10,7 @@ import {
   canForfeitComputeBoost,
   forfeitComputeBoost,
   getComputeMergeDurationSeconds,
+  capComputeMergeTimersToCurrentDuration,
   getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
@@ -5071,15 +5072,14 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(getComputeMergeDurationSeconds(state, 1.5)).toBe(0)
   })
 
-  it('Core→Node is 8 fills of pool 1\'s smallest disk at its read-cache flush rate', () => {
+  it('Core→Node is 8 fills of pool 1\'s smallest disk (one read-cache flush fills one disk)', () => {
     const state = poolVisible()
     const bandwidth = getStoragePoolBandwidth(state, 1)
     expect(bandwidth).toBeGreaterThan(0)
-    const expected = COMPUTE_MERGE_RATIO * getDiskLadderSizeBits(1) / (bandwidth * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
-    expect(getComputeMergeDurationSeconds(state, 0)).toBeCloseTo(expected, 9)
-    // Same as 8 whole-disk read-cache flushes (DISK_CACHE_BLOCK_COUNT blocks each).
-    expect(getComputeMergeDurationSeconds(state, 0)).toBeCloseTo(
-      COMPUTE_MERGE_RATIO * DISK_CACHE_BLOCK_COUNT * getDiskReadCacheFlushSeconds(state, getDiskLadderSizeBits(1)),
+    const flushSeconds = getDiskReadCacheFlushSeconds(state, getDiskLadderSizeBits(1))
+    expect(getComputeMergeDurationSeconds(state, 0)).toBeCloseTo(COMPUTE_MERGE_RATIO * flushSeconds, 9)
+    expect(flushSeconds).toBeCloseTo(
+      getDiskLadderSizeBits(1) / DISK_CACHE_BLOCK_COUNT / (bandwidth * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER),
       9,
     )
   })
@@ -5087,11 +5087,10 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
   it('uses each pool\'s smallest disk, not the ×10/×100 sizes, and no boundary-to-boundary ×10 chain', () => {
     // Enough Capacity for pool 2 to be visible.
     const state = poolVisible({ capacity: 8 * 1024 ** 2 * 4 })
-    const bandwidth2 = getStoragePoolBandwidth(state, 2)
-    expect(bandwidth2).toBeGreaterThan(0)
+    expect(getStoragePoolBandwidth(state, 2)).toBeGreaterThan(0)
     const pool2SmallestDisk = getDiskLadderSizeBits(DATA_LAKE_SUB_SIZES.length + 1)
     expect(getComputeMergeDurationSeconds(state, 1)).toBeCloseTo(
-      COMPUTE_MERGE_RATIO * pool2SmallestDisk / (bandwidth2 * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER),
+      COMPUTE_MERGE_RATIO * getDiskReadCacheFlushSeconds(state, pool2SmallestDisk),
       9,
     )
   })
@@ -5101,6 +5100,24 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     const lastBoundary = COMPUTE_MERGE_BOUNDARIES.length - 1
     expect(getStoragePoolBandwidth(state, lastBoundary + 1)).toBe(0)
     expect(getComputeMergeDurationSeconds(state, lastBoundary)).toBe(0)
+  })
+
+  it('refuses to start a merge while the input tier\'s pool has no Bandwidth', () => {
+    const state = poolVisible({ autoMergeNodesIntoCluster: true, computeNodes: COMPUTE_MERGE_RATIO })
+    expect(getComputeMergeDurationSeconds(state, 1)).toBe(0)
+    expect(isComputeNodesMergeStartAvailable(state)).toBe(false)
+    expect(startComputeNodesMerge(state)).toBe(state)
+  })
+
+  it('capComputeMergeTimersToCurrentDuration caps a legacy over-long in-flight timer, and leaves others alone', () => {
+    const duration = getComputeMergeDurationSeconds(poolVisible(), 0)
+    const legacy = poolVisible({ computeCoresMergeRemainingSeconds: duration * 1000, computeNodesMergeRemainingSeconds: 5e6 })
+    const capped = capComputeMergeTimersToCurrentDuration(legacy)
+    expect(capped.intro.computeCoresMergeRemainingSeconds).toBe(duration)
+    // Pool 2 not visible → duration 0 → left alone.
+    expect(capped.intro.computeNodesMergeRemainingSeconds).toBe(5e6)
+    const fine = poolVisible({ computeCoresMergeRemainingSeconds: duration / 2 })
+    expect(capComputeMergeTimersToCurrentDuration(fine)).toBe(fine)
   })
 
   it('a newly started Core→Node merge snapshots the live duration', () => {

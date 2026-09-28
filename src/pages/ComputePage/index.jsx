@@ -746,7 +746,9 @@ const ComputePage = ({ game }) => {
                                 ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a ${formatOfflineDuration(getComputeMergeDurationSeconds(state, rowIndex))} merge into 1 ${row.mergeOutputLabel}`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots (and a running Byte generator) — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                                  : !(getComputeMergeDurationSeconds(state, rowIndex) > 0)
+                                    ? `Merges wait until this tier's Storage pool is unlocked (its disks set the merge time)`
+                                    : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           type="button"
                         >

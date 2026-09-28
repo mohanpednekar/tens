@@ -413,10 +413,11 @@ const InfoPage = () => {
             held). The reserve fills gradually as that tier keeps growing past its normal 10 — via
             continued Booster purchases or a lower-tier merge — rather than all at once. A merge
             itself, once started, runs a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
-            smallest disks in that tier’s own Storage pool take to fill at the pool’s Bandwidth
+            smallest disks in that tier’s own Storage pool take to fill from their read cache
             (Cores use the KB pool, Nodes the MB pool, and so on). The pool’s larger disks don’t
-            count, so the timer never escalates within a pool. An in-flight timer keeps the
-            duration snapshotted at start. Before unlock, merges stay instant.
+            count, so the timer never escalates within a pool. A tier’s merges wait until its
+            pool is unlocked. An in-flight timer keeps the duration snapshotted at start. Before
+            unlock, merges stay instant.
           </li>
           <li>
             Auto-merge starts only once the input tier reaches the FULL extended cap (

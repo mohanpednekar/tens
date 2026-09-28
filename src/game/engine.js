@@ -5584,9 +5584,9 @@ const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoF
 
 // Effective timed-merge duration for boundaryIndex (0 = Core→Node, …): the time COMPUTE_MERGE_RATIO
 // (8) of the input tier's own pool's smallest ("normal") disks take to fill. Cores map to pool 1,
-// Nodes to pool 2, … (the same tier ↔ pool pairing Data Lakes/Boosters use). One disk fills at the
-// pool's own read-cache flush rate — Bandwidth × DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, see
-// getDiskReadCacheFlushSeconds — so this tracks the pool's live Bandwidth. Deliberately uses only
+// Nodes to pool 2, … (the same tier ↔ pool pairing Data Lakes/Boosters use). One disk fills in one
+// read-cache flush (getDiskReadCacheFlushSeconds — a flush pours the whole cache into the disk), so
+// this tracks the pool's live Bandwidth. Deliberately uses only
 // the pool's smallest size, never its ×10/×100 disks: the timer does not escalate within a pool,
 // and there is no longer a boundary-to-boundary ×10 chain (see docs/DESIGN_HISTORY.md). Returns 0
 // (merge unavailable — startComputeMergeReserve no-ops) for an invalid boundary or while that pool
@@ -5597,8 +5597,26 @@ export const getComputeMergeDurationSeconds = (state, boundaryIndex) => {
   const bandwidth = getStoragePoolBandwidth(state, poolIndex)
   if (!(bandwidth > 0) || !Number.isFinite(bandwidth)) return 0
   const normalDiskBits = getDiskLadderSizeBits((poolIndex - 1) * DATA_LAKE_SUB_SIZES.length + 1)
-  const diskFillSeconds = normalDiskBits / (bandwidth * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
-  return COMPUTE_MERGE_RATIO * diskFillSeconds
+  return COMPUTE_MERGE_RATIO * getDiskReadCacheFlushSeconds(state, normalDiskBits)
+}
+
+// Load-time clamp: an in-flight reserve merge snapshotted under the old, much longer Core-earn ×10
+// chain (#755) would otherwise keep counting down for weeks. Caps each boundary's timer at its
+// current duration whenever that duration is positive; a 0 duration (pool not visible) leaves the
+// timer alone. Same-reference no-op when nothing needs capping.
+export const capComputeMergeTimersToCurrentDuration = state => {
+  if (!state?.intro) return state
+  let nextIntro = null
+  COMPUTE_MERGE_BOUNDARIES.forEach((boundary, index) => {
+    const remaining = state.intro[boundary.timerField] ?? 0
+    if (!(remaining > 0)) return
+    const duration = getComputeMergeDurationSeconds(state, index)
+    if (duration > 0 && remaining > duration) {
+      nextIntro = nextIntro ?? { ...state.intro }
+      nextIntro[boundary.timerField] = duration
+    }
+  })
+  return nextIntro ? { ...state, intro: nextIntro } : state
 }
 
 // UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
@@ -5647,7 +5665,7 @@ export const isComputeMergeStartAvailableAtBoundary = (state, boundaryIndex) => 
   return isComputeMergeReserveStartAvailable(state, boundary.inputField, boundary.outputField, boundary.autoFlagField, boundary.timerField)
 }
 
-// Manual start that reads the live (possibly step-upgraded) duration from state and snapshots it
+// Manual start that reads the live duration from state and snapshots it
 // onto the timer field.
 const startComputeMergeReserveAtBoundary = (boundaryIndex, threshold) => state => {
   const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
