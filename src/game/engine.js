@@ -5513,7 +5513,7 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // a timed RESERVE pool (see COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js
 // / below): starting a merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input
 // entity, then counts down that boundary's duration (8 normal-disk fills of the input tier's own
-// pool — snapshotted at start so an in-flight timer does not rescale mid-merge) before
+// pool — snapshotted at start, then clamped down (never up) to the live duration each tick) before
 // granting 1 of the output entity (cap-checked) and clearing the timer — at most one merge in
 // flight per boundary at a time. Auto-triggers only once the input reaches the FULL extended cap
 // (18, not just the primary 10) — a stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8),
@@ -5580,8 +5580,13 @@ const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) =
 // first tick its pool has Bandwidth. It never lengthens. Applied every tick (not just on load) so a
 // reload can't shorten a merge any more than simply waiting would.
 const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoFlagField, timerField, boundaryIndex) => state => {
-  const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
   const remaining = state.intro?.[timerField] ?? 0
+  // Only compute the (Bandwidth-derived) duration when this boundary needs it — a timer to clamp or
+  // an auto-start to evaluate — so idle boundaries stay cheap in long offline replays.
+  const mayAutoStart = Boolean(state.intro?.[autoFlagField]) &&
+    (state.intro?.[inputField] ?? 0) >= COMPUTE_ENTITY_AUTO_MERGE_CAP
+  if (!(remaining > 0) && !mayAutoStart) return state
+  const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
   const clamped = durationSeconds > 0 && remaining > durationSeconds
     ? { ...state, intro: { ...state.intro, [timerField]: durationSeconds } }
     : state
