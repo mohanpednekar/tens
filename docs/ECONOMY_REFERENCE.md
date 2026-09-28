@@ -1168,11 +1168,12 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `getComputeMergeDurationSeconds`: `COMPUTE_MERGE_RATIO` (8) × the time one of the input tier's
    own pool's SMALLEST disks takes to fill (Cores → pool 1, Nodes → pool 2, …), i.e.
    `8 × getDiskReadCacheFlushSeconds(state, smallestDiskBits)` — one read-cache flush fills one
-   whole disk. On load, `capComputeMergeTimersToCurrentDuration` caps any in-flight timer that
-   was snapshotted under the old, longer formula. The pool's ×10/×100 disks never count, so
+   whole disk. The pool's ×10/×100 disks never count, so
    the timer does not escalate within a pool, and there is no boundary-to-boundary multiplier. 0
-   (merge unavailable) while that pool has no Bandwidth. Snapshotted at merge start so in-flight
-   timers do not rescale mid-merge. There is no merge-duration upgrade (removed, #755).
+   (merge unavailable) while that pool has no Bandwidth. Snapshotted at merge start, but each tick
+   (`tickComputeMergeBoundary`) clamps an in-flight timer down to the current live duration: it
+   shrinks if the pool's Bandwidth grows, and never lengthens. This also brings down timers
+   snapshotted under the old, longer formula. There is no merge-duration upgrade (removed, #755).
    `tickComputeMergeReserveTimer` counts an in-flight merge's remaining duration down every
    tick (frozen or not, same posture as every other Byte Foundry mechanic) and, on completion, grants
    1 of the output entity (capped at its effective cap, but never lowering a count that grew past it

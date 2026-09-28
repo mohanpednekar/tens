@@ -10,7 +10,6 @@ import {
   canForfeitComputeBoost,
   forfeitComputeBoost,
   getComputeMergeDurationSeconds,
-  capComputeMergeTimersToCurrentDuration,
   getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
@@ -5109,15 +5108,15 @@ describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool
     expect(startComputeNodesMerge(state)).toBe(state)
   })
 
-  it('capComputeMergeTimersToCurrentDuration caps a legacy over-long in-flight timer, and leaves others alone', () => {
+  it('an in-flight timer is clamped down to the live duration on tick (legacy/Bandwidth growth), never lengthened', () => {
     const duration = getComputeMergeDurationSeconds(poolVisible(), 0)
-    const legacy = poolVisible({ computeCoresMergeRemainingSeconds: duration * 1000, computeNodesMergeRemainingSeconds: 5e6 })
-    const capped = capComputeMergeTimersToCurrentDuration(legacy)
-    expect(capped.intro.computeCoresMergeRemainingSeconds).toBe(duration)
-    // Pool 2 not visible → duration 0 → left alone.
-    expect(capped.intro.computeNodesMergeRemainingSeconds).toBe(5e6)
-    const fine = poolVisible({ computeCoresMergeRemainingSeconds: duration / 2 })
-    expect(capComputeMergeTimersToCurrentDuration(fine)).toBe(fine)
+    const legacy = poolVisible({ autoMergeCoresIntoNode: true, computeCoresMergeRemainingSeconds: duration * 1000 })
+    expect(tickAutoMergeCoresIntoNode(1)(legacy).intro.computeCoresMergeRemainingSeconds).toBeCloseTo(duration - 1, 9)
+    const short = poolVisible({ autoMergeCoresIntoNode: true, computeCoresMergeRemainingSeconds: duration / 2 })
+    expect(tickAutoMergeCoresIntoNode(1)(short).intro.computeCoresMergeRemainingSeconds).toBeCloseTo(duration / 2 - 1, 9)
+    // Pool 2 not visible → duration 0 → the timer just counts down as snapshotted.
+    const hidden = poolVisible({ autoMergeNodesIntoCluster: true, computeNodesMergeRemainingSeconds: 5e6 })
+    expect(tickAutoMergeNodesIntoCluster(1)(hidden).intro.computeNodesMergeRemainingSeconds).toBe(5e6 - 1)
   })
 
   it('a newly started Core→Node merge snapshots the live duration', () => {

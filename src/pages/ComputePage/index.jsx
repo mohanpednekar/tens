@@ -747,7 +747,7 @@ const ComputePage = ({ game }) => {
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
                                   : !(getComputeMergeDurationSeconds(state, rowIndex) > 0)
-                                    ? `Merges wait until this tier's Storage pool is unlocked (its disks set the merge time)`
+                                    ? `Merges wait until this tier's Storage pool is visible (grow Data Stream Capacity — its disks set the merge time)`
                                     : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           type="button"

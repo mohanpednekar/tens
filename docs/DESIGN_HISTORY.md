@@ -8814,8 +8814,9 @@ existed only to patch that chain. The maintainer asked that a merge take only as
 disks take to fill, without scaling within the pool. `getComputeMergeDurationSeconds` is now
 `8 × getDiskReadCacheFlushSeconds(smallestDisk)` for the input tier's own pool (Cores → pool 1, …).
 One read-cache flush fills one whole disk. An earlier draft used the flush's per-block rate for the
-whole disk, which was 8× too slow. Timers already in flight under the old chain are capped on load
-(`capComputeMergeTimersToCurrentDuration`). The pool's
+whole disk, which was 8× too slow. Each tick clamps an in-flight timer down to the live duration, which also shortens timers
+already in flight under the old chain. A load-time-only cap was tried first and rejected: it
+let a reload shorten a running merge further than waiting would. The pool's
 larger ×10/×100 disks are deliberately ignored. The duration upgrade, its state field
 (`intro.computeMergeDurationUpgrades`, now ignored on load), `getCoreEarnTimeSeconds` and the
 ×10/×5 constants were removed. The alternative of keeping the upgrade as a ×0.5 speed-up was

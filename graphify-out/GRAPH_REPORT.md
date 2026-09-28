@@ -1,89 +1,84 @@
 # Graph Report - tens  (2026-09-28)
 
 ## Corpus Check
-- 126 files · ~486,276 words
+- 126 files · ~486,326 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .ico 1)
 
 ## Summary
-- 1727 nodes · 6339 edges · 93 communities (78 shown, 15 thin omitted)
-- Extraction: 66% EXTRACTED · 34% INFERRED · 0% AMBIGUOUS · INFERRED: 2144 edges (avg confidence: 0.95)
+- 1726 nodes · 6333 edges · 88 communities (73 shown, 15 thin omitted)
+- Extraction: 66% EXTRACTED · 34% INFERRED · 0% AMBIGUOUS · INFERRED: 2143 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a0f885a1`
+- Built from commit: `255ca310`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - AppNav/index.jsx
 - MainPage/index.jsx
-- Key engine functions (`src/game/engine.js`)
+- Byte Foundry
 - layers.js
 - navAttention.js
 - ComputePage/index.jsx
 - ByteFoundryPage
 - Automation workflows
-- MainPage reference
+- Key engine functions (`src/game/engine.js`)
 - App.jsx
 - Tens
-- useIncrementalGame
-- tickGame
+- Pool-local resets
+- run-simulation.mjs
 - Economy model
 - DevModePage/index.jsx
 - engine.js
 - clampNonNegative
 - ref_child_process
-- run-simulation.mjs
-- applyDevGameStateJson
+- fillDataLakeManually
+- DataLakePanel/index.jsx
 - What You Must Do When Invoked
 - bump-version.mjs
 - engine.test.js
-- MilestonesPage/index.jsx
+- Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit
 - ComputeFlopsPage/index.jsx
-- tokens.js
+- Theming reference
 - AGENTS.md
 - Testing
 - SettingsPage/index.jsx
-- styled-components
+- MilestonesPage/index.jsx
 - Design history & rationale
 - CLAUDE.md
-- mergeState
+- buyBooster
 - Shared components reference
-- DataLakePanel/index.jsx
+- DataLakePanel
 - navAttention.test.js
 - package.json
 - createInitialGameState
 - hasTiersGameAttention
-- Changelog
-- What it does
+- [Unreleased]
+- getStoragePoolCapacity
 - devDependencies
 - DiskArrayRow
 - scripts
 - ByteFoundryPage/index.jsx
 - contrast.js
-- MainPage
+- MainPage reference
 - Procedure
 - main
-- vitest
+- capacitorConfig.test.js
 - backlog-issue-hygiene.sh
 - graphify reference: extra exports and benchmark
 - dependencies
 - epic-407-issue-hygiene.sh
 - file-task-issue/SKILL.md
-- formatCurrency
+- DevModePage
 - generate-pwa-icons.mjs
-- buyTickspeedMultiplier
-- getSaveIncompatibilityReason
-- tickComputeFlopsAutobuyers
+- tickGame
 - economy-change-review/SKILL.md
 - optimize-ai-files/SKILL.md
 - @playwright/test
-- react
 - graphify reference: query, path, explain
-- mergeDataLakes
 - palette.md
-- simulate-run-times/SKILL.md
 - resolutions
 - sync-release-milestones.sh
 - adversarialReviewMarker.js
@@ -105,7 +100,7 @@
 - extraction-spec.md
 - PWA_REFERENCE.md
 - resolve-pr-threads.sh
-- storage.js
+- useIncrementalGame
 - claude-deny-settings.sh
 - pr-head-guard.sh
 
@@ -122,8 +117,6 @@
 10. `clampNonNegative()` - 76 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `A seventh Codex round: a real engine bug, and the simulator's own "hard cap" had gone stale too` --references--> `formatCapacityLabel()`  [INFERRED]
-  docs/DESIGN_HISTORY.md → .claude/skills/simulate-run-times/run-simulation.mjs
 - `Automation workflows` --references--> `main()`  [INFERRED]
   CLAUDE.md → scripts/bump-version.mjs
 - `Changelog convention` --references--> `main()`  [INFERRED]
@@ -132,183 +125,185 @@
   CLAUDE.md → scripts/bump-version.mjs
 - `5. Specs go stale — write defensively, and re-verify before filing a rewrite` --references--> `main()`  [INFERRED]
   .claude/skills/file-task-issue/SKILL.md → scripts/bump-version.mjs
+- `Why a PAT instead of the default `GITHUB_TOKEN`` --references--> `main()`  [INFERRED]
+  docs/DESIGN_HISTORY.md → scripts/bump-version.mjs
 
 ## Import Cycles
 - None detected.
 
-## Communities (93 total, 15 thin omitted)
+## Communities (88 total, 15 thin omitted)
 
 ### Community 0 - "AppNav/index.jsx"
 Cohesion: 0.22
 Nodes (8): APP_NAV_BOTTOM_PAD, AttentionDot, Bar, Icon, Label, NavItem, pulseHigh, ATTENTION_HIGH
 
 ### Community 1 - "MainPage/index.jsx"
-Cohesion: 0.03
-Nodes (59): getNextBytePowerProgressFraction(), BalancesSentinel, BuyButton, BuyButtonCostLabel, BuyButtonIcon, BytePowerSegment, BytePowerSegmentFill, BytePowerSegments (+51 more)
+Cohesion: 0.04
+Nodes (65): Factory MoneyHero frozen after Kilobytes → Bytes (#430 / #442), Whole-Byte tier costs converted from an arbitrary-looking bit count to Bytes in scientific notation, formatAsCleanBytesIfExactMultiple(), formatBytes(), formatCurrency(), formatMoneyBalance(), formatScientific(), RESOURCE_SYMBOL() (+57 more)
 
-### Community 2 - "Key engine functions (`src/game/engine.js`)"
-Cohesion: 0.11
-Nodes (50): actFoundry(), Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04, Disk redemption: from price coincidence to a fixed one-to-one tier+level mapping, Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens, Idle disk liquidation removed entirely — stranded disks now just sit idle instead of being converted to Bits, Timed read-cache → disk flush (#445), Byte Foundry, Key engine functions (`src/game/engine.js`) (+42 more)
+### Community 2 - "Byte Foundry"
+Cohesion: 0.17
+Nodes (32): Boosters UI revamp: buyBooster now pauses at COMPUTE_ENTITY_CAP; tier row buttons no longer clump left — 2026-09-17, Compute Boost: Reclaim and Forfeit made mutually exclusive — 2026-09-04, Data Lake Boosters, take two: from a spendable balance to a live transfer pipe, Data Lake unlock/capacity tied to real Storage progress; giant-circle CSS bug; Compute Boost reclaim floor — 2026-09-03, Byte Foundry, activateComputeBoost(), canActivateComputeBoost(), canForfeitComputeBoost() (+24 more)
 
 ### Community 3 - "layers.js"
-Cohesion: 0.04
-Nodes (91): seedDataLakeSave(), ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), TIER_UNLOCK_PREV_LEVEL_REQUIREMENT, AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST (+83 more)
+Cohesion: 0.03
+Nodes (103): seedDataLakeSave(), version, ALL_TIER_IDS, derivePurchaseFieldsFromCounts(), seedMainGameState(), TIER_UNLOCK_PREV_LEVEL_REQUIREMENT, AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS (+95 more)
 
 ### Community 4 - "navAttention.js"
-Cohesion: 0.12
-Nodes (28): enableAutoMerge(), isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable(), isAutoMergeCoresIntoNodeUnlockAvailable(), isAutoMergeDatacentersIntoSupercomputerUnlockAvailable(), isAutoMergeFabricsIntoCloudUnlockAvailable(), isAutoMergeGridsIntoFabricUnlockAvailable(), isAutoMergeNetworksIntoGridUnlockAvailable() (+20 more)
+Cohesion: 0.10
+Nodes (35): isAutoMergeCloudsIntoDatacenterUnlockAvailable(), isAutoMergeClustersIntoNetworkUnlockAvailable(), isAutoMergeCoresIntoNodeUnlockAvailable(), isAutoMergeDatacentersIntoSupercomputerUnlockAvailable(), isAutoMergeFabricsIntoCloudUnlockAvailable(), isAutoMergeGridsIntoFabricUnlockAvailable(), isAutoMergeNetworksIntoGridUnlockAvailable(), isAutoMergeNodesIntoClusterUnlockAvailable() (+27 more)
 
 ### Community 5 - "ComputePage/index.jsx"
 Cohesion: 0.06
-Nodes (31): COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RESERVE_CAP, ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow (+23 more)
+Nodes (30): Compute merge timers switched from a Core-earn ×10 chain to 8 normal-disk fills (#755), getComputeMergeDurationSeconds(), startComputeMergeReserve(), startComputeMergeReserveAtBoundary(), ActiveBoostRow, ArmedStatusText, AutoBoostLabel, AutoBoostRow (+22 more)
 
 ### Community 6 - "ByteFoundryPage"
-Cohesion: 0.18
-Nodes (43): Fixed, Removed, Pool-local resets, Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08, Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08, Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09, Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09, Devin Review on PR #608, round 6: a provenance-tracking fix superseding an incomplete bot revert — 2026-09-09 (+35 more)
+Cohesion: 0.24
+Nodes (30): Removed, Architecture, Devin Review on PR #608: an unreachable self-heal branch, a legacy-save wake-up gap, two stale docs — 2026-09-08, Devin Review on PR #614: a false-update bug, a stale comment, and a deliberately-unfixed legacy-save ambiguity — 2026-09-09, Four bot-review findings on the pool-liveness/Data-Lake PR: manual-fill overspend, a dead Fill button, a stale doc paragraph, and a UI/engine buffer mismatch, Per-pool Memory buffers: a real intermediary reservoir between the Data Stream and Storage spending, Pool 1 byte generator: binary Memory units, doubling capacity cap, ×4 Bandwidth ladder (#457, epic #456), Provision Disk funding split into passes, pool Capacity ceilings shrunk 10x, queue toggle removed — 2026-09-08 (+22 more)
 
 ### Community 7 - "Automation workflows"
 Cohesion: 0.14
 Nodes (14): Auto-merge merge method must match the Main ruleset (2026-08-20), Auto-merge (`pr-auto-merge.yml`) — why the low-risk path is safe even if heuristics mis-fire, Automation design principles, Automation workflows, Cursor-powered successor engine removed (never enabled) — 2026-09-14, Orchestration model — background, Outage: the main prompt tripped GitHub's 21,000-character mixed-expression limit, Permission block reasoning (+6 more)
 
-### Community 8 - "MainPage reference"
-Cohesion: 0.12
-Nodes (37): `DiskArrayRow/index.jsx`, "0.xyz <unit>" fractions eliminated from every Byte/bit-denominated display, A second Devin Review finding on the same PR: the level-1 cache fallback could spend cache out from under an in-flight read-cache flush, leaving it stuck for its whole remaining duration then producing no disk, ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight, Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature, Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate, Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit; Pool Bandwidth moved beside its title, Data Stream/pool balances skip their padded trailing zeros once full for more than a second (+29 more)
+### Community 8 - "Key engine functions (`src/game/engine.js`)"
+Cohesion: 0.14
+Nodes (29): Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, Compute Cores reworked: capacity-tied flush cost, not a fixed 10 MB / Storage-fullness gate, Forced priority order (Storage Bank Fill > Bandwidth > Storage Bank Build > Compute > Memory), and splitting Storage/Compute into their own screens, Pool Bandwidth's formula corrected — follows the raw Speed doublings via the SI transform, not sqrt(Capacity), Pool Capacity doubling mechanic itself corrected to land on SI-clean intermediate steps, Pool Capacity's SI-clean doubling mechanic reverted — it broke the Data Stream tile's own binary display, Precision loss at large magnitudes in the SI-clean transform — fixed with a closed-form computation, Sacrifice confirm: in-game dialog; Core warning only when unlocked (+21 more)
 
 ### Community 9 - "App.jsx"
-Cohesion: 0.18
-Nodes (19): Sacrifice confirm: in-game dialog; Core warning only when unlocked, App(), GATE_EXEMPT_PAGES, PageShell, resolveInitialThemeMode(), isComputeCoreConversionUnlocked(), getComputeAttentionLevel(), getNavAttention() (+11 more)
+Cohesion: 0.15
+Nodes (18): react, react-dom, web-vitals, App(), GATE_EXEMPT_PAGES, PageShell, resolveInitialThemeMode(), getComputeFlopsAttentionLevel() (+10 more)
 
 ### Community 10 - "Tens"
 Cohesion: 0.15
 Nodes (9): Economy model reference, Byte Foundry, Core economy, Game architecture, Game design, Guide, Scripts, Security notes (+1 more)
 
-### Community 11 - "useIncrementalGame"
-Cohesion: 0.26
-Nodes (22): Dev Mode, Security notes, Offline progress, getOfflineEffectiveSeconds(), clearAllSaveProgress(), clearDevGameState(), clearGameState(), clearSaveSlot() (+14 more)
+### Community 11 - "Pool-local resets"
+Cohesion: 0.21
+Nodes (26): Pool-local resets, A live tap bonus could survive into the pool gauge's mode switch, breaking the "clean transition at 50%" claim, A third Codex round: invisible cache activity, a stale Fill tooltip, a Buy button hidden behind Scale Out, and an unclamped legacy-save buffer, Pool cards gated on a capacity threshold too; read cache pre-fills on pool unlock; manual transfer-block UI removed, Pool liveness decoupled from disk-build progress; Data Lakes fill manually before their pool completes, Storage's own reveal threshold lowered to pool 1's own capacity gate; Data Lake panel redesigned; Dev Mode's raw state-updater gap closed, Upgrade Data Stream arms below a full Buffer (outflow pause), clearIntroCapacityUpgradeQueue() (+18 more)
 
-### Community 12 - "tickGame"
-Cohesion: 0.14
-Nodes (40): 5. Authorization boundary, actMainBuys(), wouldAutobuyerStall(), `OfflineProgressNotice/index.jsx`, Architecture / MainPage UI decisions, Cost-epoch exponent sequence changed a third time: Fibonacci replaced with a linear-increment one, Factory MoneyHero frozen after Kilobytes → Bytes (#430 / #442), Fibonacci cost curve and 2-claims-for-the-first-three-Invest-tiers reinstated, this time deliberately (+32 more)
+### Community 12 - "run-simulation.mjs"
+Cohesion: 0.11
+Nodes (40): actMainBuys(), actPlayer(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues, emit() (+32 more)
 
 ### Community 13 - "Economy model"
-Cohesion: 0.09
-Nodes (23): Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Boost tier scaling: 4× effect only, no duration enhancement (#363), Economy model, Last tier's XP-funded tickspeed: from additive to multiplicative, Multiplier overflow safety: the switch to compounding needed a floor, Prestige history: why PP replaced direct production doubling, Reintroducing the 1s-10s tickspeed ladder, Reset button history (+15 more)
+Cohesion: 0.10
+Nodes (21): Compute Boost: the first mechanic to spend Compute Cores, and a Sacrifice confirmation, Compute Boost tier scaling: 4× effect only, no duration enhancement (#363), Compute Cores/Nodes: capping the Storage ladder, and two different meanings of "MB" in the same feature, Economy model, Last tier's XP-funded tickspeed: from additive to multiplicative, Multiplier overflow safety: the switch to compounding needed a floor, Prestige history: why PP replaced direct production doubling, Reset button history (+13 more)
 
 ### Community 14 - "DevModePage/index.jsx"
-Cohesion: 0.11
-Nodes (18): PRESTIGE_THRESHOLD, ButtonGrid, coerceDraft(), Details, FieldLabel, FieldNode(), FieldRow, Header (+10 more)
+Cohesion: 0.14
+Nodes (14): ButtonGrid, coerceDraft(), Details, FieldLabel, FieldRow, Header, JsonTextarea, NumberInput (+6 more)
 
 ### Community 15 - "engine.js"
-Cohesion: 0.06
-Nodes (52): AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, combineIntroByte(), COMPUTE_MERGE_TIMER_FIELDS, currencyNumberFormatter, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork, enableAutoMergeCoresIntoNode (+44 more)
+Cohesion: 0.07
+Nodes (50): allResourceIds(), AUTO_MERGE_TICKERS, BIT_UNIT_SYMBOLS, COMPUTE_MERGE_TIMER_FIELDS, currencyNumberFormatter, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeClustersIntoNetwork, enableAutoMergeCoresIntoNode (+42 more)
 
 ### Community 16 - "clampNonNegative"
-Cohesion: 0.12
-Nodes (44): Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number, Constants (`src/game/layers.js`), Era ascension and Eons (#407), Pause/resume for the global automations, Prestige and the Googol freeze, Prestige Points, autobuyer unlock, and the tickspeed multiplier, The global tickspeed multiplier (+36 more)
+Cohesion: 0.15
+Nodes (38): Era ascension and Eons — meta-prestige above Unbounded (#407 / #405), Why the Prestige threshold became `GOOGOL * BITS_PER_BYTE`, not a round new number, Constants (`src/game/layers.js`), Era ascension and Eons (#407), Prestige and the Googol freeze, Prestige Points, autobuyer unlock, and the tickspeed multiplier, The global tickspeed multiplier, applyFlopsAutobuyerMilestones() (+30 more)
 
 ### Community 17 - "ref_child_process"
 Cohesion: 0.15
 Nodes (7): { execSync }, { execSync }, { execSync }, ref_child_process, { execSync }, { execSync }, { execSync }
 
-### Community 18 - "run-simulation.mjs"
-Cohesion: 0.11
-Nodes (23): actPlayer(), actSpeedBonus(), countUnlockedAutobuyers(), DEFAULT_CAPACITY_CAPS_BITS, defaultCareerPrestiges, defaultPPValues, emit(), formatCapacityLabel() (+15 more)
+### Community 18 - "fillDataLakeManually"
+Cohesion: 0.50
+Nodes (8): actFoundry(), formatCapacityLabel(), A seventh Codex round: a real engine bug, and the simulator's own "hard cap" had gone stale too, `getDataLakeManualFillBitsNeeded` could offer a fill that Scale Out would immediately erase, fillDataLakeManually(), getBoosterPurchaseCost(), getDataLakeManualFillBitsNeeded(), isDataLakeManualFillAvailable()
 
-### Community 19 - "applyDevGameStateJson"
-Cohesion: 0.21
-Nodes (15): 2024-05-24 - Content Security Policy (CSP) unsafe-eval, 2024-10-25 - Prototype Pollution in `isPlainObject` Function, 2024-10-27 - Prototype Pollution via 'prototype' Key, 2024-11-20 - Prototype Pollution Vector via `prototype` key, 2024-11-25 - Defense in Depth: Referrer Policy, 2024-12-07 - Content Security Policy (CSP) unsafe-inline, 2026-08-25 - Defense in Depth: Content Security Policy, 2026-08-28 - Prototype Pollution in Dev Mode State Merge\n**Vulnerability:** A recursive deep merge function (`mergeStateForDevWrite`) iterated over all object keys without filtering out `__proto__` and `constructor`, creating a prototype pollution vulnerability vector.\n**Learning:** Even if the initial parsing step (`safeJsonParse`) attempts to sanitize inputs, custom deep merge logic can easily re-introduce the vulnerability if an object with these properties sneaks past, or when merging nested objects.\n**Prevention:** Always explicitly check for and skip `__proto__` and `constructor` inside any custom object mapping, reduction, or deep-merge logic, especially when dealing with parsed JSON or external state inputs. (+7 more)
+### Community 19 - "DataLakePanel/index.jsx"
+Cohesion: 0.08
+Nodes (23): ActionButton, BareDivider, clampFraction(), LakeBlock, LakeHeaderRow, LakePoolFill, LakePoolLabel, LakePoolTile (+15 more)
 
 ### Community 20 - "What You Must Do When Invoked"
 Cohesion: 0.08
 Nodes (24): For /graphify add and --watch, For /graphify query, For the commit hook and native CLAUDE.md integration, For --update and --cluster-only, /graphify, Honesty Rules, Interpreter guard for subcommands, Part A - Structural extraction for code files (+16 more)
 
 ### Community 21 - "bump-version.mjs"
-Cohesion: 0.18
-Nodes (20): ref_node_os, assertUnreleasedWellFormed(), buildReleasedBody(), bumpSemver(), determineBumpType(), EMPTY_UNRELEASED, EMPTY_UNRELEASED_BODY, extractVersionSection() (+12 more)
+Cohesion: 0.17
+Nodes (21): ref_node_fs, ref_node_os, assertUnreleasedWellFormed(), buildReleasedBody(), bumpSemver(), determineBumpType(), EMPTY_UNRELEASED, EMPTY_UNRELEASED_BODY (+13 more)
 
 ### Community 22 - "engine.test.js"
-Cohesion: 0.04
-Nodes (27): Compute merge timers switched from a Core-earn ×10 chain to 8 normal-disk fills (#755), capComputeMergeTimersToCurrentDuration(), eraseAllComputeTokens(), getBiggestComputeTierWaitingOnMerge(), getComputeMergeDurationSeconds(), getComputeReserveHeld(), isAnyComputeMergeInFlight(), isComputeEntityAutoMergeUnlocked() (+19 more)
+Cohesion: 0.05
+Nodes (19): getBiggestComputeTierWaitingOnMerge(), isAnyComputeMergeInFlight(), eraEligibleState(), noOtherUpgradesLeft, unlockedLastTierState(), withIntro(), withOwned(), withPoolBuffer() (+11 more)
 
-### Community 23 - "MilestonesPage/index.jsx"
-Cohesion: 0.18
-Nodes (10): ERA_ELIGIBILITY_PP, Badge, Category, CategoryHeading, Header, List, RootDiv, Row (+2 more)
+### Community 23 - "Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit"
+Cohesion: 0.31
+Nodes (14): A fifth and sixth Devin finding on the same PR: a one-tick lake-overflow lag, and a currency-destroying overshoot in fillDataLakeDisks it exposed, A fourth Devin finding on the same PR: the disk-square decomposition could strand real, spendable units with no square to show for them, An eighth finding: a tick spanning more than one lake-disk completion reused the first disk's stale overflow rate for the rest, An eleventh finding: the Data Lake overflow taper was sampled once per disk-completion segment, not truly continuous — making a single tick's own result depend on how it was split, Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit, applyDataLakeOverflow(), decomposeDataLakeUnits(), fillDataLakeDisks() (+6 more)
 
 ### Community 24 - "ComputeFlopsPage/index.jsx"
-Cohesion: 0.11
-Nodes (27): PP Compute (Flops), buyComputeFlopsTier(), canBuyComputeFlopsTier(), formatAmount(), formatComputeFlopsBoost(), formatComputeFlopsTotal(), getComputeFlopsAffordableQuantity(), getComputeFlopsTierCost() (+19 more)
+Cohesion: 0.20
+Nodes (15): PP Compute (Flops), formatAmount(), formatComputeFlopsBoost(), formatComputeFlopsTotal(), isComputeFlopsPageRevealed(), ComputeFlopsPage(), FlopsHero, Header (+7 more)
 
-### Community 25 - "tokens.js"
-Cohesion: 0.15
-Nodes (14): GlobalStyle, getSystemThemeMode(), ThemeProvider(), buildTheme(), DEFAULT_MODE, font, MODES, motion (+6 more)
+### Community 25 - "Theming reference"
+Cohesion: 0.11
+Nodes (20): Changed, Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Theming reference, ConfirmDialog(), IncompatibleSaveNotice(), GlobalStyle, getSystemThemeMode(), ThemeProvider() (+12 more)
 
 ### Community 26 - "AGENTS.md"
 Cohesion: 0.12
 Nodes (15): AI-instruction file cost hygiene, Automation design principles, Budget discipline, Changelog convention, Commands, Funding, Issue-authoring tooling, Issue tracking conventions (+7 more)
 
 ### Community 27 - "Testing"
-Cohesion: 0.12
-Nodes (53): Architecture, A fourth Codex round: the "absolute ceiling" clamp itself was too high, A live tap bonus could survive into the pool gauge's mode switch, breaking the "clean transition at 50%" claim, A sixth Codex round: the player-facing Guide and the pacing simulator hadn't caught up either, A third Codex round: invisible cache activity, a stale Fill tooltip, a Buy button hidden behind Scale Out, and an unclamped legacy-save buffer, Bandwidth cap corrected to sqrt(Capacity in Bytes), not raw bits; Storage pools switched to SI display, Compute Boost base presets: fixing a total-extra-production ordering bug, Data Lake Boosters, take two: from a spendable balance to a live transfer pipe (+45 more)
+Cohesion: 0.13
+Nodes (28): A seventh finding: the pool gauge could display a nonzero incoming-overflow rate on an already-full lake, Bandwidth cap corrected to sqrt(Capacity in Bytes), not raw bits; Storage pools switched to SI display, Compute Boost base presets: fixing a total-extra-production ordering bug, Data Lake refill gating: staged 9 → 99 → 999 capacity from disk-array completion, Disk Cache: always-full reserve, whole-block Memory transfers, no pour into disks (issue #382), Disk/Cache fill speeds tied to Memory bandwidth, not flat/hardcoded rates, Disk ladder offers every Byte power-of-ten size (issue #368), Icons added to the Byte Foundry footer figures; 🧠 replaced on "Capacity ×2" (+20 more)
 
 ### Community 28 - "SettingsPage/index.jsx"
-Cohesion: 0.10
-Nodes (21): Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), ConfirmDialog(), getEonsAwarded(), isEraEligible(), MUSEUM_PIN_CAP, buildSparklinePath(), CodeForm, CodeInput (+13 more)
+Cohesion: 0.12
+Nodes (19): getEonsAwarded(), isEraEligible(), buildClearSlotConfirmMessage(), buildSparklinePath(), CodeForm, CodeInput, Header, LockedNote (+11 more)
 
-### Community 29 - "styled-components"
-Cohesion: 0.16
-Nodes (12): styled-components, Actions, Body, Card, Overlay, Title, Body, Card (+4 more)
+### Community 29 - "MilestonesPage/index.jsx"
+Cohesion: 0.10
+Nodes (21): styled-components, Actions, Body, Card, Overlay, Title, Body, Card (+13 more)
 
 ### Community 30 - "Design history & rationale"
-Cohesion: 0.17
-Nodes (17): Critical: reverted a broken `buyBooster` bulk-purchase optimization that had merged onto `main` — 2026-09-09, Data Stream / Buffer rename; Capacity Sacrifice removed (#506; superseded by #456) — 2026-08-27, Design history & rationale, Distribution, Documentation, First ten Scale Ups standardized at three completed levels — 2026-09-13, Pool 10's buffer ceiling landed a ULP below its own largest disk's face value — 2026-09-08, Reset Byte Foundry convenience-auto now includes Capacity/Sacrifice — 2026-08-25 (+9 more)
+Cohesion: 0.16
+Nodes (26): Fixed, Critical: reverted a broken `buyBooster` bulk-purchase optimization that had merged onto `main` — 2026-09-09, Design history & rationale, Devin Review on PR #608, round 2: Reset Byte Foundry's replay cap could be bypassed by the new auto-continue — 2026-09-08, Devin Review on PR #608, round 3: the cap-clearing fix above didn't stop a single-call overshoot or the same gap via save load — 2026-09-09, Devin Review on PR #608, round 4: closed the bug class at its one true chokepoint instead of patching another arming site — 2026-09-09, Devin Review on PR #608, round 6: a provenance-tracking fix superseding an incomplete bot revert — 2026-09-09, Distribution (+18 more)
 
 ### Community 31 - "CLAUDE.md"
 Cohesion: 0.11
 Nodes (18): AI-instruction file cost hygiene, Automation workflows, Capacitor foundation (in progress — #70), Changelog convention, Commands, Documentation, Economy model, Funding (+10 more)
 
-### Community 32 - "mergeState"
-Cohesion: 0.10
-Nodes (26): Accessibility, Added, Added, Added, Changed, Changed, Changed, Changed (+18 more)
+### Community 32 - "buyBooster"
+Cohesion: 0.25
+Nodes (20): `ByteFoundryPage` pool layout, A ninth finding: a lake's escalating Booster cost could outgrow its own permanently-capped capacity, bricking it forever, Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18, Auto-merge Booster progress display, a gradually-filling 18-slot extended cap, and one-shot Data Lake conversion replacing the persistent Auto/Manual toggle — 2026-09-17, Three more findings from a Devin bot review pass on the pool-overflow Data Lake rework PR: an overflow rate that asymptotically never completes, a lifetime-counter bug, and dropped legacy transfers, buyBooster(), getBoosterBulkPurchase(), getComputeEntityEffectiveCap() (+12 more)
 
 ### Community 33 - "Shared components reference"
-Cohesion: 0.13
-Nodes (13): `AppMenu/index.jsx`, `AppNav/index.jsx`, `ConfirmDialog/index.jsx`, `IncompatibleSaveNotice/index.jsx`, `Money/index.js`, Shared components reference, `StatCard/index.js`, AppMenu() (+5 more)
+Cohesion: 0.14
+Nodes (12): `AppMenu/index.jsx`, `AppNav/index.jsx`, `ConfirmDialog/index.jsx`, `Money/index.js`, Shared components reference, `StatCard/index.js`, AppMenu(), Backdrop (+4 more)
 
-### Community 34 - "DataLakePanel/index.jsx"
-Cohesion: 0.06
-Nodes (95): Changed, `ByteFoundryPage` pool layout, A fifth and sixth Devin finding on the same PR: a one-tick lake-overflow lag, and a currency-destroying overshoot in fillDataLakeDisks it exposed, A fourth Devin finding on the same PR: the disk-square decomposition could strand real, spendable units with no square to show for them, A ninth finding: a lake's escalating Booster cost could outgrow its own permanently-capped capacity, bricking it forever, A seventh Codex round: a real engine bug, and the simulator's own "hard cap" had gone stale too, A seventh finding: the pool gauge could display a nonzero incoming-overflow rate on an already-full lake, Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18 (+87 more)
+### Community 34 - "DataLakePanel"
+Cohesion: 0.16
+Nodes (31): Changed, Data Lake Boosters: spending real deposits, not a separate "used" ledger, Data Lake capacity-doubling cost: fixing a unit-count/real-bits conflation found while wiring up the Byte-scale display, Data Lake capacity doubling reinstated, redesigned as a level-based ladder with a hard cap, Data Lake capacity doubling removed: the cap was always a fixed physical ceiling, not a lever, Data Lake capacity Upgrade removed from the forced priority order — array completion is now the only gate, Idle disk liquidation could destroy a disk from a still-mid-build array, not just a genuinely full lake, Two more migration/logic gaps found by a Devin review pass on this same PR: unbounded-below capacityLevel edits, and idle liquidation confusing "maxed" with "full" (+23 more)
 
 ### Community 35 - "navAttention.test.js"
-Cohesion: 0.14
-Nodes (13): COMPUTE_MERGE_RATIO, DEFAULT_PURCHASE_BLOCK_SIZE, INTRO_BYTE_COMBINE_COST, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, MONEY_ID, TICKSPEED_AUTOBUYER_COST (+5 more)
+Cohesion: 0.06
+Nodes (37): 2024-05-24 - Bulk Purchase State Updates in React Incremental Game, 2024-05-25 - Replace O(N) while loop for Booster bulk purchases with O(1) mathematical formulation, 2024-06-25 - Replace O(N) cost epoch exponent calculation with O(1) mathematical equivalent, 2024-06-25 - Replace O(N) while loop for Compute Flops bulk purchases with O(1) loop equivalent calculation, 2024-09-20 - Replace O(N) Compute Flops autobuyer with O(1) mathematical formulation, vitest, buyComputeFlopsTier(), buyComputeFlopsTierQuantity() (+29 more)
 
 ### Community 36 - "package.json"
 Cohesion: 0.10
-Nodes (19): browserslist, development, production, name, packageManager, private, type, version (+11 more)
+Nodes (18): browserslist, development, production, name, packageManager, private, type, @capacitor/cli (+10 more)
 
 ### Community 37 - "createInitialGameState"
-Cohesion: 0.21
-Nodes (24): 2. Load the repo's invariants, actSoftResets(), Byte Foundry gate made permanent, one-time-ever; fill-multiplier instant loss beyond 200%; gauge relocated inside the tile — 2026-09-02, `prestigeGame` wiped era/eons/hyperscalerCount/eonsUpgrades/Flops-autobuyer state on every ordinary Prestige (#626) — 2026-09-09, `scaleUpGame`'s `highestMilestone` passthrough was a real bug, not a harmless asymmetry, Speed Up renamed to Scale Up and redesigned from a last-tier-only gate to a per-tier unlock ladder — 2026-09-09, Starting Money reduced from 10 to 1, The Byte Foundry becomes a per-Prestige-cycle mechanic, not a one-time gate (+16 more)
+Cohesion: 0.15
+Nodes (33): 2. Load the repo's invariants, End-to-end testing, actCapacityUpgrade(), actSoftResets(), What it does, When editing the simulation, Testing, Migration in `src/save-migration/`, runs on every load — 2026-08-22 (+25 more)
 
 ### Community 38 - "hasTiersGameAttention"
 Cohesion: 0.50
-Nodes (5): Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31, hasOverclockAvailable(), hasTiersAttention(), hasTiersGameAttention(), lastTier()
+Nodes (5): Ladder screen renamed back to Byte Factory (reverses #399/#431) — 2026-08-31, getTiersAttentionLevel(), hasOverclockAvailable(), hasTiersAttention(), hasTiersGameAttention()
 
-### Community 39 - "Changelog"
-Cohesion: 0.11
-Nodes (18): [0.1.0] - 2026-07-05, [0.2.0] - 2026-07-12, [0.3.0] - 2026-07-13, [0.4.0] - 2026-07-13, [0.5.0] - 2026-07-14, Added, Added, Added (+10 more)
+### Community 39 - "[Unreleased]"
+Cohesion: 0.06
+Nodes (31): [0.1.0] - 2026-07-05, [0.2.0] - 2026-07-12, [0.3.0] - 2026-07-13, [0.4.0] - 2026-07-13, [0.5.0] - 2026-07-14, Accessibility, Added, Added (+23 more)
 
-### Community 40 - "What it does"
-Cohesion: 0.21
-Nodes (20): actCapacityUpgrade(), What it does, A fifth Codex round: three doc/UI-text stragglers left by the earlier fix rounds, `isMemoryCapacityAtCap` silently re-coupled Capacity growth to disk-build progress, making the pool-liveness decoupling above unreachable, Pool Capacity doubling mechanic itself corrected to land on SI-clean intermediate steps, Pool Capacity end bounds corrected to SI powers of 1000, not binary powers of 1024, Pool Capacity's SI-clean doubling mechanic reverted — it broke the Data Stream tile's own binary display, Pool Capacity's SI-clean mechanic restored — decoupled from the Data Stream's binary value instead of shared with it (+12 more)
+### Community 40 - "getStoragePoolCapacity"
+Cohesion: 0.17
+Nodes (23): A fifth Codex round: three doc/UI-text stragglers left by the earlier fix rounds, A fourth Codex round: the "absolute ceiling" clamp itself was too high, A sixth Codex round: the player-facing Guide and the pacing simulator hadn't caught up either, Data Lake capacity ladder brought under the same SI-clean sequence; pool Memory UI restyled to match the Data Stream card, Data Stream / Buffer rename; Capacity Sacrifice removed (#506; superseded by #456) — 2026-08-27, `isMemoryCapacityAtCap` silently re-coupled Capacity growth to disk-build progress, making the pool-liveness decoupling above unreachable, Load-time migration clamps for the decade-power Capacity change; Data Lake capacity ladder moved onto the same shape, Pool 10's buffer ceiling landed a ULP below its own largest disk's face value — 2026-09-08 (+15 more)
 
 ### Community 41 - "devDependencies"
 Cohesion: 0.14
 Nodes (14): devDependencies, @capacitor/cli, fast-check, jsdom, @playwright/test, sharp, @testing-library/dom, @testing-library/jest-dom (+6 more)
 
 ### Community 42 - "DiskArrayRow"
-Cohesion: 0.07
-Nodes (44): A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the "stranded" gate from write-cache entirely, A Devin Review pass on the idle-disk-liquidation removal found write-cache still consuming stranded disks, A further Devin Review finding on the same area: pausing a stranded write-cache merge still lost its progress to Prestige — fixed by making diskWriteCache/diskReadCacheFlush Prestige-permanent, A tenth finding: idle disk liquidation could starve a still-needed write-cache merge of its own source disks, An adversarial review pass on PR #603 caught the new cross-tier-boundary test asserting a false "would have failed under the prior fix" claim, Pool isolation: disk write-cache merges no longer cross pool boundaries, Pool titles simplified to "<symbol> Pool"; each pool's Data Lake moved inside its own card, Read cache blocks (`DiskArrayRow`) render a proportional fill overlay, not just full/empty (+36 more)
+Cohesion: 0.06
+Nodes (70): `DiskArrayRow/index.jsx`, A Devin Review finding on the PR above: the target-stranded gate broke cross-tier-boundary write-cache chains — removed the "stranded" gate from write-cache entirely, A Devin Review pass on the idle-disk-liquidation removal found write-cache still consuming stranded disks, A further Devin Review finding on the same area: pausing a stranded write-cache merge still lost its progress to Prestige — fixed by making diskWriteCache/diskReadCacheFlush Prestige-permanent, A second Devin Review finding on the same PR: the level-1 cache fallback could spend cache out from under an in-flight read-cache flush, leaving it stuck for its whole remaining duration then producing no disk, A tenth finding: idle disk liquidation could starve a still-needed write-cache merge of its own source disks, An adversarial review pass on PR #603 caught the new cross-tier-boundary test asserting a false "would have failed under the prior fix" claim, ByteFoundryPage: hiding the Disk detail row and the Transfer-to-Main-Game row once they're no longer pulling their weight (+62 more)
 
 ### Community 43 - "scripts"
 Cohesion: 0.17
@@ -316,27 +311,27 @@ Nodes (12): scripts, audit, build, build:capacitor, bump-version, cap:sync, dev,
 
 ### Community 44 - "ByteFoundryPage/index.jsx"
 Cohesion: 0.06
-Nodes (42): Provision Disk button no longer previews progress before the player has ever clicked it, The multiplier bar moved below the balance, with its percent readout below the bar itself, formatDiskSizeInPoolUnit(), formatPoolBalance(), formatPoolBalanceStable(), getPoolBalanceUnit(), getPoolFixedUnit(), ActionsRow (+34 more)
+Nodes (54): "0.xyz <unit>" fractions eliminated from every Byte/bit-denominated display, Data Stream balance: raw-bits fallback narrowed to self-sizing into a finer unit; Pool Bandwidth moved beside its title, Data Stream/pool balances skip their padded trailing zeros once full for more than a second, Provision Disk button no longer previews progress before the player has ever clicked it, The multiplier bar moved below the balance, with its percent readout below the bar itself, combineIntroByte(), flooredBitsLabel(), formatBitsInNearestSiUnit() (+46 more)
 
 ### Community 45 - "contrast.js"
-Cohesion: 0.33
-Nodes (8): AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT, getContrastRatio(), hexToRgb(), relativeLuminance(), srgbChannelToLinear(), themes
+Cohesion: 0.38
+Nodes (7): AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT, getContrastRatio(), hexToRgb(), relativeLuminance(), srgbChannelToLinear()
 
-### Community 46 - "MainPage"
-Cohesion: 0.19
-Nodes (27): Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework, Overclock: from a standalone multiplier to a Tickscale-upgrade step boost, Overclock, once more: back to folding into the Tickspeed multiplier's own step — now multiplicative and covering milestones too, Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14, Why the tick-progress ring was removed, Multiplier outcomes are floored, Overclock, Production figure (tick-progress ring removed) (+19 more)
+### Community 46 - "MainPage reference"
+Cohesion: 0.14
+Nodes (36): seedState(), Overclock, again: the standalone multiplier comes back, deliberately, plus a full requirement rework, Overclock: from a standalone multiplier to a Tickscale-upgrade step boost, Overclock, once more: back to folding into the Tickspeed multiplier's own step — now multiplicative and covering milestones too, Reintroducing the 1s-10s tickspeed ladder, Tier autobuyer unlock/tier tickspeed autobuyer became free, prestige-count-milestone unlocks, Tier tickspeed upgrade reverted from +1% to +10% per level — 2026-09-14, Why the tick-progress ring was removed (+28 more)
 
 ### Community 47 - "Procedure"
 Cohesion: 0.22
 Nodes (8): 1. Establish scope, 3. Per-change adversarial pass, 4. Cross-cutting checks, 5. Verify, then report, Ground rules: factual, Machine-readable marker (required on every report), Procedure, Stance: adversarial
 
 ### Community 48 - "main"
-Cohesion: 0.15
-Nodes (18): Automation engine, Code review tooling, Interactive session startup, AI-instruction file cost hygiene, Auto-merge (`pr-auto-merge.yml`), Automation self-heal (`automation-self-heal.yml`), Automation workflows, Dependabot PR follow-up (`dependabot-pr-followup.yml`) (+10 more)
+Cohesion: 0.11
+Nodes (21): Automation engine, Code review tooling, Interactive session startup, Strategy snapshots (orphan branch) — required after every run, Usage, When to re-run, AI-instruction file cost hygiene, Auto-merge (`pr-auto-merge.yml`) (+13 more)
 
-### Community 49 - "vitest"
-Cohesion: 0.13
-Nodes (13): ref_node_child_process, ref_node_fs, ref_node_module, ref_node_path, ref_node_url, vite, vite-plugin-pwa, @vitejs/plugin-react (+5 more)
+### Community 49 - "capacitorConfig.test.js"
+Cohesion: 0.14
+Nodes (11): ref_node_child_process, ref_node_module, ref_node_path, ref_node_url, vite, vite-plugin-pwa, @vitejs/plugin-react, script (+3 more)
 
 ### Community 50 - "backlog-issue-hygiene.sh"
 Cohesion: 0.49
@@ -358,25 +353,17 @@ Nodes (8): add_label_if_missing(), close_if_open(), has_marker_comment(), issue_
 Cohesion: 0.25
 Nodes (7): 0. `claude-task` backlog issue vs. interactive tracking issue, 1. Use the template, section by section, 2. Label conventions, 3. Conflict-avoidance sequencing, 4. Epics and sub-issues, 5. Specs go stale — write defensively, and re-verify before filing a rewrite, 6. When an issue needs no PR
 
-### Community 55 - "formatCurrency"
-Cohesion: 0.11
-Nodes (28): Adding a new tier, Architecture, Byte Foundry, Path aliases (`vite.config.js`), Project, Added, Project, CLAUDE.md Economy model duplication trim — 2026-09-03 (+20 more)
+### Community 55 - "DevModePage"
+Cohesion: 0.23
+Nodes (12): Adding a new tier, Architecture, Byte Foundry, Path aliases (`vite.config.js`), Project, Added, Project, CLAUDE.md Economy model duplication trim — 2026-09-03 (+4 more)
 
 ### Community 56 - "generate-pwa-icons.mjs"
 Cohesion: 0.22
 Nodes (7): App icon redesigned from a plain "10" text glyph to an 8-cell "byte" grid, sharp, faviconSizes, faviconSvg, GRADIENT_STOPS, gridSvg(), targets
 
-### Community 57 - "buyTickspeedMultiplier"
-Cohesion: 0.54
-Nodes (8): actTickspeed(), `consumeXpForLastTierTickspeed` gained an owned-count guard after a real softlock report, The last tier's XP-funded tickspeed, buyTickspeedMultiplier(), consumeXpForLastTierTickspeed(), getLastTierId(), getLastTierXpTickspeedMinConsumption(), isLastTierTickspeedXpUnlocked()
-
-### Community 58 - "getSaveIncompatibilityReason"
-Cohesion: 0.36
-Nodes (7): SAVE_SCHEMA_VERSION, getSaveIncompatibilityReason(), LEGACY_TIER_IDS, mapHasLegacyTierId(), TIER_MAP_FIELDS, adaptSaveForCurrentSchema(), stripSaveEnvelope()
-
-### Community 59 - "tickComputeFlopsAutobuyers"
-Cohesion: 0.31
-Nodes (8): 2024-05-24 - Bulk Purchase State Updates in React Incremental Game, 2024-05-25 - Replace O(N) while loop for Booster bulk purchases with O(1) mathematical formulation, 2024-06-25 - Replace O(N) while loop for Compute Flops bulk purchases with O(1) loop equivalent calculation, 2024-07-28 - Replace O(N) attempts loop with O(1) batch processing for tickGame autobuyers, 2024-09-20 - Replace O(N) Compute Flops autobuyer with O(1) mathematical formulation, buyComputeFlopsTierQuantity(), getComputeFlopsAffordableAndCost(), tickComputeFlopsAutobuyers()
+### Community 57 - "tickGame"
+Cohesion: 0.21
+Nodes (20): 5. Authorization boundary, actTickspeed(), Architecture / MainPage UI decisions, `consumeXpForLastTierTickspeed` gained an owned-count guard after a real softlock report, `PURCHASE_MILESTONE_MULTIPLIER_BASE` raised 1.1 → 1.25; a 2-vs-3-Overclock-claim "stretch/easy" retune was explored and dropped, Multiplier outcomes are floored, The last tier's XP-funded tickspeed, 2024-07-28 - Replace O(N) attempts loop with O(1) batch processing for tickGame autobuyers (+12 more)
 
 ### Community 60 - "economy-change-review/SKILL.md"
 Cohesion: 0.33
@@ -386,25 +373,13 @@ Nodes (5): 1. Scope check, 2. Find the originating issue, 3. Field-by-field diff
 Cohesion: 0.29
 Nodes (6): Hard invariants — never remove or weaken these, Process, Report, Safe reduction techniques, Scope, in priority order, What not to do
 
-### Community 63 - "react"
-Cohesion: 0.29
-Nodes (5): react, react-dom, web-vitals, rootElement, reportWebVitals()
-
 ### Community 64 - "graphify reference: query, path, explain"
 Cohesion: 0.33
 Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
 
-### Community 65 - "mergeDataLakes"
-Cohesion: 0.47
-Nodes (6): createEmptyDataLakes(), createEmptyDataLakeTier(), getLegacyPendingTransferCount(), isLegacyDataLakeTier(), mergeDataLakes(), migrateLegacyDataLakeTier()
-
 ### Community 66 - "palette.md"
 Cohesion: 0.20
 Nodes (9): 2024-08-28 - Focus Visible Styles for styled-components, 2024-08-29 - Interactive polymorphic components missing focus states, 2024-09-11 - Static aria-label for Toggle Buttons with aria-pressed, 2024-11-20 - Data Lake Auto-buy button accessibility, 2025-01-31 - Focus Visible Styles for custom trigger elements, 2025-05-15 - Focus States on Styled Inputs, 2026-09-04 - Focus Visible Styles for styled native summary elements, 2026-09-06 - Focus Visible Styles for custom interactive components and Disclosure summary elements (+1 more)
-
-### Community 67 - "simulate-run-times/SKILL.md"
-Cohesion: 0.40
-Nodes (4): Strategy snapshots (orphan branch) — required after every run, Usage, When editing the simulation, When to re-run
 
 ### Community 68 - "resolutions"
 Cohesion: 0.33
@@ -439,16 +414,16 @@ Cohesion: 0.50
 Nodes (3): compilerOptions, baseUrl, include
 
 ### Community 78 - "Button/index.jsx"
-Cohesion: 0.13
-Nodes (20): Fixed, `Button/index.jsx`, The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way, Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent() (+12 more)
+Cohesion: 0.12
+Nodes (22): Fixed, `Button/index.jsx`, The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way, Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent() (+14 more)
 
 ### Community 89 - "ref_fs"
 Cohesion: 0.08
 Nodes (14): content, content, content, content, content, content, content, mdContent (+6 more)
 
-### Community 106 - "storage.js"
-Cohesion: 0.20
-Nodes (23): PRESTIGE_UNBOUNDED_MIN_COUNT, buildClearSlotConfirmMessage(), buildDefaultMeta(), buildEraseAllSavesConfirmMessage(), coerceMeta(), completeDummySupporterPurchase(), defaultSlotName(), FREE_SLOT_COUNT (+15 more)
+### Community 106 - "useIncrementalGame"
+Cohesion: 0.06
+Nodes (81): Dev Mode, Security notes, `IncompatibleSaveNotice/index.jsx`, `OfflineProgressNotice/index.jsx`, Offline progress, 2024-05-24 - Content Security Policy (CSP) unsafe-eval, 2024-10-25 - Prototype Pollution in `isPlainObject` Function, 2024-10-27 - Prototype Pollution via 'prototype' Key (+73 more)
 
 ## Knowledge Gaps
 - **509 isolated node(s):** `session-start.sh script`, `publish-strategy.sh script`, `DEFAULT_CAPACITY_CAPS_BITS`, `defaultPPValues`, `defaultCareerPrestiges` (+504 more)
@@ -458,12 +433,12 @@ Nodes (23): PRESTIGE_UNBOUNDED_MIN_COUNT, buildClearSlotConfirmMessage(), buildD
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `main()` connect `main` to `mergeState`, `DataLakePanel/index.jsx`, `simulate-run-times/SKILL.md`, `createInitialGameState`, `ByteFoundryPage`, `Automation workflows`, `tickGame`, `MainPage`, `bump-version.mjs`, `file-task-issue/SKILL.md`, `formatCurrency`, `Testing`, `Design history & rationale`, `CLAUDE.md`?**
+- **Why does `main()` connect `main` to `buyBooster`, `DataLakePanel`, `createInitialGameState`, `Automation workflows`, `Pool-local resets`, `run-simulation.mjs`, `MainPage reference`, `bump-version.mjs`, `file-task-issue/SKILL.md`, `DevModePage`, `Testing`, `Design history & rationale`, `CLAUDE.md`?**
   _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `tickGame()` connect `tickGame` to `Key engine functions (`src/game/engine.js`)`, `layers.js`, `ByteFoundryPage`, `MainPage reference`, `useIncrementalGame`, `Economy model`, `engine.js`, `clampNonNegative`, `run-simulation.mjs`, `engine.test.js`, `ComputeFlopsPage/index.jsx`, `Testing`, `mergeState`, `DataLakePanel/index.jsx`, `createInitialGameState`, `What it does`, `DiskArrayRow`, `MainPage`, `formatCurrency`, `buyTickspeedMultiplier`, `tickComputeFlopsAutobuyers`?**
-  _High betweenness centrality (0.027) - this node is a cross-community bridge._
-- **Why does `Design history & rationale` connect `Design history & rationale` to `mergeState`, `DataLakePanel/index.jsx`, `Key engine functions (`src/game/engine.js`)`, `createInitialGameState`, `ByteFoundryPage`, `Automation workflows`, `hasTiersGameAttention`, `App.jsx`, `Tens`, `tickGame`, `Economy model`, `MainPage`, `formatCurrency`, `Testing`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
+- **Why does `ByteFoundryPage()` connect `ByteFoundryPage` to `Byte Foundry`, `Key engine functions (`src/game/engine.js`)`, `App.jsx`, `Pool-local resets`, `run-simulation.mjs`, `Economy model`, `clampNonNegative`, `Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit`, `Theming reference`, `Testing`, `buyBooster`, `Shared components reference`, `DataLakePanel`, `createInitialGameState`, `getStoragePoolCapacity`, `DiskArrayRow`, `ByteFoundryPage/index.jsx`, `MainPage reference`, `DevModePage`, `tickGame`, `Button/index.jsx`, `useIncrementalGame`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `Pool-local resets` connect `Pool-local resets` to `MainPage/index.jsx`, `Byte Foundry`, `ComputePage/index.jsx`, `ByteFoundryPage`, `Key engine functions (`src/game/engine.js`)`, `clampNonNegative`, `fillDataLakeManually`, `DataLakePanel/index.jsx`, `Disk arrays and Data Lakes moved from 10 disks per size to 9 + cache/buffer as the 10th unit`, `ComputeFlopsPage/index.jsx`, `Testing`, `Design history & rationale`, `CLAUDE.md`, `buyBooster`, `DataLakePanel`, `createInitialGameState`, `getStoragePoolCapacity`, `DiskArrayRow`, `ByteFoundryPage/index.jsx`, `main`, `DevModePage`, `tickGame`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Are the 234 inferred relationships involving `Key engine functions (`src/game/engine.js`)` (e.g. with `DataLakePanel()` and `DiskArrayRow()`) actually correct?**
   _`Key engine functions (`src/game/engine.js`)` has 234 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 157 inferred relationships involving `Byte Foundry` (e.g. with `ButtonContent()` and `progressFill()`) actually correct?**

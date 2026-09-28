@@ -5574,11 +5574,18 @@ const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) =
 // entity's own extended cap once this boundary's auto-merge is unlocked, not just the primary 10)
 // with its timer countdown — the single per-boundary function tickGame's own AUTO_MERGE_TICKERS
 // pipeline calls every tick (see further down this file). Duration is read live from state at
-// auto-start so a change in the pool's Bandwidth applies to newly started
-// merges immediately; an already in-flight timer keeps whatever value was snapshotted at its start.
+// auto-start. An in-flight timer keeps its snapshot but is never allowed to exceed the current live
+// duration: if the pool's Bandwidth grows mid-merge the remaining time shrinks to match, and a
+// timer snapshotted under the old, much longer Core-earn ×10 chain (#755) is brought down on the
+// first tick its pool has Bandwidth. It never lengthens. Applied every tick (not just on load) so a
+// reload can't shorten a merge any more than simply waiting would.
 const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoFlagField, timerField, boundaryIndex) => state => {
   const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
-  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(state)
+  const remaining = state.intro?.[timerField] ?? 0
+  const clamped = durationSeconds > 0 && remaining > durationSeconds
+    ? { ...state, intro: { ...state.intro, [timerField]: durationSeconds } }
+    : state
+  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(clamped)
   return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterAutoStart)
 }
 
@@ -5600,24 +5607,6 @@ export const getComputeMergeDurationSeconds = (state, boundaryIndex) => {
   return COMPUTE_MERGE_RATIO * getDiskReadCacheFlushSeconds(state, normalDiskBits)
 }
 
-// Load-time clamp: an in-flight reserve merge snapshotted under the old, much longer Core-earn ×10
-// chain (#755) would otherwise keep counting down for weeks. Caps each boundary's timer at its
-// current duration whenever that duration is positive; a 0 duration (pool not visible) leaves the
-// timer alone. Same-reference no-op when nothing needs capping.
-export const capComputeMergeTimersToCurrentDuration = state => {
-  if (!state?.intro) return state
-  let nextIntro = null
-  COMPUTE_MERGE_BOUNDARIES.forEach((boundary, index) => {
-    const remaining = state.intro[boundary.timerField] ?? 0
-    if (!(remaining > 0)) return
-    const duration = getComputeMergeDurationSeconds(state, index)
-    if (duration > 0 && remaining > duration) {
-      nextIntro = nextIntro ?? { ...state.intro }
-      nextIntro[boundary.timerField] = duration
-    }
-  })
-  return nextIntro ? { ...state, intro: nextIntro } : state
-}
 
 // UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
 // actually unlock automation for this tier boundary.
