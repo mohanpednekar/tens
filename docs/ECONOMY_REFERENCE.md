@@ -273,12 +273,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `capacityUpgradeQueued` / `tickQueuedCapacityUpgrade` preserve the queued-upgrade behavior and
    the historical Compute-token wipe; `normalizePoolMemoryCapacity` (load normalization) no longer
    clamps `intro.capacity` to any pool boundary — only sanitizes a missing/negative value to a floor
-   of 0 — for the same reason `upgradePoolCapacity` doesn't. One deliberate exception:
-   `getCoreEarnTimeSeconds` (Compute merge/boost pacing — "Compute Cores/Nodes" below) keeps reading
-   the RAW `intro.capacity`, since it describes the real Buffer's own refill time rather than a
-   pool-card display figure — an acknowledged, minor pacing consequence (~2.4% slower per full
-   decade of doublings past a pool boundary, compounding within an Era) of `intro.capacity` no
-   longer clamping to a pool ceiling; see `docs/DESIGN_HISTORY.md`.
+   of 0 — for the same reason `upgradePoolCapacity` doesn't.
 4a. **Fill-based Speed/Bandwidth multiplier** (`FILL_MULTIPLIER_*` in `layers.js`) — the Data
    Stream's displayed Speed (`getIntroProductionRate`) and each pool's own displayed Bandwidth
    (`getStoragePoolBandwidth`, point 4 above) never change; both are always exactly what applies at
@@ -1170,9 +1165,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    state a merge itself needs. Starting a merge (`startComputeCoresMerge`/`startComputeNodesMerge`/…,
    built off a shared `startComputeMergeReserve` factory) instantly moves `COMPUTE_MERGE_RATIO` (8)
    tokens out of the input entity and starts the timer at that boundary's live duration from
-   `getComputeMergeDurationSeconds` (Core→Node = 10× live Core earn time — capacity ÷ bits/sec
-   before Boost; each next boundary ×10 the previous, or ×5 after that boundary’s sequential
-   duration upgrade — snapshotted at merge start so in-flight timers do not rescale mid-merge).
+   `getComputeMergeDurationSeconds`: `COMPUTE_MERGE_RATIO` (8) × the time one of the input tier's
+   own pool's SMALLEST disks takes to fill (Cores → pool 1, Nodes → pool 2, …), i.e.
+   `8 × smallestDiskBits / (getStoragePoolBandwidth(pool) × DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)`
+   — the same rate a read-cache flush fills that disk at. The pool's ×10/×100 disks never count, so
+   the timer does not escalate within a pool, and there is no boundary-to-boundary multiplier. 0
+   (merge unavailable) while that pool has no Bandwidth. Snapshotted at merge start so in-flight
+   timers do not rescale mid-merge. There is no merge-duration upgrade (removed, #755).
    `tickComputeMergeReserveTimer` counts an in-flight merge's remaining duration down every
    tick (frozen or not, same posture as every other Byte Foundry mechanic) and, on completion, grants
    1 of the output entity (capped at its effective cap, but never lowering a count that grew past it
@@ -3060,10 +3059,7 @@ purchases were manual or automatic.
 - `COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_RESERVE_CAP` (18) — the effective per-entity cap for tiers 1-9 once THEIR OWN outbound merge boundary has auto-merge unlocked (`isComputeEntityAutoMergeUnlocked`/`getComputeEntityEffectiveCap`) — the primary 10 slots plus the boundary's own gradually-filling 8-slot reserve. Also the auto-trigger threshold for starting a reserve merge (`tickAutoMerge*`, via `tickComputeMergeBoundary`), stricter than the manual `COMPUTE_MERGE_RATIO` (8) a player-clicked start still uses (`startCompute*Merge`)
 - `COMPUTE_MERGE_RATIO = 8` — ComputePage merge chain (issues #280/#321): how many of one compute-ladder entity merge into 1 of the next tier up (Core → Node → Cluster → Network → Grid → Fabric → Cloud → Datacenter → Supercomputer → Megacomputer) — the manual-trigger threshold either for the old instant merge (pre-unlock) or for starting a reserve merge (post-unlock, via `startCompute*Merge`) — see every `mergeCompute*Into*` function and `startComputeMergeReserve`
 - `COMPUTE_MERGE_RESERVE_CAP = 8` — issue #321: size of the 8-slot reserve pool a boundary gains once its auto-merge is unlocked, alongside the entity's own `COMPUTE_ENTITY_CAP` (10) normal slots — "18 slots" total per boundary (`COMPUTE_ENTITY_AUTO_MERGE_CAP`). Same value as `COMPUTE_MERGE_RATIO` (a merge always consumes exactly one full group) but a separate constant since it denotes the reserve pool's own capacity, not a conversion ratio. Modeled with no persisted count field of its own — `getComputeReserveHeld` derives how much is filled straight from the live entity count instead (see "Once a boundary's auto-merge is unlocked..." above)
-- `COMPUTE_MERGE_CORE_EARN_MULTIPLIER = 10` — Core→Node timed-merge duration is this × live Core earn time (`capacity / getIntroProductionRate`, before Boost); see `getComputeMergeDurationSeconds`
-- `COMPUTE_MERGE_STEP_MULTIPLIER = 10` / `COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED = 5` — each next boundary multiplies the previous duration by 10, or by 5 once that boundary’s sequential duration upgrade is claimed (`intro.computeMergeDurationUpgrades`)
-- `COMPUTE_MERGE_DURATION_UPGRADE_COUNT = 9` — one sequential upgrade per merge boundary
-- `COMPUTE_MERGE_BOUNDARIES` — per-boundary metadata (`inputField` / `outputField` / `autoFlagField` / `timerField` / `label`) for duration lookup and upgrades
+- `COMPUTE_MERGE_BOUNDARIES` — per-boundary metadata (`inputField` / `outputField` / `autoFlagField` / `timerField` / `label`); boundary `i`'s merge duration is keyed off Storage pool `i + 1` (see `getComputeMergeDurationSeconds`)
 - `COMPUTE_AUTO_BOOST_UNLOCK_COST = 30` — one-time PP cost for Compute auto-Boost (`buyComputeAutoBoost` / `tickAutoComputeBoost`)
 - `COMPUTE_BOOST_PRESETS = { burst: { multiplier: 32, durationSeconds: 60 }, standard: { multiplier: 8, durationSeconds: 600 }, sustain: { multiplier: 2, durationSeconds: 3600 } }` — Byte Foundry Compute Boost: base (tier 1 / Core) strength/duration tradeoffs; activating spends 1 token of whichever compute-ladder tier the player arms (Core through Megacomputer — see `COMPUTE_BOOST_TIER_FIELDS` / issue #326), not always a Core — higher tiers scale multiplier by `COMPUTE_BOOST_TIER_POWER_STEP` (4) per step; duration stays at the base preset (issue #363) — see `activateComputeBoost`/`getComputeBoostTierMultiplier`/`getComputeBoostMultiplier`
 - `COMPUTE_BOOST_TIER_POWER_STEP = 4` — each compute-ladder tier past Core multiplies a Boost preset's base multiplier by this much (`4^(tierIndex - 1)`); duration is unaffected

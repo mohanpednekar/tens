@@ -9,11 +9,7 @@ import {
   canBuyComputeFlopsTier,
   canForfeitComputeBoost,
   forfeitComputeBoost,
-  upgradeComputeMergeDuration,
-  isUpgradeComputeMergeDurationAvailable,
-  getNextComputeMergeDurationUpgradeIndex,
   getComputeMergeDurationSeconds,
-  getCoreEarnTimeSeconds,
   getBiggestComputeTierWaitingOnMerge,
   applyAutobuyerMilestones,
   applyOfflineProgress,
@@ -304,7 +300,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -4897,26 +4893,29 @@ describe.each([
   { tick: tickAutoMergeDatacentersIntoSupercomputer, enable: enableAutoMergeDatacentersIntoSupercomputer, isUnlockAvailable: isAutoMergeDatacentersIntoSupercomputerUnlockAvailable, start: startComputeDatacentersMerge, isStartAvailable: isComputeDatacentersMergeStartAvailable, inputField: 'computeDatacenters', outputField: 'computeSupercomputers', autoFlagField: 'autoMergeDatacentersIntoSupercomputer', timerField: 'computeDatacentersMergeRemainingSeconds', boundaryIndex: 7, label: 'datacentersIntoSupercomputer' },
   { tick: tickAutoMergeSupercomputersIntoMegacomputer, enable: enableAutoMergeSupercomputersIntoMegacomputer, isUnlockAvailable: isAutoMergeSupercomputersIntoMegacomputerUnlockAvailable, start: startComputeSupercomputersMerge, isStartAvailable: isComputeSupercomputersMergeStartAvailable, inputField: 'computeSupercomputers', outputField: 'computeMegacomputers', autoFlagField: 'autoMergeSupercomputersIntoMegacomputer', timerField: 'computeSupercomputersMergeRemainingSeconds', boundaryIndex: 8, label: 'supercomputersIntoMegacomputer' },
 ])('auto-merge / reserve-merge timer: $label', ({ tick, enable, isUnlockAvailable, start, isStartAvailable, inputField, outputField, autoFlagField, timerField, boundaryIndex }) => {
+  // Capacity high enough for all 10 pools to be visible, so every boundary's pool has Bandwidth
+  // (a pool with 0 Bandwidth makes its merge duration 0, i.e. unavailable).
+  const allPoolsVisibleState = () => withIntro(createInitialGameState(), { capacity: 8 * 1024 ** 10, byteCreated: true })
   const durationOf = (introOverrides = {}) =>
-    getComputeMergeDurationSeconds(withIntro(createInitialGameState(), introOverrides), boundaryIndex)
+    getComputeMergeDurationSeconds(withIntro(allPoolsVisibleState(), introOverrides), boundaryIndex)
 
   it('tick is a same-reference no-op while the auto flag is unset, even with the input entity completely full', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_CAP })
     expect(tick(1)(state)).toBe(state)
   })
 
   it('tick is a same-reference no-op once enabled but the input entity is below COMPUTE_ENTITY_CAP (the auto-trigger threshold is stricter than the manual button\'s own COMPUTE_MERGE_RATIO)', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
     expect(tick(1)(state)).toBe(state)
   })
 
   it('tick is still a same-reference no-op at the OLD instant-pull threshold (COMPUTE_ENTITY_CAP, 10) — the auto-trigger now needs the full extended cap (18)', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
     expect(tick(1)(state)).toBe(state)
   })
 
   it('tick auto-starts a reserve merge once enabled and the input entity reaches the extended cap (COMPUTE_ENTITY_AUTO_MERGE_CAP, 18 — primary 10 plus the gradually-filled reserve) — moving COMPUTE_MERGE_RATIO out of the input and starting the timer, without granting the output yet', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true })
     const after = tick(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO) // back to the primary 10
     expect(after.intro[outputField]).toBe(0)
@@ -4924,41 +4923,41 @@ describe.each([
   })
 
   it('tick does not start a second reserve merge while one is already in flight, even if the input has refilled all the way back to the extended cap', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, [timerField]: durationOf() })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, [timerField]: durationOf() })
     const after = tick(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP) // untouched — no second merge started
     expect(after.intro[timerField]).toBe(durationOf() - 1) // only the in-flight merge's own timer ticks down
   })
 
   it('tick completes an in-flight merge once its full duration has elapsed, granting 1 of the output and clearing the timer', () => {
-    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: 1 })
+    const state = withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: 1 })
     const after = tick(1)(state)
     expect(after.intro[outputField]).toBe(1)
     expect(after.intro[timerField]).toBe(0)
   })
 
   it('tick caps the completed output at COMPUTE_ENTITY_CAP defensively, even if the output somehow filled up while the merge was in flight', () => {
-    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: 1, [outputField]: COMPUTE_ENTITY_CAP })
+    const state = withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: 1, [outputField]: COMPUTE_ENTITY_CAP })
     const after = tick(1)(state)
     expect(after.intro[outputField]).toBe(COMPUTE_ENTITY_CAP)
     expect(after.intro[timerField]).toBe(0)
   })
 
   it('isStartAvailable requires the auto flag unlocked, no merge already in flight, at least COMPUTE_MERGE_RATIO of the input, and room under COMPUTE_ENTITY_CAP on the output', () => {
-    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
-    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
-    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
-    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(false) // already in flight
-    expect(isStartAvailable(withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true }))).toBe(true)
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO }))).toBe(false) // not unlocked
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true }))).toBe(false) // below threshold
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [timerField]: durationOf() }))).toBe(false) // already in flight
+    expect(isStartAvailable(withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true, [outputField]: COMPUTE_ENTITY_CAP }))).toBe(false) // output capped
   })
 
   it('start (manual click) is a same-reference no-op below isStartAvailable\'s own gate', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO - 1, [autoFlagField]: true })
     expect(start(state)).toBe(state)
   })
 
   it('start (manual click) fires at the lower COMPUTE_MERGE_RATIO (8) threshold — "the button is enabled only when there are at least 8 tokens available"', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_MERGE_RATIO, [autoFlagField]: true })
     const after = start(state)
     expect(after.intro[inputField]).toBe(0)
     expect(after.intro[timerField]).toBe(durationOf())
@@ -4966,52 +4965,52 @@ describe.each([
   })
 
   it('isUnlockAvailable requires COMPUTE_ENTITY_CAP of the OUTPUT entity held and not already enabled', () => {
-    const notEnough = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP - 1 })
+    const notEnough = withIntro(allPoolsVisibleState(), { [outputField]: COMPUTE_ENTITY_CAP - 1 })
     expect(isUnlockAvailable(notEnough)).toBe(false)
-    const enough = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP })
+    const enough = withIntro(allPoolsVisibleState(), { [outputField]: COMPUTE_ENTITY_CAP })
     expect(isUnlockAvailable(enough)).toBe(true)
-    const alreadyEnabled = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
+    const alreadyEnabled = withIntro(allPoolsVisibleState(), { [outputField]: COMPUTE_ENTITY_CAP, [autoFlagField]: true })
     expect(isUnlockAvailable(alreadyEnabled)).toBe(false)
   })
 
   it('enable is a same-reference no-op below isUnlockAvailable\'s own gate', () => {
-    const state = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP - 1 })
+    const state = withIntro(allPoolsVisibleState(), { [outputField]: COMPUTE_ENTITY_CAP - 1 })
     expect(enable(state)).toBe(state)
   })
 
   it('enable sacrifices exactly COMPUTE_ENTITY_CAP (10) held units of the output entity and permanently flips the auto flag', () => {
-    const state = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP })
+    const state = withIntro(allPoolsVisibleState(), { [outputField]: COMPUTE_ENTITY_CAP })
     const after = enable(state)
     expect(after.intro[outputField]).toBe(0)
     expect(after.intro[autoFlagField]).toBe(true)
   })
 
   it('enable subtracts exactly COMPUTE_ENTITY_CAP, preserving any excess above it — regression: an earlier version zeroed the whole field, silently destroying reserve progress the output entity\'s OWN outbound boundary may already be gradually accumulating past its primary 10 (see COMPUTE_ENTITY_AUTO_MERGE_CAP)', () => {
-    const state = withIntro(createInitialGameState(), { [outputField]: COMPUTE_ENTITY_CAP + 5 })
+    const state = withIntro(allPoolsVisibleState(), { [outputField]: COMPUTE_ENTITY_CAP + 5 })
     const after = enable(state)
     expect(after.intro[outputField]).toBe(5) // NOT 0
     expect(after.intro[autoFlagField]).toBe(true)
   })
 
   it('the auto flag is permanent — carried over unchanged by a real Prestige', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { [autoFlagField]: true }), PRESTIGE_THRESHOLD)
+    const state = withMoney(withIntro(allPoolsVisibleState(), { [autoFlagField]: true }), PRESTIGE_THRESHOLD)
     expect(prestigeGame(state).intro[autoFlagField]).toBe(true)
   })
 
   it('an in-flight merge timer is permanent — carried over unchanged by a real Prestige rather than being cancelled', () => {
-    const state = withMoney(withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: durationOf() - 5 }), PRESTIGE_THRESHOLD)
+    const state = withMoney(withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf() - 5 }), PRESTIGE_THRESHOLD)
     expect(prestigeGame(state).intro[timerField]).toBe(durationOf() - 5)
   })
 
   it('is wired into tickGame — a real tick auto-starts a reserve merge once enabled and the input reaches the extended cap', () => {
-    const state = withIntro(createInitialGameState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, byteCreated: true })
+    const state = withIntro(allPoolsVisibleState(), { [inputField]: COMPUTE_ENTITY_AUTO_MERGE_CAP, [autoFlagField]: true, byteCreated: true })
     const after = tickGame(1)(state)
     expect(after.intro[inputField]).toBe(COMPUTE_ENTITY_AUTO_MERGE_CAP - COMPUTE_MERGE_RATIO)
     expect(after.intro[timerField]).toBeGreaterThan(0)
   })
 
   it('is wired into tickGame — a real tick completes an in-flight merge once its duration fully elapses', () => {
-    const state = withIntro(createInitialGameState(), { [autoFlagField]: true, [timerField]: durationOf(), byteCreated: true })
+    const state = withIntro(allPoolsVisibleState(), { [autoFlagField]: true, [timerField]: durationOf(), byteCreated: true })
     const after = tickGame(durationOf())(state)
     expect(after.intro[outputField]).toBe(1)
     expect(after.intro[timerField]).toBe(0)
@@ -5058,101 +5057,57 @@ describe('isComputeEntityAutoMergeUnlocked / getComputeReserveHeld (tier 1 Cores
   })
 })
 
-describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues #377/#380)', () => {
+describe('compute merge duration = 8 normal-disk fills of the input tier\'s pool (#755)', () => {
+  const poolVisible = overrides => withIntro(createInitialGameState(), {
+    capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
+    byteCreated: true,
+    ...overrides,
+  })
+
   it('returns 0 for an out-of-range boundaryIndex', () => {
-    const state = createInitialGameState()
+    const state = poolVisible()
     expect(getComputeMergeDurationSeconds(state, -1)).toBe(0)
-    expect(getComputeMergeDurationSeconds(state, COMPUTE_MERGE_DURATION_UPGRADE_COUNT)).toBe(0)
+    expect(getComputeMergeDurationSeconds(state, COMPUTE_MERGE_BOUNDARIES.length)).toBe(0)
     expect(getComputeMergeDurationSeconds(state, 1.5)).toBe(0)
   })
 
-  it('Core→Node is COMPUTE_MERGE_CORE_EARN_MULTIPLIER × getCoreEarnTimeSeconds; each next step is ×10', () => {
-    const state = createInitialGameState()
-    const coreEarn = getCoreEarnTimeSeconds(state)
-    // capacity 8 ÷ derived rate 8 bits/sec (1 B/s at 1 Byte) = 1 second.
-    expect(coreEarn).toBe(INTRO_STARTING_CAPACITY / getIntroProductionRate(state.intro))
-    expect(getComputeMergeDurationSeconds(state, 0)).toBe(coreEarn * COMPUTE_MERGE_CORE_EARN_MULTIPLIER)
-    for (let i = 1; i < COMPUTE_MERGE_DURATION_UPGRADE_COUNT; i += 1) {
-      expect(getComputeMergeDurationSeconds(state, i)).toBe(
-        getComputeMergeDurationSeconds(state, i - 1) * COMPUTE_MERGE_STEP_MULTIPLIER,
-      )
-    }
-  })
-
-  it('scales with capacity and its own derived rate (no hardcoded second table)', () => {
-    const slow = withIntro(createInitialGameState(), { capacity: 8000 })
-    const fast = withIntro(createInitialGameState(), { capacity: 8000 * 16 })
-    expect(getComputeMergeDurationSeconds(slow, 0)).toBe(
-      getCoreEarnTimeSeconds(slow) * COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
-    )
-    // 16x capacity, 4x derived rate → 4x the earn time.
-    expect(getComputeMergeDurationSeconds(fast, 0)).toBe(getComputeMergeDurationSeconds(slow, 0) * 4)
-  })
-
-  it('uses the raw (unclamped) intro.capacity value, not a pool\'s own smaller SI-clean derived Capacity — a deliberate, documented pacing consequence of intro.capacity no longer clamping to a pool ceiling (see docs/DESIGN_HISTORY.md)', () => {
-    const state = withIntro(createInitialGameState(), {
-      // 20 doublings from 1 Byte: intro.capacity now grows past pool 1's own 100 KB SI ceiling
-      // (INTRO_CAPACITY_CAP_BITS) instead of clamping there, unlike getStoragePoolCapacity's own
-      // (smaller, SI-clean) derived value for the same pool.
-      capacity: 8 * 2 ** 20,
-    })
-    expect(state.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS)
-    // Capacity/rate, not the smaller pool-scoped derived Capacity.
-    expect(getCoreEarnTimeSeconds(state)).toBe(state.intro.capacity / getIntroProductionRate(state.intro))
-  })
-
-  it('getCoreEarnTimeSeconds is 0 for missing intro or non-positive capacity', () => {
-    expect(getCoreEarnTimeSeconds({})).toBe(0)
-    const zeroCapacity = withIntro(createInitialGameState(), { capacity: 0 })
-    expect(getCoreEarnTimeSeconds(zeroCapacity)).toBe(0)
-  })
-
-  it('upgrading Core→Node makes it ×5 of Core earn and cascades later layers', () => {
-    const locked = withIntro(createInitialGameState(), {
-      autoMergeCoresIntoNode: true,
-      computeCores: COMPUTE_ENTITY_CAP,
-    })
-    expect(isUpgradeComputeMergeDurationAvailable(locked)).toBe(true)
-    expect(getNextComputeMergeDurationUpgradeIndex(locked)).toBe(0)
-    const after = upgradeComputeMergeDuration(locked)
-    expect(after.intro.computeCores).toBe(0)
-    expect(after.intro.computeMergeDurationUpgrades).toBe(1)
-    const coreEarn = getCoreEarnTimeSeconds(after)
-    expect(getComputeMergeDurationSeconds(after, 0)).toBe(coreEarn * COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED)
-    expect(getComputeMergeDurationSeconds(after, 1)).toBe(
-      getComputeMergeDurationSeconds(after, 0) * COMPUTE_MERGE_STEP_MULTIPLIER,
+  it('Core→Node is 8 fills of pool 1\'s smallest disk at its read-cache flush rate', () => {
+    const state = poolVisible()
+    const bandwidth = getStoragePoolBandwidth(state, 1)
+    expect(bandwidth).toBeGreaterThan(0)
+    const expected = COMPUTE_MERGE_RATIO * getDiskLadderSizeBits(1) / (bandwidth * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER)
+    expect(getComputeMergeDurationSeconds(state, 0)).toBeCloseTo(expected, 9)
+    // Same as 8 whole-disk read-cache flushes (DISK_CACHE_BLOCK_COUNT blocks each).
+    expect(getComputeMergeDurationSeconds(state, 0)).toBeCloseTo(
+      COMPUTE_MERGE_RATIO * DISK_CACHE_BLOCK_COUNT * getDiskReadCacheFlushSeconds(state, getDiskLadderSizeBits(1)),
+      9,
     )
   })
 
-  it('a second upgrade makes Node→Cluster ×5 of Core→Node', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeMergeDurationUpgrades: 1,
-      autoMergeNodesIntoCluster: true,
-      computeNodes: COMPUTE_ENTITY_CAP,
-    })
-    const after = upgradeComputeMergeDuration(state)
-    expect(after.intro.computeMergeDurationUpgrades).toBe(2)
-    expect(getComputeMergeDurationSeconds(after, 1)).toBe(
-      getComputeMergeDurationSeconds(after, 0) * COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED,
+  it('uses each pool\'s smallest disk, not the ×10/×100 sizes, and no boundary-to-boundary ×10 chain', () => {
+    // Enough Capacity for pool 2 to be visible.
+    const state = poolVisible({ capacity: 8 * 1024 ** 2 * 4 })
+    const bandwidth2 = getStoragePoolBandwidth(state, 2)
+    expect(bandwidth2).toBeGreaterThan(0)
+    const pool2SmallestDisk = getDiskLadderSizeBits(DATA_LAKE_SUB_SIZES.length + 1)
+    expect(getComputeMergeDurationSeconds(state, 1)).toBeCloseTo(
+      COMPUTE_MERGE_RATIO * pool2SmallestDisk / (bandwidth2 * DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER),
+      9,
     )
   })
 
-  it('upgrade is a same-reference no-op without auto-merge unlocked or enough input held', () => {
-    const noAuto = withIntro(createInitialGameState(), { computeCores: COMPUTE_ENTITY_CAP })
-    expect(upgradeComputeMergeDuration(noAuto)).toBe(noAuto)
-    const tooFew = withIntro(createInitialGameState(), {
-      autoMergeCoresIntoNode: true,
-      computeCores: COMPUTE_ENTITY_CAP - 1,
-    })
-    expect(upgradeComputeMergeDuration(tooFew)).toBe(tooFew)
+  it('is 0 (merge unavailable) while the input tier\'s pool has no Bandwidth', () => {
+    const state = poolVisible()
+    const lastBoundary = COMPUTE_MERGE_BOUNDARIES.length - 1
+    expect(getStoragePoolBandwidth(state, lastBoundary + 1)).toBe(0)
+    expect(getComputeMergeDurationSeconds(state, lastBoundary)).toBe(0)
   })
 
-  it('upgrade spends exactly COMPUTE_ENTITY_CAP, keeping reserve progress past it (#740)', () => {
-    const state = withIntro(createInitialGameState(), {
-      autoMergeCoresIntoNode: true,
-      computeCores: COMPUTE_ENTITY_CAP + 5,
-    })
-    expect(upgradeComputeMergeDuration(state).intro.computeCores).toBe(5)
+  it('a newly started Core→Node merge snapshots the live duration', () => {
+    const state = poolVisible({ autoMergeCoresIntoNode: true, computeCores: COMPUTE_MERGE_RATIO })
+    const after = startComputeCoresMerge(state)
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(getComputeMergeDurationSeconds(state, 0))
+    expect(after.intro.computeCoresMergeRemainingSeconds).toBeGreaterThan(0)
   })
 
   it('manual merge fills the output tier\'s reserve once its own auto-merge is unlocked (#740)', () => {
@@ -5201,23 +5156,6 @@ describe('compute merge duration from live Core earn ×10 / upgraded ×5 (issues
     expect(startComputeCoresMerge(state)).toBe(state)
   })
 
-  it('the upgrade count is permanent across Prestige', () => {
-    const state = withMoney(withIntro(createInitialGameState(), {
-      computeMergeDurationUpgrades: 3,
-      autoMergeCoresIntoNode: true,
-    }), PRESTIGE_THRESHOLD)
-    expect(prestigeGame(state).intro.computeMergeDurationUpgrades).toBe(3)
-  })
-
-  it('a newly started Core→Node merge snapshots the live upgraded duration', () => {
-    const state = withIntro(createInitialGameState(), {
-      computeMergeDurationUpgrades: 1,
-      autoMergeCoresIntoNode: true,
-      computeCores: COMPUTE_MERGE_RATIO,
-    })
-    const after = startComputeCoresMerge(state)
-    expect(after.intro.computeCoresMergeRemainingSeconds).toBe(getComputeMergeDurationSeconds(state, 0))
-  })
 })
 
 describe('buyComputeAutoBoost / tickAutoComputeBoost (30 PP unlock)', () => {

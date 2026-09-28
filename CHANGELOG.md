@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+- **Boosters: timed merges now take 8 normal disk fills (#755).** A reserve merge takes as long as
+  8 of the input tier's own pool's smallest disks take to fill at that pool's Bandwidth. Cores use
+  the KB pool, Nodes the MB pool, and so on. Before, it was 10× "Core earn time" and grew 10× per
+  boundary. The merge-duration upgrade button is gone, since there is no longer a chain to shorten.
 - **Pools are fully isolated.** A pool's largest disks no longer merge into the next pool's smallest
   disks; each pool's disks fill only from its own resources. An in-progress cross-pool merge from an
   older save is cancelled and its collected disks returned to the lower pool (one already
