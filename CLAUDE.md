@@ -920,8 +920,10 @@ would now be refused.
 
 ### Pool-local resets
 
-Each Storage pool resets independently once terminal (9/9/9 disks, a completely full Data Lake, and
-the next Booster costing more than that lake can hold): only that pool's disks/buffer/lake are
+Each Storage pool becomes eligible to reset once terminal (9/9/9 disks, a completely full Data Lake,
+and the next Booster costing more than that lake can hold) — reaching that state only unlocks a
+"↻ Reset Pool" button (`isStoragePoolResetAvailable`/`resetStoragePool` in `engine.js`); the player
+must click it, it never fires on its own. Only that pool's disks/buffer/lake are
 emptied — Booster state, prior reset rewards, and every other pool are untouched; pools never
 transfer or share resources through this loop. Each reset permanently adds 1,000 lake-only capacity
 units. The first reset fixes lake overflow speed at 50%; later resets also advance the pool through
