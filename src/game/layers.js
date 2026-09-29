@@ -416,18 +416,10 @@ export const COMPUTE_MERGE_RESERVE_CAP = 8
 // auto-merge is unlocked for that boundary, COMPUTE_ENTITY_CAP alone is still the cap — see
 // getComputeEntityFieldRoom in engine.js.
 export const COMPUTE_ENTITY_AUTO_MERGE_CAP = COMPUTE_ENTITY_CAP + COMPUTE_MERGE_RESERVE_CAP
-// Timed reserve-merge durations are NOT a fixed second table — they derive from live Core earn
-// time (Memory capacity ÷ Byte generator bits/sec, before Compute Boost). Core→Node starts at
-// COMPUTE_MERGE_CORE_EARN_MULTIPLIER × that earn time; each next boundary multiplies the previous
-// duration by COMPUTE_MERGE_STEP_MULTIPLIER (10), or COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED (5)
-// once that boundary’s sequential duration upgrade is claimed. See getComputeMergeDurationSeconds.
-export const COMPUTE_MERGE_CORE_EARN_MULTIPLIER = 10
-export const COMPUTE_MERGE_STEP_MULTIPLIER = 10
-export const COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED = 5
-// Nine boundaries (Core→Node … Supercomputer→Megacomputer); one sequential upgrade each.
-export const COMPUTE_MERGE_DURATION_UPGRADE_COUNT = 9
-// Metadata per merge boundary (lowest first) for duration lookup / upgrades — sacrifice
-// COMPUTE_ENTITY_CAP of `inputField` once that boundary’s auto-merge is unlocked.
+// Timed reserve-merge durations are NOT a fixed table — each is COMPUTE_MERGE_RATIO (8) fills of the
+// input tier's own pool's smallest disk at that pool's live Bandwidth (see
+// getComputeMergeDurationSeconds in engine.js). No boundary-to-boundary multiplier.
+// Metadata per merge boundary (lowest first) — boundary i's input tier maps to Storage pool i+1.
 export const COMPUTE_MERGE_BOUNDARIES = [
   { inputField: 'computeCores', outputField: 'computeNodes', autoFlagField: 'autoMergeCoresIntoNode', timerField: 'computeCoresMergeRemainingSeconds', label: 'Cores→Nodes' },
   { inputField: 'computeNodes', outputField: 'computeClusters', autoFlagField: 'autoMergeNodesIntoCluster', timerField: 'computeNodesMergeRemainingSeconds', label: 'Nodes→Clusters' },
