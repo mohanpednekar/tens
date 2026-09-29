@@ -31,7 +31,11 @@
  * under a non-step mapping (`with.run`, `env.run`) would be linted as bash too —
  * none exist in this repo, and most such values still parse harmlessly. YAML
  * anchors/tags/aliases (`key: &a`, `!!t`, `*a`) are unsupported GitHub Actions
- * features and not handled.
+ * features and not handled. Multi-line flow-style step mappings, YAML comments
+ * inside flow-style `run` values, and quoted `run` continuations at the key's
+ * own column are likewise unsupported — no workflow here uses those shapes
+ * (steps are block-style), and this scanner is deliberately not grown into a
+ * full YAML parser.
  *
  * Usage: yarn lint:workflows
  */
