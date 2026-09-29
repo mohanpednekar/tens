@@ -11,8 +11,15 @@ import {
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+const fixtureRoots = [];
+
+afterEach(() => {
+  for (const root of fixtureRoots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+});
+
 function makeFixtureRoot({ files = [], deps = {}, nodes = [], links = [] } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'graphify-freshness-'));
+  fixtureRoots.push(root);
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ dependencies: deps }));
   fs.mkdirSync(path.join(root, 'graphify-out'));
   fs.writeFileSync(
@@ -56,8 +63,9 @@ describe('check-graphify-freshness', () => {
   it('flags repo paths and unknown bare names that no longer exist', () => {
     const root = makeFixtureRoot({
       files: ['src/kept.js'],
-      deps: { 'some-dep': '^1.0.0' },
+      deps: { 'some-dep': '^1.0.0', '@scope/pkg': '^1.0.0' },
       nodes: [
+        { source_file: '@scope/pkg' },
         { source_file: 'src/kept.js' },
         { source_file: 'src/deleted.js' },
         { source_file: 'docs/GONE.md' },

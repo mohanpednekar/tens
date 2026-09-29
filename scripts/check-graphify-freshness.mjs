@@ -10,11 +10,10 @@
  * `yarn test` runs this via `check-graphify-freshness.test.js`, so it fires
  * automatically on every PR in CI rather than needing a review round to notice.
  *
- * A `source_file` containing a path separator is always a repo path and must
- * exist. A bare name (no separator) may instead be graphify's way of recording
- * an external module import (e.g. the `web-vitals` dependency node) — those are
- * accepted only when they name a `package.json` dependency or a Node.js
- * builtin; any other missing bare name is stale.
+ * A missing `source_file` may instead be graphify's way of recording an
+ * external module import (e.g. the `web-vitals` or scoped `@capacitor/core`
+ * dependency node) — those are accepted only when they name a `package.json`
+ * dependency or a Node.js builtin; any other missing name is stale.
  *
  * Usage: node scripts/check-graphify-freshness.mjs
  *   exit 0 when clean; exit 1 and list the stale refs otherwise.
@@ -62,7 +61,8 @@ export function findStaleGraphifySourceRefs(rootDir) {
   const stale = [];
   for (const [sourceFile, refs] of collectGraphifySourceFiles(graph)) {
     if (fs.existsSync(path.join(rootDir, sourceFile))) continue;
-    if (!isRepoPath(sourceFile) && externals.has(sourceFile)) continue;
+    // Scoped packages (`@capacitor/core`) contain a slash but are still externals.
+    if (externals.has(sourceFile)) continue;
     stale.push({ sourceFile, refs });
   }
   return stale.sort((a, b) => a.sourceFile.localeCompare(b.sourceFile));
