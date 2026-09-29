@@ -1,4 +1,4 @@
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_CORE_EARN_MULTIPLIER, COMPUTE_MERGE_DURATION_UPGRADE_COUNT, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_PRESTIGE_BASE_INTERVAL_SECONDS, AUTO_PRESTIGE_COST, AUTO_PRESTIGE_COST_MULTIPLIER, AUTO_SCALE_UP_COST, AUTOBUYER_UNLOCK_BASE_COST, AUTOBUYER_UNLOCK_MILESTONE_START, AUTOBUYER_UNLOCK_MILESTONE_STEP, BITS_PER_BYTE, BYTES_ID, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_FIELDS, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_REVEAL_PP, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_BY_LEVEL, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_MAX_DISK_LADDER_STEP, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_SUB_SIZES, DATA_LAKE_SUB_SIZE_DISK_CAPS, DATA_LAKE_TIER_COUNT, DATA_LAKE_TIER_LABELS, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, EON_AMPLIFIER_AWARD_PER_LEVEL, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, FLOPS_AUTOBUYER_ERA_START, FLOPS_AUTOBUYER_ERA_STEP, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, GOOGOL, HYPERSCALER_EFFICIENCY_RATE_BONUS_PER_LEVEL, HYPERSCALER_EON_COST_BASE, HYPERSCALER_EON_COST_MULTIPLIER, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_CONVERSION_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, MEMORY_BINARY_UNIT_STEP, MUSEUM_HISTORY_CAP, MUSEUM_PIN_CAP, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_PERCENT, LAST_TIER_XP_TICKSPEED_STEP, MAX_OFFLINE_SECONDS, MONEY_ID, MONEY_STARTING_AMOUNT, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OFFLINE_PROGRESS_SPEED_MULTIPLIER, OVERCLOCK_MULTIPLIER_STEP, OVERCLOCK_REQUIREMENT_STEP, PRESTIGE_DOUBLE_PP_UPGRADE_COST_BASE, PRESTIGE_POINT_SPEED_BONUS, PRESTIGE_POWERS_PER_PP_BASE, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS, PURCHASE_BLOCK_SIZE_GROWTH_STEP, PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, SMART_AUTOBUYER_COST_MULTIPLIER, SCALE_UP_FINAL_TIER_REQUIREMENT_STEP, SCALE_UP_MULTIPLIER_BASE, TICKSPEED_AUTOBUYER_COST, TICKSPEED_MULTIPLIER_BASE_EXPONENT, TICKSPEED_PRODUCTION_STEP, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_START, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP, getStoragePoolMemoryBounds, TIER_BY_ID, TIER_INDEX_BY_ID, COMPUTE_FLOPS_TIER_BY_ID, COMPUTE_FLOPS_TIER_INDEX_BY_ID } from './layers.js'
 
 // The last tier's own id, read structurally (not hardcoded) so this stays correct if
 // TIER_DEFINITIONS ever grows a new final entry — used by the last-tier XP tickspeed mechanic
@@ -582,17 +582,10 @@ export const createInitialGameState = () => ({
     autoMergeCloudsIntoDatacenter: false,
     autoMergeDatacentersIntoSupercomputer: false,
     autoMergeSupercomputersIntoMegacomputer: false,
-    // PERMANENT — how many sequential merge-duration step upgrades have been unlocked (0..
-    // COMPUTE_MERGE_DURATION_UPGRADE_COUNT). Each step sacrifices COMPUTE_ENTITY_CAP of that
-    // boundary's input layer so that boundary is ×5 (not ×10) vs Core earn / the previous layer
-    // (see getComputeMergeDurationSeconds / upgradeComputeMergeDuration — issues #367/#377/#380).
-    // Must claim in order (Core→Node first, …); each boundary only once. Later boundaries
-    // rescale whenever an earlier upgrade changes the chain.
-    computeMergeDurationUpgrades: 0,
     // PERMANENT — one countdown field per tier boundary (Core→Node through
     // Supercomputer→Megacomputer), 0 while idle, counting down from that boundary's duration
-    // (snapshotted from getComputeMergeDurationSeconds at merge start — live Core earn ×10
-    // chain, possibly step-upgraded) while a reserve merge is in flight (see issue #321 /
+    // (snapshotted from getComputeMergeDurationSeconds at merge start — 8 normal-disk fills of the
+    // input tier's own pool) while a reserve merge is in flight (see issue #321 /
     // #377 — "Byte Foundry Compute reserve-merge timers" in layers.js). Only ever non-zero once
     // that boundary's own autoMerge* flag above is true — merging stays the old-style instant
     // action until then. Carried through a real Prestige unchanged, same permanence class as the
@@ -1251,7 +1244,6 @@ const buildEraIntroReset = (state, initial) => {
     autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
     autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
     autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
-    computeMergeDurationUpgrades: state.intro?.computeMergeDurationUpgrades ?? initial.intro.computeMergeDurationUpgrades,
     computeMergePageUnlocked: state.intro?.computeMergePageUnlocked ?? initial.intro.computeMergePageUnlocked,
     computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
   }
@@ -5527,8 +5519,8 @@ export const mergeComputeSupercomputersIntoMegacomputer = mergeComputeEntities('
 // above and layers.js), and merging that boundary — auto or manual alike — transitions entirely to
 // a timed RESERVE pool (see COMPUTE_MERGE_RESERVE_CAP / getComputeMergeDurationSeconds in layers.js
 // / below): starting a merge instantly moves COMPUTE_MERGE_RATIO (8) tokens out of the input
-// entity, then counts down that boundary's duration (live Core earn ×10 chain, or ×5 after a
-// duration upgrade — snapshotted at start so an in-flight timer does not rescale mid-merge) before
+// entity, then counts down that boundary's duration (8 normal-disk fills of the input tier's own
+// pool — snapshotted at start, then clamped down (never up) to the live duration each tick) before
 // granting 1 of the output entity (cap-checked) and clearing the timer — at most one merge in
 // flight per boundary at a time. Auto-triggers only once the input reaches the FULL extended cap
 // (18, not just the primary 10) — a stricter bar than a manual start's own COMPUTE_MERGE_RATIO (8),
@@ -5589,90 +5581,44 @@ const tickComputeMergeReserveTimer = (elapsedSeconds, timerField, outputField) =
 // entity's own extended cap once this boundary's auto-merge is unlocked, not just the primary 10)
 // with its timer countdown — the single per-boundary function tickGame's own AUTO_MERGE_TICKERS
 // pipeline calls every tick (see further down this file). Duration is read live from state at
-// auto-start so a duration-step upgrade (or a changed Core earn rate) applies to newly started
-// merges immediately; an already in-flight timer keeps whatever value was snapshotted at its start.
+// auto-start. An in-flight timer keeps its snapshot but is never allowed to exceed the current live
+// duration: if the pool's Bandwidth grows mid-merge the remaining time shrinks to match, and a
+// timer snapshotted under the old, much longer Core-earn ×10 chain (#755) is brought down on the
+// first tick its pool has Bandwidth. It never lengthens. Applied every tick (not just on load) so a
+// reload can't shorten a merge any more than simply waiting would.
 const tickComputeMergeBoundary = (elapsedSeconds, inputField, outputField, autoFlagField, timerField, boundaryIndex) => state => {
+  const remaining = state.intro?.[timerField] ?? 0
+  // Only compute the (Bandwidth-derived) duration when this boundary needs it — a timer to clamp or
+  // an auto-start to evaluate — so idle boundaries stay cheap in long offline replays.
+  const mayAutoStart = Boolean(state.intro?.[autoFlagField]) &&
+    (state.intro?.[inputField] ?? 0) >= COMPUTE_ENTITY_AUTO_MERGE_CAP
+  if (!(remaining > 0) && !mayAutoStart) return state
   const durationSeconds = getComputeMergeDurationSeconds(state, boundaryIndex)
-  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(state)
+  const clamped = durationSeconds > 0 && remaining > durationSeconds
+    ? { ...state, intro: { ...state.intro, [timerField]: durationSeconds } }
+    : state
+  const afterAutoStart = startComputeMergeReserve(inputField, outputField, autoFlagField, timerField, durationSeconds, COMPUTE_ENTITY_AUTO_MERGE_CAP)(clamped)
   return tickComputeMergeReserveTimer(elapsedSeconds, timerField, outputField)(afterAutoStart)
 }
 
-// Seconds to fill Memory once at the current Byte generator rate (capacity ÷ bits/sec). Uses
-// getIntroProductionRate — deliberately NOT including an active Compute Boost — so merge pacing
-// tracks permanent upgrade progress, not temporary boost windows. This is "Core earn
-// time": claiming a Core flushes the full capacity once Memory is full. Deliberately reads the
-// RAW intro.capacity (the real Buffer size — same value tapIntroBit/tickIntroProduction cap bits
-// at), not a Storage pool's own smaller SI-clean derived Capacity (getStoragePoolCapacity): this
-// is describing how long the actual Buffer takes to refill, not a pool-card display figure. Since
-// upgradePoolCapacity no longer clamps intro.capacity to a pool ceiling, this does mean Core-earn/
-// merge-boost pacing runs slightly slower (~2.4% per full decade of doublings past a pool
-// boundary, compounding within an Era) than it would if pinned to the pool's own bounded value —
-// an acknowledged, minor consequence of decoupling the two, not a bug — see docs/DESIGN_HISTORY.md.
-export const getCoreEarnTimeSeconds = state => {
-  const intro = state.intro
-  if (!intro) return 0
-  const capacity = intro.capacity ?? 0
-  const rate = getIntroProductionRate(intro)
-  if (!(capacity > 0) || !(rate > 0) || !Number.isFinite(rate)) return 0
-  return capacity / rate
-}
-
-// Effective timed-merge duration for boundaryIndex (0 = Core→Node, …). Live chain from Core earn
-// time: Core→Node = COMPUTE_MERGE_CORE_EARN_MULTIPLIER × earn time (or
-// COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED × once upgraded); each later boundary multiplies the
-// previous by STEP (10) or STEP_UPGRADED (5) once intro.computeMergeDurationUpgrades > that step.
+// Effective timed-merge duration for boundaryIndex (0 = Core→Node, …): the time COMPUTE_MERGE_RATIO
+// (8) of the input tier's own pool's smallest ("normal") disks take to fill. Cores map to pool 1,
+// Nodes to pool 2, … (the same tier ↔ pool pairing Data Lakes/Boosters use). One disk fills in one
+// read-cache flush (getDiskReadCacheFlushSeconds — a flush pours the whole cache into the disk), so
+// this tracks the pool's live Bandwidth. Deliberately uses only
+// the pool's smallest size, never its ×10/×100 disks: the timer does not escalate within a pool,
+// and there is no longer a boundary-to-boundary ×10 chain (see docs/DESIGN_HISTORY.md). Returns 0
+// (merge unavailable — startComputeMergeReserve no-ops) for an invalid boundary or while that pool
+// has no Bandwidth yet (not visible).
 export const getComputeMergeDurationSeconds = (state, boundaryIndex) => {
-  if (!Number.isInteger(boundaryIndex) || boundaryIndex < 0 || boundaryIndex >= COMPUTE_MERGE_DURATION_UPGRADE_COUNT) return 0
-  const upgrades = state.intro?.computeMergeDurationUpgrades ?? 0
-  let duration = getCoreEarnTimeSeconds(state)
-  if (!(duration > 0)) return 0
-  for (let step = 0; step <= boundaryIndex; step += 1) {
-    const multiplier = step < upgrades
-      ? COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED
-      : (step === 0 ? COMPUTE_MERGE_CORE_EARN_MULTIPLIER : COMPUTE_MERGE_STEP_MULTIPLIER)
-    duration *= multiplier
-  }
-  return duration
+  if (!Number.isInteger(boundaryIndex) || boundaryIndex < 0 || boundaryIndex >= COMPUTE_MERGE_BOUNDARIES.length) return 0
+  const poolIndex = boundaryIndex + 1
+  const bandwidth = getStoragePoolBandwidth(state, poolIndex)
+  if (!(bandwidth > 0) || !Number.isFinite(bandwidth)) return 0
+  const normalDiskBits = getDiskLadderSizeBits((poolIndex - 1) * DATA_LAKE_SUB_SIZES.length + 1)
+  return COMPUTE_MERGE_RATIO * getDiskReadCacheFlushSeconds(state, normalDiskBits)
 }
 
-// Next sequential duration upgrade is available when: not all claimed yet, that boundary's
-// auto-merge is already unlocked (duration only matters for timed merges), and the player holds
-// COMPUTE_ENTITY_CAP of that boundary's input layer.
-export const isUpgradeComputeMergeDurationAvailable = state => {
-  const nextIndex = state.intro?.computeMergeDurationUpgrades ?? 0
-  if (nextIndex < 0 || nextIndex >= COMPUTE_MERGE_DURATION_UPGRADE_COUNT) return false
-  const boundary = COMPUTE_MERGE_BOUNDARIES[nextIndex]
-  if (!(state.intro?.[boundary.autoFlagField] ?? false)) return false
-  return (state.intro?.[boundary.inputField] ?? 0) >= COMPUTE_ENTITY_CAP
-}
-
-// Which boundary index would be claimed next (0..8), or null if every boundary is already upgraded.
-// Does not check affordability / auto-merge unlock — UI uses this to label the next step, and
-// isUpgradeComputeMergeDurationAvailable for the actual enable gate.
-export const getNextComputeMergeDurationUpgradeIndex = state => {
-  const nextIndex = state.intro?.computeMergeDurationUpgrades ?? 0
-  if (nextIndex < 0 || nextIndex >= COMPUTE_MERGE_DURATION_UPGRADE_COUNT) return null
-  return nextIndex
-}
-
-// Sacrifices exactly COMPUTE_ENTITY_CAP of the next sequential boundary's input layer so that
-// boundary becomes ×5 (not ×10) vs Core earn / the previous layer — later boundaries rescale from
-// the new chain. Same-reference no-op below isUpgradeComputeMergeDurationAvailable.
-export const upgradeComputeMergeDuration = state => {
-  if (!isUpgradeComputeMergeDurationAvailable(state)) return state
-  const nextIndex = state.intro.computeMergeDurationUpgrades ?? 0
-  const boundary = COMPUTE_MERGE_BOUNDARIES[nextIndex]
-  return {
-    ...state,
-    intro: {
-      ...state.intro,
-      // Exactly COMPUTE_ENTITY_CAP — not the whole field, which may also hold up to
-      // COMPUTE_MERGE_RESERVE_CAP of reserve progress (same reasoning as enableAutoMerge).
-      [boundary.inputField]: (state.intro?.[boundary.inputField] ?? 0) - COMPUTE_ENTITY_CAP,
-      computeMergeDurationUpgrades: nextIndex + 1,
-    },
-  }
-}
 
 // UI mirror of enableAutoMerge's own gate — whether sacrificing the output entity right now would
 // actually unlock automation for this tier boundary.
@@ -5720,7 +5666,7 @@ export const isComputeMergeStartAvailableAtBoundary = (state, boundaryIndex) => 
   return isComputeMergeReserveStartAvailable(state, boundary.inputField, boundary.outputField, boundary.autoFlagField, boundary.timerField)
 }
 
-// Manual start that reads the live (possibly step-upgraded) duration from state and snapshots it
+// Manual start that reads the live duration from state and snapshots it
 // onto the timer field.
 const startComputeMergeReserveAtBoundary = (boundaryIndex, threshold) => state => {
   const boundary = COMPUTE_MERGE_BOUNDARIES[boundaryIndex]
@@ -6656,9 +6602,6 @@ export const prestigeGame = state => {
       autoMergeCloudsIntoDatacenter: state.intro?.autoMergeCloudsIntoDatacenter ?? initial.intro.autoMergeCloudsIntoDatacenter,
       autoMergeDatacentersIntoSupercomputer: state.intro?.autoMergeDatacentersIntoSupercomputer ?? initial.intro.autoMergeDatacentersIntoSupercomputer,
       autoMergeSupercomputersIntoMegacomputer: state.intro?.autoMergeSupercomputersIntoMegacomputer ?? initial.intro.autoMergeSupercomputersIntoMegacomputer,
-      // Merge-duration step upgrades are one-time permanent purchases (see issue #377) — carried
-      // through a real Prestige unchanged, same as the auto-merge flags above.
-      computeMergeDurationUpgrades: state.intro?.computeMergeDurationUpgrades ?? initial.intro.computeMergeDurationUpgrades,
       // Auto-boost preset preference is permanent Compute QoL (see tickAutoComputeBoost) — carried
       // through Prestige unchanged. Active boost fields below still reset every cycle.
       computeAutoBoostType: state.intro?.computeAutoBoostType ?? initial.intro.computeAutoBoostType,
