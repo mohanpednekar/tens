@@ -42,6 +42,10 @@ import {
 import { isDevModeActive } from 'game/storage'
 import App from './App'
 
+// Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
+// that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
+const POOL_2_VISIBLE_CAPACITY = 8 * 1024 ** 2 * 4
+
 // A fresh cycle's full purchase block, in bits — exactly enough for tickIntroAutoInvest to convert
 // every unit of tier01's (Kilobytes') current 8-unit block in one call. Used only as a convenient
 // round number for seeding tests below; no longer a named threshold in the engine itself (an
@@ -4468,7 +4472,7 @@ describe('Compute auto-merge automation', () => {
   test('once auto-merge is unlocked for a tier, a real tick auto-starts a reserve merge once the input is completely full (the merge itself only completes once its own timed duration elapses — see engine.test.js)', () => {
     vi.useFakeTimers()
     seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: COMPUTE_ENTITY_AUTO_MERGE_CAP, autoMergeNodesIntoCluster: true,
     })
     const { unmount } = render(<App />)
@@ -4485,7 +4489,7 @@ describe('Compute auto-merge automation', () => {
 
   test('once auto-merge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
     seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 8, autoMergeNodesIntoCluster: true,
     })
     render(<App />)

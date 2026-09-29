@@ -639,7 +639,9 @@ not at the bottom"):
          `isComputeMergeStartAvailableAtBoundary`). While a merge is in
          flight, a `MergeCountdown` span (`formatOfflineDuration` of the remaining seconds) renders
          inline with the filled slots; `aria-label`/`title` both spell out the remaining time and the
-         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count.
+         live `<reserveHeld>/COMPUTE_MERGE_RESERVE_CAP` banked count. When a start is available, the
+         `title` also names how long the merge will take (`getComputeMergeDurationSeconds`). There is
+         no merge-duration upgrade button (removed, #755).
 
      Nothing spends a Megacomputer beyond funding a Boost — see issue #280's "Out of scope".
      "Compute" names the page/feature only — no entity label carries a "Compute" prefix.
