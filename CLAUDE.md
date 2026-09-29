@@ -1065,8 +1065,9 @@ own bound; each decade step is deliberately sized to exactly fund that step's ow
 Bandwidth instead follows a finer SI-clean switchover sequence (`getSiCleanEquivalentBits` — 125
 instead of 128 past 64 B/s, repeating every decade). The Data Lake capacity ladder uses the same
 decade-power shape independently. `INTRO_COMPUTE_CORE_UNLOCK_CAPACITY` sits at half of pool 1's
-end bound. Full formulas, the `getCoreEarnTimeSeconds` raw-`intro.capacity` pacing caveat, and every
-constant name are in `docs/ECONOMY_REFERENCE.md`.
+end bound. Full formulas and every constant name are in `docs/ECONOMY_REFERENCE.md`. Timed compute
+merges (`getComputeMergeDurationSeconds`) take 8 fills of the input tier's own pool's smallest disk
+at that pool's Bandwidth; there is no merge-duration upgrade.
 
 **Pool liveness is Capacity-only, independent of disk-build progress.** A pool becomes live —
 visible, with an active buffer/Bandwidth and a usable read cache — the instant `intro.capacity`
@@ -1340,7 +1341,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1879 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1876 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
