@@ -1,6 +1,6 @@
 import Button, { ButtonContent } from 'components/Button'
-import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, getNextComputeMergeDurationUpgradeIndex, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable, isUpgradeComputeMergeDurationAvailable } from 'game/engine'
-import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, COMPUTE_MERGE_STEP_MULTIPLIER, COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED } from 'game/layers'
+import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
+import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -247,13 +247,6 @@ const StackReclaimRow = styled.div`
   width: 100%;
 `
 
-const DurationUpgradeRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-`
-
 const AutoBoostRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -486,7 +479,7 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // only ever fires automatically once the player has separately unlocked auto-merge for that
 // specific boundary; either way, once unlocked, a start (auto or manual) commits
 // COMPUTE_MERGE_RATIO (8) tokens to the reserve and counts down that boundary's live duration
-// (Core earn time ×10 chain, or ×5 after a duration upgrade — see getComputeMergeDurationSeconds)
+// (8 fills of the input tier's own pool's smallest disk — see getComputeMergeDurationSeconds)
 // before granting 1 of the output entity.
 // "Compute" names the page/feature only — individual entities drop the word (Core, Node,
 // Cluster, … not "Compute Core"/"Compute Node"/…). The merge section itself only renders once
@@ -694,35 +687,6 @@ const ComputePage = ({ game }) => {
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
-            {(() => {
-              const nextUpgradeIndex = getNextComputeMergeDurationUpgradeIndex(state)
-              if (nextUpgradeIndex === null) return null
-              const nextRow = ENTITY_ROWS[nextUpgradeIndex]
-              const currentDuration = getComputeMergeDurationSeconds(state, nextUpgradeIndex)
-              const afterDuration = getComputeMergeDurationSeconds(
-                { intro: { ...intro, computeMergeDurationUpgrades: nextUpgradeIndex + 1 } },
-                nextUpgradeIndex,
-              )
-              const canUpgrade = isUpgradeComputeMergeDurationAvailable(state)
-              return (
-                <DurationUpgradeRow>
-                  <CompactButton
-                    aria-label={`upgrade ${nextRow.label} merge duration step to ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED}`}
-                    disabled={!canUpgrade}
-                    onClick={actions.upgradeComputeMergeDuration}
-                    title={
-                      canUpgrade
-                        ? `Sacrifice ${COMPUTE_ENTITY_CAP} ${nextRow.label}: this merge becomes ×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} (not ×${COMPUTE_MERGE_STEP_MULTIPLIER}) the previous layer (${formatOfflineDuration(currentDuration)} → ${formatOfflineDuration(afterDuration)}; later layers rescale too)`
-                        : `Next duration upgrade: ${nextRow.label} → ${nextRow.mergeOutputLabel}. Needs auto-merge unlocked and ${COMPUTE_ENTITY_CAP} held ${nextRow.label}`
-                    }
-                    type="button"
-                    variant="info"
-                  >
-                    <ButtonContent>{`×${COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} ${nextRow.symbol}`}</ButtonContent>
-                  </CompactButton>
-                </DurationUpgradeRow>
-              )
-            })()}
             {ENTITY_ROWS.map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0
@@ -779,10 +743,12 @@ const ComputePage = ({ game }) => {
                             merging
                               ? `Merging: ${formatOfflineDuration(remainingSeconds)} left`
                               : startAvailable
-                                ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a timed merge into 1 ${row.mergeOutputLabel}`
+                                ? `Merge: move ${COMPUTE_MERGE_RATIO} ${row.label} into the reserve and start a ${formatOfflineDuration(getComputeMergeDurationSeconds(state, rowIndex))} merge into 1 ${row.mergeOutputLabel}`
                                 : (intro[row.mergeOutputField] ?? 0) >= outputCap
                                   ? `${row.mergeOutputLabel} is already at the max of ${outputCap}`
-                                  : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots (and a running Byte generator) — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
+                                  : !(getComputeMergeDurationSeconds(state, rowIndex) > 0)
+                                    ? `Merges wait until this tier's Storage pool is visible (grow Data Stream Capacity — its disks set the merge time)`
+                                    : `Needs at least ${COMPUTE_MERGE_RATIO} ${row.label} across the normal and reserve slots — ${reserveHeld}/${COMPUTE_MERGE_RESERVE_CAP} banked toward the next automatic merge`
                           }
                           type="button"
                         >
