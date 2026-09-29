@@ -8804,3 +8804,22 @@ bounded loss for a one-time legacy edge case, since an over-ceiling buffer would
 `normalizePoolMemoryCapacity` on the next load anyway.
 Non-consuming links were audited and kept: the reset-bandwidth cap reading the next pool's
 bandwidth, `isLaterPoolProvisioningLocked`, and pool-1-first allocation of the shared Data Stream.
+
+### Compute merge timers switched from a Core-earn ×10 chain to 8 normal-disk fills (#755)
+
+Timed reserve merges used to start at 10× "Core earn time" (Data Stream capacity ÷ production
+rate) for Core→Node and multiply by 10 at every later boundary, with a sacrifice-10 duration upgrade
+(#377/#380) that dropped a boundary to ×5. Deep merges became impractically long, and the upgrade
+existed only to patch that chain. The maintainer asked that a merge take only as long as 8 normal
+disks take to fill, without scaling within the pool. `getComputeMergeDurationSeconds` is now
+`8 × getDiskReadCacheFlushSeconds(smallestDisk)` for the input tier's own pool (Cores → pool 1, …).
+One read-cache flush fills one whole disk. An earlier draft used the flush's per-block rate for the
+whole disk, which was 8× too slow. Each tick clamps an in-flight timer down to the live duration, which also shortens timers
+already in flight under the old chain. A load-time-only cap was tried first and rejected: it
+let a reload shorten a running merge further than waiting would. The pool's
+larger ×10/×100 disks are deliberately ignored. The duration upgrade, its state field
+(`intro.computeMergeDurationUpgrades`, now ignored on load), `getCoreEarnTimeSeconds` and the
+×10/×5 constants were removed. The alternative of keeping the upgrade as a ×0.5 speed-up was
+explicitly rejected by the maintainer. Durations still grow across pools, because each pool's
+smallest disk is 1000× the previous pool's while Bandwidth is sqrt-capped. That matches how slowly
+those pools' own disks fill.

@@ -523,6 +523,8 @@ const mergeState = saved => {
     productionMilestoneTierClaims: _legacyMilestoneTierClaims,
     computeFundedBandwidthClaims: _legacyComputeFundedClaims,
     computeBandwidthSacrificeIndex: _legacySacrificeIndex,
+    // Removed with the merge-duration upgrade (#755).
+    computeMergeDurationUpgrades: _legacyComputeMergeDurationUpgrades,
     ...savedIntroClean
   } = saved.intro ?? {}
 
