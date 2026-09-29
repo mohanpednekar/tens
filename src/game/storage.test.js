@@ -484,7 +484,6 @@ describe('schema merge on load', () => {
         autoMergeNetworksIntoGrid: false, autoMergeGridsIntoFabric: false, autoMergeFabricsIntoCloud: false,
         autoMergeCloudsIntoDatacenter: false, autoMergeDatacentersIntoSupercomputer: false,
         autoMergeSupercomputersIntoMegacomputer: false,
-        computeMergeDurationUpgrades: 0,
         computeAutoBoostType: 'standard',
         computeCoresMergeRemainingSeconds: 0, computeNodesMergeRemainingSeconds: 0,
         computeClustersMergeRemainingSeconds: 0, computeNetworksMergeRemainingSeconds: 0,
@@ -503,6 +502,12 @@ describe('schema merge on load', () => {
     saveGameState(state)
     const loaded = loadGameState()
     expect(loaded.intro).toEqual(state.intro)
+  })
+
+  it('drops the removed merge-duration upgrade count from an older save (#755)', () => {
+    const state = createInitialGameState()
+    localStorage.setItem('tens_game_state', JSON.stringify({ ...state, intro: { ...state.intro, computeMergeDurationUpgrades: 3 } }))
+    expect(loadGameState().intro).not.toHaveProperty('computeMergeDurationUpgrades')
   })
 
   it('migrates a pre-rework Data Lake tier (deposits/transfers-shaped) into the current depositedUnits/fillBits/boostersUnlocked shape instead of silently discarding it, and grants each in-flight transfer\'s own compute-ladder entity rather than dropping it', () => {
