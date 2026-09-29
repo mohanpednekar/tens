@@ -17,6 +17,54 @@
       "source_location": "L1005"
     },
     {
+      "id": "src_theme_contrast_getcontrastratio",
+      "label": "getContrastRatio()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "contrast.js",
+      "file_type": "code",
+      "norm_label": "getcontrastratio()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L23"
+    },
+    {
+      "id": "src_theme_contrast_hextorgb",
+      "label": "hexToRgb()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "contrast.js",
+      "file_type": "code",
+      "norm_label": "hextorgb()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L16"
+    },
+    {
+      "id": "src_theme_contrast_relativeluminance",
+      "label": "relativeLuminance()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "contrast.js",
+      "file_type": "code",
+      "norm_label": "relativeluminance()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L11"
+    },
+    {
+      "id": "src_theme_contrast_srgbchanneltolinear",
+      "label": "srgbChannelToLinear()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 0,
+      "community_name": "contrast.js",
+      "file_type": "code",
+      "norm_label": "srgbchanneltolinear()",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L6"
+    },
+    {
       "id": "src_game_engine_formatascleanbytesifexactmultiple",
       "label": "formatAsCleanBytesIfExactMultiple()",
       "_callable": true,
@@ -125,30 +173,6 @@
       "source_location": "L880"
     },
     {
-      "id": "src_game_engine_createemptydatalakes",
-      "label": "createEmptyDataLakes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "storage.js",
-      "file_type": "code",
-      "norm_label": "createemptydatalakes()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L74"
-    },
-    {
-      "id": "src_game_engine_createemptydatalaketier",
-      "label": "createEmptyDataLakeTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "storage.js",
-      "file_type": "code",
-      "norm_label": "createemptydatalaketier()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L43"
-    },
-    {
       "id": "src_game_storage_applypendingcomputegrants",
       "label": "applyPendingComputeGrants()",
       "_callable": true,
@@ -221,18 +245,6 @@
       "source_location": "L47"
     },
     {
-      "id": "src_game_storage_getlegacypendingtransfercount",
-      "label": "getLegacyPendingTransferCount()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "storage.js",
-      "file_type": "code",
-      "norm_label": "getlegacypendingtransfercount()",
-      "source_file": "src/game/storage.js",
-      "source_location": "L417"
-    },
-    {
       "id": "src_game_storage_grantsupporterunlock",
       "label": "grantSupporterUnlock()",
       "_callable": true,
@@ -255,18 +267,6 @@
       "norm_label": "hasstoredstateforslot()",
       "source_file": "src/game/storage.js",
       "source_location": "L191"
-    },
-    {
-      "id": "src_game_storage_islegacydatalaketier",
-      "label": "isLegacyDataLakeTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "storage.js",
-      "file_type": "code",
-      "norm_label": "islegacydatalaketier()",
-      "source_file": "src/game/storage.js",
-      "source_location": "L409"
     },
     {
       "id": "src_game_storage_issupporterunlocked",
@@ -305,18 +305,6 @@
       "source_location": "L138"
     },
     {
-      "id": "src_game_storage_mergedatalakes",
-      "label": "mergeDataLakes()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "storage.js",
-      "file_type": "code",
-      "norm_label": "mergedatalakes()",
-      "source_file": "src/game/storage.js",
-      "source_location": "L457"
-    },
-    {
       "id": "src_game_storage_mergetiermap",
       "label": "mergeTierMap()",
       "_callable": true,
@@ -327,18 +315,6 @@
       "norm_label": "mergetiermap()",
       "source_file": "src/game/storage.js",
       "source_location": "L402"
-    },
-    {
-      "id": "src_game_storage_migratelegacydatalaketier",
-      "label": "migrateLegacyDataLakeTier()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 106,
-      "community_name": "storage.js",
-      "file_type": "code",
-      "norm_label": "migratelegacydatalaketier()",
-      "source_file": "src/game/storage.js",
-      "source_location": "L434"
     },
     {
       "id": "src_game_storage_normalizeunlockcode",
@@ -3173,52 +3149,28 @@
       "source_location": "L89"
     },
     {
-      "id": "src_theme_contrast_getcontrastratio",
-      "label": "getContrastRatio()",
+      "id": "src_components_confirmdialog_index_confirmdialog",
+      "label": "ConfirmDialog()",
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
-      "norm_label": "getcontrastratio()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L23"
+      "norm_label": "confirmdialog()",
+      "source_file": "src/components/ConfirmDialog/index.jsx",
+      "source_location": "L70"
     },
     {
-      "id": "src_theme_contrast_hextorgb",
-      "label": "hexToRgb()",
+      "id": "src_components_incompatiblesavenotice_index_incompatiblesavenotice",
+      "label": "IncompatibleSaveNotice()",
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
-      "norm_label": "hextorgb()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L16"
-    },
-    {
-      "id": "src_theme_contrast_relativeluminance",
-      "label": "relativeLuminance()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "relativeluminance()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L11"
-    },
-    {
-      "id": "src_theme_contrast_srgbchanneltolinear",
-      "label": "srgbChannelToLinear()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "srgbchanneltolinear()",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L6"
+      "norm_label": "incompatiblesavenotice()",
+      "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
+      "source_location": "L45"
     },
     {
       "id": "src_theme_index_getsystemthememode",
@@ -3226,11 +3178,23 @@
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "getsystemthememode()",
       "source_file": "src/theme/index.jsx",
       "source_location": "L6"
+    },
+    {
+      "id": "src_theme_index_themeprovider",
+      "label": "ThemeProvider()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Theming reference",
+      "file_type": "code",
+      "norm_label": "themeprovider()",
+      "source_file": "src/theme/index.jsx",
+      "source_location": "L18"
     },
     {
       "id": "src_theme_tokens_buildtheme",
@@ -3238,7 +3202,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "buildtheme()",
       "source_file": "src/theme/tokens.js",
@@ -3375,6 +3339,30 @@
       "norm_label": "settingspage()",
       "source_file": "src/pages/SettingsPage/index.jsx",
       "source_location": "L175"
+    },
+    {
+      "id": "src_components_offlineprogressnotice_index_offlineprogressnotice",
+      "label": "OfflineProgressNotice()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "offlineprogressnotice()",
+      "source_file": "src/components/OfflineProgressNotice/index.jsx",
+      "source_location": "L67"
+    },
+    {
+      "id": "src_game_engine_formatofflineduration",
+      "label": "formatOfflineDuration()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "formatofflineduration()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L1999"
     },
     {
       "id": "e2e_data_lake_e2e_seeddatalakesave",
@@ -3879,30 +3867,6 @@
       "norm_label": "tickdatalakeautoconvert()",
       "source_file": "src/game/engine.js",
       "source_location": "L5127"
-    },
-    {
-      "id": "src_components_button_index_buttoncontent",
-      "label": "ButtonContent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "ButtonContent",
-      "file_type": "code",
-      "norm_label": "buttoncontent()",
-      "source_file": "src/components/Button/index.jsx",
-      "source_location": "L172"
-    },
-    {
-      "id": "src_components_button_index_resolvecolor",
-      "label": "resolveColor()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "ButtonContent",
-      "file_type": "code",
-      "norm_label": "resolvecolor()",
-      "source_file": "src/components/Button/index.jsx",
-      "source_location": "L30"
     },
     {
       "id": "src_components_datalakepanel_index_clampfraction",
@@ -6514,11 +6478,83 @@
       "_callable": true,
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "file_type": "code",
       "norm_label": "reportwebvitals()",
       "source_file": "src/reportWebVitals.js",
       "source_location": "L1"
+    },
+    {
+      "id": "src_game_engine_createemptydatalakes",
+      "label": "createEmptyDataLakes()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 65,
+      "community_name": "mergeDataLakes",
+      "file_type": "code",
+      "norm_label": "createemptydatalakes()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L74"
+    },
+    {
+      "id": "src_game_engine_createemptydatalaketier",
+      "label": "createEmptyDataLakeTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 65,
+      "community_name": "mergeDataLakes",
+      "file_type": "code",
+      "norm_label": "createemptydatalaketier()",
+      "source_file": "src/game/engine.js",
+      "source_location": "L43"
+    },
+    {
+      "id": "src_game_storage_getlegacypendingtransfercount",
+      "label": "getLegacyPendingTransferCount()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 65,
+      "community_name": "mergeDataLakes",
+      "file_type": "code",
+      "norm_label": "getlegacypendingtransfercount()",
+      "source_file": "src/game/storage.js",
+      "source_location": "L417"
+    },
+    {
+      "id": "src_game_storage_islegacydatalaketier",
+      "label": "isLegacyDataLakeTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 65,
+      "community_name": "mergeDataLakes",
+      "file_type": "code",
+      "norm_label": "islegacydatalaketier()",
+      "source_file": "src/game/storage.js",
+      "source_location": "L409"
+    },
+    {
+      "id": "src_game_storage_mergedatalakes",
+      "label": "mergeDataLakes()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 65,
+      "community_name": "mergeDataLakes",
+      "file_type": "code",
+      "norm_label": "mergedatalakes()",
+      "source_file": "src/game/storage.js",
+      "source_location": "L457"
+    },
+    {
+      "id": "src_game_storage_migratelegacydatalaketier",
+      "label": "migrateLegacyDataLakeTier()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 65,
+      "community_name": "mergeDataLakes",
+      "file_type": "code",
+      "norm_label": "migratelegacydatalaketier()",
+      "source_file": "src/game/storage.js",
+      "source_location": "L434"
     },
     {
       "id": "scripts_adversarialreviewmarker_formatadversarialreviewmarker",
@@ -6555,6 +6591,18 @@
       "norm_label": "parseadversarialreviewmarker()",
       "source_file": "scripts/adversarialReviewMarker.js",
       "source_location": "L26"
+    },
+    {
+      "id": "src_components_button_index_buttoncontent",
+      "label": "ButtonContent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "Button/index.jsx",
+      "file_type": "code",
+      "norm_label": "buttoncontent()",
+      "source_file": "src/components/Button/index.jsx",
+      "source_location": "L172"
     },
     {
       "id": "src_components_button_index_clamppercent",
@@ -6605,28 +6653,16 @@
       "source_location": "L75"
     },
     {
-      "id": "src_components_offlineprogressnotice_index_offlineprogressnotice",
-      "label": "OfflineProgressNotice()",
+      "id": "src_components_button_index_resolvecolor",
+      "label": "resolveColor()",
       "_callable": true,
       "_origin": "ast",
       "community": 78,
       "community_name": "Button/index.jsx",
       "file_type": "code",
-      "norm_label": "offlineprogressnotice()",
-      "source_file": "src/components/OfflineProgressNotice/index.jsx",
-      "source_location": "L67"
-    },
-    {
-      "id": "src_game_engine_formatofflineduration",
-      "label": "formatOfflineDuration()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "formatofflineduration()",
-      "source_file": "src/game/engine.js",
-      "source_location": "L1999"
+      "norm_label": "resolvecolor()",
+      "source_file": "src/components/Button/index.jsx",
+      "source_location": "L30"
     },
     {
       "id": "src_game_engine_getdatastreambasemultiplierpercent",
@@ -6869,30 +6905,6 @@
       "source_location": "L77"
     },
     {
-      "id": "src_components_confirmdialog_index_confirmdialog",
-      "label": "ConfirmDialog()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "confirmdialog()",
-      "source_file": "src/components/ConfirmDialog/index.jsx",
-      "source_location": "L70"
-    },
-    {
-      "id": "src_components_incompatiblesavenotice_index_incompatiblesavenotice",
-      "label": "IncompatibleSaveNotice()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "incompatiblesavenotice()",
-      "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
-      "source_location": "L45"
-    },
-    {
       "id": "src_game_engine_iscomputecoreconversionunlocked",
       "label": "isComputeCoreConversionUnlocked()",
       "_callable": true,
@@ -7037,18 +7049,6 @@
       "source_location": "L11"
     },
     {
-      "id": "src_theme_index_themeprovider",
-      "label": "ThemeProvider()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "code",
-      "norm_label": "themeprovider()",
-      "source_file": "src/theme/index.jsx",
-      "source_location": "L18"
-    },
-    {
       "id": "claude_skills_simulate_run_times_ext_loader_resolve",
       "label": "resolve()",
       "_callable": true,
@@ -7061,103 +7061,81 @@
       "source_location": "L6"
     },
     {
-      "id": "src_components_appnav_index",
-      "label": "AppNav/index.jsx",
+      "id": "src_theme_contrast",
+      "label": "contrast.js",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "appnav/index.jsx",
-      "source_file": "src/components/AppNav/index.jsx",
+      "norm_label": "contrast.js",
+      "source_file": "src/theme/contrast.js",
       "source_location": "L1"
     },
     {
-      "id": "src_components_appnav_index_app_nav_bottom_pad",
-      "label": "APP_NAV_BOTTOM_PAD",
+      "id": "src_theme_contrast_aa_large_text",
+      "label": "AA_LARGE_TEXT",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "app_nav_bottom_pad",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L165"
+      "norm_label": "aa_large_text",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L34"
     },
     {
-      "id": "src_components_appnav_index_attentiondot",
-      "label": "AttentionDot",
+      "id": "src_theme_contrast_aa_normal_text",
+      "label": "AA_NORMAL_TEXT",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "attentiondot",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L79"
+      "norm_label": "aa_normal_text",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L33"
     },
     {
-      "id": "src_components_appnav_index_bar",
-      "label": "Bar",
+      "id": "src_theme_contrast_aa_ui_component",
+      "label": "AA_UI_COMPONENT",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "bar",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L17"
+      "norm_label": "aa_ui_component",
+      "source_file": "src/theme/contrast.js",
+      "source_location": "L35"
     },
     {
-      "id": "src_components_appnav_index_icon",
-      "label": "Icon",
+      "id": "src_theme_contrast_test",
+      "label": "contrast.test.js",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "icon",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L66"
+      "norm_label": "contrast.test.js",
+      "source_file": "src/theme/contrast.test.js",
+      "source_location": "L1"
     },
     {
-      "id": "src_components_appnav_index_label",
-      "label": "Label",
+      "id": "src_theme_tokens_contrast_test",
+      "label": "tokens.contrast.test.js",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "label",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L71"
+      "norm_label": "tokens.contrast.test.js",
+      "source_file": "src/theme/tokens.contrast.test.js",
+      "source_location": "L1"
     },
     {
-      "id": "src_components_appnav_index_navitem",
-      "label": "NavItem",
+      "id": "src_theme_tokens_themes",
+      "label": "themes",
       "_origin": "ast",
       "community": 0,
-      "community_name": "AppNav/index.jsx",
+      "community_name": "contrast.js",
       "file_type": "code",
-      "norm_label": "navitem",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L31"
-    },
-    {
-      "id": "src_components_appnav_index_pulsehigh",
-      "label": "pulseHigh",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AppNav/index.jsx",
-      "file_type": "code",
-      "norm_label": "pulsehigh",
-      "source_file": "src/components/AppNav/index.jsx",
-      "source_location": "L12"
-    },
-    {
-      "id": "src_game_navattention_attention_high",
-      "label": "ATTENTION_HIGH",
-      "_origin": "ast",
-      "community": 0,
-      "community_name": "AppNav/index.jsx",
-      "file_type": "code",
-      "norm_label": "attention_high",
-      "source_file": "src/game/navAttention.js",
-      "source_location": "L61"
+      "norm_label": "themes",
+      "source_file": "src/theme/tokens.js",
+      "source_location": "L155"
     },
     {
       "id": "src_pages_mainpage_index",
@@ -9657,7 +9635,7 @@
       "node_kind": "heading",
       "norm_label": "security notes",
       "source_file": "CLAUDE.md",
-      "source_location": "L1398"
+      "source_location": "L1394"
     },
     {
       "id": "docs_components_reference_offlineprogressnotice_index_jsx",
@@ -10341,66 +10319,11 @@
       "source_location": "L1594"
     },
     {
-      "id": "src_theme_contrast",
-      "label": "contrast.js",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "contrast.js",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_theme_contrast_aa_large_text",
-      "label": "AA_LARGE_TEXT",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "aa_large_text",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L34"
-    },
-    {
-      "id": "src_theme_contrast_aa_normal_text",
-      "label": "AA_NORMAL_TEXT",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "aa_normal_text",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L33"
-    },
-    {
-      "id": "src_theme_contrast_aa_ui_component",
-      "label": "AA_UI_COMPONENT",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "aa_ui_component",
-      "source_file": "src/theme/contrast.js",
-      "source_location": "L35"
-    },
-    {
-      "id": "src_theme_contrast_test",
-      "label": "contrast.test.js",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "contrast.test.js",
-      "source_file": "src/theme/contrast.test.js",
-      "source_location": "L1"
-    },
-    {
       "id": "src_theme_globalstyle",
       "label": "GlobalStyle.js",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "globalstyle.js",
       "source_file": "src/theme/GlobalStyle.js",
@@ -10411,7 +10334,7 @@
       "label": "GlobalStyle",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "globalstyle",
       "source_file": "src/theme/GlobalStyle.js",
@@ -10422,7 +10345,7 @@
       "label": "theme/index.jsx",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "theme/index.jsx",
       "source_file": "src/theme/index.jsx",
@@ -10433,21 +10356,10 @@
       "label": "tokens.js",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "tokens.js",
       "source_file": "src/theme/tokens.js",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_theme_tokens_contrast_test",
-      "label": "tokens.contrast.test.js",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "tokens.contrast.test.js",
-      "source_file": "src/theme/tokens.contrast.test.js",
       "source_location": "L1"
     },
     {
@@ -10455,7 +10367,7 @@
       "label": "DEFAULT_MODE",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "default_mode",
       "source_file": "src/theme/tokens.js",
@@ -10466,7 +10378,7 @@
       "label": "font",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "font",
       "source_file": "src/theme/tokens.js",
@@ -10477,7 +10389,7 @@
       "label": "MODES",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "modes",
       "source_file": "src/theme/tokens.js",
@@ -10488,7 +10400,7 @@
       "label": "motion",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "motion",
       "source_file": "src/theme/tokens.js",
@@ -10499,7 +10411,7 @@
       "label": "palette",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "palette",
       "source_file": "src/theme/tokens.js",
@@ -10510,7 +10422,7 @@
       "label": "radius",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "radius",
       "source_file": "src/theme/tokens.js",
@@ -10521,7 +10433,7 @@
       "label": "shadow",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "shadow",
       "source_file": "src/theme/tokens.js",
@@ -10532,29 +10444,18 @@
       "label": "space",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "space",
       "source_file": "src/theme/tokens.js",
       "source_location": "L78"
     },
     {
-      "id": "src_theme_tokens_themes",
-      "label": "themes",
-      "_origin": "ast",
-      "community": 25,
-      "community_name": "tokens.js",
-      "file_type": "code",
-      "norm_label": "themes",
-      "source_file": "src/theme/tokens.js",
-      "source_location": "L155"
-    },
-    {
       "id": "src_theme_tokens_tieraccents",
       "label": "tierAccents",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "tieraccents",
       "source_file": "src/theme/tokens.js",
@@ -10565,11 +10466,59 @@
       "label": "type",
       "_origin": "ast",
       "community": 25,
-      "community_name": "tokens.js",
+      "community_name": "Theming reference",
       "file_type": "code",
       "norm_label": "type",
       "source_file": "src/theme/tokens.js",
       "source_location": "L124"
+    },
+    {
+      "id": "changelog_changed_928",
+      "label": "Changed",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Theming reference",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "changed",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L928"
+    },
+    {
+      "id": "docs_design_history_compute_merge_timers_from_live_core_earn_10_auto_boost_30_pp_forfeit_with_confirm_377_380",
+      "label": "Compute merge timers from live Core earn \u00d710; Auto-Boost 30 PP; forfeit with confirm (#377/#380)",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Theming reference",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "compute merge timers from live core earn \u00d710; auto-boost 30 pp; forfeit with confirm (#377/#380)",
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L3412"
+    },
+    {
+      "id": "docs_theming_reference",
+      "label": "THEMING_REFERENCE.md",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Theming reference",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "theming_reference.md",
+      "source_file": "docs/THEMING_REFERENCE.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_theming_reference_theming_reference",
+      "label": "Theming reference",
+      "_origin": "ast",
+      "community": 25,
+      "community_name": "Theming reference",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "theming reference",
+      "source_file": "docs/THEMING_REFERENCE.md",
+      "source_location": "L1"
     },
     {
       "id": "agents",
@@ -11133,11 +11082,22 @@
       "source_location": "L152"
     },
     {
+      "id": "src_components_button_index_visuallyhidden",
+      "label": "VisuallyHidden",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "visuallyhidden",
+      "source_file": "src/components/Button/index.jsx",
+      "source_location": "L187"
+    },
+    {
       "id": "src_components_confirmdialog_index",
       "label": "ConfirmDialog/index.jsx",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "confirmdialog/index.jsx",
       "source_file": "src/components/ConfirmDialog/index.jsx",
@@ -11148,7 +11108,7 @@
       "label": "Actions",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "actions",
       "source_file": "src/components/ConfirmDialog/index.jsx",
@@ -11159,7 +11119,7 @@
       "label": "Body",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "body",
       "source_file": "src/components/ConfirmDialog/index.jsx",
@@ -11170,7 +11130,7 @@
       "label": "Card",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "card",
       "source_file": "src/components/ConfirmDialog/index.jsx",
@@ -11181,7 +11141,7 @@
       "label": "Overlay",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "overlay",
       "source_file": "src/components/ConfirmDialog/index.jsx",
@@ -11192,7 +11152,7 @@
       "label": "Title",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "title",
       "source_file": "src/components/ConfirmDialog/index.jsx",
@@ -11203,7 +11163,7 @@
       "label": "IncompatibleSaveNotice/index.jsx",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "incompatiblesavenotice/index.jsx",
       "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
@@ -11214,7 +11174,7 @@
       "label": "Body",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "body",
       "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
@@ -11225,7 +11185,7 @@
       "label": "Card",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "card",
       "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
@@ -11236,7 +11196,7 @@
       "label": "Overlay",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "overlay",
       "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
@@ -11247,18 +11207,62 @@
       "label": "Title",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "title",
       "source_file": "src/components/IncompatibleSaveNotice/index.jsx",
       "source_location": "L31"
     },
     {
+      "id": "src_components_offlineprogressnotice_index",
+      "label": "OfflineProgressNotice/index.jsx",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "offlineprogressnotice/index.jsx",
+      "source_file": "src/components/OfflineProgressNotice/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_components_offlineprogressnotice_index_noticetext",
+      "label": "NoticeText",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "noticetext",
+      "source_file": "src/components/OfflineProgressNotice/index.jsx",
+      "source_location": "L52"
+    },
+    {
+      "id": "src_components_offlineprogressnotice_index_offlinenoticecard",
+      "label": "OfflineNoticeCard",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "offlinenoticecard",
+      "source_file": "src/components/OfflineProgressNotice/index.jsx",
+      "source_location": "L35"
+    },
+    {
+      "id": "src_components_offlineprogressnotice_index_offlinenoticeoverlay",
+      "label": "OfflineNoticeOverlay",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "offlinenoticeoverlay",
+      "source_file": "src/components/OfflineProgressNotice/index.jsx",
+      "source_location": "L17"
+    },
+    {
       "id": "src_components_statcard_index",
       "label": "StatCard/index.js",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "statcard/index.js",
       "source_file": "src/components/StatCard/index.js",
@@ -11269,22 +11273,155 @@
       "label": "StatCard",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "code",
       "norm_label": "statcard",
       "source_file": "src/components/StatCard/index.js",
       "source_location": "L8"
     },
     {
+      "id": "src_pages_milestonespage_index",
+      "label": "MilestonesPage/index.jsx",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "milestonespage/index.jsx",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "src_pages_milestonespage_index_badge",
+      "label": "Badge",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "badge",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L70"
+    },
+    {
+      "id": "src_pages_milestonespage_index_category",
+      "label": "Category",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "category",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L45"
+    },
+    {
+      "id": "src_pages_milestonespage_index_categoryheading",
+      "label": "CategoryHeading",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "categoryheading",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L49"
+    },
+    {
+      "id": "src_pages_milestonespage_index_header",
+      "label": "Header",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "header",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L27"
+    },
+    {
+      "id": "src_pages_milestonespage_index_list",
+      "label": "List",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "list",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L39"
+    },
+    {
+      "id": "src_pages_milestonespage_index_rootdiv",
+      "label": "RootDiv",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "rootdiv",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L17"
+    },
+    {
+      "id": "src_pages_milestonespage_index_row",
+      "label": "Row",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "row",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L57"
+    },
+    {
+      "id": "src_pages_milestonespage_index_rowcontrols",
+      "label": "RowControls",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "rowcontrols",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L81"
+    },
+    {
+      "id": "src_pages_milestonespage_index_tiernamelabel",
+      "label": "TierNameLabel",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "code",
+      "norm_label": "tiernamelabel",
+      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "source_location": "L76"
+    },
+    {
+      "id": "ref_react",
+      "label": "react",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "concept",
+      "norm_label": "react",
+      "source_file": "package.json",
+      "source_location": "L18"
+    },
+    {
       "id": "ref_styled_components",
       "label": "styled-components",
       "_origin": "ast",
       "community": 29,
-      "community_name": "styled-components",
+      "community_name": "MilestonesPage/index.jsx",
       "file_type": "concept",
       "norm_label": "styled-components",
       "source_file": "package.json",
       "source_location": "L21"
+    },
+    {
+      "id": "changelog_fixed_1157",
+      "label": "Fixed",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "MilestonesPage/index.jsx",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "fixed",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L1157"
     },
     {
       "id": "e2e_data_lake_e2e",
@@ -12800,7 +12937,7 @@
       "node_kind": "heading",
       "norm_label": "capacitor foundation (in progress \u2014 #70)",
       "source_file": "CLAUDE.md",
-      "source_location": "L1274"
+      "source_location": "L1270"
     },
     {
       "id": "claude_changelog_convention",
@@ -12860,7 +12997,7 @@
       "node_kind": "heading",
       "norm_label": "funding",
       "source_file": "CLAUDE.md",
-      "source_location": "L1287"
+      "source_location": "L1283"
     },
     {
       "id": "claude_github_milestones_release_grouping",
@@ -12884,7 +13021,7 @@
       "node_kind": "heading",
       "norm_label": "graphify",
       "source_file": "CLAUDE.md",
-      "source_location": "L1408"
+      "source_location": "L1404"
     },
     {
       "id": "claude_issue_tracking_for_interactive_sessions",
@@ -12908,7 +13045,7 @@
       "node_kind": "heading",
       "norm_label": "license",
       "source_file": "CLAUDE.md",
-      "source_location": "L1294"
+      "source_location": "L1290"
     },
     {
       "id": "claude_md_claude_claude",
@@ -12932,7 +13069,7 @@
       "node_kind": "heading",
       "norm_label": "path aliases",
       "source_file": "CLAUDE.md",
-      "source_location": "L1241"
+      "source_location": "L1237"
     },
     {
       "id": "claude_pull_requests",
@@ -12956,7 +13093,7 @@
       "node_kind": "heading",
       "norm_label": "pwa support",
       "source_file": "CLAUDE.md",
-      "source_location": "L1263"
+      "source_location": "L1259"
     },
     {
       "id": "claude_repo_layout",
@@ -12992,7 +13129,7 @@
       "node_kind": "heading",
       "norm_label": "theming",
       "source_file": "CLAUDE.md",
-      "source_location": "L1248"
+      "source_location": "L1244"
     },
     {
       "id": "docs_components_reference_bytefoundrypage_pool_layout",
@@ -13043,23 +13180,11 @@
       "source_location": "L96"
     },
     {
-      "id": "changelog_fixed_1157",
-      "label": "Fixed",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "ButtonContent",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "fixed",
-      "source_file": "CHANGELOG.md",
-      "source_location": "L1157"
-    },
-    {
       "id": "docs_components_reference",
       "label": "COMPONENTS_REFERENCE.md",
       "_origin": "ast",
       "community": 33,
-      "community_name": "ButtonContent",
+      "community_name": "Shared components reference",
       "file_type": "document",
       "node_kind": "page",
       "norm_label": "components_reference.md",
@@ -13071,7 +13196,7 @@
       "label": "`AppMenu/index.jsx`",
       "_origin": "ast",
       "community": 33,
-      "community_name": "ButtonContent",
+      "community_name": "Shared components reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "`appmenu/index.jsx`",
@@ -13079,23 +13204,11 @@
       "source_location": "L25"
     },
     {
-      "id": "docs_components_reference_button_index_jsx",
-      "label": "`Button/index.jsx`",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "ButtonContent",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "`button/index.jsx`",
-      "source_file": "docs/COMPONENTS_REFERENCE.md",
-      "source_location": "L33"
-    },
-    {
       "id": "docs_components_reference_confirmdialog_index_jsx",
       "label": "`ConfirmDialog/index.jsx`",
       "_origin": "ast",
       "community": 33,
-      "community_name": "ButtonContent",
+      "community_name": "Shared components reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "`confirmdialog/index.jsx`",
@@ -13107,7 +13220,7 @@
       "label": "`Money/index.js`",
       "_origin": "ast",
       "community": 33,
-      "community_name": "ButtonContent",
+      "community_name": "Shared components reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "`money/index.js`",
@@ -13119,7 +13232,7 @@
       "label": "Shared components reference",
       "_origin": "ast",
       "community": 33,
-      "community_name": "ButtonContent",
+      "community_name": "Shared components reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "shared components reference",
@@ -13131,24 +13244,12 @@
       "label": "`StatCard/index.js`",
       "_origin": "ast",
       "community": 33,
-      "community_name": "ButtonContent",
+      "community_name": "Shared components reference",
       "file_type": "document",
       "node_kind": "heading",
       "norm_label": "`statcard/index.js`",
       "source_file": "docs/COMPONENTS_REFERENCE.md",
       "source_location": "L240"
-    },
-    {
-      "id": "docs_design_history_the_transfer_budget_becomes_dynamic_tied_to_the_kilobyte_tier_s_own_block_size_a_real_buttoncontent_bug_fixed_along_the_way",
-      "label": "The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way",
-      "_origin": "ast",
-      "community": 33,
-      "community_name": "ButtonContent",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "the transfer budget becomes dynamic (tied to the kilobyte tier's own block size); a real buttoncontent bug fixed along the way",
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L2184"
     },
     {
       "id": "src_components_datalakepanel_index",
@@ -13834,7 +13935,7 @@
       "node_kind": "heading",
       "norm_label": "end-to-end testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1364"
+      "source_location": "L1360"
     },
     {
       "id": "claude_skills_simulate_run_times_skill_when_editing_the_simulation",
@@ -13858,7 +13959,7 @@
       "node_kind": "heading",
       "norm_label": "testing",
       "source_file": "CLAUDE.md",
-      "source_location": "L1306"
+      "source_location": "L1302"
     },
     {
       "id": "docs_design_history_migration_in_src_save_migration_runs_on_every_load_2026_08_22",
@@ -17834,114 +17935,70 @@
       "source_location": "L17"
     },
     {
-      "id": "src_pages_milestonespage_index",
-      "label": "MilestonesPage/index.jsx",
+      "id": "src_components_appmenu_index",
+      "label": "AppMenu/index.jsx",
       "_origin": "ast",
       "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
+      "community_name": "AppMenu/index.jsx",
       "file_type": "code",
-      "norm_label": "milestonespage/index.jsx",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
+      "norm_label": "appmenu/index.jsx",
+      "source_file": "src/components/AppMenu/index.jsx",
       "source_location": "L1"
     },
     {
-      "id": "src_pages_milestonespage_index_badge",
-      "label": "Badge",
+      "id": "src_components_appmenu_index_backdrop",
+      "label": "Backdrop",
       "_origin": "ast",
       "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
+      "community_name": "AppMenu/index.jsx",
       "file_type": "code",
-      "norm_label": "badge",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L70"
+      "norm_label": "backdrop",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L10"
     },
     {
-      "id": "src_pages_milestonespage_index_category",
-      "label": "Category",
+      "id": "src_components_appmenu_index_icon",
+      "label": "Icon",
       "_origin": "ast",
       "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
+      "community_name": "AppMenu/index.jsx",
       "file_type": "code",
-      "norm_label": "category",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L45"
+      "norm_label": "icon",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L71"
     },
     {
-      "id": "src_pages_milestonespage_index_categoryheading",
-      "label": "CategoryHeading",
+      "id": "src_components_appmenu_index_menubutton",
+      "label": "MenuButton",
       "_origin": "ast",
       "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
+      "community_name": "AppMenu/index.jsx",
       "file_type": "code",
-      "norm_label": "categoryheading",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L49"
+      "norm_label": "menubutton",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L48"
     },
     {
-      "id": "src_pages_milestonespage_index_header",
-      "label": "Header",
+      "id": "src_components_appmenu_index_sheet",
+      "label": "Sheet",
       "_origin": "ast",
       "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
+      "community_name": "AppMenu/index.jsx",
       "file_type": "code",
-      "norm_label": "header",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L27"
+      "norm_label": "sheet",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L20"
     },
     {
-      "id": "src_pages_milestonespage_index_list",
-      "label": "List",
+      "id": "src_components_appmenu_index_sheettitle",
+      "label": "SheetTitle",
       "_origin": "ast",
       "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
+      "community_name": "AppMenu/index.jsx",
       "file_type": "code",
-      "norm_label": "list",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L39"
-    },
-    {
-      "id": "src_pages_milestonespage_index_rootdiv",
-      "label": "RootDiv",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "rootdiv",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L17"
-    },
-    {
-      "id": "src_pages_milestonespage_index_row",
-      "label": "Row",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "row",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L57"
-    },
-    {
-      "id": "src_pages_milestonespage_index_rowcontrols",
-      "label": "RowControls",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "rowcontrols",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L81"
-    },
-    {
-      "id": "src_pages_milestonespage_index_tiernamelabel",
-      "label": "TierNameLabel",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "MilestonesPage/index.jsx",
-      "file_type": "code",
-      "norm_label": "tiernamelabel",
-      "source_file": "src/pages/MilestonesPage/index.jsx",
-      "source_location": "L76"
+      "norm_label": "sheettitle",
+      "source_file": "src/components/AppMenu/index.jsx",
+      "source_location": "L38"
     },
     {
       "id": "docs_design_history_data_lake_capacity_upgrade_removed_from_the_forced_priority_order_array_completion_is_now_the_only_gate",
@@ -18333,7 +18390,7 @@
       "label": "web-vitals",
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "confidence": "EXTRACTED",
       "file_type": "code",
       "norm_label": "web-vitals",
@@ -18344,7 +18401,7 @@
       "label": "src/index.jsx",
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "file_type": "code",
       "norm_label": "src/index.jsx",
       "source_file": "src/index.jsx",
@@ -18355,7 +18412,7 @@
       "label": "rootElement",
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "file_type": "code",
       "norm_label": "rootelement",
       "source_file": "src/index.jsx",
@@ -18366,29 +18423,18 @@
       "label": "reportWebVitals.js",
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "file_type": "code",
       "norm_label": "reportwebvitals.js",
       "source_file": "src/reportWebVitals.js",
       "source_location": "L1"
     },
     {
-      "id": "ref_react",
-      "label": "react",
-      "_origin": "ast",
-      "community": 63,
-      "community_name": "react",
-      "file_type": "concept",
-      "norm_label": "react",
-      "source_file": "package.json",
-      "source_location": "L18"
-    },
-    {
       "id": "ref_react_dom",
       "label": "react-dom",
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "file_type": "concept",
       "norm_label": "react-dom",
       "source_file": "package.json",
@@ -18399,7 +18445,7 @@
       "label": "web-vitals",
       "_origin": "ast",
       "community": 63,
-      "community_name": "react",
+      "community_name": "src/index.jsx",
       "file_type": "concept",
       "norm_label": "web-vitals",
       "source_file": "package.json",
@@ -19257,61 +19303,6 @@
       "source_location": "L10"
     },
     {
-      "id": "src_components_button_index_visuallyhidden",
-      "label": "VisuallyHidden",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "visuallyhidden",
-      "source_file": "src/components/Button/index.jsx",
-      "source_location": "L187"
-    },
-    {
-      "id": "src_components_offlineprogressnotice_index",
-      "label": "OfflineProgressNotice/index.jsx",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "offlineprogressnotice/index.jsx",
-      "source_file": "src/components/OfflineProgressNotice/index.jsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_components_offlineprogressnotice_index_noticetext",
-      "label": "NoticeText",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "noticetext",
-      "source_file": "src/components/OfflineProgressNotice/index.jsx",
-      "source_location": "L52"
-    },
-    {
-      "id": "src_components_offlineprogressnotice_index_offlinenoticecard",
-      "label": "OfflineNoticeCard",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "offlinenoticecard",
-      "source_file": "src/components/OfflineProgressNotice/index.jsx",
-      "source_location": "L35"
-    },
-    {
-      "id": "src_components_offlineprogressnotice_index_offlinenoticeoverlay",
-      "label": "OfflineNoticeOverlay",
-      "_origin": "ast",
-      "community": 78,
-      "community_name": "Button/index.jsx",
-      "file_type": "code",
-      "norm_label": "offlinenoticeoverlay",
-      "source_file": "src/components/OfflineProgressNotice/index.jsx",
-      "source_location": "L17"
-    },
-    {
       "id": "src_pages_mainpage_index_prestigeprogresstrack",
       "label": "PrestigeProgressTrack",
       "_origin": "ast",
@@ -19321,6 +19312,30 @@
       "norm_label": "prestigeprogresstrack",
       "source_file": "src/pages/MainPage/index.jsx",
       "source_location": "L333"
+    },
+    {
+      "id": "docs_components_reference_button_index_jsx",
+      "label": "`Button/index.jsx`",
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "Button/index.jsx",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "`button/index.jsx`",
+      "source_file": "docs/COMPONENTS_REFERENCE.md",
+      "source_location": "L33"
+    },
+    {
+      "id": "docs_design_history_the_transfer_budget_becomes_dynamic_tied_to_the_kilobyte_tier_s_own_block_size_a_real_buttoncontent_bug_fixed_along_the_way",
+      "label": "The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way",
+      "_origin": "ast",
+      "community": 78,
+      "community_name": "Button/index.jsx",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "the transfer budget becomes dynamic (tied to the kilobyte tier's own block size); a real buttoncontent bug fixed along the way",
+      "source_file": "docs/DESIGN_HISTORY.md",
+      "source_location": "L2184"
     },
     {
       "id": "claude_skills_graphify_references_github_and_merge",
@@ -19900,82 +19915,103 @@
       "source_location": "L29"
     },
     {
-      "id": "src_components_appmenu_index",
-      "label": "AppMenu/index.jsx",
+      "id": "src_components_appnav_index",
+      "label": "AppNav/index.jsx",
       "_origin": "ast",
       "community": 9,
       "community_name": "App.jsx",
       "file_type": "code",
-      "norm_label": "appmenu/index.jsx",
-      "source_file": "src/components/AppMenu/index.jsx",
+      "norm_label": "appnav/index.jsx",
+      "source_file": "src/components/AppNav/index.jsx",
       "source_location": "L1"
     },
     {
-      "id": "src_components_appmenu_index_backdrop",
-      "label": "Backdrop",
+      "id": "src_components_appnav_index_app_nav_bottom_pad",
+      "label": "APP_NAV_BOTTOM_PAD",
       "_origin": "ast",
       "community": 9,
       "community_name": "App.jsx",
       "file_type": "code",
-      "norm_label": "backdrop",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L10"
+      "norm_label": "app_nav_bottom_pad",
+      "source_file": "src/components/AppNav/index.jsx",
+      "source_location": "L165"
     },
     {
-      "id": "src_components_appmenu_index_icon",
+      "id": "src_components_appnav_index_attentiondot",
+      "label": "AttentionDot",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "attentiondot",
+      "source_file": "src/components/AppNav/index.jsx",
+      "source_location": "L79"
+    },
+    {
+      "id": "src_components_appnav_index_bar",
+      "label": "Bar",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "bar",
+      "source_file": "src/components/AppNav/index.jsx",
+      "source_location": "L17"
+    },
+    {
+      "id": "src_components_appnav_index_icon",
       "label": "Icon",
       "_origin": "ast",
       "community": 9,
       "community_name": "App.jsx",
       "file_type": "code",
       "norm_label": "icon",
-      "source_file": "src/components/AppMenu/index.jsx",
+      "source_file": "src/components/AppNav/index.jsx",
+      "source_location": "L66"
+    },
+    {
+      "id": "src_components_appnav_index_label",
+      "label": "Label",
+      "_origin": "ast",
+      "community": 9,
+      "community_name": "App.jsx",
+      "file_type": "code",
+      "norm_label": "label",
+      "source_file": "src/components/AppNav/index.jsx",
       "source_location": "L71"
     },
     {
-      "id": "src_components_appmenu_index_menubutton",
-      "label": "MenuButton",
+      "id": "src_components_appnav_index_navitem",
+      "label": "NavItem",
       "_origin": "ast",
       "community": 9,
       "community_name": "App.jsx",
       "file_type": "code",
-      "norm_label": "menubutton",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L48"
+      "norm_label": "navitem",
+      "source_file": "src/components/AppNav/index.jsx",
+      "source_location": "L31"
     },
     {
-      "id": "src_components_appmenu_index_sheet",
-      "label": "Sheet",
+      "id": "src_components_appnav_index_pulsehigh",
+      "label": "pulseHigh",
       "_origin": "ast",
       "community": 9,
       "community_name": "App.jsx",
       "file_type": "code",
-      "norm_label": "sheet",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L20"
+      "norm_label": "pulsehigh",
+      "source_file": "src/components/AppNav/index.jsx",
+      "source_location": "L12"
     },
     {
-      "id": "src_components_appmenu_index_sheettitle",
-      "label": "SheetTitle",
+      "id": "src_game_navattention_attention_high",
+      "label": "ATTENTION_HIGH",
       "_origin": "ast",
       "community": 9,
       "community_name": "App.jsx",
       "file_type": "code",
-      "norm_label": "sheettitle",
-      "source_file": "src/components/AppMenu/index.jsx",
-      "source_location": "L38"
-    },
-    {
-      "id": "changelog_changed_928",
-      "label": "Changed",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "changed",
-      "source_file": "CHANGELOG.md",
-      "source_location": "L928"
+      "norm_label": "attention_high",
+      "source_file": "src/game/navAttention.js",
+      "source_location": "L61"
     },
     {
       "id": "docs_components_reference_appnav_index_jsx",
@@ -19990,18 +20026,6 @@
       "source_location": "L8"
     },
     {
-      "id": "docs_design_history_compute_merge_timers_from_live_core_earn_10_auto_boost_30_pp_forfeit_with_confirm_377_380",
-      "label": "Compute merge timers from live Core earn \u00d710; Auto-Boost 30 PP; forfeit with confirm (#377/#380)",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "compute merge timers from live core earn \u00d710; auto-boost 30 pp; forfeit with confirm (#377/#380)",
-      "source_file": "docs/DESIGN_HISTORY.md",
-      "source_location": "L3412"
-    },
-    {
       "id": "docs_design_history_sacrifice_confirm_in_game_dialog_core_warning_only_when_unlocked",
       "label": "Sacrifice confirm: in-game dialog; Core warning only when unlocked",
       "_origin": "ast",
@@ -20012,30 +20036,6 @@
       "norm_label": "sacrifice confirm: in-game dialog; core warning only when unlocked",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L1348"
-    },
-    {
-      "id": "docs_theming_reference",
-      "label": "THEMING_REFERENCE.md",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "theming_reference.md",
-      "source_file": "docs/THEMING_REFERENCE.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "docs_theming_reference_theming_reference",
-      "label": "Theming reference",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "App.jsx",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "theming reference",
-      "source_file": "docs/THEMING_REFERENCE.md",
-      "source_location": "L1"
     },
     {
       "id": "claude_claude_graphify",
@@ -53194,7 +53194,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1241",
+      "source_location": "L1237",
       "weight": 1.0
     },
     {
@@ -53205,7 +53205,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1248",
+      "source_location": "L1244",
       "weight": 1.0
     },
     {
@@ -53216,7 +53216,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1263",
+      "source_location": "L1259",
       "weight": 1.0
     },
     {
@@ -53227,7 +53227,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1287",
+      "source_location": "L1283",
       "weight": 1.0
     },
     {
@@ -53238,7 +53238,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1294",
+      "source_location": "L1290",
       "weight": 1.0
     },
     {
@@ -53249,7 +53249,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1306",
+      "source_location": "L1302",
       "weight": 1.0
     },
     {
@@ -53260,7 +53260,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1398",
+      "source_location": "L1394",
       "weight": 1.0
     },
     {
@@ -53271,7 +53271,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1408",
+      "source_location": "L1404",
       "weight": 1.0
     },
     {
@@ -53425,7 +53425,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1274",
+      "source_location": "L1270",
       "weight": 1.0
     },
     {
@@ -54525,7 +54525,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "CLAUDE.md",
-      "source_location": "L1364",
+      "source_location": "L1360",
       "weight": 1.0
     },
     {
@@ -70302,7 +70302,7 @@
       "confidence_score": 0.95,
       "context": "ByteFoundryPage",
       "source_file": "CLAUDE.md",
-      "source_location": "L979",
+      "source_location": "L982",
       "weight": 1.0
     },
     {
@@ -70902,7 +70902,7 @@
       "confidence_score": 0.95,
       "context": "ComputeFlopsPage",
       "source_file": "CLAUDE.md",
-      "source_location": "L1004",
+      "source_location": "L1007",
       "weight": 1.0
     },
     {
@@ -70974,7 +70974,7 @@
       "confidence_score": 0.95,
       "context": "ComputePage",
       "source_file": "CLAUDE.md",
-      "source_location": "L1003",
+      "source_location": "L1006",
       "weight": 1.0
     },
     {
@@ -71214,7 +71214,7 @@
       "confidence_score": 0.95,
       "context": "DataLakePanel",
       "source_file": "CLAUDE.md",
-      "source_location": "L1126",
+      "source_location": "L1129",
       "weight": 1.0
     },
     {
@@ -71634,7 +71634,7 @@
       "confidence_score": 0.95,
       "context": "DiskArrayRow",
       "source_file": "CLAUDE.md",
-      "source_location": "L1180",
+      "source_location": "L1183",
       "weight": 1.0
     },
     {
@@ -71838,7 +71838,7 @@
       "confidence_score": 0.95,
       "context": "IncompatibleSaveNotice",
       "source_file": "CLAUDE.md",
-      "source_location": "L1350",
+      "source_location": "L1346",
       "weight": 1.0
     },
     {
@@ -72486,7 +72486,7 @@
       "confidence_score": 0.95,
       "context": "MultiplierBar",
       "source_file": "CLAUDE.md",
-      "source_location": "L1036",
+      "source_location": "L1039",
       "weight": 1.0
     },
     {
@@ -72594,7 +72594,7 @@
       "confidence_score": 0.95,
       "context": "PoolBalanceText",
       "source_file": "CLAUDE.md",
-      "source_location": "L1200",
+      "source_location": "L1198",
       "weight": 1.0
     },
     {
@@ -72762,7 +72762,7 @@
       "confidence_score": 0.95,
       "context": "StoragePage",
       "source_file": "CLAUDE.md",
-      "source_location": "L1003",
+      "source_location": "L1006",
       "weight": 1.0
     },
     {
@@ -73362,7 +73362,7 @@
       "confidence_score": 0.95,
       "context": "buildEraIntroReset",
       "source_file": "CLAUDE.md",
-      "source_location": "L988",
+      "source_location": "L991",
       "weight": 1.0
     },
     {
@@ -73578,7 +73578,7 @@
       "confidence_score": 0.95,
       "context": "buyBooster",
       "source_file": "CLAUDE.md",
-      "source_location": "L1123",
+      "source_location": "L1126",
       "weight": 1.0
     },
     {
@@ -73890,7 +73890,7 @@
       "confidence_score": 0.95,
       "context": "buyHyperscaler",
       "source_file": "CLAUDE.md",
-      "source_location": "L964",
+      "source_location": "L967",
       "weight": 1.0
     },
     {
@@ -74298,7 +74298,7 @@
       "confidence_score": 0.95,
       "context": "buyTierQuantity",
       "source_file": "CLAUDE.md",
-      "source_location": "L1335",
+      "source_location": "L1331",
       "weight": 1.0
     },
     {
@@ -74574,7 +74574,7 @@
       "confidence_score": 0.95,
       "context": "canStartDiskWriteCacheMerge",
       "source_file": "CLAUDE.md",
-      "source_location": "L1173",
+      "source_location": "L1176",
       "weight": 1.0
     },
     {
@@ -74982,7 +74982,7 @@
       "confidence_score": 0.95,
       "context": "clearGameState",
       "source_file": "CLAUDE.md",
-      "source_location": "L1403",
+      "source_location": "L1399",
       "weight": 1.0
     },
     {
@@ -74994,7 +74994,7 @@
       "confidence_score": 0.95,
       "context": "clearGameState",
       "source_file": "CLAUDE.md",
-      "source_location": "L1258",
+      "source_location": "L1254",
       "weight": 1.0
     },
     {
@@ -75030,7 +75030,7 @@
       "confidence_score": 0.95,
       "context": "clearIntroCapacityUpgradeQueue",
       "source_file": "CLAUDE.md",
-      "source_location": "L998",
+      "source_location": "L1001",
       "weight": 1.0
     },
     {
@@ -75270,7 +75270,7 @@
       "confidence_score": 0.95,
       "context": "convertIntroBitsToKilobytes",
       "source_file": "CLAUDE.md",
-      "source_location": "L1012",
+      "source_location": "L1015",
       "weight": 1.0
     },
     {
@@ -75534,7 +75534,7 @@
       "confidence_score": 0.95,
       "context": "createInitialGameState()",
       "source_file": "CLAUDE.md",
-      "source_location": "L1384",
+      "source_location": "L1380",
       "weight": 1.0
     },
     {
@@ -75558,7 +75558,7 @@
       "confidence_score": 0.95,
       "context": "createInitialGameState()",
       "source_file": "CLAUDE.md",
-      "source_location": "L1349",
+      "source_location": "L1345",
       "weight": 1.0
     },
     {
@@ -75690,7 +75690,7 @@
       "confidence_score": 0.95,
       "context": "createViteConfig",
       "source_file": "CLAUDE.md",
-      "source_location": "L1356",
+      "source_location": "L1352",
       "weight": 1.0
     },
     {
@@ -75702,7 +75702,7 @@
       "confidence_score": 0.95,
       "context": "decomposeDataLakeUnits",
       "source_file": "CLAUDE.md",
-      "source_location": "L1159",
+      "source_location": "L1162",
       "weight": 1.0
     },
     {
@@ -75966,7 +75966,7 @@
       "confidence_score": 0.95,
       "context": "eraGame",
       "source_file": "CLAUDE.md",
-      "source_location": "L954",
+      "source_location": "L957",
       "weight": 1.0
     },
     {
@@ -76074,7 +76074,7 @@
       "confidence_score": 0.95,
       "context": "fillDataLakeDisks",
       "source_file": "CLAUDE.md",
-      "source_location": "L1123",
+      "source_location": "L1126",
       "weight": 1.0
     },
     {
@@ -76194,7 +76194,7 @@
       "confidence_score": 0.95,
       "context": "fillDataLakeManually",
       "source_file": "CLAUDE.md",
-      "source_location": "L1140",
+      "source_location": "L1143",
       "weight": 1.0
     },
     {
@@ -76806,7 +76806,7 @@
       "confidence_score": 0.95,
       "context": "formatCurrency",
       "source_file": "CLAUDE.md",
-      "source_location": "L975",
+      "source_location": "L978",
       "weight": 1.0
     },
     {
@@ -76890,7 +76890,7 @@
       "confidence_score": 0.95,
       "context": "formatDiskSizeBare",
       "source_file": "CLAUDE.md",
-      "source_location": "L1193",
+      "source_location": "L1194",
       "weight": 1.0
     },
     {
@@ -77274,7 +77274,7 @@
       "confidence_score": 0.95,
       "context": "formatMoneyBalance",
       "source_file": "CLAUDE.md",
-      "source_location": "L974",
+      "source_location": "L977",
       "weight": 1.0
     },
     {
@@ -77370,7 +77370,7 @@
       "confidence_score": 0.95,
       "context": "formatPoolBalance",
       "source_file": "CLAUDE.md",
-      "source_location": "L1201",
+      "source_location": "L1199",
       "weight": 1.0
     },
     {
@@ -77394,7 +77394,7 @@
       "confidence_score": 0.95,
       "context": "formatPoolBalanceStable",
       "source_file": "CLAUDE.md",
-      "source_location": "L1201",
+      "source_location": "L1199",
       "weight": 1.0
     },
     {
@@ -77934,7 +77934,7 @@
       "confidence_score": 0.95,
       "context": "getComputeMergeDurationSeconds",
       "source_file": "CLAUDE.md",
-      "source_location": "L1066",
+      "source_location": "L1069",
       "weight": 1.0
     },
     {
@@ -78594,7 +78594,7 @@
       "confidence_score": 0.95,
       "context": "getDataLakeNextFillSubSize",
       "source_file": "CLAUDE.md",
-      "source_location": "L1158",
+      "source_location": "L1161",
       "weight": 1.0
     },
     {
@@ -78762,7 +78762,7 @@
       "confidence_score": 0.95,
       "context": "getDataLakeSlotRepresentableUnits",
       "source_file": "CLAUDE.md",
-      "source_location": "L1159",
+      "source_location": "L1162",
       "weight": 1.0
     },
     {
@@ -78834,7 +78834,7 @@
       "confidence_score": 0.95,
       "context": "getDataLakeTierIndex",
       "source_file": "CLAUDE.md",
-      "source_location": "L1112",
+      "source_location": "L1115",
       "weight": 1.0
     },
     {
@@ -78978,7 +78978,7 @@
       "confidence_score": 0.95,
       "context": "getDataStreamEffectMultiplier",
       "source_file": "CLAUDE.md",
-      "source_location": "L1032",
+      "source_location": "L1035",
       "weight": 1.0
     },
     {
@@ -79086,7 +79086,7 @@
       "confidence_score": 0.95,
       "context": "getDataStreamSpeedBytesPerSecond",
       "source_file": "CLAUDE.md",
-      "source_location": "L999",
+      "source_location": "L1002",
       "weight": 1.0
     },
     {
@@ -79134,7 +79134,7 @@
       "confidence_score": 0.95,
       "context": "getDecadePowerEquivalentBits",
       "source_file": "CLAUDE.md",
-      "source_location": "L1060",
+      "source_location": "L1063",
       "weight": 1.0
     },
     {
@@ -79242,7 +79242,7 @@
       "confidence_score": 0.95,
       "context": "getDiskCost",
       "source_file": "CLAUDE.md",
-      "source_location": "L1083",
+      "source_location": "L1086",
       "weight": 1.0
     },
     {
@@ -79410,7 +79410,7 @@
       "confidence_score": 0.95,
       "context": "getDiskProvisionPassesCollected",
       "source_file": "CLAUDE.md",
-      "source_location": "L1083",
+      "source_location": "L1086",
       "weight": 1.0
     },
     {
@@ -79470,7 +79470,7 @@
       "confidence_score": 0.95,
       "context": "getDiskProvisionPassesRequired",
       "source_file": "CLAUDE.md",
-      "source_location": "L1089",
+      "source_location": "L1092",
       "weight": 1.0
     },
     {
@@ -79770,7 +79770,7 @@
       "confidence_score": 0.95,
       "context": "getDiskSize",
       "source_file": "CLAUDE.md",
-      "source_location": "L1083",
+      "source_location": "L1086",
       "weight": 1.0
     },
     {
@@ -80310,7 +80310,7 @@
       "confidence_score": 0.95,
       "context": "getFillMultiplierPercent",
       "source_file": "CLAUDE.md",
-      "source_location": "L1031",
+      "source_location": "L1034",
       "weight": 1.0
     },
     {
@@ -80526,7 +80526,7 @@
       "confidence_score": 0.95,
       "context": "getHyperscalerFlopsBoostRate",
       "source_file": "CLAUDE.md",
-      "source_location": "L964",
+      "source_location": "L967",
       "weight": 1.0
     },
     {
@@ -80970,7 +80970,7 @@
       "confidence_score": 0.95,
       "context": "getMoneyExponent",
       "source_file": "CLAUDE.md",
-      "source_location": "L971",
+      "source_location": "L974",
       "weight": 1.0
     },
     {
@@ -81618,7 +81618,7 @@
       "confidence_score": 0.95,
       "context": "getPoolCacheReservationBits",
       "source_file": "CLAUDE.md",
-      "source_location": "L1107",
+      "source_location": "L1110",
       "weight": 1.0
     },
     {
@@ -81702,7 +81702,7 @@
       "confidence_score": 0.95,
       "context": "getPoolCapacityUnlockThresholdBits",
       "source_file": "CLAUDE.md",
-      "source_location": "L1071",
+      "source_location": "L1074",
       "weight": 1.0
     },
     {
@@ -81762,7 +81762,7 @@
       "confidence_score": 0.95,
       "context": "getPoolEffectMultiplier",
       "source_file": "CLAUDE.md",
-      "source_location": "L1032",
+      "source_location": "L1035",
       "weight": 1.0
     },
     {
@@ -81810,7 +81810,7 @@
       "confidence_score": 0.95,
       "context": "getPoolIndexForDiskSize",
       "source_file": "CLAUDE.md",
-      "source_location": "L1179",
+      "source_location": "L1182",
       "weight": 1.0
     },
     {
@@ -81894,7 +81894,7 @@
       "confidence_score": 0.95,
       "context": "getPrestigePointsAwarded",
       "source_file": "CLAUDE.md",
-      "source_location": "L967",
+      "source_location": "L970",
       "weight": 1.0
     },
     {
@@ -81906,7 +81906,7 @@
       "confidence_score": 0.95,
       "context": "getPrestigePointsAwarded",
       "source_file": "CLAUDE.md",
-      "source_location": "L1334",
+      "source_location": "L1330",
       "weight": 1.0
     },
     {
@@ -82026,7 +82026,7 @@
       "confidence_score": 0.95,
       "context": "getPrestigeProgressPercent",
       "source_file": "CLAUDE.md",
-      "source_location": "L972",
+      "source_location": "L975",
       "weight": 1.0
     },
     {
@@ -82674,7 +82674,7 @@
       "confidence_score": 0.95,
       "context": "getSiCleanEquivalentBits",
       "source_file": "CLAUDE.md",
-      "source_location": "L1062",
+      "source_location": "L1065",
       "weight": 1.0
     },
     {
@@ -83034,7 +83034,7 @@
       "confidence_score": 0.95,
       "context": "getStoragePoolCapacity",
       "source_file": "CLAUDE.md",
-      "source_location": "L1059",
+      "source_location": "L1062",
       "weight": 1.0
     },
     {
@@ -83682,7 +83682,7 @@
       "confidence_score": 0.95,
       "context": "getTierCost",
       "source_file": "CLAUDE.md",
-      "source_location": "L1334",
+      "source_location": "L1330",
       "weight": 1.0
     },
     {
@@ -84126,7 +84126,7 @@
       "confidence_score": 0.95,
       "context": "getUnlockedStoragePoolCount",
       "source_file": "CLAUDE.md",
-      "source_location": "L1073",
+      "source_location": "L1076",
       "weight": 1.0
     },
     {
@@ -84294,7 +84294,7 @@
       "confidence_score": 0.95,
       "context": "getVisibleStoragePoolCount",
       "source_file": "CLAUDE.md",
-      "source_location": "L1072",
+      "source_location": "L1075",
       "weight": 1.0
     },
     {
@@ -85122,7 +85122,7 @@
       "confidence_score": 0.95,
       "context": "isDataLakeAutoConvertStartAvailable",
       "source_file": "CLAUDE.md",
-      "source_location": "L1150",
+      "source_location": "L1153",
       "weight": 1.0
     },
     {
@@ -85506,7 +85506,7 @@
       "confidence_score": 0.95,
       "context": "isDataLakeManualFillAvailable",
       "source_file": "CLAUDE.md",
-      "source_location": "L1140",
+      "source_location": "L1143",
       "weight": 1.0
     },
     {
@@ -85578,7 +85578,7 @@
       "confidence_score": 0.95,
       "context": "isDataLakePoolDrainAvailable",
       "source_file": "CLAUDE.md",
-      "source_location": "L1041",
+      "source_location": "L1044",
       "weight": 1.0
     },
     {
@@ -85650,7 +85650,7 @@
       "confidence_score": 0.95,
       "context": "isDataLakePoolReady",
       "source_file": "CLAUDE.md",
-      "source_location": "L1040",
+      "source_location": "L1043",
       "weight": 1.0
     },
     {
@@ -85746,7 +85746,7 @@
       "confidence_score": 0.95,
       "context": "isDataStreamOutflowPaused",
       "source_file": "CLAUDE.md",
-      "source_location": "L994",
+      "source_location": "L997",
       "weight": 1.0
     },
     {
@@ -85938,7 +85938,7 @@
       "confidence_score": 0.95,
       "context": "isDiskPullEligible",
       "source_file": "CLAUDE.md",
-      "source_location": "L1084",
+      "source_location": "L1087",
       "weight": 1.0
     },
     {
@@ -86262,7 +86262,7 @@
       "confidence_score": 0.95,
       "context": "isDiskWriteCacheCollectPaused",
       "source_file": "CLAUDE.md",
-      "source_location": "L1174",
+      "source_location": "L1177",
       "weight": 1.0
     },
     {
@@ -86358,7 +86358,7 @@
       "confidence_score": 0.95,
       "context": "isEditableScalar",
       "source_file": "CLAUDE.md",
-      "source_location": "L1358",
+      "source_location": "L1354",
       "weight": 1.0
     },
     {
@@ -86742,7 +86742,7 @@
       "confidence_score": 0.95,
       "context": "isMemoryCapacityUpgradeArmable",
       "source_file": "CLAUDE.md",
-      "source_location": "L993",
+      "source_location": "L996",
       "weight": 1.0
     },
     {
@@ -86766,7 +86766,7 @@
       "confidence_score": 0.95,
       "context": "isMemoryCapacityUpgradeAvailable",
       "source_file": "CLAUDE.md",
-      "source_location": "L1009",
+      "source_location": "L1012",
       "weight": 1.0
     },
     {
@@ -86934,7 +86934,7 @@
       "confidence_score": 0.95,
       "context": "isProductionFrozen",
       "source_file": "CLAUDE.md",
-      "source_location": "L954",
+      "source_location": "L957",
       "weight": 1.0
     },
     {
@@ -87090,7 +87090,7 @@
       "confidence_score": 0.95,
       "context": "isProvisionDiskAvailable",
       "source_file": "CLAUDE.md",
-      "source_location": "L1107",
+      "source_location": "L1110",
       "weight": 1.0
     },
     {
@@ -87282,7 +87282,7 @@
       "confidence_score": 0.95,
       "context": "isStoragePoolFullyBuilt",
       "source_file": "CLAUDE.md",
-      "source_location": "L1040",
+      "source_location": "L1043",
       "weight": 1.0
     },
     {
@@ -87370,6 +87370,18 @@
       "weight": 1.0
     },
     {
+      "source": "claude_pool_local_resets",
+      "target": "src_game_engine_isstoragepoolresetavailable",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "isStoragePoolResetAvailable",
+      "source_file": "CLAUDE.md",
+      "source_location": "L925",
+      "weight": 1.0
+    },
+    {
       "source": "claude_architecture",
       "target": "src_game_engine_isstoragepoolunlocked",
       "relation": "references",
@@ -87390,7 +87402,7 @@
       "confidence_score": 0.95,
       "context": "isStoragePoolUnlocked",
       "source_file": "CLAUDE.md",
-      "source_location": "L1073",
+      "source_location": "L1076",
       "weight": 1.0
     },
     {
@@ -87798,7 +87810,7 @@
       "confidence_score": 0.95,
       "context": "latchMainGameUnlocked",
       "source_file": "CLAUDE.md",
-      "source_location": "L981",
+      "source_location": "L984",
       "weight": 1.0
     },
     {
@@ -87918,7 +87930,7 @@
       "confidence_score": 0.95,
       "context": "loadGameState",
       "source_file": "CLAUDE.md",
-      "source_location": "L1403",
+      "source_location": "L1399",
       "weight": 1.0
     },
     {
@@ -87954,7 +87966,7 @@
       "confidence_score": 0.95,
       "context": "loadLastSaveTimestamp",
       "source_file": "CLAUDE.md",
-      "source_location": "L1403",
+      "source_location": "L1399",
       "weight": 1.0
     },
     {
@@ -88074,7 +88086,7 @@
       "confidence_score": 0.95,
       "context": "main",
       "source_file": "CLAUDE.md",
-      "source_location": "L1239",
+      "source_location": "L1235",
       "weight": 1.0
     },
     {
@@ -88458,7 +88470,7 @@
       "confidence_score": 0.95,
       "context": "mergeState",
       "source_file": "CLAUDE.md",
-      "source_location": "L1383",
+      "source_location": "L1379",
       "weight": 1.0
     },
     {
@@ -88470,7 +88482,7 @@
       "confidence_score": 0.95,
       "context": "mergeState",
       "source_file": "CLAUDE.md",
-      "source_location": "L1348",
+      "source_location": "L1344",
       "weight": 1.0
     },
     {
@@ -88758,7 +88770,7 @@
       "confidence_score": 0.95,
       "context": "normalizePoolMemoryCapacity",
       "source_file": "CLAUDE.md",
-      "source_location": "L985",
+      "source_location": "L988",
       "weight": 1.0
     },
     {
@@ -89694,7 +89706,7 @@
       "confidence_score": 0.95,
       "context": "prettifySegment",
       "source_file": "CLAUDE.md",
-      "source_location": "L1358",
+      "source_location": "L1354",
       "weight": 1.0
     },
     {
@@ -89802,7 +89814,7 @@
       "confidence_score": 0.95,
       "context": "provisionDisk",
       "source_file": "CLAUDE.md",
-      "source_location": "L1083",
+      "source_location": "L1086",
       "weight": 1.0
     },
     {
@@ -90174,7 +90186,7 @@
       "confidence_score": 0.95,
       "context": "queueDiskBuild",
       "source_file": "CLAUDE.md",
-      "source_location": "L1099",
+      "source_location": "L1102",
       "weight": 1.0
     },
     {
@@ -90538,6 +90550,18 @@
       "weight": 1.0
     },
     {
+      "source": "claude_pool_local_resets",
+      "target": "src_game_engine_resetstoragepool",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "resetStoragePool",
+      "source_file": "CLAUDE.md",
+      "source_location": "L925",
+      "weight": 1.0
+    },
+    {
       "source": "docs_components_reference_button_index_jsx",
       "target": "src_components_button_index_resolvecolor",
       "relation": "references",
@@ -90594,7 +90618,7 @@
       "confidence_score": 0.95,
       "context": "safeJsonParse",
       "source_file": "CLAUDE.md",
-      "source_location": "L1405",
+      "source_location": "L1401",
       "weight": 1.0
     },
     {
@@ -90654,7 +90678,7 @@
       "confidence_score": 0.95,
       "context": "saveGameState",
       "source_file": "CLAUDE.md",
-      "source_location": "L1403",
+      "source_location": "L1399",
       "weight": 1.0
     },
     {
@@ -91062,7 +91086,7 @@
       "confidence_score": 0.95,
       "context": "setValueAtPath",
       "source_file": "CLAUDE.md",
-      "source_location": "L1358",
+      "source_location": "L1354",
       "weight": 1.0
     },
     {
@@ -91326,7 +91350,7 @@
       "confidence_score": 0.95,
       "context": "tapPoolBuffer",
       "source_file": "CLAUDE.md",
-      "source_location": "L1032",
+      "source_location": "L1035",
       "weight": 1.0
     },
     {
@@ -91674,7 +91698,7 @@
       "confidence_score": 0.95,
       "context": "tickDataLakeAutoConvert",
       "source_file": "CLAUDE.md",
-      "source_location": "L1124",
+      "source_location": "L1127",
       "weight": 1.0
     },
     {
@@ -91758,7 +91782,7 @@
       "confidence_score": 0.95,
       "context": "tickDataLakePoolDrain",
       "source_file": "CLAUDE.md",
-      "source_location": "L1132",
+      "source_location": "L1135",
       "weight": 1.0
     },
     {
@@ -91818,7 +91842,7 @@
       "confidence_score": 0.95,
       "context": "tickDiskAutoFill",
       "source_file": "CLAUDE.md",
-      "source_location": "L1083",
+      "source_location": "L1086",
       "weight": 1.0
     },
     {
@@ -92094,7 +92118,7 @@
       "confidence_score": 0.95,
       "context": "tickDiskLevelOneCachePull",
       "source_file": "CLAUDE.md",
-      "source_location": "L1084",
+      "source_location": "L1087",
       "weight": 1.0
     },
     {
@@ -92238,7 +92262,7 @@
       "confidence_score": 0.95,
       "context": "tickDiskPull",
       "source_file": "CLAUDE.md",
-      "source_location": "L1084",
+      "source_location": "L1087",
       "weight": 1.0
     },
     {
@@ -92358,7 +92382,7 @@
       "confidence_score": 0.95,
       "context": "tickDiskWriteCache",
       "source_file": "CLAUDE.md",
-      "source_location": "L1173",
+      "source_location": "L1176",
       "weight": 1.0
     },
     {
@@ -92514,7 +92538,7 @@
       "confidence_score": 0.95,
       "context": "tickFillMultiplierDecay",
       "source_file": "CLAUDE.md",
-      "source_location": "L1032",
+      "source_location": "L1035",
       "weight": 1.0
     },
     {
@@ -92778,7 +92802,7 @@
       "confidence_score": 0.95,
       "context": "tickGame",
       "source_file": "CLAUDE.md",
-      "source_location": "L1100",
+      "source_location": "L1103",
       "weight": 1.0
     },
     {
@@ -93378,7 +93402,7 @@
       "confidence_score": 0.95,
       "context": "tickIntroAutoInvest",
       "source_file": "CLAUDE.md",
-      "source_location": "L995",
+      "source_location": "L998",
       "weight": 1.0
     },
     {
@@ -93786,7 +93810,7 @@
       "confidence_score": 0.95,
       "context": "tickPoolBufferFill",
       "source_file": "CLAUDE.md",
-      "source_location": "L995",
+      "source_location": "L998",
       "weight": 1.0
     },
     {
@@ -94110,7 +94134,7 @@
       "confidence_score": 0.95,
       "context": "tickProvisionDisk",
       "source_file": "CLAUDE.md",
-      "source_location": "L1096",
+      "source_location": "L1099",
       "weight": 1.0
     },
     {
@@ -94218,7 +94242,7 @@
       "confidence_score": 0.95,
       "context": "tickQueuedCapacityUpgrade",
       "source_file": "CLAUDE.md",
-      "source_location": "L995",
+      "source_location": "L998",
       "weight": 1.0
     },
     {
@@ -94302,7 +94326,7 @@
       "confidence_score": 0.95,
       "context": "tickQueuedDiskBuild",
       "source_file": "CLAUDE.md",
-      "source_location": "L1099",
+      "source_location": "L1102",
       "weight": 1.0
     },
     {
@@ -94650,7 +94674,7 @@
       "confidence_score": 0.95,
       "context": "useIncrementalGame",
       "source_file": "CLAUDE.md",
-      "source_location": "L1406",
+      "source_location": "L1402",
       "weight": 1.0
     },
     {
@@ -94763,5 +94787,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "f594420f1d6ab654de08f8d145e72fca9f6de0e7"
+  "built_at_commit": "8717ddc089aca67699a23bc903b2e59e7a4cf56a"
 }
