@@ -18,10 +18,15 @@ What did ship: `.gitattributes` marks the five committed artifacts `-merge` (plu
 `linguist-generated`), so git never line-merges them — a both-sides divergence becomes an explicit
 conflict resolved the documented way (`graphify update .`), and a one-sided change still merges
 cleanly. `scripts/check-graphify-freshness.mjs` — run by a Vitest file so it fires in `yarn test`
-on every PR — asserts every node/link `source_file` in `graph.json` names an existing file; bare
-module-name refs (e.g. the `web-vitals` dependency node) are exempt only when they name a
-`package.json` dependency or Node builtin. Together they make a stale committed graph a CI failure
-rather than something a review bot has to notice.
+on every PR — verifies the graph in both directions: every node/link `source_file` in `graph.json`
+names an existing file (external-module refs exempt only when they name a `package.json` dependency
+or Node builtin, including scoped names and subpath imports), and every tracked file with a
+graphify-indexed extension has at least one graph reference — the latter catching the
+take-one-side resolution where `main`'s newly-added files are simply absent from the kept graph.
+Content drift inside still-existing files is not detectable without regenerating the graph in CI —
+that stays covered by `built_at_commit` plus the same-commit regeneration convention. Together the
+two layers make a stale committed graph a CI failure rather than something a review bot has to
+notice.
 
 ### Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18
 
