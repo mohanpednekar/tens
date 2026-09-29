@@ -229,6 +229,19 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
+  it('selects the step-level run key, not a run: nested in another flow value', () => {
+    const blocks = extractRunBlocks(
+      `steps:\n  - {name: x, env: {run: ok}, run: if true; then}\n`,
+    );
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('if true; then');
+  });
+
+  it('decodes the YAML \\_ escape as a non-breaking space', () => {
+    const blocks = extractRunBlocks('steps:\n  - run: "echo\\_hi"\n');
+    expect(blocks[0].script).toBe('echo hi');
+  });
+
   it('does not lint run:-shaped text inside a quoted key\'s block scalar', () => {
     // `"prompt": |` is the same key as `prompt: |` — its body must be skipped
     // like any other non-run scalar, not scanned for a nested `run:`.

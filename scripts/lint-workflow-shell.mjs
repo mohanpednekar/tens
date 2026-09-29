@@ -72,7 +72,7 @@ const EXPR_PLACEHOLDER = 'GH_EXPR';
 const YAML_UNESCAPE = {
   '0': '\0', a: '\x07', b: '\b', t: '\t', n: '\n', v: '\v', f: '\f', r: '\r',
   e: '\x1b', ' ': ' ', '"': '"', "'": "'", '/': '/', '\\': '\\',
-  N: '\u0085', _: ' ', L: '\u2028', P: '\u2029',
+  N: '\u0085', _: ' ', L: '\u2028', P: '\u2029',
 };
 
 /**
@@ -436,8 +436,20 @@ export function extractRunBlocks(yamlText) {
     if (FLOW_STEP_RE.test(line)) {
       const matches = [...line.matchAll(new RegExp(FLOW_RUN_RE, 'g'))];
       const spans = quotedSpans(line);
+      const inSpan = (idx) => spans.some(([a, b]) => idx > a && idx < b);
+      // only the step mapping's own key counts: a `run:` nested in another
+      // key's flow value (`env: {run: y}`) sits deeper than the step's `{`.
+      const depthAt = (idx) => {
+        let d = 0;
+        for (let k = 0; k < idx; k++) {
+          if (inSpan(k)) continue;
+          if (line[k] === '{' || line[k] === '[') d++;
+          else if (line[k] === '}' || line[k] === ']') d--;
+        }
+        return d;
+      };
       const real = matches.filter(
-        (mm) => !spans.some(([a, b]) => mm.index > a && mm.index < b),
+        (mm) => !inSpan(mm.index) && depthAt(mm.index) === 1,
       );
       if (real.length) {
         const rm = real[real.length - 1];
