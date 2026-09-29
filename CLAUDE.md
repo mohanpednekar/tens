@@ -1338,7 +1338,7 @@ already cover the genuinely useful items on that checklist.
   asserting invariants (monotonicity in level/money-exponent, resource balances never going negative)
   across generated inputs rather than hand-picked cases. `fc.assert(fc.property(...), { numRuns: 200 })`
   bounds each property's generated-case count so this stays fast in CI.
-- `yarn test` is green (1876 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1882 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme
   (`MONEY_ID = 'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`;
   tier ids `tier01`/`tier02`/… with display names
@@ -1356,9 +1356,10 @@ already cover the genuinely useful items on that checklist.
   `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). Together with
-  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 14 files; the
-  remaining three are `scripts/adversarialReviewMarker.test.js`,
-  `scripts/pr-low-risk-eligible.test.js`, and `scripts/bump-version.test.js` — Vitest's default glob
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 15 files; the
+  remaining four are `scripts/adversarialReviewMarker.test.js`,
+  `scripts/pr-low-risk-eligible.test.js`, `scripts/bump-version.test.js`, and
+  `scripts/check-graphify-freshness.test.js` — Vitest's default glob
   picks these up alongside `src/` since `vite.config.js`'s `test` block sets no custom `include`.
 
 ### End-to-end testing
@@ -1443,6 +1444,11 @@ Now that `graphify-out/graph.json` exists:
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost) —
   do this in the same session/commit as any non-trivial code change, so the committed graph doesn't
   drift stale against `graph.json`'s own "Built from commit" pointer in `GRAPH_REPORT.md`.
+- The committed artifacts are `.gitattributes`-marked `-merge` (#761): git never content-merges a
+  generated graph diverged on both sides — it surfaces an explicit conflict instead, resolved by
+  regenerating. `scripts/check-graphify-freshness.mjs` (run by `yarn test`, so on every PR's CI)
+  additionally asserts every `source_file` in `graph.json` still names an existing file, catching
+  any stale graph that slips through a merge anyway.
 - `.claude/settings.json`'s `PreToolUse` hooks (`graphify hook-guard search`/`read`, on
   `Bash`/`Grep`/`Read`/`Glob`) nudge toward the graph before a raw file read; they no-op if the
   `graphify` CLI isn't on `PATH` or no graph exists yet, so a machine without it installed is unaffected.
