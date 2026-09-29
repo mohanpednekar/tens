@@ -15,11 +15,8 @@ import {
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   COMPUTE_ENTITY_AUTO_MERGE_CAP,
-  COMPUTE_MERGE_CORE_EARN_MULTIPLIER,
   COMPUTE_MERGE_RATIO,
   COMPUTE_MERGE_RESERVE_CAP,
-  COMPUTE_MERGE_STEP_MULTIPLIER,
-  COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED,
   COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC,
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_LAST_TIER_COST_PP,
@@ -415,19 +412,12 @@ const InfoPage = () => {
             input tier's own {COMPUTE_ENTITY_CAP} normal slots ({COMPUTE_ENTITY_AUTO_MERGE_CAP} total
             held). The reserve fills gradually as that tier keeps growing past its normal 10 — via
             continued Booster purchases or a lower-tier merge — rather than all at once. A merge
-            itself, once started, runs a timed countdown: Core → Node takes{' '}
-            {COMPUTE_MERGE_CORE_EARN_MULTIPLIER}× the time to earn one Core at your current Memory
-            fill rate (capacity ÷ bits/sec, before Boost). Each next boundary is ×
-            {COMPUTE_MERGE_STEP_MULTIPLIER} the previous layer’s duration — or ×
-            {COMPUTE_MERGE_STEP_MULTIPLIER_UPGRADED} after that boundary’s sequential duration
-            upgrade (sacrifice {COMPUTE_ENTITY_CAP} held tokens of its input tier once auto-merge
-            is unlocked). Before unlock, merges stay instant.
-          </li>
-          <li>
-            Duration upgrades are sequential (Core → Node first through Supercomputer →
-            Megacomputer). Upgrading a step clears that rung’s merge bottleneck; the next
-            unupgraded ×{COMPUTE_MERGE_STEP_MULTIPLIER} step becomes the new one. Later layers
-            rescale from the new chain. An in-flight timer keeps the duration snapshotted at start.
+            itself, once started, runs a timed countdown: the time {COMPUTE_MERGE_RATIO} of the
+            smallest disks in that tier’s own Storage pool take to fill from their read cache
+            (Cores use the KB pool, Nodes the MB pool, and so on). The pool’s larger disks don’t
+            count, so the timer never escalates within a pool. A tier’s merges wait until its
+            pool is visible. A running merge never takes longer than the current merge time, so it
+            speeds up as the pool’s Bandwidth grows. Before unlock, merges stay instant.
           </li>
           <li>
             Auto-merge starts only once the input tier reaches the FULL extended cap (
