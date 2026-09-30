@@ -152,8 +152,9 @@ control becomes a non-clickable cost label and every affordable Booster converts
 Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a
 gradually-filled 8-slot reserve) once that tier's own outbound merge boundary has auto-merge
 unlocked. A separate PP **Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**)
-reveals at 100 PP. At a pool's 9/9/9, full-lake, unreachable-next-Booster wall, its pool-local
-Reset adds 1,000 permanent lake-only capacity, empties that pool's Storage/lake, and free-rebuilds
+reveals at 100 PP. At a pool's 9/9/9, full-lake, unreachable-next-Booster wall, a manual
+"↻ Reset Pool" click (never automatic) adds 1,000 permanent lake-only capacity, empties that pool's
+Storage/lake, and free-rebuilds
 its disks sequentially before persistent automatic Booster conversion resumes; rebuilding blocks
 only new provisioning starts in later pools. The first reset fixes lake speed at 50%, and reset two
 onward uses the normal bandwidth steps (dynamically limited by the following pool for non-final

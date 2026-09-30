@@ -1,22 +1,22 @@
-# Graph Report - tens  (2026-09-28)
+# Graph Report - tens  (2026-09-29)
 
 ## Corpus Check
-- 126 files · ~486,393 words
+- 126 files · ~486,294 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 5 file(s) not represented in the graph (top: (none) 4, .ico 1)
 
 ## Summary
-- 1726 nodes · 6334 edges · 91 communities (76 shown, 15 thin omitted)
-- Extraction: 66% EXTRACTED · 34% INFERRED · 0% AMBIGUOUS · INFERRED: 2144 edges (avg confidence: 0.95)
+- 1726 nodes · 6336 edges · 92 communities (77 shown, 15 thin omitted)
+- Extraction: 66% EXTRACTED · 34% INFERRED · 0% AMBIGUOUS · INFERRED: 2146 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f594420f`
+- Built from commit: `8717ddc0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- AppNav/index.jsx
+- contrast.js
 - MainPage/index.jsx
 - ComputePage
 - layers.js
@@ -41,15 +41,15 @@
 - engine.test.js
 - Byte Foundry
 - ComputeFlopsPage/index.jsx
-- tokens.js
+- Theming reference
 - AGENTS.md
 - Testing
 - SettingsPage/index.jsx
-- styled-components
+- MilestonesPage/index.jsx
 - provisionDisk
 - CLAUDE.md
 - buyBooster
-- ButtonContent
+- Shared components reference
 - DataLakePanel/index.jsx
 - engine.computeFlops.test.js
 - package.json
@@ -74,13 +74,14 @@
 - getSaveIncompatibilityReason
 - generate-pwa-icons.mjs
 - tickGame
-- MilestonesPage/index.jsx
+- AppMenu/index.jsx
 - isDataLakeCapacityDoublingAvailable
 - economy-change-review/SKILL.md
 - optimize-ai-files/SKILL.md
 - @playwright/test
-- react
+- src/index.jsx
 - graphify reference: query, path, explain
+- mergeDataLakes
 - palette.md
 - resolutions
 - sync-release-milestones.sh
@@ -115,7 +116,7 @@
 5. `ByteFoundryPage()` - 90 edges
 6. `MainPage()` - 86 edges
 7. `Testing` - 85 edges
-8. `Pool-local resets` - 81 edges
+8. `Pool-local resets` - 83 edges
 9. `useIncrementalGame()` - 77 edges
 10. `clampNonNegative()` - 76 edges
 
@@ -134,11 +135,11 @@
 ## Import Cycles
 - None detected.
 
-## Communities (91 total, 15 thin omitted)
+## Communities (92 total, 15 thin omitted)
 
-### Community 0 - "AppNav/index.jsx"
-Cohesion: 0.22
-Nodes (8): APP_NAV_BOTTOM_PAD, AttentionDot, Bar, Icon, Label, NavItem, pulseHigh, ATTENTION_HIGH
+### Community 0 - "contrast.js"
+Cohesion: 0.33
+Nodes (8): AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT, getContrastRatio(), hexToRgb(), relativeLuminance(), srgbChannelToLinear(), themes
 
 ### Community 1 - "MainPage/index.jsx"
 Cohesion: 0.04
@@ -173,8 +174,8 @@ Cohesion: 0.19
 Nodes (21): A live tap bonus could survive into the pool gauge's mode switch, breaking the "clean transition at 50%" claim, Pool Bandwidth's formula corrected — follows the raw Speed doublings via the SI transform, not sqrt(Capacity), Precision loss at large magnitudes in the SI-clean transform — fixed with a closed-form computation, Key engine functions (`src/game/engine.js`), getDataStreamBaseMultiplierPercent(), getDataStreamEffectMultiplier(), getDataStreamFillFraction(), getDataStreamMultiplierPercent() (+13 more)
 
 ### Community 9 - "App.jsx"
-Cohesion: 0.09
-Nodes (31): Changed, `AppNav/index.jsx`, Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Sacrifice confirm: in-game dialog; Core warning only when unlocked, Theming reference, App(), GATE_EXEMPT_PAGES, PageShell (+23 more)
+Cohesion: 0.10
+Nodes (28): `AppNav/index.jsx`, Sacrifice confirm: in-game dialog; Core warning only when unlocked, App(), GATE_EXEMPT_PAGES, PageShell, resolveInitialThemeMode(), AppMenu(), APP_NAV_BOTTOM_PAD (+20 more)
 
 ### Community 10 - "Tens"
 Cohesion: 0.15
@@ -236,9 +237,9 @@ Nodes (30): A fifth and sixth Devin finding on the same PR: a one-tick lake-over
 Cohesion: 0.18
 Nodes (16): PP Compute (Flops), Money, formatAmount(), formatComputeFlopsBoost(), formatComputeFlopsTotal(), isComputeFlopsPageRevealed(), ComputeFlopsPage(), FlopsHero (+8 more)
 
-### Community 25 - "tokens.js"
+### Community 25 - "Theming reference"
 Cohesion: 0.11
-Nodes (21): AA_LARGE_TEXT, AA_NORMAL_TEXT, AA_UI_COMPONENT, getContrastRatio(), hexToRgb(), relativeLuminance(), srgbChannelToLinear(), GlobalStyle (+13 more)
+Nodes (19): Changed, Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380), Theming reference, ConfirmDialog(), IncompatibleSaveNotice(), GlobalStyle, getSystemThemeMode(), ThemeProvider() (+11 more)
 
 ### Community 26 - "AGENTS.md"
 Cohesion: 0.12
@@ -252,9 +253,9 @@ Nodes (22): A seventh finding: the pool gauge could display a nonzero incoming-o
 Cohesion: 0.12
 Nodes (19): getEonsAwarded(), isEraEligible(), buildClearSlotConfirmMessage(), buildSparklinePath(), CodeForm, CodeInput, Header, LockedNote (+11 more)
 
-### Community 29 - "styled-components"
-Cohesion: 0.19
-Nodes (11): styled-components, Actions, Body, Card, Overlay, Title, Body, Card (+3 more)
+### Community 29 - "MilestonesPage/index.jsx"
+Cohesion: 0.08
+Nodes (28): Fixed, react, styled-components, VisuallyHidden, Actions, Body, Card, Overlay (+20 more)
 
 ### Community 30 - "provisionDisk"
 Cohesion: 0.13
@@ -268,9 +269,9 @@ Nodes (18): AI-instruction file cost hygiene, Automation workflows, Capacitor fo
 Cohesion: 0.29
 Nodes (18): `ByteFoundryPage` pool layout, A ninth finding: a lake's escalating Booster cost could outgrow its own permanently-capped capacity, bricking it forever, Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18, Auto-merge Booster progress display, a gradually-filling 18-slot extended cap, and one-shot Data Lake conversion replacing the persistent Auto/Manual toggle — 2026-09-17, buyBooster(), getBoosterBulkPurchase(), getComputeEntityEffectiveCap(), getComputeEntityFieldRoom() (+10 more)
 
-### Community 33 - "ButtonContent"
-Cohesion: 0.18
-Nodes (10): Fixed, `AppMenu/index.jsx`, `Button/index.jsx`, `ConfirmDialog/index.jsx`, `Money/index.js`, Shared components reference, `StatCard/index.js`, The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way (+2 more)
+### Community 33 - "Shared components reference"
+Cohesion: 0.33
+Nodes (5): `AppMenu/index.jsx`, `ConfirmDialog/index.jsx`, `Money/index.js`, Shared components reference, `StatCard/index.js`
 
 ### Community 34 - "DataLakePanel/index.jsx"
 Cohesion: 0.10
@@ -368,9 +369,9 @@ Nodes (7): App icon redesigned from a plain "10" text glyph to an 8-cell "byte" 
 Cohesion: 0.21
 Nodes (20): 5. Authorization boundary, actTickspeed(), Architecture / MainPage UI decisions, `consumeXpForLastTierTickspeed` gained an owned-count guard after a real softlock report, `PURCHASE_MILESTONE_MULTIPLIER_BASE` raised 1.1 → 1.25; a 2-vs-3-Overclock-claim "stretch/easy" retune was explored and dropped, Multiplier outcomes are floored, The last tier's XP-funded tickspeed, 2024-07-28 - Replace O(N) attempts loop with O(1) batch processing for tickGame autobuyers (+12 more)
 
-### Community 58 - "MilestonesPage/index.jsx"
-Cohesion: 0.20
-Nodes (9): Badge, Category, CategoryHeading, Header, List, RootDiv, Row, RowControls (+1 more)
+### Community 58 - "AppMenu/index.jsx"
+Cohesion: 0.33
+Nodes (5): Backdrop, Icon, MenuButton, Sheet, SheetTitle
 
 ### Community 59 - "isDataLakeCapacityDoublingAvailable"
 Cohesion: 0.33
@@ -384,13 +385,17 @@ Nodes (5): 1. Scope check, 2. Find the originating issue, 3. Field-by-field diff
 Cohesion: 0.29
 Nodes (6): Hard invariants — never remove or weaken these, Process, Report, Safe reduction techniques, Scope, in priority order, What not to do
 
-### Community 63 - "react"
-Cohesion: 0.29
-Nodes (5): react, react-dom, web-vitals, rootElement, reportWebVitals()
+### Community 63 - "src/index.jsx"
+Cohesion: 0.33
+Nodes (4): react-dom, web-vitals, rootElement, reportWebVitals()
 
 ### Community 64 - "graphify reference: query, path, explain"
 Cohesion: 0.33
 Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
+
+### Community 65 - "mergeDataLakes"
+Cohesion: 0.47
+Nodes (6): createEmptyDataLakes(), createEmptyDataLakeTier(), getLegacyPendingTransferCount(), isLegacyDataLakeTier(), mergeDataLakes(), migrateLegacyDataLakeTier()
 
 ### Community 66 - "palette.md"
 Cohesion: 0.20
@@ -429,16 +434,16 @@ Cohesion: 0.50
 Nodes (3): compilerOptions, baseUrl, include
 
 ### Community 78 - "Button/index.jsx"
-Cohesion: 0.14
-Nodes (17): Button, ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb(), hexToRgb(), NAMED_GLOW_RGB, progressFill() (+9 more)
+Cohesion: 0.17
+Nodes (15): `Button/index.jsx`, The transfer budget becomes dynamic (tied to the Kilobyte tier's own block size); a real ButtonContent bug fixed along the way, Button, ButtonContent(), ButtonIcon, ButtonLabel, clampPercent(), getGlowRgb() (+7 more)
 
 ### Community 89 - "ref_fs"
 Cohesion: 0.08
 Nodes (14): content, content, content, content, content, content, content, mdContent (+6 more)
 
 ### Community 106 - "storage.js"
-Cohesion: 0.15
-Nodes (29): createEmptyDataLakes(), createEmptyDataLakeTier(), applyPendingComputeGrants(), buildDefaultMeta(), buildEraseAllSavesConfirmMessage(), coerceMeta(), completeDummySupporterPurchase(), defaultSlotName() (+21 more)
+Cohesion: 0.19
+Nodes (23): applyPendingComputeGrants(), buildDefaultMeta(), buildEraseAllSavesConfirmMessage(), coerceMeta(), completeDummySupporterPurchase(), defaultSlotName(), FREE_SLOT_COUNT, grantSupporterUnlock() (+15 more)
 
 ## Knowledge Gaps
 - **509 isolated node(s):** `session-start.sh script`, `publish-strategy.sh script`, `DEFAULT_CAPACITY_CAPS_BITS`, `defaultPPValues`, `defaultCareerPrestiges` (+504 more)
@@ -450,10 +455,10 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `main()` connect `main` to `buyBooster`, `DataLakePanel/index.jsx`, `createInitialGameState`, `Pool-local resets`, `Automation workflows`, `ByteFoundryPage`, `run-simulation.mjs`, `MainPage reference`, `bump-version.mjs`, `file-task-issue/SKILL.md`, `Testing`, `provisionDisk`, `CLAUDE.md`?**
   _High betweenness centrality (0.057) - this node is a cross-community bridge._
-- **Why does `ByteFoundryPage()` connect `ByteFoundryPage` to `ComputePage`, `Pool-local resets`, `Key engine functions (`src/game/engine.js`)`, `App.jsx`, `run-simulation.mjs`, `Economy model`, `clampNonNegative`, `useIncrementalGame`, `Byte Foundry`, `Testing`, `provisionDisk`, `buyBooster`, `ButtonContent`, `createInitialGameState`, `isMemoryCapacityAtCap`, `DiskArrayRow`, `ByteFoundryPage/index.jsx`, `MainPage reference`, `tickGame`?**
+- **Why does `ByteFoundryPage()` connect `ByteFoundryPage` to `ComputePage`, `Pool-local resets`, `Key engine functions (`src/game/engine.js`)`, `App.jsx`, `run-simulation.mjs`, `Economy model`, `clampNonNegative`, `useIncrementalGame`, `Byte Foundry`, `Theming reference`, `Testing`, `provisionDisk`, `buyBooster`, `Shared components reference`, `createInitialGameState`, `isMemoryCapacityAtCap`, `DiskArrayRow`, `ByteFoundryPage/index.jsx`, `MainPage reference`, `tickGame`, `Button/index.jsx`?**
   _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Why does `Pool-local resets` connect `Pool-local resets` to `MainPage/index.jsx`, `ComputePage`, `Key engine functions (`src/game/engine.js`)`, `ByteFoundryPage`, `clampNonNegative`, `fillDataLakeManually`, `Byte Foundry`, `ComputeFlopsPage/index.jsx`, `Testing`, `provisionDisk`, `CLAUDE.md`, `buyBooster`, `DataLakePanel/index.jsx`, `createInitialGameState`, `isMemoryCapacityAtCap`, `DiskArrayRow`, `ByteFoundryPage/index.jsx`, `main`, `tickGame`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
 - **Are the 235 inferred relationships involving `Key engine functions (`src/game/engine.js`)` (e.g. with `DataLakePanel()` and `DiskArrayRow()`) actually correct?**
   _`Key engine functions (`src/game/engine.js`)` has 235 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 157 inferred relationships involving `Byte Foundry` (e.g. with `ButtonContent()` and `progressFill()`) actually correct?**
