@@ -174,7 +174,7 @@ For general review depth, the reviewer subagent at `.claude/agents/code-reviewer
 comprehensive, adversarial, evidence-based, read-only review of a PR or working diff — every finding
 verified against the checked-out code and cited by `file:line` with a CONFIRMED/PLAUSIBLE label, an
 explicit merge verdict (APPROVE / NEEDS CHANGES / BLOCK), a checked-and-clean invariants list, and an
-honest statement of anything uncovered. Use it (spawn via the Agent tool) before merging any
+honest statement of anything it didn't cover. Use it (spawn via the Agent tool) before merging any
 non-trivial change, or whenever asked to review a branch/PR; on economy diffs it folds in the
 `economy-change-review` cross-check as a required step rather than replacing it.
 
@@ -977,7 +977,7 @@ advances every `DISK_ARRAY_LADDER_CAP` (9 — the array's always-full cache subs
 disks built at that size, up to the highest size any unlocked pool can fund. `provisionDisk` collects
 the cost in `getDiskProvisionPassesCollected`/`getDiskProvisionPassesRequired` passes of the disk's own
 face-value size — N for the array's Nth disk (1 for the first, up to 9; `DISK_BUILD_COST_MULTIPLIER`'s
-10 is no longer reached) — so a pool's buffer only ever holds one pass, and completes the instant the
+10 is no longer reached) — so a pool's buffer only ever needs to hold one pass at a time, and completes the instant the
 final pass lands, with no separate build-time delay (gathering passes already takes that real time;
 see `docs/DESIGN_HISTORY.md`). `diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard
 remain solely to finish a countdown an older save may still carry — a build `provisionDisk` starts
