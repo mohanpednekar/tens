@@ -62,6 +62,8 @@ yarn test src/game/engine.js.test.js       # single file (vitest run <path>)
 yarn test -t "buyTier"                     # filter by test name
 ```
 
+## Interactive session startup
+
 `.claude/settings.json` registers a `SessionStart` hook (`.claude/hooks/session-start.sh`) that runs
 `yarn install --frozen-lockfile` then `yarn test` synchronously before an interactive session starts
 working, printing a `✅`/`‼️` pass/fail summary for each step — so work begins from a confirmed baseline.
@@ -377,6 +379,8 @@ diff like any other change (never a direct commit to `main`). Once that PR merge
 annotated `v<x.y.z>` tag and creates the GitHub Release from that version's changelog section;
 see `docs/AUTOMATION.md`'s "Release" entry.
 
+## AI-instruction file cost hygiene
+
 `CLAUDE.md`/`.claude/CLAUDE.md` load into every session unconditionally, `AGENTS.md`/
 `.claude/agents/*.md`/`.claude/skills/*/SKILL.md` whenever a non-Claude tool or that agent/skill runs —
 so their size is a recurring cost. `.claude/skills/optimize-ai-files/SKILL.md` defines a
@@ -560,26 +564,26 @@ src/
 capacitor.config.json        ← Capacitor app id/name + `webDir: dist` (foundation for #70; no
                                android/ios platforms checked in yet)
 vite.config.js               ← thin wrapper: `defineConfig(createViteConfig({ srcPath }))`
-viteConfigFactory.js          ← the real Vite config — path aliases, dev/test server config, and the
-                               VitePWA plugin (skipped when `CAPACITOR=1`, along with the GitHub
-                               Pages `/tens/` base — see "Repo layout"'s Capacitor note below).
-                               Extracted out of `vite.config.js` so `capacitorConfig.test.js` can pin
-                               the CAPACITOR=1 behavior without loading Vite's config entry point
 viteConfigFactory.js          ← the real Vite config — path aliases, dev/test server, and the VitePWA
                                plugin (skipped when `CAPACITOR=1`, along with the GitHub Pages `/tens/`
                                base). Extracted from `vite.config.js` so `capacitorConfig.test.js` can
                                pin the CAPACITOR=1 behavior (`import.meta.url` isn't a `file:` URL under
                                Vitest). Full PWA reference: `docs/PWA_REFERENCE.md`
-  autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
-  prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
-  meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
-  data-lake.e2e.js            ← a seeded KB Data Lake renders its own disk-square breakdown on
+playwright.config.js         ← Playwright end-to-end suite config (see "End-to-end testing" under
+                               "Testing") — separate from vite.config.js's own `test` block, which only
+                               configures Vitest
+e2e/
   golden-path.e2e.js          ← buying Kilobytes via the real Buy button; Owned/money-balance updates
   autobuyer-reload.e2e.js     ← an already-unlocked tier autobuyer survives a real page reload
   prestige.e2e.js             ← prestiging from the first-time overlay resets resources, awards PP
   meta-prestige.e2e.js        ← Settings Era ascension from 1 Googol PP seed; era/Eons + Foundry gate
   data-lake.e2e.js            ← a seeded KB Data Lake renders its disk-square breakdown on Foundry, then a
                                manual Buy Booster click grants a Core (verified on the Boosters page)
+scripts/
+  bump-version.mjs (+ `.test.js`) ← `yarn bump-version`: cut CHANGELOG ## [Unreleased] into a
+                               dated ## [x.y.z] section and bump package.json (minor if
+                               Added/Removed entries, else patch; no-op if empty) — #52;
+                               `release.yml` handles the post-merge tag + GitHub Release
   generate-pwa-icons.mjs     ← one-off script (`yarn gen-pwa-icons`) rasterizing an inline "byte grid"
                                SVG (see `docs/PWA_REFERENCE.md`) with `sharp` into public/pwa-*.png +
                                apple-touch-icon.png, and hand-assembling public/favicon.ico (minimal ICO
@@ -1145,6 +1149,8 @@ A Capacitor wrap is scaffolding-only so far (not store-ready; no `android/` / `i
 button. The file alone doesn't enroll the account — Sponsors enrollment (`github.com/sponsors`) is a
 separate, maintainer-only step tracked in issue #62's checklist; until then the button won't
 display/function.
+
+## License
 
 `LICENSE` (repo root) is an explicit all-rights-reserved notice — the maintainer's deliberate choice over
 an OSS license (MIT/Apache 2.0/etc.). Code stays publicly visible but isn't legally reusable without
