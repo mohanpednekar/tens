@@ -1359,9 +1359,10 @@ already cover the genuinely useful items on that checklist.
   `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). Together with
-  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 14 files; the
-  remaining three are `scripts/adversarialReviewMarker.test.js`,
-  `scripts/pr-low-risk-eligible.test.js`, and `scripts/bump-version.test.js` — Vitest's default glob
+  `save-migration/index.test.js`/`navAttention.test.js` (named above) that's 11 of the 15 files; the
+  remaining four are `scripts/adversarialReviewMarker.test.js`,
+  `scripts/pr-low-risk-eligible.test.js`, `scripts/bump-version.test.js`, and
+  `scripts/classify-claude-failure.test.js` — Vitest's default glob
   picks these up alongside `src/` since `vite.config.js`'s `test` block sets no custom `include`.
 
 ### End-to-end testing
