@@ -128,6 +128,22 @@ jobs:
             .github/workflows/pr-auto-merge.yml \
             .github/workflows/pr-conflict-sweep.yml)" >> "$GITHUB_OUTPUT"
 
+      - name: Stage failure classifier
+        if: steps.pr.outputs.skip != 'true'
+        run: |
+          # Staged from the sparse `main` checkout above, BEFORE the pinned-SHA
+          # checkout below replaces the workspace — after that checkout,
+          # scripts/ would be the PR's own copy (or absent entirely), and a PR
+          # must not control whether its own followup failure reads as
+          # transient.
+          # Tolerant by design: the script lands on `main` with this change, so
+          # on this very PR (whose head version of this workflow already runs
+          # the staging step while `main` still lacks the file) the cp simply
+          # warns and the classify step below fails closed instead of aborting
+          # the whole job before the Claude step even runs.
+          cp scripts/classify-claude-failure.sh "$RUNNER_TEMP/classify-claude-failure.sh" \
+            || echo "::warning::classifier script not present on main yet — Claude-step failures will stay red this run."
+
       - uses: actions/checkout@v7
         if: steps.pr.outputs.skip != 'true'
         with:
@@ -159,7 +175,14 @@ jobs:
           cache: yarn
 
       - name: Address feedback / fix CI on the PR
+        id: claude
         if: steps.pr.outputs.skip != 'true'
+        # Tolerated-failure handling (#752): the "Classify Claude step failure"
+        # step below re-fails the job for any real error, but downgrades a
+        # transient, Claude-side failure (quota/API 5xx, or the engine dying
+        # before doing any work) to a warning — the next trigger retries on its
+        # own, so a red `followup` check on an otherwise-green PR is just noise.
+        continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
           GH_TOKEN: ${{ secrets.GH_AUTOMATION_PAT }}
@@ -214,3 +237,17 @@ jobs:
 
             If nothing here is actually actionable (e.g. a comment is just a question, or CI is
             already green), make no changes.
+
+      - name: Classify Claude step failure
+        # Companion to the continue-on-error above — same contract as
+        # autonomous-maintenance.yml's step of the same name. The shared
+        # classifier (scripts/classify-claude-failure.sh) is run from the
+        # trusted `main` copy staged earlier, not the PR's checkout.
+        if: steps.pr.outputs.skip != 'true' && steps.claude.outcome == 'failure'
+        run: |
+          if [ -f "$RUNNER_TEMP/classify-claude-failure.sh" ]; then
+            bash "$RUNNER_TEMP/classify-claude-failure.sh" "${{ steps.claude.outputs.execution_file }}"
+          else
+            echo "::error::Staged classifier missing (script not on main yet?) — failing closed."
+            exit 1
+          fi
