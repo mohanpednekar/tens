@@ -304,6 +304,7 @@ jobs:
             echo "secret_scanning_alerts<<SSALERT_EOF"
             echo "$secret_scanning_alerts"
             echo "SSALERT_EOF"
+          } >> "$GITHUB_OUTPUT"
 
           # Same shape for already-open automation-retro reports (#57): a run about to
           # file one dedups against — or extends — an existing report rather than piling
@@ -326,7 +327,6 @@ jobs:
             echo "open_retro_issues<<RETRO_EOF"
             echo "$open_retro_issues"
             echo "RETRO_EOF"
-
           } >> "$GITHUB_OUTPUT"
 
       - name: Surface a broken deploy.yml run
@@ -940,14 +940,24 @@ jobs:
             .github/workflows/autonomous-pr-followup.yml \
             .github/workflows/pr-auto-merge.yml)" >> "$GITHUB_OUTPUT"
 
+      - name: Stage failure classifier
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          # Staged out of the workspace BEFORE the Claude step: a maintenance
+          # run may Edit/Write scripts/ (only workflow files are denied), and
+          # the run must not be able to weaken the classification of its own
+          # failure.
+          cp scripts/classify-claude-failure.sh "$RUNNER_TEMP/classify-claude-failure.sh"
+
       - name: Run autonomous maintenance task
         id: claude
         if: steps.guard.outputs.skip != 'true'
         # Tolerated-failure handling: the step below re-fails the job for any real error,
         # but downgrades a pure Claude-side transient failure (HTTP 429 usage-quota
-        # exhaustion, or a 5xx server overload like 529 "Overloaded") to a warning — the
-        # run did no work and the next scheduled run simply retries, so a red X adds alert
-        # noise without any actionable signal.
+        # exhaustion, a 5xx server overload like 529 "Overloaded", or the engine dying
+        # before doing any work — see scripts/classify-claude-failure.sh, #752) to a
+        # warning — the run did no work and the next scheduled run simply retries, so a
+        # red X adds alert noise without any actionable signal.
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         env:
@@ -977,28 +987,11 @@ jobs:
         # 10-attempt retry budget against a 529 and then hard-failed under the old
         # 429-only check, which would otherwise have looked like a real break to Phase 0 of
         # the *next* run.
+        # Shared with autonomous-pr-followup.yml via scripts/classify-claude-failure.sh
+        # (which also covers the no-api_error_status "dead-before-work" shape, #752) —
+        # invoked from the $RUNNER_TEMP copy staged above, not the workspace.
         if: steps.guard.outputs.skip != 'true' && steps.claude.outcome == 'failure'
-        run: |
-          out="${{ steps.claude.outputs.execution_file }}"
-          [ -n "$out" ] && [ -f "$out" ] || out="$RUNNER_TEMP/claude-execution-output.json"
-          transient_status=""
-          if [ -f "$out" ]; then
-            transient_status=$(jq -r '
-                  (if type == "array" then . else [.] end)
-                  | map(select(.type == "result"))
-                  | last
-                  | if (.is_error == true) and (.api_error_status as $s | [429, 500, 502, 503, 529] | index($s) != null)
-                    then .api_error_status
-                    else empty
-                    end
-                ' "$out" 2>/dev/null)
-          fi
-          if [ -n "$transient_status" ]; then
-            echo "::warning::Run skipped: transient Claude API error (HTTP $transient_status) before any work was done. The next scheduled run will retry."
-            exit 0
-          fi
-          echo "::error::Claude run failed for a reason other than a transient quota/server error — see the 'Run autonomous maintenance task' step logs."
-          exit 1
+        run: bash "$RUNNER_TEMP/classify-claude-failure.sh" "${{ steps.claude.outputs.execution_file }}"
 
       - name: Fail on denied file modifications
         # The inverse blind spot of the step above: the action step can exit 0 while the

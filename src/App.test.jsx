@@ -42,6 +42,10 @@ import {
 import { isDevModeActive } from 'game/storage'
 import App from './App'
 
+// Enough Data Stream Capacity for Storage pool 2 (MB) to be visible — Node merges are timed off
+// that pool's Bandwidth (getComputeMergeDurationSeconds), which is 0 until it's visible.
+const POOL_2_VISIBLE_CAPACITY = 8 * 1024 ** 2 * 4
+
 // A fresh cycle's full purchase block, in bits — exactly enough for tickIntroAutoInvest to convert
 // every unit of tier01's (Kilobytes') current 8-unit block in one call. Used only as a convenient
 // round number for seeding tests below; no longer a named threshold in the engine itself (an
@@ -2555,7 +2559,7 @@ test('Upgrade Data Stream drains the Buffer and doubles Capacity', () => {
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  // expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   // The new capacity (2 B) derives the new speed — e=log2(2B) is odd, so the mean of the
   // neighbouring even-exponent sqrts: (1 + 2)/2 = 1.5 B/s.
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
@@ -2634,7 +2638,7 @@ test('tapping still increments Data Stream (still tappable) after the Byte gener
 
   const tapButton = screen.getByRole('button', { name: /tap to generate a bit/i })
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  // expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
 
   fireEvent.click(tapButton)
 
@@ -2723,7 +2727,7 @@ test('each Upgrade Data Stream press doubles Capacity, and the next cost always 
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  // expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
+  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toHaveTextContent('2 B') // cost = the new capacity
   // The Buffer drained to 0 — the next press can only arm (not fire) until the Buffer refills.
@@ -4468,7 +4472,7 @@ describe('Compute auto-merge automation', () => {
   test('once auto-merge is unlocked for a tier, a real tick auto-starts a reserve merge once the input is completely full (the merge itself only completes once its own timed duration elapses — see engine.test.js)', () => {
     vi.useFakeTimers()
     seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: COMPUTE_ENTITY_AUTO_MERGE_CAP, autoMergeNodesIntoCluster: true,
     })
     const { unmount } = render(<App />)
@@ -4485,7 +4489,7 @@ describe('Compute auto-merge automation', () => {
 
   test('once auto-merge is enabled for a tier, the old instant Merge button is replaced by the clickable reserve-slot row itself (issue #321 — "slots are the button")', () => {
     seedIntroState({
-      bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
+      bits: 0, capacity: POOL_2_VISIBLE_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
       computeNodes: 8, autoMergeNodesIntoCluster: true,
     })
     render(<App />)
@@ -4646,8 +4650,10 @@ test('AppNav\'s Foundry item navigates to the always-interactive screen; Factory
   await user.click(screen.getByRole('button', { name: /open byte foundry/i }))
 
   expect(screen.getByRole('heading', { level: 1, name: /byte foundry/i })).toBeInTheDocument()
+  // No vi.useFakeTimers() here (this test drives navigation via async userEvent.click) — the real
+  // tick can land between render and this assertion, so the exact starting balance isn't a stable
+  // invariant to assert on; aria-valuemax is.
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
-  // expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   expect(balanceBar).toHaveAttribute('aria-valuemax', String(INTRO_CAPACITY_CAP_BITS))
   // Tap + Upgrade Data Stream stay fully interactive — Sacrifice is gone; nothing here ever
   // goes read-only.
@@ -4927,14 +4933,14 @@ describe('Dev Mode', () => {
     render(<App />)
     await openDevMode(user)
 
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
     expect(isDevModeActive()).toBe(true)
     // 'dev' is gate-exempt, so toggling stays on the Dev Mode page rather than bouncing to the
     // Foundry gate — but the dev save it's now reading/writing starts out fresh and separate.
     expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^disable dev mode$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^dev mode$/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /^disable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
     expect(isDevModeActive()).toBe(false)
     // Real save's own money is untouched by whatever happened on the dev save.
     expect(JSON.parse(localStorage.getItem('tens_game_state')).resources.base).toBe(4242)
@@ -4945,7 +4951,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
     // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
@@ -4965,7 +4971,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await user.click(screen.getByText(/^intro \(\d+\)$/))
     await user.click(screen.getByText(/^dataLakes \(\d+\)$/))
@@ -4987,7 +4993,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await user.click(screen.getByText(/^intro \(\d+\)$/))
     const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
@@ -5002,7 +5008,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await user.click(screen.getByRole('button', { name: /unlock byte factory/i }))
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
@@ -5034,7 +5040,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
     await user.click(screen.getByRole('button', { name: buttonName }))
     assertState(JSON.parse(localStorage.getItem('tens_dev_state')))
   })
@@ -5044,7 +5050,7 @@ describe('Dev Mode', () => {
     seedMainGameState({ resources: { base: 4242 } })
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await openSettings(user)
     // Erase all is the only real-slot action reachable on a free (single-slot) account without a
