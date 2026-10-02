@@ -79,21 +79,12 @@ one unit of work, chosen in three phases —
 Phase 0 always outranks Phase A, which always outranks Phase B. Two follow-up steps reconcile the
 job's exit status with what the run actually did (see `docs/DESIGN_HISTORY.md` for the incidents that
 motivated this): a `blocked`-labeled task issue is excluded from Phase A picks, and a transient
-Claude-side failure is downgraded to a warning (job stays green) since it made no changes and the
-next scheduled run retries automatically. The shared classifier
-(`scripts/classify-claude-failure.sh`, also used by `autonomous-pr-followup.yml` since #752)
-recognizes two transient shapes on the last `type:"result"` entry — both gated on zero-work
-evidence (`num_turns <= 1`, `total_cost_usd == 0`, empty `modelUsage`, so a run that did real
-work before dying keeps its red check): an `api_error_status` of
-429 ("session limit") or a 5xx server overload (500/502/503/529, e.g. "Overloaded"), and a
-"dead-before-work" shape with no `api_error_status` at all — `is_error:true` plus
-`subtype:"success"` so only the confirmed structured-result shape downgrades. The first was confirmed live
-on 2026-07-29: a run exhausted the SDK's own
+Claude-side failure — HTTP 429 ("session limit") or a 5xx server overload (429/500/502/503/529,
+e.g. "Overloaded") — is downgraded to a warning (job stays green) since it made no changes and the
+next scheduled run retries automatically. Confirmed live on 2026-07-29: a run exhausted the SDK's own
 10-attempt retry budget against a 529 and hard-failed under the classifier's original 429-only check
 — broadened to the current 5xx-inclusive check so a purely transient Anthropic-side overload doesn't
-read as a real break to the next run's Phase 0 CI check. The second was confirmed live on
-2026-09-27 (#752): two `autonomous-pr-followup.yml` runs died in ~370ms with `num_turns:1` and zero
-cost, carrying no `api_error_status` — invisible to a status-keyed check.
+read as a real break to the next run's Phase 0 CI check.
 
 **Prompt assembly is a dedicated step, not inline in the action step.** A `Compose prompt` step (id
 `compose-prompt`) runs before `claude-code-action` and builds the full instructional prompt — the same
@@ -226,8 +217,9 @@ daily (rather than on a separate housekeeping-only schedule) is harmless.
 `workflow_dispatch` from the dormancy watchdog firing while a scheduled cron run is still in progress)
 queues behind the first rather than racing it. `cancel-in-progress` is deliberately `false`, not `true`:
 cancelling an in-progress run mid-task would itself produce an orphaned `claude/auto-task-*` branch —
-exactly the failure mode the orphaned-branch-recovery mechanism exists to clean up after — so queuing
-avoids causing that unnecessarily rather than trading one race for another failure mode.
+exactly the failure mode the orphaned-branch-recovery feed exists to clean up after (see Phase A
+below) — so queuing avoids causing that unnecessarily rather than trading one race for another
+failure mode.
 
 **Budget discipline.** Wall-clock time is not a constraint (one task per scheduled run is fine), but
 agent usage quota is:
@@ -277,7 +269,23 @@ or a package it can't safely resolve with confidence, gets a `claude-task` issue
 being attempted half-way. Medium/low severity alerts are left for Phase B item 2 below rather than
 elevated here. If none of (a)/(b)/(c) apply, falls through to Phase A.
 
-**Phase A — task backlog next.** Claude walks the open `claude-task` backlog in order —
+**Phase A — orphaned-branch recovery first, then the task backlog.** Before walking the backlog,
+the run handles the guard step's orphaned-branch feed (`scripts/orphan-branch-scan.sh`, #59): every
+remote `claude/*`/`devin/*`/`cursor/*` branch with **no open PR**, rendered with its merged-into-main
+status and any issue number parseable from the documented `auto-task-<n>-`/`auto-<n>-` naming
+conventions. A branch in this list is pushed work from a run that died mid-task (most often a quota
+wall) before opening a PR — invisible to the duplicate-PR guard, which only ever sees open PRs. The
+prompt's rules: a branch already merged into `main` is stale — delete the remote ref; an unmerged
+branch whose embedded issue number resolves to a closed issue is likewise deleted; an unmerged
+branch whose issue is still open is **resumed in preference to any new task** (fetch, check out, run
+`yarn test` to see its real state, finish on the same branch, open the PR — a resume counts as the
+run's one unit of work); a branch with no identifiable issue/PR reference and unmerged commits is
+left alone for a human. A resume-loop guard keeps a chronically-too-large task from being re-resumed
+forever — a branch whose commit dates spread across several distinct run windows without ever
+reaching a PR gets an `automation-retro` issue instead of another resume attempt. Deletions are
+quick housekeeping; at most one resume per run.
+
+Then Claude walks the open `claude-task` backlog in order —
 `priority:high` first, then normal (unlabeled) issues by lowest issue number, then `priority:low`
 issues last (only picked once no `priority:high` or normal-priority eligible issue remains open —
 this governs default autonomous ordering, not an absolute ban: a maintainer or interactive session
@@ -348,8 +356,9 @@ and `claude/auto-*` open PRs together toward the shared 5-PR ceiling (a red main
 and sorts the backlog `priority:high` → normal → `priority:low` with `blocked` excluded. Its
 guard step and prompt also mirror the #55 pieces — the open-`bug` feed, the code-scanning and
 secret-scanning alert feeds (same `GH_AUTOMATION_PAT` auth and fail-soft posture), the
-bug-filing rule, the alert-to-bug wiring, and Phase A's within-tier Impact weighing — minus
-Dependabot alerts, which stay the Claude engine's Phase 0(c)/Phase B item 2 job.
+bug-filing rule, the alert-to-bug wiring, the orphaned-branch feed + resume/delete rules, and Phase
+A's within-tier Impact weighing — minus Dependabot alerts, which stay the Claude engine's Phase
+0(c)/Phase B item 2 job.
 
 Unlike the Claude counterpart, the Devin agent runs under `--permission-mode dangerous` rather
 than a settings deny-list, and its prompt places **no file-scope restriction**: it may modify
@@ -389,14 +398,11 @@ copied per-workflow:
   caller-supplied
   extras (follow-up workflows pass every other workflow file since their prompts forbid
   all workflow edits). Run it from the same trusted main checkout as the guard.
-- `scripts/classify-claude-failure.sh [execution-file]` — the shared tolerated-failure
-  classifier paired with `continue-on-error: true` on a claude-code-action step: exits 0
-  (green-with-`::warning::`) for the two transient Claude-side shapes described under
-  "Autonomous maintenance" below, exits 1 for anything else. Both callers stage it into
-  `$RUNNER_TEMP` *before* the Claude step runs — from the sparse `main` checkout in the
-  follow-up workflow (so the pinned PR checkout can't substitute or delete it), and from
-  the workspace in maintenance (so a run that can Edit/Write `scripts/` can't weaken the
-  classification of its own failure). Covered by `classify-claude-failure.test.js`.
+- `scripts/orphan-branch-scan.sh` — the #59 orphaned-branch feed shared by both engines' guard
+  steps: fetches `claude/*`/`devin/*`/`cursor/*` (plus `main`) into a private
+  `refs/remotes/orphan-scan/*` namespace, drops every branch that has an open PR, and renders the
+  rest with merged-into-main status + a parsed issue number where the name carries one —
+  display-capped with a "+N more" note (#81), fail-soft to an "(unavailable …)" marker line.
 
 ### PR follow-up (`autonomous-pr-followup.yml`)
 
@@ -417,12 +423,7 @@ stall autonomous PRs whose only feedback is bot review (#731); the allowlist key
 unresolved maintainer decision, see `docs/DESIGN_HISTORY.md`'s Jules incident — so it cannot
 trigger this secrets-bearing workflow) — and checks out the exact commit SHA rather than the
 branch name before running `git checkout -B <branch>` to un-detach HEAD. See
-`docs/DESIGN_HISTORY.md` for the security reasoning behind each of these. The Claude step also
-carries the same tolerated-failure pair as the maintenance workflow (#752): `continue-on-error:
-true` plus a "Classify Claude step failure" step running the staged `main` copy of
-`scripts/classify-claude-failure.sh`, so a transient engine failure (API 429/5xx, or the
-dead-before-work shape that triggered it — see the classifier's header) downgrades to a warning
-instead of leaving a false red `followup` check on an otherwise-green PR.
+`docs/DESIGN_HISTORY.md` for the security reasoning behind each of these.
 
 ### Dependabot PR follow-up (`dependabot-pr-followup.yml`)
 
