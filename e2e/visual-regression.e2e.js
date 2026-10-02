@@ -13,8 +13,9 @@ const THEME_PREFERENCE_KEY = 'tens_theme_preference'
 const GAME_STATE_KEY = 'tens_game_state'
 
 const loadSeededPage = async (page, { theme, state }) => {
-  await page.goto('/')
-  await page.evaluate(
+  // Seed before the app boots (init scripts run ahead of page scripts) so the first mount reads
+  // the seeded save and no pre-reload tick can overwrite it with fresh state.
+  await page.addInitScript(
     ({ themeKey, theme, stateKey, state }) => {
       window.localStorage.clear()
       window.localStorage.setItem(themeKey, theme)
@@ -22,7 +23,7 @@ const loadSeededPage = async (page, { theme, state }) => {
     },
     { themeKey: THEME_PREFERENCE_KEY, theme, stateKey: GAME_STATE_KEY, state },
   )
-  await page.reload()
+  await page.goto('/')
   // Fonts are bundled (@fontsource — no runtime CDN fetch); wait for them so the capture never
   // races a late font swap.
   await page.waitForFunction(() => document.fonts.status === 'loaded')
