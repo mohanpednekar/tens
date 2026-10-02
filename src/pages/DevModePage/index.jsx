@@ -150,6 +150,7 @@ const FieldNode = ({ path, value, drafts, onDraftChange, onSetLeaf, onToggleLeaf
         <FieldLabel>{label}</FieldLabel>
         <Button
           aria-label={id}
+          aria-pressed={value}
           onClick={() => onToggleLeaf(path, !value)}
           type="button"
           variant={value ? 'success' : 'neutral'}
@@ -331,7 +332,8 @@ const DevModePage = ({ game }) => {
         </p>
         <ButtonGrid>
           <Button
-            aria-label={active ? 'disable dev mode' : 'enable dev mode'}
+            aria-label="dev mode"
+            aria-pressed={active}
             onClick={handleToggle}
             type="button"
             variant={active ? 'danger' : 'primary'}
