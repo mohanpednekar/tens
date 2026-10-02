@@ -19908,6 +19908,22 @@
       "source_file": "scripts/orphan-branch-scan.sh",
       "source_line_start": 1,
       "source_line_end": 1
+    },
+    {
+      "id": "scripts/classify-claude-failure.sh",
+      "name": "classify-claude-failure.sh",
+      "type": "file",
+      "source_file": "scripts/classify-claude-failure.sh",
+      "source_line_start": 1,
+      "source_line_end": 1
+    },
+    {
+      "id": "scripts/classify-claude-failure.test.js",
+      "name": "classify-claude-failure.test.js",
+      "type": "file",
+      "source_file": "scripts/classify-claude-failure.test.js",
+      "source_line_start": 1,
+      "source_line_end": 1
     }
   ],
   "links": [
