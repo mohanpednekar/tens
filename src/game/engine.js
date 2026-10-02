@@ -4266,31 +4266,42 @@ export const tickDiskAutoFill = (elapsedSeconds = 0) => state => {
     let memoryToCacheBudget = getPoolBudget(poolIndex)
     const bufferCapacity = getPoolBufferCapacity(state, poolIndex)
     const blockBits = size / DISK_CACHE_BLOCK_COUNT
-    for (;;) {
-      const cached = diskCache[size] ?? 0
-      const available = getPoolBufferBitsLocal(poolIndex)
-      if (cached >= size || available <= 0 || memoryToCacheBudget <= 0) break
+    const cached = diskCache[size] ?? 0
+    const available = getPoolBufferBitsLocal(poolIndex)
+    if (cached >= size || available <= 0 || memoryToCacheBudget <= 0) {
+      poolBudgets[poolIndex] = memoryToCacheBudget
+      continue
+    }
 
-      const need = size - cached
-      const transferUnit = Math.min(blockBits, need, memoryToCacheBudget)
-      if (available >= transferUnit) {
-        poolBuffers[poolIndex] = available - transferUnit
-        diskCache = { ...diskCache, [size]: cached + transferUnit }
-        memoryToCacheBudget -= transferUnit
-        changed = true
-        continue
-      }
+    // ⚡ Bolt: Replaced O(N) iterative loop with O(1) mathematical calculation.
+    // When offline progress simulates massive intervals, this avoids thread freezing
+    // by evaluating total block transfers mathematically.
+    const need = size - cached
+    const maxTransfer = Math.min(need, memoryToCacheBudget)
+    let totalTransfer = 0
+
+    if (available >= maxTransfer) {
+      totalTransfer = maxTransfer
+    } else {
+      const bulk = Math.floor(available / blockBits) * blockBits
+      const remAvailable = available - bulk
+      const remMaxTransfer = maxTransfer - bulk
+      const transferUnit = Math.min(blockBits, remMaxTransfer)
+
       // The pool's own buffer is full but its capacity itself is smaller than one block on this
       // size — dump the full balance rather than stalling the refill forever on a large array.
-      if (bufferCapacity > 0 && bufferCapacity < transferUnit && available >= bufferCapacity) {
-        const add = Math.min(need, available, memoryToCacheBudget)
-        poolBuffers[poolIndex] = available - add
-        diskCache = { ...diskCache, [size]: cached + add }
-        memoryToCacheBudget -= add
-        changed = true
-        continue
+      if (bufferCapacity > 0 && bufferCapacity < transferUnit && remAvailable >= bufferCapacity) {
+        totalTransfer = available
+      } else {
+        totalTransfer = bulk
       }
-      break
+    }
+
+    if (totalTransfer > 0) {
+      poolBuffers[poolIndex] = available - totalTransfer
+      diskCache = { ...diskCache, [size]: cached + totalTransfer }
+      memoryToCacheBudget -= totalTransfer
+      changed = true
     }
     poolBudgets[poolIndex] = memoryToCacheBudget
   }
