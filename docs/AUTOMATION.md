@@ -217,8 +217,9 @@ daily (rather than on a separate housekeeping-only schedule) is harmless.
 `workflow_dispatch` from the dormancy watchdog firing while a scheduled cron run is still in progress)
 queues behind the first rather than racing it. `cancel-in-progress` is deliberately `false`, not `true`:
 cancelling an in-progress run mid-task would itself produce an orphaned `claude/auto-task-*` branch —
-exactly the failure mode the orphaned-branch-recovery mechanism exists to clean up after — so queuing
-avoids causing that unnecessarily rather than trading one race for another failure mode.
+exactly the failure mode the orphaned-branch-recovery feed exists to clean up after (see Phase A
+below) — so queuing avoids causing that unnecessarily rather than trading one race for another
+failure mode.
 
 **Budget discipline.** Wall-clock time is not a constraint (one task per scheduled run is fine), but
 agent usage quota is:
@@ -268,7 +269,23 @@ or a package it can't safely resolve with confidence, gets a `claude-task` issue
 being attempted half-way. Medium/low severity alerts are left for Phase B item 2 below rather than
 elevated here. If none of (a)/(b)/(c) apply, falls through to Phase A.
 
-**Phase A — task backlog next.** Claude walks the open `claude-task` backlog in order —
+**Phase A — orphaned-branch recovery first, then the task backlog.** Before walking the backlog,
+the run handles the guard step's orphaned-branch feed (`scripts/orphan-branch-scan.sh`, #59): every
+remote `claude/*`/`devin/*`/`cursor/*` branch with **no open PR**, rendered with its merged-into-main
+status and any issue number parseable from the documented `auto-task-<n>-`/`auto-<n>-` naming
+conventions. A branch in this list is pushed work from a run that died mid-task (most often a quota
+wall) before opening a PR — invisible to the duplicate-PR guard, which only ever sees open PRs. The
+prompt's rules: a branch already merged into `main` is stale — delete the remote ref; an unmerged
+branch whose embedded issue number resolves to a closed issue is likewise deleted; an unmerged
+branch whose issue is still open is **resumed in preference to any new task** (fetch, check out, run
+`yarn test` to see its real state, finish on the same branch, open the PR — a resume counts as the
+run's one unit of work); a branch with no identifiable issue/PR reference and unmerged commits is
+left alone for a human. A resume-loop guard keeps a chronically-too-large task from being re-resumed
+forever — a branch whose commit dates spread across several distinct run windows without ever
+reaching a PR gets an `automation-retro` issue instead of another resume attempt. Deletions are
+quick housekeeping; at most one resume per run.
+
+Then Claude walks the open `claude-task` backlog in order —
 `priority:high` first, then normal (unlabeled) issues by lowest issue number, then `priority:low`
 issues last (only picked once no `priority:high` or normal-priority eligible issue remains open —
 this governs default autonomous ordering, not an absolute ban: a maintainer or interactive session
@@ -339,8 +356,9 @@ and `claude/auto-*` open PRs together toward the shared 5-PR ceiling (a red main
 and sorts the backlog `priority:high` → normal → `priority:low` with `blocked` excluded. Its
 guard step and prompt also mirror the #55 pieces — the open-`bug` feed, the code-scanning and
 secret-scanning alert feeds (same `GH_AUTOMATION_PAT` auth and fail-soft posture), the
-bug-filing rule, the alert-to-bug wiring, and Phase A's within-tier Impact weighing — minus
-Dependabot alerts, which stay the Claude engine's Phase 0(c)/Phase B item 2 job.
+bug-filing rule, the alert-to-bug wiring, the orphaned-branch feed + resume/delete rules, and Phase
+A's within-tier Impact weighing — minus Dependabot alerts, which stay the Claude engine's Phase
+0(c)/Phase B item 2 job.
 
 Unlike the Claude counterpart, the Devin agent runs under `--permission-mode dangerous` rather
 than a settings deny-list, and its prompt places **no file-scope restriction**: it may modify
@@ -361,7 +379,7 @@ open a `claude/self-heal-devin-autonomous-maintenance-*` fix PR.
 
 ### Shared workflow helpers
 
-To keep the workflows DRY and single-responsibility, three pieces are extracted instead of
+To keep the workflows DRY and single-responsibility, four pieces are extracted instead of
 copied per-workflow:
 
 - `.github/actions/setup-node-yarn` — composite action: `corepack enable` →
@@ -380,6 +398,11 @@ copied per-workflow:
   caller-supplied
   extras (follow-up workflows pass every other workflow file since their prompts forbid
   all workflow edits). Run it from the same trusted main checkout as the guard.
+- `scripts/orphan-branch-scan.sh` — the #59 orphaned-branch feed shared by both engines' guard
+  steps: fetches `claude/*`/`devin/*`/`cursor/*` (plus `main`) into a private
+  `refs/remotes/orphan-scan/*` namespace, drops every branch that has an open PR, and renders the
+  rest with merged-into-main status + a parsed issue number where the name carries one —
+  display-capped with a "+N more" note (#81), fail-soft to an "(unavailable …)" marker line.
 
 ### PR follow-up (`autonomous-pr-followup.yml`)
 

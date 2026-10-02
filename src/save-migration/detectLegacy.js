@@ -1,5 +1,11 @@
 import { SAVE_SCHEMA_VERSION } from './constants'
 
+
+const isPlainObject = value =>
+  Boolean(value) &&
+  Object.prototype.toString.call(value) === '[object Object]' &&
+  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
+
 const LEGACY_TIER_IDS = new Set([
   'Tens', 'Thousands', 'Millions', 'Billions', 'Trillions', 'Quadrillions', 'Pentillions',
   'Hexillions', 'Septillions', 'Octillions', 'Nonillions', 'Decillions',
@@ -12,7 +18,7 @@ const TIER_MAP_FIELDS = [
 ]
 
 const mapHasLegacyTierId = map =>
-  map && typeof map === 'object' && Object.keys(map).some(k => LEGACY_TIER_IDS.has(k))
+  map && isPlainObject(map) && Object.keys(map).some(k => LEGACY_TIER_IDS.has(k))
 
 /**
  * Returns a short reason code when a parsed save payload still needs a migration step this folder
@@ -20,7 +26,7 @@ const mapHasLegacyTierId = map =>
  * that matches the current shape.
  */
 export const getSaveIncompatibilityReason = saved => {
-  if (!saved || typeof saved !== 'object') return null
+  if (!saved || !isPlainObject(saved)) return null
   if (saved.saveSchemaVersion === SAVE_SCHEMA_VERSION) return null
 
   if (saved.resources?.Ones !== undefined) return 'legacy_money_id'
@@ -29,7 +35,7 @@ export const getSaveIncompatibilityReason = saved => {
   if (intro === undefined) {
     const hasTierProgress = TIER_MAP_FIELDS.some(field => {
       const map = saved[field]
-      return map && typeof map === 'object' && Object.keys(map).length > 0
+      return map && isPlainObject(map) && Object.keys(map).length > 0
     })
     if (hasTierProgress) return 'missing_intro'
   } else {
