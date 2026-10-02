@@ -4931,14 +4931,14 @@ describe('Dev Mode', () => {
     render(<App />)
     await openDevMode(user)
 
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
     expect(isDevModeActive()).toBe(true)
     // 'dev' is gate-exempt, so toggling stays on the Dev Mode page rather than bouncing to the
     // Foundry gate — but the dev save it's now reading/writing starts out fresh and separate.
     expect(screen.getByRole('heading', { level: 1, name: /^dev mode$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^disable dev mode$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^dev mode$/i })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /^disable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
     expect(isDevModeActive()).toBe(false)
     // Real save's own money is untouched by whatever happened on the dev save.
     expect(JSON.parse(localStorage.getItem('tens_game_state')).resources.base).toBe(4242)
@@ -4949,7 +4949,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     // Not a hardcoded field list — expand the auto-generated "resources" group (one leaf per
     // resource id in play, straight off createInitialGameState()'s own resources shape) to reach
@@ -4969,7 +4969,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await user.click(screen.getByText(/^intro \(\d+\)$/))
     await user.click(screen.getByText(/^dataLakes \(\d+\)$/))
@@ -4991,7 +4991,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await user.click(screen.getByText(/^intro \(\d+\)$/))
     const toggle = screen.getByRole('button', { name: /^intro\.mainGameUnlocked$/ })
@@ -5006,7 +5006,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await user.click(screen.getByRole('button', { name: /unlock byte factory/i }))
     expect(JSON.parse(localStorage.getItem('tens_dev_state')).intro.mainGameUnlocked).toBe(true)
@@ -5038,7 +5038,7 @@ describe('Dev Mode', () => {
     seedMainGameState()
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
     await user.click(screen.getByRole('button', { name: buttonName }))
     assertState(JSON.parse(localStorage.getItem('tens_dev_state')))
   })
@@ -5048,7 +5048,7 @@ describe('Dev Mode', () => {
     seedMainGameState({ resources: { base: 4242 } })
     render(<App />)
     await openDevMode(user)
-    await user.click(screen.getByRole('button', { name: /^enable dev mode$/i }))
+    await user.click(screen.getByRole('button', { name: /^dev mode$/i }))
 
     await openSettings(user)
     // Erase all is the only real-slot action reachable on a free (single-slot) account without a
