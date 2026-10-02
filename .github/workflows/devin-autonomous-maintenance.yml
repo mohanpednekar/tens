@@ -183,6 +183,25 @@ jobs:
             echo "SSALERT_EOF"
           } >> "$GITHUB_OUTPUT"
 
+          # Orphaned autonomous branches (#59): remote claude/*/devin/*/cursor/*
+          # branches with no open PR — a run that died mid-task after pushing
+          # but before opening a PR is invisible to the duplicate-PR guard
+          # above. The deterministic scan (shared script, same fail-soft
+          # posture as the alert feeds) renders branch + issue-number-if-
+          # parseable + merged-into-main status; the prompt below decides
+          # resume vs delete.
+          if [ -x scripts/orphan-branch-scan.sh ]; then
+            orphan_branches=$(scripts/orphan-branch-scan.sh)
+          else
+            orphan_branches="- (unavailable — scripts/orphan-branch-scan.sh missing; see this step's ::warning in the run log)"
+            echo "::warning::scripts/orphan-branch-scan.sh missing or not executable — orphan-branch feed unavailable for this run"
+          fi
+          {
+            echo "orphan_branches<<ORPHAN_EOF"
+            echo "${orphan_branches:-(none)}"
+            echo "ORPHAN_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Write Devin CLI credentials
         # Must run BEFORE the install step: install.sh ends by running
         # `devin setup`, which launches an interactive login prompt on a fresh
@@ -224,6 +243,7 @@ jobs:
           OPEN_BUG_ISSUES: ${{ steps.guard.outputs.open_bug_issues }}
           CODE_SCANNING_ALERTS: ${{ steps.guard.outputs.code_scanning_alerts }}
           SECRET_SCANNING_ALERTS: ${{ steps.guard.outputs.secret_scanning_alerts }}
+          ORPHAN_BRANCHES: ${{ steps.guard.outputs.orphan_branches }}
           MAIN_CI_BROKEN: ${{ steps.guard.outputs.main_ci_broken }}
         run: |
           : "${OPEN_PRS:=(none)}"
@@ -231,6 +251,7 @@ jobs:
           : "${OPEN_BUG_ISSUES:=(none)}"
           : "${CODE_SCANNING_ALERTS:=(none)}"
           : "${SECRET_SCANNING_ALERTS:=(none)}"
+          : "${ORPHAN_BRANCHES:=(none)}"
           cat <<'TEMPLATE_EOF' > "$RUNNER_TEMP/devin-prompt.txt"
           You are running as a scheduled, unattended maintenance job inside the
           GitHub Actions runner for REPO: $REPO. Nobody is watching this run, so
@@ -250,6 +271,11 @@ jobs:
           branches (do not open a duplicate for a task already covered by any of
           these):
           $OPEN_PRS
+
+          Orphaned autonomous branches (remote claude/*/devin/*/cursor/* with
+          no open PR — a run that died mid-task after pushing leaves work the
+          duplicate-PR guard can't see; #59):
+          $ORPHAN_BRANCHES
 
           Currently-open bug issues (number: title [labels]) — dedup targets
           for the bug-filing rule below:
@@ -273,6 +299,30 @@ jobs:
           priority:low, ascending issue number; `blocked`-labeled issues are
           excluded upstream):
           $OPEN_TASKS
+
+          First handle the orphaned-branch list above, before picking a new
+          task — each entry is pushed work from a run that died before opening
+          a PR:
+          - "merged into main" → the work already landed; delete the remote
+            branch: `git push origin --delete <branch>`.
+          - Not merged → look for an issue number in the branch name
+            (conventions: `devin/auto-<n>-*`, `claude/auto-task-<n>-*`; numbers
+            also appear mid-slug, e.g. `cursor/<slug>-399-*`) and check it with
+            `gh issue view <n>`: closed → delete the remote branch; still open
+            → prefer RESUMING that branch over a new task — `git fetch origin
+            <branch> && git checkout -b <branch> FETCH_HEAD`, run `yarn test`
+            to see its real state (don't assume the partial work is correct or
+            complete), finish it on the same branch, push, and open the PR.
+            A resume counts as this run's task — don't also start a fresh one.
+          - No identifiable issue/PR reference and not merged → leave it for a
+            human; don't guess at resumability.
+          - Resume-loop guard: if a branch's history shows it has been resumed
+            repeatedly without ever reaching a PR (commit dates spread across
+            several distinct run windows), stop auto-resuming it — file a
+            `claude-task` + `automation-retro` issue flagging the task as
+            likely oversized or stuck, and move on.
+          - Keep the sweep cheap: deletions are quick; resume at most one
+            branch per run, then proceed to the backlog walk.
 
           Pick the first eligible task. Before starting, read the issue's full
           spec and comment history (`gh issue view <n> --comments`): skip it if a
@@ -378,6 +428,7 @@ jobs:
           prompt="${prompt//\$OPEN_BUG_ISSUES/$OPEN_BUG_ISSUES}"
           prompt="${prompt//\$CODE_SCANNING_ALERTS/$CODE_SCANNING_ALERTS}"
           prompt="${prompt//\$SECRET_SCANNING_ALERTS/$SECRET_SCANNING_ALERTS}"
+          prompt="${prompt//\$ORPHAN_BRANCHES/$ORPHAN_BRANCHES}"
           prompt="${prompt//\$MAIN_CI_BROKEN/$MAIN_CI_BROKEN}"
           printf '%s' "$prompt" > "$RUNNER_TEMP/devin-prompt-final.txt"
           wc -c "$RUNNER_TEMP/devin-prompt-final.txt"
