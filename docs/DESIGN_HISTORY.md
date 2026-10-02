@@ -1,5 +1,33 @@
 # Design history & rationale
 
+### Stale `graphify-out/*` after `main` merges: `-merge` gitattributes + a CI-verified freshness test (#761) — 2026-09-29
+
+`graphify-out/`'s generated artifacts kept going stale every time a long-lived feature branch merged
+`origin/main`: git's default three-way merge either silently produced a graph re-indexing
+already-deleted files, or a conflict got resolved by taking one side — with the same stale result.
+Each occurrence (5+ across #721/#723 alone) cost a bot review comment plus a session round to
+notice, `graphify update .`, and re-push.
+
+Two of the issue's suggested mechanisms can't ship via repo contents alone: a `.gitattributes`
+`merge=<driver>` *driver command* lives in per-clone `git config`, not the repo, and a `post-merge`
+git hook lives in unversioned `.git/hooks` (`.claude/hooks/` are Claude Code session hooks, not git
+hooks). Stopping committing the graph entirely was the issue's own last-ranked option — it reverses
+the deliberate "every session starts from the same map" choice.
+
+What did ship: `.gitattributes` marks the five committed artifacts `-merge` (plus
+`linguist-generated`), so git never line-merges them — a both-sides divergence becomes an explicit
+conflict resolved the documented way (`graphify update .`), and a one-sided change still merges
+cleanly. `scripts/check-graphify-freshness.mjs` — run by a Vitest file so it fires in `yarn test`
+on every PR — verifies the graph in both directions: every node/link `source_file` in `graph.json`
+names an existing file (external-module refs exempt only when they name a `package.json` dependency
+or Node builtin, including scoped names and subpath imports), and every tracked file with a
+graphify-indexed extension has at least one graph reference — the latter catching the
+take-one-side resolution where `main`'s newly-added files are simply absent from the kept graph.
+Content drift inside still-existing files is not detectable without regenerating the graph in CI —
+that stays covered by `built_at_commit` plus the same-commit regeneration convention. Together the
+two layers make a stale committed graph a CI failure rather than something a review bot has to
+notice.
+
 ### Adversarial-review follow-up to the extended-cap/one-shot-conversion PR: a stray merge corruption, a real reserve-wipe bug, and a stuck-conversion bug — 2026-09-18
 
 Three same-day fixes, discovered in sequence while running the mandatory adversarial `code-reviewer`
