@@ -1,0 +1,10 @@
+# graphify-out/ generated artifacts (see CLAUDE.md's "graphify" section and #761):
+# never silently content-merge them. A divergent change on both sides of a merge
+# must surface as an explicit conflict and be resolved by `graphify update .`,
+# not by a line-level three-way merge that can leave stale file references or
+# corrupt JSON in the committed graph.
+graphify-out/graph.json -merge linguist-generated
+graphify-out/graph.html -merge linguist-generated
+graphify-out/GRAPH_REPORT.md -merge linguist-generated
+graphify-out/.graphify_labels.json -merge linguist-generated
+graphify-out/.graphify_labels.json.sig -merge linguist-generated
