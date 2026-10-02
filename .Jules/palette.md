@@ -25,3 +25,6 @@
 ## 2024-09-11 - Static aria-label for Toggle Buttons with aria-pressed
 **Learning:** When adding `aria-pressed` to toggle buttons, ensure the button's `aria-label` is static (e.g., "Auto-buy") rather than dynamically changing based on state (e.g., "Enable Auto-buy" / "Disable Auto-buy"). Dynamic labels combined with `aria-pressed` cause redundant and confusing screen reader announcements.
 **Action:** When converting a button to a toggle state by adding `aria-pressed={bool}`, always remove dynamic state wording from its `aria-label` to provide a consistent control identity.
+## 2024-10-24 - Testing Toggle Button aria-labels
+**Learning:** The application's test suite heavily relies on strict testing-library `getByRole` queries matching specific accessible names (e.g., `name: /^enable dev mode$/i`). Changing an `aria-label` from a dynamic state-based string to a static string combined with `aria-pressed` (the correct pattern for toggle buttons) will break these tests.
+**Action:** When updating toggle buttons to use static `aria-label`s and `aria-pressed`, always grep for the old dynamic label text in the `src/` directory (especially `src/App.test.jsx`) and update the test queries to match the new static `aria-label`.
