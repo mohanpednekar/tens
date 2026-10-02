@@ -1565,6 +1565,11 @@ job's red/green with reality by inspecting the action's execution-output JSON
   `api_error_status: 429` to a `::warning::` (job stays green), while any other failure —
   including `error_max_turns`, a real budget signal worth keeping red — re-fails the job as
   before.
+- *Second transient shape (#752):* `scripts/classify-claude-failure.sh` also downgrades a
+  "dead-before-work" result — `subtype: "success"`, no `api_error_status`, `is_error: true`, with
+  zero-work evidence (`num_turns <= 1`, `total_cost_usd == 0`, empty `modelUsage`) — confirmed live
+  2026-09-27 on `autonomous-pr-followup.yml`. Both shapes require zero-work evidence; the
+  `subtype` conjunct keeps unrecognized crash shapes red.
 
 **Reliability: cron dormancy.** GitHub Actions automatically disables a workflow's `schedule` (cron)
 trigger after 60 days with no repository activity — if the `claude-task` backlog ever fully drained
