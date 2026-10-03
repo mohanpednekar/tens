@@ -3787,7 +3787,7 @@ describe('Byte Foundry Storage', () => {
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
     const lakeBlock = within(pool1).getByLabelText('KB lake')
     expect(within(lakeBlock).getByText('Lake')).toBeInTheDocument()
-    expect(within(lakeBlock).getByRole('button', { name: /buy 1 Cores from the KB Data Lake/i })).toBeInTheDocument()
+    expect(within(lakeBlock).getByRole('button', { name: /auto convert toward 1 cores from the kb data lake/i })).toBeInTheDocument()
   })
 
   test('a completed 9/9/9 pool shows an automatic-conversion label instead of a Booster conversion button', () => {
@@ -3825,7 +3825,7 @@ describe('Byte Foundry Storage', () => {
     // src/components/DataLakePanel/index.jsx's poolReady/unlocked distinction.
     expect(within(lakeBlock).getByText(/^Locked · 0 \/ 1 KB$/)).toBeInTheDocument()
     // Boosters themselves stay purchasable off the legacy latch — the Buy/Auto controls still show.
-    expect(within(lakeBlock).getByRole('button', { name: /buy 1 cores from the kb data lake/i })).toBeInTheDocument()
+    expect(within(lakeBlock).getByRole('button', { name: /auto convert toward 1 cores from the kb data lake/i })).toBeInTheDocument()
   })
 
   test('the same legacy boostersUnlocked latch, when not yet affordable, does NOT offer a "start converting" control that could never actually fund anything (regression — the header control must key off isDataLakePoolReady, not the looser latch)', () => {
@@ -3844,7 +3844,7 @@ describe('Byte Foundry Storage', () => {
 
     const pool1 = screen.getByRole('region', { name: 'pool 1' })
     const lakeBlock = within(pool1).getByLabelText('KB lake')
-    expect(within(lakeBlock).queryByRole('button', { name: /start converting toward 1 cores from the kb data lake/i })).not.toBeInTheDocument()
+    expect(within(lakeBlock).queryByRole('button', { name: /auto convert toward 1 cores from the kb data lake/i })).not.toBeInTheDocument()
     expect(within(lakeBlock).getByTitle('Build a 1 KB disk in Storage to unlock Boosters here')).toBeInTheDocument()
   })
 
@@ -3898,7 +3898,7 @@ describe('Byte Foundry Storage', () => {
     render(<App />)
     openStorage()
 
-    const buyButton = screen.getByRole('button', { name: /buy 1 cores from the kb data lake/i })
+    const buyButton = screen.getByRole('button', { name: /auto convert toward 1 cores from the kb data lake/i })
     expect(buyButton).toBeEnabled()
     expect(screen.queryByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })).not.toBeInTheDocument()
   })
@@ -3918,7 +3918,7 @@ describe('Byte Foundry Storage', () => {
 
     const upgradeButton = screen.getByRole('button', { name: /increase the KB Data Lake's capacity ×10/i })
     expect(upgradeButton).toBeEnabled()
-    expect(screen.queryByRole('button', { name: /buy 1 cores from the kb data lake/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /auto convert toward 1 cores from the kb data lake/i })).not.toBeInTheDocument()
   })
 
   test('Data Lake capacity-increase button disappears once the lake hits its hard cap', () => {
