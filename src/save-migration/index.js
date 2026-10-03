@@ -1,6 +1,12 @@
 import { SAVE_SCHEMA_VERSION } from './constants'
 import { getSaveIncompatibilityReason } from './detectLegacy'
 
+const isPlainObject = value =>
+  Boolean(value) &&
+  Object.prototype.toString.call(value) === '[object Object]' &&
+  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
+
+
 const stripSaveEnvelope = saved => {
   const { saveSchemaVersion: _version, ...gameState } = saved
   return gameState
@@ -16,7 +22,7 @@ const stripSaveEnvelope = saved => {
  * `storage.js` never transforms legacy fields — it only persists, calls this, then mergeState.
  */
 export const adaptSaveForCurrentSchema = raw => {
-  if (!raw || typeof raw !== 'object') return { ok: false, reason: 'invalid_payload' }
+  if (!raw || !isPlainObject(raw)) return { ok: false, reason: 'invalid_payload' }
 
   if (raw.saveSchemaVersion === SAVE_SCHEMA_VERSION) {
     return { ok: true, payload: stripSaveEnvelope(raw) }
