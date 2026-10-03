@@ -169,7 +169,7 @@ const LakePoolLabel = styled.span`
 const ActionButton = styled(Button)`
   padding: 0.1rem 0.5rem;
   font-size: ${props => props.theme.type.scale.sm.size};
-  
+
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
     outline-offset: 2px;
