@@ -4952,14 +4952,38 @@ const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
   let fillBits = lake?.fillBits ?? 0
   let openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   if (openSubSize === null) return null
+  
   let unitsGained = 0
   let bitsNeeded = 0
+  
+  // ⚡ Bolt Optimization: Replaced O(N) while loop for manual fill bits calculation with an O(1) mathematical calculation.
+  // Instead of repeatedly filling a single sub-size, we calculate exactly how many disks of each size can be completed.
   while (unitsGained < neededUnits && openSubSize !== null) {
-    const slotSizeBits = unitBits * openSubSize
-    bitsNeeded += slotSizeBits - fillBits
+    const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+    const currentDisks = decomposeDataLakeUnits(Math.min(depositedUnits, representable)).disks
+    
+    let remainingSlots = (slotCounts[openSubSize] ?? 0) - (currentDisks[openSubSize] ?? 0)
+    // The final capacity slot is 1 unit which acts like a virtual subSize 1 slot.
+    // If the openSubSize is 1, and all real disks of size 1 are full (meaning remainingSlots <= 0),
+    // then the openSubSize returned is the virtual final slot.
+    if (remainingSlots <= 0) {
+       remainingSlots = capacity - depositedUnits
+    }
+
+    const unitsStillNeeded = neededUnits - unitsGained
+    const maxSlotsToFill = Math.ceil(unitsStillNeeded / openSubSize)
+    
+    let slotsToFill = Math.min(remainingSlots, maxSlotsToFill)
+    if (slotsToFill <= 0) slotsToFill = 1
+
+    const unitsToGain = slotsToFill * openSubSize
+    const totalBitsForSlots = unitBits * openSubSize * slotsToFill
+    
+    bitsNeeded += totalBitsForSlots - fillBits
     fillBits = 0
-    depositedUnits += openSubSize
-    unitsGained += openSubSize
+    depositedUnits += unitsToGain
+    unitsGained += unitsToGain
+    
     openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   }
   return unitsGained < neededUnits ? null : bitsNeeded
@@ -5236,12 +5260,30 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   let fillBits = (lake.fillBits ?? 0) + overflowBits
   let boostersUnlocked = lake.boostersUnlocked ?? false
 
+  // ⚡ Bolt Optimization: Replaced iterative O(N) loop subtracting one subSize bit cost at a time
+  // with an O(1) bulk slot purchase mathematical calculation.
   while (openSubSize !== null) {
     const slotSizeBits = unitBits * openSubSize
     if (fillBits < slotSizeBits) break
-    fillBits -= slotSizeBits
-    depositedUnits += openSubSize
+    
+    const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+    const currentDisks = decomposeDataLakeUnits(Math.min(depositedUnits, representable)).disks
+    
+    let remainingSlots = (slotCounts[openSubSize] ?? 0) - (currentDisks[openSubSize] ?? 0)
+    // Check if the current openSubSize corresponds to the virtual final capacity slot.
+    if (remainingSlots <= 0) {
+      remainingSlots = capacity - depositedUnits
+    }
+
+    const affordableSlots = Math.floor(fillBits / slotSizeBits)
+    
+    const slotsToFill = Math.min(remainingSlots, affordableSlots)
+    if (slotsToFill <= 0) break
+    
+    fillBits -= slotSizeBits * slotsToFill
+    depositedUnits += openSubSize * slotsToFill
     boostersUnlocked = true
+    
     openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   }
   // Fully maxed at this level — whatever's left in fillBits has nowhere to go; hand it back as
@@ -5278,28 +5320,26 @@ const applyDataLakeOverflow = (state, tierIndex, fillRate, availableSeconds, ava
   let spendableBits = Math.max(0, fillRate * availableSeconds)
   let changed = false
 
-  for (
-    let segment = 0;
-    segment < DATA_LAKE_OVERFLOW_SEGMENT_LIMIT && remainingBits > 0 && spendableBits > 0;
-    segment += 1
-  ) {
-    const viewState = { ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes, [tierIndex]: lake } } }
-    const openSubSize = getDataLakeCurrentFillSubSize(viewState, tierIndex)
-    if (openSubSize === null) break // maxed — nothing left to fill
-    const slotSizeBits = getDataLakeUnitBits(tierIndex) * openSubSize
-    const x0 = lake.fillBits ?? 0
-    const segmentBits = Math.min(remainingBits, spendableBits, slotSizeBits - x0)
-    if (segmentBits <= 0) break
-    const filled = fillDataLakeDisks(viewState, { [tierIndex]: lake }, tierIndex, segmentBits)
-    if (!filled) break
-    const { unconsumedBits, ...lakeUpdate } = filled
-    lake = lakeUpdate
-    const actuallySpent = segmentBits - unconsumedBits
-    remainingBits -= actuallySpent
-    spendableBits -= actuallySpent
-    changed = true
-    if (unconsumedBits > 0) break // maxed out mid-segment — nothing more this call can do
+  // ⚡ Bolt Optimization: Since fillDataLakeDisks now natively handles bulk fill in O(1) mathematically,
+  // we do not need to iteratively run 28 O(N) loops. We simply compute and apply the bulk segment bits once.
+  const openSubSize = getDataLakeCurrentFillSubSize(state, tierIndex)
+  if (openSubSize === null || remainingBits <= 0 || spendableBits <= 0) {
+    return { lake, remainingBits, changed }
   }
+
+  const segmentBits = Math.min(remainingBits, spendableBits)
+  if (segmentBits <= 0) return { lake, remainingBits, changed }
+
+  const viewState = { ...state, intro: { ...state.intro, dataLakes: { ...state.intro.dataLakes, [tierIndex]: lake } } }
+  const filled = fillDataLakeDisks(viewState, { [tierIndex]: lake }, tierIndex, segmentBits)
+  if (!filled) return { lake, remainingBits, changed }
+
+  const { unconsumedBits, ...lakeUpdate } = filled
+  lake = lakeUpdate
+  const actuallySpent = segmentBits - unconsumedBits
+  remainingBits -= actuallySpent
+  spendableBits -= actuallySpent
+  changed = true
 
   return { lake, remainingBits, changed }
 }
