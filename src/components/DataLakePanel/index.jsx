@@ -169,6 +169,11 @@ const LakePoolLabel = styled.span`
 const ActionButton = styled(Button)`
   padding: 0.1rem 0.5rem;
   font-size: ${props => props.theme.type.scale.sm.size};
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 // Only rendered in `bare` mode, and only once there's actually a list below it to separate from
@@ -312,7 +317,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   </StatusText>
                 ) : (
                   <ActionButton
-                    aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                    aria-pressed={converting}
+                    aria-label={`auto convert toward 1 ${boosterLabel} from the ${label} Data Lake`}
                     onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
                     title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
                     type="button"
@@ -337,7 +343,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 </StatusText>
               ) : poolReady ? (
                 <ActionButton
-                  aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
+                  aria-pressed={converting}
+                  aria-label={`auto convert toward 1 ${boosterLabel} from the ${label} Data Lake`}
                   onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
                   title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this ENTIRE pool is built`}
                   type="button"
