@@ -245,10 +245,11 @@ next-release milestone is `v0.7.0`, targeting Era ascension (`#407` / `#411–#4
 
 ## Automation workflows
 
-Claude-side and GitHub workflows under `.github/workflows/` run unattended — opening, fixing up, and
-merging PRs with no human in the loop, except a narrow class of low-risk bot-authored PRs that merge on
-green checks alone. All authenticate via the `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose
-pushes/merges can't trigger other workflows). The PAT includes `Workflows: write`, so autonomous runs
+The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening,
+fixing up, and merging PRs with no human in the loop, except a narrow class of low-risk bot-authored PRs
+that merge on green checks alone. Their git/GitHub write operations authenticate via the
+`GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
+read-only guard steps and some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
 may push `.github/workflows/**` changes when a task authorizes it; `.github/CODEOWNERS` review still
 applies once branch protection requires it (issue #62; `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
@@ -276,7 +277,8 @@ outright), saying so when it deviates from lowest-number order.
   `.github/workflows/**` from green-checks auto-merge). Applies the Pull-requests convention to its own
   PRs; post-run feedback stays `autonomous-pr-followup.yml`'s job.
 - `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the workflow
-  doesn't parse, hasn't started in 26h, or its latest run failed.
+  doesn't parse, hasn't started in 26h, or its latest completed run didn't succeed (any non-`success`
+  conclusion, incl. cancelled/timed out).
 - `pr-conflict-sweep.yml` — on every push to `main`, flags newly conflicted open PRs; on
   `claude/auto-*`/`devin/auto-*` the comment triggers the follow-up agent to merge-and-resolve.
 - `release.yml` — deterministic: on a `package.json` push to `main`, tags `v<x.y.z>` if absent and
@@ -292,8 +294,8 @@ outright), saying so when it deviates from lowest-number order.
 Guard-step context feeds are bounded: any new feed passes an explicit `--limit` and display-cap with a
 "+N more" note; list feeds render number + title + labels only, never bodies (`docs/AUTOMATION.md`, #81).
 
-**Budget discipline applies to every session, not just automation.** Self-estimate the remaining
-rolling 5-hour Claude usage window and keep a session at or under roughly **50%** of a full window,
+**Budget discipline applies to every Claude Code session — interactive and automated.** Self-estimate
+the remaining rolling 5-hour Claude usage window and keep a session at or under roughly **50%** of a full window,
 recalculated each time — soft target, modest overshoot is not a failure. If a task looks too large even
 after buffering, land the largest coherent, test-covered slice first (`Part of #N` instead of `Closes
 #N`, plus a comment on what remains) rather than risk a runaway session — see `docs/AUTOMATION.md`'s
