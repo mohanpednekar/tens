@@ -4956,10 +4956,28 @@ const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
   let bitsNeeded = 0
   while (unitsGained < neededUnits && openSubSize !== null) {
     const slotSizeBits = unitBits * openSubSize
-    bitsNeeded += slotSizeBits - fillBits
+
+    const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+    let maxFit = 0
+    if (depositedUnits < representable) {
+      const disks = decomposeDataLakeUnits(depositedUnits).disks
+      maxFit = (slotCounts[openSubSize] ?? 0) - (disks[openSubSize] ?? 0)
+    } else {
+      maxFit = capacity - depositedUnits
+    }
+
+    const neededBuys = Math.ceil((neededUnits - unitsGained) / openSubSize)
+    const toBuy = Math.min(maxFit, neededBuys)
+
+    if (toBuy <= 0) break
+
+    const totalSlotSizeBits = slotSizeBits * toBuy
+    bitsNeeded += totalSlotSizeBits - fillBits
     fillBits = 0
-    depositedUnits += openSubSize
-    unitsGained += openSubSize
+
+    depositedUnits += openSubSize * toBuy
+    unitsGained += openSubSize * toBuy
+
     openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   }
   return unitsGained < neededUnits ? null : bitsNeeded
@@ -5239,9 +5257,25 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   while (openSubSize !== null) {
     const slotSizeBits = unitBits * openSubSize
     if (fillBits < slotSizeBits) break
-    fillBits -= slotSizeBits
-    depositedUnits += openSubSize
+
+    const maxAffordable = Math.floor(fillBits / slotSizeBits)
+
+    const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+    let maxFit = 0
+    if (depositedUnits < representable) {
+      const disks = decomposeDataLakeUnits(depositedUnits).disks
+      maxFit = (slotCounts[openSubSize] ?? 0) - (disks[openSubSize] ?? 0)
+    } else {
+      maxFit = capacity - depositedUnits
+    }
+
+    const toBuy = Math.min(maxAffordable, maxFit)
+    if (toBuy <= 0) break
+
+    fillBits -= slotSizeBits * toBuy
+    depositedUnits += openSubSize * toBuy
     boostersUnlocked = true
+
     openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
   }
   // Fully maxed at this level — whatever's left in fillBits has nowhere to go; hand it back as
