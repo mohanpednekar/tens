@@ -19924,13 +19924,6 @@
       "source_file": "scripts/classify-claude-failure.test.js",
       "source_line_start": 1,
       "source_line_end": 1
-    },
-    {
-      "id": "docs/DEVMODE_REFERENCE.md",
-      "type": "file",
-      "group": "docs",
-      "path": "docs/DEVMODE_REFERENCE.md",
-      "source_file": "docs/DEVMODE_REFERENCE.md"
     }
   ],
   "links": [
