@@ -930,7 +930,7 @@ Capacity threshold." Folding the two into one shared primitive was tried once al
 substitutes for a 10th disk) disks built at that size, up to the highest size any unlocked pool can fund.
 `provisionDisk` collects the cost in `getDiskProvisionPassesCollected`/`getDiskProvisionPassesRequired`
 passes of the disk's own face-value size — N for the array's Nth disk (1…9; `DISK_BUILD_COST_MULTIPLIER`'s
-10 is no longer reached) — so a pool's buffer only ever holds one pass at a time, and completes the
+10 is no longer reached) — so a pool's buffer only ever needs to hold one pass at a time, and completes the
 instant the final pass lands, with no separate build-time delay (see `docs/DESIGN_HISTORY.md`).
 `diskBuild`/`tickProvisionDisk` and every "IO blocked mid-build" guard remain solely to finish a countdown
 an older save may still carry — a new build never creates one. A manual click that doesn't finish the
