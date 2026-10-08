@@ -245,9 +245,10 @@ next-release milestone is `v0.7.0`, targeting Era ascension (`#407` / `#411–#4
 
 ## Automation workflows
 
-The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening,
-fixing up, and merging PRs with no human in the loop, except a narrow class of low-risk bot-authored PRs
-that merge on green checks alone. Their git/GitHub write operations authenticate via the
+The Claude-side and GitHub automation workflows under `.github/workflows/` run unattended — opening
+and fixing up PRs, and merging them only past an approval boundary: a narrow class of low-risk
+bot-authored PRs (or an adversarial `APPROVE` on a low-risk diff) merges on green checks alone; every
+other PR waits for human approval. Their git/GitHub write operations authenticate via the
 `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
 read-only guard steps and some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
 may push `.github/workflows/**` changes when a task authorizes it; `.github/CODEOWNERS` review still
