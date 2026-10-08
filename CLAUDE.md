@@ -967,7 +967,7 @@ from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right a
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
-block it). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
+block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
 pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
 order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🎯 `<cost>`" control that
