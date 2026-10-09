@@ -4,8 +4,10 @@
 automatically via `playwright.config.js`'s `webServer`). One-time setup:
 `npx playwright install chromium` (see `CLAUDE.md`'s "End-to-end testing" section).
 
-Specs seed `localStorage`'s `tens_game_state` directly, then reload — same convention as the Vitest
-suite. `tens_theme_preference` (`'dark'`/`'light'`) controls the rendered theme independently of the
+Most specs seed `localStorage`'s `tens_game_state` directly, then reload — same convention as the
+Vitest suite. The visual-regression spec instead seeds via `page.addInitScript` before its only
+`page.goto`, so the app never mounts with fresh state and can't persist it over the seed during a
+100 ms tick (race-free). `tens_theme_preference` (`'dark'`/`'light'`) controls the rendered theme independently of the
 OS `prefers-color-scheme`.
 
 ## Visual regression (`visual-regression.e2e.js`)
