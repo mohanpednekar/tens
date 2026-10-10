@@ -4954,13 +4954,34 @@ const getDataLakeManualFillBitsNeeded = (state, tierIndex, neededUnits) => {
   if (openSubSize === null) return null
   let unitsGained = 0
   let bitsNeeded = 0
+  
+  const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+
   while (unitsGained < neededUnits && openSubSize !== null) {
-    const slotSizeBits = unitBits * openSubSize
-    bitsNeeded += slotSizeBits - fillBits
-    fillBits = 0
-    depositedUnits += openSubSize
-    unitsGained += openSubSize
-    openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+    // ⚡ Bolt Optimization: Replace O(N) loop with O(1) bulk processing for the final virtual capacity unit
+    if (openSubSize === 1 && depositedUnits >= representable) {
+       const maxVirtualUnits = capacity - depositedUnits
+       const virtualUnitsToProcess = Math.min(maxVirtualUnits, neededUnits - unitsGained)
+       
+       if (virtualUnitsToProcess > 0) {
+           bitsNeeded += (virtualUnitsToProcess * unitBits) - fillBits
+           fillBits = 0
+           depositedUnits += virtualUnitsToProcess
+           unitsGained += virtualUnitsToProcess
+           
+           if (unitsGained >= neededUnits) break
+       }
+       
+       openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+       if (openSubSize === null) break
+    } else {
+        const slotSizeBits = unitBits * openSubSize
+        bitsNeeded += slotSizeBits - fillBits
+        fillBits = 0
+        depositedUnits += openSubSize
+        unitsGained += openSubSize
+        openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+    }
   }
   return unitsGained < neededUnits ? null : bitsNeeded
 }
@@ -5236,13 +5257,32 @@ const fillDataLakeDisks = (state, dataLakes, tierIndex, overflowBits) => {
   let fillBits = (lake.fillBits ?? 0) + overflowBits
   let boostersUnlocked = lake.boostersUnlocked ?? false
 
+  const representable = getDataLakeSlotRepresentableUnits(slotCounts)
+
   while (openSubSize !== null) {
-    const slotSizeBits = unitBits * openSubSize
-    if (fillBits < slotSizeBits) break
-    fillBits -= slotSizeBits
-    depositedUnits += openSubSize
-    boostersUnlocked = true
-    openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+    // ⚡ Bolt Optimization: Replace O(N) loop with O(1) bulk processing for the final virtual capacity unit
+    if (openSubSize === 1 && depositedUnits >= representable) {
+       const maxVirtualUnits = capacity - depositedUnits
+       const affordableVirtualUnits = Math.floor(fillBits / unitBits)
+       
+       const virtualUnitsToProcess = Math.min(maxVirtualUnits, affordableVirtualUnits)
+       
+       if (virtualUnitsToProcess > 0) {
+           fillBits -= virtualUnitsToProcess * unitBits
+           depositedUnits += virtualUnitsToProcess
+           boostersUnlocked = true
+       }
+       
+       openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+       if (virtualUnitsToProcess === 0) break
+    } else {
+        const slotSizeBits = unitBits * openSubSize
+        if (fillBits < slotSizeBits) break
+        fillBits -= slotSizeBits
+        depositedUnits += openSubSize
+        boostersUnlocked = true
+        openSubSize = getDataLakeNextFillSubSize(depositedUnits, slotCounts, capacity)
+    }
   }
   // Fully maxed at this level — whatever's left in fillBits has nowhere to go; hand it back as
   // unconsumedBits instead of silently discarding it (see this function's own doc comment above).
