@@ -1,0 +1,6 @@
+{
+  "title": "🛡️ Sentinel: [MEDIUM] Fix prototype pollution vector in typeof validation",
+  "body": "🚨 **Severity:** MEDIUM\n\n💡 **Vulnerability:** Several legacy detection routines and state processing logic validated parsed state objects using `typeof obj === 'object'`. This allowed arrays or objects with manipulated prototypes (including those instantiated with `Object.create(null)`) to bypass structure checks, creating potential logic flaws or downstream prototype pollution vectors.\n\n🎯 **Impact:** Using `typeof` for plain object verification is overly permissive, potentially resulting in corrupted game state operations or unexpected property access, opening vectors for downstream prototype pollution when merging or verifying legacy and developer data structures.\n\n🔧 **Fix:** Replaced weak `typeof` checks with strict structure checks through `isPlainObject`. This verifies the `Object.prototype.toString.call` output and validates the prototype specifically to ensure dictionaries are actual plain objects. `isPlainObject` was moved to scope in `src/game/storage.js`.\n\n✅ **Verification:** Verified by checking that `yarn test --run` executes and passes all test suites, ensuring game load routines maintain their strict typing bounds without crashing.",
+  "head": "jules-6876902652580892316-38ec306d",
+  "base": "main"
+}
