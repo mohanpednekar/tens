@@ -306,7 +306,7 @@ such occurrence, but if that issue's history already shows a prior comment reach
 this run instead of leaving it comment-only again, so the same dead-end analysis isn't repeated a third
 time. A running budget check bounds the walk itself: once further skips risk leaving too little of the
 run's self-estimated budget to actually implement whatever comes next, Claude stops the walk and ends
-the run without a PR rather than forcing a rushed implementation. Once it lands on an implementable
+the run without a PR (budget is spent, so no Phase B fall-through) rather than forcing a rushed implementation. Once it lands on an implementable
 candidate, it proceeds as normal — implements it on `claude/auto-task-<number>-<short-slug>`, PR body
 includes `Closes #<number>` unless it's a partial slice (see Budget discipline). If every eligible
 candidate in the backlog is exhausted (each spec read in full — never skipped on a title or skim) without
