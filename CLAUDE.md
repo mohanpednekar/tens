@@ -1209,9 +1209,10 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 14 files; the other three are
-  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`, and
-  `scripts/bump-version.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
+  `navAttention.test.js` that's 11 of the 16 files; the other five are
+  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
+  `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`, and
+  `scripts/classify-claude-failure.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 
 ### End-to-end testing
