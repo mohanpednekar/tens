@@ -1192,7 +1192,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1876 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1896 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1209,9 +1209,10 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 14 files; the other three are
-  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`, and
-  `scripts/bump-version.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
+  `navAttention.test.js` that's 11 of the 16 files; the other five are
+  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
+  `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`, and
+  `scripts/classify-claude-failure.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 
 ### End-to-end testing
@@ -1244,7 +1245,9 @@ base path.
   `e2e/meta-prestige.e2e.js` (seed at 1 Googol PP → Settings Era ascension → assert `era.count`, Eons
   award, and the permanent `intro.mainGameUnlocked` latch carrying forward), and
   `e2e/data-lake.e2e.js` (a seeded KB Data Lake renders its disk-square breakdown on Foundry; a manual
-  Buy Booster click grants a Core, verified on Boosters).
+  Buy Booster click grants a Core, verified on Boosters), and
+  `e2e/visual-regression.e2e.js` (Linux-only full-page screenshot baselines of Byte Foundry/Byte
+  Factory in both themes; see `e2e/README.md`).
 - **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the
   runner, adding a job/step) means editing `ci.yml`, which is off-limits to `autonomous-maintenance.yml`
   (see docs/AUTOMATION.md) — a human needs to do that directly. `yarn test:e2e` is a local/manual suite
