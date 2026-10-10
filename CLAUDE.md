@@ -66,7 +66,7 @@ yarn test -t "buyTier"                     # filter by test name
 
 `.claude/settings.json` registers a `SessionStart` hook (`.claude/hooks/session-start.sh`) that runs
 `yarn install --frozen-lockfile` then `yarn test` synchronously before an interactive session starts
-working, printing a `✅`/`‼️` pass/fail summary for each step — so work begins from a confirmed baseline.
+working, printing a `✅`/`‼️` pass/fail summary for each step (the install retries once with `--ignore-engines` and a warning if a container's Node is a patch behind a dependency's engines floor — #771) — so work begins from a confirmed baseline.
 It also prints a third, informational-only staleness note for AI-instruction file cost hygiene (see "AI-
 instruction file cost hygiene" below). It always exits 0 regardless of outcome (visibility, not
 blocking) and is idempotent/non-interactive. This is interactive-session-only setup — the autonomous

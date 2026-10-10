@@ -306,13 +306,15 @@ such occurrence, but if that issue's history already shows a prior comment reach
 this run instead of leaving it comment-only again, so the same dead-end analysis isn't repeated a third
 time. A running budget check bounds the walk itself: once further skips risk leaving too little of the
 run's self-estimated budget to actually implement whatever comes next, Claude stops the walk and ends
-the run without a PR rather than forcing a rushed implementation. Once it lands on an implementable
+the run without a PR (budget is spent, so no Phase B fall-through) rather than forcing a rushed implementation. Once it lands on an implementable
 candidate, it proceeds as normal — implements it on `claude/auto-task-<number>-<short-slug>`, PR body
 includes `Closes #<number>` unless it's a partial slice (see Budget discipline). If every eligible
-candidate in the backlog is exhausted without finding one that's implementable, the run ends without a
-PR — the comments (and any new `blocked` labels) left along the way are still real, durable progress.
+candidate in the backlog is exhausted (each spec read in full — never skipped on a title or skim) without
+finding one that's implementable, the comments (and any new `blocked` labels) left along the way stay as
+durable progress and the run falls through to Phase B instead of ending PR-less. The walk-budget stop above
+applies only to budget actually spent.
 
-**Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
+**Phase B — maintenance menu fallback.** Only when no eligible, implementable task issue exists (none eligible, or every eligible one was read in full and found infeasible/covered — a candidate may never be skipped unread; an all-skipped Phase A falls through here rather than ending the run PR-less), the run picks the
 single most valuable applicable task from: (1) test coverage gaps, (2) dependency & security
 maintenance (`yarn audit` + safe patch/minor bumps, plus the medium/low-severity Dependabot alerts
 Phase 0(c) leaves for this item — critical/high alerts are Phase 0(c)'s job, not this one's), (3) code

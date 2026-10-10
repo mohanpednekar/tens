@@ -734,10 +734,13 @@ jobs:
             meaningful chunk of this run's budget walking past infeasible candidates and there
             isn't enough left to confidently implement, test, and open a PR for whatever you'd
             pick up next (even a small slice), stop the walk there rather than continuing to
-            consume budget with nothing to show for it. Ending the run with no PR after having
-            left honest comments on every candidate you actually looked at is a fine outcome —
-            better than forcing a rushed implementation of whatever candidate you happened to
-            reach right as the budget ran out.
+            consume budget with nothing to show for it — better than forcing a rushed
+            implementation of whatever candidate you happened to reach right as the budget ran
+            out. This guard applies only to budget ACTUALLY spent: a candidate may be skipped as
+            infeasible/covered only after you have read its full spec (`gh issue view`) — never
+            on a title, a body skim, or a guess that it "looks workflow-heavy"/"has a long
+            history". A run that ends having used a small fraction of its budget with every
+            candidate skipped unread is a stalled run (see #764's history), not a fine outcome.
           - Once you land on a candidate you can actually implement, treat it exactly as before:
             name the branch `claude/auto-task-<number>-<short-slug>` (the issue number in the
             branch name is how future runs know this task is already in flight), and make the PR
@@ -747,13 +750,18 @@ jobs:
             issue summarizing exactly what this slice covers and what remains, so a future run can
             pick up the rest (the issue stays open and eligible; only the PR that completes the
             full spec includes `Closes #<number>`).
-          - If you work through every eligible candidate in the backlog without finding one you
-            can implement, end the run without a PR — you've still made real progress (comments,
-            and any new `blocked` labels, are durable signal for the next run and for a human),
-            just not a code change this run.
+          - If you work through every eligible candidate in the backlog (each one's full spec
+            read — and, when the feed above ends with a "+N more" note, the hidden tail too,
+            fetched priority-sorted with an explicit limit, e.g. `gh issue list --label
+            claude-task --state open --limit 200 --json number,title,labels`, since the default
+            `gh issue list` page is only 30) without finding one you can implement, leave the comments / `blocked` labels
+            above as durable signal, then FALL THROUGH to Phase B and do one menu task with the
+            remaining budget — an idle run with budget left over is wasted, so do not end the
+            run PR-less while Phase B has useful work.
 
           PHASE B — maintenance menu fallback. Only if Phase 0 doesn't apply and there is NO
-          eligible task issue in Phase A, pick exactly one of the following menu tasks —
+          eligible, implementable task issue in Phase A (none eligible, or every eligible one
+          was read in full and found infeasible/covered), pick exactly one of the following menu tasks —
           whichever is most valuable given the current state of the repo. Minimise PRs for
           similar work: if one of the open
           PRs above already covers the same task/purpose you were about to pursue (e.g. another
