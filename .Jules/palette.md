@@ -28,3 +28,6 @@
 ## 2024-10-24 - Testing Toggle Button aria-labels
 **Learning:** The application's test suite heavily relies on strict testing-library `getByRole` queries matching specific accessible names (e.g., `name: /^enable dev mode$/i`). Changing an `aria-label` from a dynamic state-based string to a static string combined with `aria-pressed` (the correct pattern for toggle buttons) will break these tests.
 **Action:** When updating toggle buttons to use static `aria-label`s and `aria-pressed`, always grep for the old dynamic label text in the `src/` directory (especially `src/App.test.jsx`) and update the test queries to match the new static `aria-label`.
+## 2024-11-20 - Data Lake Auto-buy button accessibility
+**Learning:** Found a toggle button component missing the `aria-pressed` attribute which is important to communicate the current state to screen reader users correctly. Other automation toggles in the app had it, but the Data Lake Auto-buy button was missing it. Also dynamic `aria-label` changing between enable/disable is confusing for screen readers when `aria-pressed` is used, the label should be static.
+**Action:** Always verify `aria-pressed` on toggle buttons acting as on/off states and ensure `aria-label` is static when `aria-pressed` is managing the announcement of the state.
