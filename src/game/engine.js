@@ -2591,8 +2591,8 @@ export const getPoolEffectMultiplier = (state, poolIndex) => getPoolMultiplierPe
 // that pool's own decaying multiplier bonus (poolTapBonusPercents[poolIndex]), scoped to this one
 // pool only — never touches the Data Stream's own bonus or any other pool's (see FILL_MULTIPLIER_*
 // in layers.js). No-op for a locked/invalid pool, one whose buffer is already full (same "extra
-// rate has nowhere to go" reasoning tapIntroBit's own full-Buffer guard uses), or one whose combined
-// multiplier is already at FILL_MULTIPLIER_TAP_CAP_PERCENT (200).
+// rate has nowhere to go" reasoning tapIntroBit's own full-Buffer guard uses), or one whose stored
+// tap bonus is already at FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT (100).
 export const tapPoolBuffer = poolIndex => state => {
   if (!Number.isInteger(poolIndex) || poolIndex < 1 || poolIndex > getVisibleStoragePoolCount(state)) return state
   if (getPoolBufferBits(state, poolIndex) >= getPoolBufferCapacity(state, poolIndex)) return state
