@@ -141,33 +141,33 @@ Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator 
 *derived* from capacity via `getDataStreamSpeedBytesPerSecond`, not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no
-manual redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but
-Boosters, which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav
-**Boosters**), only buy via a single per-lake "🎯 `<cost>`" control: it buys immediately if affordable,
-or arms a one-shot `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and
-stops (never a persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches
-9/9/9, the control becomes a non-clickable cost label and every affordable Booster converts
-automatically. Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled
-8-slot reserve) once that tier's outbound merge boundary has auto-merge unlocked. A separate PP
-**Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9,
-full-lake, unreachable-next-Booster wall, its pool-local Reset adds 1,000 permanent lake-only capacity,
-empties that pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic
-Booster conversion resumes; rebuilding blocks only new provisioning starts in later pools. The first
-reset fixes lake speed at 50%, and reset two onward uses the normal bandwidth steps (dynamically limited
-by the following pool for non-final pools). The generator, Disks, Data Lakes, and Compute entities are
-permanent across every real Prestige; Era ascension is a bigger reset (`buildEraIntroReset`) that wipes
-Disks/Data Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked`
-latch, and select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
+fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
+redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Boosters,
+which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
+buy via a single per-lake "🎯 `<cost>`" control: it buys immediately if affordable, or arms a one-shot
+`autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
+persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9, the control
+becomes a non-clickable cost label and every affordable Booster converts automatically. Each
+compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled 8-slot reserve) once
+that tier's outbound merge boundary has auto-merge unlocked. A separate PP **Compute (Flops)** screen
+(`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9, full-lake,
+unreachable-next-Booster wall, its pool-local Reset adds 1,000 permanent lake-only capacity, empties that
+pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic Booster
+conversion resumes; rebuilding blocks only new provisioning starts in later pools. The first reset fixes
+lake speed at 50%; reset two onward uses the normal bandwidth steps (dynamically limited by the
+following pool for non-final pools). The generator, Disks, Data Lakes, and Compute entities are
+permanent across every real Prestige; Era ascension (`buildEraIntroReset`) wipes Disks/Data
+Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
+select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
 
-**Same caveat as above, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
+**Same caveat, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
 (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button precedence, and
 pool-liveness-is-Capacity-only — every formula/threshold/UI-rendering/gating detail is deliberately
-omitted; do not guess at any of it.** It's fully documented in `CLAUDE.md`'s "Economy
-model"/"Architecture" sections and `docs/ECONOMY_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`. Read
-those in full before touching `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or
-`ByteFoundryPage`/`StoragePage`/`ComputePage` — and check `docs/DESIGN_HISTORY.md` first if changing a
-formula/gate a past iteration may already have tried and rejected.
+omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Architecture" and
+`docs/ECONOMY_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`; read those before touching
+`src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or `ByteFoundryPage`/`StoragePage`/
+`ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
+already have tried and rejected.
 
 After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
@@ -248,22 +248,22 @@ The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml`
 `automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved), on
 `claude/*` branches, twice daily at 9:00am/9:00pm IST. `automation-self-heal.yml` watches
 orchestration-workflow failures (including the Devin engine's) and opens draft `claude/self-heal-*`
-fixes or `automation-failure` issues (see `docs/AUTOMATION.md`). A parallel **Devin CLI** engine
-(`devin-autonomous-maintenance.yml`, `devin -p --prompt-file <file> --model swe --permission-mode
-dangerous --respect-workspace-trust false`, every 4h) consumes the same `claude-task` backlog on
-`devin/auto-*` branches; its git/`gh` auth is `GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret,
-and both engines share one 5-open-PR ceiling counting `claude/auto-*` and `devin/auto-*` together.
-`devin/auto-*` PRs get the same follow-up and low-risk auto-merge handling as `claude/auto-*`. The
-Devin prompt has no file-scope restriction — it may edit anything including `.github/workflows/` (its
-own file included); changes still land via PR + human review. It requires the same check-feedback →
-address → resolve → iterate-until-mergeable loop on its own PRs before the run ends (post-run feedback
-is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on every push to `main` and
-comments on any open PR that became conflicted (the comment triggers the follow-up agent on automation
-branches). `devin-workflow-health.yml` runs daily at midnight UTC, filing an `automation-failure` issue
-when the workflow file stops parsing, no run has started in >26h, or the latest run didn't succeed.
-`release.yml` (deterministic, no agent) fires on pushes to `main` that touch `package.json`: it pushes
-annotated tag `v<x.y.z>` and creates a GitHub Release from that version's `CHANGELOG.md` section when
-the tag doesn't already exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
+fixes or `automation-failure` issues. A parallel **Devin CLI** engine (`devin-autonomous-maintenance.yml`,
+`devin -p --prompt-file <file> --model swe --permission-mode dangerous --respect-workspace-trust false`,
+every 4h) consumes the same `claude-task` backlog on `devin/auto-*` branches; its git/`gh` auth is
+`GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret, and both engines share one 5-open-PR ceiling
+counting `claude/auto-*` and `devin/auto-*` together. `devin/auto-*` PRs get the same follow-up and
+low-risk auto-merge handling as `claude/auto-*`. The Devin prompt has no file-scope restriction — it may
+edit anything including `.github/workflows/` (its own file included); changes still land via PR + human
+review. It requires the same check-feedback → address → resolve → iterate-until-mergeable loop on its own
+PRs before the run ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml`
+fires on every push to `main` and comments on any open PR that became conflicted (the comment triggers
+the follow-up agent on automation branches). `devin-workflow-health.yml` runs daily at midnight UTC,
+filing an `automation-failure` issue when the workflow file stops parsing, no run has started in >26h, or
+the latest run didn't succeed. `release.yml` (deterministic, no agent) fires on pushes to `main` touching
+`package.json`: pushes annotated tag `v<x.y.z>` and creates a GitHub Release from that version's
+`CHANGELOG.md` section if the tag doesn't exist — post-merge half of #52 (pre-merge half: `yarn
+bump-version`). Full detail: `docs/AUTOMATION.md`.
 
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
