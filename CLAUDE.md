@@ -48,7 +48,6 @@ yarn cap:sync     # npx cap sync (copies web assets; native project update waits
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
-yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
@@ -1193,7 +1192,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1937 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1896 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1210,9 +1209,10 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 14 files; the other three are
-  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`, and
-  `scripts/bump-version.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
+  `navAttention.test.js` that's 11 of the 16 files; the other five are
+  `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
+  `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`, and
+  `scripts/classify-claude-failure.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 
 ### End-to-end testing
