@@ -751,7 +751,10 @@ jobs:
             pick up the rest (the issue stays open and eligible; only the PR that completes the
             full spec includes `Closes #<number>`).
           - If you work through every eligible candidate in the backlog (each one's full spec
-            read) without finding one you can implement, leave the comments / `blocked` labels
+            read — and, when the feed above ends with a "+N more" note, the hidden tail too,
+            fetched priority-sorted with an explicit limit, e.g. `gh issue list --label
+            claude-task --state open --limit 200 --json number,title,labels`, since the default
+            `gh issue list` page is only 30) without finding one you can implement, leave the comments / `blocked` labels
             above as durable signal, then FALL THROUGH to Phase B and do one menu task with the
             remaining budget — an idle run with budget left over is wasted, so do not end the
             run PR-less while Phase B has useful work.
