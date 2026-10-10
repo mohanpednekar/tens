@@ -2,6 +2,12 @@ import { applyFlopsAutobuyerMilestones, createEmptyDataLakes, createInitialGameS
 import { COMPUTE_BOOST_TIER_FIELDS, COMPUTE_CORES_PER_NODE, COMPUTE_FLOPS_REVEAL_PP, DATA_LAKE_SUB_SIZES, PRESTIGE_UNBOUNDED_MIN_COUNT } from './layers'
 import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
+const isPlainObject = value =>
+  Boolean(value) &&
+  Object.prototype.toString.call(value) === '[object Object]' &&
+  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
+
+
 
 
 
@@ -108,12 +114,12 @@ const withSupporterSlots = meta => {
 
 const coerceMeta = raw => {
   const base = buildDefaultMeta()
-  if (!raw || typeof raw !== 'object') return base
+  if (!raw || !isPlainObject(raw)) return base
   const supporterUnlocked = Boolean(raw.supporterUnlocked)
   const slotsById = new Map()
   if (Array.isArray(raw.slots)) {
     for (const entry of raw.slots) {
-      if (!entry || typeof entry !== 'object') continue
+      if (!entry || !isPlainObject(entry)) continue
       const id = String(entry.id ?? '')
       if (!/^\d+$/.test(id)) continue
       const index = Number(id)
@@ -663,10 +669,7 @@ export const clearDevGameState = () => {
   return { ok: true }
 }
 
-const isPlainObject = value =>
-  Boolean(value) &&
-  Object.prototype.toString.call(value) === '[object Object]' &&
-  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
+
 
 // Recursive deep merge of `parsed` onto `base`, at any depth: an object-valued field (resources,
 // prestige, intro, intro.dataLakes, intro.dataLakes['1'], ...) is merged key-by-key rather than
