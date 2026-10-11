@@ -545,7 +545,8 @@ src/
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked
                                || page === 'foundry')` (`GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/
                                `'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those stay reachable
-                               during the gate). ByteFoundryPage is both a *mandatory gate* (while
+                               during the gate — Boosters only once capacity reveals it, Compute only
+                               once 100 PP, see Architecture 4b/4c). ByteFoundryPage is both a *mandatory gate* (while
                                `intro.mainGameUnlocked` is false) and, once unlocked, a permanent
                                revisitable screen (`page = 'foundry'`). `intro.mainGameUnlocked` is
                                PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real
@@ -661,7 +662,7 @@ Strict three-layer separation:
    resets (see `App.jsx`'s repo-layout entry). Once latched, the standalone Tap button is gone and the
    Data Stream tile itself is the tap target (`as="button"` on the same `FillableStatCard`, calling
    `actions.tapIntroBit`; see "Fill-based Speed/Bandwidth multiplier"). Compute lives on its own screen
-   (4b); Storage's every-size detail (4a) is continuous sections on this screen (and the reusable
+   (4b); Storage's every-size detail (4a) is continuous sections on this Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared
    Combine/Speed/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
    views over the one Data Stream, each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at
