@@ -54,7 +54,11 @@ export function extractRunBlocks(yamlText) {
       if (!isScalar(pair.key) || !STEP_LIST_KEYS.has(pair.key.value) || !isSeq(pair.value)) return;
       for (const step of pair.value.items) {
         if (!isMap(step)) continue;
-        const run = step.items.find((p) => isScalar(p.key) && p.key.value === 'run');
+        const keyOf = (p) => (isAlias(p.key) ? p.key.resolve(doc) : p.key);
+        const run = step.items.find((p) => {
+          const key = keyOf(p);
+          return isScalar(key) && key.value === 'run';
+        });
         if (!run) continue;
         // `run: *cmd` reuses an anchored scalar — lint the value Actions resolves it to.
         const value = isAlias(run.value) ? run.value.resolve(doc) : run.value;
@@ -121,43 +125,16 @@ export function sanitizeExpressions(script) {
 }
 
 /**
- * Options a script turns on with a line-leading `shopt -s …`. Only such a line
- * counts: one inside a comment, a quoted string or a heredoc body never runs,
- * and honouring it would mask a real parse error.
- * @param {string} script
- * @returns {string[]}
- */
-export function enabledShoptOptions(script) {
-  const opts = [];
-  const pending = []; // heredoc delimiters opened on the current line, in order
-  let body = null; // { delim, stripTabs } while inside a heredoc body
-  for (const line of script.split('\n')) {
-    if (body) {
-      const text = body.stripTabs ? line.replace(/^\t+/, '') : line;
-      if (text === body.delim) body = pending.shift() ?? null;
-      continue;
-    }
-    const m = /^[ \t]*shopt[ \t]+-s[ \t]+([A-Za-z_][\w \t]*)/.exec(line);
-    if (m) opts.push(...m[1].trim().split(/\s+/));
-    for (const h of line.matchAll(/(?<!<)<<(?!<)(-?)[ \t]*(['"]?)([A-Za-z_][\w-]*)\2/g)) {
-      pending.push({ delim: h[3], stripTabs: h[1] === '-' });
-    }
-    body = pending.shift() ?? null;
-  }
-  return opts;
-}
-
-/**
  * @param {string} script
  * @returns {string|null} bash's stderr on a syntax failure, null when it parses
  */
 export function bashSyntaxError(script) {
-  // `bash -n` runs no commands, so a script's own `shopt -s extglob` (which
-  // changes how later lines parse) never takes effect — mirror any `shopt -s`
-  // options the script sets as `-O` flags so valid scripts aren't rejected.
-  const shoptArgs = [];
-  for (const opt of enabledShoptOptions(script)) shoptArgs.push('-O', opt);
-  const res = spawnSync('bash', [...shoptArgs, '-n'], {
+  // Parsed with bash's default options only. A script that enables
+  // parse-affecting options itself (`shopt -s extglob`) is rejected rather than
+  // emulated: `bash -n` runs nothing, so guessing which `shopt` lines execute
+  // could mask a real parse error, while a false failure here is loud and easy
+  // to fix (e.g. move extglob-dependent code into a checked-in script file).
+  const res = spawnSync('bash', ['-n'], {
     input: sanitizeExpressions(script),
     encoding: 'utf8',
   });

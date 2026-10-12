@@ -275,6 +275,14 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
+  it('resolves an aliased run key', () => {
+    const text = `name: &rk run\nsteps:\n  - *rk : if true; then\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('if true; then');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
   it('extracts run steps from a flow-style steps sequence', () => {
     const blocks = extractRunBlocks(`jobs:\n  a:\n    steps: [{run: "if true; then"}]\n`);
     expect(blocks).toHaveLength(1);
@@ -376,20 +384,13 @@ describe('sanitizeExpressions', () => {
 });
 
 describe('bashSyntaxError', () => {
-  it('honours shopt -s extglob set by the script itself', () => {
-    // bash runs the shopt before parsing the next line; `bash -n` runs nothing,
-    // so the lint must enable it up front or reject valid extglob syntax.
-    expect(bashSyntaxError('shopt -s extglob\nls +(a|b)')).toBeNull();
+  it('parses with default options — a script-set shopt is not emulated', () => {
+    // `bash -n` runs nothing, so a script's own `shopt -s extglob` never takes
+    // effect; guessing which shopt lines run could mask real errors, so the
+    // lint stays conservative and rejects extglob syntax regardless.
     expect(bashSyntaxError('ls +(a|b)')).not.toBeNull();
-    // shopt text that never executes must not enable the option
-    expect(bashSyntaxError('# shopt -s extglob\nls +(a|b)')).not.toBeNull();
-    expect(bashSyntaxError('echo "shopt -s extglob"\nls +(a|b)')).not.toBeNull();
-    // nor shopt text inside a heredoc body (quoted, unquoted or <<- delimiters)
-    expect(bashSyntaxError("cat <<'EOF'\nshopt -s extglob\nEOF\nls +(a|b)")).not.toBeNull();
-    expect(bashSyntaxError('cat <<-EOF\n\tshopt -s extglob\n\tEOF\nls +(a|b)')).not.toBeNull();
-    // a real shopt after a heredoc still counts; a here-string opens no heredoc
-    expect(bashSyntaxError('cat <<EOF\nx\nEOF\nshopt -s extglob\nls +(a|b)')).toBeNull();
-    expect(bashSyntaxError('cat <<<word\nshopt -s extglob\nls +(a|b)')).toBeNull();
+    expect(bashSyntaxError('if false; then shopt -s extglob; fi\nls +(a|b)')).not.toBeNull();
+    expect(bashSyntaxError("echo '<<EOF'\nls +(a|b)")).not.toBeNull();
   });
 
   it('returns null for valid bash', () => {
