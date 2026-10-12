@@ -261,6 +261,20 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
+  it('extracts run steps nested in a parallel step group', () => {
+    const text = `steps:\n  - parallel:\n      - run: echo ok\n      - run: if true; then\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks.map((b) => b.script)).toEqual(['echo ok', 'if true; then']);
+    expect(bashSyntaxError(blocks[1].script)).not.toBeNull();
+  });
+
+  it('resolves an aliased run value', () => {
+    const text = `env:\n  CMD: &cmd "if true; then"\nsteps:\n  - run: *cmd\n`;
+    const blocks = extractRunBlocks(text);
+    expect(blocks).toEqual([{ line: 4, inline: true, script: 'if true; then' }]);
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
   it('extracts run steps from a flow-style steps sequence', () => {
     const blocks = extractRunBlocks(`jobs:\n  a:\n    steps: [{run: "if true; then"}]\n`);
     expect(blocks).toHaveLength(1);
@@ -370,6 +384,12 @@ describe('bashSyntaxError', () => {
     // shopt text that never executes must not enable the option
     expect(bashSyntaxError('# shopt -s extglob\nls +(a|b)')).not.toBeNull();
     expect(bashSyntaxError('echo "shopt -s extglob"\nls +(a|b)')).not.toBeNull();
+    // nor shopt text inside a heredoc body (quoted, unquoted or <<- delimiters)
+    expect(bashSyntaxError("cat <<'EOF'\nshopt -s extglob\nEOF\nls +(a|b)")).not.toBeNull();
+    expect(bashSyntaxError('cat <<-EOF\n\tshopt -s extglob\n\tEOF\nls +(a|b)')).not.toBeNull();
+    // a real shopt after a heredoc still counts; a here-string opens no heredoc
+    expect(bashSyntaxError('cat <<EOF\nx\nEOF\nshopt -s extglob\nls +(a|b)')).toBeNull();
+    expect(bashSyntaxError('cat <<<word\nshopt -s extglob\nls +(a|b)')).toBeNull();
   });
 
   it('returns null for valid bash', () => {

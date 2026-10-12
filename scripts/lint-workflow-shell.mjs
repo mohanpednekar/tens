@@ -30,9 +30,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { isMap, isScalar, isSeq, LineCounter, parseDocument, visit } from 'yaml';
+import { isAlias, isMap, isScalar, isSeq, LineCounter, parseDocument, visit } from 'yaml';
 
 const EXPR_PLACEHOLDER = 'GH_EXPR';
+const STEP_LIST_KEYS = new Set(['steps', 'parallel']);
 
 /**
  * Extract every step `run:` script from a workflow/action file's text.
@@ -49,16 +50,20 @@ export function extractRunBlocks(yamlText) {
   const blocks = [];
   visit(doc, {
     Pair(_, pair) {
-      if (!isScalar(pair.key) || pair.key.value !== 'steps' || !isSeq(pair.value)) return;
+      // `steps:` and the `parallel:` step groups nested inside them both hold ordinary steps.
+      if (!isScalar(pair.key) || !STEP_LIST_KEYS.has(pair.key.value) || !isSeq(pair.value)) return;
       for (const step of pair.value.items) {
         if (!isMap(step)) continue;
         const run = step.items.find((p) => isScalar(p.key) && p.key.value === 'run');
-        if (!run || !isScalar(run.value) || typeof run.value.value !== 'string') continue;
+        if (!run) continue;
+        // `run: *cmd` reuses an anchored scalar — lint the value Actions resolves it to.
+        const value = isAlias(run.value) ? run.value.resolve(doc) : run.value;
+        if (!isScalar(value) || typeof value.value !== 'string') continue;
         const block = {
           line: lineCounter.linePos(run.key.range[0]).line,
-          script: run.value.value,
+          script: value.value,
         };
-        if (run.value.type !== 'BLOCK_LITERAL' && run.value.type !== 'BLOCK_FOLDED') {
+        if (value.type !== 'BLOCK_LITERAL' && value.type !== 'BLOCK_FOLDED') {
           block.inline = true;
         }
         blocks.push(block);
@@ -116,6 +121,33 @@ export function sanitizeExpressions(script) {
 }
 
 /**
+ * Options a script turns on with a line-leading `shopt -s …`. Only such a line
+ * counts: one inside a comment, a quoted string or a heredoc body never runs,
+ * and honouring it would mask a real parse error.
+ * @param {string} script
+ * @returns {string[]}
+ */
+export function enabledShoptOptions(script) {
+  const opts = [];
+  const pending = []; // heredoc delimiters opened on the current line, in order
+  let body = null; // { delim, stripTabs } while inside a heredoc body
+  for (const line of script.split('\n')) {
+    if (body) {
+      const text = body.stripTabs ? line.replace(/^\t+/, '') : line;
+      if (text === body.delim) body = pending.shift() ?? null;
+      continue;
+    }
+    const m = /^[ \t]*shopt[ \t]+-s[ \t]+([A-Za-z_][\w \t]*)/.exec(line);
+    if (m) opts.push(...m[1].trim().split(/\s+/));
+    for (const h of line.matchAll(/(?<!<)<<(?!<)(-?)[ \t]*(['"]?)([A-Za-z_][\w-]*)\2/g)) {
+      pending.push({ delim: h[3], stripTabs: h[1] === '-' });
+    }
+    body = pending.shift() ?? null;
+  }
+  return opts;
+}
+
+/**
  * @param {string} script
  * @returns {string|null} bash's stderr on a syntax failure, null when it parses
  */
@@ -123,12 +155,8 @@ export function bashSyntaxError(script) {
   // `bash -n` runs no commands, so a script's own `shopt -s extglob` (which
   // changes how later lines parse) never takes effect — mirror any `shopt -s`
   // options the script sets as `-O` flags so valid scripts aren't rejected.
-  // Only a `shopt` that starts its own line counts: one inside a comment or a
-  // quoted string never runs, and honouring it would mask a real parse error.
   const shoptArgs = [];
-  for (const m of script.matchAll(/^[ \t]*shopt[ \t]+-s[ \t]+([A-Za-z_][\w \t]*)/gm)) {
-    for (const opt of m[1].trim().split(/\s+/)) shoptArgs.push('-O', opt);
-  }
+  for (const opt of enabledShoptOptions(script)) shoptArgs.push('-O', opt);
   const res = spawnSync('bash', [...shoptArgs, '-n'], {
     input: sanitizeExpressions(script),
     encoding: 'utf8',

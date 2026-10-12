@@ -109,7 +109,7 @@ every workflow down identically) and runs `bash -n` on each, wired as a step in 
 `test` job. It lives inside that job (not as its own job) so the check is merge-blocking under the
 existing branch-protection requirement without a settings change. Extraction uses the `yaml`
 package's parser (an earlier hand-written indentation scanner kept missing YAML edge cases — ~48
-review findings on #739), linting only the scalar `run` value of each `steps:` item, so `with.run`,
+review findings on #739), linting only the scalar `run` value of each `steps:` (or nested `parallel:`) item, aliases resolved, so `with.run`,
 `defaults.run` and `run:`-looking text inside other scalars can't false-positive; a file that isn't
 valid YAML fails the lint. `${{ }}` expressions are placeholder-substituted before `bash -n`.
 
