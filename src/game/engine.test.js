@@ -26,6 +26,10 @@ import {
   buyTickspeedMultiplier,
   buyTier,
   buyTierQuantity,
+  buyTierMaxLevels,
+  getTierMaxLevelsPreview,
+  isBuyMaxUnlocked,
+  repeatPurchaseMax,
   canActivateComputeBoost,
   canReclaimComputeBoost,
   canStackComputeBoost,
@@ -11804,5 +11808,63 @@ describe('prestigeGame unboundedUnlocked latch', () => {
     expect(after.prestige.count).toBe(PRESTIGE_UNBOUNDED_MIN_COUNT)
     expect(after.prestige.unboundedUnlocked).toBe(true)
     expect(isUnboundedPrestigeUnlocked(after)).toBe(true)
+  })
+})
+
+describe('Buy max mode', () => {
+  const blockCost = level => getTierCost(tensTier, level) * DEFAULT_PURCHASE_BLOCK_SIZE
+
+  it('unlocks only after the first Prestige (or any Era ascension)', () => {
+    const state = createInitialGameState()
+    expect(isBuyMaxUnlocked(state)).toBe(false)
+    expect(isBuyMaxUnlocked({ ...state, prestige: { ...state.prestige, count: 1 } })).toBe(true)
+    expect(isBuyMaxUnlocked({ ...state, era: { count: 1 } })).toBe(true)
+  })
+
+  it('buys every affordable FULL tier level in one click, leaving the remainder unspent', () => {
+    const money = blockCost(1) + blockCost(2) + blockCost(3) - 1
+    const after = buyTierMaxLevels(tensTier.id)(withMoney(createInitialGameState(), money))
+    expect(after.purchaseLevels[tensTier.id]).toBe(3)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
+    expect(after.resources[MONEY_ID]).toBe(blockCost(3) - 1)
+    expect(getTierMaxLevelsPreview(withMoney(createInitialGameState(), money), tensTier.id))
+      .toEqual({ levels: 2, cost: blockCost(1) + blockCost(2) })
+  })
+
+  it('never mixes a partial level into a full-level click: partial progress gets its own ordinary click', () => {
+    const state = withPurchaseLevelProgress(withMoney(createInitialGameState(), blockCost(1) * 10), tensTier.id, 3)
+    const after = buyTierMaxLevels(tensTier.id)(state)
+    expect(after).toEqual(buyTierQuantity(tensTier.id, Number.MAX_SAFE_INTEGER)(state))
+    expect(after.purchaseLevels[tensTier.id]).toBe(2)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0 })
+  })
+
+  it('falls back to an ordinary partial Buy when not even one full level is affordable', () => {
+    const state = withMoney(createInitialGameState(), getTierCost(tensTier, 1) * 3)
+    const after = buyTierMaxLevels(tensTier.id)(state)
+    expect(after.purchaseLevels[tensTier.id]).toBe(1)
+    expect(after.purchaseLevelProgress[tensTier.id]).toBe(3)
+  })
+
+  it('is a same-reference no-op while production is frozen', () => {
+    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
+    expect(buyTierMaxLevels(tensTier.id)(state)).toBe(state)
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0 })
+  })
+
+  it('repeatPurchaseMax chains a single-level action until it stops buying', () => {
+    const bump = state => (state.n >= 5 ? state : { ...state, n: state.n + 1 })
+    expect(repeatPurchaseMax(bump)({ n: 0 }).n).toBe(5)
+    const state = { n: 5 }
+    expect(repeatPurchaseMax(bump)(state)).toBe(state)
+  })
+
+  it('repeatPurchaseMax buys every affordable Double PP level', () => {
+    const base = createInitialGameState()
+    const points = getPrestigeDoublePpUpgradeCost(0) + getPrestigeDoublePpUpgradeCost(1)
+    const after = repeatPurchaseMax(buyPrestigeDoublePp)({ ...base, prestige: { ...base.prestige, points } })
+    expect(after.prestigeDoublePpLevel).toBe(2)
+    expect(after.prestige.points).toBe(0)
   })
 })
