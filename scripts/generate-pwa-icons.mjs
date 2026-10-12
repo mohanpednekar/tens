@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, writeFileSync } from 'node:fs'
 
 // App icon: an 8-cell "byte" grid (4 columns x 2 rows) on the app's dark page background, each
 // cell a rounded square filled with a diagonal gradient sweeping from the brand accent (indigo)
@@ -23,7 +23,7 @@ const GRADIENT_STOPS = [
 // 4x2/8-cell "byte" grid; the favicon frames below use a simplified 2x2/4-cell version instead —
 // at a true 16x16 rendered size, 8 thin cells blur into an illegible plaid, while 4 bigger cells
 // still read clearly as a grid (checked by rendering both at 16x16 before settling on this split).
-const gridSvg = (scale = 1, cols = 4, rows = 2) => {
+const gridSvg = (scale = 1, cols = 4, rows = 2, background = BG) => {
   const cell = 84 * scale * (4 / cols)
   const gap = 20 * scale * (4 / cols)
   const width = cols * cell + (cols - 1) * gap
@@ -48,7 +48,7 @@ const gridSvg = (scale = 1, cols = 4, rows = 2) => {
       ${GRADIENT_STOPS.map(({ offset, color }) => `<stop offset="${offset}" stop-color="${color}"/>`).join('\n      ')}
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="${BG}"/>
+  ${background ? `<rect width="512" height="512" fill="${background}"/>` : ''}
   ${cells.join('\n  ')}
 </svg>
 `
@@ -110,3 +110,65 @@ const faviconFrames = await Promise.all(
 )
 writeFileSync('public/favicon.ico', buildIco(faviconFrames))
 console.log(`wrote public/favicon.ico (${faviconSizes.join('/')})`)
+
+// Native app icons/splash (Capacitor android/ + ios/ projects, #70). Every PNG `npx cap add`
+// generated is overwritten in place at its own existing dimensions, so the set of densities stays
+// whatever Capacitor's template ships. Skipped per platform when that project tree doesn't exist.
+const pngSize = async file => {
+  const { width, height } = await sharp(file).metadata()
+  return { width, height }
+}
+
+const renderSquare = (svg, size) => sharp(Buffer.from(svg)).resize(size, size).png().toBuffer()
+
+// Splash: the transparent grid centered on the page background, sized to 40% of the short edge.
+const renderSplash = async ({ width, height }) => {
+  const gridSize = Math.round(Math.min(width, height) * 0.4)
+  const grid = await renderSquare(gridSvg(1, 4, 2, null), gridSize)
+  return sharp({ create: { width, height, channels: 4, background: BG } })
+    .composite([{ input: grid, gravity: 'center' }])
+    .png()
+    .toBuffer()
+}
+
+const overwrite = async (file, render) => {
+  const buffer = await render(await pngSize(file))
+  writeFileSync(file, buffer)
+  console.log(`wrote ${file}`)
+}
+
+const ANDROID_RES = 'android/app/src/main/res'
+if (existsSync(ANDROID_RES)) {
+  for (const dir of readdirSync(ANDROID_RES)) {
+    const base = `${ANDROID_RES}/${dir}`
+    if (dir.startsWith('mipmap-') && existsSync(`${base}/ic_launcher.png`)) {
+      await overwrite(`${base}/ic_launcher.png`, ({ width }) => renderSquare(gridSvg(1), width))
+      await overwrite(`${base}/ic_launcher_round.png`, ({ width }) => renderSquare(gridSvg(0.82), width))
+      // Adaptive-icon foreground: transparent, inside the 66/108 safe zone; the background layer is
+      // the `ic_launcher_background` color resource (set to BG below).
+      await overwrite(`${base}/ic_launcher_foreground.png`, ({ width }) =>
+        renderSquare(gridSvg(0.6, 4, 2, null), width)
+      )
+    }
+    if (dir.startsWith('drawable') && existsSync(`${base}/splash.png`)) {
+      await overwrite(`${base}/splash.png`, renderSplash)
+    }
+  }
+  const bgColorFile = `${ANDROID_RES}/values/ic_launcher_background.xml`
+  writeFileSync(
+    bgColorFile,
+    `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${BG.toUpperCase()}</color>\n</resources>\n`
+  )
+  console.log(`wrote ${bgColorFile}`)
+}
+
+const IOS_ASSETS = 'ios/App/App/Assets.xcassets'
+if (existsSync(IOS_ASSETS)) {
+  // iOS rejects app icons with an alpha channel, hence flatten().
+  await overwrite(`${IOS_ASSETS}/AppIcon.appiconset/AppIcon-512@2x.png`, async ({ width }) =>
+    sharp(await renderSquare(gridSvg(1), width)).flatten({ background: BG }).png().toBuffer()
+  )
+  for (const file of readdirSync(`${IOS_ASSETS}/Splash.imageset`).filter(f => f.endsWith('.png'))) {
+    await overwrite(`${IOS_ASSETS}/Splash.imageset/${file}`, renderSplash)
+  }
+}
