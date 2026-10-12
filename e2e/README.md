@@ -2,7 +2,8 @@
 
 `yarn test:e2e` runs these specs in headless Chromium against a real `yarn dev` server (started
 automatically via `playwright.config.js`'s `webServer`). One-time setup:
-`npx playwright install chromium` (see `CLAUDE.md`'s "End-to-end testing" section).
+`npx playwright install --with-deps chromium` (`--with-deps` installs the Linux system libraries
+Chromium needs; see `CLAUDE.md`'s "End-to-end testing" section).
 
 Most specs seed `localStorage`'s `tens_game_state` directly, then reload — same convention as the
 Vitest suite. The visual-regression spec instead seeds via `page.addInitScript` before its only
@@ -25,7 +26,8 @@ non-Linux machine the rest of the e2e suite still runs; only the screenshot spec
 ### Updating baselines when a PR intentionally changes the UI
 
 1. Make the UI change.
-2. On Linux (or in the CI environment), run:
+2. Stop any `yarn dev` already running on port 5173 — outside CI, `playwright.config.js` reuses an
+   existing server, which could capture a stale build. Then, on Linux (or in the CI environment), run:
    `npx playwright test e2e/visual-regression.e2e.js --update-snapshots`
 3. Review the regenerated PNGs — they should differ from the previous baselines only where the
    intended change shows.
