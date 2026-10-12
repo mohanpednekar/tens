@@ -591,6 +591,11 @@ export const PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100
 // The amount the block size grows by every PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS.
 export const PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1
 
+// Buy max mode (see isBuyMaxUnlocked/buyTierMaxLevels/repeatPurchaseMax in engine.js): a safety cap
+// on how many purchases one Buy-max click can chain. Every ladder it repeats has exponentially
+// rising costs, so a real click stops long before this — it only guards against an Infinity balance.
+export const BUY_MAX_ITERATION_CAP = 1000
+
 // A tier's production is multiplied by 1.25 at every completed level (see engine.js's
 // getPurchaseMilestoneMultiplier), compounding per completed level — the per-level multiplier
 // normally applied. Raised from 1.1 to 1.25 to shorten a fresh-save run to first Prestige (roughly
