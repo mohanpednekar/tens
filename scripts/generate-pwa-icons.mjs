@@ -143,7 +143,17 @@ if (existsSync(ANDROID_RES)) {
     const base = `${ANDROID_RES}/${dir}`
     if (dir.startsWith('mipmap-') && existsSync(`${base}/ic_launcher.png`)) {
       await overwrite(`${base}/ic_launcher.png`, ({ width }) => renderSquare(gridSvg(1), width))
-      await overwrite(`${base}/ic_launcher_round.png`, ({ width }) => renderSquare(gridSvg(0.82), width))
+      // Pre-API-26 launchers use `roundIcon` as-is, so mask it to a circle (transparent corners).
+      await overwrite(`${base}/ic_launcher_round.png`, async ({ width }) => {
+        const r = width / 2
+        const mask = Buffer.from(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${width}"><circle cx="${r}" cy="${r}" r="${r}"/></svg>`
+        )
+        return sharp(await renderSquare(gridSvg(0.82), width))
+          .composite([{ input: mask, blend: 'dest-in' }])
+          .png()
+          .toBuffer()
+      })
       // Adaptive-icon foreground: transparent, inside the 66/108 safe zone; the background layer is
       // the `ic_launcher_background` color resource (set to BG below).
       await overwrite(`${base}/ic_launcher_foreground.png`, ({ width }) =>
