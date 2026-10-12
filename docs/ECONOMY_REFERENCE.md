@@ -314,7 +314,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      when DERIVED — `getDataStreamMultiplierPercent`/`getPoolMultiplierPercent` clamp their combined
      result (`Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, base + bonus)`). Taps are NOT gated on that
      combined cap, and `tickFillMultiplierDecay` decays the stored bonus at the flat rate only (never
-     truncated against the combined cap's headroom).
+     truncated against the combined cap's headroom) — except a pool's bonus, which is forced to 0
+     immediately whenever that pool's own buffer is completely full (its fill-based reading is retired
+     and the bar hands off to the Data Lake overflow-rate reading, so a leftover bonus would break the
+     seam at 50).
    - Both bonus fields, like `computeBoostType`, are NOT permanent — they reset to 0/`{}` on every
      real Prestige, Era ascension, and Reset Byte Foundry, but are carried through Scale Up/Overclock
      untouched (the whole `intro` object passes through those unchanged either way).
