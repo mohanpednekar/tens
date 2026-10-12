@@ -8,7 +8,9 @@ its entry point (`AppMenu`'s "Dev Mode" button) and page route both render only 
 grepping `dist/assets/*.js` for page-specific strings — see this feature's own PR). `yarn dev`/`yarn
 test` (Vitest defaults `import.meta.env.DEV` to true) both expose it.
 
-Enabling Dev Mode (`game.toggleDevMode()`) does **not** touch any real player save. `game/storage.js`
+Dev Mode edits never touch real player progress. Toggling it (`game.toggleDevMode()`) first saves the
+currently loaded state to whichever slot is active, exactly as `switchSaveSlot` does, so enabling it
+writes the real slot one last time before switching away. After that, `game/storage.js`
 resolves every save read/write through `getActiveSlotId()`, which — while `isDevModeActive()` is true —
 returns a dedicated `'dev'` slot id (its own storage keys, `tens_dev_state`/`tens_dev_timestamp`,
 distinct from any of the `FREE_SLOT_COUNT`/`SUPPORTER_SLOT_COUNT` player slots and never counted or
@@ -36,13 +38,17 @@ only renders them while active):
   `null`/`undefined` leaves (structural "not yet built" sentinels, e.g. `intro.diskBuild`) and arrays
   (e.g. `prestigeMuseum.history`) are skipped; only the raw JSON editor can touch them.
   `setValueAtPath` sets one leaf immutably by its full path array, at any depth, without disturbing
-  siblings.
+  siblings. `setDevState` then runs the result through `normalizePoolMemoryCapacity` (the same clamp a
+  real load applies), so bounded fields don't keep out-of-range edits: e.g. a Data Lake's
+  `capacityLevel` is clamped to `[0, DATA_LAKE_CAPACITY_MAX_LEVEL]` and truncated to a whole level,
+  `intro.capacity` is floored at 0, and an armed Upgrade Data Stream that can't fire is cleared. A
+  value that "doesn't stick" was normalized, not ignored.
 - **Raw state JSON** — a textarea pre-filled with `JSON.stringify(game.state, null, 2)`; Apply calls
   `game.applyDevStateJson(text)` → `storage.js`'s `applyDevGameStateJson(jsonText, currentState)`.
   A caller only specifies the fields they're changing (e.g. `{ "resources": { "base": 1e50 } }`) —
-  `mergeStateForDevWrite` one-level-deep merges the parsed object onto `currentState` before writing,
-  so untouched top-level fields (and untouched siblings inside an edited object, e.g.
-  `resources.bytes`) survive. The merge is required, not cosmetic: a bare `{ "resources": {...} }`
+  `mergeStateForDevWrite` recursively merges the parsed object onto `currentState` at every depth
+  before writing, so untouched top-level fields and untouched siblings inside any edited object (e.g.
+  `resources.bytes`, or `intro.dataLakes.2` when only `intro.dataLakes.1` is given) survive. The merge is required, not cosmetic: a bare `{ "resources": {...} }`
   would omit `intro`, which `save-migration/detectLegacy.js`'s `getSaveIncompatibilityReason` treats as
   a legacy save (`'missing_intro'`) and rejects. The merged payload is then re-read through the same
   `adaptSaveForCurrentSchema` + `mergeState` pipeline a real load uses, filling any remaining gap from
