@@ -4,5 +4,12 @@
   "webDir": "dist",
   "server": {
     "androidScheme": "https"
+  },
+  "experimental": {
+    "ios": {
+      "spm": {
+        "swiftToolsVersion": "6.0"
+      }
+    }
   }
 }
