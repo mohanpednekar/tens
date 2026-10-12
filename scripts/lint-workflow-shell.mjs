@@ -248,8 +248,8 @@ function foldScalar(lines) {
     if (l === '') {
       out += '\n';
       prev = 'blank';
-    } else if (l.startsWith(' ')) {
-      // A more-indented line is literal — YAML emits a boundary newline before
+    } else if (/^[ \t]/.test(l)) {
+      // A more-indented line (leading space OR tab past the base indent) is literal — YAML emits a boundary newline before
       // it even after a paragraph-break newline (blank + lit = two newlines).
       if (prev === 'text' || prev === 'blank') out += '\n';
       out += `${l}\n`;

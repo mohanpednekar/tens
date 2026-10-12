@@ -55,6 +55,15 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(script)).toBeNull();
   });
 
+  it('treats a tab-prefixed line as more-indented inside a folded scalar', () => {
+    // YAML: a folded line whose first content char is a tab is more-indented,
+    // so its newlines survive — folding it flat would hide a stray `&&` line.
+    const text = `steps:\n  - run: >\n      echo x\n      \t&& echo y\n`;
+    const script = extractRunBlocks(text)[0].script;
+    expect(script).toBe('echo x\n\t&& echo y');
+    expect(bashSyntaxError(script)).not.toBeNull();
+  });
+
   it('emits two newlines for a blank line followed by a more-indented line', () => {
     // PyYAML: 'echo start\\\n\n  && echo y' — the paragraph break AND the
     // literal-line boundary are both real newlines; collapsing them lets a
