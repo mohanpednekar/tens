@@ -77534,7 +77534,7 @@
       "confidence_score": 0.95,
       "context": "DevModePage",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L21",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -77810,7 +77810,7 @@
       "confidence_score": 0.95,
       "context": "FieldNode",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L28",
+      "source_location": "L30",
       "weight": 1.0
     },
     {
@@ -78710,7 +78710,7 @@
       "confidence_score": 0.95,
       "context": "SettingsPage",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L56",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -79034,7 +79034,7 @@
       "confidence_score": 0.95,
       "context": "adaptSaveForCurrentSchema",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L48",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -80930,7 +80930,7 @@
       "confidence_score": 0.95,
       "context": "clearAllSaveProgress",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L56",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -80942,7 +80942,7 @@
       "confidence_score": 0.95,
       "context": "clearDevGameState",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L52",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -81062,7 +81062,7 @@
       "confidence_score": 0.95,
       "context": "clearGameState",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L16",
+      "source_location": "L18",
       "weight": 1.0
     },
     {
@@ -81158,7 +81158,7 @@
       "confidence_score": 0.95,
       "context": "clearSaveSlot",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L52",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -81734,7 +81734,7 @@
       "confidence_score": 0.95,
       "context": "createInitialGameState()",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L17",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
@@ -83534,7 +83534,7 @@
       "confidence_score": 0.95,
       "context": "getActiveSlotId",
       "source_file": "CLAUDE.md",
-      "source_location": "L765",
+      "source_location": "L766",
       "weight": 1.0
     },
     {
@@ -83546,7 +83546,7 @@
       "confidence_score": 0.95,
       "context": "getActiveSlotId()",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L12",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -88538,7 +88538,7 @@
       "confidence_score": 0.95,
       "context": "getSaveIncompatibilityReason",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L46",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -91934,7 +91934,7 @@
       "confidence_score": 0.95,
       "context": "isDevModeActive",
       "source_file": "CLAUDE.md",
-      "source_location": "L765",
+      "source_location": "L766",
       "weight": 1.0
     },
     {
@@ -91946,7 +91946,7 @@
       "confidence_score": 0.95,
       "context": "isDevModeActive()",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L12",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -94070,7 +94070,7 @@
       "confidence_score": 0.95,
       "context": "listSaveSlots",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -94130,7 +94130,7 @@
       "confidence_score": 0.95,
       "context": "loadGameState",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -94442,7 +94442,7 @@
       "confidence_score": 0.95,
       "context": "mergeState",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L48",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -94526,7 +94526,7 @@
       "confidence_score": 0.95,
       "context": "mergeStateForDevWrite",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L43",
+      "source_location": "L49",
       "weight": 1.0
     },
     {
@@ -94779,6 +94779,18 @@
       "context": "normalizePoolMemoryCapacity",
       "source_file": "docs/DESIGN_HISTORY.md",
       "source_location": "L8790",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_devmode_reference_dev_mode_reference",
+      "target": "src_game_engine_normalizepoolmemorycapacity",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "context": "normalizePoolMemoryCapacity",
+      "source_file": "docs/DEVMODE_REFERENCE.md",
+      "source_location": "L41",
       "weight": 1.0
     },
     {
@@ -95546,7 +95558,7 @@
       "confidence_score": 0.95,
       "context": "prettifySegment",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L32",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -96578,7 +96590,7 @@
       "confidence_score": 0.95,
       "context": "saveGameState",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L15",
+      "source_location": "L17",
       "weight": 1.0
     },
     {
@@ -96842,7 +96854,7 @@
       "confidence_score": 0.95,
       "context": "setActiveSaveSlot",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L55",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -96950,7 +96962,7 @@
       "confidence_score": 0.95,
       "context": "setDevModeActive",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L18",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -96998,7 +97010,7 @@
       "confidence_score": 0.95,
       "context": "setValueAtPath",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L38",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -100622,7 +100634,7 @@
       "confidence_score": 0.95,
       "context": "useIncrementalGame",
       "source_file": "docs/DEVMODE_REFERENCE.md",
-      "source_location": "L21",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -101296,5 +101308,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d9c7186ae5305015d87e60ee49449695c38d42cb"
+  "built_at_commit": "88b0afd335ca74b1040743dbf5b1b4a5c645b8a1"
 }

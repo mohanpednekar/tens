@@ -761,9 +761,9 @@ Strict three-layer separation:
 ## Dev Mode
 
 A dev-build-only testing sandbox (`DevModePage`, reached via AppNav → More; entry and route render only
-when `import.meta.env.DEV`, so production bundles contain neither). Enabling it redirects every save
-read/write to an isolated `'dev'` slot in `game/storage.js` (`getActiveSlotId`/`isDevModeActive`), never
-touching a real player save. **Always: real-slot isolation is enforced at the storage layer** —
+when `import.meta.env.DEV`, so production bundles contain neither). Toggling it first saves the loaded
+state to the active slot, then redirects every save read/write to an isolated `'dev'` slot in
+`game/storage.js` (`getActiveSlotId`/`isDevModeActive`), so dev edits never touch real progress. **Always: real-slot isolation is enforced at the storage layer** —
 `setActiveSaveSlot`/`clearSaveSlot`/`clearAllSaveProgress` refuse (`{ ok: false, reason:
 'dev_mode_active' }`) while Dev Mode is active. Quick-seed presets, the auto-generated Variables tree,
 the raw state-JSON editor (`mergeStateForDevWrite`), and `SettingsPage`'s dev-gating:
