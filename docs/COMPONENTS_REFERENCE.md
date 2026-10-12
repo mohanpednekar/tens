@@ -183,6 +183,14 @@ back to every visible-with-activity lake
 wrapped in one shared `StatCard` (`bare = false`) — retained for reuse/tests; no current caller uses
 this mode.
 
+## `BuyMaxToggle/index.jsx`
+
+`{ game }` — the Buy max mode toggle. Renders nothing until `isBuyMaxUnlocked(game.state)` (first
+Prestige or any Era ascension); then a right-aligned `Button` (`aria-label="Toggle buy max mode"`,
+`aria-pressed`, `variant` primary when on / neutral when off) reading `Buy max: On|Off` that calls
+`game.setBuyMaxMode(!game.buyMaxMode)`. Used by MainPage and ComputeFlopsPage; mechanic in
+`docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
+
 ## `ConfirmDialog/index.jsx`
 
 styled (`.jsx`) in-game confirm overlay — theme `StatCard` + Cancel/Confirm `Button`s, fixed

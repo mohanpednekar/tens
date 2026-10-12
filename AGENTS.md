@@ -73,7 +73,7 @@ src/
                               Also Dev Mode's own isolated `'dev'` slot (separate from numbered player slots)
   components/
     AppNav/, AppMenu/      ← bottom nav (Foundry → Boosters → Compute → Factory → Guide → More) + More sheet
-    Button/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
+    Button/, BuyMaxToggle/, Money/, ConfirmDialog/, OfflineProgressNotice/, IncompatibleSaveNotice/, StatCard/, DiskArrayRow/
                             ← shared styled components; see docs/COMPONENTS_REFERENCE.md
     DataLakePanel/          ← one Data Lake's own self-contained block (title + disk-square rows
                             per sub-size showing live fill + a Buy/auto-buy/Upgrade-Capacity
