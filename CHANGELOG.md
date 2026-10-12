@@ -195,6 +195,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added `focus-visible` outline styles to TierNameTrigger and other interactive components.
 
 ### Security
+- **Saves must be plain JSON objects.** Loading a save (or Dev Mode JSON) now rejects anything
+  that isn't a plain object — arrays, class instances, or other non-plain payloads — and treats it
+  as an invalid save instead of merging it into game state.
 - Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
   `constructor` keys (supersedes #478 / #480).
 - Fixed object prototype checks in `storage.js` to handle Custom and null prototype objects correctly.
