@@ -839,10 +839,15 @@
   dependencies:
     css-tree "^3.0.0"
 
-"@capacitor/cli@^8.5.1":
-  version "8.5.2"
-  resolved "https://registry.yarnpkg.com/@capacitor/cli/-/cli-8.5.2.tgz#3508c35adb52eef7d54d3cf95bd3636c6d4aab7f"
-  integrity sha512-O2kpA5ZPJUAmliDCcmpMf8xnJwMezxlFPUrlyOAjbL3U9MFNY3l4ZpPI/UXwvyPmR8ETcVF9pFr+VdWq61rqTQ==
+"@capacitor/android@^8.5.3":
+  version "8.5.3"
+  resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-8.5.3.tgz#60be0f99326861fcf1b8d252b15850f6cc2a526a"
+  integrity sha512-ilH4gSSz3DrketMkzDVAvY9JsWJ//rCQnECLTdcFRO7xXDogwAbUvQAnIAbiqefwV/D1xfjEL4Gw1MJXEcaA9g==
+
+"@capacitor/cli@^8.5.3":
+  version "8.5.3"
+  resolved "https://registry.yarnpkg.com/@capacitor/cli/-/cli-8.5.3.tgz#5eb66608123befc4890a6d92394358a0e2bb68d7"
+  integrity sha512-/G6xwna+p4GS3lthSdWN3OThCH2F85O0Ukdy8rv3oAXvgEMeyFgPEIA3PMAS++IkHwUuBYBAKOQJnZfcrh1n0w==
   dependencies:
     "@ionic/cli-framework-output" "^2.2.8"
     "@ionic/utils-subprocess" "^3.0.1"
@@ -863,12 +868,17 @@
     xcode "^3.0.1"
     xml2js "^0.6.2"
 
-"@capacitor/core@^8.5.1":
-  version "8.5.2"
-  resolved "https://registry.yarnpkg.com/@capacitor/core/-/core-8.5.2.tgz#3e347a4d5a0c341995d0a26d4fdce156bf65b330"
-  integrity sha512-agnQbGdhGw/KZFuLf7H9SY2o+oE7upkr/WPQsYaokXP6f9chaE8iVmbKkfN6SVl4w3pmz7oZ3Ur1hbkmy1hx+w==
+"@capacitor/core@^8.5.3":
+  version "8.5.3"
+  resolved "https://registry.yarnpkg.com/@capacitor/core/-/core-8.5.3.tgz#9f4d92fe5eb2d44b01d920190a54ee965e9aeb5d"
+  integrity sha512-oBE1oGuYE4ZzYYrulC75OuHdSsD6zLUy7d5o1tFwDLG4govGoubY15cxpiI5l0+q87Lm5p0bhbehMdzJg4aFag==
   dependencies:
     tslib "^2.1.0"
+
+"@capacitor/ios@^8.5.3":
+  version "8.5.3"
+  resolved "https://registry.yarnpkg.com/@capacitor/ios/-/ios-8.5.3.tgz#3bed5ce0673bc04ad9a961458337658472388c52"
+  integrity sha512-HnnV92Jl8+3x0JUloXUMjFcUsQI8wHFVsKwkLn72DfRZXYGZW11tQbmNOWOnRTljaU18FdI1b9ipT09SzzPDNw==
 
 "@csstools/color-helpers@^6.1.2":
   version "6.1.2"
