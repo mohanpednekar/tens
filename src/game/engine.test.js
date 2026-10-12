@@ -11847,6 +11847,12 @@ describe('Buy max mode', () => {
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(3)
   })
 
+  it('is a same-reference no-op while production is frozen', () => {
+    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
+    expect(buyTierMaxLevels(tensTier.id)(state)).toBe(state)
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0 })
+  })
+
   it('repeatPurchaseMax chains a single-level action until it stops buying', () => {
     const bump = state => (state.n >= 5 ? state : { ...state, n: state.n + 1 })
     expect(repeatPurchaseMax(bump)({ n: 0 }).n).toBe(5)

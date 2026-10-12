@@ -2152,6 +2152,7 @@ const canAffordFullTierLevel = (state, tier) => {
 // affordable, this click falls back to the ordinary single-level Buy (buyTierQuantity), so the
 // partial level gets its own independent click.
 export const buyTierMaxLevels = tierId => state => {
+  if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
   if (!canAffordFullTierLevel(state, tier)) return buyTierQuantity(tierId, Number.MAX_SAFE_INTEGER)(state)
@@ -2169,7 +2170,7 @@ export const buyTierMaxLevels = tierId => state => {
 // (see buyTierMaxLevels), so callers can keep showing the normal single-level preview then.
 export const getTierMaxLevelsPreview = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
-  if (!tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0 }
+  if (isProductionFrozen(state) || !tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0 }
   const after = buyTierMaxLevels(tierId)(state)
   return {
     levels: (after.purchaseLevels?.[tierId] ?? 1) - (state.purchaseLevels?.[tierId] ?? 1),

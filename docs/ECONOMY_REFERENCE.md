@@ -110,7 +110,7 @@ state, so no reset path needs to carry it; `useIncrementalGame` exposes `buyMaxM
 and picks each manual action's max variant only while the mode is on AND unlocked for the state being
 updated. Autobuyers and offline progress are unaffected.
 
-- **Factory tiers** — `buyTierMaxLevels(tierId)` buys only FULL levels, each from zero progress,
+- **Factory tiers** — `buyTierMaxLevels(tierId)` (same-reference no-op while frozen) buys only FULL levels, each from zero progress,
   re-reading price/block size after every level. If the tier has partial progress, or not even one
   full level is affordable, the click falls back to the ordinary `buyTierQuantity` fill, so a partial
   level never shares a click with full levels. `getTierMaxLevelsPreview(state, tierId)` returns
@@ -2811,6 +2811,10 @@ purchases were manual or automatic.
 
 | Function | Signature | Purpose |
 |----------|-----------|---------|
+| `isBuyMaxUnlocked` | `state → boolean` | Buy max mode unlock: `prestige.count >= 1 \|\| era.count >= 1` |
+| `buyTierMaxLevels` | `tierId → state → state` | Buy max for a Factory tier: every affordable FULL level from zero progress; partial progress / no affordable full level falls back to `buyTierQuantity`; no-op while frozen |
+| `getTierMaxLevelsPreview` | `(state, tierId) → { levels, cost }` | What one `buyTierMaxLevels` click would buy (`levels: 0` when it would fall back) |
+| `repeatPurchaseMax` | `action → state → state` | Chains a one-level purchase action until it returns the same reference (cap `BUY_MAX_ITERATION_CAP`) |
 | `createInitialGameState` | `() → state` | Fresh state derived from `TIER_DEFINITIONS`; `resources` is pre-populated with every `costResourceId`/`producesResourceId`, not just money |
 | `getTierCost` | `(tier, level) → number` | Returns the fixed PER-UNIT price: `baseCost * 10^(getCostEpochExponent(epoch) - 1)`, epoch = `level - 1` — each level multiplies `baseCost` by 10 raised to (that level's cost-epoch exponent − 1): 1, 2, 3, 5, 8, … for epochs 0, 1, 2, 3, 4, … This price is independent of `blockSize` entirely — no division happens anywhere in it, so the result is always an exact integer. A level's TOTAL cost (every purchase within it, summed) is this per-unit price times whatever `blockSize` is in effect (see `getTierQuantityCost`) — the total that scales with block size, not the per-unit price. Takes the tier's current LEVEL directly (`state.purchaseLevels[tierId]`), not a lifetime purchased count. See `docs/DESIGN_HISTORY.md` for the multiplier-form-vs-`baseCost^exponent` and per-unit/level-total design history, and for the full cost-epoch exponent-sequence history (triangular, then Fibonacci, then this linear-increment sequence). Deep epochs still eventually overflow to `Infinity`, which is safe — an infinite cost is simply never affordable |
 | `getCostEpochExponent` | `epoch → number` | The exponent driving a cost epoch's multiplier in `getTierCost`: 1, 2, 3, 5, 8, 12, 17, 23, 30, … for epochs 0, 1, 2, 3, 4, 5, 6, 7, 8, … — each epoch's exponent grows over the previous one by a linear increment (1, 1, 2, 3, 4, 5, 6, …), computed iteratively; a negative epoch is clamped to 0. Matches the Fibonacci sequence it replaced through epoch 4, then grows quadratically rather than exponentially. Two earlier sequences: a triangular-number one (`1 + e*(e+1)/2`), then a Fibonacci one (1, 2, 3, 5, 8, 13, 21, …) — see `docs/DESIGN_HISTORY.md` |
@@ -3040,6 +3044,7 @@ purchases were manual or automatic.
 - `GLOBAL_TICKSPEED_PRODUCTION_STEP = 0.01` — the uniform per-level compounding rate for the global tickspeed multiplier; milestone levels use the same rate. The global tickspeed multiplier's *cost* (`getGlobalTickspeedMultiplierCost`, see the engine functions table above) is Money-funded, not PP-funded — it has no dedicated cost constant here, using an inline `10 ** (level + 1)` formula against `resources[MONEY_ID]` instead
 - `DEFAULT_PURCHASE_BLOCK_SIZE = 8` — the purchase block size a tier's level 1 (the very start of a run) requires to complete — only the *default/starting* value, not a fixed constant used throughout the game; the effective, current block size is computed at runtime by `getPurchaseBlockSize(state)` and can grow over a run (see the two constants below). Supersedes an old fixed `PURCHASE_BLOCK_SIZE = 8` constant that every level-dependent formula used directly — see `docs/DESIGN_HISTORY.md`
 - `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS = 100` — every this many levels the LAST tier completes, the (global, shared-by-every-tier) purchase block size grows by `PURCHASE_BLOCK_SIZE_GROWTH_STEP` (see `getPurchaseBlockSize`)
+- `BUY_MAX_ITERATION_CAP = 1000` — safety cap on purchases one Buy-max click can chain (see "Buy max mode")
 - `PURCHASE_BLOCK_SIZE_GROWTH_STEP = 1` — the amount the block size grows by every `PURCHASE_BLOCK_SIZE_GROWTH_INTERVAL_LEVELS`
 - `PURCHASE_MILESTONE_MULTIPLIER_BASE = 1.25` — the regular per-completed-level production multiplier, compounding (see `getPurchaseMilestoneMultiplier`); raised from an earlier `1.1` to shorten a fresh run's time to first Prestige
 - `PURCHASE_MILESTONE_MEGA_MULTIPLIER_BASE = 10` — every 10th level uses this larger factor instead of `PURCHASE_MILESTONE_MULTIPLIER_BASE` for that one level, compounding into the rest (see `getPurchaseMilestoneMultiplier`) — this "every 10th level" cadence is independent of the (now variable) purchase block size and stays fixed at 10
