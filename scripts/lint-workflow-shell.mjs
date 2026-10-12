@@ -123,8 +123,10 @@ export function bashSyntaxError(script) {
   // `bash -n` runs no commands, so a script's own `shopt -s extglob` (which
   // changes how later lines parse) never takes effect — mirror any `shopt -s`
   // options the script sets as `-O` flags so valid scripts aren't rejected.
+  // Only a `shopt` that starts its own line counts: one inside a comment or a
+  // quoted string never runs, and honouring it would mask a real parse error.
   const shoptArgs = [];
-  for (const m of script.matchAll(/(?:^|[\s;&|])shopt\s+-s\s+([A-Za-z_][\w \t]*)/gm)) {
+  for (const m of script.matchAll(/^[ \t]*shopt[ \t]+-s[ \t]+([A-Za-z_][\w \t]*)/gm)) {
     for (const opt of m[1].trim().split(/\s+/)) shoptArgs.push('-O', opt);
   }
   const res = spawnSync('bash', [...shoptArgs, '-n'], {

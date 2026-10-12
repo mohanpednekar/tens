@@ -254,6 +254,13 @@ describe('extractRunBlocks', () => {
     expect(blocks).toEqual([{ line: 5, inline: true, script: 'echo ok' }]);
   });
 
+  it('recognizes an explicit `? run` mapping key', () => {
+    const blocks = extractRunBlocks(`steps:\n  - ? run\n    : if true; then\n`);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].script).toBe('if true; then');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
+  });
+
   it('extracts run steps from a flow-style steps sequence', () => {
     const blocks = extractRunBlocks(`jobs:\n  a:\n    steps: [{run: "if true; then"}]\n`);
     expect(blocks).toHaveLength(1);
@@ -360,6 +367,9 @@ describe('bashSyntaxError', () => {
     // so the lint must enable it up front or reject valid extglob syntax.
     expect(bashSyntaxError('shopt -s extglob\nls +(a|b)')).toBeNull();
     expect(bashSyntaxError('ls +(a|b)')).not.toBeNull();
+    // shopt text that never executes must not enable the option
+    expect(bashSyntaxError('# shopt -s extglob\nls +(a|b)')).not.toBeNull();
+    expect(bashSyntaxError('echo "shopt -s extglob"\nls +(a|b)')).not.toBeNull();
   });
 
   it('returns null for valid bash', () => {
