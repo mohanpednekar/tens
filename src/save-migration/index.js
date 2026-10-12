@@ -1,7 +1,6 @@
 import { SAVE_SCHEMA_VERSION } from './constants'
 import { getSaveIncompatibilityReason } from './detectLegacy'
 
-
 const isPlainObject = value =>
   Boolean(value) &&
   Object.prototype.toString.call(value) === '[object Object]' &&

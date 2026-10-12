@@ -5,6 +5,13 @@ import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
 
+// Plain JSON objects only — rejects arrays, class instances and non-Object prototypes, which
+// `typeof === 'object'` would let through.
+const isPlainObject = value =>
+  Boolean(value) &&
+  Object.prototype.toString.call(value) === '[object Object]' &&
+  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
+
 // Drop __proto__/constructor/prototype at parse time so localStorage/Dev JSON cannot pollute merges.
 const safeJsonParse = jsonString =>
   JSON.parse(jsonString, (key, value) => {
@@ -14,11 +21,6 @@ const safeJsonParse = jsonString =>
 
 // Slot 0 keeps the legacy keys so existing tests, e2e specs, and older browsers that only
 // ever wrote a single save keep working without a forced rewrite of every consumer.
-const isPlainObject = value =>
-  Boolean(value) &&
-  Object.prototype.toString.call(value) === '[object Object]' &&
-  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
-
 const STORAGE_KEY = 'tens_game_state'
 const LAST_SAVE_TIMESTAMP_KEY = 'tens_last_save_timestamp'
 const SAVES_META_KEY = 'tens_saves_meta'
