@@ -5081,3 +5081,35 @@ test('theme preference in Settings switches mode and persists across remount', a
 // legitimately take longer than Vitest's 5s default under a loaded/sandboxed test environment —
 // bumped rather than restructured, since the double-mount itself is the point of the test.
 }, 15000)
+
+describe('Buy max mode', () => {
+  test('the toggle stays hidden until the first Prestige', () => {
+    seedMainGameState({ resources: { base: 1e6 } })
+    render(<App />)
+    expect(screen.queryByRole('button', { name: /buy max mode/i })).not.toBeInTheDocument()
+  })
+
+  test('once unlocked, toggling it on makes the tier Buy button buy every affordable full level', async () => {
+    const user = userEvent.setup()
+    const kilobytes = TIER_DEFINITIONS[0]
+    const blockCost = level => getTierCost(kilobytes, level) * DEFAULT_PURCHASE_BLOCK_SIZE
+    seedMainGameState({
+      prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+      resources: { base: blockCost(1) + blockCost(2) },
+    })
+    render(<App />)
+
+    const toggle = screen.getByRole('button', { name: /buy max mode/i })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(localStorage.getItem('tens_buy_max_mode')).toBe('true')
+
+    await user.click(screen.getByRole('button', { name: /^Buy 2 full levels/ }))
+    const kilobytesPanel = screen.getByLabelText(`${kilobytes.name} layer`)
+    expect(within(kilobytesPanel).getByRole('progressbar', { name: `${kilobytes.name} cost-block progress` }))
+      .toHaveAttribute('aria-valuenow', '0')
+    const saved = JSON.parse(localStorage.getItem('tens_game_state'))
+    expect(saved.purchaseLevels[kilobytes.id]).toBe(3)
+  })
+})

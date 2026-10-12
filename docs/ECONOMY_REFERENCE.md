@@ -101,6 +101,25 @@ Saves must already carry `purchaseLevels`/`purchaseLevelProgress` in the current
 `storage.js`'s `mergeState` only fills missing fields from fresh defaults and does not derive levels
 from legacy `purchased` counts.
 
+### Buy max mode
+
+`isBuyMaxUnlocked(state)` — true once `prestige.count >= 1` or `era.count >= 1` (Era ascension resets
+the Prestige count but implies an earlier Prestige). The toggle itself is a per-device UI preference
+(`storage.js`'s `loadBuyMaxPreference`/`saveBuyMaxPreference`, key `tens_buy_max_mode`), not game
+state, so no reset path needs to carry it; `useIncrementalGame` exposes `buyMaxMode`/`setBuyMaxMode`
+and picks each manual action's max variant only while the mode is on AND unlocked for the state being
+updated. Autobuyers and offline progress are unaffected.
+
+- **Factory tiers** — `buyTierMaxLevels(tierId)` buys only FULL levels, each from zero progress,
+  re-reading price/block size after every level. If the tier has partial progress, or not even one
+  full level is affordable, the click falls back to the ordinary `buyTierQuantity` fill, so a partial
+  level never shares a click with full levels. `getTierMaxLevelsPreview(state, tierId)` returns
+  `{ levels, cost }` for the Buy button (`levels: 0` → show the normal single-level preview).
+- **Single-level ladders** — `repeatPurchaseMax(action)` chains a one-level purchase action until it
+  returns the same reference: per-tier tickspeed, Latency, Double PP, Auto-Prestige level, Flops tiers.
+- `BUY_MAX_ITERATION_CAP` (1000, `layers.js`) bounds both loops (only reachable with an Infinity
+  balance — every ladder's costs rise exponentially).
+
 ### Adding a new tier
 
 Add one entry to `TIER_DEFINITIONS` in `src/game/layers.js` — needs a naming-agnostic `id` (next in the
