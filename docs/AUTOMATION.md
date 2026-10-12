@@ -528,6 +528,17 @@ session):
   entry mapping `.github/workflows/**` to the repo owner actually takes effect (tracked in issue #62's
   checklist until confirmed done).
 
+### Mobile build (`mobile-build.yml`)
+
+Deterministic (no agent, no secrets, `contents: read`) — the CI half of the Capacitor native
+apps (#70). Runs on `workflow_dispatch` and on push-to-`main`/PRs whose diff touches `android/**`,
+`ios/**`, `capacitor.config.json`, `viteConfigFactory.js`, `package.json`, `yarn.lock` or the
+workflow itself. `android` (ubuntu, JDK 21) runs `yarn build:capacitor` → `cap sync android` →
+`./gradlew assembleDebug` and uploads the unsigned debug APK; `ios` (macos) syncs, then
+`xcodebuild` builds the `App` scheme for the iOS Simulator with `CODE_SIGNING_ALLOWED=NO` and
+uploads the zipped `App.app`. Neither artifact is signed/store-ready; store signing and release
+upload are deliberately out of scope until a maintainer provisions keystore/App Store credentials.
+
 ### Release (`release.yml`)
 
 Deterministic (no agent) — the post-merge half of #52, complementing the pre-merge
