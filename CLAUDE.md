@@ -533,31 +533,27 @@ src/
                                imports `./fonts` as a side effect; `mode` defaults to dark, driven from
                                system pref + Settings → Appearance toggle (#140)
   App.jsx                   ← root component; owns the single `useIncrementalGame()` call (lifted up
-                               from MainPage so ByteFoundryPage shares the save/tick loop) and wraps
-                               <ThemeProvider><GlobalStyle/>, switching between <ByteFoundryPage/>/
+                               from MainPage so ByteFoundryPage shares the save/tick loop), wraps
+                               <ThemeProvider><GlobalStyle/>, and switches between <ByteFoundryPage/>/
                                <MainPage/>/<InfoPage/>/<ComputePage/>/<ComputeFlopsPage/>/
                                <MilestonesPage/>/<SettingsPage/>/<DevModePage/> via a local `page`
                                useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/
                                `'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing
-                               library (same convention as MainPage's Factory | Upgrades tabs) — plus a
-                               shared fixed bottom `AppNav` (Foundry → Boosters → Compute → Factory →
-                               Guide → More) and `AppMenu` (More sheet → Milestones / Settings / Dev
-                               Mode in dev builds). Legacy `page === 'storage'` rewrites to `'foundry'`
-                               (Disks live on Foundry). Which screen renders is a derived
-                               `showingFoundry = !GATE_EXEMPT_PAGES.has(page) &&
-                               (!intro.mainGameUnlocked || page === 'foundry')` check (`GATE_EXEMPT_PAGES`
-                               = `'info'`/`'boosters'`/`'compute'`/`'milestones'`/`'settings'`/`'dev'`),
-                               not `page` directly: ByteFoundryPage is both a *mandatory gate* (whenever
-                               `intro.mainGameUnlocked` is false — see "Economy model") and, once
-                               unlocked, a *permanent, revisitable screen* via AppNav's Foundry item
-                               (`page = 'foundry'`). Gate-exempt pages stay reachable during the gate so
-                               Guide / Boosters (once capacity reveals it) / Compute (once 100 PP) / More
-                               are never yanked away. `intro.mainGameUnlocked` is PERMANENT (see
-                               `latchMainGameUnlocked` in `engine.js`) — never reset by a real Prestige
-                               or Era ascension — so `!intro.mainGameUnlocked` can only be true on a
-                               save's very first cycle; afterward the gate check is a no-op. Since
-                               `page` is independent of `intro.mainGameUnlocked`, no syncing effect is
-                               needed: the gate resolving just reveals whatever `page` already was
+                               library — plus a shared fixed bottom `AppNav` (Foundry → Boosters →
+                               Compute → Factory → Guide → More) and `AppMenu` (More sheet → Milestones /
+                               Settings / Dev Mode in dev builds). Legacy `page === 'storage'` rewrites
+                               to `'foundry'`. Which screen renders is derived, not `page` directly:
+                               `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked
+                               || page === 'foundry')` (`GATE_EXEMPT_PAGES` = `'info'`/`'boosters'`/
+                               `'compute'`/`'milestones'`/`'settings'`/`'dev'`, so those stay reachable
+                               during the gate — Boosters only once capacity reveals it, Compute only
+                               once 100 PP, see Architecture 4b/4c). ByteFoundryPage is both a *mandatory gate* (while
+                               `intro.mainGameUnlocked` is false) and, once unlocked, a permanent
+                               revisitable screen (`page = 'foundry'`). `intro.mainGameUnlocked` is
+                               PERMANENT (`latchMainGameUnlocked` in `engine.js`; never reset by a real
+                               Prestige or Era ascension), so `!intro.mainGameUnlocked` is true only on a
+                               save's very first cycle. `page` is independent of it, so no syncing effect
+                               is needed: the gate resolving just reveals whatever `page` already was
                                (typically `'game'`)
   index.jsx                 ← ReactDOM.createRoot entry point; calls reportWebVitals() after render
   reportWebVitals.js         ← optional web-vitals (CLS/INP/FCP/LCP/TTFB) reporter; no-ops unless passed
@@ -658,19 +654,16 @@ Strict three-layer separation:
    live in `App.jsx`'s shared `AppNav` (Byte Factory is this page), so MainPage carries no page-to-page
    open-* links. Full layout: `docs/MAINPAGE_REFERENCE.md`.
 4. **`ByteFoundryPage/index.jsx`** — the tap screen (see "Economy model"), a pure renderer taking
-   `{ game, focusNonce }`. How a save's first Prestige cycle earns its first Kilobytes — see
+   `{ game, focusNonce }`; how a save's first Prestige cycle earns its first Kilobytes (rationale:
    `docs/DESIGN_HISTORY.md`'s "Why Bytes was pulled out of the tier ladder in favor of the Byte Foundry
-   intro" for why this replaced the old self-producing Bytes tier. A mandatory gate whenever
-   `intro.mainGameUnlocked` is false (AppNav omits Factory during the gate; Guide and More stay),
-   permanently latched true the instant Storage's capacity threshold is crossed
+   intro"). A mandatory gate whenever `intro.mainGameUnlocked` is false (AppNav omits Factory during it;
+   Guide and More stay), permanently latched true the instant Storage's capacity threshold is crossed
    (`latchMainGameUnlocked`/`isStorageUnlocked` in `engine.js`) — the SAME "1 KiB" threshold that
-   reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. The latch is one-time-ever
-   and never resets (not on a real Prestige, not on an Era ascension) — see `App.jsx`'s repo-layout
-   entry for what that means once latched. Once `intro.mainGameUnlocked`, the standalone Tap button is
-   removed and the Data Stream tile itself becomes the tap target (`as="button"` on the same
-   `FillableStatCard`, calling `actions.tapIntroBit`) — see "Fill-based Speed/Bandwidth multiplier" for
-   what a tap does pre/post Storage reveal. Compute lives on its own screen (4b), reached via AppNav;
-   Storage's every-size detail (4a) is continuous sections on this Foundry screen (and the reusable
+   reveals pool 1's card and switches the tap into fill-multiplier-bonus mode. One-time-ever; never
+   resets (see `App.jsx`'s repo-layout entry). Once latched, the standalone Tap button is gone and the
+   Data Stream tile itself is the tap target (`as="button"` on the same `FillableStatCard`, calling
+   `actions.tapIntroBit`; see "Fill-based Speed/Bandwidth multiplier"). Compute lives on its own screen
+   (4b); Storage's every-size detail (4a) is continuous sections on this Foundry screen (and the reusable
    `StoragePage` wrapper), not a separate AppNav item or tab. Data Stream owns the shared
    Combine/Speed/Capacity actions and the common Provision Disk control; Storage pools 1–10 are derived
    views over the one Data Stream, each with its own Bandwidth (`getStoragePoolBandwidth`, hard-capped at
@@ -679,31 +672,30 @@ Strict three-layer separation:
    Storage action for that pool — Provision Disk's build cost, the read-cache fill — spends from
    exclusively (`tickPoolBufferFill` tops it up from `intro.bits`, pool 1 first, after tier01's
    bootstrap conversion and Queued Capacity each tick; `getPoolBufferCapacity` equals the pool's
-   Capacity, so a full buffer can always fund one `provisionDisk` pass of even that pool's largest
-   disk). One `PoolCard` renders per VISIBLE pool (`getVisibleStoragePoolCount` — PURE Capacity-based:
+   Capacity, so a full buffer can always fund one `provisionDisk` pass of even its largest disk). One
+   `PoolCard` renders per VISIBLE pool (`getVisibleStoragePoolCount` — PURE Capacity-based:
    `intro.capacity` reaching a pool's `getPoolCapacityUnlockThresholdBits`, pool 1 always counted, NO
    disk-build dependency — deliberately independent of `isStoragePoolUnlocked`/
    `getUnlockedStoragePoolCount`, which stay disk-build-only and drive the disk ladder's progression);
    see "Pool liveness is Capacity-only" and `docs/DESIGN_HISTORY.md`'s "Pool cards gated on a capacity
-   threshold too" entry for why folding the two into one primitive was tried and reverted. Only the
-   largest card is expanded by default. `components/DataLakePanel` (`bare`, `tierIndex={poolIndex}`) is
-   embedded per pool below that pool's `components/DiskArrayRow`s (cache above disks) in the same
-   disclosure — see `docs/DESIGN_HISTORY.md`'s "Pool titles simplified to `<symbol>` Pool; each pool's
-   Data Lake moved inside its own card" entry. Disk Fill is fully automatic every tick (`DiskArrayRow`
-   is a pure status display, not a click target). Provision Disk is a single shared control (one disk
-   ladder spans every pool) rendered inside the ONE `PoolCard` the ladder's current offer
-   (`getDiskSize`) belongs to (`getPoolIndexForDiskSize`), plus a fallback copy (`provisionDiskButton`)
-   after the Data Stream card for when that card isn't visible yet — see `docs/DESIGN_HISTORY.md`'s
-   "Provision Disk moved back inside its pool card" entry. Each disk array shows every size from
-   `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row. The "queue next build"
-   pin-icon toggle was removed from the UI, but the auto-arming queue it drove stays wired and live (see
-   "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section for the progress fill);
+   threshold too" for why folding the two into one primitive was tried and reverted. Only the largest
+   card is expanded by default. `components/DataLakePanel` (`bare`, `tierIndex={poolIndex}`) is embedded
+   per pool below that pool's `components/DiskArrayRow`s (cache above disks) in the same disclosure
+   (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
+   inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
+   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered inside
+   the ONE `PoolCard` the ladder's current offer (`getDiskSize`) belongs to (`getPoolIndexForDiskSize`),
+   plus a fallback copy (`provisionDiskButton`) after the Data Stream card for when that card isn't
+   visible yet (`docs/DESIGN_HISTORY.md`: "Provision Disk moved back inside its pool card"). Each disk
+   array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
+   The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
+   and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
    `queueDiskBuild`/`clearDiskBuildQueue` remain implemented/tested but unexposed (unlike Capacity's
    `queueIntroCapacityUpgrade`, which the Upgrade Data Stream button drives). Every action here or on
    either dedicated screen is gated by the forced priority order (see "Economy model") — Data Lake
    Booster purchases, its capacity Upgrade, and Upgrade Data Stream are the three exceptions, each
    arbitrated on its own eligibility. Full UI layout: `docs/MAINPAGE_REFERENCE.md`; mechanic/formula
-   detail (Bandwidth cap, buffer capacity, fill multiplier, disk ladder/build-pass): 
+   detail (Bandwidth cap, buffer capacity, fill multiplier, disk ladder/build-pass):
    `docs/ECONOMY_REFERENCE.md`; component contracts (`DiskArrayRow`, `DataLakePanel`):
    `docs/COMPONENTS_REFERENCE.md`.
 4a. **`StoragePage/index.jsx`** — thin reusable every-size DiskArrayRow list (ascending, via
