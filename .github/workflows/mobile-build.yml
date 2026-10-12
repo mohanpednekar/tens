@@ -1,0 +1,100 @@
+name: Mobile build
+
+# Builds the Capacitor native apps (#70): an unsigned debug Android APK and an iOS Simulator
+# .app, uploaded as workflow artifacts. Neither is store-ready (no signing). Runs on demand, and on
+# PRs/pushes that touch the native projects or their Capacitor config so a broken native tree is
+# caught before merge — ordinary web-only changes don't spend runner time here.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'android/**'
+      - 'ios/**'
+      - 'capacitor.config.json'
+      - 'viteConfigFactory.js'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/mobile-build.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'ios/**'
+      - 'capacitor.config.json'
+      - 'viteConfigFactory.js'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/mobile-build.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-node-yarn
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: Build web assets and sync Android project
+        run: |
+          yarn build:capacitor
+          npx cap sync android
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tens-android-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-node-yarn
+
+      - name: Build web assets and sync iOS project
+        run: |
+          yarn build:capacitor
+          npx cap sync ios
+
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/DerivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package simulator app
+        run: |
+          cd ios/DerivedData/Build/Products/Debug-iphonesimulator
+          ditto -c -k --keepParent App.app "$GITHUB_WORKSPACE/tens-ios-simulator.zip"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tens-ios-simulator-app
+          path: tens-ios-simulator.zip
+          if-no-files-found: error
