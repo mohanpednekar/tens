@@ -1,4 +1,4 @@
-# Graph Report - wt730  (2026-10-12)
+# Graph Report - tens  (2026-10-12)
 
 ## Corpus Check
 - 127 files · ~573,442 words
