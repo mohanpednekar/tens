@@ -752,9 +752,12 @@ jobs:
             full spec includes `Closes #<number>`).
           - If you work through every eligible candidate in the backlog (each one's full spec
             read — and, when the feed above ends with a "+N more" note, the hidden tail too,
-            fetched priority-sorted with an explicit limit, e.g. `gh issue list --label
-            claude-task --state open --limit 200 --json number,title,labels`, since the default
-            `gh issue list` page is only 30) without finding one you can implement, leave the comments / `blocked` labels
+            fetched with an explicit limit, `blocked` excluded and in Phase A's order, e.g. `gh
+            issue list --label claude-task --state open --limit 200 --json number,title,labels
+            --jq '[.[] | select([.labels[].name] | index("blocked") | not)] | sort_by(if
+            ([.labels[].name] | index("priority:high")) then 0 elif ([.labels[].name] |
+            index("priority:low")) then 2 else 1 end, .number) | .[] | "#\(.number) \(.title)"'`,
+            since the default `gh issue list` page is only 30) without finding one you can implement, leave the comments / `blocked` labels
             above as durable signal, then FALL THROUGH to Phase B and do one menu task with the
             remaining budget — an idle run with budget left over is wasted, so do not end the
             run PR-less while Phase B has useful work.
