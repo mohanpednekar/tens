@@ -264,12 +264,33 @@ function foldScalar(lines) {
 }
 
 /**
+ * A block scalar's final value: `|` keeps lines, `>` folds them, then the
+ * chomping indicator decides the trailing newlines — `-` strips all, `+` keeps
+ * every trailing blank, default (clip) leaves exactly one. Matters for bash:
+ * a trailing `\` continuation reads differently with or without the final
+ * newline (e.g. an unterminated heredoc that only `|-` exposes).
+ */
+function blockScalarValue(header, content) {
+  const core = (header[1] === '>' ? foldScalar(content) : content.join('\n')).replace(/\n+$/, '');
+  const chomp = header[2] + header[4];
+  if (chomp.includes('-') || core === '') return core;
+  if (chomp.includes('+')) {
+    let trailing = 0;
+    for (let k = content.length - 1; k >= 0 && content[k] === ''; k--) trailing++;
+    return `${core}\n${'\n'.repeat(trailing)}`;
+  }
+  return `${core}\n`;
+}
+
+/**
  * Extract every `run:` script from a workflow/action file's text.
  * @param {string} yamlText
  * @returns {{line: number, script: string}[]} line = 1-based line of the `run:` key
  */
 export function extractRunBlocks(yamlText) {
   const lines = yamlText.split(/\r?\n/);
+  // the file's own final newline isn't a blank line of the last scalar (|+ keep)
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
   const blocks = [];
   // Lines indented deeper than `skipBelow` belong to a scalar that isn't a run
   // script (another key's block scalar, or a plain value's folded continuation)
@@ -327,7 +348,7 @@ export function extractRunBlocks(yamlText) {
           const content = raw.map((l) => (l.trim() === '' ? '' : l.slice(base)));
           blocks.push({
             line: i + 1,
-            script: nextHeader[1] === '>' ? foldScalar(content) : content.join('\n'),
+            script: blockScalarValue(nextHeader, content),
           });
           i = j - 1;
           continue;
@@ -378,7 +399,7 @@ export function extractRunBlocks(yamlText) {
         const content = raw.map((l) => (l.trim() === '' ? '' : l.slice(base)));
         blocks.push({
           line: i + 1,
-          script: header[1] === '>' ? foldScalar(content) : content.join('\n'),
+          script: blockScalarValue(header, content),
         });
         i = j - 1;
       } else {
@@ -531,7 +552,14 @@ export function sanitizeExpressions(script) {
  * @returns {string|null} bash's stderr on a syntax failure, null when it parses
  */
 export function bashSyntaxError(script) {
-  const res = spawnSync('bash', ['-n'], {
+  // `bash -n` runs no commands, so a script's own `shopt -s extglob` (which
+  // changes how later lines parse) never takes effect — mirror any `shopt -s`
+  // options the script sets as `-O` flags so valid scripts aren't rejected.
+  const shoptArgs = [];
+  for (const m of script.matchAll(/(?:^|[\s;&|])shopt\s+-s\s+([A-Za-z_][\w \t]*)/gm)) {
+    for (const opt of m[1].trim().split(/\s+/)) shoptArgs.push('-O', opt);
+  }
+  const res = spawnSync('bash', [...shoptArgs, '-n'], {
     input: sanitizeExpressions(script),
     encoding: 'utf8',
   });

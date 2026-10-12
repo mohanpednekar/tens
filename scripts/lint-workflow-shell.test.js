@@ -31,7 +31,7 @@ describe('extractRunBlocks', () => {
     const blocks = extractRunBlocks(SAMPLE);
     expect(blocks).toHaveLength(2);
     expect(blocks[0].line).toBe(10);
-    expect(blocks[0].script).toBe('echo "hello"\nyarn test');
+    expect(blocks[0].script).toBe('echo "hello"\nyarn test\n');
     expect(blocks[1]).toEqual({ line: 14, inline: true, script: 'yarn build' });
   });
 
@@ -51,8 +51,26 @@ describe('extractRunBlocks', () => {
     // indent — folding them flat would false-fail valid bash.
     const text = `steps:\n  - run: >\n      if true; then\n        echo one\n      fi\n`;
     const script = extractRunBlocks(text)[0].script;
-    expect(script).toBe('if true; then\n  echo one\nfi');
+    expect(script).toBe('if true; then\n  echo one\nfi\n');
     expect(bashSyntaxError(script)).toBeNull();
+  });
+
+  it('applies block-scalar chomping indicators', () => {
+    // PyYAML: |- strips every trailing newline, | clips to one, |+ keeps all.
+    const body = '      a\n      b\n\n';
+    expect(extractRunBlocks(`steps:\n  - run: |-\n${body}`)[0].script).toBe('a\nb');
+    expect(extractRunBlocks(`steps:\n  - run: |\n${body}`)[0].script).toBe('a\nb\n');
+    expect(extractRunBlocks(`steps:\n  - run: |+\n${body}`)[0].script).toBe('a\nb\n\n');
+    expect(extractRunBlocks(`steps:\n  - run: >-\n${body}`)[0].script).toBe('a b');
+  });
+
+  it('flags an unterminated heredoc that only |- stripping exposes', () => {
+    // With |- the value ends in `EOF\` (no final newline): bash warns the
+    // heredoc is unterminated. Keeping the blank line hid that.
+    const text = `steps:\n  - run: |-\n      cat <<EOF\n      x\n      EOF\\\n\n`;
+    const script = extractRunBlocks(text)[0].script;
+    expect(script.endsWith('EOF\\')).toBe(true);
+    expect(bashSyntaxError(script)).not.toBeNull();
   });
 
   it('treats a tab-prefixed line as more-indented inside a folded scalar', () => {
@@ -60,7 +78,7 @@ describe('extractRunBlocks', () => {
     // so its newlines survive — folding it flat would hide a stray `&&` line.
     const text = `steps:\n  - run: >\n      echo x\n      \t&& echo y\n`;
     const script = extractRunBlocks(text)[0].script;
-    expect(script).toBe('echo x\n\t&& echo y');
+    expect(script).toBe('echo x\n\t&& echo y\n');
     expect(bashSyntaxError(script)).not.toBeNull();
   });
 
@@ -70,7 +88,7 @@ describe('extractRunBlocks', () => {
     // backslash escape swallow the `&&` line (silent false-pass).
     const text = `steps:\n  - run: >\n      echo start\\\n\n        && echo y\n`;
     const script = extractRunBlocks(text)[0].script;
-    expect(script).toBe('echo start\\\n\n  && echo y');
+    expect(script).toBe('echo start\\\n\n  && echo y\n');
     expect(bashSyntaxError(script)).not.toBeNull();
   });
 
@@ -304,7 +322,7 @@ describe('extractRunBlocks', () => {
     const text = `steps:\n  - run: |\n      echo hi\n    env:\n      X: 1\n  - run: echo bye\n`;
     const blocks = extractRunBlocks(text);
     expect(blocks).toHaveLength(2);
-    expect(blocks[0].script).toBe('echo hi');
+    expect(blocks[0].script).toBe('echo hi\n');
     expect(blocks[1].script).toBe('echo bye');
   });
 });
@@ -324,6 +342,13 @@ describe('sanitizeExpressions', () => {
 });
 
 describe('bashSyntaxError', () => {
+  it('honours shopt -s extglob set by the script itself', () => {
+    // bash runs the shopt before parsing the next line; `bash -n` runs nothing,
+    // so the lint must enable it up front or reject valid extglob syntax.
+    expect(bashSyntaxError('shopt -s extglob\nls +(a|b)')).toBeNull();
+    expect(bashSyntaxError('ls +(a|b)')).not.toBeNull();
+  });
+
   it('returns null for valid bash', () => {
     expect(bashSyntaxError('echo hi\nif true; then\n  echo yes\nfi\n')).toBeNull();
   });
