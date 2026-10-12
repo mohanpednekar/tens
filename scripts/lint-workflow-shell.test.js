@@ -283,6 +283,34 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
+  it('resolves aliased step lists and aliased step items', () => {
+    const text = [
+      'shared: &common',
+      '  - run: if true; then',
+      'step: &one {run: "echo (broken"}',
+      'jobs:',
+      '  a:',
+      '    steps: *common',
+      '  b:',
+      '    steps:',
+      '      - *one',
+      '',
+    ].join('\n');
+    const blocks = extractRunBlocks(text);
+    expect(blocks.map((b) => b.line)).toEqual([2, 3]);
+    for (const b of blocks) expect(bashSyntaxError(b.script)).not.toBeNull();
+  });
+
+  it('ignores step-shaped data outside executable step paths (matrix)', () => {
+    const text = `jobs:\n  a:\n    strategy:\n      matrix:\n        steps: [{run: "Windows (debug)"}]\n    steps:\n      - run: echo ok\n`;
+    expect(extractRunBlocks(text)).toEqual([{ line: 7, inline: true, script: 'echo ok' }]);
+  });
+
+  it('extracts composite-action runs.steps', () => {
+    const text = `runs:\n  using: composite\n  steps:\n    - run: echo hi\n      shell: bash\n`;
+    expect(extractRunBlocks(text)).toEqual([{ line: 4, inline: true, script: 'echo hi' }]);
+  });
+
   it('extracts run steps from a flow-style steps sequence', () => {
     const blocks = extractRunBlocks(`jobs:\n  a:\n    steps: [{run: "if true; then"}]\n`);
     expect(blocks).toHaveLength(1);

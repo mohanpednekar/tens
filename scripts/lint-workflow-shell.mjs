@@ -30,10 +30,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { isAlias, isMap, isScalar, isSeq, LineCounter, parseDocument, visit } from 'yaml';
+import { isAlias, isMap, isScalar, isSeq, LineCounter, parseDocument } from 'yaml';
 
 const EXPR_PLACEHOLDER = 'GH_EXPR';
-const STEP_LIST_KEYS = new Set(['steps', 'parallel']);
 
 /**
  * Extract every step `run:` script from a workflow/action file's text.
@@ -47,33 +46,53 @@ export function extractRunBlocks(yamlText) {
   const lineCounter = new LineCounter();
   const doc = parseDocument(yamlText, { lineCounter, prettyErrors: false });
   if (doc.errors.length > 0) throw doc.errors[0];
+  // Every node is looked up through aliases (`steps: *common`, `- *step`, `*rk: …`,
+  // `run: *cmd`), so a reused anchor is linted exactly as Actions expands it.
+  const deref = (node) => (isAlias(node) ? node.resolve(doc) : node);
+  const get = (map, key) => {
+    map = deref(map);
+    if (!isMap(map)) return undefined;
+    const pair = map.items.find((p) => {
+      const k = deref(p.key);
+      return isScalar(k) && k.value === key;
+    });
+    return pair && { pair, value: deref(pair.value) };
+  };
   const blocks = [];
-  visit(doc, {
-    Pair(_, pair) {
-      // `steps:` and the `parallel:` step groups nested inside them both hold ordinary steps.
-      if (!isScalar(pair.key) || !STEP_LIST_KEYS.has(pair.key.value) || !isSeq(pair.value)) return;
-      for (const step of pair.value.items) {
-        if (!isMap(step)) continue;
-        const keyOf = (p) => (isAlias(p.key) ? p.key.resolve(doc) : p.key);
-        const run = step.items.find((p) => {
-          const key = keyOf(p);
-          return isScalar(key) && key.value === 'run';
-        });
-        if (!run) continue;
-        // `run: *cmd` reuses an anchored scalar — lint the value Actions resolves it to.
-        const value = isAlias(run.value) ? run.value.resolve(doc) : run.value;
-        if (!isScalar(value) || typeof value.value !== 'string') continue;
-        const block = {
-          line: lineCounter.linePos(run.key.range[0]).line,
-          script: value.value,
-        };
-        if (value.type !== 'BLOCK_LITERAL' && value.type !== 'BLOCK_FOLDED') {
-          block.inline = true;
-        }
-        blocks.push(block);
+  const seen = new Set();
+  const visitSteps = (seq) => {
+    if (!isSeq(seq)) return;
+    for (const item of seq.items) {
+      const step = deref(item);
+      if (!isMap(step)) continue;
+      const parallel = get(step, 'parallel');
+      if (parallel) visitSteps(parallel.value);
+      const run = get(step, 'run');
+      if (!run || !isScalar(run.value) || typeof run.value.value !== 'string') continue;
+      // an aliased step expands at every use, but its source lines are linted once
+      if (seen.has(run.pair)) continue;
+      seen.add(run.pair);
+      const block = {
+        line: lineCounter.linePos(run.pair.key.range[0]).line,
+        script: run.value.value,
+      };
+      if (run.value.type !== 'BLOCK_LITERAL' && run.value.type !== 'BLOCK_FOLDED') {
+        block.inline = true;
       }
-    },
-  });
+      blocks.push(block);
+    }
+  };
+  // Only paths Actions executes: a workflow's `jobs.<id>.steps`, a composite
+  // action's `runs.steps` (plus `parallel:` groups inside either), and a bare
+  // top-level `steps:` list. Data that merely looks like steps — e.g. a matrix
+  // variable named `steps` — is never linted as shell.
+  const root = deref(doc.contents);
+  const jobs = get(root, 'jobs');
+  if (jobs && isMap(jobs.value)) {
+    for (const job of jobs.value.items) visitSteps(get(job.value, 'steps')?.value);
+  }
+  visitSteps(get(get(root, 'runs')?.value, 'steps')?.value);
+  visitSteps(get(root, 'steps')?.value);
   return blocks.sort((a, b) => a.line - b.line);
 }
 
