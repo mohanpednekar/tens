@@ -738,6 +738,26 @@ export const applyDevGameStateJson = (jsonText, currentState) => {
   return { ok: true, state: loaded }
 }
 
+/** Buy max mode preference (see isBuyMaxUnlocked in engine.js) — a per-device UI preference like
+ * the theme below, separate from game save data; survives reset/clearGameState. */
+export const BUY_MAX_PREFERENCE_KEY = 'tens_buy_max_mode'
+
+export const loadBuyMaxPreference = () => {
+  try {
+    return localStorage.getItem(BUY_MAX_PREFERENCE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+export const saveBuyMaxPreference = enabled => {
+  try {
+    localStorage.setItem(BUY_MAX_PREFERENCE_KEY, enabled ? 'true' : 'false')
+  } catch {
+    // Silently ignore (quota / private browsing)
+  }
+}
+
 /** UI theme preference — separate from game save data; survives reset/clearGameState. */
 export const THEME_PREFERENCE_KEY = 'tens_theme_preference'
 
