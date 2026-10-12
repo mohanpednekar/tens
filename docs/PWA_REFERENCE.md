@@ -5,10 +5,13 @@ Referenced from `CLAUDE.md`'s "PWA support" section. Full breakdown of the insta
 `docs/MAINPAGE_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`. Read this before touching `vite.config.js`'s
 `VitePWA` block, the manifest fields, `public/pwa-*.png`/`apple-touch-icon.png`, or
 `scripts/generate-pwa-icons.mjs`. For the *why* behind choosing this over Capacitor/native app-store
-publishing or a React Native rewrite, see `docs/DESIGN_HISTORY.md`. A Capacitor foundation is in
-progress (#70): `yarn build:capacitor` (`CAPACITOR=1`) rebuilds `dist/` with `base: './'` and
-**without** `VitePWA`, so a Workbox SW is not injected into the native shell. Ordinary `yarn build`
-(Pages + PWA) is unchanged.
+publishing or a React Native rewrite, see `docs/DESIGN_HISTORY.md`. Native Android/iOS apps are
+wrapped with Capacitor (#70): `yarn build:capacitor` (`CAPACITOR=1`) rebuilds `dist/` with `base: './'`
+and **without** `VitePWA`, so a Workbox SW is not injected into the native shell, and `cap sync` copies
+it into the committed `android/`/`ios/` projects. Ordinary `yarn build` (Pages + PWA) is unchanged.
+`yarn gen-pwa-icons` also overwrites the native launcher icons (Android mipmaps incl. adaptive
+foreground + `ic_launcher_background` color, iOS `AppIcon-512@2x.png` flattened — iOS rejects alpha)
+and splash screens at their template dimensions, from the same byte-grid design.
 
 The app is installable as a Progressive Web App on both Android Chrome and iOS Safari — home-screen
 icon, standalone display with no browser chrome, offline-capable after a first visit — via

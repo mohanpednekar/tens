@@ -9,7 +9,7 @@ package-lock.json
 /build
 /dist
 
-# Capacitor native build artifacts (android/ + ios/ project trees are committed once added;
+# Capacitor native build artifacts (android/ + ios/ project trees are committed;
 # only generated build output stays ignored — see #70)
 android/app/build/
 android/.gradle/

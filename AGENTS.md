@@ -36,7 +36,8 @@ yarn install --frozen-lockfile   # CI does this; use plain `yarn install` locall
 yarn dev          # dev server → http://127.0.0.1:<port>/tens/
 yarn build        # production build (Pages base + PWA)
 yarn build:capacitor # CAPACITOR=1 build for native wrap (relative base, no PWA plugin)
-yarn cap:sync     # cap sync (after android/ios platforms exist — see #70)
+yarn cap:sync     # cap sync (copy dist/ into android/ + ios/)
+yarn cap:android  # build:capacitor + sync + open Android Studio (cap:ios → Xcode)
 yarn test         # run all tests once (Vitest)
 yarn test:watch   # watch mode
 yarn test:e2e     # Playwright end-to-end suite (real chromium, against yarn dev)
@@ -96,7 +97,8 @@ src/
   theme/                   ← design tokens (dark+light) + ThemeProvider + GlobalStyle
   App.jsx                  ← root component; page toggle + AppNav/AppMenu (not a router)
   index.jsx                ← ReactDOM.createRoot entry
-capacitor.config.json      ← Capacitor app id/name + webDir dist (#70 foundation; no android/ios yet)
+capacitor.config.json      ← Capacitor app id/name + webDir dist (#70)
+android/, ios/              ← committed Capacitor native projects; CI builds via mobile-build.yml
 vite.config.js             ← thin wrapper delegating to viteConfigFactory.js
 viteConfigFactory.js       ← real Vite config: path aliases (below) + dev/test server config +
                            VitePWA plugin (omitted when CAPACITOR=1)
