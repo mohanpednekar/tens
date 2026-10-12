@@ -1129,9 +1129,12 @@ fields, or `public/pwa-*`/`scripts/generate-pwa-icons.mjs`.
 Android and iOS apps wrap the same web build via Capacitor 8 (not yet store-signed):
 
 - `@capacitor/core`/`android`/`ios` + `@capacitor/cli`; `capacitor.config.json` names the app **Tens**
-  (`appId: com.mohanpednekar.tens`, `webDir: dist`). `android/` (Gradle, min SDK 24) and `ios/`
-  (Xcode project, Swift Package Manager — no CocoaPods, iOS 15+) are committed; regenerate only via
-  `npx cap add`, never by hand.
+  (`appId: com.mohanpednekar.tens`, `webDir: dist`). `android/` (Gradle) and `ios/` (Xcode project,
+  Swift Package Manager — no CocoaPods) are committed; regenerate only via `npx cap add`, never by hand.
+- Minimum OS = oldest still receiving security updates (maintainer policy; no older OS support):
+  Android 14 (`minSdkVersion = 34`, `android/variables.gradle`) and iOS 18
+  (`IPHONEOS_DEPLOYMENT_TARGET`, which `cap sync` also writes into `CapApp-SPM/Package.swift`). Raise
+  both as vendors drop security support.
 - `yarn build:capacitor` sets `CAPACITOR=1` so Vite uses `base: './'` and omits `VitePWA` — a
   Workbox SW under Capacitor's origin is redundant/harmful; `yarn build` for Pages is unchanged.
   Then `cap sync` (or `yarn cap:android`/`yarn cap:ios`) copies `dist/` into both projects.

@@ -10,8 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **Native Android and iOS apps (#70).** The game now ships as Capacitor native projects
-  (`android/`, `ios/`) with the byte-grid launcher icon and a dark splash screen. A new
-  **Mobile build** workflow produces a debug Android APK and an iOS Simulator app to download.
+  (`android/`, `ios/`) with the byte-grid launcher icon and a dark splash screen; they require
+  Android 14+ or iOS 18+. A new **Mobile build** workflow produces a debug Android APK and an iOS
+  Simulator app to download.
 
 - Added pool-local end-of-progression resets: a completed 9/9/9 Storage Pool at an unreachable
   Booster capacity wall can restart its own disks for permanent Data Lake capacity, speed, and
