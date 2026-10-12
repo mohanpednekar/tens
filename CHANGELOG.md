@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Buy max mode.** After your first Prestige, a **Buy max** toggle (Factory and Compute screens)
+  makes each purchase buy as many levels as you can afford — Factory tiers, tier tickspeed, Latency,
+  Double PP, Auto-Prestige, and Flops tiers. Factory tiers buy full levels only; a partially-filled
+  level still takes its own click.
+
 - **Native Android and iOS apps (#70).** The game now ships as Capacitor native projects
   (`android/`, `ios/`) with the byte-grid launcher icon and a dark splash screen; they require
   Android 14+ or iOS 18+. A new **Mobile build** workflow produces a debug Android APK and an iOS
