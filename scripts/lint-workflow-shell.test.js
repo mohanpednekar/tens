@@ -210,19 +210,14 @@ describe('extractRunBlocks', () => {
     expect(bashSyntaxError(blocks[0].script)).toBeNull();
   });
 
-  it('spans blank lines and skips # comment lines inside an inline continuation', () => {
-    // YAML plain scalars continue across blank lines and `#` lines are
-    // comments, never content — gluing them in would corrupt the linted
-    // script in both directions (false pass and false fail).
-    const text = `steps:\n  - run: if true; then\n        # why\n\n        echo ok\n      fi\n`;
+  it('folds a multi-line plain run value across blank lines', () => {
+    // YAML plain scalars continue across blank lines (each blank = a newline);
+    // this value folds to `if true; then\necho ok fi` — broken bash the lint
+    // must see, not a truncated prefix that happens to parse.
+    const text = `steps:\n  - run: if true; then\n\n        echo ok\n      fi\n`;
     const blocks = extractRunBlocks(text);
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].script).not.toContain('# why');
-    expect(blocks[0].script).toContain('echo ok');
-    expect(blocks[0].script).toContain('fi');
-    // under real YAML semantics this value folds to broken bash (`fi` reads as
-    // an echo argument) — the lint must see the same broken shape, not a
-    // truncated prefix that happens to parse.
+    expect(blocks[0].script).toBe('if true; then\necho ok fi');
     expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
@@ -240,11 +235,29 @@ describe('extractRunBlocks', () => {
     expect(blocks[0].script.trim()).toBe('echo real');
   });
 
-  it('does not lint run:-shaped continuation lines of a plain scalar', () => {
+  it('throws on invalid YAML, and lintFiles reports it as a failure', () => {
+    // a run:-shaped line inside a wrapped plain `name` value isn't valid YAML —
+    // GitHub rejects the workflow, so the lint must fail rather than guess.
     const text = `steps:\n  - name: a title that wraps\n      run: still-the-name-value\n    run: |\n      echo real\n`;
+    expect(() => extractRunBlocks(text)).toThrow();
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'lint-wf-'));
+    const file = path.join(dir, 'bad.yml');
+    fs.writeFileSync(file, text);
+    const { failures } = lintFiles([file]);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].error).toMatch(/invalid YAML/);
+  });
+
+  it('only lints step run values — not look-alike keys under with/env', () => {
+    const text = `steps:\n  - uses: x/y@v1\n    with:\n      run: Deploy (dry run)\n  - run: echo ok\n`;
     const blocks = extractRunBlocks(text);
+    expect(blocks).toEqual([{ line: 5, inline: true, script: 'echo ok' }]);
+  });
+
+  it('extracts run steps from a flow-style steps sequence', () => {
+    const blocks = extractRunBlocks(`jobs:\n  a:\n    steps: [{run: "if true; then"}]\n`);
     expect(blocks).toHaveLength(1);
-    expect(blocks[0].script.trim()).toBe('echo real');
+    expect(bashSyntaxError(blocks[0].script)).not.toBeNull();
   });
 
   it('extracts a quoted run key in a flow-style step ({"run": ...})', () => {
