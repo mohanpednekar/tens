@@ -258,7 +258,7 @@ dangerous --respect-workspace-trust false`, every 4h) consumes the same `claude-
 and both engines share one 5-open-PR ceiling counting `claude/auto-*` and `devin/auto-*` together.
 `devin/auto-*` PRs get the same follow-up and low-risk auto-merge handling as `claude/auto-*`. The
 Devin prompt has no file-scope restriction — it may edit anything including `.github/workflows/` (its
-own file included); changes still land via PR + human review. It requires the same check-feedback →
+own file included); changes still land via PR, and workflow-file changes stay human-gated. It requires the same check-feedback →
 address → resolve → iterate-until-mergeable loop on its own PRs before the run ends (post-run feedback
 is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on every push to `main` and
 comments on any open PR that became conflicted (the comment triggers the follow-up agent on automation

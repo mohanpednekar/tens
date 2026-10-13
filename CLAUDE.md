@@ -254,7 +254,8 @@ bot-authored branch (`scripts/pr-low-risk-eligible.sh`) merges without human app
 alone, or via an adversarial `APPROVE` marker on that same eligible diff; every other PR waits for human
 approval. Their git/GitHub write operations authenticate via the
 `GH_AUTOMATION_PAT` secret, not `GITHUB_TOKEN` (whose pushes/merges can't trigger other workflows;
-read-only guard steps and some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
+read-only guard steps, `autonomous-maintenance.yml`'s "Surface a broken deploy.yml run" alert comment/issue, and
+some workflows, e.g. `devin-workflow-health.yml`/`deploy.yml`, use `GITHUB_TOKEN`). The PAT includes `Workflows: write`, so autonomous runs
 may push `.github/workflows/**` changes when a task authorizes it; `.github/CODEOWNERS` review still
 applies once branch protection requires it (issue #62; `docs/AUTOMATION.md`'s "Auto-merge" prerequisites).
 
@@ -278,8 +279,8 @@ outright), saying so when it deviates from lowest-number order.
 - `devin-autonomous-maintenance.yml` — Devin-CLI counterpart, every 4h (UTC :17), opens `devin/auto-*`
   PRs; agent auth via `DEVIN_CLI_CREDENTIALS`, git/`gh` via `GH_AUTOMATION_PAT`. 5-open-PR ceiling counts
   `devin/auto-*` + `claude/auto-*` together. No file-scope restriction (may edit workflows incl. its own
-  file); every change still lands via PR + human review (`pr-auto-merge.yml` excludes
-  `.github/workflows/**` from green-checks auto-merge). Applies the Pull-requests convention to its own
+  file); every change still lands via PR, and workflow-file changes stay human-gated (`pr-auto-merge.yml`
+  excludes `.github/workflows/**` from green-checks auto-merge). Applies the Pull-requests convention to its own
   PRs; post-run feedback stays `autonomous-pr-followup.yml`'s job.
 - `devin-workflow-health.yml` — daily 00:00 UTC; files an `automation-failure` issue if the workflow
   doesn't parse, hasn't started in 26h, or its latest completed run didn't succeed (any non-`success`
