@@ -1,9 +1,10 @@
 import { APP_NAV_BOTTOM_PAD } from 'components/AppNav'
+import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyHidden } from 'components/Button'
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierTickspeedAutobuyerMilestone, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getAutobuyerUnlockMilestone, getAutoPrestigeAttemptRate, getAutoPrestigeCost, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigeDoublePpUpgradeCost, getPrestigePointsAwarded, getPrestigePpPerPower, getPrestigePowersPerPp, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getSmartAutobuyerCost, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, getTierTickspeedAutobuyerMilestone, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
 import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS, TIER_TICKSPEED_AUTOBUYER_MILESTONE_STEP } from 'game/layers'
 import { hasAffordablePpUpgrade } from 'game/navAttention'
 import { useEffect, useRef, useState } from 'react'
@@ -1041,6 +1042,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   // since the player already knows what Prestige does.
   const isFrozen = isProductionFrozen(state)
   const isFirstRun = prestige.count === 0
+  const buyMaxActive = Boolean(game.buyMaxMode) && isBuyMaxUnlocked(state)
   // The purchase block size every tier's current level currently requires to complete — a single
   // global value (see getPurchaseBlockSize in engine.js), starting at DEFAULT_PURCHASE_BLOCK_SIZE
   // and growing over the course of a run; computed once here rather than per-tier below, since
@@ -1467,6 +1469,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
         </ViewNav>
       )}
 
+      <BuyMaxToggle game={game} />
+
       {view === 'game' && (<>
 
       {globalTickspeedCardEverRevealed && (
@@ -1604,7 +1608,12 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // button must stay disabled until at least 1 generator would remain afterward —
           // matching buyTickspeedMultiplier's own `available >= cost + 1` guard in engine.js.
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
-          const buyLabel = `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
+          // Buy max mode (see BuyMaxToggle/buyTierMaxLevels): when a click would buy one or more
+          // FULL levels, preview those instead of the single-level fill below.
+          const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0 }
+          const buyLabel = maxLevelsPreview.levels > 0
+            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} (${formatAmount(completedLevels)} completed levels)`
+            : `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
           // (via formatCost) in place of its full name. The full sentence stays in aria-label/
@@ -1616,7 +1625,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
           // a column across tier rows regardless of the cost string's length. The level number
           // itself isn't shown here (still available via aria-label and the row's Details
           // disclosure) — this is purely "how close is the current level."
-          const buyLevelQuantityText = `${formatAmount(doneInBlock)}${affordableQuantity > 0 ? `+${formatAmount(affordableQuantity)}` : ''}/${formatAmount(purchaseBlockSize)}`
+          const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)} Lv` : `${formatAmount(doneInBlock)}${affordableQuantity > 0 ? `+${formatAmount(affordableQuantity)}` : ''}/${formatAmount(purchaseBlockSize)}`
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
@@ -1753,7 +1762,7 @@ const MainPage = ({ game, focusNonce = 0 }) => {
                 $pulse={canAfford}
               >
                 <BuyButtonIcon>🛒 {buyLevelQuantityText} </BuyButtonIcon>
-                <BuyButtonCostLabel>{formatCurrency(displayCost)}</BuyButtonCostLabel>
+                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? maxLevelsPreview.cost : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}

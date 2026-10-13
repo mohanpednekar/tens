@@ -156,6 +156,10 @@ const InfoPage = () => {
           <li>
             Hitting <strong>1 Googol Bytes</strong> (8×10^100 Bits) freezes production until you Prestige.
           </li>
+          <li>
+            After your first Prestige, the <strong>Buy max</strong> toggle makes each purchase buy as many
+            levels as you can afford. Tiers buy full levels only — a partially-filled level takes its own click.
+          </li>
         </ul>
       </Section>
 
