@@ -5,6 +5,13 @@ import { adaptSaveForCurrentSchema, SAVE_SCHEMA_VERSION } from 'save-migration'
 
 
 
+// Plain JSON objects only — rejects arrays, class instances and non-Object prototypes, which
+// `typeof === 'object'` would let through.
+const isPlainObject = value =>
+  Boolean(value) &&
+  Object.prototype.toString.call(value) === '[object Object]' &&
+  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
+
 // Drop __proto__/constructor/prototype at parse time so localStorage/Dev JSON cannot pollute merges.
 const safeJsonParse = jsonString =>
   JSON.parse(jsonString, (key, value) => {
@@ -108,12 +115,12 @@ const withSupporterSlots = meta => {
 
 const coerceMeta = raw => {
   const base = buildDefaultMeta()
-  if (!raw || typeof raw !== 'object') return base
+  if (!isPlainObject(raw)) return base
   const supporterUnlocked = Boolean(raw.supporterUnlocked)
   const slotsById = new Map()
   if (Array.isArray(raw.slots)) {
     for (const entry of raw.slots) {
-      if (!entry || typeof entry !== 'object') continue
+      if (!isPlainObject(entry)) continue
       const id = String(entry.id ?? '')
       if (!/^\d+$/.test(id)) continue
       const index = Number(id)
@@ -663,10 +670,6 @@ export const clearDevGameState = () => {
   return { ok: true }
 }
 
-const isPlainObject = value =>
-  Boolean(value) &&
-  Object.prototype.toString.call(value) === '[object Object]' &&
-  (Object.getPrototypeOf(value) === null || Object.getPrototypeOf(value) === Object.prototype)
 
 // Recursive deep merge of `parsed` onto `base`, at any depth: an object-valued field (resources,
 // prestige, intro, intro.dataLakes, intro.dataLakes['1'], ...) is merged key-by-key rather than
