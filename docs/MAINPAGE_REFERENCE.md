@@ -654,7 +654,7 @@ not at the bottom"):
   docs/ECONOMY_REFERENCE.md) rather than derived from `purchased` via division — completing a level means
   buying `getPurchaseBlockSize(state)` pieces of it (a value that can grow over a run, see "Economy
   model"). This shows on the Buy button's visible text as `{progress}+{affordable}/{blockSize}` (e.g.
-  `5+3/8` — how many of the current level's pieces are already bought, plus how many more are
+  `5+3/8` — or `+N Lv` while Buy max mode would buy N full levels, see "Buy button" below — how many of the current level's pieces are already bought, plus how many more are
   affordable right now, over the block size; the `+{affordable}` segment is omitted once nothing is
   currently affordable) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
   rather than centered — this keeps the progress text starting at the same x position across every
@@ -819,7 +819,14 @@ not at the bottom"):
   `App.jsx`'s shared `AppNav`, not as header buttons here.
 - **Buy button.** Manual Buy always grabs as many units as are currently affordable up to the current
   level's cost-block boundary (`getTierAffordableQuantity`/`buyTierQuantity`, capped against
-  `getPurchaseBlockSize(state)`) — no player-facing batch-size control. Renders its cost-block progress as an
+  `getPurchaseBlockSize(state)`). The one player-facing control over this is **Buy max mode**
+  (`components/BuyMaxToggle`, rendered below the Factory/Upgrades tab bar on both tabs and on
+  ComputeFlopsPage once `isBuyMaxUnlocked`): while on, a click that can afford at least one FULL level
+  from zero progress buys every such level (`buyTierMaxLevels`) and the button previews it as
+  `+N Lv` with the summed cost (`getTierMaxLevelsPreview`; aria-label `Buy N full level(s) for …`);
+  otherwise the button keeps the normal single-level text and behavior below. Latency, tier tickspeed,
+  Double PP, Auto-Prestige and Flops buttons keep their single-level cost text but buy every
+  affordable level per click in that mode (`repeatPurchaseMax`). Renders its cost-block progress as an
   on-button gradient fill via `Button`'s `$progress`/`$secondaryProgress` props (green = units already
   bought this level, amber = units affordable now but not yet bought). Prestige gets the same single-tone fill
   treatment (spendable ÷ cost, or `prestigeProgressPercent`), and both pulse (`$pulse`) when
