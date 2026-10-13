@@ -61,7 +61,8 @@ Single test file or name: `yarn test src/game/engine.js.test.js` (vitest run <pa
 
 `.claude/settings.json` registers a `SessionStart` hook (`.claude/hooks/session-start.sh`) that runs
 `yarn install --frozen-lockfile` then `yarn test` synchronously before an interactive session starts,
-printing a `✅`/`‼️` pass/fail summary per step so work begins from a confirmed baseline, plus a third,
+printing a `✅`/`‼️` pass/fail summary per step (the install retries once with `--ignore-engines` and a warning if a container's Node is
+a patch behind a dependency's engines floor — #771) so work begins from a confirmed baseline, plus a third,
 informational-only staleness note for AI-instruction file cost hygiene (below). It always exits 0
 (visibility, not blocking) and is idempotent/non-interactive. Interactive-only: the autonomous workflow
 (`autonomous-maintenance.yml`) does equivalent setup via its own `Enable Corepack`/`Set up Node` steps.

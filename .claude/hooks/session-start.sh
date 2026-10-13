@@ -6,8 +6,15 @@ set -uo pipefail
 
 echo "== Baseline check: yarn install --frozen-lockfile =="
 if ! yarn install --frozen-lockfile; then
-  echo "‼️  yarn install --frozen-lockfile FAILED — dependencies could not be installed cleanly."
-  exit 0
+  # A container whose Node is a patch behind a dependency's "engines" floor (e.g. jsdom 30.1.1
+  # needs ^22.22.2, container ships 22.22.0 — #771) fails the strict install even though the
+  # code runs fine. Retry once ignoring engines, with a loud warning, before giving up.
+  echo "⚠️  Strict install failed (Node $(node -v 2>/dev/null || echo '?')); retrying with --ignore-engines."
+  if ! yarn install --frozen-lockfile --ignore-engines; then
+    echo "‼️  yarn install --frozen-lockfile FAILED — dependencies could not be installed cleanly."
+    exit 0
+  fi
+  echo "⚠️  Installed with --ignore-engines: Node is older than a dependency's declared engine range."
 fi
 
 echo "== Baseline check: yarn test =="
