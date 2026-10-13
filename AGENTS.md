@@ -144,33 +144,33 @@ Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator 
 *derived* from capacity via `getDataStreamSpeedBytesPerSecond`, not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer
-fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no
-manual redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but
-Boosters, which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav
-**Boosters**), only buy via a single per-lake "🎯 `<cost>`" control: it buys immediately if affordable,
-or arms a one-shot `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and
-stops (never a persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches
-9/9/9, the control becomes a non-clickable cost label and every affordable Booster converts
-automatically. Each compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled
-8-slot reserve) once that tier's outbound merge boundary has auto-merge unlocked. A separate PP
-**Compute (Flops)** screen (`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9,
-full-lake, unreachable-next-Booster wall, its pool-local Reset adds 1,000 permanent lake-only capacity,
-empties that pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic
-Booster conversion resumes; rebuilding blocks only new provisioning starts in later pools. The first
-reset fixes lake speed at 50%, and reset two onward uses the normal bandwidth steps (dynamically limited
-by the following pool for non-final pools). The generator, Disks, Data Lakes, and Compute entities are
-permanent across every real Prestige; Era ascension is a bigger reset (`buildEraIntroReset`) that wipes
-Disks/Data Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked`
-latch, and select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
+fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
+redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Boosters,
+which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
+buy via a single per-lake "🎯 `<cost>`" control: it buys immediately if affordable, or arms a one-shot
+`autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
+persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9, the control
+becomes a non-clickable cost label and every affordable Booster converts automatically. Each
+compute-ladder entity caps at 10 normally, or 18 (10 primary + a gradually-filled 8-slot reserve) once
+that tier's outbound merge boundary has auto-merge unlocked. A separate PP **Compute (Flops)** screen
+(`ComputeFlopsPage`, nav **Compute**) reveals at 100 PP. At a pool's 9/9/9, full-lake,
+unreachable-next-Booster wall, its pool-local Reset adds 1,000 permanent lake-only capacity, empties that
+pool's Storage/lake, and free-rebuilds its disks sequentially before persistent automatic Booster
+conversion resumes; rebuilding blocks only new provisioning starts in later pools. The first reset fixes
+lake speed at 50%; reset two onward uses the normal bandwidth steps (dynamically limited by the
+following pool for non-final pools). The generator, Disks, Data Lakes, and Compute entities are
+permanent across every real Prestige; Era ascension (`buildEraIntroReset`) wipes Disks/Data
+Lakes/Compute entity balances to scratch while keeping `byteCreated`, the `mainGameUnlocked` latch, and
+select automation-unlock flags. Only the Data Stream balance resets each ordinary cycle.
 
-**Same caveat as above, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
+**Same caveat, extended to Data Stream Capacity, pool Bandwidth, Provision Disk, Data Lakes
 (fill/Boosters/capacity ladder), stranded-disk handling, the Buy/Upgrade button precedence, and
 pool-liveness-is-Capacity-only — every formula/threshold/UI-rendering/gating detail is deliberately
-omitted; do not guess at any of it.** It's fully documented in `CLAUDE.md`'s "Economy
-model"/"Architecture" sections and `docs/ECONOMY_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`. Read
-those in full before touching `src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or
-`ByteFoundryPage`/`StoragePage`/`ComputePage` — and check `docs/DESIGN_HISTORY.md` first if changing a
-formula/gate a past iteration may already have tried and rejected.
+omitted; do not guess at any of it.** See `CLAUDE.md`'s "Economy model"/"Architecture" and
+`docs/ECONOMY_REFERENCE.md`/`docs/COMPONENTS_REFERENCE.md`; read those before touching
+`src/game/engine.js`, `src/game/layers.js`, `TIER_DEFINITIONS`, or `ByteFoundryPage`/`StoragePage`/
+`ComputePage`, and check `docs/DESIGN_HISTORY.md` first if changing a formula/gate a past iteration may
+already have tried and rejected.
 
 After **100 lifetime prestiges**, production no longer freezes at 1 Googol Bytes (optional Prestige
 to claim PP); PP earns 1 per 64 money-exponent powers beyond Googol, improvable via Double PP
