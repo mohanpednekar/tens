@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Buy max mode.** After your first Prestige, a **Buy max** toggle (Factory and Compute screens)
+  makes each purchase buy as many levels as you can afford — Factory tiers, tier tickspeed, Latency,
+  Double PP, Auto-Prestige, and Flops tiers. Factory tiers buy full levels only; a partially-filled
+  level still takes its own click.
+
 - **Native Android and iOS apps (#70).** The game now ships as Capacitor native projects
   (`android/`, `ios/`) with the byte-grid launcher icon and a dark splash screen; they require
   Android 14+ or iOS 18+. A new **Mobile build** workflow produces a debug Android APK and an iOS
@@ -195,6 +200,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Added `focus-visible` outline styles to TierNameTrigger and other interactive components.
 
 ### Security
+- **Saves must be plain JSON objects.** Loading a save (or Dev Mode JSON) now rejects anything
+  that isn't a plain object — arrays, class instances, or other non-plain payloads — and treats it
+  as an invalid save instead of merging it into game state.
 - Harden `storage.js` JSON loads (`safeJsonParse`) against prototype pollution via `__proto__` /
   `constructor` keys (supersedes #478 / #480).
 - Fixed object prototype checks in `storage.js` to handle Custom and null prototype objects correctly.
