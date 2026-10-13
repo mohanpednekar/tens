@@ -51,6 +51,7 @@ yarn test:watch   # watch mode, host 127.0.0.1
 yarn test:e2e     # run the Playwright end-to-end suite (real chromium, against yarn dev) — see "Testing"
 yarn audit        # yarn audit (Yarn Classic v1's built-in audit — no --all/--recursive flags; it
                   # already covers dependencies/devDependencies/optionalDependencies by default)
+yarn lint:workflows # bash -n every `run:` block in .github/workflows/*.yml + .github/actions/** (#738)
 yarn bump-version # move CHANGELOG ## [Unreleased] → dated ## [x.y.z] + bump package.json
                   # (minor if Added/Removed entries, else patch; no-op if Unreleased empty)
 yarn gen-pwa-icons # regenerate public/pwa-*.png + apple-touch-icon.png + favicon.ico from scripts/generate-pwa-icons.mjs
@@ -81,8 +82,9 @@ list (see `docs/DESIGN_HISTORY.md`) — so this hook could only be added from an
 > be named `.jsx`, not `.js`, or the build/tests will fail. Plain styled-components definitions (no JSX)
 > stay `.js` (see `src/components/*/index.js`).
 
-There is no configured lint script (`yarn lint` does not exist) and no CI job for linting — CI only runs
-`yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
+There is no general code lint (`yarn lint` does not exist). CI's required `test` job runs `yarn
+lint:workflows` (`scripts/lint-workflow-shell.mjs` — `bash -n` over every workflow/action `run:` block,
+#738) and then `yarn test`. `.github/workflows/deploy.yml` runs `yarn build` and publishes `dist/` to GitHub Pages on
 push to `main`. Automated Copilot review on PRs is configured through GitHub's repository settings, not
 an explicit workflow file.
 
@@ -1201,7 +1203,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1906 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1960 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1218,10 +1220,10 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 16 files; the other five are
+  `navAttention.test.js` that's 11 of the 17 files; the other six are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
-  `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`, and
-  `scripts/classify-claude-failure.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
+  `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
+  `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
   block sets no custom `include`.
 
 ### End-to-end testing
