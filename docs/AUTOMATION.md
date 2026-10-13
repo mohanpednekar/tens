@@ -101,6 +101,18 @@ via Phase B item 5's self-improvement task) edits the heredoc inside the `Compos
 `with.prompt:` block — and should keep new dynamic values passed the same way (a step output
 substituted via bash parameter expansion), not as an inline `${{ }}` back in the `with:` block.
 
+A second incident in the same class — #709's dropped `}` closer inside a guard-step `run: |` block,
+which silently failed every scheduled run for two days (#738) — is closed by a different guard:
+`scripts/lint-workflow-shell.mjs` (`yarn lint:workflows`) extracts every `run:` block in
+`.github/workflows/*.yml` and `.github/actions/**` (composite actions included — a broken one takes
+every workflow down identically) and runs `bash -n` on each, wired as a step in `ci.yml`'s required
+`test` job. It lives inside that job (not as its own job) so the check is merge-blocking under the
+existing branch-protection requirement without a settings change. Extraction uses the `yaml`
+package's parser (an earlier hand-written indentation scanner kept missing YAML edge cases — ~48
+review findings on #739), linting only the scalar `run` value of steps on paths Actions executes (`jobs.<id>.steps`, composite `runs.steps`, nested `parallel:` groups), aliases resolved, so `with.run`,
+`defaults.run` and `run:`-looking text inside other scalars can't false-positive; a file that isn't
+valid YAML fails the lint. `${{ }}` expressions are placeholder-substituted before `bash -n`.
+
 **Guard-step list feeds are explicitly `--limit`-ed and, for the task backlog, capped/sorted for
 display.** `gh issue list`/`gh pr list` default to `--limit 30`, newest-first — a silent truncation,
 not an error, on any repo with more open items than that. This repo hit it for real: with 30+ open
