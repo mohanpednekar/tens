@@ -1205,7 +1205,8 @@ base path.
 - Current specs (see "Repo layout" `e2e/` for one-line descriptions): `golden-path`, `autobuyer-reload`,
   `prestige` (seeding Money ≥ `PRESTIGE_THRESHOLD`; first-time `FullScreenOverlay`), `meta-prestige`
   (seed at 1 Googol PP → Settings Era ascension → assert `era.count`, Eons award, and the permanent
-  `intro.mainGameUnlocked` latch carrying forward), and `data-lake`.
+  `intro.mainGameUnlocked` latch carrying forward), `data-lake`, and `visual-regression` (Linux-only
+  full-page screenshot baselines of Byte Foundry/Byte Factory in both themes; see `e2e/README.md`).
 - **Not wired into `ci.yml`** — deliberately. Wiring it in (installing Playwright's browser on the
   runner, adding a job/step) means editing `ci.yml`, which is off-limits to `autonomous-maintenance.yml`
   (see docs/AUTOMATION.md) — a human needs to do that directly. `yarn test:e2e` is a local/manual suite
