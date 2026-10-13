@@ -1,4 +1,5 @@
 import Button, { ButtonContent } from 'components/Button'
+import BuyMaxToggle from 'components/BuyMaxToggle'
 import Money from 'components/Money'
 import StatCard from 'components/StatCard'
 import {
@@ -100,6 +101,8 @@ const ComputeFlopsPage = ({ game }) => {
           {formatComputeFlopsTotal(totalFlops)}
         </FlopsHero>
       </Header>
+
+      <BuyMaxToggle game={game} />
 
       <Hint>
         Unlocks at {COMPUTE_FLOPS_REVEAL_PP} PP — you have {formatAmount(pp)} PP.

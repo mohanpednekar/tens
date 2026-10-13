@@ -473,6 +473,8 @@ src/
                                mechanic.
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
+    BuyMaxToggle/index.jsx  ← Buy max mode toggle (MainPage + ComputeFlopsPage); renders nothing until
+                               `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
                                SettingsPage's Era ascension action. Full
                                contract: `docs/COMPONENTS_REFERENCE.md`
@@ -625,7 +627,7 @@ Strict three-layer separation:
    up from MainPage so `ByteFoundryPage` shares the save/tick loop). Owns the `setInterval` tick timer
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
    resetByteFoundry, offlineProgress, dismissOfflineProgress, incompatibleSaveReason,
-   dismissIncompatibleSaveNotice, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
+   dismissIncompatibleSaveNotice, buyMaxMode, setBuyMaxMode, savesMeta, saveSlots, switchSaveSlot, renameSaveSlot,
    redeemUnlockCode, purchaseSupporterDummy, opsSamples, clearSlot, eraseAllSaveProgress,
    devModeActive, toggleDevMode, setDevState, applyDevStateJson, resetDevState }` — the last five back
    Dev Mode (see "Dev Mode"); always present on the return value (not gated by `import.meta.env.DEV`)
@@ -1072,6 +1074,12 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
+**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`) — a per-device toggle
+(`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
+`buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
+falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
+Detail: `docs/ECONOMY_REFERENCE.md`'s "Buy max mode".
+
 Scale Up uses persisted, run-scoped `scaleUpTierCounts`: each claim doubles the current target and all
 earlier tiers, while the newly recorded successor begins at ×1. Requirements are based on the target
 tier's **completed levels** (`purchaseLevels − 1`): each of the first ten Scale Ups requires 3 completed
@@ -1193,7 +1201,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1896 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1906 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoScaleUp, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierQuantity, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, pinMuseumEntry, prestigeGame, provisionDisk, queueDiskBuild, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, resetStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
+import { activateComputeBoost, applyOfflineProgress, buyAutoPrestige, buyAutoPrestigeAutobuyer, buyAutoScaleUp, buyComputeAutoBoost, buyComputeFlopsTier, buyGlobalTickspeedMultiplier, buyHyperscaler, buyPrestigeDoublePp, buyPrestigeSpeedBonus, buySmartAutobuyer, buyTickspeedAutobuyer, buyTickspeedMultiplier, buyTierMaxLevels, buyTierQuantity, clearDiskBuildQueue, clearIntroCapacityUpgradeQueue, combineIntroByte, consumeXpForLastTierTickspeed, convertIntroBitsToKilobytes, createInitialGameState, doubleDataLakeCapacity, enableAutoMergeClustersIntoNetwork, enableAutoMergeCloudsIntoDatacenter, enableAutoMergeCoresIntoNode, enableAutoMergeDatacentersIntoSupercomputer, enableAutoMergeFabricsIntoCloud, enableAutoMergeGridsIntoFabric, enableAutoMergeNetworksIntoGrid, enableAutoMergeNodesIntoCluster, enableAutoMergeSupercomputersIntoMegacomputer, eraGame, getOfflineEffectiveSeconds, isBuyMaxUnlocked, latchComputeFlopsPageUnlocked, mergeComputeClustersIntoNetwork, mergeComputeCloudsIntoDatacenter, mergeComputeCoresIntoNode, mergeComputeDatacentersIntoSupercomputer, mergeComputeFabricsIntoCloud, mergeComputeGridsIntoFabric, mergeComputeNetworksIntoGrid, mergeComputeNodesIntoCluster, mergeComputeSupercomputersIntoMegacomputer, normalizePoolMemoryCapacity, overclockGame, pickIntroCapacityMilestone, pinMuseumEntry, prestigeGame, provisionDisk, queueDiskBuild, repeatPurchaseMax, reclaimComputeBoost, forfeitComputeBoost, resetByteFoundry, resetStoragePool, setAutobuyerEnabled, setAutoGlobalTickspeedEnabled, setAutoPrestigeAutobuyerEnabled, setAutoPrestigeEnabled, setAutoScaleUpEnabled, setComputeAutoBoostType, setComputeFlopsAutobuyerEnabled, setTierTickspeedAutobuyerEnabled, scaleUpGame, stackComputeBoost, startComputeCloudsMerge, startComputeClustersMerge, startComputeCoresMerge, startComputeDatacentersMerge, startComputeFabricsMerge, startComputeGridsMerge, startComputeNetworksMerge, startComputeNodesMerge, startComputeSupercomputersMerge, startDataLakeAutoConvert, tapIntroBit, tapPoolBuffer, tickGame, unpinMuseumEntry } from './engine'
 import { MONEY_ID, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, OPS_SAMPLE_CAP, OPS_SAMPLE_INTERVAL_MS, TICK_RATE_MS } from './layers'
-import { applyDevGameStateJson, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
+import { applyDevGameStateJson, loadBuyMaxPreference, saveBuyMaxPreference, clearAllSaveProgress, clearDevGameState, clearGameState, clearSaveSlot, completeDummySupporterPurchase, discardIncompatibleActiveSaveIfNeeded, isDevModeActive, listSaveSlots, loadGameState, loadLastSaveTimestamp, loadSavesMeta, redeemSupporterUnlockCode, renameSaveSlot, saveGameState, setActiveSaveSlot, setDevModeActive } from './storage'
 
 // Every purchase — manual Buy and autobuyer ticks alike — always batches up to the current
 // level's cost-block boundary. The actual cap is applied dynamically inside the engine (see
@@ -55,208 +55,224 @@ const computeInitialGame = () => {
   const loaded = loadGameState()
   if (!loaded) {
     return {
-      state: createInitialGameState(),
-      offlineProgress: null,
-      incompatibleSaveReason,
+        state: createInitialGameState(),
+        offlineProgress: null,
+        incompatibleSaveReason,
+      }
+    }
+
+    const lastSaveTimestamp = loadLastSaveTimestamp()
+    const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
+    const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded)
+    const result = caughtUp ?? { state: loaded, offlineProgress: null }
+    return {
+      ...result,
+      state: latchComputeFlopsPageUnlocked(result.state),
+      incompatibleSaveReason: null,
     }
   }
 
-  const lastSaveTimestamp = loadLastSaveTimestamp()
-  const elapsedRealSeconds = lastSaveTimestamp ? (Date.now() - lastSaveTimestamp) / 1000 : 0
-  const caughtUp = computeOfflineCatchUp(elapsedRealSeconds, loaded)
-  const result = caughtUp ?? { state: loaded, offlineProgress: null }
-  return {
-    ...result,
-    state: latchComputeFlopsPageUnlocked(result.state),
-    incompatibleSaveReason: null,
-  }
-}
+  export const useIncrementalGame = () => {
+    // Computed once — the lazy initializer only ever runs on mount — and read into two more
+    // useStates below rather than one combined state, since actions.* only ever needs to touch
+    // `state`, not the one-shot offlineProgress summary.
+    const [initial] = useState(computeInitialGame)
+    const [state, setState] = useState(initial.state)
+    const [offlineProgress, setOfflineProgress] = useState(initial.offlineProgress)
+    const [incompatibleSaveReason, setIncompatibleSaveReason] = useState(initial.incompatibleSaveReason)
+    const [savesMeta, setSavesMeta] = useState(() => loadSavesMeta())
+    const [saveSlots, setSaveSlots] = useState(() => listSaveSlots())
+    // Dev Mode (see pages/DevModePage) — whether the app is currently reading/writing the separate
+    // dev save instead of the real active player slot. Its own entry point is gated behind
+    // import.meta.env.DEV, so this stays inert (and unreachable) in a production build.
+    const [devModeActive, setDevModeActiveState] = useState(() => isDevModeActive())
+    // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
+    const [opsSamples, setOpsSamples] = useState([])
 
-export const useIncrementalGame = () => {
-  // Computed once — the lazy initializer only ever runs on mount — and read into two more
-  // useStates below rather than one combined state, since actions.* only ever needs to touch
-  // `state`, not the one-shot offlineProgress summary.
-  const [initial] = useState(computeInitialGame)
-  const [state, setState] = useState(initial.state)
-  const [offlineProgress, setOfflineProgress] = useState(initial.offlineProgress)
-  const [incompatibleSaveReason, setIncompatibleSaveReason] = useState(initial.incompatibleSaveReason)
-  const [savesMeta, setSavesMeta] = useState(() => loadSavesMeta())
-  const [saveSlots, setSaveSlots] = useState(() => listSaveSlots())
-  // Dev Mode (see pages/DevModePage) — whether the app is currently reading/writing the separate
-  // dev save instead of the real active player slot. Its own entry point is gated behind
-  // import.meta.env.DEV, so this stays inert (and unreachable) in a production build.
-  const [devModeActive, setDevModeActiveState] = useState(() => isDevModeActive())
-  // In-session Ops dashboard samples — not persisted; meta QoL sparkline only.
-  const [opsSamples, setOpsSamples] = useState([])
+    // Mirrors `state` for the tick-loop effect below to read without depending on `state` itself —
+    // depending on it would tear down and recreate the interval/listener (and, worse, reset the
+    // gap-detection clock) on every single tick.
+    const stateRef = useRef(state)
+    useEffect(() => { stateRef.current = state }, [state])
 
-  // Mirrors `state` for the tick-loop effect below to read without depending on `state` itself —
-  // depending on it would tear down and recreate the interval/listener (and, worse, reset the
-  // gap-detection clock) on every single tick.
-  const stateRef = useRef(state)
-  useEffect(() => { stateRef.current = state }, [state])
+    const refreshSavesUi = useCallback(() => {
+      setSavesMeta(loadSavesMeta())
+      setSaveSlots(listSaveSlots())
+    }, [])
 
-  const refreshSavesUi = useCallback(() => {
-    setSavesMeta(loadSavesMeta())
-    setSaveSlots(listSaveSlots())
-  }, [])
+    useEffect(() => {
+      // Real wall-clock time of the most recently processed tick (live or catch-up), used to detect
+      // a gap much larger than TICK_RATE_MS between two ticks — mobile browsers/PWA hosts routinely
+      // throttle or fully suspend a backgrounded tab's setInterval timer without ever tearing the
+      // page down, so the mount-time computeInitialGame check above (a one-shot effect that only
+      // ever runs again on a real remount/page reload) silently misses that time entirely: the app
+      // just resumes ticking forward from wherever it left off, with no catch-up and no notice. A
+      // plain closure variable, not a ref, since it's only ever read/written from inside this same
+      // effect's own callbacks.
+      let lastTickRealTime = Date.now()
 
-  useEffect(() => {
-    // Real wall-clock time of the most recently processed tick (live or catch-up), used to detect
-    // a gap much larger than TICK_RATE_MS between two ticks — mobile browsers/PWA hosts routinely
-    // throttle or fully suspend a backgrounded tab's setInterval timer without ever tearing the
-    // page down, so the mount-time computeInitialGame check above (a one-shot effect that only
-    // ever runs again on a real remount/page reload) silently misses that time entirely: the app
-    // just resumes ticking forward from wherever it left off, with no catch-up and no notice. A
-    // plain closure variable, not a ref, since it's only ever read/written from inside this same
-    // effect's own callbacks.
-    let lastTickRealTime = Date.now()
+      // Shared by the interval below and the visibilitychange listener. lastTickRealTime is stamped
+      // only after the tick/catch-up work below actually finishes, not at entry — a large catch-up
+      // replays applyOfflineProgress one simulated second at a time (up to MAX_OFFLINE_SECONDS worth),
+      // which can itself take real wall-clock time to compute on a slow device; stamping at entry
+      // would let that processing time be mistaken for a further background gap by whichever call
+      // runs next, double-counting it. This is safe specifically because JS is single-threaded and
+      // this function is fully synchronous — two calls to runTick can never overlap, so the next call
+      // (whether from the interval or the visibilitychange listener) only ever starts after this one
+      // has fully returned and already restamped lastTickRealTime, never mid-flight.
+      const runTick = () => {
+        const now = Date.now()
+        const gapSeconds = (now - lastTickRealTime) / 1000
 
-    // Shared by the interval below and the visibilitychange listener. lastTickRealTime is stamped
-    // only after the tick/catch-up work below actually finishes, not at entry — a large catch-up
-    // replays applyOfflineProgress one simulated second at a time (up to MAX_OFFLINE_SECONDS worth),
-    // which can itself take real wall-clock time to compute on a slow device; stamping at entry
-    // would let that processing time be mistaken for a further background gap by whichever call
-    // runs next, double-counting it. This is safe specifically because JS is single-threaded and
-    // this function is fully synchronous — two calls to runTick can never overlap, so the next call
-    // (whether from the interval or the visibilitychange listener) only ever starts after this one
-    // has fully returned and already restamped lastTickRealTime, never mid-flight.
-    const runTick = () => {
-      const now = Date.now()
-      const gapSeconds = (now - lastTickRealTime) / 1000
-
-      if (gapSeconds > BACKGROUND_TICK_GAP_THRESHOLD_SECONDS) {
-        const caughtUp = computeOfflineCatchUp(gapSeconds, stateRef.current)
-        if (caughtUp) {
-          setState(caughtUp.state)
-          setOfflineProgress(caughtUp.offlineProgress)
-          lastTickRealTime = Date.now()
-          return
+        if (gapSeconds > BACKGROUND_TICK_GAP_THRESHOLD_SECONDS) {
+          const caughtUp = computeOfflineCatchUp(gapSeconds, stateRef.current)
+          if (caughtUp) {
+            setState(caughtUp.state)
+            setOfflineProgress(caughtUp.offlineProgress)
+            lastTickRealTime = Date.now()
+            return
+          }
         }
+
+        setState(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY))
+        lastTickRealTime = Date.now()
       }
 
-      setState(tickGame(TICK_RATE_MS / 1000, BUY_QUANTITY))
-      lastTickRealTime = Date.now()
-    }
+      const intervalId = window.setInterval(runTick, TICK_RATE_MS)
 
-    const intervalId = window.setInterval(runTick, TICK_RATE_MS)
+      // Fires immediately on resume (foregrounding the tab/app, unlocking the phone, switching back
+      // from another app) rather than waiting for the interval's own next scheduled firing, which a
+      // fully suspended timer may never reach on its own until some other event wakes the page.
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') runTick()
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Fires immediately on resume (foregrounding the tab/app, unlocking the phone, switching back
-    // from another app) rather than waiting for the interval's own next scheduled firing, which a
-    // fully suspended timer may never reach on its own until some other event wakes the page.
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') runTick()
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+      return () => {
+        window.clearInterval(intervalId)
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
+    }, [])
 
-    return () => {
-      window.clearInterval(intervalId)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    // Persist to localStorage whenever state changes
+    useEffect(() => {
+      saveGameState(state)
+    }, [state])
+
+    // Ops sparkline sampling — only while Supporter is unlocked (avoids useless work for free).
+    useEffect(() => {
+      if (!savesMeta.supporterUnlocked) {
+        setOpsSamples([])
+        return undefined
+      }
+      const sample = () => {
+        const s = stateRef.current
+        setOpsSamples(prev => {
+          const next = [
+            ...prev,
+            {
+              t: Date.now(),
+              money: s.resources?.[MONEY_ID] ?? 0,
+              prestigePoints: s.prestige?.points ?? 0,
+            },
+          ]
+          return next.length > OPS_SAMPLE_CAP ? next.slice(next.length - OPS_SAMPLE_CAP) : next
+        })
+      }
+      sample()
+      const id = window.setInterval(sample, OPS_SAMPLE_INTERVAL_MS)
+      return () => window.clearInterval(id)
+    }, [savesMeta.supporterUnlocked, savesMeta.activeSlotId])
+
+    // Buy max mode (see isBuyMaxUnlocked in engine.js): a per-device preference, read through a ref
+    // so the memoized actions below always see the current toggle without being rebuilt.
+    const [buyMaxMode, setBuyMaxModeState] = useState(loadBuyMaxPreference)
+    const buyMaxModeRef = useRef(buyMaxMode)
+    const setBuyMaxMode = useCallback(enabled => {
+      buyMaxModeRef.current = Boolean(enabled)
+      saveBuyMaxPreference(Boolean(enabled))
+      setBuyMaxModeState(Boolean(enabled))
+    }, [])
+
+    const actions = useMemo(() => {
+      // Leveled manual purchases pick their Buy-max variant only while the mode is on AND unlocked
+      // for the state being updated — the engine stays the source of truth for the unlock.
+      const buyOneOrMax = (single, max) =>
+        setState(prev => (buyMaxModeRef.current && isBuyMaxUnlocked(prev) ? max : single)(prev))
+      return {
+      buyTierQuantity: tierId => buyOneOrMax(buyTierQuantity(tierId, BUY_QUANTITY), buyTierMaxLevels(tierId)),
+      buyTickspeedMultiplier: tierId => buyOneOrMax(buyTickspeedMultiplier(tierId), repeatPurchaseMax(buyTickspeedMultiplier(tierId))),
+      buySmartAutobuyer: tierId => setState(buySmartAutobuyer(tierId)),
+      buyAutoPrestige: () => buyOneOrMax(buyAutoPrestige, repeatPurchaseMax(buyAutoPrestige)),
+      buyAutoPrestigeAutobuyer: () => setState(buyAutoPrestigeAutobuyer),
+      buyGlobalTickspeedMultiplier: () => buyOneOrMax(buyGlobalTickspeedMultiplier, repeatPurchaseMax(buyGlobalTickspeedMultiplier)),
+      buyPrestigeSpeedBonus: () => setState(buyPrestigeSpeedBonus),
+      buyPrestigeDoublePp: () => buyOneOrMax(buyPrestigeDoublePp, repeatPurchaseMax(buyPrestigeDoublePp)),
+      buyComputeFlopsTier: flopId => buyOneOrMax(buyComputeFlopsTier(flopId), repeatPurchaseMax(buyComputeFlopsTier(flopId))),
+      buyHyperscaler: () => setState(buyHyperscaler),
+      eraAscend: () => setState(eraGame),
+      prestige: () => setState(prestigeGame),
+      scaleUp: () => setState(scaleUpGame),
+      overclock: () => setState(overclockGame),
+      buyAutoScaleUp: () => setState(buyAutoScaleUp),
+      buyComputeAutoBoost: () => setState(buyComputeAutoBoost),
+      setComputeAutoBoostType: boostType => setState(setComputeAutoBoostType(boostType)),
+      buyTickspeedAutobuyer: () => setState(buyTickspeedAutobuyer),
+      consumeXpForLastTierTickspeed: amount => setState(consumeXpForLastTierTickspeed(amount)),
+      setAutoScaleUpEnabled: enabled => setState(setAutoScaleUpEnabled(enabled)),
+      setAutoGlobalTickspeedEnabled: enabled => setState(setAutoGlobalTickspeedEnabled(enabled)),
+      setAutoPrestigeEnabled: enabled => setState(setAutoPrestigeEnabled(enabled)),
+      setAutoPrestigeAutobuyerEnabled: enabled => setState(setAutoPrestigeAutobuyerEnabled(enabled)),
+      setAutobuyerEnabled: (tierId, enabled) => setState(setAutobuyerEnabled(tierId, enabled)),
+      setTierTickspeedAutobuyerEnabled: (tierId, enabled) => setState(setTierTickspeedAutobuyerEnabled(tierId, enabled)),
+      setComputeFlopsAutobuyerEnabled: (flopId, enabled) => setState(setComputeFlopsAutobuyerEnabled(flopId, enabled)),
+      tapIntroBit: () => setState(tapIntroBit),
+      tapPoolBuffer: poolIndex => setState(tapPoolBuffer(poolIndex)),
+      combineIntroByte: () => setState(combineIntroByte),
+      pickIntroCapacityMilestone: () => setState(pickIntroCapacityMilestone),
+      clearIntroCapacityUpgradeQueue: () => setState(clearIntroCapacityUpgradeQueue),
+      convertIntroBitsToKilobytes: () => setState(convertIntroBitsToKilobytes),
+      provisionDisk: () => setState(provisionDisk),
+      queueDiskBuild: () => setState(queueDiskBuild),
+      clearDiskBuildQueue: () => setState(clearDiskBuildQueue),
+      doubleDataLakeCapacity: tierIndex => setState(doubleDataLakeCapacity(tierIndex)),
+      activateComputeBoost: (boostType, tierIndex, forfeitConfirmed = false) => setState(activateComputeBoost(boostType, tierIndex, forfeitConfirmed)),
+      stackComputeBoost: () => setState(stackComputeBoost),
+      reclaimComputeBoost: () => setState(reclaimComputeBoost),
+      forfeitComputeBoost: () => setState(forfeitComputeBoost),
+      mergeComputeCoresIntoNode: () => setState(mergeComputeCoresIntoNode),
+      mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
+      mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
+      mergeComputeNetworksIntoGrid: () => setState(mergeComputeNetworksIntoGrid),
+      mergeComputeGridsIntoFabric: () => setState(mergeComputeGridsIntoFabric),
+      mergeComputeFabricsIntoCloud: () => setState(mergeComputeFabricsIntoCloud),
+      mergeComputeCloudsIntoDatacenter: () => setState(mergeComputeCloudsIntoDatacenter),
+      mergeComputeDatacentersIntoSupercomputer: () => setState(mergeComputeDatacentersIntoSupercomputer),
+      mergeComputeSupercomputersIntoMegacomputer: () => setState(mergeComputeSupercomputersIntoMegacomputer),
+      enableAutoMergeCoresIntoNode: () => setState(enableAutoMergeCoresIntoNode),
+      enableAutoMergeNodesIntoCluster: () => setState(enableAutoMergeNodesIntoCluster),
+      enableAutoMergeClustersIntoNetwork: () => setState(enableAutoMergeClustersIntoNetwork),
+      enableAutoMergeNetworksIntoGrid: () => setState(enableAutoMergeNetworksIntoGrid),
+      enableAutoMergeGridsIntoFabric: () => setState(enableAutoMergeGridsIntoFabric),
+      enableAutoMergeFabricsIntoCloud: () => setState(enableAutoMergeFabricsIntoCloud),
+      enableAutoMergeCloudsIntoDatacenter: () => setState(enableAutoMergeCloudsIntoDatacenter),
+      enableAutoMergeDatacentersIntoSupercomputer: () => setState(enableAutoMergeDatacentersIntoSupercomputer),
+      enableAutoMergeSupercomputersIntoMegacomputer: () => setState(enableAutoMergeSupercomputersIntoMegacomputer),
+      startComputeCoresMerge: () => setState(startComputeCoresMerge),
+      startComputeNodesMerge: () => setState(startComputeNodesMerge),
+      startComputeClustersMerge: () => setState(startComputeClustersMerge),
+      startComputeNetworksMerge: () => setState(startComputeNetworksMerge),
+      startComputeGridsMerge: () => setState(startComputeGridsMerge),
+      startComputeFabricsMerge: () => setState(startComputeFabricsMerge),
+      startComputeCloudsMerge: () => setState(startComputeCloudsMerge),
+      startComputeDatacentersMerge: () => setState(startComputeDatacentersMerge),
+      startComputeSupercomputersMerge: () => setState(startComputeSupercomputersMerge),
+      startDataLakeAutoConvert: tierIndex => setState(startDataLakeAutoConvert(tierIndex)),
+      resetStoragePool: tierIndex => setState(resetStoragePool(tierIndex)),
+      pinMuseumEntry: entryId => setState(pinMuseumEntry(entryId)),
+      unpinMuseumEntry: entryId => setState(unpinMuseumEntry(entryId)),
     }
   }, [])
-
-  // Persist to localStorage whenever state changes
-  useEffect(() => {
-    saveGameState(state)
-  }, [state])
-
-  // Ops sparkline sampling — only while Supporter is unlocked (avoids useless work for free).
-  useEffect(() => {
-    if (!savesMeta.supporterUnlocked) {
-      setOpsSamples([])
-      return undefined
-    }
-    const sample = () => {
-      const s = stateRef.current
-      setOpsSamples(prev => {
-        const next = [
-          ...prev,
-          {
-            t: Date.now(),
-            money: s.resources?.[MONEY_ID] ?? 0,
-            prestigePoints: s.prestige?.points ?? 0,
-          },
-        ]
-        return next.length > OPS_SAMPLE_CAP ? next.slice(next.length - OPS_SAMPLE_CAP) : next
-      })
-    }
-    sample()
-    const id = window.setInterval(sample, OPS_SAMPLE_INTERVAL_MS)
-    return () => window.clearInterval(id)
-  }, [savesMeta.supporterUnlocked, savesMeta.activeSlotId])
-
-  const actions = useMemo(() => ({
-    buyTierQuantity: tierId => setState(buyTierQuantity(tierId, BUY_QUANTITY)),
-    buyTickspeedMultiplier: tierId => setState(buyTickspeedMultiplier(tierId)),
-    buySmartAutobuyer: tierId => setState(buySmartAutobuyer(tierId)),
-    buyAutoPrestige: () => setState(buyAutoPrestige),
-    buyAutoPrestigeAutobuyer: () => setState(buyAutoPrestigeAutobuyer),
-    buyGlobalTickspeedMultiplier: () => setState(buyGlobalTickspeedMultiplier),
-    buyPrestigeSpeedBonus: () => setState(buyPrestigeSpeedBonus),
-    buyPrestigeDoublePp: () => setState(buyPrestigeDoublePp),
-    buyComputeFlopsTier: flopId => setState(buyComputeFlopsTier(flopId)),
-    buyHyperscaler: () => setState(buyHyperscaler),
-    eraAscend: () => setState(eraGame),
-    prestige: () => setState(prestigeGame),
-    scaleUp: () => setState(scaleUpGame),
-    overclock: () => setState(overclockGame),
-    buyAutoScaleUp: () => setState(buyAutoScaleUp),
-    buyComputeAutoBoost: () => setState(buyComputeAutoBoost),
-    setComputeAutoBoostType: boostType => setState(setComputeAutoBoostType(boostType)),
-    buyTickspeedAutobuyer: () => setState(buyTickspeedAutobuyer),
-    consumeXpForLastTierTickspeed: amount => setState(consumeXpForLastTierTickspeed(amount)),
-    setAutoScaleUpEnabled: enabled => setState(setAutoScaleUpEnabled(enabled)),
-    setAutoGlobalTickspeedEnabled: enabled => setState(setAutoGlobalTickspeedEnabled(enabled)),
-    setAutoPrestigeEnabled: enabled => setState(setAutoPrestigeEnabled(enabled)),
-    setAutoPrestigeAutobuyerEnabled: enabled => setState(setAutoPrestigeAutobuyerEnabled(enabled)),
-    setAutobuyerEnabled: (tierId, enabled) => setState(setAutobuyerEnabled(tierId, enabled)),
-    setTierTickspeedAutobuyerEnabled: (tierId, enabled) => setState(setTierTickspeedAutobuyerEnabled(tierId, enabled)),
-    setComputeFlopsAutobuyerEnabled: (flopId, enabled) => setState(setComputeFlopsAutobuyerEnabled(flopId, enabled)),
-    tapIntroBit: () => setState(tapIntroBit),
-    tapPoolBuffer: poolIndex => setState(tapPoolBuffer(poolIndex)),
-    combineIntroByte: () => setState(combineIntroByte),
-    pickIntroCapacityMilestone: () => setState(pickIntroCapacityMilestone),
-    clearIntroCapacityUpgradeQueue: () => setState(clearIntroCapacityUpgradeQueue),
-    convertIntroBitsToKilobytes: () => setState(convertIntroBitsToKilobytes),
-    provisionDisk: () => setState(provisionDisk),
-    queueDiskBuild: () => setState(queueDiskBuild),
-    clearDiskBuildQueue: () => setState(clearDiskBuildQueue),
-    doubleDataLakeCapacity: tierIndex => setState(doubleDataLakeCapacity(tierIndex)),
-    activateComputeBoost: (boostType, tierIndex, forfeitConfirmed = false) => setState(activateComputeBoost(boostType, tierIndex, forfeitConfirmed)),
-    stackComputeBoost: () => setState(stackComputeBoost),
-    reclaimComputeBoost: () => setState(reclaimComputeBoost),
-    forfeitComputeBoost: () => setState(forfeitComputeBoost),
-    mergeComputeCoresIntoNode: () => setState(mergeComputeCoresIntoNode),
-    mergeComputeNodesIntoCluster: () => setState(mergeComputeNodesIntoCluster),
-    mergeComputeClustersIntoNetwork: () => setState(mergeComputeClustersIntoNetwork),
-    mergeComputeNetworksIntoGrid: () => setState(mergeComputeNetworksIntoGrid),
-    mergeComputeGridsIntoFabric: () => setState(mergeComputeGridsIntoFabric),
-    mergeComputeFabricsIntoCloud: () => setState(mergeComputeFabricsIntoCloud),
-    mergeComputeCloudsIntoDatacenter: () => setState(mergeComputeCloudsIntoDatacenter),
-    mergeComputeDatacentersIntoSupercomputer: () => setState(mergeComputeDatacentersIntoSupercomputer),
-    mergeComputeSupercomputersIntoMegacomputer: () => setState(mergeComputeSupercomputersIntoMegacomputer),
-    enableAutoMergeCoresIntoNode: () => setState(enableAutoMergeCoresIntoNode),
-    enableAutoMergeNodesIntoCluster: () => setState(enableAutoMergeNodesIntoCluster),
-    enableAutoMergeClustersIntoNetwork: () => setState(enableAutoMergeClustersIntoNetwork),
-    enableAutoMergeNetworksIntoGrid: () => setState(enableAutoMergeNetworksIntoGrid),
-    enableAutoMergeGridsIntoFabric: () => setState(enableAutoMergeGridsIntoFabric),
-    enableAutoMergeFabricsIntoCloud: () => setState(enableAutoMergeFabricsIntoCloud),
-    enableAutoMergeCloudsIntoDatacenter: () => setState(enableAutoMergeCloudsIntoDatacenter),
-    enableAutoMergeDatacentersIntoSupercomputer: () => setState(enableAutoMergeDatacentersIntoSupercomputer),
-    enableAutoMergeSupercomputersIntoMegacomputer: () => setState(enableAutoMergeSupercomputersIntoMegacomputer),
-    startComputeCoresMerge: () => setState(startComputeCoresMerge),
-    startComputeNodesMerge: () => setState(startComputeNodesMerge),
-    startComputeClustersMerge: () => setState(startComputeClustersMerge),
-    startComputeNetworksMerge: () => setState(startComputeNetworksMerge),
-    startComputeGridsMerge: () => setState(startComputeGridsMerge),
-    startComputeFabricsMerge: () => setState(startComputeFabricsMerge),
-    startComputeCloudsMerge: () => setState(startComputeCloudsMerge),
-    startComputeDatacentersMerge: () => setState(startComputeDatacentersMerge),
-    startComputeSupercomputersMerge: () => setState(startComputeSupercomputersMerge),
-    startDataLakeAutoConvert: tierIndex => setState(startDataLakeAutoConvert(tierIndex)),
-    resetStoragePool: tierIndex => setState(resetStoragePool(tierIndex)),
-    pinMuseumEntry: entryId => setState(pinMuseumEntry(entryId)),
-    unpinMuseumEntry: entryId => setState(unpinMuseumEntry(entryId)),
-  }), [])
 
   const resetGame = useCallback(() => {
     clearGameState()
@@ -402,6 +418,7 @@ export const useIncrementalGame = () => {
   return {
     actions,
     applyDevStateJson,
+    buyMaxMode,
     clearSlot,
     devModeActive,
     dismissIncompatibleSaveNotice,
@@ -418,6 +435,7 @@ export const useIncrementalGame = () => {
     resetGame,
     saveSlots,
     savesMeta,
+    setBuyMaxMode,
     setDevState,
     state,
     switchSaveSlot,

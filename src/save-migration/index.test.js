@@ -23,6 +23,12 @@ describe('getSaveIncompatibilityReason', () => {
 })
 
 describe('adaptSaveForCurrentSchema', () => {
+  it('rejects non-plain-object payloads (arrays, class instances, primitives)', () => {
+    for (const raw of [[], [{ intro: {} }], new Date(), new Map(), 'save', 42, null]) {
+      expect(adaptSaveForCurrentSchema(raw)).toEqual({ ok: false, reason: 'invalid_payload' })
+    }
+  })
+
   it('returns current-schema game state stripped of the envelope', () => {
     const result = adaptSaveForCurrentSchema({ saveSchemaVersion: SAVE_SCHEMA_VERSION, intro: { mainGameUnlocked: true } })
     expect(result).toEqual({ ok: true, payload: { intro: { mainGameUnlocked: true } } })
