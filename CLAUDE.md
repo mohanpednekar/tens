@@ -622,7 +622,7 @@ Strict three-layer separation:
    and no side effects. Every mutation returns a new state object; invalid actions (can't afford, tier
    locked) return the *same* state reference unchanged, which callers use as a no-op signal (see
    `tickGame`'s autobuyer loop, which breaks as soon as `buyTierQuantity` returns the same object
-   back — `buyTier` itself is only invoked one level down, inside `buyTierQuantity`'s own loop).
+   back).
 2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (lifted
    up from MainPage so `ByteFoundryPage` shares the save/tick loop). Owns the `setInterval` tick timer
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
