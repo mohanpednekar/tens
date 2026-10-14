@@ -101,6 +101,18 @@ via Phase B item 5's self-improvement task) edits the heredoc inside the `Compos
 `with.prompt:` block — and should keep new dynamic values passed the same way (a step output
 substituted via bash parameter expansion), not as an inline `${{ }}` back in the `with:` block.
 
+A second incident in the same class — #709's dropped `}` closer inside a guard-step `run: |` block,
+which silently failed every scheduled run for two days (#738) — is closed by a different guard:
+`scripts/lint-workflow-shell.mjs` (`yarn lint:workflows`) extracts every `run:` block in
+`.github/workflows/*.yml` and `.github/actions/**` (composite actions included — a broken one takes
+every workflow down identically) and runs `bash -n` on each, wired as a step in `ci.yml`'s required
+`test` job. It lives inside that job (not as its own job) so the check is merge-blocking under the
+existing branch-protection requirement without a settings change. Extraction uses the `yaml`
+package's parser (an earlier hand-written indentation scanner kept missing YAML edge cases — ~48
+review findings on #739), linting only the scalar `run` value of steps on paths Actions executes (`jobs.<id>.steps`, composite `runs.steps`, nested `parallel:` groups), aliases resolved, so `with.run`,
+`defaults.run` and `run:`-looking text inside other scalars can't false-positive; a file that isn't
+valid YAML fails the lint. `${{ }}` expressions are placeholder-substituted before `bash -n`.
+
 **Guard-step list feeds are explicitly `--limit`-ed and, for the task backlog, capped/sorted for
 display.** `gh issue list`/`gh pr list` default to `--limit 30`, newest-first — a silent truncation,
 not an error, on any repo with more open items than that. This repo hit it for real: with 30+ open
@@ -306,13 +318,15 @@ such occurrence, but if that issue's history already shows a prior comment reach
 this run instead of leaving it comment-only again, so the same dead-end analysis isn't repeated a third
 time. A running budget check bounds the walk itself: once further skips risk leaving too little of the
 run's self-estimated budget to actually implement whatever comes next, Claude stops the walk and ends
-the run without a PR rather than forcing a rushed implementation. Once it lands on an implementable
+the run without a PR (budget is spent, so no Phase B fall-through) rather than forcing a rushed implementation. Once it lands on an implementable
 candidate, it proceeds as normal — implements it on `claude/auto-task-<number>-<short-slug>`, PR body
 includes `Closes #<number>` unless it's a partial slice (see Budget discipline). If every eligible
-candidate in the backlog is exhausted without finding one that's implementable, the run ends without a
-PR — the comments (and any new `blocked` labels) left along the way are still real, durable progress.
+candidate in the backlog is exhausted (each spec read in full — never skipped on a title or skim) without
+finding one that's implementable, the comments (and any new `blocked` labels) left along the way stay as
+durable progress and the run falls through to Phase B instead of ending PR-less. The walk-budget stop above
+applies only to budget actually spent.
 
-**Phase B — maintenance menu fallback.** Only when no eligible task issue exists, the run picks the
+**Phase B — maintenance menu fallback.** Only when no eligible, implementable task issue exists (none eligible, or every eligible one was read in full and found infeasible/covered — a candidate may never be skipped unread; an all-skipped Phase A falls through here rather than ending the run PR-less), the run picks the
 single most valuable applicable task from: (1) test coverage gaps, (2) dependency & security
 maintenance (`yarn audit` + safe patch/minor bumps, plus the medium/low-severity Dependabot alerts
 Phase 0(c) leaves for this item — critical/high alerts are Phase 0(c)'s job, not this one's), (3) code
