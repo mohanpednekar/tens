@@ -654,9 +654,10 @@ not at the bottom"):
   docs/ECONOMY_REFERENCE.md) rather than derived from `purchased` via division — completing a level means
   buying `getPurchaseBlockSize(state)` pieces of it (a value that can grow over a run, see "Economy
   model"). This shows on the Buy button's visible text as `{progress}+{affordable}/{blockSize}` (e.g.
-  `5+3/8` — or `+N Lv` while Buy max mode would buy N full levels, see "Buy button" below — how many of the current level's pieces are already bought, plus how many more are
+  `5+3/8` — how many of the current level's pieces are already bought, plus how many more are
   affordable right now, over the block size; the `+{affordable}` segment is omitted once nothing is
-  currently affordable) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
+  currently affordable; while Buy max mode would buy N full levels it reads `+N Lv` instead, see "Buy
+  button" below) inside `ButtonIcon` alongside the 🛒 glyph, pinned immediately next to the icon
   rather than centered — this keeps the progress text starting at the same x position across every
   tier row regardless of the cost string's length. This deliberately doesn't show the level number
   itself (unlike an earlier `Lv.{level} ({progress}/{blockSize})` version) — the zero-indexed count

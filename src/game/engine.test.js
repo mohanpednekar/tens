@@ -7337,6 +7337,11 @@ describe('buyTier', () => {
 // ─── buyTierQuantity ─────────────────────────────────────────────────────────
 
 describe('buyTierQuantity', () => {
+  it('is a same-reference no-op while production is frozen', () => {
+    const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
+    expect(buyTierQuantity(tensTier.id, 8)(state)).toBe(state)
+  })
+
   it('buys the full requested quantity when affordable and within the same block', () => {
     const state = withMoney(createInitialGameState(), 10000)
     // tensTier (baseCost 1000) level 1: fixed per-unit cost = 1000
