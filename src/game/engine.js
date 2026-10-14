@@ -2069,6 +2069,7 @@ export const buyTier = tierId => state => {
 // Buys up to `quantity` units of a tier, capped at the current level's boundary so every unit
 // purchased is at the same price. Stops early if a purchase becomes unaffordable.
 export const buyTierQuantity = (tierId, quantity) => state => {
+  if (isProductionFrozen(state)) return state
   const tier = TIER_BY_ID[tierId]
   if (!tier || !isTierUnlocked(state)(tier)) return state
 
