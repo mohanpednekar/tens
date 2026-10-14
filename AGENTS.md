@@ -251,22 +251,22 @@ The unattended pipeline runs the **Claude** engine (`autonomous-maintenance.yml`
 `automation-self-heal.yml`, via `anthropics/claude-code-action` where an agent is involved), on
 `claude/*` branches, twice daily at 9:00am/9:00pm IST. `automation-self-heal.yml` watches
 orchestration-workflow failures (including the Devin engine's) and opens draft `claude/self-heal-*`
-fixes or `automation-failure` issues. A parallel **Devin CLI** engine (`devin-autonomous-maintenance.yml`,
-`devin -p --prompt-file <file> --model swe --permission-mode dangerous --respect-workspace-trust false`,
-every 4h) consumes the same `claude-task` backlog on `devin/auto-*` branches; its git/`gh` auth is
-`GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret, and both engines share one 5-open-PR ceiling
-counting `claude/auto-*` and `devin/auto-*` together. `devin/auto-*` PRs get the same follow-up and
-low-risk auto-merge handling as `claude/auto-*`. The Devin prompt has no file-scope restriction — it may
-edit anything including `.github/workflows/` (its own file included); changes still land via PR + human
-review. It requires the same check-feedback → address → resolve → iterate-until-mergeable loop on its own
-PRs before the run ends (post-run feedback is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml`
-fires on every push to `main` and comments on any open PR that became conflicted (the comment triggers
-the follow-up agent on automation branches). `devin-workflow-health.yml` runs daily at midnight UTC,
-filing an `automation-failure` issue when the workflow file stops parsing, no run has started in >26h, or
-the latest run didn't succeed. `release.yml` (deterministic, no agent) fires on pushes to `main` touching
-`package.json`: pushes annotated tag `v<x.y.z>` and creates a GitHub Release from that version's
-`CHANGELOG.md` section if the tag doesn't exist — post-merge half of #52 (pre-merge half: `yarn
-bump-version`). Full detail: `docs/AUTOMATION.md`.
+fixes or `automation-failure` issues (see `docs/AUTOMATION.md`). A parallel **Devin CLI** engine
+(`devin-autonomous-maintenance.yml`, `devin -p --prompt-file <file> --model swe --permission-mode
+dangerous --respect-workspace-trust false`, every 4h) consumes the same `claude-task` backlog on
+`devin/auto-*` branches; its git/`gh` auth is `GH_AUTOMATION_PAT` plus a `DEVIN_CLI_CREDENTIALS` secret,
+and both engines share one 5-open-PR ceiling counting `claude/auto-*` and `devin/auto-*` together.
+`devin/auto-*` PRs get the same follow-up and low-risk auto-merge handling as `claude/auto-*`. The
+Devin prompt has no file-scope restriction — it may edit anything including `.github/workflows/` (its
+own file included); changes still land via PR, and workflow-file changes stay human-gated. It requires the same check-feedback →
+address → resolve → iterate-until-mergeable loop on its own PRs before the run ends (post-run feedback
+is `autonomous-pr-followup.yml`'s job). `pr-conflict-sweep.yml` fires on every push to `main` and
+comments on any open PR that became conflicted (the comment triggers the follow-up agent on automation
+branches). `devin-workflow-health.yml` runs daily at midnight UTC, filing an `automation-failure` issue
+when the workflow file stops parsing, no run has started in >26h, or the latest run didn't succeed.
+`release.yml` (deterministic, no agent) fires on pushes to `main` that touch `package.json`: it pushes
+annotated tag `v<x.y.z>` and creates a GitHub Release from that version's `CHANGELOG.md` section when
+the tag doesn't already exist — the post-merge half of #52 (pre-merge half: `yarn bump-version`).
 
 Guard-step context feeds are bounded by standing rule (`docs/AUTOMATION.md`, #81): explicit `--limit`
 + display cap with a "+N more" note; list feeds render number + title + labels only, never bodies.
