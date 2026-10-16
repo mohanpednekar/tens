@@ -113,15 +113,20 @@ const CategoryHeading = styled.h2`
 
 // Every row is a CSS grid so columns line up row-to-row regardless of content width (a flex
 // `space-between` row let each badge drift with its siblings' widths). Default: label | control.
-// `$tier`: symbol | ⚙ cell | 🤖 cell | trailing control (Smart / nothing) — shared by the Unlocks
-// and Toggles tier lists so both tabs read as the same table.
+// `$tier`: symbol | ⚙ cell | 🤖 cell (| Smart cell on Unlocks) — shared by the Unlocks and Toggles
+// tier lists so both tabs read as the same table.
 const Row = styled.div`
   align-items: center;
-  column-gap: 0.75rem;
+  column-gap: 0.6rem;
   display: grid;
-  grid-template-columns: ${props => (props.$tier
-    ? '2.75rem minmax(4.25rem, 1fr) minmax(4.25rem, 1fr) minmax(6.5rem, auto)'
-    : 'minmax(0, 1fr) auto')};
+  /* Every track is fixed or fr-based (never content-sized) so separate rows' columns line up, and
+     the whole row still fits a 320px-wide phone. $tier="unlocks" keeps a fixed trailing Smart cell;
+     $tier="toggles" has no trailing cell. */
+  grid-template-columns: ${props => (props.$tier === 'unlocks'
+    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr) 5.75rem'
+    : props.$tier === 'toggles'
+      ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
+      : 'minmax(0, 1fr) auto')};
   min-height: 2.75rem;
   padding: 0.35rem 0;
 
@@ -130,7 +135,7 @@ const Row = styled.div`
   }
 
   & > :last-child {
-    justify-self: end;
+    justify-self: ${props => (props.$tier === 'toggles' ? 'start' : 'end')};
   }
 `
 
@@ -166,7 +171,7 @@ const SubText = styled.span`
 const PpButton = styled(Button)`
   font-size: 0.85em;
   gap: 0.35rem;
-  min-width: 6.5rem;
+  min-width: 5.5rem;
   padding: 0.45em 0.7em;
   white-space: nowrap;
 `
@@ -359,7 +364,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const smartCost = getSmartAutobuyerCost(tier.id)
           const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && points >= smartCost
           return (
-            <Row key={tier.id} $tier aria-label={`${tier.name} PP unlocks`}>
+            <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
               <MilestoneBadge
                 current={prestigeCount}
@@ -602,7 +607,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
       const tierTickspeedAutobuyerEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
       return (
-        <Row key={tier.id} $tier aria-label={`${tier.name} automation toggles`}>
+        <Row key={tier.id} $tier="toggles" aria-label={`${tier.name} automation toggles`}>
           <TierSymbol tier={tier} />
           {!isTierTickspeedAutobuyerActive ? <span /> : (
             <AutomationToggle
@@ -622,7 +627,6 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               toggleLabel={`${tier.name}'s autobuyer`}
             />
           )}
-          <span />
         </Row>
       )
     }).filter(Boolean)

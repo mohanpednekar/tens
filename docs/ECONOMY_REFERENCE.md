@@ -1845,7 +1845,7 @@ predating this feature — see `storage.js` below): a paused automation behaves 
 never been bought, for automation purposes only — the level/PP already spent are untouched, and (for
 Auto-Prestige) the manual Prestige button keeps working regardless. Pausing Auto-Prestige stops both its
 per-tick `autoPrestigeAttemptBudget` accumulation and its automatic `prestigeGame` firing, not just the
-firing. Perks → 🎛 Toggles renders a pause/resume toggle (`aria-pressed`-driven `PauseToggleButton`
+firing. Perks → 🎛 Toggles renders a pause/resume `components/Switch` (`aria-pressed`)
 beside an icon-only status badge) for each of the four global automations once bought.
 
 #### Pause/resume for per-tier automations
@@ -2176,8 +2176,8 @@ requirement is measured against (via `getScaleUpTargetTier`), not always the las
 requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
-and `autoScaleUp` bought, a static "⏩ Auto Scale Up active" note shows (the purchase button itself
-lives on Perks → Unlocks).
+and `autoScaleUp` bought, an `AutoChip` in the Scale Up card header reads "⏩ Auto" (or "⏩ Paused";
+`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Perks → Unlocks).
 
 ### Overclock
 

@@ -263,7 +263,7 @@ const CenteredCard = styled(StatCard)`
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
-// MutedText (still hardcoded, still used by TierList/ScaleUpCard/GlobalTickspeedCard) rather
+// MutedText (still hardcoded, still used by TierList/GlobalTickspeedCard) rather
 // than migrating those shared components here: they're each other
 // sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
 // of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's

@@ -878,8 +878,8 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
   badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.
-Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier` = symbol | ⚙ |
-🤖 | trailing Smart cell) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
+Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier="unlocks"` = symbol | ⚙ |
+🤖 | fixed 5.75rem Smart cell, `$tier="toggles"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
 Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
 heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
 Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`, incl. the Auto-Prestige Autobuyer),
@@ -1001,8 +1001,8 @@ order — rather than staying side by side down to phone width (an earlier versi
 tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
 `SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards deliberately override the shared `StatCard` spacing with compact
-`0.5rem 0.65rem` padding and a `0.35rem` internal gap; their headings have no default margin, their
+alongside it. Both soft-reset cards (and Latency) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`

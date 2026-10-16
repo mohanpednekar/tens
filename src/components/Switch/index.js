@@ -2,9 +2,11 @@ import styled from 'styled-components'
 
 // Accessible on/off switch (a <button> with aria-pressed): a pill track + sliding knob, used for
 // every Perks → Toggles control and Buy max. Callers pass `$on` (visual state) alongside
-// `aria-pressed`; the accessible name comes from the caller's aria-label.
+// `aria-pressed`; the accessible name comes from the caller's aria-label. The off track uses
+// `textMuted` (not `borderStrong`) so the control clears WCAG 1.4.11's 3:1 against `surface` in both
+// themes (borderStrong measured ~1.7:1); see tokens.contrast.test.js.
 const Switch = styled.button.attrs({ type: 'button' })`
-  background: ${props => (props.$on ? props.theme.color.good : props.theme.color.borderStrong)};
+  background: ${props => (props.$on ? props.theme.color.good : props.theme.color.textMuted)};
   border: none;
   border-radius: 999px;
   cursor: pointer;
