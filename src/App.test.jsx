@@ -291,6 +291,25 @@ test('after an Era ascension (prestige count 0, era 1) Perks stays reachable wit
   expect(screen.getByRole('button', { name: /^Auto Scale Up automation$/i })).toBeInTheDocument()
 })
 
+test('an Era-unlocked Compute (Flops) autobuyer gets its own pause toggle on Perks → Toggles', async () => {
+  const user = userEvent.setup()
+  seedMainGameState({
+    era: { count: 1 },
+    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    computeFlopsAutobuyers: { flop01: 1, flop02: null, flop03: null, flop04: null, flop05: null, flop06: null, flop07: null, flop08: null, flop09: null, flop10: null },
+    prestige: { xp: 0, points: 0, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(user, /open toggles/i)
+
+  expect(screen.queryByRole('button', { name: /^MFlops's autobuyer$/i })).not.toBeInTheDocument()
+  const toggle = screen.getByRole('button', { name: /^KFlops's autobuyer$/i })
+  expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await user.click(toggle)
+  expect(screen.getByLabelText("KFlops's autobuyer paused")).toBeInTheDocument()
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).computeFlopsAutobuyersEnabled.flop01).toBe(false)
+})
+
 test('a fully-smart tier keeps its pause toggles on the Toggles tab alongside its Unlocks history', async () => {
   const user = userEvent.setup()
   seedMainGameState({

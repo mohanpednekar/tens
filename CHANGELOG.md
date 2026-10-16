@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   permanent feature into three icon tabs: 🔓 **Unlocks** (one-time purchases like Smart, Tickspeed
   Autobuyer and Auto Scale Up, plus every tier's autobuyer milestones, reached ones included — shown
   once, no longer repeated on Milestones), ⏫ **Upgrades** (leveled — Double PP, Auto-Prestige) and 🎛 **Toggles** (Buy max and
-  pause/resume for every automation you own). Byte Factory no longer has its own Upgrades tab, and the
+  pause/resume for every automation you own — including Era-unlocked Compute autobuyers, which
+  previously had no pause control). Byte Factory no longer has its own Upgrades tab, and the
   Buy max toggle moved off Factory/Compute onto Toggles.
 
 - **Buy max mode.** After your first Prestige, a **Buy max** toggle (Perks → Toggles)

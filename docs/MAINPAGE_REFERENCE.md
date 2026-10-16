@@ -873,7 +873,8 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
 - 🎛 **Toggles** (`open toggles`, `aria-label="automation toggles page"`) — *Purchasing* (the Buy max
   button, `components/BuyMaxToggle`, removed from MainPage/ComputeFlopsPage), *Tier Autobuyers* (each
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-smart tiers), *Global Automation*
-  (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige, Auto-Prestige Autobuyer). Each toggle is a status
+  (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige, Auto-Prestige Autobuyer), *Compute Autobuyers*
+  (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
   badge (`"<name> active|paused"`) + `PauseToggleButton` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.

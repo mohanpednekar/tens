@@ -37,7 +37,8 @@ import styled, { useTheme } from 'styled-components'
 //   tickspeed autobuyers, Compute autobuyers, Unbounded Prestige) — each milestone shown exactly once
 //   here, not also on MilestonesPage (which keeps only Chapters / Era ascension).
 // - ⏫ Upgrades: repeatable leveled PP purchases (Double PP, Auto-Prestige).
-// - 🎛 Toggles: Buy max mode plus every owned automation's pause/resume.
+// - 🎛 Toggles: Buy max mode plus every owned automation's pause/resume (Factory tiers, global
+//   automations, and Era-unlocked Compute autobuyers).
 
 const RootDiv = styled.main`
   width: min(880px, calc(100vw - 2rem));
@@ -650,6 +651,23 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         </Row>
       ),
     ].filter(Boolean)
+    // Era-unlocked Compute (Flops) autobuyers — see setComputeFlopsAutobuyerEnabled in engine.js.
+    const flopsRows = COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
+      if ((state.computeFlopsAutobuyers?.[flopTier.id] ?? null) === null) return null
+      const enabled = state.computeFlopsAutobuyersEnabled?.[flopTier.id] ?? true
+      return (
+        <Row key={flopTier.id} aria-label={`${flopTier.name} automation toggles`}>
+          <TierSymbol tier={flopTier} />
+          <AutomationToggle
+            enabled={enabled}
+            icon="🤖"
+            name={`${flopTier.name}'s autobuyer`}
+            onToggle={() => actions.setComputeFlopsAutobuyerEnabled(flopTier.id, !enabled)}
+            toggleLabel={`${flopTier.name}'s autobuyer`}
+          />
+        </Row>
+      )
+    }).filter(Boolean)
     const showBuyMax = isBuyMaxUnlocked(state)
     return (
       <List aria-label="automation toggles page">
@@ -674,7 +692,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             {globalRows}
           </Category>
         )}
-        {!showBuyMax && tierRows.length === 0 && globalRows.length === 0 && (
+        {flopsRows.length > 0 && (
+          <Category aria-label="compute automation toggles category">
+            <CategoryHeading>Compute Autobuyers</CategoryHeading>
+            {flopsRows}
+          </Category>
+        )}
+        {!showBuyMax && tierRows.length === 0 && globalRows.length === 0 && flopsRows.length === 0 && (
           <StatCard aria-label="no toggles notice">
             <MutedText>Nothing to toggle yet — automations appear here once unlocked.</MutedText>
           </StatCard>
