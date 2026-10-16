@@ -155,8 +155,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_actcapacityupgrade",
-      "community": 100,
-      "community_name": "upgradePoolCapacity",
+      "community": 34,
+      "community_name": "DataLakePanel/index.jsx",
       "norm_label": "actcapacityupgrade()"
     },
     {
@@ -180,7 +180,7 @@
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_wouldautobuyerstall",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "wouldautobuyerstall()"
     },
     {
@@ -191,8 +191,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "claude_skills_simulate_run_times_run_simulation_actmainbuys",
-      "community": 18,
-      "community_name": "run-simulation.mjs",
+      "community": 12,
+      "community_name": "tickGame",
       "norm_label": "actmainbuys()"
     },
     {
@@ -634,7 +634,7 @@
       "_origin": "ast",
       "id": "e2e_data_lake_e2e",
       "community": 16,
-      "community_name": "navAttention.test.js",
+      "community_name": "createInitialGameState",
       "norm_label": "data-lake.e2e.js"
     },
     {
@@ -646,7 +646,7 @@
       "_origin": "ast",
       "id": "e2e_data_lake_e2e_seeddatalakesave",
       "community": 16,
-      "community_name": "navAttention.test.js",
+      "community_name": "createInitialGameState",
       "norm_label": "seeddatalakesave()"
     },
     {
@@ -1199,8 +1199,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "package_resolutions",
-      "community": 43,
-      "community_name": "scripts",
+      "community": 36,
+      "community_name": "package.json",
       "norm_label": "resolutions"
     },
     {
@@ -1210,8 +1210,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "package_resolutions_glob_minimatch_brace_expansion",
-      "community": 43,
-      "community_name": "scripts",
+      "community": 36,
+      "community_name": "package.json",
       "norm_label": "**/glob/minimatch/brace-expansion"
     },
     {
@@ -1221,8 +1221,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "package_resolutions_filelist_minimatch_brace_expansion",
-      "community": 43,
-      "community_name": "scripts",
+      "community": 36,
+      "community_name": "package.json",
       "norm_label": "**/filelist/minimatch/brace-expansion"
     },
     {
@@ -1232,8 +1232,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "package_resolutions_fast_uri",
-      "community": 43,
-      "community_name": "scripts",
+      "community": 36,
+      "community_name": "package.json",
       "norm_label": "**/fast-uri"
     },
     {
@@ -1243,8 +1243,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "package_resolutions_nanoid",
-      "community": 43,
-      "community_name": "scripts",
+      "community": 36,
+      "community_name": "package.json",
       "norm_label": "**/nanoid"
     },
     {
@@ -1254,8 +1254,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "package_resolutions_uuid",
-      "community": 43,
-      "community_name": "scripts",
+      "community": 36,
+      "community_name": "package.json",
       "norm_label": "**/uuid"
     },
     {
@@ -3656,8 +3656,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_derivepurchasefieldsfromcounts",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "derivepurchasefieldsfromcounts()"
     },
     {
@@ -3668,8 +3668,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_seedmaingamestate",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "seedmaingamestate()"
     },
     {
@@ -3724,7 +3724,7 @@
       "label": "ALL_TIER_IDS",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1712",
+      "source_location": "L1728",
       "_origin": "ast",
       "id": "src_app_test_all_tier_ids",
       "community": 89,
@@ -3735,7 +3735,7 @@
       "label": "allTiersSmartSeed()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1716",
+      "source_location": "L1732",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_alltierssmartseed",
@@ -3747,7 +3747,7 @@
       "label": "seedIntroState()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L2477",
+      "source_location": "L2493",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_seedintrostate",
@@ -3759,7 +3759,7 @@
       "label": "openDevMode()",
       "file_type": "code",
       "source_file": "src/App.test.jsx",
-      "source_location": "L4976",
+      "source_location": "L4992",
       "_callable": true,
       "_origin": "ast",
       "id": "src_app_test_opendevmode",
@@ -3774,8 +3774,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_components_appmenu_index",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "appmenu/index.jsx"
     },
     {
@@ -3785,8 +3785,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_components_appmenu_index_backdrop",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "backdrop"
     },
     {
@@ -3796,8 +3796,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "src_components_appmenu_index_sheet",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "sheet"
     },
     {
@@ -3807,8 +3807,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_components_appmenu_index_sheettitle",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "sheettitle"
     },
     {
@@ -3818,8 +3818,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "src_components_appmenu_index_menubutton",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "menubutton"
     },
     {
@@ -3829,8 +3829,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "src_components_appmenu_index_icon",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "icon"
     },
     {
@@ -3841,8 +3841,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_components_appmenu_index_appmenu",
-      "community": 109,
-      "community_name": "AppMenu/index.jsx",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "appmenu()"
     },
     {
@@ -4804,8 +4804,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getlasttierid",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "getlasttierid()"
     },
     {
@@ -4816,7 +4816,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_clampnonnegative",
-      "community": 17,
+      "community": 46,
       "community_name": "clampNonNegative",
       "norm_label": "clampnonnegative()"
     },
@@ -4829,7 +4829,7 @@
       "_origin": "ast",
       "id": "src_game_engine_allresourceids",
       "community": 16,
-      "community_name": "navAttention.test.js",
+      "community_name": "createInitialGameState",
       "norm_label": "allresourceids()"
     },
     {
@@ -4840,8 +4840,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_createemptydatalaketier",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "createemptydatalaketier()"
     },
     {
@@ -4852,8 +4852,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_createemptydatalakes",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "createemptydatalakes()"
     },
     {
@@ -4865,7 +4865,7 @@
       "_origin": "ast",
       "id": "src_game_engine_createinitialgamestate",
       "community": 16,
-      "community_name": "navAttention.test.js",
+      "community_name": "createInitialGameState",
       "norm_label": "createinitialgamestate()"
     },
     {
@@ -4981,8 +4981,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcostepochexponent",
-      "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getcostepochexponent()"
     },
     {
@@ -4994,7 +4994,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpurchaseblocksize",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "getpurchaseblocksize()"
     },
     {
@@ -5006,7 +5006,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettiercost",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettiercost()"
     },
     {
@@ -5018,7 +5018,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierbulkquantity",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettierbulkquantity()"
     },
     {
@@ -5030,7 +5030,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierquantitycost",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettierquantitycost()"
     },
     {
@@ -5042,7 +5042,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettieraffordablequantity",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettieraffordablequantity()"
     },
     {
@@ -5053,8 +5053,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettickspeedmultiplierbasecost",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "gettickspeedmultiplierbasecost()"
     },
     {
@@ -5066,7 +5066,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettickspeedmultipliercost",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "gettickspeedmultipliercost()"
     },
     {
@@ -5077,8 +5077,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautobuyerunlockcost",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "getautobuyerunlockcost()"
     },
     {
@@ -5089,8 +5089,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getautobuyerunlockmilestone",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "getautobuyerunlockmilestone()"
     },
     {
@@ -5126,7 +5126,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettickspeedproductionmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "gettickspeedproductionmultiplier()"
     },
     {
@@ -5138,7 +5138,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedmultipliercost",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getglobaltickspeedmultipliercost()"
     },
     {
@@ -5149,8 +5149,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isglobaltickspeedmultiplierunlocked",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "isglobaltickspeedmultiplierunlocked()"
     },
     {
@@ -5162,7 +5162,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getglobaltickspeedproductionmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getglobaltickspeedproductionmultiplier()"
     },
     {
@@ -5173,8 +5173,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_islasttiertickspeedxpunlocked",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "islasttiertickspeedxpunlocked()"
     },
     {
@@ -5186,7 +5186,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getlasttierxptickspeedmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getlasttierxptickspeedmultiplier()"
     },
     {
@@ -5210,7 +5210,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getprestigeproductionmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigeproductionmultiplier()"
     },
     {
@@ -5221,8 +5221,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyprestigespeedbonus",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buyprestigespeedbonus()"
     },
     {
@@ -5233,8 +5233,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputeflopspagerevealed",
-      "community": 24,
-      "community_name": "ComputeFlopsPage/index.jsx",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "iscomputeflopspagerevealed()"
     },
     {
@@ -5245,8 +5245,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_latchcomputeflopspageunlocked",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "latchcomputeflopspageunlocked()"
     },
     {
@@ -5257,8 +5257,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeflopsaffordableandcost",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "getcomputeflopsaffordableandcost()"
     },
     {
@@ -5269,8 +5269,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buycomputeflopstierquantity",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "buycomputeflopstierquantity()"
     },
     {
@@ -5293,8 +5293,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canbuycomputeflopstier",
-      "community": 24,
-      "community_name": "ComputeFlopsPage/index.jsx",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "canbuycomputeflopstier()"
     },
     {
@@ -5317,8 +5317,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buycomputeflopstier",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buycomputeflopstier()"
     },
     {
@@ -5401,8 +5401,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickcomputeflops",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "tickcomputeflops()"
     },
     {
@@ -5413,8 +5413,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iseraeligible",
-      "community": 11,
-      "community_name": "MilestonesPage/index.jsx",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "iseraeligible()"
     },
     {
@@ -5425,8 +5425,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_geteonsawarded",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "geteonsawarded()"
     },
     {
@@ -5437,8 +5437,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gethyperscalereoncost",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "gethyperscalereoncost()"
     },
     {
@@ -5449,8 +5449,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canbuyhyperscaler",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "canbuyhyperscaler()"
     },
     {
@@ -5461,8 +5461,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyhyperscaler",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "buyhyperscaler()"
     },
     {
@@ -5473,8 +5473,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getflopsautobuyerunlockera",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "getflopsautobuyerunlockera()"
     },
     {
@@ -5485,8 +5485,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_applyflopsautobuyermilestones",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "applyflopsautobuyermilestones()"
     },
     {
@@ -5498,7 +5498,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setcomputeflopsautobuyerenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setcomputeflopsautobuyerenabled()"
     },
     {
@@ -5509,8 +5509,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickcomputeflopsautobuyers",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "tickcomputeflopsautobuyers()"
     },
     {
@@ -5521,8 +5521,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_builderaintroreset",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "builderaintroreset()"
     },
     {
@@ -5533,8 +5533,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_eragame",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "eragame()"
     },
     {
@@ -5546,7 +5546,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buyprestigedoublepp",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "buyprestigedoublepp()"
     },
     {
@@ -5570,7 +5570,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpurchasemilestonemultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getpurchasemilestonemultiplier()"
     },
     {
@@ -5582,7 +5582,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getscaleupmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getscaleupmultiplier()"
     },
     {
@@ -5594,7 +5594,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierscaleupmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "gettierscaleupmultiplier()"
     },
     {
@@ -5605,7 +5605,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getclampedscaleuptargettierindex",
-      "community": 17,
+      "community": 46,
       "community_name": "clampNonNegative",
       "norm_label": "getclampedscaleuptargettierindex()"
     },
@@ -5617,7 +5617,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getscaleuptargettier",
-      "community": 17,
+      "community": 46,
       "community_name": "clampNonNegative",
       "norm_label": "getscaleuptargettier()"
     },
@@ -5629,7 +5629,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getscaleuprequirement",
-      "community": 17,
+      "community": 46,
       "community_name": "clampNonNegative",
       "norm_label": "getscaleuprequirement()"
     },
@@ -5641,7 +5641,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getoverclockrequirement",
-      "community": 17,
+      "community": 46,
       "community_name": "clampNonNegative",
       "norm_label": "getoverclockrequirement()"
     },
@@ -5654,7 +5654,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getoverclockmultiplier",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getoverclockmultiplier()"
     },
     {
@@ -5689,8 +5689,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isunboundedprestigeunlocked",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 63,
+      "community_name": "PerksPage/index.jsx",
       "norm_label": "isunboundedprestigeunlocked()"
     },
     {
@@ -5701,8 +5701,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isproductionfrozen",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 63,
+      "community_name": "PerksPage/index.jsx",
       "norm_label": "isproductionfrozen()"
     },
     {
@@ -5712,8 +5712,8 @@
       "source_location": "L1442",
       "_origin": "ast",
       "id": "src_game_engine_tier_unlock_prev_level_requirement",
-      "community": 88,
-      "community_name": "InfoPage/index.jsx",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "tier_unlock_prev_level_requirement"
     },
     {
@@ -5725,7 +5725,7 @@
       "_origin": "ast",
       "id": "src_game_engine_istierunlocked",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "istierunlocked()"
     },
     {
@@ -5736,8 +5736,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getmoneyexponent",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getmoneyexponent()"
     },
     {
@@ -5748,8 +5748,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeprogresspercent",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigeprogresspercent()"
     },
     {
@@ -5761,7 +5761,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getnextbytepowerprogressfraction",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "getnextbytepowerprogressfraction()"
     },
     {
@@ -5773,7 +5773,7 @@
       "_origin": "ast",
       "id": "src_game_engine_geteffectivetiertickspeedseconds",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "geteffectivetiertickspeedseconds()"
     },
     {
@@ -5784,8 +5784,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_gettierproductionprogresspercent",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "gettierproductionprogresspercent()"
     },
     {
@@ -5796,8 +5796,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigedoublepphalvinglevels",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigedoublepphalvinglevels()"
     },
     {
@@ -5808,8 +5808,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigepowersperpp",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigepowersperpp()"
     },
     {
@@ -5820,8 +5820,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeppperpower",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigeppperpower()"
     },
     {
@@ -5844,8 +5844,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigepointsawarded",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigepointsawarded()"
     },
     {
@@ -5856,8 +5856,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getprestigeppearnprogresspercent",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "getprestigeppearnprogresspercent()"
     },
     {
@@ -5868,8 +5868,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_checkmilestones",
-      "community": 106,
-      "community_name": "getPrestigePointsAwarded",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "checkmilestones()"
     },
     {
@@ -5880,7 +5880,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickgame",
-      "community": 46,
+      "community": 12,
       "community_name": "tickGame",
       "norm_label": "tickgame()"
     },
@@ -5893,7 +5893,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getofflineeffectiveseconds",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "getofflineeffectiveseconds()"
     },
     {
@@ -5905,7 +5905,7 @@
       "_origin": "ast",
       "id": "src_game_engine_applyofflineprogress",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "applyofflineprogress()"
     },
     {
@@ -5929,7 +5929,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierspendableamount",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettierspendableamount()"
     },
     {
@@ -5941,7 +5941,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettierpurchasedcount",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettierpurchasedcount()"
     },
     {
@@ -5953,7 +5953,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buytier",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "buytier()"
     },
     {
@@ -5965,7 +5965,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buytierquantity",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "buytierquantity()"
     },
     {
@@ -6000,7 +6000,7 @@
       "_origin": "ast",
       "id": "src_game_engine_repeatpurchasemax",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "repeatpurchasemax()"
     },
     {
@@ -6012,7 +6012,7 @@
       "_origin": "ast",
       "id": "src_game_engine_canaffordfulltierlevel",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "canaffordfulltierlevel()"
     },
     {
@@ -6024,7 +6024,7 @@
       "_origin": "ast",
       "id": "src_game_engine_buytiermaxlevels",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "buytiermaxlevels()"
     },
     {
@@ -6036,7 +6036,7 @@
       "_origin": "ast",
       "id": "src_game_engine_gettiermaxlevelspreview",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "gettiermaxlevelspreview()"
     },
     {
@@ -6048,7 +6048,7 @@
       "_origin": "ast",
       "id": "src_game_engine_granttierunits",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "granttierunits()"
     },
     {
@@ -6059,8 +6059,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdatastreamspeedbytespersecond",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getdatastreamspeedbytespersecond()"
     },
     {
@@ -6071,8 +6071,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintroproductionrate",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getintroproductionrate()"
     },
     {
@@ -6084,7 +6084,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getfillmultiplierpercent",
       "community": 22,
-      "community_name": "engine.test.js",
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "getfillmultiplierpercent()"
     },
     {
@@ -6096,7 +6096,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdatastreamfillfraction",
       "community": 22,
-      "community_name": "engine.test.js",
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "getdatastreamfillfraction()"
     },
     {
@@ -6108,7 +6108,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdatastreambasemultiplierpercent",
       "community": 22,
-      "community_name": "engine.test.js",
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "getdatastreambasemultiplierpercent()"
     },
     {
@@ -6120,7 +6120,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdatastreammultiplierpercent",
       "community": 22,
-      "community_name": "engine.test.js",
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "getdatastreammultiplierpercent()"
     },
     {
@@ -6132,7 +6132,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdatastreameffectmultiplier",
       "community": 22,
-      "community_name": "engine.test.js",
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "getdatastreameffectmultiplier()"
     },
     {
@@ -6143,8 +6143,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tapintrobit",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 100,
+      "community_name": "upgradePoolCapacity",
       "norm_label": "tapintrobit()"
     },
     {
@@ -6155,8 +6155,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_combineintrobyte",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "combineintrobyte()"
     },
     {
@@ -6168,7 +6168,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getstoragepoolcount",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getstoragepoolcount()"
     },
     {
@@ -6179,8 +6179,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpoolindexfordisksize",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getpoolindexfordisksize()"
     },
     {
@@ -6192,7 +6192,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isstoragepoolfullybuilt",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "isstoragepoolfullybuilt()"
     },
     {
@@ -6203,8 +6203,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragepoolsizes",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getstoragepoolsizes()"
     },
     {
@@ -6216,7 +6216,7 @@
       "_origin": "ast",
       "id": "src_game_engine_islaterpoolprovisioninglocked",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "islaterpoolprovisioninglocked()"
     },
     {
@@ -6228,7 +6228,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isstoragepoolrebuilding",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isstoragepoolrebuilding()"
     },
     {
@@ -6240,7 +6240,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isstoragepoolunlocked",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "isstoragepoolunlocked()"
     },
     {
@@ -6252,7 +6252,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getunlockedstoragepoolcount",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getunlockedstoragepoolcount()"
     },
     {
@@ -6264,7 +6264,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpoolcapacityunlockthresholdbits",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getpoolcapacityunlockthresholdbits()"
     },
     {
@@ -6276,7 +6276,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getvisiblestoragepoolcount",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getvisiblestoragepoolcount()"
     },
     {
@@ -6287,8 +6287,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getnextsidoubledvalue",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "getnextsidoubledvalue()"
     },
     {
@@ -6310,8 +6310,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getsicleanequivalentbits",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getsicleanequivalentbits()"
     },
     {
@@ -6334,7 +6334,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdecadepowerequivalentbits",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getdecadepowerequivalentbits()"
     },
     {
@@ -6345,8 +6345,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getstoragepoolbandwidth",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getstoragepoolbandwidth()"
     },
     {
@@ -6358,7 +6358,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getstoragepoolcapacityatrawcapacity",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getstoragepoolcapacityatrawcapacity()"
     },
     {
@@ -6370,7 +6370,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getstoragepoolcapacity",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getstoragepoolcapacity()"
     },
     {
@@ -6382,7 +6382,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpoolbuffercapacity",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getpoolbuffercapacity()"
     },
     {
@@ -6394,7 +6394,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpoolbufferclampceilingbits",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getpoolbufferclampceilingbits()"
     },
     {
@@ -6406,7 +6406,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpoolbufferbits",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "getpoolbufferbits()"
     },
     {
@@ -6417,8 +6417,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpoolbufferfillfraction",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getpoolbufferfillfraction()"
     },
     {
@@ -6429,8 +6429,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpoolbasemultiplierpercent",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getpoolbasemultiplierpercent()"
     },
     {
@@ -6441,8 +6441,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpooltapbonuspercent",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getpooltapbonuspercent()"
     },
     {
@@ -6453,8 +6453,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpoolmultiplierpercent",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getpoolmultiplierpercent()"
     },
     {
@@ -6465,8 +6465,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getpooleffectmultiplier",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getpooleffectmultiplier()"
     },
     {
@@ -6478,7 +6478,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tappoolbuffer",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "tappoolbuffer()"
     },
     {
@@ -6489,8 +6489,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickfillmultiplierdecay",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "tickfillmultiplierdecay()"
     },
     {
@@ -6502,7 +6502,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickpoolbufferfill",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "tickpoolbufferfill()"
     },
     {
@@ -6514,7 +6514,7 @@
       "_origin": "ast",
       "id": "src_game_engine_normalizepoolmemorycapacity",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "normalizepoolmemorycapacity()"
     },
     {
@@ -6537,8 +6537,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isdiskfillavailable",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "isdiskfillavailable()"
     },
     {
@@ -6550,7 +6550,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getpoolcachereservationbits",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "getpoolcachereservationbits()"
     },
     {
@@ -6562,7 +6562,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isprovisiondiskavailable",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isprovisiondiskavailable()"
     },
     {
@@ -6574,7 +6574,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickpoolresetreprovision",
       "community": 23,
-      "community_name": "buyBooster",
+      "community_name": "isDataLakePoolReady",
       "norm_label": "tickpoolresetreprovision()"
     },
     {
@@ -6585,8 +6585,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputeupgradeavailable",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "iscomputeupgradeavailable()"
     },
     {
@@ -6670,7 +6670,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdatastreamoutflowpaused",
       "community": 13,
-      "community_name": "getVisibleStoragePoolCount",
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "isdatastreamoutflowpaused()"
     },
     {
@@ -6694,7 +6694,7 @@
       "_origin": "ast",
       "id": "src_game_engine_clearintrocapacityupgradequeue",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "clearintrocapacityupgradequeue()"
     },
     {
@@ -6752,8 +6752,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstorageunlocked",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 100,
+      "community_name": "upgradePoolCapacity",
       "norm_label": "isstorageunlocked()"
     },
     {
@@ -6916,8 +6916,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getintrokilobyteconversioncost",
-      "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "getintrokilobyteconversioncost()"
     },
     {
@@ -6928,8 +6928,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_convertintrobitstokilobytes",
-      "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "convertintrobitstokilobytes()"
     },
     {
@@ -6940,8 +6940,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_latchmaingameunlocked",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 100,
+      "community_name": "upgradePoolCapacity",
       "norm_label": "latchmaingameunlocked()"
     },
     {
@@ -6953,7 +6953,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickintroproduction",
       "community": 22,
-      "community_name": "engine.test.js",
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "tickintroproduction()"
     },
     {
@@ -6965,7 +6965,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickintroautoinvest",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "tickintroautoinvest()"
     },
     {
@@ -6976,8 +6976,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskladdersizebits",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getdiskladdersizebits()"
     },
     {
@@ -6989,7 +6989,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getmaxactivediskladderstep",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "getmaxactivediskladderstep()"
     },
     {
@@ -7001,7 +7001,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdiskladderexhaustedforactivepools",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isdiskladderexhaustedforactivepools()"
     },
     {
@@ -7013,7 +7013,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdisksize",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "getdisksize()"
     },
     {
@@ -7024,7 +7024,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskprovisionpassesrequired",
-      "community": 107,
+      "community": 90,
       "community_name": "ByteFoundryPage",
       "norm_label": "getdiskprovisionpassesrequired()"
     },
@@ -7036,7 +7036,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskcost",
-      "community": 107,
+      "community": 90,
       "community_name": "ByteFoundryPage",
       "norm_label": "getdiskcost()"
     },
@@ -7049,7 +7049,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdiskprovisionpassescollected",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "getdiskprovisionpassescollected()"
     },
     {
@@ -7059,8 +7059,8 @@
       "source_location": "L3676",
       "_origin": "ast",
       "id": "src_game_engine_formatdisksize",
-      "community": 107,
-      "community_name": "ByteFoundryPage",
+      "community": 42,
+      "community_name": "DiskArrayRow/index.jsx",
       "norm_label": "formatdisksize"
     },
     {
@@ -7167,8 +7167,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdisksizestoshow",
-      "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getdisksizestoshow()"
     },
     {
@@ -7180,7 +7180,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isprovisiondiskturnavailable",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isprovisiondiskturnavailable()"
     },
     {
@@ -7192,7 +7192,7 @@
       "_origin": "ast",
       "id": "src_game_engine_provisiondisk",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "provisiondisk()"
     },
     {
@@ -7204,7 +7204,7 @@
       "_origin": "ast",
       "id": "src_game_engine_queuediskbuild",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "queuediskbuild()"
     },
     {
@@ -7216,7 +7216,7 @@
       "_origin": "ast",
       "id": "src_game_engine_cleardiskbuildqueue",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "cleardiskbuildqueue()"
     },
     {
@@ -7228,7 +7228,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickqueueddiskbuild",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "tickqueueddiskbuild()"
     },
     {
@@ -7239,8 +7239,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickprovisiondisk",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "tickprovisiondisk()"
     },
     {
@@ -7251,8 +7251,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getnextdiskladdersize",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getnextdiskladdersize()"
     },
     {
@@ -7263,8 +7263,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_candisksizefeedwritecache",
-      "community": 42,
-      "community_name": "DiskArrayRow/index.jsx",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "candisksizefeedwritecache()"
     },
     {
@@ -7323,8 +7323,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canstartdiskwritecachemerge",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "canstartdiskwritecachemerge()"
     },
     {
@@ -7335,8 +7335,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_decrementfulldiskcount",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "decrementfulldiskcount()"
     },
     {
@@ -7347,8 +7347,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskwritecacheflushseconds",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getdiskwritecacheflushseconds()"
     },
     {
@@ -7359,8 +7359,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskwritecachesegmentseconds",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getdiskwritecachesegmentseconds()"
     },
     {
@@ -7371,8 +7371,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickdiskwritecache",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "tickdiskwritecache()"
     },
     {
@@ -7395,8 +7395,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskreadcacheflushseconds",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getdiskreadcacheflushseconds()"
     },
     {
@@ -7431,8 +7431,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isdiskreadcacheeligible",
-      "community": 102,
-      "community_name": "isDiskPullEligible",
+      "community": 42,
+      "community_name": "DiskArrayRow/index.jsx",
       "norm_label": "isdiskreadcacheeligible()"
     },
     {
@@ -7443,8 +7443,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickdiskautofill",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "tickdiskautofill()"
     },
     {
@@ -7503,8 +7503,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskredeemtiername",
-      "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community": 102,
+      "community_name": "isDiskPullEligible",
       "norm_label": "getdiskredeemtiername()"
     },
     {
@@ -7527,8 +7527,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getrelevantdisksizesforfoundry",
-      "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community": 90,
+      "community_name": "ByteFoundryPage",
       "norm_label": "getrelevantdisksizesforfoundry()"
     },
     {
@@ -7564,7 +7564,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickdisklevelonecachepull",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "tickdisklevelonecachepull()"
     },
     {
@@ -7575,8 +7575,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdiskladderstep",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getdiskladderstep()"
     },
     {
@@ -7587,8 +7587,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdatalaketierindex",
-      "community": 102,
-      "community_name": "isDiskPullEligible",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getdatalaketierindex()"
     },
     {
@@ -7599,8 +7599,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getdatalakesubsize",
-      "community": 102,
-      "community_name": "isDiskPullEligible",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "getdatalakesubsize()"
     },
     {
@@ -7803,8 +7803,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isdatalakepoolready",
-      "community": 34,
-      "community_name": "DataLakePanel/index.jsx",
+      "community": 23,
+      "community_name": "isDataLakePoolReady",
       "norm_label": "isdatalakepoolready()"
     },
     {
@@ -7816,7 +7816,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdatalakeboosterunlocked",
       "community": 23,
-      "community_name": "buyBooster",
+      "community_name": "isDataLakePoolReady",
       "norm_label": "isdatalakeboosterunlocked()"
     },
     {
@@ -7839,8 +7839,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputeentityautomergeunlocked",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "iscomputeentityautomergeunlocked()"
     },
     {
@@ -7851,8 +7851,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeentityeffectivecap",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "getcomputeentityeffectivecap()"
     },
     {
@@ -7863,8 +7863,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputefieldeffectivecap",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "getcomputefieldeffectivecap()"
     },
     {
@@ -7875,8 +7875,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeentityfieldroom",
-      "community": 23,
-      "community_name": "buyBooster",
+      "community": 34,
+      "community_name": "DataLakePanel/index.jsx",
       "norm_label": "getcomputeentityfieldroom()"
     },
     {
@@ -7887,8 +7887,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputereserveheld",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "getcomputereserveheld()"
     },
     {
@@ -7911,8 +7911,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isboosterentityatcap",
-      "community": 23,
-      "community_name": "buyBooster",
+      "community": 34,
+      "community_name": "DataLakePanel/index.jsx",
       "norm_label": "isboosterentityatcap()"
     },
     {
@@ -7923,8 +7923,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getboosterbulkpurchase",
-      "community": 23,
-      "community_name": "buyBooster",
+      "community": 34,
+      "community_name": "DataLakePanel/index.jsx",
       "norm_label": "getboosterbulkpurchase()"
     },
     {
@@ -7935,8 +7935,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buybooster",
-      "community": 23,
-      "community_name": "buyBooster",
+      "community": 34,
+      "community_name": "DataLakePanel/index.jsx",
       "norm_label": "buybooster()"
     },
     {
@@ -7984,7 +7984,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setdatalakeautoconvertactive",
       "community": 23,
-      "community_name": "buyBooster",
+      "community_name": "isDataLakePoolReady",
       "norm_label": "setdatalakeautoconvertactive()"
     },
     {
@@ -8008,7 +8008,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdatalakeautoconvertstartavailable",
       "community": 23,
-      "community_name": "buyBooster",
+      "community_name": "isDataLakePoolReady",
       "norm_label": "isdatalakeautoconvertstartavailable()"
     },
     {
@@ -8031,8 +8031,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_resetstoragepool",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "resetstoragepool()"
     },
     {
@@ -8044,7 +8044,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startdatalakeautoconvert",
       "community": 23,
-      "community_name": "buyBooster",
+      "community_name": "isDataLakePoolReady",
       "norm_label": "startdatalakeautoconvert()"
     },
     {
@@ -8067,8 +8067,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_latchcomputemergepageifneeded",
-      "community": 23,
-      "community_name": "buyBooster",
+      "community": 34,
+      "community_name": "DataLakePanel/index.jsx",
       "norm_label": "latchcomputemergepageifneeded()"
     },
     {
@@ -8127,8 +8127,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_arestoragepooldisksfull",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 17,
+      "community_name": "getPoolIndexForDiskSize",
       "norm_label": "arestoragepooldisksfull()"
     },
     {
@@ -8140,7 +8140,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isstoragepoolprovisioninginprogress",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isstoragepoolprovisioninginprogress()"
     },
     {
@@ -8152,7 +8152,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdatalakepooldrainavailable",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isdatalakepooldrainavailable()"
     },
     {
@@ -8164,7 +8164,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickdatalakepooldrain",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "tickdatalakepooldrain()"
     },
     {
@@ -8212,7 +8212,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdatalakecapacitydoublingturnavailable",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "isdatalakecapacitydoublingturnavailable()"
     },
     {
@@ -8224,7 +8224,7 @@
       "_origin": "ast",
       "id": "src_game_engine_doubledatalakecapacity",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "doubledatalakecapacity()"
     },
     {
@@ -8235,8 +8235,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputecoreconversionunlocked",
-      "community": 4,
-      "community_name": "navAttention.js",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "iscomputecoreconversionunlocked()"
     },
     {
@@ -8247,8 +8247,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_mergecomputeentities",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "mergecomputeentities()"
     },
     {
@@ -8259,7 +8259,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputecoresintonode",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputecoresintonode"
     },
     {
@@ -8270,7 +8270,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputenodesintocluster",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputenodesintocluster"
     },
     {
@@ -8281,7 +8281,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputeclustersintonetwork",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputeclustersintonetwork"
     },
     {
@@ -8292,7 +8292,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputenetworksintogrid",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputenetworksintogrid"
     },
     {
@@ -8303,7 +8303,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputegridsintofabric",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputegridsintofabric"
     },
     {
@@ -8314,7 +8314,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputefabricsintocloud",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputefabricsintocloud"
     },
     {
@@ -8325,7 +8325,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputecloudsintodatacenter",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputecloudsintodatacenter"
     },
     {
@@ -8336,7 +8336,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputedatacentersintosupercomputer",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputedatacentersintosupercomputer"
     },
     {
@@ -8347,7 +8347,7 @@
       "_origin": "ast",
       "id": "src_game_engine_mergecomputesupercomputersintomegacomputer",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "mergecomputesupercomputersintomegacomputer"
     },
     {
@@ -8394,8 +8394,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputemergedurationseconds",
-      "community": 6,
-      "community_name": "engine.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getcomputemergedurationseconds()"
     },
     {
@@ -8406,8 +8406,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergeunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergeunlockavailable()"
     },
     {
@@ -8418,8 +8418,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_enableautomerge",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "enableautomerge()"
     },
     {
@@ -8442,8 +8442,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputemergestartavailableatboundary",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "iscomputemergestartavailableatboundary()"
     },
     {
@@ -8478,7 +8478,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergecoresintonode",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergecoresintonode"
     },
     {
@@ -8489,8 +8489,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergecoresintonodeunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergecoresintonodeunlockavailable()"
     },
     {
@@ -8501,7 +8501,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputecoresmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputecoresmerge"
     },
     {
@@ -8536,7 +8536,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergenodesintocluster",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergenodesintocluster"
     },
     {
@@ -8547,8 +8547,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergenodesintoclusterunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergenodesintoclusterunlockavailable()"
     },
     {
@@ -8559,7 +8559,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputenodesmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputenodesmerge"
     },
     {
@@ -8594,7 +8594,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergeclustersintonetwork",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergeclustersintonetwork"
     },
     {
@@ -8605,8 +8605,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergeclustersintonetworkunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergeclustersintonetworkunlockavailable()"
     },
     {
@@ -8617,7 +8617,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputeclustersmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputeclustersmerge"
     },
     {
@@ -8652,7 +8652,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergenetworksintogrid",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergenetworksintogrid"
     },
     {
@@ -8663,8 +8663,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergenetworksintogridunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergenetworksintogridunlockavailable()"
     },
     {
@@ -8675,7 +8675,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputenetworksmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputenetworksmerge"
     },
     {
@@ -8710,7 +8710,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergegridsintofabric",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergegridsintofabric"
     },
     {
@@ -8721,8 +8721,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergegridsintofabricunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergegridsintofabricunlockavailable()"
     },
     {
@@ -8733,7 +8733,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputegridsmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputegridsmerge"
     },
     {
@@ -8768,7 +8768,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergefabricsintocloud",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergefabricsintocloud"
     },
     {
@@ -8779,8 +8779,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergefabricsintocloudunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergefabricsintocloudunlockavailable()"
     },
     {
@@ -8791,7 +8791,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputefabricsmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputefabricsmerge"
     },
     {
@@ -8826,7 +8826,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergecloudsintodatacenter",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergecloudsintodatacenter"
     },
     {
@@ -8837,8 +8837,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergecloudsintodatacenterunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergecloudsintodatacenterunlockavailable()"
     },
     {
@@ -8849,7 +8849,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputecloudsmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputecloudsmerge"
     },
     {
@@ -8884,7 +8884,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergedatacentersintosupercomputer",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergedatacentersintosupercomputer"
     },
     {
@@ -8895,8 +8895,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergedatacentersintosupercomputerunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergedatacentersintosupercomputerunlockavailable()"
     },
     {
@@ -8907,7 +8907,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputedatacentersmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputedatacentersmerge"
     },
     {
@@ -8942,7 +8942,7 @@
       "_origin": "ast",
       "id": "src_game_engine_enableautomergesupercomputersintomegacomputer",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "enableautomergesupercomputersintomegacomputer"
     },
     {
@@ -8953,8 +8953,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isautomergesupercomputersintomegacomputerunlockavailable",
-      "community": 98,
-      "community_name": "isAutoMergeUnlockAvailable",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isautomergesupercomputersintomegacomputerunlockavailable()"
     },
     {
@@ -8965,7 +8965,7 @@
       "_origin": "ast",
       "id": "src_game_engine_startcomputesupercomputersmerge",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "startcomputesupercomputersmerge"
     },
     {
@@ -8987,7 +8987,7 @@
       "source_location": "L5821",
       "_origin": "ast",
       "id": "src_game_engine_auto_merge_tickers",
-      "community": 46,
+      "community": 12,
       "community_name": "tickGame",
       "norm_label": "auto_merge_tickers"
     },
@@ -8999,8 +8999,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isvalidcomputeboosttier",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "isvalidcomputeboosttier()"
     },
     {
@@ -9011,8 +9011,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeboosttierfield",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "getcomputeboosttierfield()"
     },
     {
@@ -9023,8 +9023,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeboosttiermultiplier",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "getcomputeboosttiermultiplier()"
     },
     {
@@ -9035,8 +9035,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeboosttierdurationseconds",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "getcomputeboosttierdurationseconds()"
     },
     {
@@ -9047,8 +9047,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getcomputeboostmultiplier",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 22,
+      "community_name": "getDataStreamBaseMultiplierPercent",
       "norm_label": "getcomputeboostmultiplier()"
     },
     {
@@ -9059,8 +9059,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canactivatecomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "canactivatecomputeboost()"
     },
     {
@@ -9071,8 +9071,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_iscomputeboostturnavailable",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "iscomputeboostturnavailable()"
     },
     {
@@ -9083,8 +9083,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canstackcomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "canstackcomputeboost()"
     },
     {
@@ -9095,8 +9095,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isstackcomputeboostturnavailable",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "isstackcomputeboostturnavailable()"
     },
     {
@@ -9119,8 +9119,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canforfeitcomputeboost",
-      "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "canforfeitcomputeboost()"
     },
     {
@@ -9132,7 +9132,7 @@
       "_origin": "ast",
       "id": "src_game_engine_forfeitcomputeboost",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "forfeitcomputeboost()"
     },
     {
@@ -9143,8 +9143,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_activatecomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "activatecomputeboost()"
     },
     {
@@ -9155,8 +9155,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_stackcomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "stackcomputeboost()"
     },
     {
@@ -9167,8 +9167,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickcomputeboost",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "tickcomputeboost()"
     },
     {
@@ -9179,8 +9179,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_isanycomputemergeinflight",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "isanycomputemergeinflight()"
     },
     {
@@ -9191,8 +9191,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_getbiggestcomputetierwaitingonmerge",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "getbiggestcomputetierwaitingonmerge()"
     },
     {
@@ -9204,7 +9204,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setcomputeautoboosttype",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setcomputeautoboosttype()"
     },
     {
@@ -9215,8 +9215,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_tickautocomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "tickautocomputeboost()"
     },
     {
@@ -9227,8 +9227,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_canreclaimcomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "canreclaimcomputeboost()"
     },
     {
@@ -9239,8 +9239,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_reclaimcomputeboost",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "reclaimcomputeboost()"
     },
     {
@@ -9252,7 +9252,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautobuyerenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setautobuyerenabled()"
     },
     {
@@ -9263,8 +9263,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedmultiplier",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "buytickspeedmultiplier()"
     },
     {
@@ -9275,8 +9275,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buysmartautobuyer",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buysmartautobuyer()"
     },
     {
@@ -9288,7 +9288,7 @@
       "_origin": "ast",
       "id": "src_game_engine_settiertickspeedautobuyerenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "settiertickspeedautobuyerenabled()"
     },
     {
@@ -9299,8 +9299,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestige",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 63,
+      "community_name": "PerksPage/index.jsx",
       "norm_label": "buyautoprestige()"
     },
     {
@@ -9312,7 +9312,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoprestigeenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setautoprestigeenabled()"
     },
     {
@@ -9323,8 +9323,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoprestigeautobuyer",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buyautoprestigeautobuyer()"
     },
     {
@@ -9336,7 +9336,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoprestigeautobuyerenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setautoprestigeautobuyerenabled()"
     },
     {
@@ -9347,8 +9347,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyglobaltickspeedmultiplier",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "buyglobaltickspeedmultiplier()"
     },
     {
@@ -9359,7 +9359,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_capturefoundryupgradecaps",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "capturefoundryupgradecaps()"
     },
@@ -9371,7 +9371,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_mergefoundryupgradecaps",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "mergefoundryupgradecaps()"
     },
@@ -9384,7 +9384,7 @@
       "_origin": "ast",
       "id": "src_game_engine_isdiskbuildbelowcap",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "isdiskbuildbelowcap()"
     },
     {
@@ -9396,7 +9396,7 @@
       "_origin": "ast",
       "id": "src_game_engine_getdiskreplaypassallowance",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "getdiskreplaypassallowance()"
     },
     {
@@ -9408,7 +9408,7 @@
       "_origin": "ast",
       "id": "src_game_engine_tickfoundryresetconvenience",
       "community": 90,
-      "community_name": "isProvisionDiskAvailable",
+      "community_name": "ByteFoundryPage",
       "norm_label": "tickfoundryresetconvenience()"
     },
     {
@@ -9419,7 +9419,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_resetbytefoundry",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "resetbytefoundry()"
     },
@@ -9431,8 +9431,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_prestigegame",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 46,
+      "community_name": "clampNonNegative",
       "norm_label": "prestigegame()"
     },
     {
@@ -9444,7 +9444,7 @@
       "_origin": "ast",
       "id": "src_game_engine_pinmuseumentry",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "pinmuseumentry()"
     },
     {
@@ -9456,7 +9456,7 @@
       "_origin": "ast",
       "id": "src_game_engine_unpinmuseumentry",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "unpinmuseumentry()"
     },
     {
@@ -9467,7 +9467,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_scaleupgame",
-      "community": 17,
+      "community": 46,
       "community_name": "clampNonNegative",
       "norm_label": "scaleupgame()"
     },
@@ -9479,8 +9479,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_overclockgame",
-      "community": 18,
-      "community_name": "run-simulation.mjs",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "overclockgame()"
     },
     {
@@ -9491,8 +9491,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buyautoscaleup",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buyautoscaleup()"
     },
     {
@@ -9503,8 +9503,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buycomputeautoboost",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buycomputeautoboost()"
     },
     {
@@ -9516,7 +9516,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoscaleupenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setautoscaleupenabled()"
     },
     {
@@ -9527,8 +9527,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_buytickspeedautobuyer",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 15,
+      "community_name": "engine.test.js",
       "norm_label": "buytickspeedautobuyer()"
     },
     {
@@ -9540,7 +9540,7 @@
       "_origin": "ast",
       "id": "src_game_engine_setautoglobaltickspeedenabled",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "setautoglobaltickspeedenabled()"
     },
     {
@@ -9551,8 +9551,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_consumexpforlasttiertickspeed",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "consumexpforlasttiertickspeed()"
     },
     {
@@ -9562,7 +9562,7 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_engine_test",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "engine.test.js"
     },
@@ -9574,7 +9574,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withmoney",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withmoney()"
     },
@@ -9586,7 +9586,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withbytes",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withbytes()"
     },
@@ -9598,7 +9598,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withresource",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withresource()"
     },
@@ -9610,7 +9610,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withowned",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withowned()"
     },
@@ -9622,7 +9622,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withpurchased",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withpurchased()"
     },
@@ -9634,7 +9634,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withpurchaselevel",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withpurchaselevel()"
     },
@@ -9646,7 +9646,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withpurchaselevelprogress",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withpurchaselevelprogress()"
     },
@@ -9658,7 +9658,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withxp",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withxp()"
     },
@@ -9670,7 +9670,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautobuyer",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautobuyer()"
     },
@@ -9682,7 +9682,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withtickspeedlevel",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withtickspeedlevel()"
     },
@@ -9694,8 +9694,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withprestigepoints",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "withprestigepoints()"
     },
     {
@@ -9706,7 +9706,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withprestigecount",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withprestigecount()"
     },
@@ -9718,7 +9718,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withsmartautobuyer",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withsmartautobuyer()"
     },
@@ -9730,7 +9730,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withtiertickspeedautobuyer",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withtiertickspeedautobuyer()"
     },
@@ -9742,7 +9742,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautobuyerenabled",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautobuyerenabled()"
     },
@@ -9754,7 +9754,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withtiertickspeedautobuyerenabled",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withtiertickspeedautobuyerenabled()"
     },
@@ -9766,7 +9766,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoprestige",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoprestige()"
     },
@@ -9778,7 +9778,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoprestigebudget",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoprestigebudget()"
     },
@@ -9790,7 +9790,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withglobaltickspeedmultiplier",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withglobaltickspeedmultiplier()"
     },
@@ -9802,7 +9802,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withprestigespeedbonusunlocked",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withprestigespeedbonusunlocked()"
     },
@@ -9814,7 +9814,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withscaleupcount",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withscaleupcount()"
     },
@@ -9826,7 +9826,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withoverclockcount",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withoverclockcount()"
     },
@@ -9838,7 +9838,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoscaleup",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoscaleup()"
     },
@@ -9850,7 +9850,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoglobaltickspeed",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoglobaltickspeed()"
     },
@@ -9862,7 +9862,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoscaleupenabled",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoscaleupenabled()"
     },
@@ -9874,7 +9874,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoglobaltickspeedenabled",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoglobaltickspeedenabled()"
     },
@@ -9886,7 +9886,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoprestigeenabled",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoprestigeenabled()"
     },
@@ -9898,7 +9898,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoprestigeautobuyer",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoprestigeautobuyer()"
     },
@@ -9910,7 +9910,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withautoprestigeautobuyerenabled",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withautoprestigeautobuyerenabled()"
     },
@@ -9922,7 +9922,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withlasttiertickspeedxpunlocked",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withlasttiertickspeedxpunlocked()"
     },
@@ -9934,7 +9934,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withlasttierxpconsumed",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "withlasttierxpconsumed()"
     },
@@ -9946,7 +9946,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_witheverunlockedtierids",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "witheverunlockedtierids()"
     },
@@ -9958,8 +9958,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withintro",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "withintro()"
     },
     {
@@ -9970,8 +9970,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_withpoolbuffer",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "withpoolbuffer()"
     },
     {
@@ -9982,7 +9982,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_omit",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "omit()"
     },
@@ -9993,7 +9993,7 @@
       "source_location": "L980",
       "_origin": "ast",
       "id": "src_game_engine_test_nootherupgradesleft",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "nootherupgradesleft"
     },
@@ -10005,8 +10005,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_getfinalpoolcapacitycapbits",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getfinalpoolcapacitycapbits()"
     },
     {
@@ -10017,7 +10017,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_unlockedlasttierstate",
-      "community": 22,
+      "community": 15,
       "community_name": "engine.test.js",
       "norm_label": "unlockedlasttierstate()"
     },
@@ -10029,8 +10029,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_engine_test_eraeligiblestate",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "eraeligiblestate()"
     },
     {
@@ -10106,8 +10106,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "src_game_layers_bytes_id",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "bytes_id"
     },
     {
@@ -10131,7 +10131,7 @@
       "_origin": "ast",
       "id": "src_game_layers_gettierbasetickspeedseconds",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "gettierbasetickspeedseconds()"
     },
     {
@@ -10141,8 +10141,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "src_game_layers_money_id",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "money_id"
     },
     {
@@ -10240,8 +10240,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "src_game_layers_intro_starting_capacity",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "intro_starting_capacity"
     },
     {
@@ -10251,8 +10251,8 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "src_game_layers_intro_capacity_doubling_step",
-      "community": 3,
-      "community_name": "layers.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "intro_capacity_doubling_step"
     },
     {
@@ -10296,8 +10296,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_layers_getstoragepoolmemorybounds",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 13,
+      "community_name": "getStoragePoolBandwidth",
       "norm_label": "getstoragepoolmemorybounds()"
     },
     {
@@ -10318,8 +10318,8 @@
       "source_location": "L183",
       "_origin": "ast",
       "id": "src_game_layers_intro_byte_combine_cost",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "intro_byte_combine_cost"
     },
     {
@@ -10340,8 +10340,8 @@
       "source_location": "L195",
       "_origin": "ast",
       "id": "src_game_layers_intro_conversion_unlock_capacity",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 3,
+      "community_name": "layers.js",
       "norm_label": "intro_conversion_unlock_capacity"
     },
     {
@@ -10373,8 +10373,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "src_game_layers_fill_multiplier_tap_bonus_percent",
-      "community": 89,
-      "community_name": "App.test.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "fill_multiplier_tap_bonus_percent"
     },
     {
@@ -10395,8 +10395,8 @@
       "source_location": "L224",
       "_origin": "ast",
       "id": "src_game_layers_fill_multiplier_tap_bonus_cap_percent",
-      "community": 89,
-      "community_name": "App.test.jsx",
+      "community": 44,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "fill_multiplier_tap_bonus_cap_percent"
     },
     {
@@ -10406,8 +10406,8 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "src_game_layers_fill_multiplier_tap_cap_percent",
-      "community": 88,
-      "community_name": "InfoPage/index.jsx",
+      "community": 44,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "fill_multiplier_tap_cap_percent"
     },
     {
@@ -10417,8 +10417,8 @@
       "source_location": "L259",
       "_origin": "ast",
       "id": "src_game_layers_intro_disk_unlock_capacity",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "intro_disk_unlock_capacity"
     },
     {
@@ -10428,8 +10428,8 @@
       "source_location": "L276",
       "_origin": "ast",
       "id": "src_game_layers_disk_build_cost_multiplier",
-      "community": 89,
-      "community_name": "App.test.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "disk_build_cost_multiplier"
     },
     {
@@ -10472,8 +10472,8 @@
       "source_location": "L307",
       "_origin": "ast",
       "id": "src_game_layers_disk_cache_block_count",
-      "community": 88,
-      "community_name": "InfoPage/index.jsx",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "disk_cache_block_count"
     },
     {
@@ -10517,7 +10517,7 @@
       "_origin": "ast",
       "id": "src_game_layers_intro_compute_core_unlock_capacity",
       "community": 16,
-      "community_name": "navAttention.test.js",
+      "community_name": "createInitialGameState",
       "norm_label": "intro_compute_core_unlock_capacity"
     },
     {
@@ -10527,8 +10527,8 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "src_game_layers_compute_cores_per_node",
-      "community": 89,
-      "community_name": "App.test.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "compute_cores_per_node"
     },
     {
@@ -10538,8 +10538,8 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "src_game_layers_compute_entity_cap",
-      "community": 5,
-      "community_name": "ComputePage/index.jsx",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "compute_entity_cap"
     },
     {
@@ -10549,8 +10549,8 @@
       "source_location": "L386",
       "_origin": "ast",
       "id": "src_game_layers_compute_merge_ratio",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "compute_merge_ratio"
     },
     {
@@ -10560,8 +10560,8 @@
       "source_location": "L412",
       "_origin": "ast",
       "id": "src_game_layers_compute_merge_reserve_cap",
-      "community": 5,
-      "community_name": "ComputePage/index.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "compute_merge_reserve_cap"
     },
     {
@@ -10571,8 +10571,8 @@
       "source_location": "L418",
       "_origin": "ast",
       "id": "src_game_layers_compute_entity_auto_merge_cap",
-      "community": 88,
-      "community_name": "InfoPage/index.jsx",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "compute_entity_auto_merge_cap"
     },
     {
@@ -10582,8 +10582,8 @@
       "source_location": "L423",
       "_origin": "ast",
       "id": "src_game_layers_compute_merge_boundaries",
-      "community": 22,
-      "community_name": "engine.test.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "compute_merge_boundaries"
     },
     {
@@ -10593,8 +10593,8 @@
       "source_location": "L452",
       "_origin": "ast",
       "id": "src_game_layers_compute_boost_presets",
-      "community": 5,
-      "community_name": "ComputePage/index.jsx",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "compute_boost_presets"
     },
     {
@@ -10637,8 +10637,8 @@
       "source_location": "L475",
       "_origin": "ast",
       "id": "src_game_layers_compute_boost_tier_fields",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "compute_boost_tier_fields"
     },
     {
@@ -10648,8 +10648,8 @@
       "source_location": "L484",
       "_origin": "ast",
       "id": "src_game_layers_compute_boost_max_stacks",
-      "community": 5,
-      "community_name": "ComputePage/index.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "compute_boost_max_stacks"
     },
     {
@@ -10770,7 +10770,7 @@
       "_origin": "ast",
       "id": "src_game_layers_offline_progress_full_speed_threshold_seconds",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "offline_progress_full_speed_threshold_seconds"
     },
     {
@@ -10780,8 +10780,8 @@
       "source_location": "L563",
       "_origin": "ast",
       "id": "src_game_layers_max_offline_seconds",
-      "community": 3,
-      "community_name": "layers.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "max_offline_seconds"
     },
     {
@@ -10835,8 +10835,8 @@
       "source_location": "L584",
       "_origin": "ast",
       "id": "src_game_layers_default_purchase_block_size",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 89,
+      "community_name": "App.test.jsx",
       "norm_label": "default_purchase_block_size"
     },
     {
@@ -10912,8 +10912,8 @@
       "source_location": "L625",
       "_origin": "ast",
       "id": "src_game_layers_prestige_speed_bonus_unlock_cost",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 18,
+      "community_name": "run-simulation.mjs",
       "norm_label": "prestige_speed_bonus_unlock_cost"
     },
     {
@@ -11110,8 +11110,8 @@
       "source_location": "L712",
       "_origin": "ast",
       "id": "src_game_layers_compute_auto_boost_unlock_cost",
-      "community": 5,
-      "community_name": "ComputePage/index.jsx",
+      "community": 88,
+      "community_name": "InfoPage/index.jsx",
       "norm_label": "compute_auto_boost_unlock_cost"
     },
     {
@@ -11121,8 +11121,8 @@
       "source_location": "L720",
       "_origin": "ast",
       "id": "src_game_layers_tickspeed_autobuyer_cost",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "tickspeed_autobuyer_cost"
     },
     {
@@ -11132,8 +11132,8 @@
       "source_location": "L730",
       "_origin": "ast",
       "id": "src_game_layers_auto_prestige_autobuyer_cost",
-      "community": 63,
-      "community_name": "PerksPage/index.jsx",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "auto_prestige_autobuyer_cost"
     },
     {
@@ -11165,8 +11165,8 @@
       "source_location": "L752",
       "_origin": "ast",
       "id": "src_game_layers_last_tier_xp_tickspeed_min_consumption_floor",
-      "community": 3,
-      "community_name": "layers.js",
+      "community": 6,
+      "community_name": "engine.js",
       "norm_label": "last_tier_xp_tickspeed_min_consumption_floor"
     },
     {
@@ -11187,8 +11187,8 @@
       "source_location": "L758",
       "_origin": "ast",
       "id": "src_game_layers_compute_flops_first_tier_cost_pp",
-      "community": 88,
-      "community_name": "InfoPage/index.jsx",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "compute_flops_first_tier_cost_pp"
     },
     {
@@ -11220,8 +11220,8 @@
       "source_location": "L768",
       "_origin": "ast",
       "id": "src_game_layers_compute_flops_tier_definitions",
-      "community": 104,
-      "community_name": "COMPUTE_FLOPS_TIER_DEFINITIONS",
+      "community": 24,
+      "community_name": "ComputeFlopsPage/index.jsx",
       "norm_label": "compute_flops_tier_definitions"
     },
     {
@@ -11352,8 +11352,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "src_game_navattention_attention_high",
-      "community": 27,
-      "community_name": "AppNav/index.jsx",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "attention_high"
     },
     {
@@ -11363,8 +11363,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "src_game_navattention_attention_normal",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "attention_normal"
     },
     {
@@ -11469,7 +11469,7 @@
       "_origin": "ast",
       "id": "src_game_navattention_hasaffordablefulllevel",
       "community": 12,
-      "community_name": "getPurchaseBlockSize",
+      "community_name": "tickGame",
       "norm_label": "hasaffordablefulllevel()"
     },
     {
@@ -11480,8 +11480,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_hasaffordableglobaltickspeed",
-      "community": 46,
-      "community_name": "tickGame",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "hasaffordableglobaltickspeed()"
     },
     {
@@ -11492,8 +11492,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_hasscaleupavailable",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "hasscaleupavailable()"
     },
     {
@@ -11504,8 +11504,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_hasoverclockavailable",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "hasoverclockavailable()"
     },
     {
@@ -11516,8 +11516,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_hastiersgameattention",
-      "community": 17,
-      "community_name": "clampNonNegative",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "hastiersgameattention()"
     },
     {
@@ -11648,8 +11648,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_hasaffordablecomputeflopstier",
-      "community": 24,
-      "community_name": "ComputeFlopsPage/index.jsx",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "hasaffordablecomputeflopstier()"
     },
     {
@@ -11672,8 +11672,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_maxattention",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "maxattention()"
     },
     {
@@ -11695,42 +11695,42 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_game_navattention_test",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "navattention.test.js"
     },
     {
       "label": "withIntro()",
       "file_type": "code",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L42",
+      "source_location": "L43",
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_navattention_test_withintro",
       "community": 16,
-      "community_name": "navAttention.test.js",
+      "community_name": "createInitialGameState",
       "norm_label": "withintro()"
     },
     {
       "label": "investReadyIntro",
       "file_type": "code",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L53",
+      "source_location": "L54",
       "_origin": "ast",
       "id": "src_game_navattention_test_investreadyintro",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "investreadyintro"
     },
     {
       "label": "computeBoostReadyIntro",
       "file_type": "code",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L61",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "src_game_navattention_test_computeboostreadyintro",
-      "community": 16,
-      "community_name": "navAttention.test.js",
+      "community": 4,
+      "community_name": "navAttention.js",
       "norm_label": "computeboostreadyintro"
     },
     {
@@ -11752,8 +11752,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_isplainobject",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "isplainobject()"
     },
     {
@@ -11775,8 +11775,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_game_storage_free_slot_count",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "free_slot_count"
     },
     {
@@ -11797,8 +11797,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "src_game_storage_supporter_unlock_code",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "supporter_unlock_code"
     },
     {
@@ -11833,8 +11833,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_defaultslotname",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 101,
+      "community_name": "listSaveSlots",
       "norm_label": "defaultslotname()"
     },
     {
@@ -11845,8 +11845,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_builddefaultmeta",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 101,
+      "community_name": "listSaveSlots",
       "norm_label": "builddefaultmeta()"
     },
     {
@@ -11893,8 +11893,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_withsupporterslots",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 101,
+      "community_name": "listSaveSlots",
       "norm_label": "withsupporterslots()"
     },
     {
@@ -11905,8 +11905,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_coercemeta",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 101,
+      "community_name": "listSaveSlots",
       "norm_label": "coercemeta()"
     },
     {
@@ -12001,8 +12001,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_listsaveslots",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 101,
+      "community_name": "listSaveSlots",
       "norm_label": "listsaveslots()"
     },
     {
@@ -12061,8 +12061,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_getactiveslotdisplayname",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "getactiveslotdisplayname()"
     },
     {
@@ -12073,8 +12073,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_buildresetactiveslotconfirmmessage",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "buildresetactiveslotconfirmmessage()"
     },
     {
@@ -12085,8 +12085,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_buildresetbytefoundryconfirmmessage",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 9,
+      "community_name": "App.jsx",
       "norm_label": "buildresetbytefoundryconfirmmessage()"
     },
     {
@@ -12097,8 +12097,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_buildclearslotconfirmmessage",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "buildclearslotconfirmmessage()"
     },
     {
@@ -12109,8 +12109,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_builderaseallsavesconfirmmessage",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "builderaseallsavesconfirmmessage()"
     },
     {
@@ -12193,8 +12193,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_islegacydatalaketier",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "islegacydatalaketier()"
     },
     {
@@ -12205,8 +12205,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_getlegacypendingtransfercount",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "getlegacypendingtransfercount()"
     },
     {
@@ -12217,8 +12217,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_migratelegacydatalaketier",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "migratelegacydatalaketier()"
     },
     {
@@ -12229,8 +12229,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_mergedatalakes",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "mergedatalakes()"
     },
     {
@@ -12325,8 +12325,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_mergestatefordevwrite",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "mergestatefordevwrite()"
     },
     {
@@ -12337,8 +12337,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_game_storage_applydevgamestatejson",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 98,
+      "community_name": "applyDevGameStateJson",
       "norm_label": "applydevgamestatejson()"
     },
     {
@@ -12361,7 +12361,7 @@
       "_origin": "ast",
       "id": "src_game_storage_loadbuymaxpreference",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "loadbuymaxpreference()"
     },
     {
@@ -12373,7 +12373,7 @@
       "_origin": "ast",
       "id": "src_game_storage_savebuymaxpreference",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "savebuymaxpreference()"
     },
     {
@@ -12443,7 +12443,7 @@
       "_origin": "ast",
       "id": "src_game_useincrementalgame",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "useincrementalgame.js"
     },
     {
@@ -12455,7 +12455,7 @@
       "_origin": "ast",
       "id": "src_game_useincrementalgame_computeofflinecatchup",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "computeofflinecatchup()"
     },
     {
@@ -12479,7 +12479,7 @@
       "_origin": "ast",
       "id": "src_game_useincrementalgame_useincrementalgame",
       "community": 15,
-      "community_name": "useIncrementalGame.js",
+      "community_name": "engine.test.js",
       "norm_label": "useincrementalgame()"
     },
     {
@@ -12756,8 +12756,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_formatcombinedbalance",
-      "community": 107,
-      "community_name": "ByteFoundryPage",
+      "community": 91,
+      "community_name": "formatMemoryAmount",
       "norm_label": "formatcombinedbalance()"
     },
     {
@@ -12768,8 +12768,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_usetrimbalanceafterfull",
-      "community": 107,
-      "community_name": "ByteFoundryPage",
+      "community": 91,
+      "community_name": "formatMemoryAmount",
       "norm_label": "usetrimbalanceafterfull()"
     },
     {
@@ -12780,8 +12780,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_poolbalancetext",
-      "community": 107,
-      "community_name": "ByteFoundryPage",
+      "community": 91,
+      "community_name": "formatMemoryAmount",
       "norm_label": "poolbalancetext()"
     },
     {
@@ -12792,8 +12792,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_clamppercent",
-      "community": 107,
-      "community_name": "ByteFoundryPage",
+      "community": 44,
+      "community_name": "ByteFoundryPage/index.jsx",
       "norm_label": "clamppercent()"
     },
     {
@@ -12939,7 +12939,7 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_bytefoundrypage_index_bytefoundrypage",
-      "community": 107,
+      "community": 90,
       "community_name": "ByteFoundryPage",
       "norm_label": "bytefoundrypage()"
     },
@@ -13394,8 +13394,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_computepage_index_computepage",
-      "community": 85,
-      "community_name": "ComputePage",
+      "community": 5,
+      "community_name": "ComputePage/index.jsx",
       "norm_label": "computepage()"
     },
     {
@@ -14256,32 +14256,10 @@
       "norm_label": "upgradebutton"
     },
     {
-      "label": "UpgradeCategory",
-      "file_type": "code",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L772",
-      "_origin": "ast",
-      "id": "src_pages_mainpage_index_upgradecategory",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "norm_label": "upgradecategory"
-    },
-    {
-      "label": "UpgradeRow",
-      "file_type": "code",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L783",
-      "_origin": "ast",
-      "id": "src_pages_mainpage_index_upgraderow",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "norm_label": "upgraderow"
-    },
-    {
       "label": "PpUpgradeBadge",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L800",
+      "source_location": "L776",
       "_origin": "ast",
       "id": "src_pages_mainpage_index_ppupgradebadge",
       "community": 1,
@@ -14289,21 +14267,10 @@
       "norm_label": "ppupgradebadge"
     },
     {
-      "label": "UpgradeRowControls",
-      "file_type": "code",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L808",
-      "_origin": "ast",
-      "id": "src_pages_mainpage_index_upgraderowcontrols",
-      "community": 1,
-      "community_name": "MainPage/index.jsx",
-      "norm_label": "upgraderowcontrols"
-    },
-    {
       "label": "formatCost()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L814",
+      "source_location": "L781",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatcost",
@@ -14315,7 +14282,7 @@
       "label": "progressPercent()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L823",
+      "source_location": "L790",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_progresspercent",
@@ -14327,7 +14294,7 @@
       "label": "formatRate()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L830",
+      "source_location": "L797",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatrate",
@@ -14339,7 +14306,7 @@
       "label": "formatBonusPercent()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L834",
+      "source_location": "L801",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatbonuspercent",
@@ -14351,7 +14318,7 @@
       "label": "formatGlobalTickspeedBonusPercent()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L842",
+      "source_location": "L809",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatglobaltickspeedbonuspercent",
@@ -14363,7 +14330,7 @@
       "label": "formatBonusOrMultiplier()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L850",
+      "source_location": "L817",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -14375,12 +14342,12 @@
       "label": "MainPage()",
       "file_type": "code",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L855",
+      "source_location": "L822",
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_mainpage_index_mainpage",
       "community": 46,
-      "community_name": "tickGame",
+      "community_name": "clampNonNegative",
       "norm_label": "mainpage()"
     },
     {
@@ -14938,8 +14905,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_settingspage_index_buildsparklinepath",
-      "community": 75,
-      "community_name": "formatCurrency",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "buildsparklinepath()"
     },
     {
@@ -14950,8 +14917,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_pages_settingspage_index_settingspage",
-      "community": 75,
-      "community_name": "formatCurrency",
+      "community": 28,
+      "community_name": "SettingsPage/index.jsx",
       "norm_label": "settingspage()"
     },
     {
@@ -14962,7 +14929,7 @@
       "_origin": "ast",
       "id": "src_pages_storagepage_index",
       "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community_name": "StoragePage/index.jsx",
       "norm_label": "storagepage/index.jsx"
     },
     {
@@ -14973,7 +14940,7 @@
       "_origin": "ast",
       "id": "src_pages_storagepage_index_rootdiv",
       "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community_name": "StoragePage/index.jsx",
       "norm_label": "rootdiv"
     },
     {
@@ -14984,7 +14951,7 @@
       "_origin": "ast",
       "id": "src_pages_storagepage_index_header",
       "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community_name": "StoragePage/index.jsx",
       "norm_label": "header"
     },
     {
@@ -14995,7 +14962,7 @@
       "_origin": "ast",
       "id": "src_pages_storagepage_index_title",
       "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community_name": "StoragePage/index.jsx",
       "norm_label": "title"
     },
     {
@@ -15007,7 +14974,7 @@
       "_origin": "ast",
       "id": "src_pages_storagepage_index_storagepage",
       "community": 108,
-      "community_name": "getDiskSizesToShow",
+      "community_name": "StoragePage/index.jsx",
       "norm_label": "storagepage()"
     },
     {
@@ -15040,8 +15007,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_save_migration_constants",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "constants.js"
     },
     {
@@ -15051,8 +15018,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "src_save_migration_constants_save_schema_version",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "save_schema_version"
     },
     {
@@ -15062,8 +15029,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_save_migration_detectlegacy",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "detectlegacy.js"
     },
     {
@@ -15074,8 +15041,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_save_migration_detectlegacy_isplainobject",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "isplainobject()"
     },
     {
@@ -15085,8 +15052,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "src_save_migration_detectlegacy_legacy_tier_ids",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "legacy_tier_ids"
     },
     {
@@ -15096,8 +15063,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "src_save_migration_detectlegacy_tier_map_fields",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "tier_map_fields"
     },
     {
@@ -15108,8 +15075,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_save_migration_detectlegacy_maphaslegacytierid",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "maphaslegacytierid()"
     },
     {
@@ -15120,8 +15087,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_save_migration_detectlegacy_getsaveincompatibilityreason",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "getsaveincompatibilityreason()"
     },
     {
@@ -15131,8 +15098,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_save_migration_index",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "save-migration/index.js"
     },
     {
@@ -15143,8 +15110,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_save_migration_index_isplainobject",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "isplainobject()"
     },
     {
@@ -15155,8 +15122,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_save_migration_index_stripsaveenvelope",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "stripsaveenvelope()"
     },
     {
@@ -15167,8 +15134,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_save_migration_index_adaptsaveforcurrentschema",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "adaptsaveforcurrentschema()"
     },
     {
@@ -15178,8 +15145,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_save_migration_index_test",
-      "community": 19,
-      "community_name": "storage.js",
+      "community": 85,
+      "community_name": "save-migration/index.js",
       "norm_label": "index.test.js"
     },
     {
@@ -15222,8 +15189,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_theme_contrast",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "contrast.js"
     },
     {
@@ -15234,8 +15201,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_theme_contrast_srgbchanneltolinear",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "srgbchanneltolinear()"
     },
     {
@@ -15246,8 +15213,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_theme_contrast_relativeluminance",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "relativeluminance()"
     },
     {
@@ -15258,8 +15225,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_theme_contrast_hextorgb",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "hextorgb()"
     },
     {
@@ -15270,8 +15237,8 @@
       "_callable": true,
       "_origin": "ast",
       "id": "src_theme_contrast_getcontrastratio",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "getcontrastratio()"
     },
     {
@@ -15281,8 +15248,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "src_theme_contrast_aa_normal_text",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "aa_normal_text"
     },
     {
@@ -15292,8 +15259,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "src_theme_contrast_aa_large_text",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "aa_large_text"
     },
     {
@@ -15303,8 +15270,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_theme_contrast_aa_ui_component",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "aa_ui_component"
     },
     {
@@ -15314,8 +15281,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_theme_contrast_test",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "contrast.test.js"
     },
     {
@@ -15383,8 +15350,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_theme_tokens_contrast_test",
-      "community": 101,
-      "community_name": "contrast.js",
+      "community": 25,
+      "community_name": "tokens.js",
       "norm_label": "tokens.contrast.test.js"
     },
     {
@@ -17772,8 +17739,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude",
-      "community": 111,
-      "community_name": "README.md",
+      "community": 79,
+      "community_name": "Tens",
       "norm_label": "claude.md"
     },
     {
@@ -17948,8 +17915,8 @@
       "source_location": "L731",
       "_origin": "ast",
       "id": "claude_economy_model",
-      "community": 112,
-      "community_name": "Economy model",
+      "community": 10,
+      "community_name": "CLAUDE.md",
       "norm_label": "economy model"
     },
     {
@@ -17959,8 +17926,8 @@
       "source_location": "L733",
       "_origin": "ast",
       "id": "claude_pool_local_resets",
-      "community": 112,
-      "community_name": "Economy model",
+      "community": 10,
+      "community_name": "CLAUDE.md",
       "norm_label": "pool-local resets"
     },
     {
@@ -17970,8 +17937,8 @@
       "source_location": "L748",
       "_origin": "ast",
       "id": "claude_tiers_prestige_era_ascension",
-      "community": 112,
-      "community_name": "Economy model",
+      "community": 10,
+      "community_name": "CLAUDE.md",
       "norm_label": "tiers, prestige, era ascension"
     },
     {
@@ -17981,8 +17948,8 @@
       "source_location": "L785",
       "_origin": "ast",
       "id": "claude_byte_foundry",
-      "community": 112,
-      "community_name": "Economy model",
+      "community": 10,
+      "community_name": "CLAUDE.md",
       "norm_label": "byte foundry"
     },
     {
@@ -18014,8 +17981,8 @@
       "source_location": "L1017",
       "_origin": "ast",
       "id": "claude_pwa_support",
-      "community": 118,
-      "community_name": "PWA support",
+      "community": 10,
+      "community_name": "CLAUDE.md",
       "norm_label": "pwa support"
     },
     {
@@ -18025,8 +17992,8 @@
       "source_location": "L1027",
       "_origin": "ast",
       "id": "claude_native_apps_capacitor_70",
-      "community": 118,
-      "community_name": "PWA support",
+      "community": 10,
+      "community_name": "CLAUDE.md",
       "norm_label": "native apps (capacitor \u2014 #70)"
     },
     {
@@ -18102,8 +18069,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "readme",
-      "community": 111,
-      "community_name": "README.md",
+      "community": 79,
+      "community_name": "Tens",
       "norm_label": "readme.md"
     },
     {
@@ -18509,8 +18476,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_design_history",
-      "community": 111,
-      "community_name": "README.md",
+      "community": 79,
+      "community_name": "Tens",
       "norm_label": "design_history.md"
     },
     {
@@ -19653,8 +19620,8 @@
       "source_location": "L3975",
       "_origin": "ast",
       "id": "docs_design_history_distribution",
-      "community": 119,
-      "community_name": "Distribution",
+      "community": 30,
+      "community_name": "Design history & rationale",
       "norm_label": "distribution"
     },
     {
@@ -19664,8 +19631,8 @@
       "source_location": "L3977",
       "_origin": "ast",
       "id": "docs_design_history_why_a_pwa_instead_of_capacitor_native_app_store_distribution",
-      "community": 119,
-      "community_name": "Distribution",
+      "community": 30,
+      "community_name": "Design history & rationale",
       "norm_label": "why a pwa instead of capacitor/native app-store distribution"
     },
     {
@@ -20654,8 +20621,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_economy_reference",
-      "community": 111,
-      "community_name": "README.md",
+      "community": 79,
+      "community_name": "Tens",
       "norm_label": "economy_reference.md"
     },
     {
@@ -20665,8 +20632,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_economy_reference_economy_model_reference",
-      "community": 111,
-      "community_name": "README.md",
+      "community": 79,
+      "community_name": "Tens",
       "norm_label": "economy model reference"
     },
     {
@@ -20731,8 +20698,8 @@
       "source_location": "L1461",
       "_origin": "ast",
       "id": "docs_economy_reference_tier_production_tickspeed",
-      "community": 117,
-      "community_name": "Tier production tickspeed",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "tier production tickspeed"
     },
     {
@@ -20742,8 +20709,8 @@
       "source_location": "L1505",
       "_origin": "ast",
       "id": "docs_economy_reference_multiplier_outcomes_are_floored",
-      "community": 117,
-      "community_name": "Tier production tickspeed",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "multiplier outcomes are floored"
     },
     {
@@ -20753,8 +20720,8 @@
       "source_location": "L1528",
       "_origin": "ast",
       "id": "docs_economy_reference_production_figure_tick_progress_ring_removed",
-      "community": 117,
-      "community_name": "Tier production tickspeed",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "production figure (tick-progress ring removed)"
     },
     {
@@ -20797,8 +20764,8 @@
       "source_location": "L1669",
       "_origin": "ast",
       "id": "docs_economy_reference_era_ascension_and_eons_407",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "era ascension and eons (#407)"
     },
     {
@@ -20808,8 +20775,8 @@
       "source_location": "L1794",
       "_origin": "ast",
       "id": "docs_economy_reference_tier_autobuyer_tier_tickspeed_autobuyer_milestones",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "tier autobuyer/tier-tickspeed-autobuyer milestones"
     },
     {
@@ -20819,8 +20786,8 @@
       "source_location": "L1827",
       "_origin": "ast",
       "id": "docs_economy_reference_pause_resume_for_the_global_automations",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "pause/resume for the global automations"
     },
     {
@@ -20830,59 +20797,59 @@
       "source_location": "L1851",
       "_origin": "ast",
       "id": "docs_economy_reference_pause_resume_for_per_tier_automations",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "pause/resume for per-tier automations"
     },
     {
       "label": "Tickspeed multiplier",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1883",
+      "source_location": "L1882",
       "_origin": "ast",
       "id": "docs_economy_reference_tickspeed_multiplier",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "tickspeed multiplier"
     },
     {
       "label": "The global tickspeed multiplier",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1913",
+      "source_location": "L1912",
       "_origin": "ast",
       "id": "docs_economy_reference_the_global_tickspeed_multiplier",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "the global tickspeed multiplier"
     },
     {
       "label": "The last tier's XP-funded tickspeed",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1949",
+      "source_location": "L1948",
       "_origin": "ast",
       "id": "docs_economy_reference_the_last_tier_s_xp_funded_tickspeed",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "the last tier's xp-funded tickspeed"
     },
     {
       "label": "Multiplier overflow safety",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2043",
+      "source_location": "L2042",
       "_origin": "ast",
       "id": "docs_economy_reference_multiplier_overflow_safety",
-      "community": 103,
-      "community_name": "Era ascension and Eons (#407)",
+      "community": 35,
+      "community_name": "Pool-local reset loop",
       "norm_label": "multiplier overflow safety"
     },
     {
       "label": "Prestige and the Googol freeze",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2060",
+      "source_location": "L2059",
       "_origin": "ast",
       "id": "docs_economy_reference_prestige_and_the_googol_freeze",
       "community": 35,
@@ -20893,7 +20860,7 @@
       "label": "Scale Up",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2104",
+      "source_location": "L2103",
       "_origin": "ast",
       "id": "docs_economy_reference_scale_up",
       "community": 35,
@@ -20904,7 +20871,7 @@
       "label": "Overclock",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2183",
+      "source_location": "L2182",
       "_origin": "ast",
       "id": "docs_economy_reference_overclock",
       "community": 35,
@@ -20915,7 +20882,7 @@
       "label": "Prestige info is hidden until first prestige",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2266",
+      "source_location": "L2265",
       "_origin": "ast",
       "id": "docs_economy_reference_prestige_info_is_hidden_until_first_prestige",
       "community": 35,
@@ -20926,7 +20893,7 @@
       "label": "Reset",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2286",
+      "source_location": "L2285",
       "_origin": "ast",
       "id": "docs_economy_reference_reset",
       "community": 35,
@@ -20937,7 +20904,7 @@
       "label": "Game state shape",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2320",
+      "source_location": "L2319",
       "_origin": "ast",
       "id": "docs_economy_reference_game_state_shape",
       "community": 35,
@@ -20948,7 +20915,7 @@
       "label": "Key engine functions (`src/game/engine.js`)",
       "file_type": "document",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2796",
+      "source_location": "L2795",
       "_origin": "ast",
       "id": "docs_economy_reference_key_engine_functions_src_game_engine_js",
       "community": 35,
@@ -27688,7 +27655,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.jsx",
-      "source_location": "L55",
+      "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27699,7 +27666,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L60",
+      "source_location": "L59",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27711,7 +27678,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L61",
+      "source_location": "L60",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27723,7 +27690,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L65",
+      "source_location": "L64",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27735,7 +27702,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L87",
+      "source_location": "L85",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27747,7 +27714,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L148",
+      "source_location": "L146",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27759,7 +27726,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L88",
+      "source_location": "L86",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27771,7 +27738,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L96",
+      "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27795,7 +27762,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L122",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27819,7 +27786,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/App.jsx",
-      "source_location": "L116",
+      "source_location": "L114",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_app",
@@ -27854,7 +27821,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1712",
+      "source_location": "L1728",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -27865,7 +27832,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L1716",
+      "source_location": "L1732",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -27887,7 +27854,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L4976",
+      "source_location": "L4992",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -27942,7 +27909,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/App.test.jsx",
-      "source_location": "L2477",
+      "source_location": "L2493",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test",
@@ -28566,7 +28533,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/App.test.jsx",
-      "source_location": "L1717",
+      "source_location": "L1733",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_app_test_alltierssmartseed",
@@ -39088,7 +39055,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L43",
+      "source_location": "L44",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test_withintro",
@@ -39400,7 +39367,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L819",
+      "source_location": "L786",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatcost",
@@ -39412,7 +39379,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L881",
+      "source_location": "L845",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -39568,7 +39535,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L816",
+      "source_location": "L783",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatcost",
@@ -39580,7 +39547,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1139",
+      "source_location": "L1101",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -39652,7 +39619,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L818",
+      "source_location": "L785",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatcost",
@@ -39664,7 +39631,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1333",
+      "source_location": "L1295",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -39700,7 +39667,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1238",
+      "source_location": "L1200",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -39904,7 +39871,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L970",
+      "source_location": "L934",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40120,7 +40087,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1379",
+      "source_location": "L1341",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40204,7 +40171,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1378",
+      "source_location": "L1340",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40276,7 +40243,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1450",
+      "source_location": "L1412",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40372,7 +40339,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L338",
+      "source_location": "L333",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -40444,7 +40411,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L339",
+      "source_location": "L334",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -40528,7 +40495,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1401",
+      "source_location": "L1363",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40600,7 +40567,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1068",
+      "source_location": "L1030",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40672,7 +40639,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1069",
+      "source_location": "L1031",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40732,7 +40699,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1067",
+      "source_location": "L1029",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40816,7 +40783,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1396",
+      "source_location": "L1358",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40864,7 +40831,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1400",
+      "source_location": "L1362",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40912,7 +40879,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1409",
+      "source_location": "L1371",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -40960,7 +40927,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L868",
+      "source_location": "L832",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -41824,7 +41791,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L477",
+      "source_location": "L471",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -42124,7 +42091,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L340",
+      "source_location": "L335",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -42172,7 +42139,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1440",
+      "source_location": "L1402",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42244,7 +42211,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1441",
+      "source_location": "L1403",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42340,7 +42307,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L982",
+      "source_location": "L946",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42412,7 +42379,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L985",
+      "source_location": "L949",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42508,7 +42475,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1022",
+      "source_location": "L986",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42544,7 +42511,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1031",
+      "source_location": "L995",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42724,7 +42691,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L863",
+      "source_location": "L827",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -42772,7 +42739,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L505",
+      "source_location": "L499",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -43132,7 +43099,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L963",
+      "source_location": "L927",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -43360,7 +43327,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L887",
+      "source_location": "L851",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -43384,7 +43351,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L336",
+      "source_location": "L331",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -43492,7 +43459,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L871",
+      "source_location": "L835",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -43528,7 +43495,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L872",
+      "source_location": "L836",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -43600,7 +43567,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1449",
+      "source_location": "L1411",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -43864,7 +43831,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L870",
+      "source_location": "L834",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -44440,7 +44407,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1210",
+      "source_location": "L1172",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -44548,7 +44515,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1365",
+      "source_location": "L1327",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -44620,7 +44587,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1364",
+      "source_location": "L1326",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -44740,7 +44707,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L965",
+      "source_location": "L929",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -44764,7 +44731,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
-      "source_location": "L659",
+      "source_location": "L653",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_perkspage_index_perkspage",
@@ -44908,7 +44875,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1457",
+      "source_location": "L1419",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -58806,7 +58773,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L996",
+      "source_location": "L960",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -58937,7 +58904,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L819",
+      "source_location": "L786",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatcost",
@@ -58949,7 +58916,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1546",
+      "source_location": "L1508",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -58985,7 +58952,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1448",
+      "source_location": "L1410",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -60664,6 +60631,18 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/game/navAttention.test.js",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_game_navattention_test",
+      "target": "src_game_layers_auto_prestige_autobuyer_cost",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/pages/PerksPage/index.jsx",
       "source_location": "L21",
       "weight": 1.0,
@@ -61344,7 +61323,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61368,7 +61347,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61380,7 +61359,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61560,7 +61539,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61584,7 +61563,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61608,7 +61587,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61632,7 +61611,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61656,7 +61635,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61680,7 +61659,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61728,7 +61707,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61776,7 +61755,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61800,7 +61779,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61836,7 +61815,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61896,7 +61875,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61932,7 +61911,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61956,7 +61935,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61968,7 +61947,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L23",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61979,7 +61958,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -61990,7 +61969,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L53",
+      "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -62001,7 +61980,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/game/navAttention.test.js",
-      "source_location": "L42",
+      "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_game_navattention_test",
@@ -66264,7 +66243,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L850",
+      "source_location": "L817",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66275,7 +66254,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L834",
+      "source_location": "L801",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66286,7 +66265,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L814",
+      "source_location": "L781",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66297,7 +66276,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L842",
+      "source_location": "L809",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66308,7 +66287,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L830",
+      "source_location": "L797",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66407,7 +66386,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L855",
+      "source_location": "L822",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66484,7 +66463,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L800",
+      "source_location": "L776",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66550,7 +66529,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L823",
+      "source_location": "L790",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index",
@@ -66723,44 +66702,11 @@
       "confidence_score": 1.0
     },
     {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L772",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_upgradecategory",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L783",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_upgraderow",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L808",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "src_pages_mainpage_index",
-      "target": "src_pages_mainpage_index_upgraderowcontrols",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1461",
+      "source_location": "L1423",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -66772,7 +66718,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L992",
+      "source_location": "L956",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -66784,7 +66730,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L852",
+      "source_location": "L819",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -66796,7 +66742,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1531",
+      "source_location": "L1493",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -66808,7 +66754,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L853",
+      "source_location": "L820",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -66820,7 +66766,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L853",
+      "source_location": "L820",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_formatbonusormultiplier",
@@ -66832,7 +66778,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1289",
+      "source_location": "L1251",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -66844,7 +66790,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/pages/MainPage/index.jsx",
-      "source_location": "L1270",
+      "source_location": "L1232",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_pages_mainpage_index_mainpage",
@@ -73237,7 +73183,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2320",
+      "source_location": "L2319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73248,7 +73194,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2796",
+      "source_location": "L2795",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73270,7 +73216,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2183",
+      "source_location": "L2182",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73292,7 +73238,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2060",
+      "source_location": "L2059",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73303,7 +73249,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2266",
+      "source_location": "L2265",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73325,7 +73271,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2286",
+      "source_location": "L2285",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73336,7 +73282,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2104",
+      "source_location": "L2103",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_pool_local_reset_loop",
@@ -73391,7 +73337,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L2043",
+      "source_location": "L2042",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_era_ascension_and_eons_407",
@@ -73424,7 +73370,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1913",
+      "source_location": "L1912",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_era_ascension_and_eons_407",
@@ -73435,7 +73381,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1949",
+      "source_location": "L1948",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_era_ascension_and_eons_407",
@@ -73446,7 +73392,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/ECONOMY_REFERENCE.md",
-      "source_location": "L1883",
+      "source_location": "L1882",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_economy_reference_era_ascension_and_eons_407",
@@ -73543,5 +73489,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "acc6860a1358e93227778097263ccfd9c5758ae7"
+  "built_at_commit": "de926583368c2389954758f8d0fcabdbaa9382f2"
 }

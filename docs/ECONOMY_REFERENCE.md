@@ -1873,8 +1873,7 @@ toggle** — it's a batch-size behavior modifier for the unit autobuyer (buy sin
 completes, then in full blocks), not something that independently "acts" each tick, so "pausing" it
 has no clean meaning distinct from "temporarily not being smart." `mergeState` merges missing
 `autobuyersEnabled`/`tierTickspeedAutobuyerEnabled` keys from fresh defaults (`true` for every tier)
-but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and the Tier Autobuyers category in "PP Upgrades
-view" above for where each toggle renders.
+but does not transform legacy save formats. See "Unit autobuyer status (Factory view, per tier)" above and `docs/MAINPAGE_REFERENCE.md`'s "Perks page" — every toggle renders on Perks → 🎛 Toggles.
 
 XP (`prestige.xp`) has otherwise been removed from the UI — see `docs/DESIGN_HISTORY.md`; the
 underlying earning mechanic (`checkMilestones`) is untouched in `engine.js`. Its one exception is
@@ -2798,6 +2797,7 @@ purchases were manual or automatic.
 | Function | Signature | Purpose |
 |----------|-----------|---------|
 | `isBuyMaxUnlocked` | `state → boolean` | Buy max mode unlock: `prestige.count >= 1 \|\| era.count >= 1` |
+| `isPerksPageRevealed` | `state → boolean` | Perks AppNav page reveal — alias of `isBuyMaxUnlocked` |
 | `buyTierMaxLevels` | `tierId → state → state` | Buy max for a Factory tier: every affordable FULL level from zero progress; partial progress / no affordable full level falls back to `buyTierQuantity`; no-op while frozen |
 | `getTierMaxLevelsPreview` | `(state, tierId) → { levels, cost }` | What one `buyTierMaxLevels` click would buy (`levels: 0` when it would fall back) |
 | `repeatPurchaseMax` | `action → state → state` | Chains a one-level purchase action until it returns the same reference (cap `BUY_MAX_ITERATION_CAP`) |

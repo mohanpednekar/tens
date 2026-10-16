@@ -5,6 +5,7 @@ import {
   getPrestigeDoublePpUpgradeCost,
 } from 'game/engine'
 import {
+  AUTO_PRESTIGE_AUTOBUYER_COST,
   BYTES_ID,
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
@@ -338,6 +339,21 @@ describe('navAttention', () => {
     expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
     expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
     expect(hasAffordablePpUpgrade(levelOnly)).toBe(true)
+
+    // The Auto-Prestige Autobuyer (an Unlocks purchase) counts only once every tier is fully
+    // automated and Auto-Prestige is active.
+    const allDone = Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true]))
+    const autoPrestigeAutobuyerOnly = {
+      ...levelOnly,
+      prestige: { count: 1, points: AUTO_PRESTIGE_AUTOBUYER_COST },
+      prestigeDoublePpLevel: 5,
+      tierTickspeedAutobuyer: allDone,
+      autoPrestige: 30,
+      autoPrestigeAutobuyer: false,
+    }
+    expect(hasAffordablePpUnlock(autoPrestigeAutobuyerOnly)).toBe(true)
+    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestigeAutobuyer: true })).toBe(false)
+    expect(hasAffordablePpUnlock({ ...autoPrestigeAutobuyerOnly, autoPrestige: null })).toBe(false)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {

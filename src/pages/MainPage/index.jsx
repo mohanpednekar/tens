@@ -769,30 +769,6 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-const UpgradeCategory = styled(StatCard)`
-  gap: 0.4rem;
-`
-
-// One row per tier/upgrade within a category — a simpler flex layout than the Factory view's
-// TierLine grid. In the Tier Autobuyers category, a row's badge order (tickspeed-autobuyer cluster,
-// then unit-autobuyer cluster) mirrors the Factory view's own TierName badge order (⚙ before 🤖), and
-// Smart is nested inside the same UpgradeRowControls as the unit-autobuyer badge/toggle since it
-// specifically modifies that autobuyer's behavior, rather than trailing as an unrelated fourth item.
-// No border/background of its own — the enclosing UpgradeCategory provides that — just a thin top
-// divider between consecutive rows so a whole category still reads as a distinct list.
-const UpgradeRow = styled.div`
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: space-between;
-  padding: 0.4rem 0;
-
-  & + & {
-    border-top: 1px solid ${props => props.theme.color.border};
-  }
-`
-
 // $dimmed is the "paused" signal — a subtle opacity reduction on the same icon rather than a
 // separate written "Paused" word (see MainPage): the badge's visible content is icon-only, with
 // the active/paused state conveyed by this dimming (plus the existing $color green/amber split)
@@ -800,15 +776,6 @@ const UpgradeRow = styled.div`
 const PpUpgradeBadge = styled.span`
   color: ${props => props.$color};
   opacity: ${props => (props.$dimmed ? 0.5 : 1)};
-`
-
-// Groups an active/paused status badge with its pause/resume toggle as a single flex item, so an
-// UpgradeRow's existing two-child (label, control) `justify-content: space-between` layout still
-// holds once a bought global automation gets a second, smaller control alongside its badge.
-const UpgradeRowControls = styled.div`
-  align-items: center;
-  display: flex;
-  gap: 0.5rem;
 `
 
 const formatCost = (amount, resourceId) =>
@@ -852,13 +819,10 @@ const formatBonusOrMultiplier = (multiplier, { precise = false } = {}) =>
     ? `${formatRate(multiplier)}x`
     : `+${precise ? formatGlobalTickspeedBonusPercent(multiplier) : formatBonusPercent(multiplier)}%`
 
-const MainPage = ({ game, focusNonce = 0 }) => {
+const MainPage = ({ game }) => {
   const { actions, dismissOfflineProgress, offlineProgress, state } = game
   const theme = useTheme()
   const { prestige } = state
-  // Live "how close am I" fill for every PP-spending button, mirroring the tier buttons'
-  // on-button progress treatment: how much of a given PP cost the current unspent balance
-  // already covers.
   const canPrestige = state.resources[MONEY_ID] >= PRESTIGE_THRESHOLD
   const isUnbounded = isUnboundedPrestigeUnlocked(state)
   const doublePpLevel = state.prestigeDoublePpLevel ?? 0
@@ -1033,10 +997,8 @@ const MainPage = ({ game, focusNonce = 0 }) => {
   const overclockProgressPercent = progressPercent(lastTierLevelDisplay, overclockRequirementDisplay)
   const canOverclock = !isFrozen && lastTierLevelDisplay >= overclockRequirement
 
-  // Automates Scale Up (see buyAutoScaleUp in engine.js) — gated on !isFirstRun like every other
-  // PP-spending control (see "Prestige info is hidden until first prestige"), but NOT on
-  // allTiersFullyAutomated the way Auto-Prestige is: Scale Up is meant to help early/mid-game, well before
-  // that endgame milestone.
+  // Auto Scale Up (bought on Perks → Unlocks; see buyAutoScaleUp in engine.js) — Factory only shows
+  // its status note.
   const isAutoScaleUpActive = state.autoScaleUp ?? false
   // Whether Auto Scale Up currently acts, independent of whether it's been bought (see
   // setAutoScaleUpEnabled/tickGame in engine.js) — a pause/resume preference, not a purchase.

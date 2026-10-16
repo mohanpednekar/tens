@@ -44,8 +44,7 @@ function App() {
   // cycle goes straight to Factory with no replay of the gate.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Byte Factory (MainPage) / Perks (resets to its Unlocks tab).
-  const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
+  // Bumped when AppNav selects Perks so it resets to its Unlocks tab.
   const [perksFocusNonce, setPerksFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
@@ -77,7 +76,6 @@ function App() {
       return
     }
     setMenuOpen(false)
-    if (nextPage === 'game') setTiersFocusNonce(n => n + 1)
     if (nextPage === 'perks') setPerksFocusNonce(n => n + 1)
     if (nextPage === 'foundry') setFoundryFocusNonce(n => n + 1)
     setPage(nextPage)
@@ -138,11 +136,11 @@ function App() {
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
   } else if (page === 'dev') {
-    content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage focusNonce={tiersFocusNonce} game={game} />
+    content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage game={game} />
   } else if (page === 'settings') {
     content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} onThemePreferenceChange={handleThemePreferenceChange} themePreference={themePreference} />
   } else {
-    content = <MainPage focusNonce={tiersFocusNonce} game={game} />
+    content = <MainPage game={game} />
   }
 
   const navAttention = getNavAttention(game.state)

@@ -324,66 +324,60 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
     <List aria-label="PP unlocks page">
       <Category aria-label="tier autobuyers category">
         <CategoryHeading>Tier Autobuyers</CategoryHeading>
-        {allTiersFullyAutomated ? (
-          <div aria-label="full smart autobuyer notice">
-            <MutedText>🧠 Every tier is fully smart — nothing left to unlock here.</MutedText>
-          </div>
-        ) : (
-          TIER_DEFINITIONS.map(tier => {
-            const isSmart = state.smartAutobuyer?.[tier.id] ?? false
-            const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
-            if (isSmart && isTierTickspeedAutobuyerActive) return null
-            const unlocked = isTierUnlocked(state)(tier)
-            const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
-            const autobuyerMilestone = getAutobuyerUnlockMilestone(tier.id)
-            const tickspeedMilestone = getTierTickspeedAutobuyerMilestone(tier.id)
-            const smartCost = getSmartAutobuyerCost(tier.id)
-            const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && points >= smartCost
-            return (
-              <Row key={tier.id} aria-label={`${tier.name} PP unlocks`}>
-                <TierSymbol tier={tier} />
+        {/* Every tier's row stays listed (reached milestones included) so unlock history is never lost. */}
+        {TIER_DEFINITIONS.map(tier => {
+          const isSmart = state.smartAutobuyer?.[tier.id] ?? false
+          const isTierTickspeedAutobuyerActive = state.tierTickspeedAutobuyer?.[tier.id] ?? false
+          const unlocked = isTierUnlocked(state)(tier)
+          const isAutobuyerLocked = (state.autobuyers[tier.id] ?? null) === null
+          const autobuyerMilestone = getAutobuyerUnlockMilestone(tier.id)
+          const tickspeedMilestone = getTierTickspeedAutobuyerMilestone(tier.id)
+          const smartCost = getSmartAutobuyerCost(tier.id)
+          const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && points >= smartCost
+          return (
+            <Row key={tier.id} aria-label={`${tier.name} PP unlocks`}>
+              <TierSymbol tier={tier} />
+              <MilestoneBadge
+                current={prestigeCount}
+                icon="⚙"
+                milestone={tickspeedMilestone}
+                progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
+                reached={isTierTickspeedAutobuyerActive}
+                subject={`${tier.name}'s tickspeed autobuyer`}
+                unit="Prestige"
+              />
+              <RowControls>
                 <MilestoneBadge
                   current={prestigeCount}
-                  icon="⚙"
-                  milestone={tickspeedMilestone}
-                  progressLabel={`${tier.name} tickspeed autobuyer milestone progress`}
-                  reached={isTierTickspeedAutobuyerActive}
-                  subject={`${tier.name}'s tickspeed autobuyer`}
+                  icon="🤖"
+                  milestone={autobuyerMilestone}
+                  progressLabel={`${tier.name} autobuyer unlock milestone progress`}
+                  reached={!isAutobuyerLocked}
+                  subject={`${tier.name}'s autobuyer`}
                   unit="Prestige"
                 />
-                <RowControls>
-                  <MilestoneBadge
-                    current={prestigeCount}
-                    icon="🤖"
-                    milestone={autobuyerMilestone}
-                    progressLabel={`${tier.name} autobuyer unlock milestone progress`}
-                    reached={!isAutobuyerLocked}
-                    subject={`${tier.name}'s autobuyer`}
-                    unit="Prestige"
-                  />
-                  {/* Smart needs the autobuyer and the tier itself reachable this run. */}
-                  {!isAutobuyerLocked && unlocked && (
-                    isSmart ? (
-                      <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer is smart`}>🧠 ✓</Badge>
-                    ) : (
-                      <PpPurchaseButton
-                        ariaLabel={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
-                        color="#a78bfa"
-                        cost={smartCost}
-                        disabled={!canBuySmart}
-                        icon="🧠"
-                        label={`${formatAmount(smartCost)} PP`}
-                        onClick={() => actions.buySmartAutobuyer(tier.id)}
-                        points={points}
-                        progressLabel={`${tier.name} smart autobuyer Prestige Point progress`}
-                      />
-                    )
-                  )}
-                </RowControls>
-              </Row>
-            )
-          })
-        )}
+                {/* Smart needs the autobuyer and the tier itself reachable this run. */}
+                {!isAutobuyerLocked && unlocked && (
+                  isSmart ? (
+                    <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer is smart`}>🧠 ✓</Badge>
+                  ) : (
+                    <PpPurchaseButton
+                      ariaLabel={`Make ${tier.name}'s autobuyer smart (buy singly until ${purchaseBlockSize} purchases, then in blocks of ${purchaseBlockSize}) for ${formatAmount(smartCost)} Prestige Point${smartCost === 1 ? '' : 's'}`}
+                      color="#a78bfa"
+                      cost={smartCost}
+                      disabled={!canBuySmart}
+                      icon="🧠"
+                      label={`${formatAmount(smartCost)} PP`}
+                      onClick={() => actions.buySmartAutobuyer(tier.id)}
+                      points={points}
+                      progressLabel={`${tier.name} smart autobuyer Prestige Point progress`}
+                    />
+                  )
+                )}
+              </RowControls>
+            </Row>
+          )
+        })}
       </Category>
 
       <Category aria-label="global automation category">

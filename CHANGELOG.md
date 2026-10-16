@@ -11,12 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Perks page.** A new **Perks** item in the bottom bar (after your first Prestige) gathers every
   permanent feature into three icon tabs: 🔓 **Unlocks** (one-time purchases like Smart, Tickspeed
-  Autobuyer and Auto Scale Up, plus every autobuyer milestone — shown once, no longer repeated on
-  Milestones), ⏫ **Upgrades** (leveled — Double PP, Auto-Prestige) and 🎛 **Toggles** (Buy max and
+  Autobuyer and Auto Scale Up, plus every tier's autobuyer milestones, reached ones included — shown
+  once, no longer repeated on Milestones), ⏫ **Upgrades** (leveled — Double PP, Auto-Prestige) and 🎛 **Toggles** (Buy max and
   pause/resume for every automation you own). Byte Factory no longer has its own Upgrades tab, and the
   Buy max toggle moved off Factory/Compute onto Toggles.
 
-- **Buy max mode.** After your first Prestige, a **Buy max** toggle (Factory and Compute screens)
+- **Buy max mode.** After your first Prestige, a **Buy max** toggle (Perks → Toggles)
   makes each purchase buy as many levels as you can afford — Factory tiers, tier tickspeed, Latency,
   Double PP, Auto-Prestige, and Flops tiers. Factory tiers buy full levels only; a partially-filled
   level still takes its own click.

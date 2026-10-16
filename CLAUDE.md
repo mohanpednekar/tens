@@ -468,7 +468,7 @@ src/
     ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`
                                (Architecture 4c / "Economy model")
-    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game, focusNonce }`.
+    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
                                No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
     PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (= first
                                Prestige/Era). Takes `{ game, focusNonce }`. Icon tabs: 🔓 Unlocks
@@ -1093,7 +1093,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1964 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1965 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

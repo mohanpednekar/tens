@@ -860,8 +860,8 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
     reachable this run) with a `MilestoneBadge` for its ⚙ tickspeed autobuyer and 🤖 autobuyer
     (`"<tier>'s … unlocked at Prestige N"` once reached, else `"… unlocks at Prestige N"` + hidden
     milestone progressbar) and, once the autobuyer is unlocked and the tier reachable, the 🧠 Smart
-    purchase (or a `"<tier>'s autobuyer is smart"` badge). A row disappears once Smart + tickspeed
-    autobuyer are both owned; when every tier is, a single `full smart autobuyer notice` replaces them.
+    purchase (or a `"<tier>'s autobuyer is smart"` badge). Rows never disappear, so reached milestones
+    stay visible as unlock history.
   - *Global Automation*: Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige Autobuyer (the last only once
     every tier is fully smart and Auto-Prestige is active) — PP button, or an `UnlockedBadge`
     (`"<name> unlocked"`) once bought; never a pause control here.
