@@ -300,7 +300,7 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('lights Factory (Upgrades) when an affordable PP automation unlock is available', () => {
+  it('lights Perks (not Factory) when an affordable PP automation unlock is available', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
@@ -310,8 +310,9 @@ describe('navAttention', () => {
       resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
     }
     expect(hasAffordablePpUpgrade(state)).toBe(true)
-    expect(hasTiersAttention(state)).toBe(true)
-    expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
+    expect(hasTiersAttention(state)).toBe(false)
+    expect(getNavAttention(state).game).toBe(false)
+    expect(getNavAttention(state).perks).toBe(ATTENTION_NORMAL)
   })
 
   it('splits PP affordability between one-time unlocks and leveled upgrades', () => {

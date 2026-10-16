@@ -1703,6 +1703,9 @@ The following records *why* specific MainPage/component behaviors were built the
   Unlocks shows a static "unlocked" badge, Toggles keeps every owned automation's toggle regardless of
   remaining purchases, and the attention dot split along the same line (`hasAffordablePpUnlock` /
   `hasAffordablePpLevelUpgrade`).
+  A follow-up request moved the three tabs off Byte Factory into their own AppNav page (**Perks**),
+  icon-only tab labels, folded the free autobuyer/Compute-autobuyer milestones into Unlocks (removing
+  them from MilestonesPage so each appears once), and moved the Buy max toggle onto Toggles.
 - **`Lv.N` on the Buy button instead of a separate Purchased cell.** Buy is the action that raises
   `purchased`, so folding the level into the Buy button's own label (plus a `(level N)` `aria-label`
   suffix) avoids a redundant grid cell. The player-facing term is "level" (it only ever increases and

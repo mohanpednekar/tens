@@ -1,4 +1,5 @@
 import {
+  AUTO_PRESTIGE_AUTOBUYER_COST,
   AUTO_SCALE_UP_COST,
   BYTES_ID,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
@@ -166,8 +167,7 @@ export const hasTiersGameAttention = state =>
   hasScaleUpAvailable(state) ||
   hasOverclockAvailable(state)
 
-/** PP Upgrades view — unspent PP can buy at least one upgrade. */
-// Factory's PP screens are split three ways (Unlocks / Upgrades / Toggles — see MainPage): one-time
+// The Perks page's PP tabs (see pages/PerksPage): Unlocks = one-time
 // permanent unlocks, repeatable leveled upgrades, and pause/resume toggles (never "affordable").
 export const hasAffordablePpUnlock = state => {
   if ((state.prestige?.count ?? 0) < 1) return false
@@ -182,7 +182,10 @@ export const hasAffordablePpUnlock = state => {
     ) ||
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
-    (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST)
+    (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
+    (state.autoPrestige != null && !(state.autoPrestigeAutobuyer ?? false) &&
+      TIER_DEFINITIONS.every(tier => Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id])) &&
+      points >= AUTO_PRESTIGE_AUTOBUYER_COST)
   )
 }
 
@@ -200,8 +203,8 @@ export const hasAffordablePpLevelUpgrade = state => {
 export const hasAffordablePpUpgrade = state =>
   hasAffordablePpUnlock(state) || hasAffordablePpLevelUpgrade(state)
 
-export const hasTiersAttention = state =>
-  hasTiersGameAttention(state) || hasAffordablePpUpgrade(state)
+// PP purchases light the Perks nav item (perks), not Factory.
+export const hasTiersAttention = state => hasTiersGameAttention(state)
 
 export const getTiersAttentionLevel = state =>
   pickLevel(
@@ -281,4 +284,5 @@ export const getNavAttention = state => ({
   foundry: getFoundryAttentionLevel(state),
   boosters: getComputeAttentionLevel(state),
   compute: getComputeFlopsAttentionLevel(state),
+  perks: hasAffordablePpUpgrade(state) ? ATTENTION_NORMAL : false,
 })

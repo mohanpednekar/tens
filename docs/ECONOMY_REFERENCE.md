@@ -1819,13 +1819,10 @@ per-tier milestone, no PP spent, no button to click:
   became free. `getTierTickspeedAutobuyerCost` and `TIER_TICKSPEED_AUTOBUYER_COST_MULTIPLIER` were
   removed entirely — nothing else needed that formula once the tier tickspeed autobuyer itself
   stopped costing PP.
-- `MainPage` surfaces this on two surfaces: a locked tier's row on the PP Upgrades page's "Tier
-  Autobuyers" category shows a dimmed `🔒 Prestige {milestone}` badge in place of what used to be a
-  Buy button (Smart, still PP-funded, is unaffected and renders alongside once the autobuyer itself
-  is unlocked); the dedicated **Milestones** view (`view === 'milestones'`, a third `ViewNav` tab
-  alongside Game/Upgrades, gated on `!isFirstRun` the same way) lists every tier's status for both
-  tracks in full — a green `✅ Prestige {milestone}` badge once reached, or a dimmed `🔒` badge plus a
-  `role="progressbar"` (`aria-valuenow = min(prestige.count, milestone)`) while still pending.
+- Surfaced once, on Perks → 🔓 Unlocks' "Tier Autobuyers" category (`pages/PerksPage`): each tier's
+  row shows a `MilestoneBadge` per track — `✓` once reached, or a dimmed `🔒 {milestone}` badge plus a
+  `role="progressbar"` (`aria-valuenow = min(prestige.count, milestone)`) while pending — with Smart
+  (still PP-funded) alongside once the autobuyer is unlocked. `MilestonesPage` no longer repeats this.
 
 #### Pause/resume for the global automations
 
@@ -1848,9 +1845,8 @@ predating this feature — see `storage.js` below): a paused automation behaves 
 never been bought, for automation purposes only — the level/PP already spent are untouched, and (for
 Auto-Prestige) the manual Prestige button keeps working regardless. Pausing Auto-Prestige stops both its
 per-tick `autoPrestigeAttemptBudget` accumulation and its automatic `prestigeGame` firing, not just the
-firing. `MainPage`'s PP Upgrades page renders a small secondary pause/resume toggle button
-(`aria-pressed`-driven, `PauseToggleButton`) beside each of the four icon-only status badges/levels in
-the Global Automation category once that automation is bought — see "PP Upgrades view" above.
+firing. Perks → 🎛 Toggles renders a pause/resume toggle (`aria-pressed`-driven `PauseToggleButton`
+beside an icon-only status badge) for each of the four global automations once bought.
 
 #### Pause/resume for per-tier automations
 
@@ -2101,8 +2097,8 @@ status. It has been removed entirely as redundant with the `TopPrestigeBar`/`Ful
 PP-header-as-button ways to trigger and observe Prestige — none of that information had anywhere else to
 go for it to lose. Auto-Prestige's status line (`"Lv.{level} (every ~{interval}s)"`, `interval =
 Math.round(1 / getAutoPrestigeAttemptRate(level))`, gated on `allTiersFullyAutomated &&
-isAutoPrestigeActive`, prefixed with the dimmable `✦` `PpUpgradeBadge`) still shows on the PP Upgrades
-page's Auto-Prestige row (see "PP Upgrades view" above) — Auto-Prestige's *control* lives there too,
+isAutoPrestigeActive`) shows on Perks → ⏫ Upgrades' Auto-Prestige row — Auto-Prestige's *control*
+lives there too (its pause toggle on Perks → Toggles),
 gated on `allTiersFullyAutomated` — UI-only, `buyAutoPrestige`/`tickGame` don't check it.
 
 ### Scale Up
@@ -2182,7 +2178,7 @@ requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
 and `autoScaleUp` bought, a static "⏩ Auto Scale Up active" note shows (the purchase button itself
-lives on the PP Upgrades page).
+lives on Perks → Unlocks).
 
 ### Overclock
 
@@ -2272,7 +2268,8 @@ not destructive).
 Prestige Points don't exist as a concept for the player until `isFirstRun` (`prestige.count === 0`) is
 false, so `MainPage` keeps every PP-related display/control out of the page during the first run:
 
-- The top-level PP display `StatCard` and the PP Upgrades tab itself don't render until `!isFirstRun`.
+- The top-level PP display `StatCard` and the Perks AppNav item don't render until the first Prestige
+  (`isPerksPageRevealed`).
 - Once that page is reachable, every purchase on it shows immediately — no separate "reveal one by
   one" teaser gate. The only exceptions are real prerequisites: Auto-Prestige (1000 PP) stays behind
   `allTiersFullyAutomated` (a deliberate endgame gate, not a cost-ordering one), and per-tier
