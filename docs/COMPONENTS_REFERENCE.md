@@ -186,7 +186,7 @@ this mode.
 ## `Switch/index.js`
 
 Styled `<button type="button">` on/off switch (pill track + sliding knob; `$on` drives the visual,
-`theme.color.good` when on / `borderStrong` when off; reduced-motion aware). Callers pass
+`theme.color.good` when on / `textMuted` when off; reduced-motion aware). Callers pass
 `aria-pressed` and an `aria-label` for the accessible name. Used by `BuyMaxToggle` and every Perks →
 Toggles automation row.
 

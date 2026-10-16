@@ -1846,7 +1846,7 @@ never been bought, for automation purposes only — the level/PP already spent a
 Auto-Prestige) the manual Prestige button keeps working regardless. Pausing Auto-Prestige stops both its
 per-tick `autoPrestigeAttemptBudget` accumulation and its automatic `prestigeGame` firing, not just the
 firing. Perks → 🎛 Toggles renders a pause/resume `components/Switch` (`aria-pressed`)
-beside an icon-only status badge) for each of the four global automations once bought.
+beside an icon-only status badge for each of the four global automations once bought.
 
 #### Pause/resume for per-tier automations
 
