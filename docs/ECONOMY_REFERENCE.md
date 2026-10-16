@@ -2267,12 +2267,14 @@ not destructive).
 Prestige Points don't exist as a concept for the player until `isFirstRun` (`prestige.count === 0`) is
 false, so `MainPage` keeps every PP-related display/control out of the page during the first run:
 
-- The top-level PP display `StatCard` and the Perks AppNav item don't render until the first Prestige
-  (`isPerksPageRevealed`).
+- The top-level PP display `StatCard` doesn't render until `!isFirstRun` (`prestige.count > 0`); the
+  Perks AppNav item appears once `isPerksPageRevealed` (first Prestige, or any Era ascension — so it
+  stays reachable after an Era resets the Prestige count to 0).
 - Once that page is reachable, every purchase on it shows immediately — no separate "reveal one by
   one" teaser gate. The only exceptions are real prerequisites: Auto-Prestige (1000 PP) stays behind
-  `allTiersFullyAutomated` (a deliberate endgame gate, not a cost-ordering one), and per-tier
-  Unlock/Smart/tier-tickspeed-autobuyer rows reveal per tier as each tier itself is reachable.
+  `allTiersFullyAutomated` (a deliberate endgame gate, not a cost-ordering one), and the Smart
+  purchase button, which waits for its tier to be reachable this run. Every tier's Unlocks row (its
+  milestone badges and owned-Smart marker) is always listed.
 - The sticky PP header display (`PpHeaderCard`, unspent PP + production-speed suffix once
   `state.prestigeSpeedBonusUnlocked`) only renders once `!isFirstRun`.
 

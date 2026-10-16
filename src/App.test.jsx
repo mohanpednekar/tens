@@ -2140,6 +2140,21 @@ test('a tier\'s Unlocks row stays listed (as unlock history) once Smart and its 
   expect(within(row).getByLabelText("Kilobytes's tickspeed autobuyer unlocked at Prestige 12")).toBeInTheDocument()
   expect(within(row).getByLabelText("Kilobytes's autobuyer is smart")).toBeInTheDocument()
 })
+test('an owned Smart marker stays on a tier\'s Unlocks row even before that tier is reachable again this run', async () => {
+  seedMainGameState({
+    resources: { base: 10 },
+    owned: { tier01: 3 }, // tier02 not reachable this run
+    autobuyers: { tier01: 1, tier02: 1 },
+    smartAutobuyer: { tier02: true },
+    prestige: { xp: 0, points: 100, count: 30, highestMilestone: 1 },
+  })
+  render(<App />)
+  await openPerksTab(userEvent.setup(), /open unlocks/i)
+
+  const row = screen.getByLabelText(/^megabytes pp unlocks$/i)
+  expect(within(row).getByLabelText("Megabytes's autobuyer is smart")).toBeInTheDocument()
+})
+
 test('a tier\'s Unlocks row shows only its milestones (no Smart) before that tier itself is reachable', async () => {
   seedMainGameState({
     resources: { base: 10 },

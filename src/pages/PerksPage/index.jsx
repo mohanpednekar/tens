@@ -356,8 +356,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   subject={`${tier.name}'s autobuyer`}
                   unit="Prestige"
                 />
-                {/* Smart needs the autobuyer and the tier itself reachable this run. */}
-                {!isAutobuyerLocked && unlocked && (
+                {/* Owned Smart always shows (history); buying it needs the tier reachable this run. */}
+                {!isAutobuyerLocked && (isSmart || unlocked) && (
                   isSmart ? (
                     <Badge $color="#a78bfa" aria-label={`${tier.name}'s autobuyer is smart`}>🧠 ✓</Badge>
                   ) : (
