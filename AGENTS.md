@@ -10,8 +10,8 @@ change rather than letting the two drift (a stale mirror here is worse than no m
 **Tens** — a React incremental game. Every mechanic uses powers of ten. Top-level destinations via
 shared bottom `AppNav` in progression order: **Foundry → Boosters → Compute → Factory → Guide → More**. Storage
 is under Foundry as continuous **Data Stream + Disk** sections on the same screen (not its own AppNav
-item, and no second-level Memory | Storage tabs). Byte Factory uses **Factory | Upgrades**
-after the first Prestige. Guide and More (Milestones, Settings) are always available — even
+item, and no second-level Memory | Storage tabs). Byte Factory uses **Factory | Unlocks | Upgrades | Toggles**
+after the first Prestige (one-time PP unlocks / leveled PP upgrades / automation pause toggles). Guide and More (Milestones, Settings) are always available — even
 during the Byte Foundry gate. A third More entry, **Dev Mode** (`DevModePage`), renders only in a
 dev build (`import.meta.env.DEV`) — a local sandbox for seeding/experimenting with an isolated save,
 never a player-facing feature; see `CLAUDE.md`'s "Dev Mode" section and `docs/DEVMODE_REFERENCE.md`. Reset (full save wipe) and
@@ -85,7 +85,7 @@ src/
     StoragePage/index.jsx  ← thin Disks list wrapper (primary UI is Foundry; not top-level AppNav)
     ComputePage/index.jsx  ← Foundry Boosters (Cores/merge/Boost); nav Boosters, page id `'boosters'`
     ComputeFlopsPage/index.jsx ← PP Compute (Flops); nav Compute, page id `'compute'`; reveals at 100 PP
-    MainPage/index.jsx     ← the game (Byte Factory); Factory | Upgrades; data-driven from TIER_DEFINITIONS
+    MainPage/index.jsx     ← the game (Byte Factory); Factory | Unlocks | Upgrades | Toggles; data-driven from TIER_DEFINITIONS
     InfoPage/index.jsx     ← Guide; static mechanic explanations; reads no game state
     MilestonesPage/index.jsx ← Chapters / autobuyer milestones; via AppNav → More
     SettingsPage/index.jsx ← Supporter / saves / museum / Era ascension / Ops / Reset; via AppNav → More

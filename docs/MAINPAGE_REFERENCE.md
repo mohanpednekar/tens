@@ -843,6 +843,24 @@ not at the bottom"):
   carries the level+progress text (see "Owned vs. level" above) — see there for why it's pinned next
   to the icon rather than folded into the centered cost label.
 
+**PP screens: Unlocks / Upgrades / Toggles (current layout).** The single PP Upgrades view described
+below is now split into three peer tabs after Factory (`view` ∈ `'game' | 'unlocks' | 'upgrades' |
+'toggles'`, tab aria-labels `open unlocks`/`open upgrades`/`open toggles`):
+- **Unlocks** (`aria-label="PP unlocks page"`) — every one-time permanent purchase: Tier Autobuyers
+  (milestone lock badges, Smart; rows `"<tier> PP unlocks"`), Global Automation (Tickspeed Autobuyer,
+  Auto Scale Up, Auto-Prestige Autobuyer), Production Bonuses, and the Unbounded Prestige note. A bought
+  unlock shows a static `UnlockedBadge` (`"<name> unlocked"`), never a pause control.
+- **Upgrades** (`aria-label="PP upgrades page"`) — repeatable leveled purchases: Double PP, and
+  Auto-Prestige (category hidden until `allTiersFullyAutomated`).
+- **Toggles** (`aria-label="automation toggles page"`) — every bought automation's
+  `AutomationToggle` (status badge `"<name> active|paused"` + `PauseToggleButton`): per-tier autobuyer /
+  tier tickspeed autobuyer (kept even for fully-smart tiers), Tickspeed Autobuyer, Auto Scale Up,
+  Auto-Prestige, Auto-Prestige Autobuyer; a `no toggles notice` empty state otherwise.
+NavDots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`), Upgrades `PP upgrade available`
+(`hasAffordablePpLevelUpgrade`); `hasAffordablePpUpgrade` is their OR (AppNav Factory attention). The
+paragraphs below predate the split — where they say "PP Upgrades page", read the tab above that now
+holds that control.
+
 **Factory view vs. Upgrades view.** `MainPage` renders one of two views, toggled by a local
 `useState('game' | 'upgrades')` — still a single-page app with no router; the toggle is just which JSX
 block renders. The player-facing first tab is labeled **Factory** (internal `view === 'game'`). The

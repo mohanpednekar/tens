@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createInitialGameState,
   getIntroKilobyteConversionCost,
+  getPrestigeDoublePpUpgradeCost,
 } from 'game/engine'
 import {
   BYTES_ID,
@@ -26,6 +27,8 @@ import {
   hasAffordableComputeFlopsTier,
   hasAffordableFullLevel,
   hasAffordableGlobalTickspeed,
+  hasAffordablePpLevelUpgrade,
+  hasAffordablePpUnlock,
   hasAffordablePpUpgrade,
   hasComputeAttention,
   hasFoundryAttention,
@@ -309,6 +312,31 @@ describe('navAttention', () => {
     expect(hasAffordablePpUpgrade(state)).toBe(true)
     expect(hasTiersAttention(state)).toBe(true)
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
+  })
+
+  it('splits PP affordability between one-time unlocks and leveled upgrades', () => {
+    const base = {
+      ...createInitialGameState(),
+      intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 0 },
+    }
+    const unlockOnly = { ...base, prestige: { count: 1, points: TICKSPEED_AUTOBUYER_COST }, autoGlobalTickspeed: false }
+    expect(hasAffordablePpUnlock(unlockOnly)).toBe(true)
+    expect(hasAffordablePpLevelUpgrade(unlockOnly)).toBe(false)
+
+    const doublePpCost = getPrestigeDoublePpUpgradeCost(0)
+    const levelOnly = {
+      ...base,
+      prestige: { count: 1, points: doublePpCost },
+      // Every one-time unlock already owned, so only the leveled Double PP is affordable.
+      prestigeSpeedBonusUnlocked: true,
+      autoScaleUp: true,
+      autoGlobalTickspeed: true,
+      smartAutobuyer: Object.fromEntries(TIER_DEFINITIONS.map(tier => [tier.id, true])),
+    }
+    expect(hasAffordablePpUnlock(levelOnly)).toBe(false)
+    expect(hasAffordablePpLevelUpgrade(levelOnly)).toBe(true)
+    expect(hasAffordablePpUpgrade(levelOnly)).toBe(true)
   })
 
   it('does not light PP upgrades before the first Prestige', () => {

@@ -13,7 +13,7 @@ powers of ten. No routing library, no backend — state lives in React and persi
 (Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
+`MainPage` (tier ladder + PP Unlocks/Upgrades/Toggles), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Memory + Storage sections on the same screen (no
 second-level tabs). Guide and More (Milestones / Settings) are always available, including during the
@@ -468,7 +468,8 @@ src/
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`
                                (Architecture 4c / "Economy model")
     MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game, focusNonce }`.
-                               Second-level tabs: Factory | Upgrades (after first Prestige). Full
+                               Second-level tabs (after first Prestige): Factory | Unlocks (one-time
+                               PP purchases) | Upgrades (leveled) | Toggles (pause/resume). Full
                                reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (Architecture 5), including Byte Foundry/Storage/Compute
                                sections. Reached via AppNav's Guide item; takes no navigation props
@@ -1087,7 +1088,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1960 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1963 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

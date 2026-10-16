@@ -167,14 +167,12 @@ export const hasTiersGameAttention = state =>
   hasOverclockAvailable(state)
 
 /** PP Upgrades view — unspent PP can buy at least one upgrade. */
-export const hasAffordablePpUpgrade = state => {
+// Factory's PP screens are split three ways (Unlocks / Upgrades / Toggles — see MainPage): one-time
+// permanent unlocks, repeatable leveled upgrades, and pause/resume toggles (never "affordable").
+export const hasAffordablePpUnlock = state => {
   if ((state.prestige?.count ?? 0) < 1) return false
-  const points = state.prestige?.points ?? 0
-  if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
   if (isProductionFrozen(state)) return false
-  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
-    Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
-  )
+  const points = state.prestige?.points ?? 0
   return (
     TIER_DEFINITIONS.some(tier =>
       isTierUnlocked(state)(tier) &&
@@ -184,10 +182,23 @@ export const hasAffordablePpUpgrade = state => {
     ) ||
     (!state.prestigeSpeedBonusUnlocked && points >= PRESTIGE_SPEED_BONUS_UNLOCK_COST) ||
     (!(state.autoScaleUp ?? false) && points >= AUTO_SCALE_UP_COST) ||
-    (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST) ||
-    (allTiersFullyAutomated && points >= getAutoPrestigeCost(state.autoPrestige ?? 0))
+    (!(state.autoGlobalTickspeed ?? false) && points >= TICKSPEED_AUTOBUYER_COST)
   )
 }
+
+export const hasAffordablePpLevelUpgrade = state => {
+  if ((state.prestige?.count ?? 0) < 1) return false
+  const points = state.prestige?.points ?? 0
+  if (points >= getPrestigeDoublePpUpgradeCost(state.prestigeDoublePpLevel ?? 0)) return true
+  if (isProductionFrozen(state)) return false
+  const allTiersFullyAutomated = TIER_DEFINITIONS.every(tier =>
+    Boolean(state.smartAutobuyer?.[tier.id]) && Boolean(state.tierTickspeedAutobuyer?.[tier.id]),
+  )
+  return allTiersFullyAutomated && points >= getAutoPrestigeCost(state.autoPrestige ?? 0)
+}
+
+export const hasAffordablePpUpgrade = state =>
+  hasAffordablePpUnlock(state) || hasAffordablePpLevelUpgrade(state)
 
 export const hasTiersAttention = state =>
   hasTiersGameAttention(state) || hasAffordablePpUpgrade(state)

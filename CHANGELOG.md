@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Separate Unlocks, Upgrades and Toggles screens.** Byte Factory's single PP Upgrades tab is now
+  three tabs: **Unlocks** (one-time permanent purchases like Smart, Tickspeed Autobuyer, Auto Scale
+  Up), **Upgrades** (leveled purchases — Double PP, Auto-Prestige) and **Toggles** (pause/resume for
+  every automation you own, including fully-smart tiers' autobuyers).
+
 - **Buy max mode.** After your first Prestige, a **Buy max** toggle (Factory and Compute screens)
   makes each purchase buy as many levels as you can afford — Factory tiers, tier tickspeed, Latency,
   Double PP, Auto-Prestige, and Flops tiers. Factory tiers buy full levels only; a partially-filled
