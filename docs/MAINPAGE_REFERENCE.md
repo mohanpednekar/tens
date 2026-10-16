@@ -875,9 +875,13 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-smart tiers), *Global Automation*
   (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige, Auto-Prestige Autobuyer), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
-  badge (`"<name> active|paused"`) + `PauseToggleButton` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
+  badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.
+Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier` = symbol | ⚙ |
+🤖 | trailing Smart cell) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
+Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
+heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
 Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`, incl. the Auto-Prestige Autobuyer),
 Upgrades `PP upgrade available` (`hasAffordablePpLevelUpgrade`). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.

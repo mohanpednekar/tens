@@ -115,6 +115,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+
+- **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
+  their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split
+  with a wide gap after the first word. Perks rows now line up in fixed columns, automation toggles are
+  proper on/off switches (Buy max too), the Milestones page no longer repeats each chapter name, and the
+  Factory's Latency / Scale Up / Overclock cards share one compact style with Auto Scale Up shown as a
+  header chip.
 - **Boosters page (#740).** A lower-tier merge now fills the next tier's reserve (up to 18) once
   that tier has auto-merge unlocked, so chained auto-merges keep going instead of stalling at 10.
   A timed merge finishing no longer cuts an output that grew past 10 back down to 10. The

@@ -439,6 +439,8 @@ src/
                                each `ByteFoundryPage` pool card. Full contract (incl. the
                                omitted-`tierIndex` every-lake fallback mode, unused by any current
                                caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
+    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
+                               Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     BuyMaxToggle/index.jsx  ← Buy max mode toggle button (Perks → Toggles only); renders nothing until
@@ -1093,7 +1095,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1967 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1971 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1110,7 +1112,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 17 files; the other six are
+  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
+  12 of the 18 files; the other six are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
