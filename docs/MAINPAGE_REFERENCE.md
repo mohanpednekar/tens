@@ -208,7 +208,7 @@ operation against that size's array (auto-fill, auto-redeem, manual cache releas
 disallowed, "the array provisioning." The button renders two lines (`diskBuildStatus`): a label
 (`"{icon} Provision {size} Disk"`) and one terse status line per state, so ready/queued/waiting
 never read alike — `Ready · {cost}`; `{cost} · tap to queue` (not affordable or outranked; the
-`title` names which); `Queued · funding|after disk fill|needs buffer`; `{n}s left` (legacy
+`title` and `aria-description` name which); `Queued · funding|after disk fill|needs buffer`; `{n}s left` (legacy
 countdown). Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
 ` · {collected}/{required}` segment appears whenever
 `diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at

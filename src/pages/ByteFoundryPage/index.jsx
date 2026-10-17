@@ -639,11 +639,16 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         ? { icon: '⏳', label: diskOfferLabel, status: `Queued${diskPassesText} · ${canStartDiskBuild ? 'funding' : diskBuildBlockedByPriority ? 'after disk fill' : 'needs buffer'}` }
         : canStartDiskBuild
           ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${formatDiskSize(diskCost)}${diskPassesText}` }
-          : { icon: '🏦', label: diskOfferLabel, status: `${formatDiskSize(diskCost)}${diskPassesText} · tap to queue` }
+          : {
+              icon: '🏦',
+              label: diskOfferLabel,
+              status: `${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
+              reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
+            }
   const provisionDiskButton = (
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-      aria-description={diskBuildStatus.status ?? undefined}
+      aria-description={diskBuildStatus.reason ? `${diskBuildStatus.status} (${diskBuildStatus.reason})` : diskBuildStatus.status ?? undefined}
       disabled={!!diskBuildInProgress || diskLadderExhausted}
       onClick={handleProvisionDiskClick}
       title={

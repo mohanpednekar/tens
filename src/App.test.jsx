@@ -3411,6 +3411,7 @@ describe('Byte Foundry Storage', () => {
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
     expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
+    expect(buildButton).toHaveAttribute('aria-description', expect.stringMatching(/pool buffer too low/))
     expect(buildButton).not.toHaveTextContent(/Ready|Queued/)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
