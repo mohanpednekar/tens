@@ -48,11 +48,11 @@ const BalanceText = styled.p`
   min-width: 0;
   margin: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.lg.size};
+  font-size: ${props => props.theme.type.scale.md.size};
   font-weight: 700;
   text-align: center;
   white-space: nowrap;
-  text-shadow: 0 0 3px ${props => props.theme.color.surface}, 0 0 6px ${props => props.theme.color.surface};
+  text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
 const BalanceSeparator = styled.span`
@@ -407,7 +407,7 @@ const BarTrack = styled.div`
   min-width: 0;
   height: ${BAR_HEIGHT}px;
   border-radius: ${props => props.theme.radius.pill};
-  background: transparent;
+  background: ${props => props.theme.color.surfaceSunken};
   overflow: hidden;
 `
 
@@ -417,10 +417,10 @@ const BarCenterTick = styled.div`
   top: 0;
   bottom: 0;
   left: 50%;
-  width: 1px;
+  width: 2px;
   transform: translateX(-50%);
-  background: ${props => props.theme.color.textMuted};
-  opacity: 0.6;
+  background: ${props => props.theme.color.text};
+  opacity: 0.7;
 `
 
 // A segment spanning [$fromPercent, $toPercent] of the track, in either order.
