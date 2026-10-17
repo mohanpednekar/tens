@@ -4707,9 +4707,7 @@ describe('Compute auto-merge automation', () => {
 // productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {
-  const user = userEvent.setup()
-
+test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -4720,7 +4718,10 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
+  // A synchronous click, then an immediate read: a real timer tick can't fire in between. (An
+  // awaited userEvent click yields to the event loop, and under CPU load a live tick credits the
+  // Data Stream bits before the `bits === 0` assertion below — the old, intermittent failure.)
+  fireEvent.click(screen.getByRole('button', { name: /prestige \(requires/i }))
 
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
   // never re-gates it, so Factory stays on screen with no navigation to the Byte Foundry.
