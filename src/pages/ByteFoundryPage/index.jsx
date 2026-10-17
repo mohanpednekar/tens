@@ -628,29 +628,22 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // One explicit status per state, so the button never reads the same while ready, queued, or
   // waiting. Pass count shows whenever it carries information (multi-pass, or any pass banked).
   const diskPassesText = diskPassesRequired > 1 || diskPassesCollected > 0
-    ? ` · ${diskPassesCollected}/${diskPassesRequired} passes`
+    ? ` · ${diskPassesCollected}/${diskPassesRequired}`
     : ''
+  const diskOfferLabel = `Provision ${formatDiskSize(diskSize)} Disk`
   const diskBuildStatus = diskBuildInProgress
-    ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left · array offline` }
+    ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
     : diskLadderExhausted
-      ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: 'Every disk provisioned' }
+      ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
       : diskBuildQueued
-        ? {
-            icon: '⏳',
-            label: `Provision ${formatDiskSize(diskSize)} Disk`,
-            status: `Queued${diskPassesText} · ${canStartDiskBuild ? 'funding now' : diskBuildBlockedByPriority ? 'waiting for disk fill' : 'waiting for pool buffer'}`,
-          }
+        ? { icon: '⏳', label: diskOfferLabel, status: `Queued${diskPassesText} · ${canStartDiskBuild ? 'funding' : diskBuildBlockedByPriority ? 'after disk fill' : 'needs buffer'}` }
         : canStartDiskBuild
-          ? { icon: '🏦', label: `Provision ${formatDiskSize(diskSize)} Disk`, status: `Ready · ${formatDiskSize(diskCost)}${diskPassesText}` }
-          : {
-              icon: '🏦',
-              label: `Provision ${formatDiskSize(diskSize)} Disk`,
-              status: `${diskBuildBlockedByPriority ? 'Disk fill first' : 'Buffer too low'} · ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
-            }
+          ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${formatDiskSize(diskCost)}${diskPassesText}` }
+          : { icon: '🏦', label: diskOfferLabel, status: `${formatDiskSize(diskCost)}${diskPassesText} · tap to queue` }
   const provisionDiskButton = (
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
-      aria-description={diskBuildStatus.status}
+      aria-description={diskBuildStatus.status ?? undefined}
       disabled={!!diskBuildInProgress || diskLadderExhausted}
       onClick={handleProvisionDiskClick}
       title={
@@ -674,7 +667,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     >
       <MilestoneButtonContent>
         <span>{diskBuildStatus.icon} {diskBuildStatus.label}</span>
-        <MilestoneCostLine>{diskBuildStatus.status}</MilestoneCostLine>
+        {diskBuildStatus.status && <MilestoneCostLine>{diskBuildStatus.status}</MilestoneCostLine>}
       </MilestoneButtonContent>
       <VisuallyHidden
         role="progressbar"

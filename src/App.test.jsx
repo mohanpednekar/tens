@@ -3410,12 +3410,12 @@ describe('Byte Foundry Storage', () => {
     // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
-    expect(buildButton).toHaveTextContent(/Buffer too low · .* · tap to queue/)
+    expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
     expect(buildButton).not.toHaveTextContent(/Ready|Queued/)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
-    expect(buildButton).toHaveTextContent(/⏳.*Queued · waiting for pool buffer/)
+    expect(buildButton).toHaveTextContent(/⏳.*Queued · needs buffer/)
     expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
