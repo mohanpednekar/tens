@@ -2829,7 +2829,20 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
-  expect(upgradeButton).toHaveTextContent('→ 128 B · ⚡ 12 B/s')
+  expect(upgradeButton).toHaveTextContent('🎯 64 B · 📦 ×2 · ⚡ ×1.5')
+  // The absolute next values stay available to assistive tech.
+  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and speed 12 B/s after upgrading')
+})
+
+test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
+  seedIntroState({ capacity: 1.298074214633707e33, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toBeDisabled()
+  expect(upgradeButton).toHaveTextContent('Max capacity')
+  expect(upgradeButton).not.toHaveTextContent('→')
+  expect(upgradeButton).not.toHaveTextContent('🎯')
 })
 
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {

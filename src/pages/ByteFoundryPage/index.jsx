@@ -607,7 +607,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
   const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
   const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
-  const nextRateText = `${formatBitsInNearestUnit(getIntroProductionRate({ ...intro, capacity: nextCapacity }))}/s`
+  const nextRate = getIntroProductionRate({ ...intro, capacity: nextCapacity })
+  const nextRateText = `${formatBitsInNearestUnit(nextRate)}/s`
+  // Relative gain shown on the button (the current size/speed are already on the tile): Capacity
+  // always doubles; Speed alternates ×1.5 and ×4/3 (see getDataStreamSpeedBytesPerSecond).
+  const speedGainText = productionRate > 0 ? `×${Number((nextRate / productionRate).toFixed(2))}` : ''
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
@@ -796,17 +800,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'
                   }
-                  aria-description={capacityUpgradeClickable ? `Capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
+                  aria-description={capacityUpgradeClickable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
                   type="button"
                   variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
                   $progress={capacityUpgradeProgress}
                 >
                   <MilestoneButtonContent>
                     <span>Upgrade Data Stream</span>
-                    <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
-                    {capacityUpgradeClickable && (
-                      <MilestoneCostLine>→ {nextCapacityText} · ⚡ {nextRateText}</MilestoneCostLine>
-                    )}
+                    <MilestoneCostLine>
+                      {capacityUpgradeClickable
+                        ? `🎯 ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
+                        : '📦 Max capacity'}
+                    </MilestoneCostLine>
                   </MilestoneButtonContent>
                 </Button>
               )}
