@@ -1696,6 +1696,16 @@ at that time, matching this repo's "don't design for hypothetical future require
 The following records *why* specific MainPage/component behaviors were built the way they were —
 `CLAUDE.md`'s Architecture section states the current behavior; this is the reasoning trail.
 
+- **PP Upgrades tab split into Unlocks / Upgrades / Toggles.** The one PP page mixed three kinds of
+  control — one-time permanent unlocks, repeatable leveled upgrades, and pause/resume toggles — so a
+  bought unlock's row carried a pause button and a fully-smart tier's row (hidden once nothing was left
+  to buy) took its pause toggles with it. Per the maintainer's request each kind now has its own tab;
+  Unlocks shows a static "unlocked" badge, Toggles keeps every owned automation's toggle regardless of
+  remaining purchases, and the attention dot split along the same line (`hasAffordablePpUnlock` /
+  `hasAffordablePpLevelUpgrade`).
+  A follow-up request moved the three tabs off Byte Factory into their own AppNav page (**Perks**),
+  icon-only tab labels, folded the free autobuyer/Compute-autobuyer milestones into Unlocks (removing
+  them from MilestonesPage so each appears once), and moved the Buy max toggle onto Toggles.
 - **`Lv.N` on the Buy button instead of a separate Purchased cell.** Buy is the action that raises
   `purchased`, so folding the level into the Buy button's own label (plus a `(level N)` `aria-label`
   suffix) avoids a redundant grid cell. The player-facing term is "level" (it only ever increases and

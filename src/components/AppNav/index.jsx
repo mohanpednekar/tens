@@ -1,10 +1,10 @@
 import styled, { css, keyframes } from 'styled-components'
 import { ATTENTION_HIGH } from 'game/navAttention'
 
-// Bottom bar order follows play progression: Foundry → Boosters → Compute → Factory, then Guide / More.
+// Bottom bar order follows play progression: Foundry → Boosters → Compute → Factory → Perks, then Guide / More.
 // Storage is folded into Foundry as continuous Memory + Disk sections (same Memory pool +
 // DiskArrayRow). Factory stays progress-gated; Guide/More stay available during the Foundry gate.
-// Accessible names: open byte foundry / open boosters / open compute / open byte factory / open guide / open more menu.
+// Accessible names: open byte foundry / open boosters / open compute / open byte factory / open perks / open guide / open more menu.
 // Attention: 'high' = larger pulsing dot; 'normal' = smaller cue (game/navAttention.js).
 
 const NAV_HEIGHT = '3.25rem'
@@ -106,6 +106,7 @@ const AppNav = ({
   showTiers = true,
   showBoosters = false,
   showComputeFlops = false,
+  showPerks = false,
   moreOpen = false,
   attention = {},
 }) => {
@@ -115,6 +116,7 @@ const AppNav = ({
     showBoosters && { id: 'boosters', ariaLabel: 'open boosters', icon: '⚡', label: 'Boosters', title: 'Boosters — Cores, merge chain, Compute Boost' },
     showComputeFlops && { id: 'compute', ariaLabel: 'open compute', icon: '🖥', label: 'Compute', title: 'Compute — PP Flops tiers boost Factory production' },
     showTiers && { id: 'game', ariaLabel: 'open byte factory', icon: '📶', label: 'Factory', title: 'Byte Factory — buy and produce' },
+    showPerks && { id: 'perks', ariaLabel: 'open perks', icon: '✨', label: 'Perks', title: 'Perks — unlocks, upgrades, and toggles' },
     { id: 'info', ariaLabel: 'open guide', icon: 'ℹ️', label: 'Guide', title: 'How this game works' },
   ].filter(Boolean)
 
