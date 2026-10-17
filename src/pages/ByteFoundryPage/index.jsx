@@ -802,10 +802,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $progress={capacityUpgradeProgress}
                 >
                   <MilestoneButtonContent>
-                    <span>Upgrade Data Stream</span>
+                    <span>Upgrade Data Stream{capacityUpgradeClickable ? ` → ${nextCapacityText}` : ''}</span>
                     <MilestoneCostLine>
                       {capacityUpgradeClickable
-                        ? `Cost ${formatBitsInNearestUnit(capacityUpgradeCost)} · → ${nextCapacityText} · ⚡ ${nextRateText}`
+                        ? `Cost ${formatBitsInNearestUnit(capacityUpgradeCost)} · ⚡ ${nextRateText}`
                         : 'Max capacity'}
                     </MilestoneCostLine>
                   </MilestoneButtonContent>
