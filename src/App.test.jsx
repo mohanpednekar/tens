@@ -3410,9 +3410,13 @@ describe('Byte Foundry Storage', () => {
     // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/Buffer too low · .* · tap to queue/)
+    expect(buildButton).not.toHaveTextContent(/Ready|Queued/)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
+    expect(buildButton).toHaveTextContent(/⏳.*Queued · waiting for pool buffer/)
+    expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
 
@@ -3548,9 +3552,8 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'pool 2' })).not.toBeInTheDocument()
-    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk falls
-    // back to rendering outside any pool card (see ByteFoundryPage's provisionDiskButton fallback)
-    // rather than disappearing until pool 2's own card catches up.
+    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk lives in
+    // the Data Stream card, so it stays reachable before pool 2's own card is visible.
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
@@ -3571,6 +3574,7 @@ describe('Byte Foundry Storage', () => {
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands

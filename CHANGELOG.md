@@ -37,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
   The upgrade button now shows the Capacity and Speed you'll have after upgrading, and the Provision
   Disk button moved out of the pool cards into the Data Stream section, directly under it.
+- **Byte Foundry: Provision Disk always states its status.** A second line on the button reads
+  Ready, Queued (and what it's waiting for), Buffer too low / Disk fill first (tap to queue),
+  or Every disk provisioned — the button no longer looks the same while ready, queued or waiting.
 - **Boosters: timed merges now take 8 normal disk fills (#755).** A reserve merge takes as long as
   8 of the input tier's own pool's smallest disks take to fill at that pool's Bandwidth. Cores use
   the KB pool, Nodes the MB pool, and so on. Before, it was 10× "Core earn time" and grew 10× per
