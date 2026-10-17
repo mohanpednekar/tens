@@ -607,7 +607,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
   const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
   const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
-  const nextRateText = `${formatBitsInNearestUnit(getIntroProductionRate({ ...intro, capacity: nextCapacity }))}/s`
+  const nextRate = getIntroProductionRate({ ...intro, capacity: nextCapacity })
+  const nextRateText = `${formatBitsInNearestUnit(nextRate)}/s`
+  // Relative gain shown on the button (the current size/speed are already on the tile): Capacity
+  // always doubles; Speed alternates ×1.5 and ×4/3 (see getDataStreamSpeedBytesPerSecond).
+  const speedGainText = productionRate > 0 ? `×${Number((nextRate / productionRate).toFixed(2))}` : ''
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
@@ -802,10 +806,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   $progress={capacityUpgradeProgress}
                 >
                   <MilestoneButtonContent>
-                    <span>Upgrade Data Stream{capacityUpgradeClickable ? ` → ${nextCapacityText}` : ''}</span>
+                    <span>Upgrade Data Stream</span>
                     <MilestoneCostLine>
                       {capacityUpgradeClickable
-                        ? `Cost ${formatBitsInNearestUnit(capacityUpgradeCost)} · ⚡ ${nextRateText}`
+                        ? `Cost ${formatBitsInNearestUnit(capacityUpgradeCost)} · ×${INTRO_CAPACITY_DOUBLING_STEP} size · ⚡ ${speedGainText}`
                         : 'Max capacity'}
                     </MilestoneCostLine>
                   </MilestoneButtonContent>

@@ -2829,8 +2829,9 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
-  expect(upgradeButton).toHaveTextContent('Upgrade Data Stream → 128 B')
-  expect(upgradeButton).toHaveTextContent('Cost 64 B · ⚡ 12 B/s')
+  expect(upgradeButton).toHaveTextContent('Cost 64 B · ×2 size · ⚡ ×1.5')
+  // The absolute next values stay available to assistive tech.
+  expect(upgradeButton).toHaveAccessibleDescription('Capacity 128 B and speed 12 B/s after upgrading')
 })
 
 test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
