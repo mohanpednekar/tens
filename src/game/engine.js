@@ -2125,6 +2125,9 @@ export const buyTierQuantity = (tierId, quantity) => state => {
 export const isBuyMaxUnlocked = state =>
   clampNonNegative(state.prestige?.count ?? 0) >= 1 || clampNonNegative(state.era?.count ?? 0) >= 1
 
+// The Perks page (Unlocks / Upgrades / Toggles) appears on the same first-Prestige-ever condition.
+export const isPerksPageRevealed = isBuyMaxUnlocked
+
 // Chains a single-level purchase action (state => state, same-reference no-op when it can't buy)
 // until it stops buying, capped at BUY_MAX_ITERATION_CAP. Used for every leveled purchase whose
 // own action buys exactly one level per call (per-tier tickspeed, Latency, Double PP,

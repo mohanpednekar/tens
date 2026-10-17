@@ -582,10 +582,10 @@ const InfoPage = () => {
         <ul>
           <li>
             Each tier’s unit-buying autobuyer and its tickspeed autobuyer unlock automatically as
-            you Prestige more — see Milestones for exact thresholds.
+            you Prestige more — see Perks → 🔓 Unlocks for exact thresholds.
           </li>
           <li>
-            Once unlocked, the ⏸/▶ control pauses or resumes without losing the unlock.
+            Once unlocked, its ⏸/▶ control on Perks → 🎛 Toggles pauses or resumes without losing the unlock.
           </li>
           <li>
             <strong>Smart</strong> is a one-time Prestige Point purchase: the unit autobuyer buys
@@ -627,8 +627,8 @@ const InfoPage = () => {
             once you reach at least 1 Googol Bytes.
           </li>
           <li>
-            Double PP upgrades cost 100^(level+1) PP (100, 10,000, 1,000,000, …) on the Upgrades
-            tab — permanent across Prestige.
+            Double PP upgrades cost 100^(level+1) PP (100, 10,000, 1,000,000, …) on Perks →
+            ⏫ Upgrades — permanent across Prestige.
           </li>
           <li>
             Resets resources, owned counts, and run-scoped progress. Unlocked autobuyers stay
