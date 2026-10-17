@@ -59,7 +59,7 @@ denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extend
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
 (`aria-label="data stream bit balance"`). Its third line, below the balance, is the fill-based
 `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
-compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
+compact single DIVERGING bar anchored at the center (the neutral 100% midpoint of a 0–200% track; blue grows right when boosted, left when penalised; the yellow tap bonus is a segment lifting outward from the blue's end), with its own
 percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
 took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
