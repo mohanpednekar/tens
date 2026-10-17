@@ -219,6 +219,14 @@ const UpgradeStatusText = styled.span`
   text-align: center;
 `
 
+// Secondary line under the status ("Outflow paused"): smaller and muted so the headline stays one line.
+const UpgradeStatusNote = styled.span`
+  display: block;
+  font-size: 0.8em;
+  font-weight: 500;
+  opacity: 0.85;
+`
+
 const SpeedText = styled.span`
   flex-shrink: 0;
   color: ${props => props.theme.color.textMuted};
@@ -717,7 +725,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
-              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText} · outflow paused
+              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText}{' '}
+              <UpgradeStatusNote>Outflow paused</UpgradeStatusNote>
             </UpgradeStatusText>
           )}
           {intro.byteCreated && (

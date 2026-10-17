@@ -2883,8 +2883,9 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   // The upgrade button is gone while armed; the tile carries the status instead.
   expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
-  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
+  expect(dataStream).toHaveTextContent(/Upgrading to .* · ⚡ .*\/s/)
+  expect(dataStream).toHaveTextContent(/outflow paused/i)
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/\/s Outflow paused/)
 
   // The same DOM node flips role in place, so keyboard focus is never dropped.
   const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
@@ -2892,7 +2893,7 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   fireEvent.click(cancel)
   expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
   expect(upgradeButton).toBeEnabled()
-  expect(dataStream).not.toHaveTextContent(/outflow paused/)
+  expect(dataStream).not.toHaveTextContent(/outflow paused/i)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()
