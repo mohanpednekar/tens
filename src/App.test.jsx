@@ -3427,13 +3427,30 @@ describe('Byte Foundry Storage', () => {
     expect(buildButton).not.toBeDisabled()
     expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
     expect(buildButton).toHaveAttribute('aria-description', expect.stringMatching(/pool buffer too low/))
-    expect(buildButton).not.toHaveTextContent(/Ready|Queued/)
+    expect(buildButton).not.toHaveTextContent(/Ready|Queued|Provisioning/)
+    expect(buildButton).toHaveTextContent('Provision 1 KB Disk')
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
-    expect(buildButton).toHaveTextContent(/⏳.*Queued · needs buffer/)
+    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk….*Queued · needs buffer/)
     expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
+  })
+
+  test('a queued Provision Disk reads "Provisioning …" with its banked passes, unlike the idle "Provision …" label', () => {
+    // 8 built → this is the 9th disk (9 passes); 2 already banked and the queue is armed.
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
+      diskProvisionPasses: { [currentBankSize]: 2 },
+      diskBuildQueued: true,
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk…/)
+    expect(buildButton).toHaveTextContent('2/9 · needs buffer')
+    expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
