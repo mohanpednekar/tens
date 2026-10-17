@@ -4,7 +4,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
-import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -597,7 +597,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeCost = intro.capacity
   // What the player gets for the upgrade: Capacity doubles, and Speed is derived purely from
   // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
-  const nextCapacity = intro.capacity * 2
+  const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
   const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
   const nextRateText = `${formatBitsInNearestUnit(getIntroProductionRate({ ...intro, capacity: nextCapacity }))}/s`
 
@@ -719,7 +719,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
-              ⏫ Upgrading to {nextCapacityText} · {nextRateText} · outflow paused
+              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText} · outflow paused
             </UpgradeStatusText>
           )}
           {intro.byteCreated && (
@@ -789,8 +789,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'
                   }
-                  aria-description={capacityUpgradeClickable ? `Capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined
-                  }
+                  aria-description={capacityUpgradeClickable ? `Capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
                   type="button"
                   variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
                   $progress={capacityUpgradeProgress}

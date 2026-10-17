@@ -3536,7 +3536,7 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
-  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk falling back outside any pool card', () => {
+  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk still reachable in the Data Stream card', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
     seedIntroState({
@@ -3559,6 +3559,18 @@ describe('Byte Foundry Storage', () => {
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
   })
 
+  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      diskCache: { [currentBankSize]: currentBankSize },
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
+  })
+
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
     // Provision Disk's pass is paid from the pool's own buffer, so that's what gets seeded —
     // exactly one pass's worth (currentBankSize), so the click collects the first pass and
@@ -3575,6 +3587,7 @@ describe('Byte Foundry Storage', () => {
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
     expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands
