@@ -41,12 +41,18 @@ const Header = styled.header`
 // multiplier bar (with its own percent readout below it) below the combined balance/capacity line" in CLAUDE.md's UI conventions) — sized a
 // step above the rest of the tile's text but below the page's own H1 so a stack of several pool
 // cards doesn't read as several competing headlines.
+// Sits in the middle of TitleRow (title left, Speed/Bandwidth right). The text-shadow is a halo in
+// the card's own surface color so the digits stay legible where the progress-fill edge crosses them.
 const BalanceText = styled.p`
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.xl.size};
+  font-size: ${props => props.theme.type.scale.lg.size};
   font-weight: 700;
   text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 3px ${props => props.theme.color.surface}, 0 0 6px ${props => props.theme.color.surface};
 `
 
 const BalanceSeparator = styled.span`
@@ -387,17 +393,18 @@ const clampBarValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.ma
 // 0% -> left edge, 100% -> center, FILL_MULTIPLIER_TAP_CAP_PERCENT -> right edge.
 const percentToTrackPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100
 
+// Bar and percent legend share one row (the legend never wraps), so the bar costs a single line.
 const BarRow = styled.div`
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: ${props => props.theme.space.sm};
   width: 100%;
 `
 
 const BarTrack = styled.div`
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: ${BAR_HEIGHT}px;
   border-radius: ${props => props.theme.radius.pill};
   background: transparent;
@@ -428,6 +435,8 @@ const BarSegment = styled.div`
 
 const BarPercentLabel = styled.span`
   display: inline-flex;
+  flex-shrink: 0;
+  white-space: nowrap;
   gap: 0.25em;
   font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
@@ -721,15 +730,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
+            <BalanceText>
+              {formatCombinedBalance(
+                formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed),
+                formatMemoryCapacityValue(intro.capacity, intro.byteCreated),
+              )}{' '}
+              <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
+            </BalanceText>
             {dataStreamRateText && <SpeedText>⚡ {dataStreamRateText}</SpeedText>}
           </TitleRow>
-          <BalanceText>
-            {formatCombinedBalance(
-              formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed),
-              formatMemoryCapacityValue(intro.capacity, intro.byteCreated),
-            )}{' '}
-            <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
-          </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
               ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText}{' '}
@@ -896,9 +905,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
                   <span>Pool</span>
                 </SectionTitle>
+                <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
                 <SpeedText>⚡ {formatDiskSize(poolBandwidth)}/s</SpeedText>
               </TitleRow>
-              <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
               <MultiplierBar
                 basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
                 bonusPercent={poolTapBonusPercent}
