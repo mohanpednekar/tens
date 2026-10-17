@@ -1060,7 +1060,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `startDataLakeAutoConvert(tierIndex)`/`isDataLakeAutoConvertStartAvailable`/
    `tickDataLakeAutoConvert` in `engine.js`) replaced an earlier persistent Auto/Manual toggle
    (`toggleDataLakeAutoBuy`/`tickDataLakeAutoBuy`/`autoBuyEnabled` — see `docs/DESIGN_HISTORY.md`).
-   `DataLakePanel` shows a single "🎯 `<cost>`" control per lake (in place of the old separate
+   `DataLakePanel` shows a single "🏷️ `<cost>`" control per lake (in place of the old separate
    Fill/Buy/Auto-Manual row): clicking it calls `startDataLakeAutoConvert`, which buys immediately
    (`buyBooster(tierIndex, 1)`) if already affordable, or — same-reference no-op below
    `isDataLakeAutoConvertStartAvailable` (unlocked, not already converting, room under the entity's

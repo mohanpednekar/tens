@@ -439,6 +439,8 @@ src/
                                each `ByteFoundryPage` pool card. Full contract (incl. the
                                omitted-`tierIndex` every-lake fallback mode, unused by any current
                                caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
+    icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
+                               Provision Disk status line)
     Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
                                Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
@@ -912,7 +914,7 @@ it applies, full-buffer overflow yields to it so a tick isn't credited twice; un
 block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
 pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
-order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🎯 `<cost>`" control that
+order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
 `tickDataLakeAutoConvert` then drives `fillDataLakeManually` one step per tick until affordable, buys
 exactly 1, and clears the flag — "one click, one full fill-then-buy conversion, then stop," never a

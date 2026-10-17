@@ -148,7 +148,7 @@ multiplier (never the displayed Speed/Bandwidth figures) scales the real deliver
 fullness and recent taps. Disks (`StoragePage`) fill and pull into Factory automatically, with no manual
 redeem step, and each Storage pool's overflow feeds its own Data Lake automatically too — but Boosters,
 which spend banked Data Lake units for Compute Cores/Nodes/Boost (`ComputePage`, nav **Boosters**), only
-buy via a single per-lake "🎯 `<cost>`" control: it buys immediately if affordable, or arms a one-shot
+buy via a single per-lake "🏷️ `<cost>`" control: it buys immediately if affordable, or arms a one-shot
 `autoConvertActive` flag that fills-then-buys exactly 1 over subsequent ticks and stops (never a
 persistent auto-buy loop) while its Storage pool is incomplete. Once that pool reaches 9/9/9, the control
 becomes a non-clickable cost label and every affordable Booster converts automatically. Each

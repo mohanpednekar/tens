@@ -5866,6 +5866,14 @@ condition satisfied but capacity below its own threshold correctly stays hidden 
 would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
 manual transfer-block row is confirmed gone from every state that used to show it.
 
+### Cost icon: 🎯 replaced by 🏷️ (`COST_ICON`)
+
+🎯 read as "target/goal" and, on the Data Lake Booster control, doubled as the "aim and convert"
+action marker, so one glyph carried both the price and the action. Eighteen candidates were rendered
+on the real button (🪙 💰 🏷️ 💸 💎 🎟️ ⚖️ 🛒 ⛽ 🧾 🔻 📥 🔑 🧮 ¤ ⛁ ⊖); the maintainer picked 🏷️. It is now one shared
+constant (`components/icons.js`) used for every cost: Data Lake Booster, Upgrade Data Stream,
+Provision Disk. Caveat seen in the render: 🏷️ is small at this size, so keep a space after it.
+
 ### Provision Disk moved into the Data Stream card
 
 Maintainer request: Provision Disk now sits in the Data Stream card directly below Upgrade Data

@@ -39,6 +39,7 @@ import {
   TIER_DEFINITIONS,
   DISK_LADDER_BASE_SIZE_BITS,
 } from 'game/layers'
+import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
 
@@ -2829,7 +2830,7 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
-  expect(upgradeButton).toHaveTextContent('🎯 64 B · 📦 ×2 · ⚡ ×1.5')
+  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.5`)
   // The absolute next values stay available to assistive tech.
   expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and speed 12 B/s after upgrading')
 })
@@ -2842,7 +2843,7 @@ test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacit
   expect(upgradeButton).toBeDisabled()
   expect(upgradeButton).toHaveTextContent('Max capacity')
   expect(upgradeButton).not.toHaveTextContent('→')
-  expect(upgradeButton).not.toHaveTextContent('🎯')
+  expect(upgradeButton).not.toHaveTextContent(COST_ICON)
 })
 
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
@@ -3958,7 +3959,7 @@ describe('Byte Foundry Storage', () => {
 
     const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
-    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent('🎯 1 KB')
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON} 1 KB`)
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {

@@ -1,4 +1,5 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
+import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
@@ -650,11 +651,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       : diskBuildQueued
         ? { icon: '⏳', label: diskOfferLabel, status: `Queued${diskPassesText} · ${canStartDiskBuild ? 'funding' : diskBuildBlockedByPriority ? 'after disk fill' : 'needs buffer'}` }
         : canStartDiskBuild
-          ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${formatDiskSize(diskCost)}${diskPassesText}` }
+          ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText}` }
           : {
               icon: '🏦',
               label: diskOfferLabel,
-              status: `${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
+              status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
             }
   const provisionDiskButton = (
@@ -809,7 +810,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     <span>Upgrade Data Stream</span>
                     <MilestoneCostLine>
                       {capacityUpgradeClickable
-                        ? `🎯 ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
+                        ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
                         : '📦 Max capacity'}
                     </MilestoneCostLine>
                   </MilestoneButtonContent>

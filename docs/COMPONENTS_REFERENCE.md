@@ -143,10 +143,10 @@ filling); before that it renders as an ordinary empty slot. **There is no bottom
 gone, replaced entirely by the ONE header-row control mentioned above (see
 `docs/DESIGN_HISTORY.md`'s "one-shot Data Lake conversion" entry). That control renders one of, in
 priority order: (1) while `isDataLakeAutoConvertActive` (a conversion is mid-flight), an inert
-`🎯 <next Booster cost>` status label — no longer clickable; (2) once the matching compute-ladder
-entity is already at its own effective cap, the same `🎯 <cost>` text as a status label explaining
+`🏷️ <next Booster cost>` status label — no longer clickable; (2) once the matching compute-ladder
+entity is already at its own effective cap, the same `🏷️ <cost>` text as a status label explaining
 the entity is full; (3) whenever genuinely affordable right now (`isBoosterPurchaseAvailable`), a
-clickable `🎯 <cost>` button (`actions.startDataLakeAutoConvert(tierIndex)`) that buys immediately;
+clickable `🏷️ <cost>` button (`actions.startDataLakeAutoConvert(tierIndex)`) that buys immediately;
 (4) otherwise, IF the Storage array corresponding to the lake's CURRENT capacity level is fully built
 (`isDataLakeCapacityDoublingAvailable` — the pool's smallest ×1 array for level 0→1, middle ×10 for
 1→2, largest ×100 for 2→3 — not the lake's own Booster cost any more), an "⚡ Scale Out" button
@@ -155,14 +155,14 @@ clickable `🎯 <cost>` button (`actions.startDataLakeAutoConvert(tierIndex)`) t
 least one real disk this era; deliberately NOT the looser `isDataLakeBoosterUnlocked`, which also
 passes under a legacy `boostersUnlocked` latch alone — starting a conversion there would arm
 `autoConvertActive` with no way for it to ever bank anything, leaving the control stuck showing
-"converting" forever — see `docs/DESIGN_HISTORY.md`) but not yet affordable, a clickable `🎯 <cost>`
+"converting" forever — see `docs/DESIGN_HISTORY.md`) but not yet affordable, a clickable `🏷️ <cost>`
 button that also calls
 `actions.startDataLakeAutoConvert(tierIndex)` — this time arming the one-shot `autoConvertActive`
 flag: `tickDataLakeAutoConvert` (engine.js, run every tick) then automatically draws from this pool's
 own buffer (the same source a standalone Fill click used to) until the cost is banked, buys exactly
 1, and clears the flag, at which point the control drops back to state (1)'s inert label for the
 whole duration — "one click fully automates the sequence to fill up and then convert it into a
-Booster, then stop," never a persistent auto-buy loop; or (6) before unlock, the same `🎯 <cost>`
+Booster, then stop," never a persistent auto-buy loop; or (6) before unlock, the same `🏷️ <cost>`
 text as a plain non-interactive status label. Cost/capacity figures render via
 `formatDiskSizeInPoolUnit` — this lake's own FIXED unit, e.g. always "KB" for the KB lake, never
 auto-converting up even past 1000x — rather than `formatDiskSize`'s auto-nearest-unit pick, since a
