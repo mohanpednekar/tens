@@ -35,8 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
-  The upgrade button shows `🎯 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
+  The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
   Provision Disk button moved out of the pool cards into the Data Stream section, directly under it.
+- **Byte Foundry: provisioning in progress is obvious at a glance.** A queued Provision Disk build now
+  reads `⏳ Provisioning 1 KB Disk…` (with its banked passes, e.g. `2/9 · needs buffer`) and pulses;
+  idle states keep `🏦 Provision 1 KB Disk`, so the two no longer look alike.
+- **Cost icon is now 🏷️ everywhere.** The Data Lake Booster control, the Upgrade Data Stream button
+  and Provision Disk's status line all mark their cost with the same price-tag icon (replacing 🎯).
 - **Byte Foundry: armed Upgrade Data Stream status is tidier.** The headline stays on one line
   (`Upgrading to … · ⚡ …`); "Outflow paused" moves to a smaller second line.
 - **Byte Foundry: Provision Disk always states its status.** A short second line on the button

@@ -162,8 +162,8 @@ pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-
 Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
-relative gains (current values are on the tile): `🎯 <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
-ratio>` (🎯 is the game's cost icon, as on Data Lake Boosters) (ratio = `getIntroProductionRate` at the doubled Capacity ÷ now: ×1.5 / ×1.33 alternating),
+relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
+ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (ratio = `getIntroProductionRate` at the doubled Capacity ÷ now: ×1.5 / ×1.33 alternating),
 `📦 Max capacity` at the cap; its `aria-description` carries the cost and absolute next Capacity and Speed, and
 the armed status line shows them too. Its
 visible label always tracks
@@ -209,8 +209,8 @@ solely to finish out a countdown a save from before that change may still be car
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
 disallowed, "the array provisioning." The button renders two lines (`diskBuildStatus`): a label
 (`"{icon} Provision {size} Disk"`) and one terse status line per state, so ready/queued/waiting
-never read alike — `Ready · {cost}`; `{cost} · tap to queue` (not affordable or outranked; the
-`title` and `aria-description` name which); `Queued · funding|after disk fill|needs buffer`; `{n}s left` (legacy
+never read alike — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (not affordable or outranked; the
+`title` and `aria-description` name which); `Queued · funding|after disk fill|needs buffer` (or the banked passes, `2/9 · …`, once any are collected). A queued build is the only state that reads `⏳ Provisioning {size} Disk…` (progressive title, purple `smart` variant, pulsing glow via `$pulse`, which honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`; `{n}s left` (legacy
 countdown). Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
 ` · {collected}/{required}` segment appears whenever
 `diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at
@@ -329,17 +329,17 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between.
 
-**The header row's control is a single "`🎯 <next Booster cost>`" element, no bottom action row at
+**The header row's control is a single "`🏷️ <next Booster cost>`" element, no bottom action row at
 all** (the old separate 💧 Fill / Buy / 🔁 Auto-Manual three-control row, and the lifetime
 "`<N>×  <Booster>`" counter text, are both gone — see `docs/DESIGN_HISTORY.md`'s "one-shot
 Data Lake conversion" entry). The cost figure alone is self-explanatory, so no separate counter is
 needed. It renders as one of four things, in priority order: (1) while
 `isDataLakeAutoConvertActive` (`converting`), an inert `StatusText` label reading the same
-`🎯 <cost>` text — no longer clickable, mid-automation; (2) once the matching compute-ladder entity
+`🏷️ <cost>` text — no longer clickable, mid-automation; (2) once the matching compute-ladder entity
 is already at its own effective cap (`entityAtCap`, `!canBuy && isBoosterEntityAtCap`), the same
-`🎯 <cost>` text as a `StatusText` explaining the entity is full; (3) whenever genuinely affordable
+`🏷️ <cost>` text as a `StatusText` explaining the entity is full; (3) whenever genuinely affordable
 right now (`canBuy`, `isBoosterPurchaseAvailable`) — even with Scale Out also available (e.g. right
-after the buffer just filled) — a clickable `🎯 <cost>` `ActionButton` (`aria-label="buy 1 <Booster>
+after the buffer just filled) — a clickable `🏷️ <cost>` `ActionButton` (`aria-label="buy 1 <Booster>
 from the <label> Data Lake"`) that calls `actions.startDataLakeAutoConvert(tierIndex)`, buying
 immediately since the cost is already banked; (4) otherwise, IF the corresponding Storage array for
 the lake's current capacity level is fully built (`upgradeAvailable`, level 0→1 needs the pool's
@@ -350,14 +350,14 @@ plain decade-power-of-10 step per level, not a literal doubling; the action/func
 see docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden (not merely disabled) unless that array
 is actually complete, and hidden once the lake's own 1,000-unit hard cap is reached
 (`isDataLakeCapacityMaxed`); (5) once unlocked (`isDataLakeBoosterUnlocked` — the matching Storage
-pool has built at least one real disk) but not yet affordable, a clickable `🎯 <cost>` `ActionButton`
+pool has built at least one real disk) but not yet affordable, a clickable `🏷️ <cost>` `ActionButton`
 (`aria-label="start converting toward 1 <Booster> from the <label> Data Lake"`) that also calls
 `actions.startDataLakeAutoConvert(tierIndex)` — this time arming the one-shot `autoConvertActive`
 flag rather than buying immediately, since `tickDataLakeAutoConvert` (engine.js) then automatically
 draws from this pool's own buffer every tick until the cost is banked, buys exactly 1, and clears the
 flag (the control flips back to state (1)'s inert label for the whole duration — "Once automated, it
 will change from button to label," per the request this implements); or (6) before the lake is even
-unlocked, the same `🎯 <cost>` text as a non-interactive `StatusText`. Neither Scale Out nor the cost
+unlocked, the same `🏷️ <cost>` text as a non-interactive `StatusText`. Neither Scale Out nor the cost
 control is arbitrated against the other via the forced priority order at all (removed — see
 `docs/DESIGN_HISTORY.md`; array completion is Scale Out's own gate, same as the cost control's own
 affordability/unlock checks). Starting a conversion is refused outright

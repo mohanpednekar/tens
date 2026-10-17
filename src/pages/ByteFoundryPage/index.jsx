@@ -1,4 +1,5 @@
 import Button, { ButtonContent, progressFill, VisuallyHidden } from 'components/Button'
+import { COST_ICON } from 'components/icons'
 import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
@@ -639,22 +640,29 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const diskBuildQueued = intro.diskBuildQueued
   // One explicit status per state, so the button never reads the same while ready, queued, or
   // waiting. Pass count shows whenever it carries information (multi-pass, or any pass banked).
-  const diskPassesText = diskPassesRequired > 1 || diskPassesCollected > 0
-    ? ` · ${diskPassesCollected}/${diskPassesRequired}`
-    : ''
+  const diskPassesFraction = `${diskPassesCollected}/${diskPassesRequired}`
+  const diskPassesText = diskPassesRequired > 1 || diskPassesCollected > 0 ? ` · ${diskPassesFraction}` : ''
   const diskOfferLabel = `Provision ${formatDiskSize(diskSize)} Disk`
+  // A queued build is the only state where provisioning is actually progressing (it fires itself as
+  // the buffer allows), so it alone gets the progressive title, the pulse and the hourglass — idle
+  // states keep the imperative "Provision …" so the two never read alike.
+  const diskProvisioningActive = Boolean(diskBuildQueued) && !diskBuildInProgress && !diskLadderExhausted
   const diskBuildStatus = diskBuildInProgress
     ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left` }
     : diskLadderExhausted
       ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: null }
       : diskBuildQueued
-        ? { icon: '⏳', label: diskOfferLabel, status: `Queued${diskPassesText} · ${canStartDiskBuild ? 'funding' : diskBuildBlockedByPriority ? 'after disk fill' : 'needs buffer'}` }
+        ? {
+            icon: '⏳',
+            label: `Provisioning ${formatDiskSize(diskSize)} Disk`,
+            status: `${diskPassesCollected > 0 ? diskPassesFraction : 'Queued'} · ${canStartDiskBuild ? 'funding' : diskBuildBlockedByPriority ? 'after disk fill' : 'needs buffer'}`,
+          }
         : canStartDiskBuild
-          ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${formatDiskSize(diskCost)}${diskPassesText}` }
+          ? { icon: '🏦', label: diskOfferLabel, status: `Ready · ${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText}` }
           : {
               icon: '🏦',
               label: diskOfferLabel,
-              status: `${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
+              status: `${COST_ICON} ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
               reason: diskBuildBlockedByPriority ? 'disk fill comes first' : 'pool buffer too low',
             }
   const provisionDiskButton = (
@@ -681,9 +689,10 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
       type="button"
       variant={diskLadderExhausted ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
       $progress={diskBuildProgress}
+      $pulse={diskProvisioningActive}
     >
       <MilestoneButtonContent>
-        <span>{diskBuildStatus.icon} {diskBuildStatus.label}</span>
+        <span>{diskBuildStatus.icon} {diskBuildStatus.label}{diskProvisioningActive ? '…' : ''}</span>
         {diskBuildStatus.status && <MilestoneCostLine>{diskBuildStatus.status}</MilestoneCostLine>}
       </MilestoneButtonContent>
       <VisuallyHidden
@@ -809,7 +818,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     <span>Upgrade Data Stream</span>
                     <MilestoneCostLine>
                       {capacityUpgradeClickable
-                        ? `🎯 ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
+                        ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
                         : '📦 Max capacity'}
                     </MilestoneCostLine>
                   </MilestoneButtonContent>
