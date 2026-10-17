@@ -57,10 +57,10 @@ continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into th
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). Its third line, below the balance, is the fill-based
+(`aria-label="data stream bit balance"`). Its balance sits in the middle of the title row (title left, Speed right); its second line is the fill-based
 `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
-compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
-percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
+compact single DIVERGING bar anchored at the center (the neutral 100% midpoint of a 0–200% track; blue grows right when boosted, left when penalised; the yellow tap bonus is a segment lifting outward from the blue's end), with its own
+percent readout on the same row, to the bar's right — replacing an earlier corner needle-speedometer that
 took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
