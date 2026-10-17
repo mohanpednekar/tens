@@ -161,10 +161,10 @@ scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
 Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
-only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows two
-labeled before → after lines, `Capacity <now> → <next>` (× 2) and `Speed <now> → <next>` (via
-`getIntroProductionRate` at that Capacity), when clickable (`Capacity <now> (max)` otherwise); the
-cost (= current Capacity) lives in its `title`; the armed status line repeats both next figures. Its
+only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows one
+second line, `Cost <current Capacity> · → <next Capacity> · ⚡ <next Speed>/s` (× 2; Speed via
+`getIntroProductionRate` at that Capacity) when clickable, `Max capacity` otherwise; the armed
+status line repeats the next figures. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1
