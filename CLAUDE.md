@@ -10,10 +10,11 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture"):
+(Foundry → Boosters → Compute → Factory → Perks → Guide → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
+`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles icon
+tabs — PP purchases, autobuyer milestones, Buy max + automation pause toggles), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Memory + Storage sections on the same screen (no
 second-level tabs). Guide and More (Milestones / Settings) are always available, including during the
@@ -417,7 +418,7 @@ src/
                                DESIGN_HISTORY.md "Save persistence".
   components/
     AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Boosters → Compute → Factory →
-                               Guide → More; Factory omits during the Foundry gate (Guide/More stay);
+                               Perks → Guide → More; Factory omits during the Foundry gate (Guide/More stay);
                                green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset Byte
                                Foundry are Settings → Danger zone only)
@@ -440,7 +441,7 @@ src/
                                caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    BuyMaxToggle/index.jsx  ← Buy max mode toggle (MainPage + ComputeFlopsPage); renders nothing until
+    BuyMaxToggle/index.jsx  ← Buy max mode toggle button (Perks → Toggles only); renders nothing until
                                `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
                                SettingsPage's Era ascension action. Full contract:
@@ -467,14 +468,19 @@ src/
     ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`
                                (Architecture 4c / "Economy model")
-    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game, focusNonce }`.
-                               Second-level tabs: Factory | Upgrades (after first Prestige). Full
-                               reference: `docs/MAINPAGE_REFERENCE.md`
+    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
+                               No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
+    PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (= first
+                               Prestige/Era). Takes `{ game, focusNonce }`. Icon tabs: 🔓 Unlocks
+                               (one-time PP unlocks + every free autobuyer/Compute-autobuyer/Unbounded
+                               milestone, shown once), ⏫ Upgrades (Double PP, Auto-Prestige), 🎛
+                               Toggles (Buy max + every owned automation's pause). Tab dots:
+                               `hasAffordablePpUnlock`/`hasAffordablePpLevelUpgrade`
+                               (`docs/MAINPAGE_REFERENCE.md`)
     InfoPage/index.jsx      ← the Guide page (Architecture 5), including Byte Foundry/Storage/Compute
                                sections. Reached via AppNav's Guide item; takes no navigation props
                                (AppNav is the exit)
-    MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer / Compute-autobuyer
-                               status (Architecture 6)
+    MilestonesPage/index.jsx ← Chapters / Era ascension status (Architecture 6)
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension, Appearance,
                                Ops dashboard, Danger zone (Architecture 7)
     DevModePage/index.jsx   ← dev-only sandbox (see "Dev Mode"); reached via AppNav → More, rendered only
@@ -502,9 +508,9 @@ src/
                                <MainPage/>/<InfoPage/>/<ComputePage/>/<ComputeFlopsPage/>/
                                <MilestonesPage/>/<SettingsPage/>/<DevModePage/> via a local `page`
                                useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/
-                               `'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing
+                               `'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing
                                library — plus a shared fixed bottom `AppNav` (Foundry → Boosters →
-                               Compute → Factory → Guide → More) and `AppMenu` (More sheet → Milestones /
+                               Compute → Factory → Perks → Guide → More) and `AppMenu` (More sheet → Milestones /
                                Settings / Dev Mode in dev builds). Legacy `page === 'storage'` rewrites
                                to `'foundry'`. Which screen renders is derived, not `page` directly:
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked
@@ -695,8 +701,8 @@ Strict three-layer separation:
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
-6. **`MilestonesPage/index.jsx`** — Chapters / tier-autobuyer / tickspeed-autobuyer /
-   Compute-autobuyer / Era ascension status screen. Chapters: the first KiloByte, Go Googol, Open
+6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
+   milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first KiloByte, Go Googol, Open
    Compute, Go Unbounded, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
@@ -961,7 +967,7 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`) — a per-device toggle
+**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Perks → Toggles) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
@@ -1087,7 +1093,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1960 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1967 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
