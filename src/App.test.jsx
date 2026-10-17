@@ -2829,7 +2829,8 @@ test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () =
   render(<App />)
 
   const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
-  expect(upgradeButton).toHaveTextContent('→ 128 B · ⚡ 12 B/s')
+  expect(upgradeButton).toHaveTextContent('Capacity 64 B → 128 B')
+  expect(upgradeButton).toHaveTextContent('Speed 8 B/s → 12 B/s')
 })
 
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
