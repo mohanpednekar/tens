@@ -4874,6 +4874,19 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
 })
 
+test('Compute (Flops) buy buttons show their PP cost as text, not "[object Object]"', async () => {
+  seedMainGameState({
+    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    prestige: { xp: 0, points: 5000, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await userEvent.setup().click(screen.getByRole('button', { name: /^open compute$/i }))
+
+  const buy = screen.getByRole('button', { name: /^buy KFlops for/i })
+  expect(buy).toHaveTextContent(/^[\d,.e+]+ PP$/)
+  expect(buy).not.toHaveTextContent(/object/i)
+})
+
 test('Compute autobuyer milestones list Era unlocks once Compute is revealed', async () => {
   const user = userEvent.setup()
 

@@ -12,7 +12,7 @@ const RootDiv = styled.div`
   max-width: 480px;
   margin: 0 auto;
   padding: calc(${props => props.theme.space.xl} + env(safe-area-inset-top))
-    ${props => props.theme.space.md} ${props => props.theme.space.xl};
+    ${props => props.theme.space.lg} ${props => props.theme.space.xl};
   color: ${props => props.theme.color.text};
 `
 
