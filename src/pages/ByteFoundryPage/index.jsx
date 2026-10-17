@@ -717,7 +717,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
-              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText} · outflow paused
+              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText}<VisuallyHidden> · outflow paused</VisuallyHidden>
             </UpgradeStatusText>
           )}
           {intro.byteCreated && (

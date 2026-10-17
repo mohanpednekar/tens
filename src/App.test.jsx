@@ -2883,7 +2883,7 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   // The upgrade button is gone while armed; the tile carries the status instead.
   expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
+  expect(dataStream).toHaveTextContent(/Upgrading to .* · ⚡ .*\/s/)
   expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
 
   // The same DOM node flips role in place, so keyboard focus is never dropped.
