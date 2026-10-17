@@ -159,15 +159,11 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
-poolIndex`), right after that pool's own Memory-buffer/Data-Lake tiles above and OUTSIDE its
-`isExpanded` disclosure (so it stays visible/usable without expanding that pool) — not alongside
-Speed in the Data Stream section — an earlier layout had it there, standalone, but that separated
-the button from the pool it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
-card) for the rare case where the disk ladder has already advanced past the last pool card
-currently VISIBLE (`getVisibleStoragePoolCount`, capacity-threshold-gated — see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — keeping the button reachable rather than
-letting it disappear until that pool's card catches up. Its
+Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
+location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
+only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows a third
+line, `→ <next Capacity> · ⚡ <next Speed>/s` (Capacity × 2; Speed via `getIntroProductionRate` at
+that Capacity), whenever clickable; the armed status line repeats both figures. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1

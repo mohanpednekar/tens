@@ -596,16 +596,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
   const capacityUpgradeClickable = capacityUpgradeAvailable || capacityUpgradeArmable
   const capacityUpgradeCost = intro.capacity
+  // What the player gets for the upgrade: Capacity doubles, and Speed is derived purely from
+  // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
+  const nextCapacity = intro.capacity * 2
+  const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
+  const nextRateText = `${formatBitsInNearestUnit(getIntroProductionRate({ ...intro, capacity: nextCapacity }))}/s`
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const capacityUpgradeProgress = clampPercent((intro.bits / capacityUpgradeCost) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
-  // inside whichever pool card diskPoolIndex currently belongs to, with a fallback slot right
-  // after the Data Stream card for the rare case that pool's own card isn't visible yet (its
-  // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
-  // disk-build-driven, independent of capacity — has already moved past it).
+  // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
+  // the pool its current offer belongs to is rebuilding after a pool-local reset.
   // Clicking no longer requires this disk's very FIRST pass to already be banked. Once at least one
   // pass has ever been collected, provisionDisk itself already auto-arms intro.diskBuildQueued so
   // every later pass fires on its own as the buffer refills — but getting that auto-continuation
@@ -701,7 +704,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
-              ⏫ Upgrading to {formatMemoryCapacityValue(intro.capacity * 2, true)} · outflow paused
+              ⏫ Upgrading to {nextCapacityText} · {nextRateText} · outflow paused
             </UpgradeStatusText>
           )}
           {intro.byteCreated && (
@@ -771,6 +774,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'
                   }
+                  aria-description={capacityUpgradeClickable ? `Capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined
+                  }
                   type="button"
                   variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
                   $progress={capacityUpgradeProgress}
@@ -778,19 +783,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <MilestoneButtonContent>
                     <span>Upgrade Data Stream</span>
                     <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
+                    {capacityUpgradeClickable && (
+                      <MilestoneCostLine>→ {nextCapacityText} · ⚡ {nextRateText}</MilestoneCostLine>
+                    )}
                   </MilestoneButtonContent>
                 </Button>
               )}
             </MilestonesRow>
           )}
 
+          {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && provisionDiskButton}
         </ActionsRow>
       </DataStreamCard>
-
-      {/* Fallback for when the disk ladder has already advanced past the last VISIBLE pool card
-          (its own capacity-unlock threshold not yet reached) — keeps the button reachable rather
-          than disappearing until that pool's card catches up. */}
-      {storageRevealed && diskPoolIndex > visiblePoolCount && provisionDiskButton}
 
       {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
@@ -834,14 +838,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
-        // The shared Provision Disk control always targets whichever size the disk ladder
-        // currently offers (getDiskSize) — a single ladder spanning every pool, not a per-pool
-        // one — so it renders inside whichever ONE pool card that size currently belongs to,
-        // outside the isExpanded disclosure so it stays visible/usable without expanding. See the
-        // fallback render below the loop for when that pool's own CARD isn't visible yet (its
-        // capacity-unlock threshold not yet reached, even though the disk ladder — a purely
-        // disk-build-driven progression, independent of capacity — has already moved past it).
-        const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             {/* Title/Speed/bar/balance render INSIDE this same tappable button now (not a
@@ -901,7 +897,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             >
               {isExpanded ? '▲' : '▼'}
             </ExpandToggleButton>
-            {isActiveDiskPool && !isStoragePoolRebuilding(state, poolIndex) && provisionDiskButton}
             {isExpanded && (
               <>
                 {poolSizes.map(size => (

@@ -2823,6 +2823,15 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
   expect(upgradeButton).toHaveTextContent('64 B')
 })
 
+test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
+  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
+  seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toHaveTextContent('→ 128 B · ⚡ 12 B/s')
+})
+
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
   // Fake timers so a real production tick can't race the exact balance assertions below.
   vi.useFakeTimers()
@@ -3513,6 +3522,9 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
+    // Lives in the Data Stream card below Upgrade Data Stream, not inside any pool card.
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(provisionButton)
+    expect(pool2).not.toContainElement(provisionButton)
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
