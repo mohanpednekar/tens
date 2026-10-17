@@ -162,9 +162,9 @@ pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-
 Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
-relative gains (current values are on the tile): `Cost <current Capacity> · ×2 size · ⚡ ×<speed
-ratio>` (ratio = `getIntroProductionRate` at the doubled Capacity ÷ now: ×1.5 / ×1.33 alternating),
-`Max capacity` at the cap; its `aria-description` carries the absolute next Capacity and Speed, and
+relative gains (current values are on the tile): `🎯 <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
+ratio>` (🎯 is the game's cost icon, as on Data Lake Boosters) (ratio = `getIntroProductionRate` at the doubled Capacity ÷ now: ×1.5 / ×1.33 alternating),
+`📦 Max capacity` at the cap; its `aria-description` carries the cost and absolute next Capacity and Speed, and
 the armed status line shows them too. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×

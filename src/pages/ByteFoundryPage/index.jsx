@@ -800,7 +800,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'
                   }
-                  aria-description={capacityUpgradeClickable ? `Capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
+                  aria-description={capacityUpgradeClickable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
                   type="button"
                   variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
                   $progress={capacityUpgradeProgress}
@@ -809,8 +809,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     <span>Upgrade Data Stream</span>
                     <MilestoneCostLine>
                       {capacityUpgradeClickable
-                        ? `Cost ${formatBitsInNearestUnit(capacityUpgradeCost)} · ×${INTRO_CAPACITY_DOUBLING_STEP} size · ⚡ ${speedGainText}`
-                        : 'Max capacity'}
+                        ? `🎯 ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
+                        : '📦 Max capacity'}
                     </MilestoneCostLine>
                   </MilestoneButtonContent>
                 </Button>
