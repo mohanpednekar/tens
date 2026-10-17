@@ -1452,9 +1452,9 @@ convention — internal state always stores raw bit counts.
 Disks' common Provision Disk button and every shown size's full DiskArrayRow stay on ByteFoundryPage itself as
 continuous sections; the thin `StoragePage` wrapper remains for reuse/tests (see "Architecture" in
 `CLAUDE.md`) — see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" and "Storage page" sections for
-the render-level layout. The Provision Disk button itself renders INSIDE the pool card matching the
-disk ladder's current offer (`diskPoolIndex`), not as a standalone section — see "Architecture" item 4
-in `CLAUDE.md` for the fallback that covers the ladder briefly outrunning a not-yet-visible pool card. Auto-redeem has no standalone pause/resume control of
+the render-level layout. The Provision Disk button itself renders in the Data Stream card's actions, directly below Upgrade
+Data Stream, hidden only while `isStoragePoolRebuilding(state, diskPoolIndex)` — see "Architecture"
+item 4 in `CLAUDE.md`. Auto-redeem has no standalone pause/resume control of
 its own any more — it's gated per-matched-tier's own autobuyer instead, see the "Auto-redeem"
 paragraph above.
 

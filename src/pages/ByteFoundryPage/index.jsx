@@ -4,7 +4,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
-import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -571,7 +571,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // stored value or the engine's own funding math (see getDiskProvisionPassesRequired in
   // game/engine).
   const diskPassesCollected = Math.min(diskPassesRequired, getDiskProvisionPassesCollected(state, diskSize))
-  const diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress
   // The button's own existence already signals eligibility — no need to preview a fill from
   // whatever the pool buffer happens to be holding (accumulated for unrelated reasons, e.g. cache
   // fill) before the player has ever engaged this build. Progress only starts rendering once at
@@ -596,16 +595,19 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
   const capacityUpgradeClickable = capacityUpgradeAvailable || capacityUpgradeArmable
   const capacityUpgradeCost = intro.capacity
+  // What the player gets for the upgrade: Capacity doubles, and Speed is derived purely from
+  // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
+  const nextCapacity = intro.capacity * INTRO_CAPACITY_DOUBLING_STEP
+  const nextCapacityText = formatMemoryCapacityValue(nextCapacity, true)
+  const nextRateText = `${formatBitsInNearestUnit(getIntroProductionRate({ ...intro, capacity: nextCapacity }))}/s`
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const capacityUpgradeProgress = clampPercent((intro.bits / capacityUpgradeCost) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
-  // inside whichever pool card diskPoolIndex currently belongs to, with a fallback slot right
-  // after the Data Stream card for the rare case that pool's own card isn't visible yet (its
-  // capacity-unlock threshold not yet reached, even though the disk ladder itself — purely
-  // disk-build-driven, independent of capacity — has already moved past it).
+  // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
+  // the pool its current offer belongs to is rebuilding after a pool-local reset.
   // Clicking no longer requires this disk's very FIRST pass to already be banked. Once at least one
   // pass has ever been collected, provisionDisk itself already auto-arms intro.diskBuildQueued so
   // every later pass fires on its own as the buffer refills — but getting that auto-continuation
@@ -623,9 +625,32 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
     }
   }
   const diskBuildQueued = intro.diskBuildQueued
+  // One explicit status per state, so the button never reads the same while ready, queued, or
+  // waiting. Pass count shows whenever it carries information (multi-pass, or any pass banked).
+  const diskPassesText = diskPassesRequired > 1 || diskPassesCollected > 0
+    ? ` · ${diskPassesCollected}/${diskPassesRequired} passes`
+    : ''
+  const diskBuildStatus = diskBuildInProgress
+    ? { icon: '🏗', label: `Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk`, status: `${Math.ceil(diskBuildInProgress.remainingSeconds)}s left · array offline` }
+    : diskLadderExhausted
+      ? { icon: '✅', label: `All Pools Complete (${formatDiskSize(diskSize)})`, status: 'Every disk provisioned' }
+      : diskBuildQueued
+        ? {
+            icon: '⏳',
+            label: `Provision ${formatDiskSize(diskSize)} Disk`,
+            status: `Queued${diskPassesText} · ${canStartDiskBuild ? 'funding now' : diskBuildBlockedByPriority ? 'waiting for disk fill' : 'waiting for pool buffer'}`,
+          }
+        : canStartDiskBuild
+          ? { icon: '🏦', label: `Provision ${formatDiskSize(diskSize)} Disk`, status: `Ready · ${formatDiskSize(diskCost)}${diskPassesText}` }
+          : {
+              icon: '🏦',
+              label: `Provision ${formatDiskSize(diskSize)} Disk`,
+              status: `${diskBuildBlockedByPriority ? 'Disk fill first' : 'Buffer too low'} · ${formatDiskSize(diskCost)}${diskPassesText} · tap to queue`,
+            }
   const provisionDiskButton = (
     <Button
       aria-label={diskBuildInProgress ? 'disk array rebuilding' : diskLadderExhausted ? 'disk ladder complete' : 'provision disk'}
+      aria-description={diskBuildStatus.status}
       disabled={!!diskBuildInProgress || diskLadderExhausted}
       onClick={handleProvisionDiskClick}
       title={
@@ -633,31 +658,24 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           ? `Provisioning ${formatDiskSize(diskBuildInProgress.size)} — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s (array offline)`
           : diskLadderExhausted
             ? `All ${getStoragePoolCount()} storage pools are complete through ${formatDiskSize(diskSize)}`
-            : canStartDiskBuild
-              ? (diskRedeemTierName
-                ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
-                : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`)
-              : diskBuildQueued
-                ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
+            : diskBuildQueued
+              ? `Queued — fires itself the instant ${diskBuildBlockedByPriority ? 'it is your turn' : 'enough is banked'} (${diskPassesCollected}/${diskPassesRequired} passes so far)`
+              : canStartDiskBuild
+                ? (diskRedeemTierName
+                  ? `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, redeemable right away for a free ${diskRedeemTierName} once full`
+                  : `Costs ${formatDiskSize(diskCost)}, paid in ${diskPassesRequired} pass${diskPassesRequired === 1 ? '' : 'es'} of ${formatDiskSize(diskSize)} each (${diskPassesCollected}/${diskPassesRequired} collected) — creates an empty ${formatDiskSize(diskSize)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`)
                 : diskBuildBlockedByPriority
                   ? 'Redeem a full Disk first — click to queue this build so it fires itself the instant it is your turn'
                   : `Not enough banked yet for the next pass (${diskPassesCollected}/${diskPassesRequired} collected) — click to queue this build so it fires itself as the buffer fills`
       }
       type="button"
-      variant={canStartDiskBuild ? 'info' : diskBuildQueued ? 'smart' : 'neutral'}
+      variant={diskLadderExhausted ? 'neutral' : diskBuildQueued ? 'smart' : canStartDiskBuild ? 'info' : 'neutral'}
       $progress={diskBuildProgress}
     >
-      <ButtonContent>
-        {diskBuildInProgress
-          ? `🏦 Provisioning ${formatDiskSize(diskBuildInProgress.size)} Disk — ${Math.ceil(diskBuildInProgress.remainingSeconds)}s`
-          : diskLadderExhausted
-            ? `🏦 All Pools Complete (${formatDiskSize(diskSize)})`
-            : diskFundingInProgress
-              ? `${diskBuildQueued && !canStartDiskBuild ? '⏳' : '🏦'} Provision ${formatDiskSize(diskSize)} Disk — ${diskPassesCollected}/${diskPassesRequired}`
-              : diskPassesRequired > 1
-                ? `${diskBuildQueued && !canStartDiskBuild ? '⏳' : '🏦'} Provision ${formatDiskSize(diskSize)} Disk — 0/${diskPassesRequired} (${formatDiskSize(diskCost)})`
-                : `${diskBuildQueued && !canStartDiskBuild ? '⏳' : '🏦'} Provision ${formatDiskSize(diskSize)} Disk (${formatDiskSize(diskCost)})`}
-      </ButtonContent>
+      <MilestoneButtonContent>
+        <span>{diskBuildStatus.icon} {diskBuildStatus.label}</span>
+        <MilestoneCostLine>{diskBuildStatus.status}</MilestoneCostLine>
+      </MilestoneButtonContent>
       <VisuallyHidden
         role="progressbar"
         aria-label="byte foundry disk build progress"
@@ -701,7 +719,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
-              ⏫ Upgrading to {formatMemoryCapacityValue(intro.capacity * 2, true)} · outflow paused
+              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText} · outflow paused
             </UpgradeStatusText>
           )}
           {intro.byteCreated && (
@@ -771,6 +789,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                         ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
                         : 'Capacity is already at its maximum'
                   }
+                  aria-description={capacityUpgradeClickable ? `Capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
                   type="button"
                   variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
                   $progress={capacityUpgradeProgress}
@@ -778,19 +797,18 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <MilestoneButtonContent>
                     <span>Upgrade Data Stream</span>
                     <MilestoneCostLine>{formatBitsInNearestUnit(capacityUpgradeCost)}</MilestoneCostLine>
+                    {capacityUpgradeClickable && (
+                      <MilestoneCostLine>→ {nextCapacityText} · ⚡ {nextRateText}</MilestoneCostLine>
+                    )}
                   </MilestoneButtonContent>
                 </Button>
               )}
             </MilestonesRow>
           )}
 
+          {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && provisionDiskButton}
         </ActionsRow>
       </DataStreamCard>
-
-      {/* Fallback for when the disk ladder has already advanced past the last VISIBLE pool card
-          (its own capacity-unlock threshold not yet reached) — keeps the button reachable rather
-          than disappearing until that pool's card catches up. */}
-      {storageRevealed && diskPoolIndex > visiblePoolCount && provisionDiskButton}
 
       {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
@@ -834,14 +852,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
-        // The shared Provision Disk control always targets whichever size the disk ladder
-        // currently offers (getDiskSize) — a single ladder spanning every pool, not a per-pool
-        // one — so it renders inside whichever ONE pool card that size currently belongs to,
-        // outside the isExpanded disclosure so it stays visible/usable without expanding. See the
-        // fallback render below the loop for when that pool's own CARD isn't visible yet (its
-        // capacity-unlock threshold not yet reached, even though the disk ladder — a purely
-        // disk-build-driven progression, independent of capacity — has already moved past it).
-        const isActiveDiskPool = diskPoolIndex === poolIndex
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             {/* Title/Speed/bar/balance render INSIDE this same tappable button now (not a
@@ -901,7 +911,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             >
               {isExpanded ? '▲' : '▼'}
             </ExpandToggleButton>
-            {isActiveDiskPool && !isStoragePoolRebuilding(state, poolIndex) && provisionDiskButton}
             {isExpanded && (
               <>
                 {poolSizes.map(size => (

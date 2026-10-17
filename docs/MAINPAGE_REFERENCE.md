@@ -159,15 +159,11 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
-poolIndex`), right after that pool's own Memory-buffer/Data-Lake tiles above and OUTSIDE its
-`isExpanded` disclosure (so it stays visible/usable without expanding that pool) — not alongside
-Speed in the Data Stream section — an earlier layout had it there, standalone, but that separated
-the button from the pool it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
-card) for the rare case where the disk ladder has already advanced past the last pool card
-currently VISIBLE (`getVisibleStoragePoolCount`, capacity-threshold-gated — see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — keeping the button reachable rather than
-letting it disappear until that pool's card catches up. Its
+Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
+location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
+only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows a third
+line, `→ <next Capacity> · ⚡ <next Speed>/s` (Capacity × 2; Speed via `getIntroProductionRate` at
+that Capacity), whenever clickable; the armed status line repeats both figures. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1
@@ -209,18 +205,15 @@ spent funding it" entry). An earlier version DID impose a real timed countdown h
 solely to finish out a countdown a save from before that change may still be carrying; a build
 `provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." The Provision button's idle state has three label variants
-depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)` (clamped at
-`diskPassesRequired` for display, so a save carrying a stale, already-over-required stored value
-from an earlier flat-multiplier version of this ladder never shows a nonsensical "N/M" with N > M —
-see `docs/DESIGN_HISTORY.md`) and `diskPassesRequired = getDiskProvisionPassesRequired(state,
-diskSize)`: plain `"🏦 Provision {size} Disk ({cost})"` before any pass has landed on a single-pass
-disk (an array's first); `"🏦 Provision {size} Disk — 0/{passesRequired} ({cost})"` before any pass
-has landed on a disk needing MORE than one pass, so the pass count is visible up front rather than
-only after the first pass lands; or `"🏦 Provision {size} Disk — {passesCollected}/{passesRequired}"`
-once funding is under way (`diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress`)
-— the button itself stays enabled/disabled and clickable exactly the same way across all three
-(funding-in-progress is not a separate `disabled` state; only the visible label changes). Overall
+disallowed, "the array provisioning." The button renders two lines (`diskBuildStatus`): a label
+(`"{icon} Provision {size} Disk"`) and one explicit status line per state, so ready/queued/waiting
+never read alike — `Ready · {cost}`; `Buffer too low · {cost} · tap to queue`; `Disk fill first ·
+{cost} · tap to queue` (`diskBuildBlockedByPriority`); `Queued · funding now|waiting for disk
+fill|waiting for pool buffer`; `{n}s left · array offline` (legacy countdown); `Every disk
+provisioned` (ladder exhausted, ✅). A ` · {collected}/{required} passes` segment appears whenever
+`diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at
+`diskPassesRequired` for display — see `docs/DESIGN_HISTORY.md`), so a single-pass disk never shows a
+redundant "0/1". The status line is also the button's `aria-description`. Overall
 the button renders three distinct BEHAVIORAL states (idle/mid-build/ladder-complete, each covering
 its own label variants above) off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
@@ -293,9 +286,8 @@ directly, exactly as before; otherwise it calls `actions.queueDiskBuild()`, so
 then it just happens" treatment every later pass already had. `disabled` dropped its own
 affordability/priority checks — the button refuses input only while a build's own timed countdown
 is running or the ladder is exhausted for active pools, since a click in every other state now does
-something useful. Variant/icon reflect three live states: `'info'`/🏦 while turn-available (fires
-now), `'smart'`/⏳ while queued-but-not-yet-turn-available (armed, waiting), `'neutral'`/🏦
-otherwise (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
+something useful. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
+else `'info'`/🏦 while turn-available (fires now), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
 so the control's identity never changes out from under assistive tech or a `getByRole` query.
 `actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same
 posture Capacity's own `queueIntroCapacityUpgrade` still has. See docs/ECONOMY_REFERENCE.md's

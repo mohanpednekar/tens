@@ -2823,6 +2823,15 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
   expect(upgradeButton).toHaveTextContent('64 B')
 })
 
+test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
+  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
+  seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toHaveTextContent('→ 128 B · ⚡ 12 B/s')
+})
+
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
   // Fake timers so a real production tick can't race the exact balance assertions below.
   vi.useFakeTimers()
@@ -3401,9 +3410,13 @@ describe('Byte Foundry Storage', () => {
     // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/Buffer too low · .* · tap to queue/)
+    expect(buildButton).not.toHaveTextContent(/Ready|Queued/)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
+    expect(buildButton).toHaveTextContent(/⏳.*Queued · waiting for pool buffer/)
+    expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
   })
 
@@ -3513,6 +3526,9 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
+    // Lives in the Data Stream card below Upgrade Data Stream, not inside any pool card.
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(provisionButton)
+    expect(pool2).not.toContainElement(provisionButton)
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
@@ -3520,7 +3536,7 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
-  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk falling back outside any pool card', () => {
+  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk still reachable in the Data Stream card', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
     seedIntroState({
@@ -3536,12 +3552,23 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'pool 2' })).not.toBeInTheDocument()
-    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk falls
-    // back to rendering outside any pool card (see ByteFoundryPage's provisionDiskButton fallback)
-    // rather than disappearing until pool 2's own card catches up.
+    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk lives in
+    // the Data Stream card, so it stays reachable before pool 2's own card is visible.
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
+  })
+
+  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      diskCache: { [currentBankSize]: currentBankSize },
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
   })
 
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
@@ -3559,6 +3586,8 @@ describe('Byte Foundry Storage', () => {
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands

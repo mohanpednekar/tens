@@ -5866,6 +5866,13 @@ condition satisfied but capacity below its own threshold correctly stays hidden 
 would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
 manual transfer-block row is confirmed gone from every state that used to show it.
 
+### Provision Disk moved into the Data Stream card
+
+Maintainer request: Provision Disk now sits in the Data Stream card directly below Upgrade Data
+Stream, reversing "Provision Disk moved back inside its pool card" below. One fixed location also
+drops the off-screen-pool fallback copy. Upgrade Data Stream gained a post-upgrade Capacity/Speed
+preview line so the player sees what the drain buys.
+
 ### Provision Disk moved back inside its pool card; pool Capacity switched from SI-clean to a plain decade-of-10 ladder
 
 Two more requests from the same conversation as the three entries above, landed together since both

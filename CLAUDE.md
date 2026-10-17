@@ -651,10 +651,10 @@ Strict three-layer separation:
    per pool below that pool's `components/DiskArrayRow`s (cache above disks) in the same disclosure
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
-   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered inside
-   the ONE `PoolCard` the ladder's current offer (`getDiskSize`) belongs to (`getPoolIndexForDiskSize`),
-   plus a fallback copy (`provisionDiskButton`) after the Data Stream card for when that card isn't
-   visible yet (`docs/DESIGN_HISTORY.md`: "Provision Disk moved back inside its pool card"). Each disk
+   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
+   the Data Stream card's actions directly below Upgrade Data Stream (hidden while the offer's pool is
+   rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
+   (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
@@ -1095,7 +1095,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1972 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1974 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
