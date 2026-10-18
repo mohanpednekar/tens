@@ -141,7 +141,7 @@ before touching `src/game/engine.js`, `src/game/layers.js`, or any economy const
 one-time-ever gate (`latchMainGameUnlocked` — see above) before `MainPage` (`tier01`/Kilobytes onward)
 is reachable. Tapping accumulates bits into the **Data Stream** (Buffer-capped, binary units —
 Disks/Data Lake/caches stay SI), which combines into a permanent Byte generator grown via a single
-**Upgrade Data Stream** action (cost = current capacity, doubles `intro.capacity`; displayed Speed is
+**Upgrade Data Stream** action (cost = current capacity, a click starts a progress bar fed at a constant 100% of base Speed from the Buffer, doubling `intro.capacity` when full; displayed Speed is
 *derived* from capacity via `getDataStreamSpeedBytesPerSecond`, not purchased) — entirely OUTSIDE the
 forced priority order, never waiting on Disk Fill/Provision Disk/Compute; a separate fill-based
 multiplier (never the displayed Speed/Bandwidth figures) scales the real delivery rate by buffer

@@ -56,19 +56,19 @@ import {
   latchMainGameUnlocked,
   pickIntroCapacityMilestone,
   isMemoryCapacityUpgradeArmable,
-  isDataStreamOutflowPaused,
   areStoragePoolDisksFull,
   isStoragePoolProvisioningInProgress,
   isDataLakePoolDrainAvailable,
   tickDataLakePoolDrain,
   tickIntroProduction,
+  tickCapacityUpgradeDrain,
+  upgradePoolCapacity,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
   queueDiskBuild,
   clearDiskBuildQueue,
   tickQueuedDiskBuild,
   eraseAllComputeTokens,
-  tickQueuedCapacityUpgrade,
   setAutobuyerEnabled,
   setAutoGlobalTickspeedEnabled,
   setAutoPrestigeAutobuyerEnabled,
@@ -1333,7 +1333,7 @@ describe('pickIntroCapacityMilestone', () => {
     const state = withIntro(createInitialGameState(), {
       bits: INTRO_STARTING_CAPACITY, capacity: INTRO_STARTING_CAPACITY, ...noOtherUpgradesLeft,
     })
-    const after = pickIntroCapacityMilestone(state)
+    const after = upgradePoolCapacity(state)
     expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
     expect(after.intro.bits).toBe(0)
   })
@@ -1353,7 +1353,7 @@ describe('pickIntroCapacityMilestone', () => {
     const state = withIntro(createInitialGameState(), {
       bits: BITS_PER_BYTE * 64, capacity: BITS_PER_BYTE * 64, ...noOtherUpgradesLeft,
     })
-    const after = pickIntroCapacityMilestone(state)
+    const after = upgradePoolCapacity(state)
     expect(after.intro.capacity).toBe(BITS_PER_BYTE * 128)
   })
 
@@ -1362,7 +1362,7 @@ describe('pickIntroCapacityMilestone', () => {
       bits: 8 * 2 ** 16, capacity: 8 * 2 ** 16, ...noOtherUpgradesLeft,
     })
     expect(getStoragePoolCapacity(state, 1)).toBe(80_000) // 10,000 Bytes (decade power) — below the 100 KB ceiling
-    const after = pickIntroCapacityMilestone(state)
+    const after = upgradePoolCapacity(state)
     expect(after.intro.capacity).toBe(8 * 2 ** 17) // raw doubles plainly, unclamped...
     expect(after.intro.capacity).toBeGreaterThan(INTRO_CAPACITY_CAP_BITS) // ...now past the pool's own ceiling
     expect(getStoragePoolCapacity(after, 1)).toBe(INTRO_CAPACITY_CAP_BITS) // the pool's own derived value still clamps there
@@ -1386,23 +1386,44 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(pickIntroCapacityMilestone(atCap)).toBe(atCap)
   })
 
-  it('arms (queues) instead of upgrading below a full Buffer, even when empty', () => {
+  it('starts the upgrade at any fill, even a full Buffer, without changing Capacity yet', () => {
     expect(pickIntroCapacityMilestone(armState(0)).intro.capacityUpgradeQueued).toBe(true)
-    const state = armState(capacity / 2)
+    const state = armState(capacity)
     expect(isMemoryCapacityUpgradeArmable(state)).toBe(true)
     const after = pickIntroCapacityMilestone(state)
     expect(after.intro.capacityUpgradeQueued).toBe(true)
     expect(after.intro.capacity).toBe(capacity)
-    expect(isDataStreamOutflowPaused(after)).toBe(true)
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it('pauses pool-buffer fill and tier01 auto-invest while armed', () => {
-    const armed = pickIntroCapacityMilestone(armState(capacity / 2))
-    expect(tickPoolBufferFill(1)(armed)).toBe(armed)
-    expect(tickIntroAutoInvest(armed)).toBe(armed)
-    const unarmed = { ...armed, intro: { ...armed.intro, capacityUpgradeQueued: false } }
-    expect(tickPoolBufferFill(1)(unarmed)).not.toBe(unarmed)
+  it('pulls a constant 100% of base Speed from the Buffer into the bar', () => {
+    const started = pickIntroCapacityMilestone(armState(capacity / 2))
+    const rate = getIntroProductionRate(started.intro)
+    const after = tickCapacityUpgradeDrain(1)(started)
+    expect(after.intro.capacityUpgradeProgress).toBe(rate)
+    expect(after.intro.bits).toBe(capacity / 2 - rate)
+  })
+
+  it('pulls only what the Buffer holds', () => {
+    const started = pickIntroCapacityMilestone(armState(5))
+    const after = tickCapacityUpgradeDrain(1)(started)
+    expect(after.intro.capacityUpgradeProgress).toBe(5)
+    expect(after.intro.bits).toBe(0)
+  })
+
+  it('does not pause pool-buffer fill or tier01 auto-invest while upgrading', () => {
+    const started = pickIntroCapacityMilestone(armState(capacity / 2))
+    expect(tickPoolBufferFill(1)(started)).not.toBe(started)
+  })
+
+  it('cancelling returns the bar\'s bits to the Buffer', () => {
+    let state = pickIntroCapacityMilestone(armState(0))
+    state = tickCapacityUpgradeDrain(1)(withIntro(state, { bits: 100 }))
+    const progress = state.intro.capacityUpgradeProgress
+    const cancelled = clearIntroCapacityUpgradeQueue(state)
+    expect(cancelled.intro.capacityUpgradeQueued).toBe(false)
+    expect(cancelled.intro.capacityUpgradeProgress).toBe(0)
+    expect(cancelled.intro.bits).toBeCloseTo(state.intro.bits + progress)
   })
 
   it('an armed upgrade carries through a real Prestige', () => {
@@ -1412,13 +1433,14 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(after.intro.capacity).toBe(capacity)
   })
 
-  it('tickGame tops the Buffer off and fires the armed upgrade, then resumes outflow', () => {
+  it('tickGame fills the bar and fires the upgrade, doubling Capacity', () => {
     let state = pickIntroCapacityMilestone(armState(capacity / 2))
     for (let i = 0; i < 10_000 && state.intro.capacity === capacity; i += 1) {
       state = tickGame(1)(state)
     }
     expect(state.intro.capacity).toBe(capacity * INTRO_CAPACITY_DOUBLING_STEP)
     expect(state.intro.capacityUpgradeQueued).toBe(false)
+    expect(state.intro.capacityUpgradeProgress).toBe(0)
   })
 })
 
@@ -1448,9 +1470,8 @@ describe('tickDataLakePoolDrain (buffer priority: disk filling > provisioning in
     expect(getDataLakeDepositedUnits(1)(tickDataLakePoolDrain(1e6)(state))).toBe(1)
   })
 
-  it('moves bits from the pool buffer into its lake, even while an armed upgrade pauses the Data Stream', () => {
+  it('moves bits from the pool buffer into its lake, even while an upgrade is diverting the Data Stream', () => {
     const state = pool({ capacityUpgradeQueued: true })
-    expect(isDataStreamOutflowPaused(state)).toBe(true)
     const after = tickDataLakePoolDrain(1e6)(state)
     // A fresh lake holds exactly 1 unit (one smallest-disk's worth of bits).
     expect(getDataLakeDepositedUnits(1)(after)).toBe(1)
@@ -2106,7 +2127,7 @@ describe('queueDiskBuild / clearDiskBuildQueue / tickQueuedDiskBuild', () => {
   })
 })
 
-describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
+describe('queueIntroCapacityUpgrade', () => {
   it('queues a Capacity upgrade before the Buffer is full', () => {
     const state = withIntro(createInitialGameState(), { bits: 1, capacity: INTRO_STARTING_CAPACITY, byteCreated: true })
     const queued = queueIntroCapacityUpgrade(state)
@@ -2119,19 +2140,6 @@ describe('queueIntroCapacityUpgrade / tickQueuedCapacityUpgrade', () => {
     const cleared = clearIntroCapacityUpgradeQueue(queued)
     expect(cleared.intro.capacityUpgradeQueued).toBe(false)
     expect(clearIntroCapacityUpgradeQueue(cleared)).toBe(cleared)
-  })
-
-  it('tickQueuedCapacityUpgrade clears the legacy flag and doubles a full Capacity', () => {
-    const state = withIntro(createInitialGameState(), {
-      bits: INTRO_STARTING_CAPACITY,
-      capacity: INTRO_STARTING_CAPACITY,
-      byteCreated: true,
-      capacityUpgradeQueued: true,
-    })
-    const after = tickQueuedCapacityUpgrade(state)
-    expect(after.intro.capacityUpgradeQueued).toBe(false)
-    expect(after.intro.capacity).toBe(INTRO_STARTING_CAPACITY * INTRO_CAPACITY_DOUBLING_STEP)
-    expect(after.intro.bits).toBe(0)
   })
 
   it('refuses to queue once Capacity is already at the FINAL pool\'s own end bound', () => {
@@ -2488,7 +2496,7 @@ describe('tickFoundryResetConvenience', () => {
     expect(after.intro.bits).toBe(0)
   })
 
-  it('never arms (pauses outflow for) a Capacity replay below a full Buffer', () => {
+  it('never starts a progress-bar upgrade for a Capacity replay below a full Buffer', () => {
     const state = withIntro(createInitialGameState(), {
       bits: 1,
       capacity: INTRO_STARTING_CAPACITY,
@@ -2501,7 +2509,6 @@ describe('tickFoundryResetConvenience', () => {
     })
     const after = tickFoundryResetConvenience(state)
     expect(after.intro.capacityUpgradeQueued).toBe(false)
-    expect(isDataStreamOutflowPaused(after)).toBe(false)
   })
 
   it('auto-Combine during convenience leaves Capacity on the doubling ladder', () => {

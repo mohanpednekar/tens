@@ -101,16 +101,11 @@ B/s at even `log2` exponents and the arithmetic mean of the two neighbouring eve
 odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
-isMemoryCapacityUpgradeAvailable(state) || isMemoryCapacityUpgradeArmable(state)`: a full Buffer
-upgrades immediately; below full (any fill, byte combined, not at cap, not already armed) a click
-arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
-fills and it fires. While armed the button is hidden and the Data Stream tile itself reflects the
-status instead: a `warn`-colored inset outline (`$upgrading`) plus an `UpgradeStatusText` line
-"⏫ Upgrading to <next capacity> · ⚡ <next speed>" with a smaller second line "Outflow paused" (`UpgradeStatusNote`) (id `data-stream-upgrade-status`, wired to the tile
-via `aria-describedby`). A small neutral "✕ Cancel upgrade" button (`aria-label="cancel data stream
-upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then —
-rendered as the SAME keyed `Button` element in the same slot, so arming or cancelling never unmounts
-the focused control (keyboard focus stays put). Upgrade Data Stream sits outside the forced priority order (see
+isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already
+running) starts the upgrade (`intro.capacityUpgradeQueued`); `tickCapacityUpgradeDrain` then pulls 100% of
+base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, the SAME `Button` becomes
+an inert progress bar ("⏫ Upgrading Data Stream…", fill = progress/Capacity, hidden `progressbar`
+`aria-label="data stream upgrade progress"`); there is no cancel, and the tile is unchanged. Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav

@@ -4,7 +4,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css } from 'styled-components'
@@ -318,23 +318,6 @@ const PoolTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
-// Data Stream tile's own status line while an Upgrade Data Stream is armed (the button itself is
-// hidden then — see capacityUpgradeQueued below).
-const UpgradeStatusText = styled.span`
-  color: ${props => props.theme.color.warn};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  font-weight: 600;
-  text-align: center;
-`
-
-// Secondary line under the status ("Outflow paused"): smaller and muted so the headline stays one line.
-const UpgradeStatusNote = styled.span`
-  display: block;
-  font-size: 0.8em;
-  font-weight: 500;
-  opacity: 0.85;
-`
-
 const SpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
@@ -371,10 +354,6 @@ const FillableStatCard = styled.div`
   color: ${props => props.theme.color.text};
   ${progressFill}
   background-color: ${softInnerFill};
-
-  ${props => props.$upgrading && `
-    box-shadow: inset 0 0 0 2px ${props.theme.color.warn};
-  `}
 
   ${props => props.$tappable && `
     cursor: pointer;
@@ -713,10 +692,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // actually consume instead.
         : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeArmable = isMemoryCapacityUpgradeArmable(state)
   const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
-  const capacityUpgradeClickable = capacityUpgradeAvailable || capacityUpgradeArmable
+  const capacityUpgradeClickable = capacityUpgradeArmable
   const capacityUpgradeCost = intro.capacity
   // What the player gets for the upgrade: Capacity doubles, and Speed is derived purely from
   // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
@@ -729,8 +707,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const speedGainText = productionRate > 0 ? `×${Number((nextRate / productionRate).toFixed(2))}` : ''
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
+  const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
-  const capacityUpgradeProgress = clampPercent((intro.bits / capacityUpgradeCost) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
   // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
@@ -834,10 +812,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           disabled={intro.mainGameUnlocked ? isFull || dataStreamMultiplierCapped : undefined}
           aria-label={intro.mainGameUnlocked ? 'tap to generate a bit' : 'data stream balance'}
           title={intro.mainGameUnlocked && !isFull && dataStreamMultiplierCapped ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap` : undefined}
-          aria-describedby={capacityUpgradeQueued ? 'data-stream-upgrade-status' : undefined}
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
-          $upgrading={capacityUpgradeQueued}
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
@@ -850,12 +826,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </BalanceText>
             {dataStreamRateText && <SpeedText>⚡ {dataStreamRateText}</SpeedText>}
           </TitleRow>
-          {capacityUpgradeQueued && (
-            <UpgradeStatusText id="data-stream-upgrade-status">
-              ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText}{' '}
-              <UpgradeStatusNote>Outflow paused</UpgradeStatusNote>
-            </UpgradeStatusText>
-          )}
           {intro.byteCreated && (
             <MultiplierBar
               basePercent={dataStreamBaseMultiplierPercent}
@@ -894,51 +864,48 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
-          {/* One stable Button element for both states, so pressing Upgrade (arming) or Cancel
-              never unmounts the focused control — keyboard focus stays put. While armed, the
-              Data Stream tile itself shows the upgrade status and this slot becomes a small
-              neutral Cancel control (see clearIntroCapacityUpgradeQueue). */}
+          {/* While the upgrade runs the same button becomes an inert, full-strength progress bar (aria-disabled, not
+              `disabled`, so it keeps its colors and pulse); its fill is intro.capacityUpgradeProgress /
+              capacity, there is no cancel, and it is clickable again once the upgrade completes. */}
           {intro.byteCreated && (
             <MilestonesRow>
-              {capacityUpgradeQueued ? (
-                <Button
-                  key="data-stream-upgrade"
-                  aria-label="cancel data stream upgrade"
-                  onClick={actions.clearIntroCapacityUpgradeQueue}
-                  title="Cancel the armed upgrade and resume Data Stream outflow"
-                  type="button"
-                  variant="neutral"
-                >
-                  <ButtonContent>✕ Cancel upgrade</ButtonContent>
-                </Button>
-              ) : (
-                <Button
-                  key="data-stream-upgrade"
-                  aria-label="upgrade data stream"
-                  disabled={!capacityUpgradeClickable}
-                  onClick={actions.pickIntroCapacityMilestone}
-                  title={
-                    capacityUpgradeAvailable
-                      ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                      : capacityUpgradeArmable
-                        ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
-                        : 'Capacity is already at its maximum'
-                  }
-                  aria-description={capacityUpgradeClickable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
-                  type="button"
-                  variant={capacityUpgradeClickable ? 'prestige' : 'neutral'}
-                  $progress={capacityUpgradeProgress}
-                >
-                  <MilestoneButtonContent>
-                    <span>Upgrade Data Stream</span>
-                    <MilestoneCostLine>
-                      {capacityUpgradeClickable
+              <Button
+                aria-label="upgrade data stream"
+                disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}
+                aria-disabled={capacityUpgradeQueued || undefined}
+                onClick={capacityUpgradeQueued ? undefined : actions.pickIntroCapacityMilestone}
+                style={capacityUpgradeQueued ? { pointerEvents: 'none', cursor: 'default' } : undefined}
+                title={
+                  capacityUpgradeQueued
+                    ? `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`
+                    : capacityUpgradeArmable
+                      ? 'Pull the Data Stream\'s base Speed into the upgrade; its bar filling doubles Capacity'
+                      : 'Capacity is already at its maximum'
+                }
+                aria-description={capacityUpgradeClickable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
+                type="button"
+                variant={capacityUpgradeClickable || capacityUpgradeQueued ? 'prestige' : 'neutral'}
+                $progress={capacityUpgradeProgress}
+                $pulse={capacityUpgradeQueued}
+              >
+                <MilestoneButtonContent>
+                  <span>{capacityUpgradeQueued ? '⏫ Upgrading Data Stream…' : 'Upgrade Data Stream'}</span>
+                  <MilestoneCostLine>
+                    {capacityUpgradeQueued
+                      ? `${Math.floor(capacityUpgradeProgress)}% · 📦 ${nextCapacityText} · ⚡ ${nextRateText}`
+                      : capacityUpgradeClickable
                         ? `${COST_ICON} ${formatBitsInNearestUnit(capacityUpgradeCost)} · 📦 ×${INTRO_CAPACITY_DOUBLING_STEP} · ⚡ ${speedGainText}`
                         : '📦 Max capacity'}
-                    </MilestoneCostLine>
-                  </MilestoneButtonContent>
-                </Button>
-              )}
+                  </MilestoneCostLine>
+                </MilestoneButtonContent>
+                <VisuallyHidden
+                  role="progressbar"
+                  aria-label="data stream upgrade progress"
+                  aria-valuenow={Math.round(capacityUpgradeProgress)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </Button>
             </MilestonesRow>
           )}
 

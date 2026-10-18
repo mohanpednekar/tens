@@ -799,14 +799,12 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via a single **Upgrade
-Data Stream** action: it requires a full Buffer, drains it (cost = current capacity), and doubles
-`intro.capacity` — Capacity is the only purchased progression variable. The button is clickable at any
-fill (`isMemoryCapacityUpgradeArmable`): a click below 100% arms it (`intro.capacityUpgradeQueued`) and
-pauses every Data Stream outflow (`isDataStreamOutflowPaused` — `tickPoolBufferFill`/Data Lake overflow,
-`tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade` fires it, so continuous pool/lake draw can't
-hold the Buffer below full indefinitely. The arm survives load and Prestige. While armed the button is
-hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control disarms it
-(`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
+Data Stream** action: a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
+and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
+(like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
+every other consumer — nothing is paused or raced; when the bar
+reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
+running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
 the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
 ×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
@@ -911,8 +909,8 @@ from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right a
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
-block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
-pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
+block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while a running Upgrade Data Stream
+pulls from the Data Stream. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
 order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
@@ -1100,7 +1098,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1976 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1979 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
