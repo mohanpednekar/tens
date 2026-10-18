@@ -129,11 +129,18 @@ const ActionsRow = styled.div`
 `
 
 // Provision Disk is its own card, independent of the Data Stream card above it.
+// Its single button fills the card flush (no card padding, no inner border).
 const ProvisionCard = styled(StatCard)`
   width: 100%;
-  padding: 0.5rem;
+  padding: 0;
+  overflow: hidden;
   ${cardEdge}
-  ${softInnerButtons}
+
+  button {
+    background-color: ${softInnerFill};
+    border: 0;
+    border-radius: 0;
+  }
 `
 
 // "Upgrade Data Stream" is the single recurring upgrade — placing it in MilestonesRow keeps the
