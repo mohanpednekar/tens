@@ -873,6 +873,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           />
         </FillableStatCard>
 
+        {(canCombine || intro.byteCreated) && (
         <ActionsRow>
           {canCombine && (
             <Button
@@ -942,6 +943,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           )}
 
         </ActionsRow>
+        )}
       </DataStreamCard>
 
       {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && (
