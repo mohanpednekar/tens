@@ -6619,6 +6619,7 @@ export const prestigeGame = state => {
     // carry the whole intro object through untouched either way.
     intro: {
       ...initial.intro,
+      bits: 0,
       // Falls back to initial.intro's own fresh values (rather than throwing) for a state that
       // predates the intro field entirely — same defensive posture as autobuyers/smartAutobuyer/etc. below.
       mainGameUnlocked: state.intro?.mainGameUnlocked ?? initial.intro.mainGameUnlocked,
