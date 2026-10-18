@@ -518,11 +518,11 @@ Error generating stack: `+e.message+`
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.05s ease;
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     filter: brightness(1.2);
   }
 
-  &:active:not(:disabled) {
+  &:active:not(:disabled):not([aria-disabled='true']) {
     transform: scale(0.98);
   }
 
@@ -568,27 +568,20 @@ Error generating stack: `+e.message+`
 `,rp=L(rf)`
   width: 100%;
   gap: ${e=>e.theme.space.md};
-`,ip=L.button`
-  width: 100%;
+`,ip=L.span`
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: ${e=>e.theme.color.textMuted};
-  font-size: 0.75em;
-  line-height: 1;
+  align-items: baseline;
+  gap: ${e=>e.theme.space.xs};
   cursor: pointer;
-  padding: 0.2rem;
   border-radius: ${e=>e.theme.radius.sm};
 
   &:hover {
-    background: ${e=>e.theme.color.surfaceSunken};
+    text-decoration: underline;
   }
 
   &:focus-visible {
     outline: 2px solid ${e=>e.theme.color.accent};
-    outline-offset: -2px;
+    outline-offset: 2px;
   }
 `,ap=L.div`
   display: flex;
@@ -646,11 +639,11 @@ Error generating stack: `+e.message+`
     cursor: pointer;
     transition: filter 0.15s ease, transform 0.05s ease;
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled):not([aria-disabled='true']) {
       filter: brightness(1.2);
     }
 
-    &:active:not(:disabled) {
+    &:active:not(:disabled):not([aria-disabled='true']) {
       transform: scale(0.98);
     }
 
@@ -659,7 +652,8 @@ Error generating stack: `+e.message+`
       outline-offset: 2px;
     }
 
-    &:disabled {
+    &:disabled,
+    &[aria-disabled='true'] {
       cursor: not-allowed;
     }
   `}
@@ -699,7 +693,7 @@ Error generating stack: `+e.message+`
   ${e=>e.$widthPercent>=Dp?`left: 50%; transform: translate(-50%, -50%); color: ${e.theme.color.page};`:`left: calc(50% + ${e.$widthPercent/2}% + 0.35rem); transform: translateY(-50%); color: ${e.theme.color.text}; text-shadow: 0 0 2px ${e.theme.color.surface}, 0 0 4px ${e.theme.color.surface};`}
 `,kp=L.span`
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
-`,Ap=({basePercent:e,bonusPercent:t=0,totalPercent:n,ariaLabel:r,mode:i=`multiplier`})=>{let a=i===`lake`,o=bp(a?0:e),s=bp(n),c=a?0:xp(o),l=a?xp(s):0,u=Math.min(100,Math.max(0,t)),d=u/100*100,f=!a&&u>0,p=a?s:o;return p<=0?null:(0,R.jsxs)(Sp,{children:[(0,R.jsxs)(Cp,{role:`progressbar`,"aria-label":r,"aria-valuenow":Math.round(p),"aria-valuetext":`${Math.round(p)}%`,"aria-valuemin":0,"aria-valuemax":150,children:[a?l>0&&(0,R.jsx)(Ep,{$widthPercent:l}):c>0&&(0,R.jsx)(wp,{$widthPercent:c}),(0,R.jsxs)(Op,{$widthPercent:a?l:c,children:[Math.round(p),`%`]})]}),f&&(0,R.jsxs)(Cp,{role:`progressbar`,"aria-label":`${r} tap bonus`,"aria-valuenow":Math.round(u),"aria-valuetext":`+${Math.round(u)}%`,"aria-valuemin":0,"aria-valuemax":100,children:[(0,R.jsx)(Tp,{$widthPercent:d}),(0,R.jsxs)(Op,{$widthPercent:d,children:[`+`,Math.round(u),`% `,(0,R.jsx)(kp,{children:`👆`})]})]})]})},jp=({game:e,focusNonce:t=0})=>{let{actions:n,dismissOfflineProgress:r,offlineProgress:i,state:a}=e,{intro:o}=a,s=o.bits>=o.capacity,c=gp(s),l=!o.byteCreated&&o.bits>=8,u=Ko(a),d=co(a),[f,p]=(0,F.useState)(null);(0,F.useEffect)(()=>{p(null)},[d]);let m=f===0?null:f??d,h=Ga(o),g=o.byteCreated?`${os(h)}/s`:null,_=Ya(o),v=Ja(o),y=d>=1&&(o.dataStreamTapBonusPercent??0)>=100,b=gs(a),x=vs(a,b),S=_s(a,b),C=eo(b),ee=yo(a,C),w=Math.max(0,ee-jo(a,C)),te=hs(a),T=u?Os(a):[],E=ks(a),D=o.diskBuild,ne=!te&&w>=b&&!E&&!D,O=Math.min(S,ys(a,b)),re=O>0||o.diskBuildQueued,k=D?vp(100-D.remainingSeconds/D.totalSeconds*100):te?100:re?vp((O*b+Math.min(w,b))/x*100):0,ie=nc(a,b),A=Io(a),ae=Ro(a),j=!!o.capacityUpgradeQueued,oe=A||ae,se=o.capacity,ce=o.capacity*2,le=pp(ce,!0),ue=Ga({...o,capacity:ce}),de=`${os(ue)}/s`,fe=h>0?`×${Number((ue/h).toFixed(2))}`:``,pe=vp(o.bits/8*100),me=vp(o.bits/o.capacity*100),he=vp(o.bits/se*100),ge=()=>{E?n.provisionDisk():n.queueDiskBuild()},_e=o.diskBuildQueued,ve=`${O}/${S}`,M=S>1||O>0?` · ${ve}`:``,N=`Provision ${bs(b)} Disk`,ye=!!_e&&!D&&!te,be=D?{icon:`🏗`,label:`Provisioning ${bs(D.size)} Disk`,status:`${Math.ceil(D.remainingSeconds)}s left`}:te?{icon:`✅`,label:`All Pools Complete (${bs(b)})`,status:null}:_e?{icon:`⏳`,label:`Provisioning ${bs(b)} Disk`,status:`${O>0?ve:`Queued`} · ${E?`funding`:ne?`after disk fill`:`needs buffer`}`}:E?{icon:`🏦`,label:N,status:`Ready · ${uf} ${bs(x)}${M}`}:{icon:`🏦`,label:N,status:`${uf} ${bs(x)}${M} · tap to queue`,reason:ne?`disk fill comes first`:`pool buffer too low`},xe=(0,R.jsxs)(Y,{"aria-label":D?`disk array rebuilding`:te?`disk ladder complete`:`provision disk`,"aria-description":be.reason?`${be.status} (${be.reason})`:be.status??void 0,disabled:!!D||te,onClick:ge,title:D?`Provisioning ${bs(D.size)} — ${Math.ceil(D.remainingSeconds)}s (array offline)`:te?`All ${$a()} storage pools are complete through ${bs(b)}`:_e?`Queued — fires itself the instant ${ne?`it is your turn`:`enough is banked`} (${O}/${S} passes so far)`:E?ie?`Costs ${bs(x)}, paid in ${S} pass${S===1?``:`es`} of ${bs(b)} each (${O}/${S} collected) — creates an empty ${bs(b)} container; its cache auto-fills it, redeemable right away for a free ${ie} once full`:`Costs ${bs(x)}, paid in ${S} pass${S===1?``:`es`} of ${bs(b)} each (${O}/${S} collected) — creates an empty ${bs(b)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`:ne?`Redeem a full Disk first — click to queue this build so it fires itself the instant it is your turn`:`Not enough banked yet for the next pass (${O}/${S} collected) — click to queue this build so it fires itself as the buffer fills`,type:`button`,variant:te?`neutral`:_e?`smart`:E?`info`:`neutral`,$progress:k,$pulse:ye,children:[(0,R.jsxs)($,{children:[(0,R.jsxs)(`span`,{children:[be.icon,` `,be.label,ye?`…`:``]}),be.status&&(0,R.jsx)(tp,{children:be.status})]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`byte foundry disk build progress`,"aria-valuenow":Math.round(k),"aria-valuemin":0,"aria-valuemax":100})]});return(0,R.jsxs)(qf,{children:[(0,R.jsx)(Kf,{offlineProgress:i,dismissOfflineProgress:r}),(0,R.jsx)(Yf,{children:(0,R.jsx)(Jf,{children:`🔥 Byte Foundry`})}),(0,R.jsxs)(rp,{"aria-label":`Data Stream`,children:[(0,R.jsxs)(dp,{as:o.mainGameUnlocked?`button`:`section`,type:o.mainGameUnlocked?`button`:void 0,onClick:o.mainGameUnlocked?n.tapIntroBit:void 0,disabled:o.mainGameUnlocked?s||y:void 0,"aria-label":o.mainGameUnlocked?`tap to generate a bit`:`data stream balance`,title:o.mainGameUnlocked&&!s&&y?`Tap bonus already at the 100% cap`:void 0,"aria-describedby":j?`data-stream-upgrade-status`:void 0,$progress:me,$tappable:o.mainGameUnlocked,$upgrading:j,children:[(0,R.jsxs)(ap,{children:[(0,R.jsx)(op,{children:`Data Stream`}),(0,R.jsxs)(Xf,{children:[mp(fp(o.bits,o.capacity,o.byteCreated,!c),pp(o.capacity,o.byteCreated)),` `,(0,R.jsx)(Zf,{children:`/`}),` `,pp(o.capacity,o.byteCreated)]}),g&&(0,R.jsxs)(up,{children:[`⚡ `,g]})]}),j&&(0,R.jsxs)(cp,{id:`data-stream-upgrade-status`,children:[`⏫ Upgrading to `,le,` · ⚡ `,de,` `,(0,R.jsx)(lp,{children:`Outflow paused`})]}),o.byteCreated&&(0,R.jsx)(Ap,{basePercent:v,bonusPercent:o.dataStreamTapBonusPercent??0,totalPercent:_,ariaLabel:`data stream fill-based speed multiplier`}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`data stream bit balance`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":o.capacity})]}),(0,R.jsxs)($f,{children:[l&&(0,R.jsxs)(Y,{"aria-label":`combine 8 bits into a Byte`,onClick:n.combineIntroByte,type:`button`,variant:`primary`,$progress:pe,children:[(0,R.jsx)(X,{children:`🔗 Combine into a Byte`}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`byte foundry combine progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":8})]}),o.byteCreated&&(0,R.jsx)(ep,{children:j?(0,R.jsx)(Y,{"aria-label":`cancel data stream upgrade`,onClick:n.clearIntroCapacityUpgradeQueue,title:`Cancel the armed upgrade and resume Data Stream outflow`,type:`button`,variant:`neutral`,children:(0,R.jsx)(X,{children:`✕ Cancel upgrade`})},`data-stream-upgrade`):(0,R.jsx)(Y,{"aria-label":`upgrade data stream`,disabled:!oe,onClick:n.pickIntroCapacityMilestone,title:A?`The Data Stream Buffer is full; drain it to double Capacity`:ae?`Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity`:`Capacity is already at its maximum`,"aria-description":oe?`Costs ${os(se)}; capacity ${le} and speed ${de} after upgrading`:void 0,type:`button`,variant:oe?`prestige`:`neutral`,$progress:he,children:(0,R.jsxs)($,{children:[(0,R.jsx)(`span`,{children:`Upgrade Data Stream`}),(0,R.jsx)(tp,{children:oe?`🏷️ ${os(se)} · 📦 ×2 · ⚡ ${fe}`:`📦 Max capacity`})]})},`data-stream-upgrade`)}),u&&!io(a,C)&&xe]})]}),u&&Array.from({length:d},(e,t)=>{let r=t+1,i=mo(a,r),o=yo(a,r),s=_o(a,r),c=s>0?vp(o/s*100):0,l=o>=s,u=Co(a,r),d=xo(a,r),f=So(a,r),h=f>=100,g=wc(a,r),_=Tc(a,r)&&to(a,r),v=tl(a,r),y=v||l&&_,b=T.filter(e=>eo(e)===r),x=m===r;return(0,R.jsxs)(np,{"aria-label":`pool ${r}`,children:[(0,R.jsxs)(dp,{as:`button`,type:`button`,onClick:()=>n.tapPoolBuffer(r),disabled:l||v||h,"aria-label":`tap pool ${r} memory`,title:l?void 0:h?`Tap bonus already at the 100% cap`:void 0,$progress:c,$tappable:!0,children:[(0,R.jsxs)(ap,{children:[(0,R.jsxs)(op,{children:[(0,R.jsx)(sp,{"aria-hidden":`true`,children:z[r-1]?.symbol??`#${r}`}),(0,R.jsx)(`span`,{children:`Pool`})]}),(0,R.jsx)(_p,{bits:o,capacityBits:s,isFull:l,poolIndex:r}),(0,R.jsxs)(up,{children:[`⚡ `,bs(i),`/s`]})]}),(0,R.jsx)(Ap,{basePercent:y?0:d,bonusPercent:f,totalPercent:y?g:u,ariaLabel:y?`pool ${r} data lake overflow rate`:`pool ${r} fill-based bandwidth multiplier`,mode:y?`lake`:`multiplier`}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`pool ${r} memory buffer`,"aria-valuenow":Math.round(c),"aria-valuemin":0,"aria-valuemax":100})]}),(0,R.jsx)(ip,{"aria-expanded":x,"aria-label":`${x?`collapse`:`expand`} pool ${r}`,onClick:()=>p(x?0:r),type:`button`,children:x?`▲`:`▼`}),x&&(0,R.jsxs)(R.Fragment,{children:[b.map(e=>(0,R.jsx)(Sf,{actions:n,size:e,state:a},e)),(0,R.jsx)(Bf,{actions:n,state:a,bare:!0,tierIndex:r})]})]},r)}),!o.mainGameUnlocked&&(0,R.jsx)(Qf,{"aria-label":`tap to generate a bit`,disabled:s||y,title:!s&&y?`Tap bonus already at the 100% cap`:void 0,onClick:n.tapIntroBit,type:`button`,children:`👆 Tap`})]})},Mp=L.b`
+`,Ap=({basePercent:e,bonusPercent:t=0,totalPercent:n,ariaLabel:r,mode:i=`multiplier`})=>{let a=i===`lake`,o=bp(a?0:e),s=bp(n),c=a?0:xp(o),l=a?xp(s):0,u=Math.min(100,Math.max(0,t)),d=u/100*100,f=!a&&u>0,p=a?s:o;return p<=0?null:(0,R.jsxs)(Sp,{children:[(0,R.jsxs)(Cp,{role:`progressbar`,"aria-label":r,"aria-valuenow":Math.round(p),"aria-valuetext":`${Math.round(p)}%`,"aria-valuemin":0,"aria-valuemax":150,children:[a?l>0&&(0,R.jsx)(Ep,{$widthPercent:l}):c>0&&(0,R.jsx)(wp,{$widthPercent:c}),(0,R.jsxs)(Op,{$widthPercent:a?l:c,children:[Math.round(p),`%`]})]}),f&&(0,R.jsxs)(Cp,{role:`progressbar`,"aria-label":`${r} tap bonus`,"aria-valuenow":Math.round(u),"aria-valuetext":`+${Math.round(u)}%`,"aria-valuemin":0,"aria-valuemax":100,children:[(0,R.jsx)(Tp,{$widthPercent:d}),(0,R.jsxs)(Op,{$widthPercent:d,children:[`+`,Math.round(u),`% `,(0,R.jsx)(kp,{children:`👆`})]})]})]})},jp=({game:e,focusNonce:t=0})=>{let{actions:n,dismissOfflineProgress:r,offlineProgress:i,state:a}=e,{intro:o}=a,s=o.bits>=o.capacity,c=gp(s),l=!o.byteCreated&&o.bits>=8,u=Ko(a),d=co(a),[f,p]=(0,F.useState)(null);(0,F.useEffect)(()=>{p(null)},[d]);let m=f===0?null:f??d,h=Ga(o),g=o.byteCreated?`${os(h)}/s`:null,_=Ya(o),v=Ja(o),y=d>=1&&(o.dataStreamTapBonusPercent??0)>=100,b=gs(a),x=vs(a,b),S=_s(a,b),C=eo(b),ee=yo(a,C),w=Math.max(0,ee-jo(a,C)),te=hs(a),T=u?Os(a):[],E=ks(a),D=o.diskBuild,ne=!te&&w>=b&&!E&&!D,O=Math.min(S,ys(a,b)),re=O>0||o.diskBuildQueued,k=D?vp(100-D.remainingSeconds/D.totalSeconds*100):te?100:re?vp((O*b+Math.min(w,b))/x*100):0,ie=nc(a,b),A=Io(a),ae=Ro(a),j=!!o.capacityUpgradeQueued,oe=A||ae,se=o.capacity,ce=o.capacity*2,le=pp(ce,!0),ue=Ga({...o,capacity:ce}),de=`${os(ue)}/s`,fe=h>0?`×${Number((ue/h).toFixed(2))}`:``,pe=vp(o.bits/8*100),me=vp(o.bits/o.capacity*100),he=vp(o.bits/se*100),ge=()=>{E?n.provisionDisk():n.queueDiskBuild()},_e=o.diskBuildQueued,ve=`${O}/${S}`,M=S>1||O>0?` · ${ve}`:``,N=`Provision ${bs(b)} Disk`,ye=!!_e&&!D&&!te,be=D?{icon:`🏗`,label:`Provisioning ${bs(D.size)} Disk`,status:`${Math.ceil(D.remainingSeconds)}s left`}:te?{icon:`✅`,label:`All Pools Complete (${bs(b)})`,status:null}:_e?{icon:`⏳`,label:`Provisioning ${bs(b)} Disk`,status:`${O>0?ve:`Queued`} · ${E?`funding`:ne?`after disk fill`:`needs buffer`}`}:E?{icon:`🏦`,label:N,status:`Ready · ${uf} ${bs(x)}${M}`}:{icon:`🏦`,label:N,status:`${uf} ${bs(x)}${M} · tap to queue`,reason:ne?`disk fill comes first`:`pool buffer too low`},xe=(0,R.jsxs)(Y,{"aria-label":D?`disk array rebuilding`:te?`disk ladder complete`:`provision disk`,"aria-description":be.reason?`${be.status} (${be.reason})`:be.status??void 0,disabled:!!D||te,onClick:ge,title:D?`Provisioning ${bs(D.size)} — ${Math.ceil(D.remainingSeconds)}s (array offline)`:te?`All ${$a()} storage pools are complete through ${bs(b)}`:_e?`Queued — fires itself the instant ${ne?`it is your turn`:`enough is banked`} (${O}/${S} passes so far)`:E?ie?`Costs ${bs(x)}, paid in ${S} pass${S===1?``:`es`} of ${bs(b)} each (${O}/${S} collected) — creates an empty ${bs(b)} container; its cache auto-fills it, redeemable right away for a free ${ie} once full`:`Costs ${bs(x)}, paid in ${S} pass${S===1?``:`es`} of ${bs(b)} each (${O}/${S} collected) — creates an empty ${bs(b)} container; its cache auto-fills it, but it won't be redeemable until its own fixed corresponding tier reaches its matching level`:ne?`Redeem a full Disk first — click to queue this build so it fires itself the instant it is your turn`:`Not enough banked yet for the next pass (${O}/${S} collected) — click to queue this build so it fires itself as the buffer fills`,type:`button`,variant:te?`neutral`:_e?`smart`:E?`info`:`neutral`,$progress:k,$pulse:ye,children:[(0,R.jsxs)($,{children:[(0,R.jsxs)(`span`,{children:[be.icon,` `,be.label,ye?`…`:``]}),be.status&&(0,R.jsx)(tp,{children:be.status})]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`byte foundry disk build progress`,"aria-valuenow":Math.round(k),"aria-valuemin":0,"aria-valuemax":100})]});return(0,R.jsxs)(qf,{children:[(0,R.jsx)(Kf,{offlineProgress:i,dismissOfflineProgress:r}),(0,R.jsx)(Yf,{children:(0,R.jsx)(Jf,{children:`🔥 Byte Foundry`})}),(0,R.jsxs)(rp,{"aria-label":`Data Stream`,children:[(0,R.jsxs)(dp,{as:o.mainGameUnlocked?`button`:`section`,type:o.mainGameUnlocked?`button`:void 0,onClick:o.mainGameUnlocked?n.tapIntroBit:void 0,disabled:o.mainGameUnlocked?s||y:void 0,"aria-label":o.mainGameUnlocked?`tap to generate a bit`:`data stream balance`,title:o.mainGameUnlocked&&!s&&y?`Tap bonus already at the 100% cap`:void 0,"aria-describedby":j?`data-stream-upgrade-status`:void 0,$progress:me,$tappable:o.mainGameUnlocked,$upgrading:j,children:[(0,R.jsxs)(ap,{children:[(0,R.jsx)(op,{children:`Data Stream`}),(0,R.jsxs)(Xf,{children:[mp(fp(o.bits,o.capacity,o.byteCreated,!c),pp(o.capacity,o.byteCreated)),` `,(0,R.jsx)(Zf,{children:`/`}),` `,pp(o.capacity,o.byteCreated)]}),g&&(0,R.jsxs)(up,{children:[`⚡ `,g]})]}),j&&(0,R.jsxs)(cp,{id:`data-stream-upgrade-status`,children:[`⏫ Upgrading to `,le,` · ⚡ `,de,` `,(0,R.jsx)(lp,{children:`Outflow paused`})]}),o.byteCreated&&(0,R.jsx)(Ap,{basePercent:v,bonusPercent:o.dataStreamTapBonusPercent??0,totalPercent:_,ariaLabel:`data stream fill-based speed multiplier`}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`data stream bit balance`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":o.capacity})]}),(0,R.jsxs)($f,{children:[l&&(0,R.jsxs)(Y,{"aria-label":`combine 8 bits into a Byte`,onClick:n.combineIntroByte,type:`button`,variant:`primary`,$progress:pe,children:[(0,R.jsx)(X,{children:`🔗 Combine into a Byte`}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`byte foundry combine progress`,"aria-valuenow":o.bits,"aria-valuemin":0,"aria-valuemax":8})]}),o.byteCreated&&(0,R.jsx)(ep,{children:j?(0,R.jsx)(Y,{"aria-label":`cancel data stream upgrade`,onClick:n.clearIntroCapacityUpgradeQueue,title:`Cancel the armed upgrade and resume Data Stream outflow`,type:`button`,variant:`neutral`,children:(0,R.jsx)(X,{children:`✕ Cancel upgrade`})},`data-stream-upgrade`):(0,R.jsx)(Y,{"aria-label":`upgrade data stream`,disabled:!oe,onClick:n.pickIntroCapacityMilestone,title:A?`The Data Stream Buffer is full; drain it to double Capacity`:ae?`Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity`:`Capacity is already at its maximum`,"aria-description":oe?`Costs ${os(se)}; capacity ${le} and speed ${de} after upgrading`:void 0,type:`button`,variant:oe?`prestige`:`neutral`,$progress:he,children:(0,R.jsxs)($,{children:[(0,R.jsx)(`span`,{children:`Upgrade Data Stream`}),(0,R.jsx)(tp,{children:oe?`🏷️ ${os(se)} · 📦 ×2 · ⚡ ${fe}`:`📦 Max capacity`})]})},`data-stream-upgrade`)}),u&&!io(a,C)&&xe]})]}),u&&Array.from({length:d},(e,t)=>{let r=t+1,i=mo(a,r),o=yo(a,r),s=_o(a,r),c=s>0?vp(o/s*100):0,l=o>=s,u=Co(a,r),d=xo(a,r),f=So(a,r),h=f>=100,g=wc(a,r),_=Tc(a,r)&&to(a,r),v=tl(a,r),y=v||l&&_,b=T.filter(e=>eo(e)===r),x=m===r,S=l||v||h;return(0,R.jsxs)(np,{"aria-label":`pool ${r}`,children:[(0,R.jsxs)(dp,{as:`button`,type:`button`,onClick:()=>{S||n.tapPoolBuffer(r)},"aria-disabled":S,"aria-label":`tap pool ${r} memory`,title:l?void 0:h?`Tap bonus already at the 100% cap`:void 0,$progress:c,$tappable:!0,children:[(0,R.jsxs)(ap,{children:[(0,R.jsx)(op,{children:(0,R.jsxs)(ip,{role:`button`,tabIndex:0,"aria-expanded":x,"aria-label":`${x?`collapse`:`expand`} pool ${r}`,onClick:e=>{e.stopPropagation(),p(x?0:r)},onKeyDown:e=>{(e.key===`Enter`||e.key===` `)&&(e.preventDefault(),e.stopPropagation(),p(x?0:r))},children:[(0,R.jsx)(sp,{"aria-hidden":`true`,children:z[r-1]?.symbol??`#${r}`}),(0,R.jsx)(`span`,{children:`Pool`})]})}),(0,R.jsx)(_p,{bits:o,capacityBits:s,isFull:l,poolIndex:r}),(0,R.jsxs)(up,{children:[`⚡ `,bs(i),`/s`]})]}),(0,R.jsx)(Ap,{basePercent:y?0:d,bonusPercent:f,totalPercent:y?g:u,ariaLabel:y?`pool ${r} data lake overflow rate`:`pool ${r} fill-based bandwidth multiplier`,mode:y?`lake`:`multiplier`}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`pool ${r} memory buffer`,"aria-valuenow":Math.round(c),"aria-valuemin":0,"aria-valuemax":100})]}),x&&(0,R.jsxs)(R.Fragment,{children:[b.map(e=>(0,R.jsx)(Sf,{actions:n,size:e,state:a},e)),(0,R.jsx)(Bf,{actions:n,state:a,bare:!0,tierIndex:r})]})]},r)}),!o.mainGameUnlocked&&(0,R.jsx)(Qf,{"aria-label":`tap to generate a bit`,disabled:s||y,title:!s&&y?`Tap bonus already at the 100% cap`:void 0,onClick:n.tapIntroBit,type:`button`,children:`👆 Tap`})]})},Mp=L.b`
   color: ${e=>e.theme.color.text};
   font-size: 1.25em;
   padding: 0.25em 0;
@@ -1128,7 +1122,6 @@ Error generating stack: `+e.message+`
   row-gap: ${e=>e.theme.space.xs};
   padding: ${e=>e.theme.space.sm} ${e=>e.theme.space.md};
   border-left: 3px solid ${e=>e.$accent};
-  cursor: pointer;
   transition: border-color ${e=>e.theme.motion.duration.base} ${e=>e.theme.motion.easing.standard};
   animation: ${e=>e.$animateReveal?Bn`${km} 0.4s ease-out`:`none`};
 
@@ -1216,7 +1209,7 @@ Error generating stack: `+e.message+`
   align-items: center;
   text-align: center;
 
-  ${e=>(e.$actionable||e.$expandable)&&Bn`
+  ${e=>e.$actionable&&Bn`
     cursor: pointer;
 
     &:hover {
@@ -1231,36 +1224,42 @@ Error generating stack: `+e.message+`
     }
   `}
 
-  ${e=>e.$expandable&&Bn`
-    &:focus-visible {
-      outline: 2px solid ${e.theme.color.accent};
-      outline-offset: 2px;
-    }
-  `}
-`,Vm=L.p`
+`,Vm=L.div`
+  cursor: pointer;
+  border-radius: ${e=>e.theme.radius.sm};
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+  }
+`,Hm=L.p`
   color: ${e=>e.theme.color.textMuted};
   margin: 0;
-`,Hm=L.b`
+`,Um=L.b`
   color: ${e=>e.theme.color.warn};
   font-size: 1.25em;
-`,Um=L(Mp)`
+`,Wm=L(Mp)`
   font-family: ${e=>e.theme.font.body};
   font-size: ${e=>e.theme.type.scale.hero.size};
   line-height: ${e=>e.theme.type.scale.hero.lineHeight};
   padding: 0;
-`,Wm=L.div`
+`,Gm=L.div`
   display: flex;
   gap: 3px;
   margin-top: 0.5rem;
   width: 100%;
-`,Gm=L.span`
+`,Km=L.span`
   background: ${e=>e.theme.color.surfaceSunken};
   border-radius: 2px;
   flex: 1;
   height: 0.4rem;
   min-width: 0;
   overflow: hidden;
-`,Km=L.span`
+`,qm=L.span`
   background: ${e=>e.theme.color.accent};
   display: block;
   height: 100%;
@@ -1270,7 +1269,7 @@ Error generating stack: `+e.message+`
   @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
-`,qm=L.div`
+`,Jm=L.div`
   background: ${e=>e.theme.color.surfaceRaised};
   border-top: 1px solid ${e=>e.theme.color.border};
   bottom: ${Wd};
@@ -1279,7 +1278,7 @@ Error generating stack: `+e.message+`
   position: fixed;
   right: 0;
   z-index: 39;
-`,Jm=L.div`
+`,Ym=L.div`
   ${e=>Qd({$progress:e.$percent,$progressColor:e.theme.color.accent,theme:e.theme})}
   align-items: center;
   border-radius: ${e=>e.theme.radius.pill};
@@ -1289,14 +1288,14 @@ Error generating stack: `+e.message+`
   margin: 0 auto;
   max-width: min(880px, calc(100vw - 2rem));
   width: 100%;
-`,Ym=L.span`
+`,Xm=L.span`
   color: ${e=>e.theme.color.text};
   font-size: ${e=>e.theme.type.scale.xs.size};
   font-weight: 600;
-`,Xm=L(Bm)`
+`,Zm=L(Bm)`
   box-shadow: none;
   padding: 0.5rem 1rem;
-`,Zm=L.ul`
+`,Qm=L.ul`
   color: ${e=>e.theme.color.textMuted};
   font-size: 0.8em;
   margin: 0.5rem 0 0;
@@ -1306,7 +1305,7 @@ Error generating stack: `+e.message+`
   li {
     margin: 0.15rem 0;
   }
-`,Qm=L.div`
+`,$m=L.div`
   background: ${e=>e.theme.color.page};
   display: flex;
   flex-direction: ${e=>e.$compressed?`row`:`column`};
@@ -1356,24 +1355,17 @@ Error generating stack: `+e.message+`
       width: 100%;
     }
   `}
-`,$m=L.div`
+`,eh=L.div`
   height: 1px;
   margin-top: calc(-0.85rem - 1px);
-`,eh=L.div`
+`,th=L.div`
   align-items: baseline;
   column-gap: ${e=>e.theme.space.sm};
-  cursor: pointer;
   display: flex;
   grid-area: name;
   min-width: 0;
   width: 100%;
-
-  &:focus-visible {
-    outline: 2px solid ${e=>e.theme.color.accent};
-    outline-offset: 2px;
-    border-radius: ${e=>e.theme.radius.sm};
-  }
-`,th=L.div`
+`,nh=L.div`
   grid-area: details;
   font-size: ${e=>e.theme.type.scale.xs.size};
   line-height: ${e=>e.theme.type.scale.xs.lineHeight};
@@ -1390,7 +1382,7 @@ Error generating stack: `+e.message+`
   li {
     margin: 0.15rem 0;
   }
-`,nh=L.div`
+`,rh=L.div`
   align-items: center;
   background: rgba(0, 0, 0, 0.92);
   bottom: 0;
@@ -1405,7 +1397,7 @@ Error generating stack: `+e.message+`
   right: 0;
   top: 0;
   z-index: 1000;
-`,rh=L.div`
+`,ih=L.div`
   background: ${e=>e.theme.color.surfaceRaised};
   border: 1px solid ${e=>e.theme.color.borderStrong};
   border-radius: ${e=>e.theme.radius.lg};
@@ -1437,7 +1429,7 @@ Error generating stack: `+e.message+`
   li {
     margin: 0.3rem 0;
   }
-`,ih=L.div`
+`,ah=L.div`
   align-items: center;
   background: ${e=>e.theme.color.surfaceRaised};
   border-bottom: 2px solid ${e=>e.theme.color.warn};
@@ -1456,17 +1448,17 @@ Error generating stack: `+e.message+`
   right: 0;
   top: 0;
   z-index: 900;
-`,ah=L.div`
+`,oh=L.div`
   height: ${e=>e.$height}px;
-`,oh=L.p`
+`,sh=L.p`
   color: ${e=>e.theme.color.textMuted};
   font-size: ${e=>e.theme.type.scale.sm.size};
   line-height: ${e=>e.theme.type.scale.sm.lineHeight};
   margin: 0;
-`,sh=L.p`
+`,ch=L.p`
   color: ${e=>e.theme.color.textMuted};
   margin: 0;
-`,ch={burst:`Burst`,standard:`Standard`,sustain:`Sustain`},lh=L.h3`
+`,lh={burst:`Burst`,standard:`Standard`,sustain:`Sustain`},uh=L.h3`
   align-items: baseline;
   column-gap: ${e=>e.theme.space.sm};
   display: flex;
@@ -1481,9 +1473,20 @@ Error generating stack: `+e.message+`
     font-size: ${e=>e.theme.type.scale.md.size};
     line-height: ${e=>e.theme.type.scale.md.lineHeight};
   }
-`,uh=L.span`
+`,dh=L.span`
+  cursor: pointer;
   flex-shrink: 0;
-`,dh=L.details`
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${e=>e.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${e=>e.theme.radius.sm};
+  }
+`,fh=L.details`
   summary {
     cursor: pointer;
     list-style: none;
@@ -1509,7 +1512,7 @@ Error generating stack: `+e.message+`
   p {
     margin-top: 0.3rem;
   }
-`,fh=e=>{e.target.closest(`summary`)||(e.currentTarget.open=!1)},ph=L.span`
+`,ph=L.span`
   color: ${e=>e.theme.color.textMuted};
   flex-shrink: 0;
   font-size: ${e=>e.theme.type.scale.sm.size};
@@ -1573,7 +1576,7 @@ Error generating stack: `+e.message+`
     font-size: ${e=>e.theme.type.scale.xs.size};
     padding: 0.38em 0.4em;
   }
-`,yh=(e,t)=>t===`base`?ui(e):t===`bytes`?di(e):`${V(e)} ${or(t)}`,bh=(e,t)=>Math.min(100,Math.round(e/t*100)),xh=e=>(Math.round(e*100)/100).toFixed(2).replace(/\.?0+$/,``),Sh=e=>Math.round((e-1)*100),Ch=e=>(Math.round((e-1)*100*100)/100).toFixed(2).replace(/\.?0+$/,``),wh=(e,{precise:t=!1}={})=>e>=2?`${xh(e)}x`:`+${t?Ch(e):Sh(e)}%`,Th=({game:e})=>{let{actions:t,dismissOfflineProgress:n,offlineProgress:r,state:i}=e,a=jn(),{prestige:o}=i,s=i.resources[cr]>=ur,c=va(i),l=i.prestigeDoublePpLevel??0,u=i.prestigeSpeedBonusUnlocked?Ni(o.points):1,d=Oa(i.resources[cr],l),f=xa(i.resources[cr]),p=Sa(i.resources[cr]),m=Math.round(p*100),h=Math.max(1,d),g=`${c&&s?`Prestige (optional — claim accumulated PP)`:`Prestige (requires 1 Googol Bytes)`} — awards +${V(h)} Prestige Point${h===1?``:`s`}`,[_]=(0,F.useState)(()=>new Set(z.filter(e=>ya(i)(e)).map(e=>e.id))),[v,y]=(0,F.useState)(()=>new Set),b=e=>y(t=>{let n=new Set(t);return n.has(e)?n.delete(e):n.add(e),n}),x=(0,F.useRef)(null),S=(0,F.useRef)(new Map),C=(0,F.useRef)(new Map);(0,F.useEffect)(()=>{if(typeof IntersectionObserver>`u`)return;let e=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting)return;let t=e.target.dataset.tierId;y(e=>{if(!e.has(t))return e;let n=new Set(e);return n.delete(t),n})})});return x.current=e,()=>e.disconnect()},[]);let ee=e=>(C.current.has(e)||C.current.set(e,t=>{let n=x.current,r=S.current.get(e);n&&r&&r!==t&&n.unobserve(r),t?(S.current.set(e,t),n&&n.observe(t)):S.current.delete(e)}),C.current.get(e)),[w,te]=(0,F.useState)(!1),T=()=>te(e=>!e),E=U(i),D=o.count===0,ne=!!e.buyMaxMode&&La(i),O=hi(i),re=E&&D,k=E&&!D,ie=z[z.length-1],A=i.purchaseLevels?.[ie.id]??1,ae=ya(i)(ie),j=fa(i),oe=i.purchaseLevels?.[j.id]??1,se=i.scaleUpCount??0,ce=pa(i),le=Math.max(0,A-1),ue=Math.max(0,oe-1),de=ce,fe=bh(ue,de),pe=!E&&ue>=ce,me=z[z.indexOf(j)+1]??null,he=me?.symbol===`TB`,[ge,_e]=(0,F.useState)(ae);(0,F.useEffect)(()=>{ae&&_e(!0)},[ae]);let ve=i.overclockCount??0,M=ma(i),N=M,ye=1+Ir*ha(ve),be=1+Ir*ha(ve+le),xe=bh(le,N),Se=!E&&le>=M,Ce=i.autoScaleUp??!1,P=i.autoScaleUpEnabled??!0,we=P,Te=P?`Auto Scale Up active`:`Auto Scale Up paused`,Ee=P?`Scale Up now triggers automatically the instant it's eligible`:`Auto Scale Up is currently paused — it will not trigger until resumed`,De=i.globalTickspeedMultiplier??null,Oe=De!==null,ke=ki(De,ve),Ae=Di(De??0),je=Oi(i),Me=!E&&je&&(i.resources.bytes??0)>=Ae,Ne=bh(i.resources.bytes??0,Ae),[Pe,Fe]=(0,F.useState)(je);(0,F.useEffect)(()=>{je&&Fe(!0)},[je]);let Ie=(0,F.useRef)(null);(0,F.useEffect)(()=>{re&&Ie.current?.focus()},[re]);let Le=(0,F.useRef)(null),[Re,ze]=(0,F.useState)(!1);(0,F.useEffect)(()=>{let e=Le.current;if(!e||typeof IntersectionObserver>`u`)return;let t=null,n=new IntersectionObserver(([e])=>{clearTimeout(t),t=setTimeout(()=>ze(!e.isIntersecting),60)});return n.observe(e),()=>{clearTimeout(t),n.disconnect()}},[re]);let Be=(0,F.useRef)(null),[Ve,He]=(0,F.useState)(60);return(0,F.useEffect)(()=>{let e=Be.current;if(!e||typeof ResizeObserver>`u`)return;let t=new ResizeObserver(()=>He(e.offsetHeight));return t.observe(e),()=>t.disconnect()},[k]),re?(0,R.jsx)(nh,{role:`dialog`,"aria-modal":`true`,"aria-label":`Prestige required`,children:(0,R.jsxs)(rh,{children:[(0,R.jsx)(`h2`,{children:`✦ Prestige Available!`}),(0,R.jsxs)(oh,{children:[`You've reached `,ui(i.resources[cr]),` — 1 Googol Bytes. All production has stopped.`]}),(0,R.jsxs)(`ul`,{children:[(0,R.jsx)(`li`,{children:`Resets your resources, owned tiers, and purchases`}),(0,R.jsxs)(`li`,{children:[`Awards `,V(d),` Prestige Point`,d===1?``:`s`,` — each unspent point adds +1% production speed, or spend them on the Perks page to unlock autobuyers`]}),(0,R.jsx)(`li`,{children:`Keeps your unlocked autobuyers and Prestige Points`})]}),(0,R.jsx)(Y,{ref:Ie,"aria-label":`Prestige now`,variant:`prestige`,onClick:t.prestige,title:`Awards Prestige Points and resets your resources`,type:`button`,$pulse:!0,children:(0,R.jsx)(X,{children:`✦ Prestige Now`})})]})}):(0,R.jsxs)(Tm,{children:[k&&(0,R.jsxs)(R.Fragment,{children:[(0,R.jsxs)(ih,{ref:Be,"aria-label":`prestige available banner`,children:[(0,R.jsx)(oh,{children:`1 Googol Bytes reached — production has stopped.`}),(0,R.jsxs)(Y,{"aria-label":g,variant:`prestige`,onClick:t.prestige,title:`Awards Prestige Points and resets your resources`,type:`button`,$pulse:!0,children:[(0,R.jsx)($d,{children:`✦ `}),(0,R.jsxs)(ef,{children:[`Prestige +`,V(h),` PP`]})]})]}),(0,R.jsx)(ah,{$height:Ve})]}),(0,R.jsx)(qm,{"aria-label":`prestige progress`,children:(0,R.jsxs)(Jm,{$percent:f,children:[(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`progress toward 1 Googol Bytes, when Prestige becomes available`,"aria-valuenow":f,"aria-valuemin":0,"aria-valuemax":100}),(0,R.jsx)(Ym,{children:`${f}% to Prestige`})]})}),(0,R.jsx)(Dm,{children:(0,R.jsx)(`h1`,{children:`Byte Factory`})}),i.intro?.computeBoostType&&br[i.intro.computeBoostType]&&(0,R.jsx)(sh,{"aria-label":`active compute boost`,children:`${ch[i.intro.computeBoostType]??i.intro.computeBoostType} Compute Boost active: ×${br[i.intro.computeBoostType].multiplier} production, ${Na(i.intro.computeBoostRemainingSeconds)} left`}),(0,R.jsx)(Kf,{offlineProgress:r,dismissOfflineProgress:n}),(0,R.jsx)($m,{ref:Le,"aria-hidden":`true`}),(0,R.jsxs)(Qm,{$compressed:Re,$belowBar:k,$belowBarHeight:Ve,children:[(0,R.jsxs)(Bm,{"aria-controls":`global-multipliers-details`,"aria-expanded":w,"aria-label":`money display`,$expandable:!0,$raised:!0,onClick:T,onKeyDown:e=>{(e.key===`Enter`||e.key===` `)&&(e.preventDefault(),T())},role:`button`,tabIndex:0,title:`Show or hide the global production multipliers currently in effect`,children:[(0,R.jsx)(Um,{children:pi(i.resources[cr])}),!Re&&(0,R.jsxs)(R.Fragment,{children:[(0,R.jsx)(Wm,{"aria-hidden":`true`,children:Array.from({length:8},(e,t)=>{let n=t/8,r=Math.min(1,Math.max(0,(p-n)/.125));return(0,R.jsx)(Gm,{children:(0,R.jsx)(Km,{$fraction:r})},t)})}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`progress toward the next power of ten Bytes`,"aria-valuenow":m,"aria-valuemin":0,"aria-valuemax":100})]}),w&&!Re&&(0,R.jsxs)(Zm,{id:`global-multipliers-details`,"aria-label":`global production multipliers`,children:[!D&&(0,R.jsxs)(`li`,{children:[`Prestige speed bonus: `,i.prestigeSpeedBonusUnlocked?`${wh(u)} production speed from ${V(o.points)} unspent PP`:`not yet unlocked (${V(1e4)} PP on Perks → Unlocks)`]}),(0,R.jsxs)(`li`,{children:[`Scale Up: `,se>0?`${se} activation${se===1?``:`s`}; multiplier varies by tier`:`not yet activated (reach ${V(de)} completed levels on ${j.name})`]}),Pe&&(0,R.jsxs)(`li`,{children:[`Latency: `,Oe?`${wh(ke,{precise:!0})} faster ticks on every tier (Lv.${De})`:`not yet active`]}),ge&&(0,R.jsxs)(`li`,{children:[`Overclock: `,ve>0?`Latency's per-level rate is now ${Ch(ye)}% (was 1%) from ${V(ve)} banked completed levels`:`not yet claimed (reach ${V(N)} completed levels on ${ie.name})`]})]})]}),!D&&(0,R.jsx)(Xm,{"aria-label":`prestige points display`,$actionable:s,onClick:s?t.prestige:void 0,onKeyDown:e=>{!s||e.key!==`Enter`&&e.key!==` `||(e.preventDefault(),t.prestige())},role:s?`button`:void 0,tabIndex:s?0:void 0,title:s?`Awards Prestige Points and resets your resources`:void 0,children:(0,R.jsxs)(Vm,{children:[(0,R.jsxs)(Hm,{children:[V(o.points),` PP`]}),i.prestigeSpeedBonusUnlocked&&` · ${wh(u)} production speed`]})})]}),Pe&&(0,R.jsxs)(Im,{"aria-label":`global latency panel`,children:[(0,R.jsxs)(dh,{onClick:fh,children:[(0,R.jsx)(`summary`,{children:(0,R.jsx)(`h2`,{children:`Latency`})}),Oe&&(0,R.jsxs)(sh,{children:[`Lv.`,De,` — `,wh(ke,{precise:!0}),` faster ticks on every tier.`]})]}),(0,R.jsxs)(Y,{"aria-label":Oe?`Upgrade Latency for ${di(Ae)} (currently ${wh(ke,{precise:!0})} faster ticks on every tier)`:`Enable Latency for ${di(Ae)}`,color:Me?`#3b82f6`:`darkgrey`,disabled:!Me,onClick:t.buyGlobalTickspeedMultiplier,title:`Spend Bytes to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten`,type:`button`,$progress:Ne,$progressColor:`#3b82f6`,$pulse:Me,children:[(0,R.jsx)($d,{children:`🌐 `}),(0,R.jsxs)(ef,{children:[Oe?`Upgrade`:`Enable`,` for `,di(Ae)]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`Latency progress`,"aria-valuenow":Ne,"aria-valuemin":0,"aria-valuemax":100})]})]}),(0,R.jsx)(Om,{children:z.map((e,n)=>{if(!ya(i)(e))return null;let r=i.resources[e.id]??0,o=i.owned[e.id]??0,s=Fa(i,e.id),c=Pa(i,e),l=i.purchaseLevels?.[e.id]??1,d=Math.max(0,l-1),f=i.purchaseLevelProgress?.[e.id]??0,p=yi(e,l,O,f,c,2**53-1),m=vi(e,l,O,f,1),h=p>0?vi(e,l,O,f,p):m,g=p>0&&!E,y=f/O*100,x=p/O*100,S=e.id===ie.id&&Ai(i),C=i.tickspeedLevels?.[e.id]??1,w=i.lastTierXpConsumed??0,te=S?ji(w):Ei(C),T=wh(te),D=Math.floor(i.prestige.xp??0),re=Mi(w),k=bh(D,re),A=S&&!E&&o>0&&D>=re,ae=`🧬 ${V(D)} XP`,j=wh(ji(D)),oe=`Consume ${V(D)} XP for ${j} ${e.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`,se=()=>{A&&window.confirm(`Consume ${V(D)} XP for ${j} faster ${e.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)&&t.consumeXpForLastTierTickspeed(D)},ce=ca(l),le=ua(i,e.id),ue=Math.floor(o*u*le*ce),de=sr(e.id),fe=Ca(i,e.id),pe=xi(e.id,C+1),me=r>=pe+1&&!E,he=ne?Ha(i,e.id):{levels:0,cost:0},ge=he.levels>0?`Buy ${V(he.levels)} full level${he.levels===1?``:`s`} for ${ui(he.cost)} (${V(d)} completed levels)`:`Buy${p>1?` ×${p}`:``} for ${ui(h)} (${V(d)} completed levels, ${V(f)} of ${O} purchased toward the next)`,_e=`Tickspeed multiplier (+10% faster ticks) for ${yh(pe,e.id)}`,ve=he.levels>0?`+${V(he.levels)} Lv`:`${V(f)}${p>0?`+${V(p)}`:``}/${V(O)}`,M=`⚙ ${yh(pe,e.id)}`,N=bh(r,pe+1),ye=a.tierAccents[n%a.tierAccents.length],be=v.has(e.id),xe=`${e.id}-details`;return(0,R.jsxs)(Am,{ref:ee(e.id),"data-tier-id":e.id,"aria-label":`${e.name} layer`,$accent:ye,$animateReveal:!_.has(e.id),onClick:t=>{t.target.closest(`button`)||b(e.id)},children:[(0,R.jsxs)(eh,{role:`button`,tabIndex:0,"aria-expanded":be,"aria-controls":xe,onClick:t=>{t.stopPropagation(),b(e.id)},onKeyDown:t=>{(t.key===`Enter`||t.key===` `)&&(t.preventDefault(),b(e.id))},children:[(0,R.jsx)(lh,{children:(0,R.jsxs)(uh,{title:e.name,children:[(0,R.jsx)(nf,{children:e.name}),(0,R.jsx)(`span`,{"aria-hidden":`true`,children:e.symbol})]})}),(0,R.jsxs)(ph,{title:`Owned`,children:[(0,R.jsx)(nf,{children:`Owned: `}),V(o)]})]}),be&&(0,R.jsx)(th,{id:xe,children:(0,R.jsxs)(`ul`,{children:[(0,R.jsxs)(`li`,{children:[`Base tickspeed: delivers every `,xh(de),`s`]}),(0,R.jsxs)(`li`,{children:[`Effective tickspeed: every `,xh(fe),`s (tier ×`,xh(te),`, global ×`,xh(ke),`)`]}),(0,R.jsxs)(`li`,{children:[`Completed levels: `,V(d),` (`,V(f),`/`,O,` purchased toward the next) — purchase milestone bonus: ×`,xh(ce),` from `,V(s),` lifetime purchases`]}),le>1&&(0,R.jsxs)(`li`,{children:[`Scale Up bonus: ×`,xh(le)]}),S&&(0,R.jsxs)(`li`,{children:[`XP Tickspeed — unspent XP: `,V(D),` `,`(next auto-consumption needs at least `,V(re),`)`]}),(0,R.jsxs)(`li`,{children:[`Costs `,or(e.costResourceId),`, produces `,or(e.producesResourceId)]})]})}),(0,R.jsxs)(mh,{children:[`+`,e.producesResourceId===`base`?ui(ue):e.producesResourceId===`bytes`?di(ue):`${V(ue)} ${or(e.producesResourceId)}`]}),S?(0,R.jsxs)(vh,{"aria-label":oe,variant:`smart`,disabled:!A,onClick:se,title:o>0?`Consume XP for a compounding +1% ${e.name} tickspeed per XP (min ${V(re)} XP right now) — resets every other tier's owned quantity and Bits to 0`:`No ${e.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`,$progress:k,$pulse:A,children:[(0,R.jsx)(X,{children:ae}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`${e.name} XP tickspeed progress`,"aria-valuenow":k,"aria-valuemin":0,"aria-valuemax":100})]}):(0,R.jsxs)(vh,{"aria-label":_e,variant:`success`,disabled:!me,onClick:()=>t.buyTickspeedMultiplier(e.id),title:`Tickspeed multiplier level ${C} (${T} faster ticks) — the next level makes it 10% more`,$progress:N,$pulse:me,children:[(0,R.jsx)(X,{children:M}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`${e.name} tickspeed multiplier progress`,"aria-valuenow":N,"aria-valuemin":0,"aria-valuemax":100})]}),(0,R.jsxs)(hh,{"aria-label":ge,variant:`plain`,disabled:!g,onClick:()=>t.buyTierQuantity(e.id),title:`Buy ${e.name} to increase your ${or(e.producesResourceId)} production — completing every level (${O} purchases) also multiplies it by ×${Mr}`,$progress:y,$secondaryProgress:x,$pulse:g,children:[(0,R.jsxs)(gh,{children:[`🛒 `,ve,` `]}),(0,R.jsx)(_h,{children:ui(he.levels>0?he.cost:h)}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`${e.name} cost-block progress`,"aria-valuenow":f,"aria-valuemin":0,"aria-valuemax":O})]})]},e.id)})}),(0,R.jsxs)(zm,{children:[(0,R.jsxs)(Pm,{"aria-label":`scale up panel`,children:[(0,R.jsxs)(Mm,{children:[(0,R.jsx)(`h2`,{children:`Scale Up`}),!D&&Ce&&(0,R.jsxs)(Nm,{$dimmed:!we,"aria-label":Te,title:Ee,children:[`⏩ `,we?`Auto`:`Paused`]})]}),(0,R.jsxs)(Fm,{"aria-label":`Scale Up (requires ${de} completed ${j.name} levels) — doubles production for tiers unlocked so far${he?` and unlocks TB`:``}`,color:pe?`#22d3ee`:`darkgrey`,disabled:!pe,onClick:t.scaleUp,title:`Resets tiers, doubles production for tiers unlocked so far${me?`, and unlocks ${me.name}`:``} — requires ${de} completed ${j.name} levels`,type:`button`,$progress:fe,$progressColor:`#22d3ee`,$pulse:pe,children:[(0,R.jsx)($d,{children:`⏩ `}),(0,R.jsxs)(ef,{children:[`×2`,` · `,j.symbol,` `,V(ue),`/`,V(de),he?` · Unlock TB`:``]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`Scale Up progress`,"aria-valuenow":fe,"aria-valuemin":0,"aria-valuemax":100})]})]}),ge&&(0,R.jsxs)(Lm,{"aria-label":`overclock panel`,children:[(0,R.jsxs)(dh,{onClick:fh,children:[(0,R.jsx)(`summary`,{children:(0,R.jsx)(`h2`,{children:`Overclock`})}),ve>0&&(0,R.jsxs)(sh,{children:[`Latency's per-level rate is now `,Ch(ye),`% (was 1%) from `,V(ve),` banked completed levels.`]})]}),(0,R.jsxs)(Rm,{"aria-label":`Overclock (requires ${N} completed ${ie.name} levels) — resets Scale Up's bonus and raises Latency's per-level rate to ${Ch(be)}%`,color:Se?`#fb923c`:`darkgrey`,disabled:!Se,onClick:t.overclock,title:`Resets tiers (and Scale Up's bonus) and raises Latency's per-level rate to ${Ch(be)}% — requires ${N} completed ${ie.name} levels`,type:`button`,$progress:xe,$progressColor:`#fb923c`,$pulse:Se,children:[(0,R.jsx)($d,{children:`⚡ `}),(0,R.jsxs)(ef,{children:[Ch(be),`%/lvl`,` · `,ie.symbol,` `,V(le),`/`,V(N)]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`Overclock progress`,"aria-valuenow":xe,"aria-valuemin":0,"aria-valuemax":100})]})]})]})]})},Eh=L.main`
+`,yh=(e,t)=>t===`base`?ui(e):t===`bytes`?di(e):`${V(e)} ${or(t)}`,bh=(e,t)=>Math.min(100,Math.round(e/t*100)),xh=e=>(Math.round(e*100)/100).toFixed(2).replace(/\.?0+$/,``),Sh=e=>Math.round((e-1)*100),Ch=e=>(Math.round((e-1)*100*100)/100).toFixed(2).replace(/\.?0+$/,``),wh=(e,{precise:t=!1}={})=>e>=2?`${xh(e)}x`:`+${t?Ch(e):Sh(e)}%`,Th=({game:e})=>{let{actions:t,dismissOfflineProgress:n,offlineProgress:r,state:i}=e,a=jn(),{prestige:o}=i,s=i.resources[cr]>=ur,c=va(i),l=i.prestigeDoublePpLevel??0,u=i.prestigeSpeedBonusUnlocked?Ni(o.points):1,d=Oa(i.resources[cr],l),f=xa(i.resources[cr]),p=Sa(i.resources[cr]),m=Math.round(p*100),h=Math.max(1,d),g=`${c&&s?`Prestige (optional — claim accumulated PP)`:`Prestige (requires 1 Googol Bytes)`} — awards +${V(h)} Prestige Point${h===1?``:`s`}`,[_]=(0,F.useState)(()=>new Set(z.filter(e=>ya(i)(e)).map(e=>e.id))),[v,y]=(0,F.useState)(()=>new Set),b=e=>y(t=>{let n=new Set(t);return n.has(e)?n.delete(e):n.add(e),n}),x=(0,F.useRef)(null),S=(0,F.useRef)(new Map),C=(0,F.useRef)(new Map);(0,F.useEffect)(()=>{if(typeof IntersectionObserver>`u`)return;let e=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting)return;let t=e.target.dataset.tierId;y(e=>{if(!e.has(t))return e;let n=new Set(e);return n.delete(t),n})})});return x.current=e,()=>e.disconnect()},[]);let ee=e=>(C.current.has(e)||C.current.set(e,t=>{let n=x.current,r=S.current.get(e);n&&r&&r!==t&&n.unobserve(r),t?(S.current.set(e,t),n&&n.observe(t)):S.current.delete(e)}),C.current.get(e)),[w,te]=(0,F.useState)(!1),T=()=>te(e=>!e),E=U(i),D=o.count===0,ne=!!e.buyMaxMode&&La(i),O=hi(i),re=E&&D,k=E&&!D,ie=z[z.length-1],A=i.purchaseLevels?.[ie.id]??1,ae=ya(i)(ie),j=fa(i),oe=i.purchaseLevels?.[j.id]??1,se=i.scaleUpCount??0,ce=pa(i),le=Math.max(0,A-1),ue=Math.max(0,oe-1),de=ce,fe=bh(ue,de),pe=!E&&ue>=ce,me=z[z.indexOf(j)+1]??null,he=me?.symbol===`TB`,[ge,_e]=(0,F.useState)(ae);(0,F.useEffect)(()=>{ae&&_e(!0)},[ae]);let ve=i.overclockCount??0,M=ma(i),N=M,ye=1+Ir*ha(ve),be=1+Ir*ha(ve+le),xe=bh(le,N),Se=!E&&le>=M,Ce=i.autoScaleUp??!1,P=i.autoScaleUpEnabled??!0,we=P,Te=P?`Auto Scale Up active`:`Auto Scale Up paused`,Ee=P?`Scale Up now triggers automatically the instant it's eligible`:`Auto Scale Up is currently paused — it will not trigger until resumed`,De=i.globalTickspeedMultiplier??null,Oe=De!==null,ke=ki(De,ve),Ae=Di(De??0),je=Oi(i),Me=!E&&je&&(i.resources.bytes??0)>=Ae,Ne=bh(i.resources.bytes??0,Ae),[Pe,Fe]=(0,F.useState)(je);(0,F.useEffect)(()=>{je&&Fe(!0)},[je]);let Ie=(0,F.useRef)(null);(0,F.useEffect)(()=>{re&&Ie.current?.focus()},[re]);let Le=(0,F.useRef)(null),[Re,ze]=(0,F.useState)(!1);(0,F.useEffect)(()=>{let e=Le.current;if(!e||typeof IntersectionObserver>`u`)return;let t=null,n=new IntersectionObserver(([e])=>{clearTimeout(t),t=setTimeout(()=>ze(!e.isIntersecting),60)});return n.observe(e),()=>{clearTimeout(t),n.disconnect()}},[re]);let Be=(0,F.useRef)(null),[Ve,He]=(0,F.useState)(60);return(0,F.useEffect)(()=>{let e=Be.current;if(!e||typeof ResizeObserver>`u`)return;let t=new ResizeObserver(()=>He(e.offsetHeight));return t.observe(e),()=>t.disconnect()},[k]),re?(0,R.jsx)(rh,{role:`dialog`,"aria-modal":`true`,"aria-label":`Prestige required`,children:(0,R.jsxs)(ih,{children:[(0,R.jsx)(`h2`,{children:`✦ Prestige Available!`}),(0,R.jsxs)(sh,{children:[`You've reached `,ui(i.resources[cr]),` — 1 Googol Bytes. All production has stopped.`]}),(0,R.jsxs)(`ul`,{children:[(0,R.jsx)(`li`,{children:`Resets your resources, owned tiers, and purchases`}),(0,R.jsxs)(`li`,{children:[`Awards `,V(d),` Prestige Point`,d===1?``:`s`,` — each unspent point adds +1% production speed, or spend them on the Perks page to unlock autobuyers`]}),(0,R.jsx)(`li`,{children:`Keeps your unlocked autobuyers and Prestige Points`})]}),(0,R.jsx)(Y,{ref:Ie,"aria-label":`Prestige now`,variant:`prestige`,onClick:t.prestige,title:`Awards Prestige Points and resets your resources`,type:`button`,$pulse:!0,children:(0,R.jsx)(X,{children:`✦ Prestige Now`})})]})}):(0,R.jsxs)(Tm,{children:[k&&(0,R.jsxs)(R.Fragment,{children:[(0,R.jsxs)(ah,{ref:Be,"aria-label":`prestige available banner`,children:[(0,R.jsx)(sh,{children:`1 Googol Bytes reached — production has stopped.`}),(0,R.jsxs)(Y,{"aria-label":g,variant:`prestige`,onClick:t.prestige,title:`Awards Prestige Points and resets your resources`,type:`button`,$pulse:!0,children:[(0,R.jsx)($d,{children:`✦ `}),(0,R.jsxs)(ef,{children:[`Prestige +`,V(h),` PP`]})]})]}),(0,R.jsx)(oh,{$height:Ve})]}),(0,R.jsx)(Jm,{"aria-label":`prestige progress`,children:(0,R.jsxs)(Ym,{$percent:f,children:[(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`progress toward 1 Googol Bytes, when Prestige becomes available`,"aria-valuenow":f,"aria-valuemin":0,"aria-valuemax":100}),(0,R.jsx)(Xm,{children:`${f}% to Prestige`})]})}),(0,R.jsx)(Dm,{children:(0,R.jsx)(`h1`,{children:`Byte Factory`})}),i.intro?.computeBoostType&&br[i.intro.computeBoostType]&&(0,R.jsx)(ch,{"aria-label":`active compute boost`,children:`${lh[i.intro.computeBoostType]??i.intro.computeBoostType} Compute Boost active: ×${br[i.intro.computeBoostType].multiplier} production, ${Na(i.intro.computeBoostRemainingSeconds)} left`}),(0,R.jsx)(Kf,{offlineProgress:r,dismissOfflineProgress:n}),(0,R.jsx)(eh,{ref:Le,"aria-hidden":`true`}),(0,R.jsxs)($m,{$compressed:Re,$belowBar:k,$belowBarHeight:Ve,children:[(0,R.jsxs)(Bm,{$raised:!0,children:[(0,R.jsx)(Vm,{"aria-controls":`global-multipliers-details`,"aria-expanded":w,"aria-label":`money display`,onClick:T,onKeyDown:e=>{(e.key===`Enter`||e.key===` `)&&(e.preventDefault(),T())},role:`button`,tabIndex:0,title:`Show or hide the global production multipliers currently in effect`,children:(0,R.jsx)(Wm,{children:pi(i.resources[cr])})}),!Re&&(0,R.jsxs)(R.Fragment,{children:[(0,R.jsx)(Gm,{"aria-hidden":`true`,children:Array.from({length:8},(e,t)=>{let n=t/8,r=Math.min(1,Math.max(0,(p-n)/.125));return(0,R.jsx)(Km,{children:(0,R.jsx)(qm,{$fraction:r})},t)})}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`progress toward the next power of ten Bytes`,"aria-valuenow":m,"aria-valuemin":0,"aria-valuemax":100})]}),w&&!Re&&(0,R.jsxs)(Qm,{id:`global-multipliers-details`,"aria-label":`global production multipliers`,children:[!D&&(0,R.jsxs)(`li`,{children:[`Prestige speed bonus: `,i.prestigeSpeedBonusUnlocked?`${wh(u)} production speed from ${V(o.points)} unspent PP`:`not yet unlocked (${V(1e4)} PP on Perks → Unlocks)`]}),(0,R.jsxs)(`li`,{children:[`Scale Up: `,se>0?`${se} activation${se===1?``:`s`}; multiplier varies by tier`:`not yet activated (reach ${V(de)} completed levels on ${j.name})`]}),Pe&&(0,R.jsxs)(`li`,{children:[`Latency: `,Oe?`${wh(ke,{precise:!0})} faster ticks on every tier (Lv.${De})`:`not yet active`]}),ge&&(0,R.jsxs)(`li`,{children:[`Overclock: `,ve>0?`Latency's per-level rate is now ${Ch(ye)}% (was 1%) from ${V(ve)} banked completed levels`:`not yet claimed (reach ${V(N)} completed levels on ${ie.name})`]})]})]}),!D&&(0,R.jsx)(Zm,{"aria-label":`prestige points display`,$actionable:s,onClick:s?t.prestige:void 0,onKeyDown:e=>{!s||e.key!==`Enter`&&e.key!==` `||(e.preventDefault(),t.prestige())},role:s?`button`:void 0,tabIndex:s?0:void 0,title:s?`Awards Prestige Points and resets your resources`:void 0,children:(0,R.jsxs)(Hm,{children:[(0,R.jsxs)(Um,{children:[V(o.points),` PP`]}),i.prestigeSpeedBonusUnlocked&&` · ${wh(u)} production speed`]})})]}),Pe&&(0,R.jsxs)(Im,{"aria-label":`global latency panel`,children:[(0,R.jsxs)(fh,{children:[(0,R.jsx)(`summary`,{children:(0,R.jsx)(`h2`,{children:`Latency`})}),Oe&&(0,R.jsxs)(ch,{children:[`Lv.`,De,` — `,wh(ke,{precise:!0}),` faster ticks on every tier.`]})]}),(0,R.jsxs)(Y,{"aria-label":Oe?`Upgrade Latency for ${di(Ae)} (currently ${wh(ke,{precise:!0})} faster ticks on every tier)`:`Enable Latency for ${di(Ae)}`,color:Me?`#3b82f6`:`darkgrey`,disabled:!Me,onClick:t.buyGlobalTickspeedMultiplier,title:`Spend Bytes to permanently speed up every tier's production ticks by another 1% at once (more frequent deliveries, not bigger ones) — each level costs another power of ten`,type:`button`,$progress:Ne,$progressColor:`#3b82f6`,$pulse:Me,children:[(0,R.jsx)($d,{children:`🌐 `}),(0,R.jsxs)(ef,{children:[Oe?`Upgrade`:`Enable`,` for `,di(Ae)]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`Latency progress`,"aria-valuenow":Ne,"aria-valuemin":0,"aria-valuemax":100})]})]}),(0,R.jsx)(Om,{children:z.map((e,n)=>{if(!ya(i)(e))return null;let r=i.resources[e.id]??0,o=i.owned[e.id]??0,s=Fa(i,e.id),c=Pa(i,e),l=i.purchaseLevels?.[e.id]??1,d=Math.max(0,l-1),f=i.purchaseLevelProgress?.[e.id]??0,p=yi(e,l,O,f,c,2**53-1),m=vi(e,l,O,f,1),h=p>0?vi(e,l,O,f,p):m,g=p>0&&!E,y=f/O*100,x=p/O*100,S=e.id===ie.id&&Ai(i),C=i.tickspeedLevels?.[e.id]??1,w=i.lastTierXpConsumed??0,te=S?ji(w):Ei(C),T=wh(te),D=Math.floor(i.prestige.xp??0),re=Mi(w),k=bh(D,re),A=S&&!E&&o>0&&D>=re,ae=`🧬 ${V(D)} XP`,j=wh(ji(D)),oe=`Consume ${V(D)} XP for ${j} ${e.name} tickspeed (resets every other tier's owned quantity and Bits to 0)`,se=()=>{A&&window.confirm(`Consume ${V(D)} XP for ${j} faster ${e.name} ticks? This resets every other tier's owned quantity (not their level) and your Bits balance back to 0.`)&&t.consumeXpForLastTierTickspeed(D)},ce=ca(l),le=ua(i,e.id),ue=Math.floor(o*u*le*ce),de=sr(e.id),fe=Ca(i,e.id),pe=xi(e.id,C+1),me=r>=pe+1&&!E,he=ne?Ha(i,e.id):{levels:0,cost:0},ge=he.levels>0?`Buy ${V(he.levels)} full level${he.levels===1?``:`s`} for ${ui(he.cost)} (${V(d)} completed levels)`:`Buy${p>1?` ×${p}`:``} for ${ui(h)} (${V(d)} completed levels, ${V(f)} of ${O} purchased toward the next)`,_e=`Tickspeed multiplier (+10% faster ticks) for ${yh(pe,e.id)}`,ve=he.levels>0?`+${V(he.levels)} Lv`:`${V(f)}${p>0?`+${V(p)}`:``}/${V(O)}`,M=`⚙ ${yh(pe,e.id)}`,N=bh(r,pe+1),ye=a.tierAccents[n%a.tierAccents.length],be=v.has(e.id),xe=`${e.id}-details`;return(0,R.jsxs)(Am,{ref:ee(e.id),"data-tier-id":e.id,"aria-label":`${e.name} layer`,$accent:ye,$animateReveal:!_.has(e.id),children:[(0,R.jsxs)(th,{children:[(0,R.jsx)(uh,{children:(0,R.jsxs)(dh,{title:e.name,role:`button`,tabIndex:0,"aria-expanded":be,"aria-controls":xe,onClick:()=>b(e.id),onKeyDown:t=>{(t.key===`Enter`||t.key===` `)&&(t.preventDefault(),b(e.id))},children:[(0,R.jsx)(nf,{children:e.name}),(0,R.jsx)(`span`,{"aria-hidden":`true`,children:e.symbol})]})}),(0,R.jsxs)(ph,{title:`Owned`,children:[(0,R.jsx)(nf,{children:`Owned: `}),V(o)]})]}),be&&(0,R.jsx)(nh,{id:xe,children:(0,R.jsxs)(`ul`,{children:[(0,R.jsxs)(`li`,{children:[`Base tickspeed: delivers every `,xh(de),`s`]}),(0,R.jsxs)(`li`,{children:[`Effective tickspeed: every `,xh(fe),`s (tier ×`,xh(te),`, global ×`,xh(ke),`)`]}),(0,R.jsxs)(`li`,{children:[`Completed levels: `,V(d),` (`,V(f),`/`,O,` purchased toward the next) — purchase milestone bonus: ×`,xh(ce),` from `,V(s),` lifetime purchases`]}),le>1&&(0,R.jsxs)(`li`,{children:[`Scale Up bonus: ×`,xh(le)]}),S&&(0,R.jsxs)(`li`,{children:[`XP Tickspeed — unspent XP: `,V(D),` `,`(next auto-consumption needs at least `,V(re),`)`]}),(0,R.jsxs)(`li`,{children:[`Costs `,or(e.costResourceId),`, produces `,or(e.producesResourceId)]})]})}),(0,R.jsxs)(mh,{children:[`+`,e.producesResourceId===`base`?ui(ue):e.producesResourceId===`bytes`?di(ue):`${V(ue)} ${or(e.producesResourceId)}`]}),S?(0,R.jsxs)(vh,{"aria-label":oe,variant:`smart`,disabled:!A,onClick:se,title:o>0?`Consume XP for a compounding +1% ${e.name} tickspeed per XP (min ${V(re)} XP right now) — resets every other tier's owned quantity and Bits to 0`:`No ${e.name} owned right now — nothing to speed up, so this stays disabled until you own at least one again`,$progress:k,$pulse:A,children:[(0,R.jsx)(X,{children:ae}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`${e.name} XP tickspeed progress`,"aria-valuenow":k,"aria-valuemin":0,"aria-valuemax":100})]}):(0,R.jsxs)(vh,{"aria-label":_e,variant:`success`,disabled:!me,onClick:()=>t.buyTickspeedMultiplier(e.id),title:`Tickspeed multiplier level ${C} (${T} faster ticks) — the next level makes it 10% more`,$progress:N,$pulse:me,children:[(0,R.jsx)(X,{children:M}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`${e.name} tickspeed multiplier progress`,"aria-valuenow":N,"aria-valuemin":0,"aria-valuemax":100})]}),(0,R.jsxs)(hh,{"aria-label":ge,variant:`plain`,disabled:!g,onClick:()=>t.buyTierQuantity(e.id),title:`Buy ${e.name} to increase your ${or(e.producesResourceId)} production — completing every level (${O} purchases) also multiplies it by ×${Mr}`,$progress:y,$secondaryProgress:x,$pulse:g,children:[(0,R.jsxs)(gh,{children:[`🛒 `,ve,` `]}),(0,R.jsx)(_h,{children:ui(he.levels>0?he.cost:h)}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`${e.name} cost-block progress`,"aria-valuenow":f,"aria-valuemin":0,"aria-valuemax":O})]})]},e.id)})}),(0,R.jsxs)(zm,{children:[(0,R.jsxs)(Pm,{"aria-label":`scale up panel`,children:[(0,R.jsxs)(Mm,{children:[(0,R.jsx)(`h2`,{children:`Scale Up`}),!D&&Ce&&(0,R.jsxs)(Nm,{$dimmed:!we,"aria-label":Te,title:Ee,children:[`⏩ `,we?`Auto`:`Paused`]})]}),(0,R.jsxs)(Fm,{"aria-label":`Scale Up (requires ${de} completed ${j.name} levels) — doubles production for tiers unlocked so far${he?` and unlocks TB`:``}`,color:pe?`#22d3ee`:`darkgrey`,disabled:!pe,onClick:t.scaleUp,title:`Resets tiers, doubles production for tiers unlocked so far${me?`, and unlocks ${me.name}`:``} — requires ${de} completed ${j.name} levels`,type:`button`,$progress:fe,$progressColor:`#22d3ee`,$pulse:pe,children:[(0,R.jsx)($d,{children:`⏩ `}),(0,R.jsxs)(ef,{children:[`×2`,` · `,j.symbol,` `,V(ue),`/`,V(de),he?` · Unlock TB`:``]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`Scale Up progress`,"aria-valuenow":fe,"aria-valuemin":0,"aria-valuemax":100})]})]}),ge&&(0,R.jsxs)(Lm,{"aria-label":`overclock panel`,children:[(0,R.jsxs)(fh,{children:[(0,R.jsx)(`summary`,{children:(0,R.jsx)(`h2`,{children:`Overclock`})}),ve>0&&(0,R.jsxs)(ch,{children:[`Latency's per-level rate is now `,Ch(ye),`% (was 1%) from `,V(ve),` banked completed levels.`]})]}),(0,R.jsxs)(Rm,{"aria-label":`Overclock (requires ${N} completed ${ie.name} levels) — resets Scale Up's bonus and raises Latency's per-level rate to ${Ch(be)}%`,color:Se?`#fb923c`:`darkgrey`,disabled:!Se,onClick:t.overclock,title:`Resets tiers (and Scale Up's bonus) and raises Latency's per-level rate to ${Ch(be)}% — requires ${N} completed ${ie.name} levels`,type:`button`,$progress:xe,$progressColor:`#fb923c`,$pulse:Se,children:[(0,R.jsx)($d,{children:`⚡ `}),(0,R.jsxs)(ef,{children:[Ch(be),`%/lvl`,` · `,ie.symbol,` `,V(le),`/`,V(N)]}),(0,R.jsx)(nf,{role:`progressbar`,"aria-label":`Overclock progress`,"aria-valuenow":xe,"aria-valuemin":0,"aria-valuemax":100})]})]})]})]})},Eh=L.main`
   width: min(880px, calc(100vw - 2rem));
   margin: 0 auto;
   display: flex;
