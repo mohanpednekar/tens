@@ -371,9 +371,9 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      screen-reader-visible as a progress indicator and every test asserting on that contract is
      unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
      target (`FillableStatCard` rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own
-     `TitleRow` (title left, Speed/Bandwidth right) renders as the first line inside that same
-     button; disk status/count is omitted. The second line combines balance and capacity in the
-     centered `balance / capacity-unit` form, followed by the centered `MultiplierBar`. This is the
+     `TitleRow` (title left, centered `balance / capacity-unit` in the middle, Speed/Bandwidth right)
+     renders as the first line inside that same button; disk status/count is omitted. The
+     `MultiplierBar` is the second line. This is the
      same structure the Data Stream's own tile uses. Expand/collapse lives on a separate, slim
      `ExpandToggleButton` (a plain
      ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a

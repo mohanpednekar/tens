@@ -44,7 +44,7 @@ const Header = styled.header`
 // Sits in the middle of TitleRow (title left, Speed/Bandwidth right). The text-shadow is a halo in
 // the card's own surface color so the digits stay legible where the progress-fill edge crosses them.
 const BalanceText = styled.p`
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   margin: 0;
   font-family: ${props => props.theme.font.display};
@@ -188,14 +188,16 @@ const ExpandToggleButton = styled.button`
 `
 
 // Shared top row for both the Data Stream card and every pool's own summary: title top-left, the
-// combined balance/capacity line (BalanceText, flex: 1) in the middle, and that section's own
-// Speed/Bandwidth top-right — a plain flex row. The multiplier bar(s) render below it — see
+// combined balance/capacity line (BalanceText, nowrap, grows) in the middle, and that section's own
+// Speed/Bandwidth top-right — a flex row that WRAPS (Speed drops to its own right-aligned line) when a
+// long balance leaves no room on a narrow phone, rather than overlapping the neighbours. The multiplier bar(s) render below it — see
 // docs/DESIGN_HISTORY.md for the corner-speedometer → center-grow-bar redesign this replaced.
 const TitleRow = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: ${props => props.theme.space.sm};
+  gap: 0 ${props => props.theme.space.sm};
   width: 100%;
 `
 
@@ -235,6 +237,7 @@ const UpgradeStatusNote = styled.span`
 
 const SpeedText = styled.span`
   flex-shrink: 0;
+  margin-left: auto;
   font-size: ${props => props.theme.type.scale.sm.size};
   color: ${props => props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
@@ -429,8 +432,9 @@ const BarFillLake = styled(BarFillBase)`
 
 // Percent readout. Inside its bar it is centered, in the page color (dark on the dark theme's light
 // fills, light on the light theme's dark fills) so it reads on the fill; a bar too narrow to hold
-// it (a small tap bonus or lake rate) gets the label just past the fill's right edge, in the bar's
-// own color on the track.
+// it (a small tap bonus or lake rate, or a full buffer's 50% floor) gets the label just past the fill's
+// right edge in the plain text color with a surface-colored halo, since that spot can sit on the
+// tile's own progress fill (green) where the bar's accent color has poor contrast.
 const BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT = 40
 
 const BarPercentLabel = styled.span`
@@ -443,7 +447,7 @@ const BarPercentLabel = styled.span`
   font-variant-numeric: tabular-nums;
   ${props => props.$widthPercent >= BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT
     ? `left: 50%; transform: translate(-50%, -50%); color: ${props.theme.color.page};`
-    : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color[props.$colorToken]};`}
+    : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color.text}; text-shadow: 0 0 2px ${props.theme.color.surface}, 0 0 4px ${props.theme.color.surface};`}
 `
 
 // The tap emoji is yellow, the same hue as the bonus bar it sits on in the dark theme; a thin dark
@@ -485,7 +489,7 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
         {isLakeMode
           ? lakeWidthPercent > 0 && <BarFillLake $widthPercent={lakeWidthPercent} />
           : baseWidthPercent > 0 && <BarFillBase $widthPercent={baseWidthPercent} />}
-        <BarPercentLabel $colorToken={isLakeMode ? 'info' : 'accent'} $widthPercent={isLakeMode ? lakeWidthPercent : baseWidthPercent}>
+        <BarPercentLabel $widthPercent={isLakeMode ? lakeWidthPercent : baseWidthPercent}>
           {Math.round(displayPercent)}%
         </BarPercentLabel>
       </BarTrack>
@@ -498,7 +502,7 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
           aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
         >
           <BarFillBonus $widthPercent={bonusWidthPercent} />
-          <BarPercentLabel $colorToken="warn" $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
+          <BarPercentLabel $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
           </BarPercentLabel>
         </BarTrack>
       )}
