@@ -187,11 +187,10 @@ const ExpandToggleButton = styled.button`
   }
 `
 
-// Shared top row for both the Data Stream card and every pool's own summary: title top-left,
-// that section's own Speed/Bandwidth top-right — a plain flex row
-// (not a grid) since there's no middle column to keep centered between the two ends. The
-// combined balance/capacity line and multiplier bars render below it — see docs/DESIGN_HISTORY.md for the corner-speedometer →
-// center-grow-bar redesign this replaced.
+// Shared top row for both the Data Stream card and every pool's own summary: title top-left, the
+// combined balance/capacity line (BalanceText, flex: 1) in the middle, and that section's own
+// Speed/Bandwidth top-right — a plain flex row. The multiplier bar(s) render below it — see
+// docs/DESIGN_HISTORY.md for the corner-speedometer → center-grow-bar redesign this replaced.
 const TitleRow = styled.div`
   display: flex;
   align-items: baseline;
@@ -371,7 +370,7 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // FULL track width, 0% is a zero-width point at dead center. The blue (accent) bar shows ONLY the
 // fill-based base reading; the manual tap bonus is a separate yellow (warn) bar directly below it,
 // on its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT scale, rendered only while the bonus is above
-// 0. Each bar's percent readout is a small pill centered inside it.
+// 0. Each bar's percent readout is plain text centered inside it.
 //
 // For a POOL specifically, once its own Memory buffer is completely full, the SAME bar switches to
 // `mode="lake"` and represents a different quantity entirely: that pool's own Data Lake overflow
@@ -432,7 +431,7 @@ const BarFillLake = styled(BarFillBase)`
 // fills, light on the light theme's dark fills) so it reads on the fill; a bar too narrow to hold
 // it (a small tap bonus or lake rate) gets the label just past the fill's right edge, in the bar's
 // own color on the track.
-const BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT = 30
+const BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT = 40
 
 const BarPercentLabel = styled.span`
   position: absolute;
