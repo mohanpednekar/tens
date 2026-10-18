@@ -467,6 +467,7 @@ describe('schema merge on load', () => {
         bits: 5, capacity: INTRO_CAPACITY_CAP_BITS, byteCreated: true,
         mainGameUnlocked: false,
         capacityUpgradeQueued: false,
+        capacityUpgradeProgress: 0,
         disks: { 8000: 1 }, disksBuiltTotal: { 8000: 1 }, diskCache: { 8000: 250 },
         diskBuild: { size: 80000, remainingSeconds: 4, totalSeconds: 10 },
         diskProvisionPasses: {},

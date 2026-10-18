@@ -2651,7 +2651,7 @@ test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer i
 
 // Upgrade Data Stream spends the full Buffer (cost = current capacity) and doubles Capacity —
 // Speed follows the new capacity automatically rather than being upgraded independently.
-test('Upgrade Data Stream drains the Buffer and doubles Capacity', () => {
+test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', () => {
   // Fake timers so a real production tick can't race the exact post-upgrade balance assertion.
   vi.useFakeTimers()
 
@@ -2662,10 +2662,11 @@ test('Upgrade Data Stream drains the Buffer and doubles Capacity', () => {
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
+  // 1 B/s at 1 B Capacity: the bar completes after one second of ticks.
+  act(() => { vi.advanceTimersByTime(1_200) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   // The new capacity (2 B) derives the new speed — e=log2(2B) is odd, so the mean of the
   // neighbouring even-exponent sqrts: (1 + 2)/2 = 1.5 B/s.
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
@@ -2852,13 +2853,12 @@ test('each Upgrade Data Stream press doubles Capacity, and the next cost always 
   let upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
+  act(() => { vi.advanceTimersByTime(1_200) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toHaveTextContent('2 B') // cost = the new capacity
-  // The Buffer drained to 0 — the next press can only arm (not fire) until the Buffer refills.
   expect(upgradeButton).toBeEnabled()
   expect(upgradeButton).toHaveTextContent('Upgrade Data Stream')
 
@@ -2892,8 +2892,7 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
   expect(dataStream).toHaveTextContent(/Upgrading to .* · ⚡ .*\/s/)
-  expect(dataStream).toHaveTextContent(/outflow paused/i)
-  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/\/s Outflow paused/)
+  expect(dataStream).toHaveTextContent(/\d+%/)
 
   // The same DOM node flips role in place, so keyboard focus is never dropped.
   const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
@@ -2901,7 +2900,7 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   fireEvent.click(cancel)
   expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
   expect(upgradeButton).toBeEnabled()
-  expect(dataStream).not.toHaveTextContent(/outflow paused/i)
+  expect(dataStream).not.toHaveTextContent(/Upgrading to/)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()

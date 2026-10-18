@@ -4,7 +4,7 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css } from 'styled-components'
@@ -713,10 +713,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // actually consume instead.
         : clampPercent(((diskPassesCollected * diskSize + Math.min(diskPoolSpendableBufferBits, diskSize)) / diskCost) * 100)
   const diskRedeemTierName = getDiskRedeemTierName(state, diskSize)
-  const capacityUpgradeAvailable = isMemoryCapacityUpgradeAvailable(state)
   const capacityUpgradeArmable = isMemoryCapacityUpgradeArmable(state)
   const capacityUpgradeQueued = Boolean(intro.capacityUpgradeQueued)
-  const capacityUpgradeClickable = capacityUpgradeAvailable || capacityUpgradeArmable
+  const capacityUpgradeClickable = capacityUpgradeArmable
   const capacityUpgradeCost = intro.capacity
   // What the player gets for the upgrade: Capacity doubles, and Speed is derived purely from
   // Capacity (getIntroProductionRate), so both post-upgrade figures are previewed on the button.
@@ -730,7 +729,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
-  const capacityUpgradeProgress = clampPercent((intro.bits / capacityUpgradeCost) * 100)
+  const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
   // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
@@ -853,7 +852,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
               ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText}{' '}
-              <UpgradeStatusNote>Outflow paused</UpgradeStatusNote>
+              <UpgradeStatusNote>{Math.floor(capacityUpgradeProgress)}%</UpgradeStatusNote>
             </UpgradeStatusText>
           )}
           {intro.byteCreated && (
@@ -905,7 +904,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   key="data-stream-upgrade"
                   aria-label="cancel data stream upgrade"
                   onClick={actions.clearIntroCapacityUpgradeQueue}
-                  title="Cancel the armed upgrade and resume Data Stream outflow"
+                  title="Cancel the upgrade and return its progress to the Buffer"
                   type="button"
                   variant="neutral"
                 >
@@ -918,11 +917,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   disabled={!capacityUpgradeClickable}
                   onClick={actions.pickIntroCapacityMilestone}
                   title={
-                    capacityUpgradeAvailable
-                      ? 'The Data Stream Buffer is full; drain it to double Capacity'
-                      : capacityUpgradeArmable
-                        ? 'Arm the upgrade: pauses Data Stream outflow until the Buffer fills, then doubles Capacity'
-                        : 'Capacity is already at its maximum'
+                    capacityUpgradeArmable
+                      ? 'Divert the Data Stream at full Speed into the upgrade; its bar filling doubles Capacity'
+                      : 'Capacity is already at its maximum'
                   }
                   aria-description={capacityUpgradeClickable ? `Costs ${formatBitsInNearestUnit(capacityUpgradeCost)}; capacity ${nextCapacityText} and speed ${nextRateText} after upgrading` : undefined}
                   type="button"

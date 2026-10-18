@@ -799,14 +799,12 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via a single **Upgrade
-Data Stream** action: it requires a full Buffer, drains it (cost = current capacity), and doubles
-`intro.capacity` — Capacity is the only purchased progression variable. The button is clickable at any
-fill (`isMemoryCapacityUpgradeArmable`): a click below 100% arms it (`intro.capacityUpgradeQueued`) and
-pauses every Data Stream outflow (`isDataStreamOutflowPaused` — `tickPoolBufferFill`/Data Lake overflow,
-`tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade` fires it, so continuous pool/lake draw can't
-hold the Buffer below full indefinitely. The arm survives load and Prestige. While armed the button is
-hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control disarms it
-(`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
+Data Stream** action: a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
+and from then on `tickIntroProduction` diverts the stream's whole nominal Speed (100%, no fill multiplier)
+into `intro.capacityUpgradeProgress` at the highest priority — nothing is paused or raced; when the bar
+reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
+running the button is hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control
+returns the bar's bits to the Buffer (`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
 the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
 ×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,

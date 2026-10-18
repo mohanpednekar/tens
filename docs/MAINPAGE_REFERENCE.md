@@ -106,7 +106,7 @@ upgrades immediately; below full (any fill, byte combined, not at cap, not alrea
 arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
 fills and it fires. While armed the button is hidden and the Data Stream tile itself reflects the
 status instead: a `warn`-colored inset outline (`$upgrading`) plus an `UpgradeStatusText` line
-"⏫ Upgrading to <next capacity> · ⚡ <next speed>" with a smaller second line "Outflow paused" (`UpgradeStatusNote`) (id `data-stream-upgrade-status`, wired to the tile
+"⏫ Upgrading to <next capacity> · ⚡ <next speed>" with a smaller second line showing the bar percentage (`UpgradeStatusNote`) (id `data-stream-upgrade-status`, wired to the tile
 via `aria-describedby`). A small neutral "✕ Cancel upgrade" button (`aria-label="cancel data stream
 upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then —
 rendered as the SAME keyed `Button` element in the same slot, so arming or cancelling never unmounts

@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+
+- **Upgrade Data Stream is now a progress bar.** Clicking it diverts the Data Stream's full Speed into the upgrade at top priority; when the bar fills, Capacity doubles. Nothing is paused and there is no race with other Data Stream consumers. Cancelling returns the progress to the Buffer.
 - **Pool title is a real button.** The "KB Pool" title is now its own button (keyboard/focus support) beside a stretched tap target, so it still expands/collapses while the pool's tap is disabled (full buffer, lake draining, tap bonus capped).
 - **Byte Foundry spacing.** The Data Stream and pool tiles now sit flush in their cards (no padding around them); only the buttons, disks and Data Lake below are padded, and gaps between cards are tighter, so more fits on screen. Cards get a stronger edge and shadow against the page, while the tiles and buttons inside them use a softer fill, so contrast is higher between cards and lower within them.
 - **Provision Disk is its own card.** The Provision Disk control no longer lives inside the Data Stream card; it sits in a separate card right below it.

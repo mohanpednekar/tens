@@ -8801,7 +8801,10 @@ shipped it to `1.1` — corrected to the current `1.25` in the same commit.
 **Verification.** `yarn test`: 1798/1798. `simulate-run-times` re-run and published to the
 `ideal-run-strategy` orphan branch at the final `1.25` value per this repo's own convention.
 
-### Upgrade Data Stream arms below a full Buffer (outflow pause)
+### Upgrade Data Stream arms below a full Buffer (outflow pause) — SUPERSEDED
+
+Superseded: Upgrade Data Stream now diverts 100% of nominal Speed into `intro.capacityUpgradeProgress` from `tickIntroProduction` and no outflow is paused (the pause was a source of races/confusion). The notes below describe the removed design.
+
 
 **Problem:** the Data Stream could stall below full forever. Pool buffers and — once a pool is fully
 built — its Data Lake's overflow draw from `intro.bits` every tick, while the fill-based multiplier

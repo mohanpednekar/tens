@@ -221,7 +221,7 @@ export const getTiersAttentionLevel = state =>
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
-  isMemoryCapacityUpgradeAvailable(state) ||
+  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued) ||
   isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state)
 
