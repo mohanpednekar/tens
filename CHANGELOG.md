@@ -34,6 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+- **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
+  The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
+  Provision Disk button moved out of the pool cards into the Data Stream section, directly under it.
+- **Byte Foundry: provisioning in progress is obvious at a glance.** A queued Provision Disk build now
+  reads `⏳ Provisioning 1 KB Disk…` (with its banked passes, e.g. `2/9 · needs buffer`) and pulses;
+  idle states keep `🏦 Provision 1 KB Disk`, so the two no longer look alike.
+- **Cost icon is now 🏷️ everywhere.** The Data Lake Booster control, the Upgrade Data Stream button
+  and Provision Disk's status line all mark their cost with the same price-tag icon (replacing 🎯).
+- **Byte Foundry: armed Upgrade Data Stream status is tidier.** The headline stays on one line
+  (`Upgrading to … · ⚡ …`); "Outflow paused" moves to a smaller second line.
+- **Byte Foundry: Provision Disk always states its status.** A short second line on the button
+  reads Ready, Queued (and what it's waiting for) or "tap to queue", with the cost and pass count —
+  the button no longer looks the same while ready, queued or waiting.
 - **Boosters: timed merges now take 8 normal disk fills (#755).** A reserve merge takes as long as
   8 of the input tier's own pool's smallest disks take to fill at that pool's Bandwidth. Cores use
   the KB pool, Nodes the MB pool, and so on. Before, it was 10× "Core earn time" and grew 10× per
@@ -115,6 +128,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+
+- **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
+  their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split
+  with a wide gap after the first word. Perks rows now line up in fixed columns, automation toggles are
+  proper on/off switches (Buy max too), the Milestones page no longer repeats each chapter name, and the
+  Factory's Latency / Scale Up / Overclock cards share one compact style with Auto Scale Up shown as a
+  header chip.
 - **Boosters page (#740).** A lower-tier merge now fills the next tier's reserve (up to 18) once
   that tier has auto-merge unlocked, so chained auto-merges keep going instead of stalling at 10.
   A timed merge finishing no longer cuts an output that grew past 10 back down to 10. The

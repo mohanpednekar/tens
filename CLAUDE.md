@@ -439,6 +439,10 @@ src/
                                each `ByteFoundryPage` pool card. Full contract (incl. the
                                omitted-`tierIndex` every-lake fallback mode, unused by any current
                                caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
+    icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
+                               Provision Disk status line)
+    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
+                               Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     BuyMaxToggle/index.jsx  ← Buy max mode toggle button (Perks → Toggles only); renders nothing until
@@ -649,10 +653,10 @@ Strict three-layer separation:
    per pool below that pool's `components/DiskArrayRow`s (cache above disks) in the same disclosure
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
-   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered inside
-   the ONE `PoolCard` the ladder's current offer (`getDiskSize`) belongs to (`getPoolIndexForDiskSize`),
-   plus a fallback copy (`provisionDiskButton`) after the Data Stream card for when that card isn't
-   visible yet (`docs/DESIGN_HISTORY.md`: "Provision Disk moved back inside its pool card"). Each disk
+   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
+   the Data Stream card's actions directly below Upgrade Data Stream (hidden while the offer's pool is
+   rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
+   (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
@@ -910,7 +914,7 @@ it applies, full-buffer overflow yields to it so a tick isn't credited twice; un
 block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
 pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
-order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🎯 `<cost>`" control that
+order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
 `tickDataLakeAutoConvert` then drives `fillDataLakeManually` one step per tick until affordable, buys
 exactly 1, and clears the flag — "one click, one full fill-then-buy conversion, then stop," never a
@@ -1093,7 +1097,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1967 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1976 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
@@ -1110,7 +1114,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 17 files; the other six are
+  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
+  12 of the 18 files; the other six are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
