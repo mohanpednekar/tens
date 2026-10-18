@@ -385,7 +385,9 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // width doesn't jump when its meaning switches. This bar only ever shows a RATE, never a level (the
 // lake's accumulation has its own bar — see FillableStatCard usage below). The Data Stream card has
 // no lake, so it always renders `mode="multiplier"`. Keeps the role="progressbar"/aria-label/
-// aria-valuenow/min/max contract (always 0..FILL_MULTIPLIER_MAX_PERCENT regardless of mode).
+// aria-valuenow/min/max contract (always 0..FILL_MULTIPLIER_MAX_PERCENT regardless of mode), plus an
+// aria-valuetext with the displayed percentage — the visible label is a descendant of the
+// progressbar, which assistive tech flattens, so the text would otherwise not be exposed.
 const BAR_HEIGHT = 14
 
 const clampBarValue = value => Math.min(FILL_MULTIPLIER_MAX_PERCENT, Math.max(0, value))
@@ -483,6 +485,7 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
         role="progressbar"
         aria-label={ariaLabel}
         aria-valuenow={Math.round(displayPercent)}
+        aria-valuetext={`${Math.round(displayPercent)}%`}
         aria-valuemin={0}
         aria-valuemax={FILL_MULTIPLIER_MAX_PERCENT}
       >
@@ -498,6 +501,7 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
           role="progressbar"
           aria-label={`${ariaLabel} tap bonus`}
           aria-valuenow={Math.round(clampedBonus)}
+          aria-valuetext={`+${Math.round(clampedBonus)}%`}
           aria-valuemin={0}
           aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
         >

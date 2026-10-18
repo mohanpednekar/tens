@@ -350,10 +350,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      dead center — rendered INSIDE the same tappable tile (`FillableStatCard`) for both the Data
      Stream and every pool, as its own full-width row directly under the tile's `TitleRow` (title,
      combined balance/capacity, Speed/Bandwidth), with its rounded percent readout
-     (`BarPercentLabel`) centered inside the bar (page-colored text), or just past the fill's end in
-     the bar's own color when the fill is under `BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT` of the track.
-     The normal percentage is accent blue; while a tap bonus is active its own bar carries a yellow
-     `+NN% 👆` label. This replaced an earlier
+     (`BarPercentLabel`) centered inside the bar (page-colored text), or, when the fill is under
+     `BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT` of the track (a small tap bonus, the 50% floor/lake rate),
+     just past the fill's end in the plain text color with a surface-colored halo, since that spot can
+     sit on the tile's green progress fill. The base bar is accent blue; while a tap bonus
+     is active its own yellow bar carries a `+NN% 👆` label. Each track also exposes its displayed
+     percentage as `aria-valuetext` (the visible label sits inside the progressbar, which assistive
+     tech flattens). This replaced an earlier
      corner needle-speedometer (a half-circle dial sweeping 0%→100%→200% with a percent readout
      beneath it, itself replacing a still-earlier full-width linear two-tone bar) — the dial took too
      much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
