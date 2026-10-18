@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).
 - **Buy max shows levels + partial progress.** The Buy button's progress text is now `<full levels>+<affordable purchases toward the next level>/<block size>` (e.g. `4+3/8`) instead of `+N Lv`, and its cost is that of the highest level reached. Gating and spending are unchanged.
 - **Buy max shows only the highest level's cost.** With Buy max on, a tier's Buy button now displays
   the cost of the highest level it would buy (in the usual units) instead of the combined total. The
