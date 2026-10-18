@@ -144,9 +144,8 @@ see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its percent read
 bar (or just past a too-narrow fill). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
-`PoolTitleToggle` — the "<symbol> Pool" title alone (`role="button"`, `aria-expanded`,
-`aria-label="expand/collapse pool {n}"`), nested inside the tap button (which uses `aria-disabled`, not the
-native `disabled` attribute, so the title still works while the buffer is full). An earlier iteration had the header in its own
+`PoolTitleToggle` — the "<symbol> Pool" title alone (`aria-expanded`,
+`aria-label="expand/collapse pool {n}"`), a real `<button>` that is a sibling of the stretched `PoolTapButton` (tap target) rather than nested in it, so a disabled tap never blocks it. An earlier iteration had the header in its own
 separate `PoolSummaryButton` (toggling expand/collapse) ABOVE the balance tile instead of merged
 into it — folded together per player feedback that the two looked like disconnected pieces rather
 than one control. A still-earlier iteration also rendered a second, always-visible, non-interactive

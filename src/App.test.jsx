@@ -3244,7 +3244,7 @@ test('the pool bar shows the Data Lake rate (and the tile is inert) while the la
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
-  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toHaveAttribute('aria-disabled', 'true')
+  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
@@ -3312,7 +3312,7 @@ test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplie
     .toHaveAttribute('aria-valuetext', `${FILL_MULTIPLIER_MAX_PERCENT}%`)
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuetext', `+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}%`)
-  expect(screen.getByRole('button', { name: /tap pool 1 memory/i }))
+  expect(screen.getByRole('region', { name: 'pool 1' }))
     .toHaveTextContent(`${FILL_MULTIPLIER_MAX_PERCENT}%+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
   expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
@@ -3348,7 +3348,7 @@ test('a pool\'s own Memory tap target disables once that pool\'s own tap bonus i
   render(<App />)
 
   const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
-  expect(poolTapTarget).toHaveAttribute('aria-disabled', 'true')
+  expect(poolTapTarget).toBeDisabled()
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })

@@ -378,9 +378,8 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      renders as the first line inside that same button; disk status/count is omitted. The
      `MultiplierBar` is the second line. This is the
      same structure the Data Stream's own tile uses. Expand/collapse is the "<symbol> Pool" title alone
-     (`PoolTitleToggle`, `role="button"` + `aria-expanded`, nested in the tap button — the tap button
-     uses `aria-disabled` rather than the native `disabled` attribute so the title stays clickable
-     while the buffer is full).
+     (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
+     `PoolTapButton` behind the readouts, so the two never nest and a disabled tap can't block the title).
 5. **Upgrade Data Stream** (`upgradeIntroCapacity`, the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current
