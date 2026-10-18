@@ -8739,6 +8739,14 @@ describe('buyGlobalTickspeedMultiplier', () => {
     expect(after.resources[BYTES_ID]).toBe(0)
   })
 
+  it('also deducts the mirrored Bits from the Money balance (clamped at 0)', () => {
+    const base = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
+    const rich = { ...base, resources: { ...base.resources, [MONEY_ID]: 1000 } }
+    expect(buyGlobalTickspeedMultiplier(rich).resources[MONEY_ID]).toBe(1000 - 10 * BITS_PER_BYTE)
+    const poor = { ...base, resources: { ...base.resources, [MONEY_ID]: 5 } }
+    expect(buyGlobalTickspeedMultiplier(poor).resources[MONEY_ID]).toBe(0)
+  })
+
   it('costs 100 Bytes for level 1 → 2, another power of ten each level after that', () => {
     const state = withBytes(
       withGlobalTickspeedMultiplier(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 1),
@@ -11840,7 +11848,7 @@ describe('Buy max mode', () => {
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
     expect(after.resources[MONEY_ID]).toBe(blockCost(3) - 1)
     expect(getTierMaxLevelsPreview(withMoney(createInitialGameState(), money), tensTier.id))
-      .toEqual({ levels: 2, cost: blockCost(1) + blockCost(2), lastLevelCost: blockCost(2) })
+      .toEqual({ levels: 2, cost: blockCost(1) + blockCost(2), lastLevelCost: blockCost(2), partialQuantity: 7, partialCost: getTierQuantityCost(tensTier, 3, 8, 0, 7) })
   })
 
   it('never mixes a partial level into a full-level click: partial progress gets its own ordinary click', () => {
@@ -11849,7 +11857,7 @@ describe('Buy max mode', () => {
     expect(after).toEqual(buyTierQuantity(tensTier.id, Number.MAX_SAFE_INTEGER)(state))
     expect(after.purchaseLevels[tensTier.id]).toBe(2)
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
-    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0 })
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 })
   })
 
   it('falls back to an ordinary partial Buy when not even one full level is affordable', () => {
@@ -11862,7 +11870,7 @@ describe('Buy max mode', () => {
   it('is a same-reference no-op while production is frozen', () => {
     const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
     expect(buyTierMaxLevels(tensTier.id)(state)).toBe(state)
-    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0 })
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 })
   })
 
   it('repeatPurchaseMax chains a single-level action until it stops buying', () => {

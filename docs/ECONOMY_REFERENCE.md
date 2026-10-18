@@ -1753,7 +1753,7 @@ milestones" below), spending no PP at all.
   `autoGlobalTickspeed = true`. Same one-time-unlock pattern as Auto Scale Up rather than Auto-Prestige's
   leveled one, since there's no cadence to speed up here either: once bought, `tickGame` calls
   `buyGlobalTickspeedMultiplier` every tick (edge-triggered, re-validating its own eligibility
-  internally — a no-op unless `isGlobalTickspeedMultiplierUnlocked` and there's enough Money) whenever
+  internally — a no-op unless `isGlobalTickspeedMultiplierUnlocked` and there are enough Bytes) whenever
   `autoGlobalTickspeedEnabled` is also true. This only
   automates the *clicking* — it doesn't change what currency the multiplier costs or its unlock
   prerequisite. No-op if already bought, insufficient points, or frozen. Permanent — never reset.
@@ -1923,17 +1923,17 @@ were removed outright rather than replaced. Overclock scales this one shared ste
   level.
 - `getGlobalTickspeedMultiplierCost(currentLevel) = 10 ** (currentLevel + 1)` — `currentLevel` is the
   level *before* the purchase (`null`/not-yet-bought treated as 0): 10 Money to activate (level 0 → 1),
-  100 Money for the next level, 1000 after that, and so on — spent from the same base-currency balance
-  as buying tiers themselves (`resources[MONEY_ID]`), with no "leave 1 behind" reserve, since Money isn't
-  itself an "owned" generator count (same as `buyTier`).
+  100 for the next level, 1000 after that, and so on — paid in Factory Bytes (`resources[BYTES_ID]`);
+  the mirrored Bits (`cost × BITS_PER_BYTE`) are deducted from `resources[MONEY_ID]` too (clamped at 0)
+  so the headline balance drops like any other purchase.
 - `getGlobalTickspeedProductionMultiplier(level, overclockCount = 0)` returns
   `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`.
   `null` is level 0 (×1); every level uses exactly the same step (no milestone bonuses).
-- `buyGlobalTickspeedMultiplier(state)` spends Money to raise the level by 1 — a no-op if
-  `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough
-  Money. `state.globalTickspeedMultiplier` (the level) **resets to `null` (not-yet-bought) on both a
+- `buyGlobalTickspeedMultiplier(state)` spends Bytes (plus the mirrored Bits) to raise the level by 1 — a no-op if
+  `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there aren't enough
+  Bytes. `state.globalTickspeedMultiplier` (the level) **resets to `null` (not-yet-bought) on both a
   real Prestige (`prestigeGame`) and Scale Up (`scaleUpGame`)** — the same run-scoped reset the
-  per-tier `tickspeedLevels` gets, since both are funded from the same Money balance prestige/Scale Up
+  per-tier `tickspeedLevels` gets, since both are funded from balances prestige/Scale Up
   already wipe; unlike every other automation toggle/level in this section, which both leave
   untouched; see "Scale Up" below. The `autoGlobalTickspeed` automation toggle itself still carries over
   unchanged, so a Prestige or Scale Up with Tickspeed Autobuyer already bought just starts re-buying
@@ -2931,7 +2931,7 @@ purchases were manual or automatic.
 | `buyAutoPrestige` | `state → state` | Returns the same state if `isProductionFrozen` or if there aren't enough unspent Prestige Points for the next level; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getAutoPrestigeCost(currentLevel)` — a single global upgrade track, not per-tier |
 | `buyAutoPrestigeAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if Auto-Prestige hasn't been activated yet (`state.autoPrestige` is still `null` — this automates RE-leveling only, not the initial activation), if already bought, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_PRESTIGE_AUTOBUYER_COST` PP and permanently sets `autoPrestigeAutobuyer = true`, making `tickGame` call `buyAutoPrestige` automatically every tick |
 | `isGlobalTickspeedMultiplierUnlocked` | `state → bool` | `owned[TIER_DEFINITIONS[1].id] >= 1 \|\| globalTickspeedMultiplier != null` — gates the global tickspeed multiplier's *initial* activation on owning at least 1 of the second tier; once active it stays true regardless of tier02's current owned count |
-| `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there isn't enough Money; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getGlobalTickspeedMultiplierCost(currentLevel)`, spending `resources[MONEY_ID]` directly (no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
+| `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there aren't enough Bytes; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getGlobalTickspeedMultiplierCost(currentLevel)`, spending `resources[BYTES_ID]` and deducting `cost × BITS_PER_BYTE` from `resources[MONEY_ID]` (clamped at 0; no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
 | `buyAutoScaleUp` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoScaleUp` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_SCALE_UP_COST` PP and permanently sets `autoScaleUp = true`, making `tickGame` call `scaleUpGame` automatically every tick, including final-tier claims whose 3/6/9 cadence leaves Overclock available at level 5 |
 | `buyTickspeedAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoGlobalTickspeed` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `TICKSPEED_AUTOBUYER_COST` PP and permanently sets `autoGlobalTickspeed = true`, making `tickGame` call `buyGlobalTickspeedMultiplier` automatically every tick |
 | `setAutoScaleUpEnabled` | `enabled → state → state` | Unconditional (not gated by `isProductionFrozen`) and a no-op if `autoScaleUp` is still falsy; otherwise sets `autoScaleUpEnabled` to `!!enabled`, pausing/resuming `tickGame`'s automatic `scaleUpGame` call without touching `autoScaleUp` itself — see "Pause/resume for the global automations" above |

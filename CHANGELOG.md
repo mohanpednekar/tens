@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Buy button progress uses a plus sign throughout.** Every count on the tier Buy button's progress text is prefixed with `+` (`+3/8`, `+4`, `+4 +3/8`); zero parts stay hidden.
+- **Buy button no longer mixes bought and affordable counts.** The ordinary Buy button's progress text shows only the affordable count (`+3/8`) when anything is affordable, else the bought count (`3/8`); the old `3+3/8` was misleading.
+- **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).
+- **Buy max shows levels + partial progress.** The Buy button's progress text is now `<full levels>+<affordable purchases toward the next level>/<block size>` (e.g. `4+3/8`) instead of `+N Lv`, and its cost is that of the highest level reached. Gating and spending are unchanged.
 - **Buy max shows only the highest level's cost.** With Buy max on, a tier's Buy button now displays
   the cost of the highest level it would buy (in the usual units) instead of the combined total. The
   button is still gated on, and a click still spends, the full cost.
@@ -139,6 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+
+- **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
 
 - **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
   their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split

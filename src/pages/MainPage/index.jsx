@@ -1423,9 +1423,9 @@ const MainPage = ({ game }) => {
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
           // Buy max mode (see BuyMaxToggle/buyTierMaxLevels): when a click would buy one or more
           // FULL levels, preview those instead of the single-level fill below.
-          const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0 }
+          const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
           const buyLabel = maxLevelsPreview.levels > 0
-            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} total; highest level costs ${formatCurrency(maxLevelsPreview.lastLevelCost)} (${formatAmount(completedLevels)} completed levels)`
+            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} total; highest level costs ${formatCurrency(maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost)}${maxLevelsPreview.partialQuantity > 0 ? ` (${maxLevelsPreview.partialQuantity} of ${purchaseBlockSize} purchases toward the next level)` : ''} (${formatAmount(completedLevels)} completed levels)`
             : `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
@@ -1438,7 +1438,17 @@ const MainPage = ({ game }) => {
           // a column across tier rows regardless of the cost string's length. The level number
           // itself isn't shown here (still available via aria-label and the row's Details
           // disclosure) — this is purely "how close is the current level."
-          const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)} Lv` : `${formatAmount(doneInBlock)}${affordableQuantity > 0 ? `+${formatAmount(affordableQuantity)}` : ''}/${formatAmount(purchaseBlockSize)}`
+          // Every count carries a "+" and zero parts are omitted: Buy-max shows "+<levels>" /
+          // "+<levels> +<n>/<block>", the ordinary Buy shows "+<affordable>/<block>" when anything
+          // is affordable, else "+<done>/<block>", and nothing at 0/<block>.
+          const blockText = formatAmount(purchaseBlockSize)
+          const buyLevelQuantityText = maxLevelsPreview.levels > 0
+            ? `+${formatAmount(maxLevelsPreview.levels)}${maxLevelsPreview.partialQuantity > 0 ? ` +${formatAmount(maxLevelsPreview.partialQuantity)}/${blockText}` : ''}`
+            : affordableQuantity > 0
+              ? `+${formatAmount(affordableQuantity)}/${blockText}`
+              : doneInBlock > 0
+                ? `+${formatAmount(doneInBlock)}/${blockText}`
+                : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
@@ -1565,8 +1575,8 @@ const MainPage = ({ game }) => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <BuyButtonIcon>🛒 {buyLevelQuantityText} </BuyButtonIcon>
-                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? maxLevelsPreview.lastLevelCost : displayCost)}</BuyButtonCostLabel>
+                <BuyButtonIcon>🛒{buyLevelQuantityText && ` ${buyLevelQuantityText}`} </BuyButtonIcon>
+                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? (maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost) : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
