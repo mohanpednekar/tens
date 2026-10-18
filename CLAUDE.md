@@ -909,8 +909,8 @@ from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right a
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
-block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
-pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
+block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while a running Upgrade Data Stream
+pulls from the Data Stream. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
 order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
@@ -1098,7 +1098,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1976 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1979 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
   'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme

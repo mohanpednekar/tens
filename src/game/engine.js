@@ -2854,7 +2854,7 @@ export const tickPoolBufferFill = elapsedSeconds => state => {
 // array bounds.
 export const normalizePoolMemoryCapacity = state => {
   if (!state?.intro) return state
-  // An armed Upgrade Data Stream (see pickIntroCapacityMilestone) survives a reload; only a flag
+  // An armed Upgrade Data Stream (see pickIntroCapacityMilestone) survives a reload; only a run
   // that could never fire (no byte yet, or Capacity already at its cap) is cleared.
   const staleQueue = Boolean(state.intro.capacityUpgradeQueued) &&
     (!state.intro.byteCreated || isMemoryCapacityAtCap(state))
@@ -3208,7 +3208,7 @@ export const upgradePoolCapacity = state => {
 }
 
 // Shared capacity doubling (plus its compute wipe and main-game latch) for both the instant
-// full-Buffer upgrade above and the progress-bar upgrade fired from tickIntroProduction.
+// full-Buffer upgrade above and the progress-bar upgrade fired from tickCapacityUpgradeDrain.
 const doubleIntroCapacity = state => {
   const afterWipe = isComputeCoreConversionUnlocked(state)
     ? eraseAllComputeTokens(state)
@@ -3250,7 +3250,8 @@ export const queueIntroCapacityUpgrade = state => {
 export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
   if (!state.intro?.capacityUpgradeQueued) return state
   if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
-  const progress = state.intro.capacityUpgradeProgress ?? 0
+  const stored = state.intro.capacityUpgradeProgress
+  const progress = Number.isFinite(stored) && stored > 0 ? stored : 0
   const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, state.intro.capacity - progress)
   const next = {
     ...state,

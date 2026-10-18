@@ -100,7 +100,9 @@ const COMPUTE_RESERVE_MERGE_STARTS = [
   isComputeSupercomputersMergeStartAvailable,
 ]
 
-const isMemoryFull = state => (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0)
+// Not "full" for attention purposes while an Upgrade Data Stream runs — nothing is waiting on the player.
+const isMemoryFull = state =>
+  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued
 
 const isCombineAvailable = state =>
   !(state.intro?.byteCreated ?? false) && (state.intro?.bits ?? 0) >= INTRO_BYTE_COMBINE_COST

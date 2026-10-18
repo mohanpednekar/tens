@@ -78,6 +78,16 @@ describe('navAttention', () => {
     expect(getNavAttention(state).foundry).toBe('high')
   })
 
+  it('does not light Foundry for a full Buffer while an Upgrade Data Stream is running', () => {
+    const state = withIntro({
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      capacityUpgradeQueued: true,
+    })
+    expect(hasFoundryAttention(state)).toBe(false)
+  })
+
   it('lights Foundry when combine into a Byte is ready', () => {
     const state = withIntro({
       bits: INTRO_BYTE_COMBINE_COST,
