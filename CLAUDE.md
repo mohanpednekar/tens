@@ -999,6 +999,9 @@ new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
 
+**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
+heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
+
 ## Path aliases
 
 `components/X` → `src/components/X`, `game/X` → `src/game/X`, `pages/X` → `src/pages/X`, `theme/X` →

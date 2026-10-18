@@ -239,7 +239,7 @@ const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
 
-  ${props => (props.$actionable || props.$expandable) && css`
+  ${props => props.$actionable && css`
     cursor: pointer;
 
     &:hover {
@@ -254,12 +254,22 @@ const CenteredCard = styled(StatCard)`
     }
   `}
 
-  ${props => props.$expandable && css`
-    &:focus-visible {
-      outline: 2px solid ${props.theme.color.accent};
-      outline-offset: 2px;
-    }
-  `}
+`
+
+// Expand/collapse trigger for the global-multipliers breakdown: just the balance figure, not the
+// whole card (app-wide convention: only the name/label of a disclosure toggles it).
+const MoneyHeroToggle = styled.div`
+  cursor: pointer;
+  border-radius: ${props => props.theme.radius.sm};
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
@@ -682,18 +692,6 @@ const Disclosure = styled.details`
     margin-top: 0.3rem;
   }
 `
-
-// Clicking <summary> already natively toggles a <details> element open/closed; clicking
-// anywhere else inside it (e.g. the revealed status line itself) doesn't, by default, so this
-// force-closes it instead — mirroring the tier row's own "click anywhere on the tile also
-// toggles its details" convention (see TierLine's onClick below), just scoped to collapsing only
-// (opening still requires the summary specifically, per Disclosure's own contract above). Safe to
-// mutate `.open` directly since every Disclosure here is uncontrolled (no `open` prop is ever
-// passed by React).
-const collapseDisclosure = event => {
-  if (event.target.closest('summary')) return
-  event.currentTarget.open = false
-}
 
 // Owned count lives on the first line, right-aligned to the row center (pushed to the end of
 // the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
@@ -1194,23 +1192,23 @@ const MainPage = ({ game }) => {
         $belowBar={showTopPrestigeBar}
         $belowBarHeight={topPrestigeBarHeight}
       >
-        <CenteredCard
-          aria-controls="global-multipliers-details"
-          aria-expanded={showGlobalMultipliers}
-          aria-label="money display"
-          $expandable
-          $raised
-          onClick={toggleGlobalMultipliers}
-          onKeyDown={event => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            toggleGlobalMultipliers()
-          }}
-          role="button"
-          tabIndex={0}
-          title="Show or hide the global production multipliers currently in effect"
-        >
-          <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+        <CenteredCard $raised>
+          <MoneyHeroToggle
+            aria-controls="global-multipliers-details"
+            aria-expanded={showGlobalMultipliers}
+            aria-label="money display"
+            onClick={toggleGlobalMultipliers}
+            onKeyDown={event => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+              toggleGlobalMultipliers()
+            }}
+            role="button"
+            tabIndex={0}
+            title="Show or hide the global production multipliers currently in effect"
+          >
+            <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+          </MoneyHeroToggle>
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">
@@ -1294,7 +1292,7 @@ const MainPage = ({ game }) => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global latency panel">
-          <Disclosure onClick={collapseDisclosure}>
+          <Disclosure>
             <summary><h2>Latency</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
@@ -1621,7 +1619,7 @@ const MainPage = ({ game }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <Disclosure onClick={collapseDisclosure}>
+          <Disclosure>
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>

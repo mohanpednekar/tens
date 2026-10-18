@@ -1656,7 +1656,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
 })
 
-test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
+test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1672,13 +1672,10 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   await user.click(heading)
   expect(statusLine).toBeVisible()
 
-  // Clicking the revealed line itself (not the heading) also collapses it.
+  // Only the heading toggles — clicking the revealed line itself does nothing.
   await user.click(statusLine)
-  expect(statusLine).not.toBeVisible()
-
-  await user.click(heading)
   expect(statusLine).toBeVisible()
-  // Clicking the heading again (native <summary> toggle) still works too.
+
   await user.click(heading)
   expect(statusLine).not.toBeVisible()
 })
