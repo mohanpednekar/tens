@@ -104,7 +104,7 @@ const TapArea = styled.button`
 // Contrast hierarchy: cards stand out from the page (stronger edge + shadow) while the tiles and
 // buttons inside them sit closer to the card's own surface (softened sunken fill).
 const cardEdge = ({ theme }) => css`
-  border-color: ${theme.color.borderStrong};
+  border: 1.5px solid color-mix(in srgb, ${theme.color.borderStrong} 65%, ${theme.color.text});
   box-shadow: ${theme.shadow.md};
 `
 const softInnerFill = ({ theme }) =>
@@ -119,6 +119,8 @@ const ActionsRow = styled.div`
 
   button {
     background-color: ${softInnerFill};
+    border-width: 1px;
+    border-color: color-mix(in srgb, currentColor 45%, transparent);
   }
 `
 
@@ -345,6 +347,7 @@ const FillableStatCard = styled.div`
   align-items: center;
   gap: 0.3rem;
   padding: 0.6rem 0.75rem;
+  border: 0;
   border-radius: ${props => props.theme.radius.sm};
   color: ${props => props.theme.color.text};
   ${progressFill}
