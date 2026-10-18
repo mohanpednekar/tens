@@ -79,11 +79,9 @@ const reveal = keyframes`
 // holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) —
 // only rendered at all while expanded, so a collapsed row contributes zero height there. There
 // is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
-// TierNameTrigger, in the 'name' area) is the trigger, and clicking anywhere else on the tile
-// that isn't a button also toggles it (see the row's own onClick below) — a React-controlled
+// TierNameTrigger, in the 'name' area) is the only trigger (no whole-tile click) — a React-controlled
 // disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// cursor: pointer signals the whole tile is clickable; Button's own cursor rule overrides it
-// for the two buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier
+// There used to be a dedicated 'autobuyer' grid row for the per-tier
 // autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
 // single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
 // needs the extra vertical space for it.
@@ -99,7 +97,6 @@ const TierLine = styled(StatCard)`
   row-gap: ${props => props.theme.space.xs};
   padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
-  cursor: pointer;
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
@@ -232,14 +229,13 @@ const SpeedCardsRow = styled.div`
 
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
 // Header that are centered rather than left-aligned. $actionable (used only by the PP display,
-// once Prestige is available) makes the whole card double as the Prestige button, matching the
-// tier rows' own whole-tile-clickable-plus-title pattern (see TierNameTrigger) rather than the
+// once Prestige is available) makes the whole card double as the Prestige button, rather than the
 // "don't combine those on a passive tile" call made for the offline notice card.
 const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
 
-  ${props => (props.$actionable || props.$expandable) && css`
+  ${props => props.$actionable && css`
     cursor: pointer;
 
     &:hover {
@@ -254,12 +250,22 @@ const CenteredCard = styled(StatCard)`
     }
   `}
 
-  ${props => props.$expandable && css`
-    &:focus-visible {
-      outline: 2px solid ${props.theme.color.accent};
-      outline-offset: 2px;
-    }
-  `}
+`
+
+// Expand/collapse trigger for the global-multipliers breakdown: just the balance figure, not the
+// whole card (app-wide convention: only the name/label of a disclosure toggles it).
+const MoneyHeroToggle = styled.div`
+  cursor: pointer;
+  border-radius: ${props => props.theme.radius.sm};
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
@@ -475,17 +481,10 @@ const BalancesSentinel = styled.div`
 const TierNameTrigger = styled.div`
   align-items: baseline;
   column-gap: ${props => props.theme.space.sm};
-  cursor: pointer;
   display: flex;
   grid-area: name;
   min-width: 0;
   width: 100%;
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-    border-radius: ${props => props.theme.radius.sm};
-  }
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -640,8 +639,20 @@ const TierName = styled.h3`
   }
 `
 
+// The only expand/collapse trigger for a tier row's details (role="button" set at the call site).
 const TierNameLabel = styled.span`
+  cursor: pointer;
   flex-shrink: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${props => props.theme.radius.sm};
+  }
 `
 
 // A native click-to-expand disclosure for a genuinely live number that would otherwise need its
@@ -677,18 +688,6 @@ const Disclosure = styled.details`
     margin-top: 0.3rem;
   }
 `
-
-// Clicking <summary> already natively toggles a <details> element open/closed; clicking
-// anywhere else inside it (e.g. the revealed status line itself) doesn't, by default, so this
-// force-closes it instead — mirroring the tier row's own "click anywhere on the tile also
-// toggles its details" convention (see TierLine's onClick below), just scoped to collapsing only
-// (opening still requires the summary specifically, per Disclosure's own contract above). Safe to
-// mutate `.open` directly since every Disclosure here is uncontrolled (no `open` prop is ever
-// passed by React).
-const collapseDisclosure = event => {
-  if (event.target.closest('summary')) return
-  event.currentTarget.open = false
-}
 
 // Owned count lives on the first line, right-aligned to the row center (pushed to the end of
 // the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
@@ -867,7 +866,7 @@ const MainPage = ({ game }) => {
   // instead of the full row) regardless of whether the span is expressed via a named area or
   // explicit grid-column line numbers. This keeps TierName as the visible trigger and the
   // details content spanning the full row width, at the cost of reimplementing the
-  // expand/collapse and keyboard behavior manually (see TierNameTrigger below) instead of getting
+  // expand/collapse and keyboard behavior manually (see TierNameLabel below) instead of getting
   // it for free from native <details>.
   const [openTierDetailIds, setOpenTierDetailIds] = useState(() => new Set())
   const toggleTierDetails = tierId => setOpenTierDetailIds(previous => {
@@ -1189,23 +1188,23 @@ const MainPage = ({ game }) => {
         $belowBar={showTopPrestigeBar}
         $belowBarHeight={topPrestigeBarHeight}
       >
-        <CenteredCard
-          aria-controls="global-multipliers-details"
-          aria-expanded={showGlobalMultipliers}
-          aria-label="money display"
-          $expandable
-          $raised
-          onClick={toggleGlobalMultipliers}
-          onKeyDown={event => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            toggleGlobalMultipliers()
-          }}
-          role="button"
-          tabIndex={0}
-          title="Show or hide the global production multipliers currently in effect"
-        >
-          <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+        <CenteredCard $raised>
+          <MoneyHeroToggle
+            aria-controls="global-multipliers-details"
+            aria-expanded={showGlobalMultipliers}
+            aria-label="money display"
+            onClick={toggleGlobalMultipliers}
+            onKeyDown={event => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+              toggleGlobalMultipliers()
+            }}
+            role="button"
+            tabIndex={0}
+            title="Show or hide the global production multipliers currently in effect"
+          >
+            <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+          </MoneyHeroToggle>
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">
@@ -1289,7 +1288,7 @@ const MainPage = ({ game }) => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global latency panel">
-          <Disclosure onClick={collapseDisclosure}>
+          <Disclosure>
             <summary><h2>Latency</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
@@ -1461,31 +1460,22 @@ const MainPage = ({ game }) => {
               aria-label={`${tier.name} layer`}
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
-              onClick={event => {
-                // TierNameTrigger's own click handler (below) stops propagation before a click
-                // reaches here, so only a click elsewhere on the tile arrives — still skip a
-                // button, so Buy/tickspeed purchases never also toggle the disclosure.
-                if (event.target.closest('button')) return
-                toggleTierDetails(tier.id)
-              }}
             >
-              <TierNameTrigger
-                role="button"
-                tabIndex={0}
-                aria-expanded={isDetailsOpen}
-                aria-controls={detailsId}
-                onClick={event => {
-                  event.stopPropagation()
-                  toggleTierDetails(tier.id)
-                }}
-                onKeyDown={event => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return
-                  event.preventDefault()
-                  toggleTierDetails(tier.id)
-                }}
-              >
+              <TierNameTrigger>
                 <TierName>
-                  <TierNameLabel title={tier.name}>
+                  <TierNameLabel
+                    title={tier.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isDetailsOpen}
+                    aria-controls={detailsId}
+                    onClick={() => toggleTierDetails(tier.id)}
+                    onKeyDown={event => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return
+                      event.preventDefault()
+                      toggleTierDetails(tier.id)
+                    }}
+                  >
                     <VisuallyHidden>{tier.name}</VisuallyHidden>
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
@@ -1625,7 +1615,7 @@ const MainPage = ({ game }) => {
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <Disclosure onClick={collapseDisclosure}>
+          <Disclosure>
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>

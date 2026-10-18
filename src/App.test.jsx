@@ -726,7 +726,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.1\)/i)
 })
 
-test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
+test('clicking elsewhere on a tier row\'s tile (not the name) does not toggle its details', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -739,14 +739,12 @@ test('clicking anywhere else on a tier row\'s tile (not a button) also expands i
   const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
-  // Click the row's own container, not the name trigger and not a button.
-  await user.click(megabytesLayer)
-
-  expect(trigger).toHaveAttribute('aria-expanded', 'true')
-
-  // Clicking the tile again collapses it back.
+  // Only the name toggles — clicking the row's own container does nothing.
   await user.click(megabytesLayer)
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+  await user.click(trigger)
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
 })
 
 test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {
@@ -1658,7 +1656,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
 })
 
-test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
+test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -1674,13 +1672,10 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   await user.click(heading)
   expect(statusLine).toBeVisible()
 
-  // Clicking the revealed line itself (not the heading) also collapses it.
+  // Only the heading toggles — clicking the revealed line itself does nothing.
   await user.click(statusLine)
-  expect(statusLine).not.toBeVisible()
-
-  await user.click(heading)
   expect(statusLine).toBeVisible()
-  // Clicking the heading again (native <summary> toggle) still works too.
+
   await user.click(heading)
   expect(statusLine).not.toBeVisible()
 })
@@ -3249,7 +3244,7 @@ test('the pool bar shows the Data Lake rate (and the tile is inert) while the la
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
-  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
+  expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toHaveAttribute('aria-disabled', 'true')
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
@@ -3353,7 +3348,7 @@ test('a pool\'s own Memory tap target disables once that pool\'s own tap bonus i
   render(<App />)
 
   const poolTapTarget = screen.getByRole('button', { name: /tap pool 1 memory/i })
-  expect(poolTapTarget).toBeDisabled()
+  expect(poolTapTarget).toHaveAttribute('aria-disabled', 'true')
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT))
 })

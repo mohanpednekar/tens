@@ -83,11 +83,11 @@ const TapArea = styled.button`
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.05s ease;
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     filter: brightness(1.2);
   }
 
-  &:active:not(:disabled) {
+  &:active:not(:disabled):not([aria-disabled='true']) {
     transform: scale(0.98);
   }
 
@@ -158,32 +158,23 @@ const DataStreamCard = styled(StatCard)`
   gap: ${props => props.theme.space.md};
 `
 
-// Expand/collapse a pool card. Title/bar/Bandwidth now render INSIDE the pool's own tappable
-// Memory buffer button (see FillableStatCard below) rather than a separate header button above
-// it — a <button> can't nest inside another <button>, so this is a plain sibling: a slim,
-// full-width strip right below the merged button, just a centered chevron, rather than a second
-// full header row.
-const ExpandToggleButton = styled.button`
-  width: 100%;
+// Expand/collapse trigger for a pool card: just the "<symbol> Pool" title. It sits inside the pool's
+// tappable buffer button, so it is a role="button" span (a real <button> can't nest) that stops
+// propagation so the tap-to-boost never also fires.
+const PoolTitleToggle = styled.span`
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  background: transparent;
-  color: ${props => props.theme.color.textMuted};
-  font-size: 0.75em;
-  line-height: 1;
+  align-items: baseline;
+  gap: ${props => props.theme.space.xs};
   cursor: pointer;
-  padding: 0.2rem;
   border-radius: ${props => props.theme.radius.sm};
 
   &:hover {
-    background: ${props => props.theme.color.surfaceSunken};
+    text-decoration: underline;
   }
 
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: -2px;
+    outline-offset: 2px;
   }
 `
 
@@ -278,11 +269,11 @@ const FillableStatCard = styled.div`
     cursor: pointer;
     transition: filter 0.15s ease, transform 0.05s ease;
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled):not([aria-disabled='true']) {
       filter: brightness(1.2);
     }
 
-    &:active:not(:disabled) {
+    &:active:not(:disabled):not([aria-disabled='true']) {
       transform: scale(0.98);
     }
 
@@ -291,7 +282,8 @@ const FillableStatCard = styled.div`
       outline-offset: 2px;
     }
 
-    &:disabled {
+    &:disabled,
+    &[aria-disabled='true'] {
       cursor: not-allowed;
     }
   `}
@@ -879,19 +871,26 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
+        const poolTapDisabled = poolBufferFull || lakeDraining || poolMultiplierCapped
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             {/* Title/Speed/bar/balance render INSIDE this same tappable button now (not a
                 separate header button above it — two buttons can't nest), so one tap both boosts
                 this pool's own multiplier bonus (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
-                game/layers) and shows the full summary in one control. Expand/collapse moves to
-                the slim ExpandToggleButton strip below. Same FillableStatCard component Data
+                game/layers) and shows the full summary in one control. Expand/collapse is the
+                "<symbol> Pool" title alone (PoolTitleToggle). Same FillableStatCard component Data
                 Stream's own tap tile uses — see FillableStatCard above. */}
             <FillableStatCard
               as="button"
               type="button"
-              onClick={() => actions.tapPoolBuffer(poolIndex)}
-              disabled={poolBufferFull || lakeDraining || poolMultiplierCapped}
+              onClick={() => {
+                if (poolTapDisabled) return
+                actions.tapPoolBuffer(poolIndex)
+              }}
+              // aria-disabled, not the native `disabled` attribute: browsers swallow clicks on
+              // descendants of a disabled <button>, which would make the nested PoolTitleToggle
+              // un-clickable exactly when the buffer is full.
+              aria-disabled={poolTapDisabled}
               aria-label={`tap pool ${poolIndex} memory`}
               title={
                 poolBufferFull
@@ -905,8 +904,25 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             >
               <TitleRow>
                 <SectionTitle>
-                  <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
-                  <span>Pool</span>
+                  <PoolTitleToggle
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isExpanded}
+                    aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
+                    onClick={event => {
+                      event.stopPropagation()
+                      setExpandedPoolIndex(isExpanded ? 0 : poolIndex)
+                    }}
+                    onKeyDown={event => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return
+                      event.preventDefault()
+                      event.stopPropagation()
+                      setExpandedPoolIndex(isExpanded ? 0 : poolIndex)
+                    }}
+                  >
+                    <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
+                    <span>Pool</span>
+                  </PoolTitleToggle>
                 </SectionTitle>
                 <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
                 <SpeedText>⚡ {formatDiskSize(poolBandwidth)}/s</SpeedText>
@@ -930,14 +946,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 aria-valuemax={100}
               />
             </FillableStatCard>
-            <ExpandToggleButton
-              aria-expanded={isExpanded}
-              aria-label={`${isExpanded ? 'collapse' : 'expand'} pool ${poolIndex}`}
-              onClick={() => setExpandedPoolIndex(isExpanded ? 0 : poolIndex)}
-              type="button"
-            >
-              {isExpanded ? '▲' : '▼'}
-            </ExpandToggleButton>
             {isExpanded && (
               <>
                 {poolSizes.map(size => (
