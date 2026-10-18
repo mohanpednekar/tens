@@ -804,8 +804,7 @@ and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 
 (like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
 every other consumer — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
-running the button is hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control
-returns the bar's bits to the Buffer (`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
+running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
 the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
 ×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
