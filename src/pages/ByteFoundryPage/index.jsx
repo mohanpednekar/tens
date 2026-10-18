@@ -708,7 +708,6 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
-  // While the upgrade runs, the tile's bar IS the upgrade bar: empty at the click, full when it fires.
   const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
@@ -865,14 +864,17 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </Button>
           )}
 
-          {/* While the upgrade runs the same button becomes an inert progress bar (its fill is
-              intro.capacityUpgradeProgress / capacity); there is no cancel. */}
+          {/* While the upgrade runs the same button becomes an inert, full-strength progress bar (aria-disabled, not
+              `disabled`, so it keeps its colors and pulse); its fill is intro.capacityUpgradeProgress /
+              capacity, there is no cancel, and it is clickable again once the upgrade completes. */}
           {intro.byteCreated && (
             <MilestonesRow>
               <Button
                 aria-label="upgrade data stream"
-                disabled={!capacityUpgradeClickable}
-                onClick={actions.pickIntroCapacityMilestone}
+                disabled={!capacityUpgradeClickable && !capacityUpgradeQueued}
+                aria-disabled={capacityUpgradeQueued || undefined}
+                onClick={capacityUpgradeQueued ? undefined : actions.pickIntroCapacityMilestone}
+                style={capacityUpgradeQueued ? { pointerEvents: 'none', cursor: 'default' } : undefined}
                 title={
                   capacityUpgradeQueued
                     ? `Upgrading to ${nextCapacityText} — pulling the Data Stream's base Speed into the bar`

@@ -2890,7 +2890,7 @@ test('starting Upgrade Data Stream turns the same button into an inert progress 
   // Same DOM node, now disabled and showing progress; no Cancel control and no tile status line.
   const running = screen.getByRole('button', { name: /^upgrade data stream$/i })
   expect(running).toBe(upgradeButton)
-  expect(running).toBeDisabled()
+  expect(running).toHaveAttribute('aria-disabled', 'true')
   expect(running).toHaveTextContent(/Upgrading Data Stream/)
   expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
   expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
