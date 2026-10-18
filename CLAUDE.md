@@ -654,7 +654,7 @@ Strict three-layer separation:
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
    display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
-   the Data Stream card's actions directly below Upgrade Data Stream (hidden while the offer's pool is
+   its own standalone "Provision Disk" card directly below the Data Stream card (hidden while the offer's pool is
    rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
    (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.

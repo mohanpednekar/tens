@@ -7,17 +7,17 @@ import StatCard from 'components/StatCard'
 import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${props => props.theme.space.lg};
+  gap: ${props => props.theme.space.md};
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(${props => props.theme.space.xl} + env(safe-area-inset-top))
-    ${props => props.theme.space.md} ${props => props.theme.space.xl};
+  padding: calc(${props => props.theme.space.lg} + env(safe-area-inset-top))
+    ${props => props.theme.space.md} ${props => props.theme.space.lg};
   color: ${props => props.theme.color.text};
 `
 
@@ -101,11 +101,46 @@ const TapArea = styled.button`
   }
 `
 
+// Contrast hierarchy: cards stand out from the page (stronger edge + shadow) while the tiles and
+// buttons inside them sit closer to the card's own surface (softened sunken fill).
+const cardEdge = ({ theme }) => css`
+  border: 1.5px solid color-mix(in srgb, ${theme.color.borderStrong} 65%, ${theme.color.text});
+  box-shadow: ${theme.shadow.md};
+`
+const softInnerFill = ({ theme }) =>
+  `color-mix(in srgb, ${theme.color.surfaceSunken} 45%, ${theme.color.surface})`
+
+const softInnerButtons = props => css`
+  button {
+    background-color: ${softInnerFill(props)};
+    border-width: 1px;
+    border-color: color-mix(in srgb, currentColor 45%, transparent);
+  }
+`
+
 const ActionsRow = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   width: 100%;
+  padding: ${props => props.theme.space.sm} 0.5rem 0.5rem;
+
+  ${softInnerButtons}
+`
+
+// Provision Disk is its own card, independent of the Data Stream card above it.
+// Its single button fills the card flush (no card padding, no inner border).
+const ProvisionCard = styled(StatCard)`
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  ${cardEdge}
+
+  button {
+    background-color: ${softInnerFill};
+    border: 0;
+    border-radius: 0;
+  }
 `
 
 // "Upgrade Data Stream" is the single recurring upgrade — placing it in MilestonesRow keeps the
@@ -148,14 +183,35 @@ const MilestoneCostLine = styled.span`
 
 // Data Stream has one shared control surface; each unlocked storage pool gets its own compact
 // derived Bandwidth/Capacity card with its three disk-array rows below it.
+// The summary tile sits flush in its card (no card padding); only the expanded disk/lake content
+// below it (PoolBody) is padded.
 const PoolCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.sm};
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  ${cardEdge}
 `
 
+const PoolBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.sm};
+  padding: ${props => props.theme.space.sm} 0.5rem 0.5rem;
+`
+
+// The Data Stream tile sits flush in its card; the action buttons below it (ActionsRow) are padded.
 const DataStreamCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.md};
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  ${cardEdge}
+
+  > :first-child {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 `
 
 // A pool's summary tile: FillableStatCard supplies the fill background, PoolTapButton is a
@@ -310,9 +366,11 @@ const FillableStatCard = styled.div`
   align-items: center;
   gap: 0.3rem;
   padding: 0.6rem 0.75rem;
+  border: 0;
   border-radius: ${props => props.theme.radius.sm};
   color: ${props => props.theme.color.text};
   ${progressFill}
+  background-color: ${softInnerFill};
 
   ${props => props.$upgrading && `
     box-shadow: inset 0 0 0 2px ${props.theme.color.warn};
@@ -344,6 +402,7 @@ const FillableStatCard = styled.div`
 
 const PoolTile = styled(FillableStatCard)`
   position: relative;
+  ${props => props.$expanded && 'border-bottom-left-radius: 0; border-bottom-right-radius: 0;'}
 `
 
 // The balance and Capacity figures use compact formatting (see
@@ -814,6 +873,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           />
         </FillableStatCard>
 
+        {(canCombine || intro.byteCreated) && (
         <ActionsRow>
           {canCombine && (
             <Button
@@ -882,9 +942,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </MilestonesRow>
           )}
 
-          {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && provisionDiskButton}
         </ActionsRow>
+        )}
       </DataStreamCard>
+
+      {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && (
+        <ProvisionCard aria-label="Provision Disk">{provisionDiskButton}</ProvisionCard>
+      )}
 
       {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
@@ -934,7 +998,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             {/* One tile: a stretched PoolTapButton (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) sits behind the readouts, and the "<symbol> Pool" title is its own
                 sibling PoolTitleToggle button (expand/collapse) — never nested in the tap button. */}
-            <PoolTile $progress={poolBufferPercent}>
+            <PoolTile $progress={poolBufferPercent} $expanded={isExpanded}>
               <PoolTapButton
                 type="button"
                 onClick={() => actions.tapPoolBuffer(poolIndex)}
@@ -985,12 +1049,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               </PoolTileContent>
             </PoolTile>
             {isExpanded && (
-              <>
+              <PoolBody>
                 {poolSizes.map(size => (
                   <DiskArrayRow key={size} actions={actions} size={size} state={state} />
                 ))}
                 <DataLakePanel actions={actions} state={state} bare tierIndex={poolIndex} />
-              </>
+              </PoolBody>
             )}
           </PoolCard>
         )
