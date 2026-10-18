@@ -141,6 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
+
 - **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
   their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split
   with a wide gap after the first word. Perks rows now line up in fixed columns, automation toggles are

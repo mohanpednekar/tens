@@ -1653,7 +1653,8 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
+  // The mirrored Bits (10 B × 8) are deducted too, so the headline balance drops like any purchase.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
 test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {

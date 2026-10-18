@@ -6347,9 +6347,15 @@ export const buyGlobalTickspeedMultiplier = state => {
   const available = state.resources[BYTES_ID] ?? 0
   if (available < cost) return state
 
+  // Every Byte produced is mirrored into Bits (see tickGame), so spending Bytes also removes the
+  // mirrored Bits — otherwise the headline balance wouldn't drop, unlike every other purchase.
   return {
     ...state,
-    resources: { ...state.resources, [BYTES_ID]: available - cost },
+    resources: {
+      ...state.resources,
+      [BYTES_ID]: available - cost,
+      [MONEY_ID]: clampNonNegative((state.resources[MONEY_ID] ?? 0) - cost * BITS_PER_BYTE),
+    },
     globalTickspeedMultiplier: (currentLevel ?? 0) + 1,
   }
 }

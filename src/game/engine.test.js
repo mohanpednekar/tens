@@ -8739,6 +8739,14 @@ describe('buyGlobalTickspeedMultiplier', () => {
     expect(after.resources[BYTES_ID]).toBe(0)
   })
 
+  it('also deducts the mirrored Bits from the Money balance (clamped at 0)', () => {
+    const base = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
+    const rich = { ...base, resources: { ...base.resources, [MONEY_ID]: 1000 } }
+    expect(buyGlobalTickspeedMultiplier(rich).resources[MONEY_ID]).toBe(1000 - 10 * BITS_PER_BYTE)
+    const poor = { ...base, resources: { ...base.resources, [MONEY_ID]: 5 } }
+    expect(buyGlobalTickspeedMultiplier(poor).resources[MONEY_ID]).toBe(0)
+  })
+
   it('costs 100 Bytes for level 1 → 2, another power of ten each level after that', () => {
     const state = withBytes(
       withGlobalTickspeedMultiplier(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 1),
