@@ -207,8 +207,8 @@ const SectionTitle = styled.h3`
   margin: 0;
   min-width: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.md.size};
-  line-height: ${props => props.theme.type.scale.md.lineHeight};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 700;
   color: ${props => props.theme.color.text};
 `
@@ -236,6 +236,7 @@ const UpgradeStatusNote = styled.span`
 
 const SpeedText = styled.span`
   flex-shrink: 0;
+  font-size: ${props => props.theme.type.scale.sm.size};
   color: ${props => props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -432,13 +433,19 @@ const BarSegment = styled.div`
   background: ${props => props.theme.color[props.$colorToken]};
 `
 
+// Percent readouts are pills overlaid on the bar: base reading on the left and the tap bonus on the
+// right when both exist, a single centered pill when only the base (or the lake rate) does.
+const labelAlign = {
+  left: 'left: 0.25rem;',
+  right: 'right: 0.25rem;',
+  center: 'left: 50%; transform: translate(-50%, -50%);',
+}
+
 const BarPercentLabel = styled.span`
   position: absolute;
-  left: ${props => props.theme.space.xs};
   top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  gap: 0.25em;
+  ${props => labelAlign[props.$align]}
+  ${props => props.$align !== 'center' && 'transform: translateY(-50%);'}
   padding: 0 0.4em;
   border-radius: ${props => props.theme.radius.pill};
   background: color-mix(in srgb, ${props => props.theme.color.surface} 85%, transparent);
@@ -448,16 +455,12 @@ const BarPercentLabel = styled.span`
   font-variant-numeric: tabular-nums;
 `
 
-const BasePercentText = styled.span`
+const BasePercentText = styled(BarPercentLabel)`
   color: ${props => props.theme.color.accent};
 `
 
-const BonusPercentText = styled.span`
+const BonusPercentText = styled(BarPercentLabel)`
   color: ${props => props.theme.color.warn};
-`
-
-const PercentJoiner = styled.span`
-  color: ${props => props.theme.color.textMuted};
 `
 
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
@@ -504,15 +507,8 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
           aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
         />
       )}
-      <BarPercentLabel>
-        <BasePercentText>{Math.round(displayPercent)}%</BasePercentText>
-        {hasBonus && (
-          <>
-            <PercentJoiner>+</PercentJoiner>
-            <BonusPercentText>{Math.round(clampedBonus)}% 👆</BonusPercentText>
-          </>
-        )}
-      </BarPercentLabel>
+      <BasePercentText $align={hasBonus ? 'left' : 'center'}>{Math.round(displayPercent)}%</BasePercentText>
+      {hasBonus && <BonusPercentText $align="right">+{Math.round(clampedBonus)}% 👆</BonusPercentText>}
     </BarRow>
   )
 }
