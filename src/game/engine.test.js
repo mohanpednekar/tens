@@ -61,6 +61,7 @@ import {
   isDataLakePoolDrainAvailable,
   tickDataLakePoolDrain,
   tickIntroProduction,
+  tickCapacityUpgradeDrain,
   upgradePoolCapacity,
   queueIntroCapacityUpgrade,
   clearIntroCapacityUpgradeQueue,
@@ -1395,20 +1396,19 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it('diverts 100% of base Speed into the bar (nothing left over at a 100% multiplier)', () => {
+  it('pulls a constant 100% of base Speed from the Buffer into the bar', () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
-    const after = tickIntroProduction(1)(started)
-    expect(after.intro.bits).toBe(capacity / 2)
+    const after = tickCapacityUpgradeDrain(1)(started)
     expect(after.intro.capacityUpgradeProgress).toBe(rate)
+    expect(after.intro.bits).toBe(capacity / 2 - rate)
   })
 
-  it('only the fill-multiplier excess above 100% of base Speed reaches the Buffer', () => {
-    const started = pickIntroCapacityMilestone(armState(0)) // empty Buffer => 150% multiplier
-    const rate = getIntroProductionRate(started.intro)
-    const after = tickIntroProduction(1)(started)
-    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate)
-    expect(after.intro.bits).toBeCloseTo(rate * 0.5)
+  it('pulls only what the Buffer holds', () => {
+    const started = pickIntroCapacityMilestone(armState(5))
+    const after = tickCapacityUpgradeDrain(1)(started)
+    expect(after.intro.capacityUpgradeProgress).toBe(5)
+    expect(after.intro.bits).toBe(0)
   })
 
   it('does not pause pool-buffer fill or tier01 auto-invest while upgrading', () => {
@@ -1418,7 +1418,7 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
 
   it('cancelling returns the bar\'s bits to the Buffer', () => {
     let state = pickIntroCapacityMilestone(armState(0))
-    state = tickIntroProduction(1)(state)
+    state = tickCapacityUpgradeDrain(1)(withIntro(state, { bits: 100 }))
     const progress = state.intro.capacityUpgradeProgress
     const cancelled = clearIntroCapacityUpgradeQueue(state)
     expect(cancelled.intro.capacityUpgradeQueued).toBe(false)

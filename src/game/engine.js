@@ -1628,7 +1628,7 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
   // itself, so tickIntroProduction/tickPoolBufferFill below both read this tick's already-decayed
   // multiplier rather than lagging a tick behind.
   const stateAfterFillMultiplierDecay = tickFillMultiplierDecay(elapsedSeconds)(stateAfterMainGameLatch)
-  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay)))
+  const stateAfterProvision = tickPoolResetReprovision(tickProvisionDisk(elapsedSeconds)(tickCapacityUpgradeDrain(elapsedSeconds)(tickIntroProduction(elapsedSeconds)(stateAfterFillMultiplierDecay))))
   // First pass advances in-flight read-cache flushes (and may complete them) so write-cache
   // collect can claim newly emptied source slots same tick. Second pass uses 0 elapsed so
   // flush countdowns are not applied twice per tickGame — it only refills / starts new flushes
@@ -3235,14 +3235,28 @@ export const isMemoryCapacityUpgradeArmable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
-// Upgrade Data Stream click: starts the upgrade. From then on tickIntroProduction diverts 100% of
-// the base Speed from the Data Stream's delivery into intro.capacityUpgradeProgress (highest priority
-// — nothing else is paused; any fill-multiplier excess still reaches the Buffer) and doubles Capacity the tick that bar reaches the current Capacity.
+// Upgrade Data Stream click: starts the upgrade. From then on tickCapacityUpgradeDrain pulls from the
+// Data Stream Buffer at a constant 100% of the base Speed (like a pool pulling at its Bandwidth) into
+// intro.capacityUpgradeProgress, ahead of every other consumer; Capacity doubles when the bar fills.
 export const pickIntroCapacityMilestone = state => queueIntroCapacityUpgrade(state)
 
 export const queueIntroCapacityUpgrade = state => {
   if (!isMemoryCapacityUpgradeArmable(state)) return state
   return { ...state, intro: { ...state.intro, capacityUpgradeQueued: true, capacityUpgradeProgress: 0 } }
+}
+
+// Runs right after production, before any other Data Stream consumer. Pulls min(Buffer, 100% of base
+// Speed) into the bar regardless of the fill multiplier; fires the upgrade once the bar reaches Capacity.
+export const tickCapacityUpgradeDrain = elapsedSeconds => state => {
+  if (!state.intro?.capacityUpgradeQueued) return state
+  if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
+  const progress = state.intro.capacityUpgradeProgress ?? 0
+  const pull = Math.min(state.intro.bits, getIntroProductionRate(state.intro) * elapsedSeconds, state.intro.capacity - progress)
+  const next = {
+    ...state,
+    intro: { ...state.intro, bits: state.intro.bits - pull, capacityUpgradeProgress: progress + pull },
+  }
+  return next.intro.capacityUpgradeProgress >= next.intro.capacity ? doubleIntroCapacity(next) : next
 }
 
 // Cancelling returns the bits already put into the bar to the Buffer (clamped to Capacity).
@@ -3522,24 +3536,6 @@ export const tickIntroProduction = elapsedSeconds => state => {
   const bitsToAdd = getIntroProductionRate(state.intro) * elapsedSeconds * getComputeBoostMultiplier(state.intro) * getDataStreamEffectMultiplier(state.intro)
 
   if (bitsToAdd <= 0) return state
-
-  // A running Upgrade Data Stream takes the first 100% of the displayed (base) Speed off the top of
-  // whatever the stream actually delivers this tick; only the excess (e.g. the 24% of a 124% fill
-  // multiplier) reaches the Buffer. It fires the instant its bar reaches the current Capacity.
-  if (state.intro.capacityUpgradeQueued) {
-    if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
-    const toUpgrade = Math.min(bitsToAdd, getIntroProductionRate(state.intro) * elapsedSeconds)
-    const progress = (state.intro.capacityUpgradeProgress ?? 0) + toUpgrade
-    if (progress >= state.intro.capacity) return doubleIntroCapacity(state)
-    return {
-      ...state,
-      intro: {
-        ...state.intro,
-        capacityUpgradeProgress: progress,
-        bits: Math.min(state.intro.capacity, state.intro.bits + (bitsToAdd - toUpgrade)),
-      },
-    }
-  }
 
   return {
     ...state,
