@@ -2172,7 +2172,7 @@ export const buyTierMaxLevels = tierId => state => {
 // (see buyTierMaxLevels), so callers can keep showing the normal single-level preview then.
 export const getTierMaxLevelsPreview = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
-  if (isProductionFrozen(state) || !tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0, lastLevelCost: 0 }
+  if (isProductionFrozen(state) || !tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
   // Replays buyTierMaxLevels' loop to also capture the final level's own cost (display only —
   // the button is still gated on, and a click still spends, the full `cost`).
   let current = state
@@ -2183,10 +2183,17 @@ export const getTierMaxLevelsPreview = (state, tierId) => {
     previous = current
     current = next
   }
+  // Leftover after the full levels: how many blocks of the NEXT level are still affordable (each
+  // full buy ends at zero progress), so callers can render "<levels>+<partial>/<blockSize>".
+  const blockSize = getPurchaseBlockSize(current)
+  const nextLevel = current.purchaseLevels?.[tierId] ?? 1
+  const partialQuantity = Math.min(blockSize - 1, getTierAffordableQuantity(tier, nextLevel, blockSize, 0, getTierSpendableAmount(current, tier), blockSize))
   return {
     levels: (current.purchaseLevels?.[tierId] ?? 1) - (state.purchaseLevels?.[tierId] ?? 1),
     cost: getTierSpendableAmount(state, tier) - getTierSpendableAmount(current, tier),
     lastLevelCost: getTierSpendableAmount(previous, tier) - getTierSpendableAmount(current, tier),
+    partialQuantity,
+    partialCost: partialQuantity > 0 ? getTierQuantityCost(tier, nextLevel, blockSize, 0, partialQuantity) : 0,
   }
 }
 
