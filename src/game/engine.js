@@ -2172,11 +2172,21 @@ export const buyTierMaxLevels = tierId => state => {
 // (see buyTierMaxLevels), so callers can keep showing the normal single-level preview then.
 export const getTierMaxLevelsPreview = (state, tierId) => {
   const tier = TIER_BY_ID[tierId]
-  if (isProductionFrozen(state) || !tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0 }
-  const after = buyTierMaxLevels(tierId)(state)
+  if (isProductionFrozen(state) || !tier || !isTierUnlocked(state)(tier) || !canAffordFullTierLevel(state, tier)) return { levels: 0, cost: 0, lastLevelCost: 0 }
+  // Replays buyTierMaxLevels' loop to also capture the final level's own cost (display only —
+  // the button is still gated on, and a click still spends, the full `cost`).
+  let current = state
+  let previous = state
+  for (let i = 0; i < BUY_MAX_ITERATION_CAP && canAffordFullTierLevel(current, tier); i++) {
+    const next = buyTierQuantity(tierId, Number.MAX_SAFE_INTEGER)(current)
+    if (next === current) break
+    previous = current
+    current = next
+  }
   return {
-    levels: (after.purchaseLevels?.[tierId] ?? 1) - (state.purchaseLevels?.[tierId] ?? 1),
-    cost: getTierSpendableAmount(state, tier) - getTierSpendableAmount(after, tier),
+    levels: (current.purchaseLevels?.[tierId] ?? 1) - (state.purchaseLevels?.[tierId] ?? 1),
+    cost: getTierSpendableAmount(state, tier) - getTierSpendableAmount(current, tier),
+    lastLevelCost: getTierSpendableAmount(previous, tier) - getTierSpendableAmount(current, tier),
   }
 }
 
