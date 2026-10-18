@@ -3565,8 +3565,9 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
-    // Lives in the Data Stream card below Upgrade Data Stream, not inside any pool card.
-    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(provisionButton)
+    // Lives in its own Provision Disk card, independent of the Data Stream card and every pool card.
+    expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(provisionButton)
+    expect(screen.getByRole('region', { name: 'Data Stream' })).not.toContainElement(provisionButton)
     expect(pool2).not.toContainElement(provisionButton)
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
@@ -3626,7 +3627,7 @@ describe('Byte Foundry Storage', () => {
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
     expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
-    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(buildButton)
+    expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands

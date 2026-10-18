@@ -110,6 +110,14 @@ const cardEdge = ({ theme }) => css`
 const softInnerFill = ({ theme }) =>
   `color-mix(in srgb, ${theme.color.surfaceSunken} 45%, ${theme.color.surface})`
 
+const softInnerButtons = props => css`
+  button {
+    background-color: ${softInnerFill(props)};
+    border-width: 1px;
+    border-color: color-mix(in srgb, currentColor 45%, transparent);
+  }
+`
+
 const ActionsRow = styled.div`
   display: flex;
   flex-direction: column;
@@ -117,11 +125,15 @@ const ActionsRow = styled.div`
   width: 100%;
   padding: ${props => props.theme.space.sm} 0.5rem 0.5rem;
 
-  button {
-    background-color: ${softInnerFill};
-    border-width: 1px;
-    border-color: color-mix(in srgb, currentColor 45%, transparent);
-  }
+  ${softInnerButtons}
+`
+
+// Provision Disk is its own card, independent of the Data Stream card above it.
+const ProvisionCard = styled(StatCard)`
+  width: 100%;
+  padding: 0.5rem;
+  ${cardEdge}
+  ${softInnerButtons}
 `
 
 // "Upgrade Data Stream" is the single recurring upgrade — placing it in MilestonesRow keeps the
@@ -922,9 +934,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             </MilestonesRow>
           )}
 
-          {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && provisionDiskButton}
         </ActionsRow>
       </DataStreamCard>
+
+      {storageRevealed && !isStoragePoolRebuilding(state, diskPoolIndex) && (
+        <ProvisionCard aria-label="Provision Disk">{provisionDiskButton}</ProvisionCard>
+      )}
 
       {storageRevealed && Array.from({ length: visiblePoolCount }, (_, offset) => {
         const poolIndex = offset + 1
