@@ -171,6 +171,11 @@ const DataStreamCard = styled(StatCard)`
   gap: 0;
   padding: 0;
   overflow: hidden;
+
+  > :first-child {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 `
 
 // A pool's summary tile: FillableStatCard supplies the fill background, PoolTapButton is a
@@ -359,6 +364,7 @@ const FillableStatCard = styled.div`
 
 const PoolTile = styled(FillableStatCard)`
   position: relative;
+  ${props => props.$expanded && 'border-bottom-left-radius: 0; border-bottom-right-radius: 0;'}
 `
 
 // The balance and Capacity figures use compact formatting (see
@@ -949,7 +955,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             {/* One tile: a stretched PoolTapButton (tapPoolBuffer/FILL_MULTIPLIER_* in game/engine and
                 game/layers) sits behind the readouts, and the "<symbol> Pool" title is its own
                 sibling PoolTitleToggle button (expand/collapse) — never nested in the tap button. */}
-            <PoolTile $progress={poolBufferPercent}>
+            <PoolTile $progress={poolBufferPercent} $expanded={isExpanded}>
               <PoolTapButton
                 type="button"
                 onClick={() => actions.tapPoolBuffer(poolIndex)}
