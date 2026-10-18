@@ -39,6 +39,7 @@ import {
   TIER_DEFINITIONS,
   DISK_LADDER_BASE_SIZE_BITS,
 } from 'game/layers'
+import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
 
@@ -2823,6 +2824,28 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
   expect(upgradeButton).toHaveTextContent('64 B')
 })
 
+test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
+  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
+  seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.5`)
+  // The absolute next values stay available to assistive tech.
+  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and speed 12 B/s after upgrading')
+})
+
+test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
+  seedIntroState({ capacity: 1.298074214633707e33, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toBeDisabled()
+  expect(upgradeButton).toHaveTextContent('Max capacity')
+  expect(upgradeButton).not.toHaveTextContent('→')
+  expect(upgradeButton).not.toHaveTextContent(COST_ICON)
+})
+
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
   // Fake timers so a real production tick can't race the exact balance assertions below.
   vi.useFakeTimers()
@@ -2874,8 +2897,9 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   // The upgrade button is gone while armed; the tile carries the status instead.
   expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
-  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
+  expect(dataStream).toHaveTextContent(/Upgrading to .* · ⚡ .*\/s/)
+  expect(dataStream).toHaveTextContent(/outflow paused/i)
+  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/\/s Outflow paused/)
 
   // The same DOM node flips role in place, so keyboard focus is never dropped.
   const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
@@ -2883,7 +2907,7 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   fireEvent.click(cancel)
   expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
   expect(upgradeButton).toBeEnabled()
-  expect(dataStream).not.toHaveTextContent(/outflow paused/)
+  expect(dataStream).not.toHaveTextContent(/outflow paused/i)
   expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
 
   unmount()
@@ -3401,10 +3425,32 @@ describe('Byte Foundry Storage', () => {
     // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
+    expect(buildButton).toHaveAttribute('aria-description', expect.stringMatching(/pool buffer too low/))
+    expect(buildButton).not.toHaveTextContent(/Ready|Queued|Provisioning/)
+    expect(buildButton).toHaveTextContent('Provision 1 KB Disk')
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
+    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk….*Queued · needs buffer/)
+    expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
+  })
+
+  test('a queued Provision Disk reads "Provisioning …" with its banked passes, unlike the idle "Provision …" label', () => {
+    // 8 built → this is the 9th disk (9 passes); 2 already banked and the queue is armed.
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
+      diskProvisionPasses: { [currentBankSize]: 2 },
+      diskBuildQueued: true,
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk…/)
+    expect(buildButton).toHaveTextContent('2/9 · needs buffer')
+    expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
@@ -3513,6 +3559,9 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
+    // Lives in the Data Stream card below Upgrade Data Stream, not inside any pool card.
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(provisionButton)
+    expect(pool2).not.toContainElement(provisionButton)
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
@@ -3520,7 +3569,7 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
-  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk falling back outside any pool card', () => {
+  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk still reachable in the Data Stream card', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
     seedIntroState({
@@ -3536,12 +3585,23 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'pool 2' })).not.toBeInTheDocument()
-    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk falls
-    // back to rendering outside any pool card (see ByteFoundryPage's provisionDiskButton fallback)
-    // rather than disappearing until pool 2's own card catches up.
+    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk lives in
+    // the Data Stream card, so it stays reachable before pool 2's own card is visible.
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
+  })
+
+  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      diskCache: { [currentBankSize]: currentBankSize },
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
   })
 
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
@@ -3559,6 +3619,8 @@ describe('Byte Foundry Storage', () => {
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
+    expect(screen.getByRole('region', { name: 'Data Stream' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands
@@ -3914,7 +3976,7 @@ describe('Byte Foundry Storage', () => {
 
     const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
-    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent('🎯 1 KB')
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON} 1 KB`)
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
@@ -4645,9 +4707,7 @@ describe('Compute auto-merge automation', () => {
 // productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {
-  const user = userEvent.setup()
-
+test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -4658,7 +4718,10 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
+  // A synchronous click, then an immediate read: a real timer tick can't fire in between. (An
+  // awaited userEvent click yields to the event loop, and under CPU load a live tick credits the
+  // Data Stream bits before the `bits === 0` assertion below — the old, intermittent failure.)
+  fireEvent.click(screen.getByRole('button', { name: /prestige \(requires/i }))
 
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
   // never re-gates it, so Factory stays on screen with no navigation to the Byte Foundry.
@@ -4872,6 +4935,19 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   expect(screen.getByLabelText(/^go unbounded chapter$/i)).toHaveTextContent('✅')
   expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
+})
+
+test('Compute (Flops) buy buttons show their PP cost as text, not "[object Object]"', async () => {
+  seedMainGameState({
+    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    prestige: { xp: 0, points: 5000, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await userEvent.setup().click(screen.getByRole('button', { name: /^open compute$/i }))
+
+  const buy = screen.getByRole('button', { name: /^buy KFlops for/i })
+  expect(buy).toHaveTextContent(/^[\d,.e+]+ PP$/)
+  expect(buy).not.toHaveTextContent(/object/i)
 })
 
 test('Compute autobuyer milestones list Era unlocks once Compute is revealed', async () => {
