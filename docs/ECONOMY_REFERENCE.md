@@ -1060,7 +1060,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `startDataLakeAutoConvert(tierIndex)`/`isDataLakeAutoConvertStartAvailable`/
    `tickDataLakeAutoConvert` in `engine.js`) replaced an earlier persistent Auto/Manual toggle
    (`toggleDataLakeAutoBuy`/`tickDataLakeAutoBuy`/`autoBuyEnabled` — see `docs/DESIGN_HISTORY.md`).
-   `DataLakePanel` shows a single "🎯 `<cost>`" control per lake (in place of the old separate
+   `DataLakePanel` shows a single "🏷️ `<cost>`" control per lake (in place of the old separate
    Fill/Buy/Auto-Manual row): clicking it calls `startDataLakeAutoConvert`, which buys immediately
    (`buyBooster(tierIndex, 1)`) if already affordable, or — same-reference no-op below
    `isDataLakeAutoConvertStartAvailable` (unlocked, not already converting, room under the entity's
@@ -1452,9 +1452,9 @@ convention — internal state always stores raw bit counts.
 Disks' common Provision Disk button and every shown size's full DiskArrayRow stay on ByteFoundryPage itself as
 continuous sections; the thin `StoragePage` wrapper remains for reuse/tests (see "Architecture" in
 `CLAUDE.md`) — see docs/MAINPAGE_REFERENCE.md's "Byte Foundry page" and "Storage page" sections for
-the render-level layout. The Provision Disk button itself renders INSIDE the pool card matching the
-disk ladder's current offer (`diskPoolIndex`), not as a standalone section — see "Architecture" item 4
-in `CLAUDE.md` for the fallback that covers the ladder briefly outrunning a not-yet-visible pool card. Auto-redeem has no standalone pause/resume control of
+the render-level layout. The Provision Disk button itself renders in the Data Stream card's actions, directly below Upgrade
+Data Stream, hidden only while `isStoragePoolRebuilding(state, diskPoolIndex)` — see "Architecture"
+item 4 in `CLAUDE.md`. Auto-redeem has no standalone pause/resume control of
 its own any more — it's gated per-matched-tier's own autobuyer instead, see the "Auto-redeem"
 paragraph above.
 
@@ -1845,8 +1845,8 @@ predating this feature — see `storage.js` below): a paused automation behaves 
 never been bought, for automation purposes only — the level/PP already spent are untouched, and (for
 Auto-Prestige) the manual Prestige button keeps working regardless. Pausing Auto-Prestige stops both its
 per-tick `autoPrestigeAttemptBudget` accumulation and its automatic `prestigeGame` firing, not just the
-firing. Perks → 🎛 Toggles renders a pause/resume toggle (`aria-pressed`-driven `PauseToggleButton`
-beside an icon-only status badge) for each of the four global automations once bought.
+firing. Perks → 🎛 Toggles renders a pause/resume `components/Switch` (`aria-pressed`)
+beside an icon-only status badge for each of the four global automations once bought.
 
 #### Pause/resume for per-tier automations
 
@@ -2176,8 +2176,8 @@ requirement is measured against (via `getScaleUpTargetTier`), not always the las
 requirement is already in completed levels; the displayed current count is
 `state.purchaseLevels[targetTier.id] − 1`. Enabled once the raw engine requirement is met and disabled
 while frozen — no `window.confirm` guard, since this is beneficial not destructive. Once `!isFirstRun`
-and `autoScaleUp` bought, a static "⏩ Auto Scale Up active" note shows (the purchase button itself
-lives on Perks → Unlocks).
+and `autoScaleUp` bought, an `AutoChip` in the Scale Up card header reads "⏩ Auto" (or "⏩ Paused";
+`aria-label` "Auto Scale Up active|paused"; the purchase button itself lives on Perks → Unlocks).
 
 ### Overclock
 
