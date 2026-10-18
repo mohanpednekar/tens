@@ -447,10 +447,11 @@ const BarPercentLabel = styled.span`
     : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color[props.$colorToken]};`}
 `
 
-// The tap emoji is yellow, the same hue as the bonus bar it sits on; a halo in the page color (dark
-// on the dark theme, light on the light one) keeps it legible there.
+// The tap emoji is yellow, the same hue as the bonus bar it sits on in the dark theme; a thin dark
+// outline (the same in both themes — a light halo would glow on the light theme's brown bar) keeps
+// it legible there.
 const TapIcon = styled.span`
-  filter: drop-shadow(0 0 1px ${props => props.theme.color.page}) drop-shadow(0 0 2px ${props => props.theme.color.page});
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
 `
 
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
