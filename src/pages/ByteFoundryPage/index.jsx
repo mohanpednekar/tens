@@ -384,7 +384,7 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // renders `mode="multiplier"`. Keeps the role="progressbar"/aria-label/aria-valuenow/min/max
 // contract (always 0..FILL_MULTIPLIER_TAP_CAP_PERCENT regardless of mode); the tap bonus keeps its
 // own "<label> tap bonus" progressbar (visually hidden — its segment lives in the one visible bar).
-const BAR_HEIGHT = 8
+const BAR_HEIGHT = 16
 // The neutral (×1.0) multiplier sits at the track's midpoint.
 const NEUTRAL_PERCENT = FILL_MULTIPLIER_TAP_CAP_PERCENT / 2
 
@@ -393,18 +393,17 @@ const clampBarValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.ma
 // 0% -> left edge, 100% -> center, FILL_MULTIPLIER_TAP_CAP_PERCENT -> right edge.
 const percentToTrackPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100
 
-// Bar and percent legend share one row (the legend never wraps), so the bar costs a single line.
+// The bar spans the tile's full width; the percent legend is a pill overlaid on its left end. The
+// multiplier never drops below FILL_MULTIPLIER_MIN_PERCENT (50% = a quarter of the track from the
+// left), so that end of the track stays empty and the pill doesn't hide any reading in practice.
 const BarRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${props => props.theme.space.sm};
+  position: relative;
   width: 100%;
 `
 
 const BarTrack = styled.div`
   position: relative;
-  flex: 1;
-  min-width: 0;
+  width: 100%;
   height: ${BAR_HEIGHT}px;
   border-radius: ${props => props.theme.radius.pill};
   background: ${props => props.theme.color.surfaceSunken};
@@ -434,11 +433,18 @@ const BarSegment = styled.div`
 `
 
 const BarPercentLabel = styled.span`
+  position: absolute;
+  left: ${props => props.theme.space.xs};
+  top: 50%;
+  transform: translateY(-50%);
   display: inline-flex;
-  flex-shrink: 0;
-  white-space: nowrap;
   gap: 0.25em;
+  padding: 0 0.4em;
+  border-radius: ${props => props.theme.radius.pill};
+  background: color-mix(in srgb, ${props => props.theme.color.surface} 85%, transparent);
+  white-space: nowrap;
   font-size: 0.65rem;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 `
 
