@@ -728,8 +728,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   const speedGainText = productionRate > 0 ? `×${Number((nextRate / productionRate).toFixed(2))}` : ''
 
   const combineProgress = clampPercent((intro.bits / INTRO_BYTE_COMBINE_COST) * 100)
-  const fullProgress = clampPercent((intro.bits / intro.capacity) * 100)
   const capacityUpgradeProgress = clampPercent(((intro.capacityUpgradeProgress ?? 0) / capacityUpgradeCost) * 100)
+  // While the upgrade runs, the tile's bar IS the upgrade bar: empty at the click, full when it fires.
+  const fullProgress = capacityUpgradeQueued ? capacityUpgradeProgress : clampPercent((intro.bits / intro.capacity) * 100)
 
   // The shared Provision Disk control (one ladder spanning every pool, not per-pool) — rendered
   // in the Data Stream card's own actions, directly below Upgrade Data Stream; hidden only while
