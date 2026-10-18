@@ -1633,7 +1633,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 10, bytes: 10 },
+    resources: { base: 80 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1653,7 +1653,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  // The mirrored Bits (10 B × 8) are deducted too, so the headline balance drops like any purchase.
+  // Latency spends Bits (10 B = 80 b) from the one shared balance.
   expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
@@ -1661,7 +1661,7 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 999, bytes: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 1,
   })
   render(<App />)
@@ -1681,9 +1681,9 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   expect(statusLine).not.toBeVisible()
 })
 
-test('the Enable Latency button stays disabled without enough Bytes', () => {
+test('the Enable Latency button stays disabled without enough Bits', () => {
   seedMainGameState({
-    resources: { base: 10, bytes: 9 },
+    resources: { base: 79 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1693,7 +1693,7 @@ test('the Enable Latency button stays disabled without enough Bytes', () => {
 
 test('the Latency Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
-    resources: { base: 999, bytes: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)

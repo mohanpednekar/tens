@@ -35,7 +35,8 @@ const allResourceIds = () => {
   const ids = new Set([MONEY_ID])
   TIER_DEFINITIONS.forEach(t => {
     ids.add(t.costResourceId)
-    ids.add(t.producesResourceId)
+    // BYTES_ID is only the unit tier01 produces in — Bytes and Bits are one pool (MONEY_ID).
+    if (t.producesResourceId !== BYTES_ID) ids.add(t.producesResourceId)
   })
   return [...ids]
 }
@@ -689,7 +690,7 @@ export const formatCurrency = value => {
   return formatAsCleanBytesIfExactMultiple(safeValue) ?? `${formatScientific(safeValue)} ${symbol}`
 }
 
-// Whole-Byte amounts (Factory Bytes pool — see BYTES_ID) — same rounding/exponential rules as
+// Whole-Byte amounts (a Bytes-unit amount — 8 Bits each, see BYTES_ID) — same rounding/exponential rules as
 // formatCurrency, suffixed with uppercase "B" via RESOURCE_SYMBOL(BYTES_ID).
 export const formatBytes = value => {
   const safeValue = Math.floor(clampNonNegative(value))
@@ -898,6 +899,13 @@ export const getTickspeedProductionMultiplier = level =>
 // `currentLevel` is the level *before* this purchase (null/not-yet-bought treated as 0).
 export const getGlobalTickspeedMultiplierCost = currentLevel =>
   10 ** (clampNonNegative(currentLevel) + 1)
+
+// The same cost as a spendable Bits amount — Bytes and Bits are one pool (MONEY_ID), 8 Bits per Byte.
+export const getGlobalTickspeedMultiplierCostBits = currentLevel =>
+  getGlobalTickspeedMultiplierCost(currentLevel) * BITS_PER_BYTE
+
+export const isGlobalTickspeedAffordable = state =>
+  (state.resources?.[MONEY_ID] ?? 0) >= getGlobalTickspeedMultiplierCostBits(state.globalTickspeedMultiplier ?? 0)
 
 // Whether the Latency multiplier can be bought/upgraded at all yet — unlocked once level 1 of the
 // first tier (TIER_DEFINITIONS[0]) has been purchased (i.e. completed: purchaseLevels advances past
@@ -1857,16 +1865,16 @@ export const tickGame = (elapsedSeconds, autobuyerBatchSize = 1) => state => {
     const scaleUpMultiplier = getTierScaleUpMultiplier(stateAfterAutobuyers, tier.id)
     const production = Math.floor((stateAfterAutobuyers.owned[tier.id] ?? 0) * ticksElapsed * multiplier * scaleUpMultiplier * tierMultiplier * computeBoostMultiplier * flopsBoostMultiplier)
 
-    newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
-    // Factory Bytes (BYTES_ID) are Latency fuel and the tier-row "+N B" unit — but MoneyHero,
-    // Prestige, and tier Buys still key off Bits (MONEY_ID). Mirror each Byte produced into Bits
-    // at BITS_PER_BYTE so the headline balance and Prestige progress track Byte output (otherwise
-    // Money freezes after #430 redirected tier01 off `base`). Disk-cache releases still add Bits
-    // separately; Latency still spends only the Bytes pool.
-    if (tier.producesResourceId === BYTES_ID && production > 0) {
-      newResources[MONEY_ID] = clampNonNegative(
-        (newResources[MONEY_ID] ?? 0) + production * BITS_PER_BYTE,
-      )
+    // Bytes and Bits are ONE pool (MONEY_ID): tier01 produces whole Bytes (the tier row's "+N B"),
+    // credited as production × BITS_PER_BYTE Bits. There is no separate Bytes balance.
+    if (tier.producesResourceId === BYTES_ID) {
+      if (production > 0) {
+        newResources[MONEY_ID] = clampNonNegative(
+          (newResources[MONEY_ID] ?? 0) + production * BITS_PER_BYTE,
+        )
+      }
+    } else {
+      newResources[tier.producesResourceId] = clampNonNegative((newResources[tier.producesResourceId] ?? 0) + production)
     }
     // If the produced resource is also a tier (generator), add to owned count — not for the
     // separate Factory Bytes pool (BYTES_ID) or other non-tier resources.
@@ -6332,30 +6340,24 @@ export const setAutoPrestigeAutobuyerEnabled = enabled => state => {
 }
 
 // Activate (currentLevel null → 1) or upgrade (level N → N+1) Latency (the global tickspeed
-// multiplier), always by spending Factory Bytes (see BYTES_ID) — activation is just the N=0 case
-// of the same cost formula (getGlobalTickspeedMultiplierCost(0) = 10 Bytes). A single global upgrade
+// multiplier), always by spending Bits (MONEY_ID; 1 Byte = 8 Bits, one shared pool) — activation is
+// just the N=0 case of the same cost formula (getGlobalTickspeedMultiplierCost(0) = 10 Bytes = 80 Bits). A single global upgrade
 // track, not per-tier — unlike the per-tier tickspeed multiplier (funded from each tier's own
 // resource), this one requires the first tier's level 1 to be completed first (see
-// isGlobalTickspeedMultiplierUnlocked). A no-op if not yet unlocked, if Bytes are short, or while
+// isGlobalTickspeedMultiplierUnlocked). A no-op if not yet unlocked, if Bits are short, or while
 // production is frozen.
 export const buyGlobalTickspeedMultiplier = state => {
   if (isProductionFrozen(state)) return state
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return state
 
   const currentLevel = state.globalTickspeedMultiplier ?? null
-  const cost = getGlobalTickspeedMultiplierCost(currentLevel ?? 0)
-  const available = state.resources[BYTES_ID] ?? 0
+  const cost = getGlobalTickspeedMultiplierCostBits(currentLevel ?? 0)
+  const available = state.resources[MONEY_ID] ?? 0
   if (available < cost) return state
 
-  // Every Byte produced is mirrored into Bits (see tickGame), so spending Bytes also removes the
-  // mirrored Bits — otherwise the headline balance wouldn't drop, unlike every other purchase.
   return {
     ...state,
-    resources: {
-      ...state.resources,
-      [BYTES_ID]: available - cost,
-      [MONEY_ID]: clampNonNegative((state.resources[MONEY_ID] ?? 0) - cost * BITS_PER_BYTE),
-    },
+    resources: { ...state.resources, [MONEY_ID]: available - cost },
     globalTickspeedMultiplier: (currentLevel ?? 0) + 1,
   }
 }
