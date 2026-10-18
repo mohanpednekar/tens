@@ -1445,7 +1445,9 @@ const MainPage = ({ game }) => {
             ? `${formatAmount(maxLevelsPreview.levels)}${maxLevelsPreview.partialQuantity > 0 ? `+${formatAmount(maxLevelsPreview.partialQuantity)}/${blockText}` : ''}`
             : doneInBlock === 0 && affordableQuantity === 0
               ? ''
-              : `${doneInBlock > 0 ? formatAmount(doneInBlock) : ''}${affordableQuantity > 0 ? `+${formatAmount(affordableQuantity)}` : ''}/${blockText}`
+              : affordableQuantity > 0
+                ? `+${formatAmount(affordableQuantity)}/${blockText}`
+                : `${formatAmount(doneInBlock)}/${blockText}`
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
