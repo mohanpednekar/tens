@@ -8876,3 +8876,18 @@ larger ×10/×100 disks are deliberately ignored. The duration upgrade, its stat
 explicitly rejected by the maintainer. Durations still grow across pools, because each pool's
 smallest disk is 1000× the previous pool's while Bandwidth is sqrt-capped. That matches how slowly
 those pools' own disks fill.
+
+## Foundry multiplier bar: one diverging bar tried and dropped (2026-10)
+
+To shrink the Data Stream/pool tiles (4 rows → 2), the balance moved onto the title row and the
+fill-multiplier and tap-bonus bars were compacted. A single bar anchored at the neutral 100%
+midpoint (blue right of center when boosted, left when penalised, yellow bonus extending it
+outward) was implemented and reviewed on screenshots; the maintainer found it unintuitive and it was
+reverted. Final design: two center-growing bars (as before) with their percent labels inside; the
+base/lake bar's scale is now 0..`FILL_MULTIPLIER_MAX_PERCENT` (150%) so it is full-width at its own
+maximum (it previously used the 200% combined cap, which the base reading never reaches), and the
+bonus bar is full-width at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`. Lake mode still shares the base
+bar's scale, so the 50% hand-off between the two readings stays jump-free. Pill backgrounds behind
+the labels were also tried and dropped: plain page-colored text reads on both themes' fills, and
+labels move just past a fill too narrow to hold them. The tap emoji gets a thin dark outline (a
+light halo glowed on the light theme's brown bar).

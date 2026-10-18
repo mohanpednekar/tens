@@ -43,24 +43,25 @@ that structure.
 `DataStreamCard` would double-box the same region) — containing everything for that section (title,
 Speed, combined balance/capacity, and bars) as one control, so the whole thing reads (and, once
 interactive, taps) as one piece rather than a separate header sitting above a boxed balance tile.
-Its first line is a `TitleRow`: a "Data Stream" `SectionTitle` at top-left and live Speed at
-top-right. Disk status/count is not shown. An earlier
+Its first line is a `TitleRow`: a "Data Stream" `SectionTitle` at top-left, the combined balance in the
+middle, and live Speed at top-right (the row wraps, Speed dropping to its own right-aligned line, when
+a long balance leaves no room on a narrow phone). Disk status/count is not shown. An earlier
 iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
-inside it — merged together per player feedback that the two read as disconnected pieces. Its
-second line applies `components/Button`'s own
+inside it — merged together per player feedback that the two read as disconnected pieces. The tile
+applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
 toward Capacity the same visual way every button on this page already does, and shows balance and
-capacity together in a bigger, centered `BalanceText` (`balance / capacity-unit`, using
+capacity together in the middle, centered `BalanceText` (`balance / capacity-unit`, using
 `formatMemoryBalanceValue`; see "Numbers are formatted"
 below — `useTrimBalanceAfterFull` switches it to the ordinary trimmed form once `isFull` has held
 continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). Its third line, below the balance, is the fill-based
+(`aria-label="data stream bit balance"`). Its second line is the fill-based
 `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
-compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
-percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
+compact bar that grows/shrinks from the MIDDLE (FILL_MULTIPLIER_MAX_PERCENT, 150%, fills the full track width; the yellow tap bonus is a second bar below it, only while active), with each bar's own
+percent readout centered inside it (or just past the fill when it is too narrow to hold it) — replacing an earlier corner needle-speedometer that
 took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
@@ -134,13 +135,13 @@ balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard
 `<button>` (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
 `disabled={poolBufferFull || poolMultiplierCapped}`) — a `TitleRow` is the button's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
-or tier name in the visible text) on the left, and Bandwidth on the right. Its second line is the
-Memory buffer balance and Capacity (`balance / capacity-unit`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
-above. Its third line, below the balance, is the pool's own `MultiplierBar` (switching to
+or tier name in the visible text) on the left, the
+Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
+(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the pool's own `MultiplierBar` (switching to
 `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow, or
 whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests below full and the tile's tap is disabled (`lakeDraining`) —
-see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
-bar itself. Only ONE pool is expanded at a time by default — the
+see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its percent readout inside the
+bar (or just past a too-narrow fill). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,

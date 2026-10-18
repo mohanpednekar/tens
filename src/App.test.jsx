@@ -26,7 +26,6 @@ import {
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
-  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
@@ -3163,17 +3162,17 @@ test('Pool balance and Capacity share one precisely centered line', () => {
   expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
-test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200%)', () => {
+test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_MAX_PERCENT (150%)', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
   const dataStreamBar = screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i })
-  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
   // Both the Data Stream Buffer and pool 1's own Memory buffer start empty — FILL_MULTIPLIER_MAX_PERCENT.
   expect(dataStreamBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
 
   const poolBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
-  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
   expect(poolBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
 })
 
@@ -3196,11 +3195,11 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
   render(<App />)
 
   // The old "fill-based bandwidth multiplier" reading is gone — the SAME bar now reads as the
-  // Data Lake's own overflow rate instead, still on the identical 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
+  // Data Lake's own overflow rate instead, still on the identical 0..FILL_MULTIPLIER_MAX_PERCENT
   // scale (never a separately-scaled bar).
   expect(screen.queryByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
   const lakeRateBar = screen.getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })
-  expect(lakeRateBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(lakeRateBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
   // A fresh, untouched lake's currently-open disk is empty, so its overflow rate reads at its own
   // ceiling (DATA_LAKE_OVERFLOW_MAX_PERCENT, 50) — the SAME numeric value FILL_MULTIPLIER_MIN_PERCENT
   // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
@@ -3313,6 +3312,11 @@ test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplie
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
+  // The displayed percentages are also exposed as aria-valuetext (the visible labels sit inside the tracks).
+  expect(screen.getByRole('progressbar', { name: /^pool 1 fill-based bandwidth multiplier$/i }))
+    .toHaveAttribute('aria-valuetext', `${FILL_MULTIPLIER_MAX_PERCENT}%`)
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
+    .toHaveAttribute('aria-valuetext', `+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}%`)
   expect(screen.getByRole('button', { name: /tap pool 1 memory/i }))
     .toHaveTextContent(`${FILL_MULTIPLIER_MAX_PERCENT}%+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
   expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))

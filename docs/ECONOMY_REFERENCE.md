@@ -345,13 +345,18 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      consumer of `intro.bits` only ever compares (`>=`/`<`) or subtracts/floor-divides it, so this is
      safe.
    - `ByteFoundryPage` displays the live multiplier via a compact `MultiplierBar` (own component in
-     that file) — a bar that grows and shrinks from the MIDDLE: `FILL_MULTIPLIER_TAP_CAP_PERCENT`
-     (200%) fills the full track width, 0% is a zero-width point at dead center — rendered INSIDE
-     the same tappable tile (`FillableStatCard`) for both the Data Stream and every pool, as its own
-     full-width row BELOW the tile's combined balance/capacity line, with its own rounded percent
-     readout on a row below the bar itself (`BarPercentLabel`). The normal percentage is accent
-     blue; while a tap bonus is active the readout appends a neutral `+` and a yellow
-     `NN% 👆`. This replaced an earlier
+     that file) — a bar that grows and shrinks from the MIDDLE: `FILL_MULTIPLIER_MAX_PERCENT`
+     (150%, the base reading's own ceiling) fills the full track width, 0% is a zero-width point at
+     dead center — rendered INSIDE the same tappable tile (`FillableStatCard`) for both the Data
+     Stream and every pool, as its own full-width row directly under the tile's `TitleRow` (title,
+     combined balance/capacity, Speed/Bandwidth), with its rounded percent readout
+     (`BarPercentLabel`) centered inside the bar (page-colored text), or, when the fill is under
+     `BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT` of the track (a small tap bonus, the 50% floor/lake rate),
+     just past the fill's end in the plain text color with a surface-colored halo, since that spot can
+     sit on the tile's green progress fill. The base bar is accent blue; while a tap bonus
+     is active its own yellow bar carries a `+NN% 👆` label. Each track also exposes its displayed
+     percentage as `aria-valuetext` (the visible label sits inside the progressbar, which assistive
+     tech flattens). This replaced an earlier
      corner needle-speedometer (a half-circle dial sweeping 0%→100%→200% with a percent readout
      beneath it, itself replacing a still-earlier full-width linear two-tone bar) — the dial took too
      much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
@@ -365,13 +370,13 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      (`getDataLakeOverflowRatePercent`'s own `DATA_LAKE_OVERFLOW_MIN_PERCENT` floor, 0) — the base
      fill multiplier's own floor (`FILL_MULTIPLIER_MIN_PERCENT`, 50) never actually reaches 0. The bar keeps the old
      dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`
-     contract (`aria-valuemax` always `FILL_MULTIPLIER_TAP_CAP_PERCENT`), so it's still
+     contract (`aria-valuemax` always `FILL_MULTIPLIER_MAX_PERCENT` on the base/lake bar and `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` on the bonus bar), so it's still
      screen-reader-visible as a progress indicator and every test asserting on that contract is
      unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
      target (`FillableStatCard` rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own
-     `TitleRow` (title left, Speed/Bandwidth right) renders as the first line inside that same
-     button; disk status/count is omitted. The second line combines balance and capacity in the
-     centered `balance / capacity-unit` form, followed by the centered `MultiplierBar`. This is the
+     `TitleRow` (title left, centered `balance / capacity-unit` in the middle, Speed/Bandwidth right)
+     renders as the first line inside that same button; disk status/count is omitted. The
+     `MultiplierBar` is the second line. This is the
      same structure the Data Stream's own tile uses. Expand/collapse lives on a separate, slim
      `ExpandToggleButton` (a plain
      ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a

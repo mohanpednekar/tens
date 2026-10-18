@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+- **Foundry multiplier bars read at a glance.** The fill-based multiplier (blue) and tap bonus (yellow, only while active) are two bars growing from the centre, each with its percent centred inside it. The balance now sits on the title row between a smaller name and Speed/Bandwidth, and has a halo so the fill edge no longer clips its digits.
 - **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
   The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
   Provision Disk button moved out of the pool cards into the Data Stream section, directly under it.

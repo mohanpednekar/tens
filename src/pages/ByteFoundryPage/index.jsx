@@ -5,7 +5,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
-import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -41,12 +41,18 @@ const Header = styled.header`
 // multiplier bar (with its own percent readout below it) below the combined balance/capacity line" in CLAUDE.md's UI conventions) — sized a
 // step above the rest of the tile's text but below the page's own H1 so a stack of several pool
 // cards doesn't read as several competing headlines.
+// Sits in the middle of TitleRow (title left, Speed/Bandwidth right). The text-shadow is a halo in
+// the card's own surface color so the digits stay legible where the progress-fill edge crosses them.
 const BalanceText = styled.p`
+  flex: 1 1 auto;
+  min-width: 0;
   margin: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.xl.size};
+  font-size: ${props => props.theme.type.scale.md.size};
   font-weight: 700;
   text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 0 2px ${props => props.theme.color.surface};
 `
 
 const BalanceSeparator = styled.span`
@@ -181,16 +187,17 @@ const ExpandToggleButton = styled.button`
   }
 `
 
-// Shared top row for both the Data Stream card and every pool's own summary: title top-left,
-// that section's own Speed/Bandwidth top-right — a plain flex row
-// (not a grid) since there's no middle column to keep centered between the two ends. The
-// combined balance/capacity line and multiplier bars render below it — see docs/DESIGN_HISTORY.md for the corner-speedometer →
-// center-grow-bar redesign this replaced.
+// Shared top row for both the Data Stream card and every pool's own summary: title top-left, the
+// combined balance/capacity line (BalanceText, nowrap, grows) in the middle, and that section's own
+// Speed/Bandwidth top-right — a flex row that WRAPS (Speed drops to its own right-aligned line) when a
+// long balance leaves no room on a narrow phone, rather than overlapping the neighbours. The multiplier bar(s) render below it — see
+// docs/DESIGN_HISTORY.md for the corner-speedometer → center-grow-bar redesign this replaced.
 const TitleRow = styled.div`
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: ${props => props.theme.space.sm};
+  gap: 0 ${props => props.theme.space.sm};
   width: 100%;
 `
 
@@ -201,8 +208,8 @@ const SectionTitle = styled.h3`
   margin: 0;
   min-width: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.md.size};
-  line-height: ${props => props.theme.type.scale.md.lineHeight};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 700;
   color: ${props => props.theme.color.text};
 `
@@ -230,6 +237,8 @@ const UpgradeStatusNote = styled.span`
 
 const SpeedText = styled.span`
   flex-shrink: 0;
+  margin-left: auto;
+  font-size: ${props => props.theme.type.scale.sm.size};
   color: ${props => props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -358,44 +367,37 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 
 // Fill-based Speed/Bandwidth multiplier bar (see FILL_MULTIPLIER_* in game/layers and
 // getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact, full-width
-// bar that grows and shrinks from the MIDDLE, replacing the earlier corner needle-speedometer (too
-// tall for how little it showed — see docs/DESIGN_HISTORY.md for the swap). The bar is centered in
-// its track: FILL_MULTIPLIER_TAP_CAP_PERCENT (200%) fills the FULL track width, 0% is a zero-width
-// point at dead center. The blue (accent) layer shows ONLY the fill-based base reading — the
-// manual tap bonus is a separate yellow (warn) bar rendered directly below it, on its own
-// 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT scale, only while the bonus is above 0. Both bars are
-// continuous, center-anchored fills on a transparent track (no visible background), so each grows
-// and shrinks from the middle as its own value changes.
+// bar that grows and shrinks from the MIDDLE (see docs/DESIGN_HISTORY.md for the swap from the
+// earlier corner needle-speedometer, and for the one-diverging-bar variant tried and dropped as
+// unintuitive). The bar is centered in its track: FILL_MULTIPLIER_MAX_PERCENT (150%) fills the
+// FULL track width, 0% is a zero-width point at dead center. The blue (accent) bar shows ONLY the
+// fill-based base reading; the manual tap bonus is a separate yellow (warn) bar directly below it,
+// on its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT scale, rendered only while the bonus is above
+// 0. Each bar's percent readout is plain text centered inside it.
 //
 // For a POOL specifically, once its own Memory buffer is completely full, the SAME bar switches to
 // `mode="lake"` and represents a different quantity entirely: that pool's own Data Lake overflow
 // rate (DATA_LAKE_OVERFLOW_MAX_PERCENT at an empty currently-filling disk, down toward
 // DATA_LAKE_OVERFLOW_MIN_PERCENT as it nears completion — see getDataLakeOverflowRatePercent in
 // game/engine, NOT the lake's overall total), drawn as a single `theme.color.info` layer on the
-// SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT scale the multiplier reading already uses — not a
-// separately-scaled bar. This is what makes the transition between the two readings clean rather
-// than a jump: FILL_MULTIPLIER_MIN_PERCENT (the fill-based multiplier's own floor, reached exactly
-// when the buffer is full) and DATA_LAKE_OVERFLOW_MAX_PERCENT (the lake reading's own ceiling, at
-// its highest right as the buffer transitions to full and overflow starts) are numerically the same
-// value (50) by design, so the bar's width doesn't jump when its meaning switches — it's already
-// sitting exactly where the lake reading picks up. Whichever quantity is live, the actual
-// accumulation into the lake itself (fed by that overflow) has its own separate bar — see
-// FillableStatCard usage below with the 🌊 lake label — this bar only ever shows a RATE, never a
-// level. The Data Stream card has no lake of its own, so it always renders in `mode="multiplier"`.
-// Keeps the exact same role="progressbar"/aria-label/aria-valuenow/min/max contract as the old
-// gauge (always 0..FILL_MULTIPLIER_TAP_CAP_PERCENT regardless of mode) — existing tests asserting
-// on it are unaffected by the visual swap.
-const BAR_HEIGHT = 8
+// SAME 0..FILL_MULTIPLIER_MAX_PERCENT scale the multiplier reading uses. FILL_MULTIPLIER_MIN_PERCENT
+// and DATA_LAKE_OVERFLOW_MAX_PERCENT are numerically the same value (50) by design, so the bar's
+// width doesn't jump when its meaning switches. This bar only ever shows a RATE, never a level (the
+// lake's accumulation has its own bar — see FillableStatCard usage below). The Data Stream card has
+// no lake, so it always renders `mode="multiplier"`. Keeps the role="progressbar"/aria-label/
+// aria-valuenow/min/max contract (always 0..FILL_MULTIPLIER_MAX_PERCENT regardless of mode), plus an
+// aria-valuetext with the displayed percentage — the visible label is a descendant of the
+// progressbar, which assistive tech flattens, so the text would otherwise not be exposed.
+const BAR_HEIGHT = 14
 
-const clampBarValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.max(0, value))
+const clampBarValue = value => Math.min(FILL_MULTIPLIER_MAX_PERCENT, Math.max(0, value))
 
-// 0% -> 0 width (a point at the track's own center), FILL_MULTIPLIER_TAP_CAP_PERCENT -> full width.
-const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100
+// 0% -> 0 width (a point at the track's own center), FILL_MULTIPLIER_MAX_PERCENT -> full width.
+const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_MAX_PERCENT) * 100
 
 const BarRow = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 2px;
   width: 100%;
 `
@@ -430,23 +432,31 @@ const BarFillLake = styled(BarFillBase)`
   background: ${props => props.theme.color.info};
 `
 
+// Percent readout. Inside its bar it is centered, in the page color (dark on the dark theme's light
+// fills, light on the light theme's dark fills) so it reads on the fill; a bar too narrow to hold
+// it (a small tap bonus or lake rate, or a full buffer's 50% floor) gets the label just past the fill's
+// right edge in the plain text color with a surface-colored halo, since that spot can sit on the
+// tile's own progress fill (green) where the bar's accent color has poor contrast.
+const BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT = 40
+
 const BarPercentLabel = styled.span`
-  display: inline-flex;
-  gap: 0.25em;
-  font-size: 0.65rem;
+  position: absolute;
+  top: 50%;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  ${props => props.$widthPercent >= BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT
+    ? `left: 50%; transform: translate(-50%, -50%); color: ${props.theme.color.page};`
+    : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color.text}; text-shadow: 0 0 2px ${props.theme.color.surface}, 0 0 4px ${props.theme.color.surface};`}
 `
 
-const BasePercentText = styled.span`
-  color: ${props => props.theme.color.accent};
-`
-
-const BonusPercentText = styled.span`
-  color: ${props => props.theme.color.warn};
-`
-
-const PercentJoiner = styled.span`
-  color: ${props => props.theme.color.textMuted};
+// The tap emoji is yellow, the same hue as the bonus bar it sits on in the dark theme; a thin dark
+// outline (the same in both themes — a light halo would glow on the light theme's brown bar) keeps
+// it legible there.
+const TapIcon = styled.span`
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
 `
 
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
@@ -464,10 +474,8 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
   // 0 above and would otherwise always suppress the lake reading). A genuine 0 here — reachable
   // only in lake mode, via getDataLakeOverflowRatePercent's own DATA_LAKE_OVERFLOW_MIN_PERCENT
   // floor once a maxed lake has no open disk slot left to report a rate for — has nothing
-  // meaningful to draw: a zero-width center point plus an orphaned "0%" label reads as a stalled/
-  // broken bar rather than "nothing to show right now," so the whole row is hidden instead. The
-  // base multiplier reading itself never actually reaches 0 (its own floor is
-  // FILL_MULTIPLIER_MIN_PERCENT, 50), so this never hides the ordinary multiplier bar.
+  // meaningful to draw, so the whole row is hidden. The base multiplier reading itself never
+  // reaches 0 (its floor is FILL_MULTIPLIER_MIN_PERCENT, 50), so this never hides the ordinary bar.
   const displayPercent = isLakeMode ? clampedTotal : clampedBase
   if (displayPercent <= 0) return null
 
@@ -476,34 +484,32 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
       <BarTrack
         role="progressbar"
         aria-label={ariaLabel}
-        aria-valuenow={Math.round(isLakeMode ? clampedTotal : clampedBase)}
+        aria-valuenow={Math.round(displayPercent)}
+        aria-valuetext={`${Math.round(displayPercent)}%`}
         aria-valuemin={0}
-        aria-valuemax={FILL_MULTIPLIER_TAP_CAP_PERCENT}
+        aria-valuemax={FILL_MULTIPLIER_MAX_PERCENT}
       >
         {isLakeMode
           ? lakeWidthPercent > 0 && <BarFillLake $widthPercent={lakeWidthPercent} />
           : baseWidthPercent > 0 && <BarFillBase $widthPercent={baseWidthPercent} />}
+        <BarPercentLabel $widthPercent={isLakeMode ? lakeWidthPercent : baseWidthPercent}>
+          {Math.round(displayPercent)}%
+        </BarPercentLabel>
       </BarTrack>
       {hasBonus && (
         <BarTrack
           role="progressbar"
           aria-label={`${ariaLabel} tap bonus`}
           aria-valuenow={Math.round(clampedBonus)}
+          aria-valuetext={`+${Math.round(clampedBonus)}%`}
           aria-valuemin={0}
           aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
         >
           <BarFillBonus $widthPercent={bonusWidthPercent} />
+          <BarPercentLabel $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
+          </BarPercentLabel>
         </BarTrack>
       )}
-      <BarPercentLabel>
-        <BasePercentText>{Math.round(isLakeMode ? clampedTotal : clampedBase)}%</BasePercentText>
-        {hasBonus && (
-          <>
-            <PercentJoiner>+</PercentJoiner>
-            <BonusPercentText>{Math.round(clampedBonus)}% 👆</BonusPercentText>
-          </>
-        )}
-      </BarPercentLabel>
     </BarRow>
   )
 }
@@ -727,15 +733,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
+            <BalanceText>
+              {formatCombinedBalance(
+                formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed),
+                formatMemoryCapacityValue(intro.capacity, intro.byteCreated),
+              )}{' '}
+              <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
+            </BalanceText>
             {dataStreamRateText && <SpeedText>⚡ {dataStreamRateText}</SpeedText>}
           </TitleRow>
-          <BalanceText>
-            {formatCombinedBalance(
-              formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed),
-              formatMemoryCapacityValue(intro.capacity, intro.byteCreated),
-            )}{' '}
-            <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
-          </BalanceText>
           {capacityUpgradeQueued && (
             <UpgradeStatusText id="data-stream-upgrade-status">
               ⏫ Upgrading to {nextCapacityText} · ⚡ {nextRateText}{' '}
@@ -902,9 +908,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   <PoolTitleSymbol aria-hidden="true">{TIER_DEFINITIONS[poolIndex - 1]?.symbol ?? `#${poolIndex}`}</PoolTitleSymbol>
                   <span>Pool</span>
                 </SectionTitle>
+                <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
                 <SpeedText>⚡ {formatDiskSize(poolBandwidth)}/s</SpeedText>
               </TitleRow>
-              <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
               <MultiplierBar
                 basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
                 bonusPercent={poolTapBonusPercent}
