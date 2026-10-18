@@ -1395,12 +1395,20 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     expect(isMemoryCapacityUpgradeArmable(after)).toBe(false)
   })
 
-  it('diverts the whole nominal Speed into the bar and leaves the Buffer untouched', () => {
+  it('diverts 100% of base Speed into the bar (nothing left over at a 100% multiplier)', () => {
     const started = pickIntroCapacityMilestone(armState(capacity / 2))
     const rate = getIntroProductionRate(started.intro)
     const after = tickIntroProduction(1)(started)
     expect(after.intro.bits).toBe(capacity / 2)
     expect(after.intro.capacityUpgradeProgress).toBe(rate)
+  })
+
+  it('only the fill-multiplier excess above 100% of base Speed reaches the Buffer', () => {
+    const started = pickIntroCapacityMilestone(armState(0)) // empty Buffer => 150% multiplier
+    const rate = getIntroProductionRate(started.intro)
+    const after = tickIntroProduction(1)(started)
+    expect(after.intro.capacityUpgradeProgress).toBeCloseTo(rate)
+    expect(after.intro.bits).toBeCloseTo(rate * 0.5)
   })
 
   it('does not pause pool-buffer fill or tier01 auto-invest while upgrading', () => {
@@ -1415,7 +1423,7 @@ describe('Upgrade Data Stream arming (isMemoryCapacityUpgradeArmable)', () => {
     const cancelled = clearIntroCapacityUpgradeQueue(state)
     expect(cancelled.intro.capacityUpgradeQueued).toBe(false)
     expect(cancelled.intro.capacityUpgradeProgress).toBe(0)
-    expect(cancelled.intro.bits).toBe(progress)
+    expect(cancelled.intro.bits).toBeCloseTo(state.intro.bits + progress)
   })
 
   it('an armed upgrade carries through a real Prestige', () => {

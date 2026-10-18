@@ -3235,9 +3235,9 @@ export const isMemoryCapacityUpgradeArmable = state => {
   return !isMemoryCapacityAtCap(state)
 }
 
-// Upgrade Data Stream click: starts the upgrade. From then on tickIntroProduction diverts the
-// Data Stream's whole nominal output into intro.capacityUpgradeProgress (highest priority — nothing
-// else is paused or competes) and doubles Capacity the tick that bar reaches the current Capacity.
+// Upgrade Data Stream click: starts the upgrade. From then on tickIntroProduction diverts 100% of
+// the base Speed from the Data Stream's delivery into intro.capacityUpgradeProgress (highest priority
+// — nothing else is paused; any fill-multiplier excess still reaches the Buffer) and doubles Capacity the tick that bar reaches the current Capacity.
 export const pickIntroCapacityMilestone = state => queueIntroCapacityUpgrade(state)
 
 export const queueIntroCapacityUpgrade = state => {
@@ -3514,16 +3514,6 @@ export const latchMainGameUnlocked = state => {
 export const tickIntroProduction = elapsedSeconds => state => {
   if (!state.intro.byteCreated) return state
 
-  // A running Upgrade Data Stream takes the stream's entire nominal output (100% of Speed, no
-  // fill multiplier) at the highest priority: nothing reaches the Buffer this tick, and the
-  // upgrade fires the instant its bar reaches the current Capacity.
-  if (state.intro.capacityUpgradeQueued) {
-    if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
-    const progress = (state.intro.capacityUpgradeProgress ?? 0) + getIntroProductionRate(state.intro) * elapsedSeconds
-    if (progress >= state.intro.capacity) return doubleIntroCapacity(state)
-    return { ...state, intro: { ...state.intro, capacityUpgradeProgress: progress } }
-  }
-
   // Continuous delivery at the capacity-derived rate (see getIntroProductionRate) — no batching.
   // getDataStreamEffectMultiplier applies the fill-based multiplier (see FILL_MULTIPLIER_* in
   // layers.js) to this real per-tick delivery only — getIntroProductionRate's own displayed rate
@@ -3532,6 +3522,24 @@ export const tickIntroProduction = elapsedSeconds => state => {
   const bitsToAdd = getIntroProductionRate(state.intro) * elapsedSeconds * getComputeBoostMultiplier(state.intro) * getDataStreamEffectMultiplier(state.intro)
 
   if (bitsToAdd <= 0) return state
+
+  // A running Upgrade Data Stream takes the first 100% of the displayed (base) Speed off the top of
+  // whatever the stream actually delivers this tick; only the excess (e.g. the 24% of a 124% fill
+  // multiplier) reaches the Buffer. It fires the instant its bar reaches the current Capacity.
+  if (state.intro.capacityUpgradeQueued) {
+    if (isMemoryCapacityAtCap(state)) return clearIntroCapacityUpgradeQueue(state)
+    const toUpgrade = Math.min(bitsToAdd, getIntroProductionRate(state.intro) * elapsedSeconds)
+    const progress = (state.intro.capacityUpgradeProgress ?? 0) + toUpgrade
+    if (progress >= state.intro.capacity) return doubleIntroCapacity(state)
+    return {
+      ...state,
+      intro: {
+        ...state.intro,
+        capacityUpgradeProgress: progress,
+        bits: Math.min(state.intro.capacity, state.intro.bits + (bitsToAdd - toUpgrade)),
+      },
+    }
+  }
 
   return {
     ...state,

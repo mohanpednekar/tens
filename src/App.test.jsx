@@ -2662,8 +2662,8 @@ test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', (
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
-  // 1 B/s at 1 B Capacity: the bar completes after one second of ticks.
-  act(() => { vi.advanceTimersByTime(1_200) })
+  // A full Buffer delivers at 50%, so the 1 B bar completes after ~2s of ticks.
+  act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
@@ -2853,7 +2853,7 @@ test('each Upgrade Data Stream press doubles Capacity, and the next cost always 
   let upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
-  act(() => { vi.advanceTimersByTime(1_200) })
+  act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')

@@ -800,8 +800,8 @@ keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets 
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via a single **Upgrade
 Data Stream** action: a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
-and from then on `tickIntroProduction` diverts the stream's whole nominal Speed (100%, no fill multiplier)
-into `intro.capacityUpgradeProgress` at the highest priority — nothing is paused or raced; when the bar
+and from then on `tickIntroProduction` diverts 100% of the base Speed out of the stream's delivery
+into `intro.capacityUpgradeProgress` at the highest priority (any fill-multiplier excess, e.g. the 24% of 124%, still reaches the Buffer) — nothing is paused or raced; when the bar
 reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
 running the button is hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control
 returns the bar's bits to the Buffer (`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
