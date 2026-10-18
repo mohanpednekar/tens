@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+- **Name-only expand/collapse.** Storage pool cards and Factory tier rows now expand/collapse only from their name (the "KB Pool" title, the tier label); the pool's chevron strip and the whole-row click target are gone.
 - **Foundry multiplier bars read at a glance.** The fill-based multiplier (blue) and tap bonus (yellow, only while active) are two bars growing from the centre, each with its percent centred inside it. The balance now sits on the title row between a smaller name and Speed/Bandwidth, and has a halo so the fill edge no longer clips its digits.
 - **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
   The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the

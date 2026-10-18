@@ -726,7 +726,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.1\)/i)
 })
 
-test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
+test('clicking elsewhere on a tier row\'s tile (not the name) does not toggle its details', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -739,14 +739,12 @@ test('clicking anywhere else on a tier row\'s tile (not a button) also expands i
   const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
-  // Click the row's own container, not the name trigger and not a button.
-  await user.click(megabytesLayer)
-
-  expect(trigger).toHaveAttribute('aria-expanded', 'true')
-
-  // Clicking the tile again collapses it back.
+  // Only the name toggles — clicking the row's own container does nothing.
   await user.click(megabytesLayer)
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+  await user.click(trigger)
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
 })
 
 test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {

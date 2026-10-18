@@ -475,17 +475,10 @@ const BalancesSentinel = styled.div`
 const TierNameTrigger = styled.div`
   align-items: baseline;
   column-gap: ${props => props.theme.space.sm};
-  cursor: pointer;
   display: flex;
   grid-area: name;
   min-width: 0;
   width: 100%;
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-    border-radius: ${props => props.theme.radius.sm};
-  }
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -640,8 +633,20 @@ const TierName = styled.h3`
   }
 `
 
+// The only expand/collapse trigger for a tier row's details (role="button" set at the call site).
 const TierNameLabel = styled.span`
+  cursor: pointer;
   flex-shrink: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${props => props.theme.radius.sm};
+  }
 `
 
 // A native click-to-expand disclosure for a genuinely live number that would otherwise need its
@@ -1461,31 +1466,22 @@ const MainPage = ({ game }) => {
               aria-label={`${tier.name} layer`}
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
-              onClick={event => {
-                // TierNameTrigger's own click handler (below) stops propagation before a click
-                // reaches here, so only a click elsewhere on the tile arrives — still skip a
-                // button, so Buy/tickspeed purchases never also toggle the disclosure.
-                if (event.target.closest('button')) return
-                toggleTierDetails(tier.id)
-              }}
             >
-              <TierNameTrigger
-                role="button"
-                tabIndex={0}
-                aria-expanded={isDetailsOpen}
-                aria-controls={detailsId}
-                onClick={event => {
-                  event.stopPropagation()
-                  toggleTierDetails(tier.id)
-                }}
-                onKeyDown={event => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return
-                  event.preventDefault()
-                  toggleTierDetails(tier.id)
-                }}
-              >
+              <TierNameTrigger>
                 <TierName>
-                  <TierNameLabel title={tier.name}>
+                  <TierNameLabel
+                    title={tier.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isDetailsOpen}
+                    aria-controls={detailsId}
+                    onClick={() => toggleTierDetails(tier.id)}
+                    onKeyDown={event => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return
+                      event.preventDefault()
+                      toggleTierDetails(tier.id)
+                    }}
+                  >
                     <VisuallyHidden>{tier.name}</VisuallyHidden>
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
