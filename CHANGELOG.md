@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - **Pool title is a real button.** The "KB Pool" title is now its own button (keyboard/focus support) beside a stretched tap target, so it still expands/collapses while the pool's tap is disabled (full buffer, lake draining, tap bonus capped).
-- **Byte Foundry spacing.** Slimmer card padding (no more double padding around collapsed Data Stream/pool tiles) and tighter gaps between cards, so more fits on screen.
+- **Byte Foundry spacing.** The Data Stream and pool tiles now sit flush in their cards (no padding around them); only the buttons, disks and Data Lake below are padded, and gaps between cards are tighter, so more fits on screen.
 - **Name-only expand/collapse.** Storage pool cards and Factory tier rows now expand/collapse only from their name (the "KB Pool" title, the tier label); the pool's chevron strip and the whole-row click target are gone. The same rule now applies app-wide: the Latency/Overclock disclosures no longer collapse when their revealed text is clicked, and the global-multipliers breakdown toggles from the balance figure only, not the whole money card (its `money display` label now covers just the balance figure).
 - **Foundry multiplier bars read at a glance.** The fill-based multiplier (blue) and tap bonus (yellow, only while active) are two bars growing from the centre, each with its percent centred inside it. The balance now sits on the title row between a smaller name and Speed/Bandwidth, and has a halo so the fill edge no longer clips its digits.
 - **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**

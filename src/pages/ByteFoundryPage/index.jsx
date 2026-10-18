@@ -17,7 +17,7 @@ const RootDiv = styled.div`
   max-width: 480px;
   margin: 0 auto;
   padding: calc(${props => props.theme.space.lg} + env(safe-area-inset-top))
-    ${props => props.theme.space.sm} ${props => props.theme.space.lg};
+    ${props => props.theme.space.md} ${props => props.theme.space.lg};
   color: ${props => props.theme.color.text};
 `
 
@@ -106,6 +106,7 @@ const ActionsRow = styled.div`
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   width: 100%;
+  padding: ${props => props.theme.space.sm} 0.5rem 0.5rem;
 `
 
 // "Upgrade Data Stream" is the single recurring upgrade — placing it in MilestonesRow keeps the
@@ -148,17 +149,28 @@ const MilestoneCostLine = styled.span`
 
 // Data Stream has one shared control surface; each unlocked storage pool gets its own compact
 // derived Bandwidth/Capacity card with its three disk-array rows below it.
-// Cards wrap an already-padded tile, so their own padding stays slim (no double padding).
+// The summary tile sits flush in its card (no card padding); only the expanded disk/lake content
+// below it (PoolBody) is padded.
 const PoolCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.sm};
-  padding: 0.4rem;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
 `
 
+const PoolBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.space.sm};
+  padding: ${props => props.theme.space.sm} 0.5rem 0.5rem;
+`
+
+// The Data Stream tile sits flush in its card; the action buttons below it (ActionsRow) are padded.
 const DataStreamCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.sm};
-  padding: 0.5rem;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
 `
 
 // A pool's summary tile: FillableStatCard supplies the fill background, PoolTapButton is a
@@ -988,12 +1000,12 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               </PoolTileContent>
             </PoolTile>
             {isExpanded && (
-              <>
+              <PoolBody>
                 {poolSizes.map(size => (
                   <DiskArrayRow key={size} actions={actions} size={size} state={state} />
                 ))}
                 <DataLakePanel actions={actions} state={state} bare tierIndex={poolIndex} />
-              </>
+              </PoolBody>
             )}
           </PoolCard>
         )
