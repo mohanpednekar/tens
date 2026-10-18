@@ -5,7 +5,7 @@ import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
 import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
-import { FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
@@ -367,7 +367,7 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact, full-width
 // bar that grows and shrinks from the MIDDLE (see docs/DESIGN_HISTORY.md for the swap from the
 // earlier corner needle-speedometer, and for the one-diverging-bar variant tried and dropped as
-// unintuitive). The bar is centered in its track: FILL_MULTIPLIER_TAP_CAP_PERCENT (200%) fills the
+// unintuitive). The bar is centered in its track: FILL_MULTIPLIER_MAX_PERCENT (150%) fills the
 // FULL track width, 0% is a zero-width point at dead center. The blue (accent) bar shows ONLY the
 // fill-based base reading; the manual tap bonus is a separate yellow (warn) bar directly below it,
 // on its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT scale, rendered only while the bonus is above
@@ -378,18 +378,18 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 // rate (DATA_LAKE_OVERFLOW_MAX_PERCENT at an empty currently-filling disk, down toward
 // DATA_LAKE_OVERFLOW_MIN_PERCENT as it nears completion — see getDataLakeOverflowRatePercent in
 // game/engine, NOT the lake's overall total), drawn as a single `theme.color.info` layer on the
-// SAME 0..FILL_MULTIPLIER_TAP_CAP_PERCENT scale the multiplier reading uses. FILL_MULTIPLIER_MIN_PERCENT
+// SAME 0..FILL_MULTIPLIER_MAX_PERCENT scale the multiplier reading uses. FILL_MULTIPLIER_MIN_PERCENT
 // and DATA_LAKE_OVERFLOW_MAX_PERCENT are numerically the same value (50) by design, so the bar's
 // width doesn't jump when its meaning switches. This bar only ever shows a RATE, never a level (the
 // lake's accumulation has its own bar — see FillableStatCard usage below). The Data Stream card has
 // no lake, so it always renders `mode="multiplier"`. Keeps the role="progressbar"/aria-label/
-// aria-valuenow/min/max contract (always 0..FILL_MULTIPLIER_TAP_CAP_PERCENT regardless of mode).
+// aria-valuenow/min/max contract (always 0..FILL_MULTIPLIER_MAX_PERCENT regardless of mode).
 const BAR_HEIGHT = 14
 
-const clampBarValue = value => Math.min(FILL_MULTIPLIER_TAP_CAP_PERCENT, Math.max(0, value))
+const clampBarValue = value => Math.min(FILL_MULTIPLIER_MAX_PERCENT, Math.max(0, value))
 
-// 0% -> 0 width (a point at the track's own center), FILL_MULTIPLIER_TAP_CAP_PERCENT -> full width.
-const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_TAP_CAP_PERCENT) * 100
+// 0% -> 0 width (a point at the track's own center), FILL_MULTIPLIER_MAX_PERCENT -> full width.
+const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_MAX_PERCENT) * 100
 
 const BarRow = styled.div`
   display: flex;
@@ -428,20 +428,23 @@ const BarFillLake = styled(BarFillBase)`
   background: ${props => props.theme.color.info};
 `
 
-// Percent readout: a pill centered over its bar, so the digits stay legible on any fill color.
+// Percent readout. Inside its bar it is centered, in the page color (dark on the dark theme's light
+// fills, light on the light theme's dark fills) so it reads on the fill; a bar too narrow to hold
+// it (a small tap bonus or lake rate) gets the label just past the fill's right edge, in the bar's
+// own color on the track.
+const BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT = 30
+
 const BarPercentLabel = styled.span`
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 0 0.4em;
-  border-radius: ${props => props.theme.radius.pill};
-  background: color-mix(in srgb, ${props => props.theme.color.surface} 85%, transparent);
-  color: ${props => props.theme.color[props.$colorToken]};
   white-space: nowrap;
-  font-size: 0.65rem;
-  line-height: 1.2;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  ${props => props.$widthPercent >= BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT
+    ? `left: 50%; transform: translate(-50%, -50%); color: ${props.theme.color.page};`
+    : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color[props.$colorToken]};`}
 `
 
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
@@ -471,12 +474,12 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
         aria-label={ariaLabel}
         aria-valuenow={Math.round(displayPercent)}
         aria-valuemin={0}
-        aria-valuemax={FILL_MULTIPLIER_TAP_CAP_PERCENT}
+        aria-valuemax={FILL_MULTIPLIER_MAX_PERCENT}
       >
         {isLakeMode
           ? lakeWidthPercent > 0 && <BarFillLake $widthPercent={lakeWidthPercent} />
           : baseWidthPercent > 0 && <BarFillBase $widthPercent={baseWidthPercent} />}
-        <BarPercentLabel $colorToken={isLakeMode ? 'info' : 'accent'}>
+        <BarPercentLabel $colorToken={isLakeMode ? 'info' : 'accent'} $widthPercent={isLakeMode ? lakeWidthPercent : baseWidthPercent}>
           {Math.round(displayPercent)}%
         </BarPercentLabel>
       </BarTrack>
@@ -489,7 +492,7 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
           aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
         >
           <BarFillBonus $widthPercent={bonusWidthPercent} />
-          <BarPercentLabel $colorToken="warn">+{Math.round(clampedBonus)}% 👆</BarPercentLabel>
+          <BarPercentLabel $colorToken="warn" $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% 👆</BarPercentLabel>
         </BarTrack>
       )}
     </BarRow>
