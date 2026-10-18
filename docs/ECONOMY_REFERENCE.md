@@ -377,13 +377,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      `TitleRow` (title left, centered `balance / capacity-unit` in the middle, Speed/Bandwidth right)
      renders as the first line inside that same button; disk status/count is omitted. The
      `MultiplierBar` is the second line. This is the
-     same structure the Data Stream's own tile uses. Expand/collapse lives on a separate, slim
-     `ExpandToggleButton` (a plain
-     ▲/▼ chevron) rendered as a SIBLING right below the tap button, not nested inside it, since a
-     `<button>` can't nest inside another `<button>` (the same constraint `ComputePage`'s own
-     `TierSelectButton` already works around) — an earlier iteration had the header in its own
-     separate `PoolSummaryButton` (itself the expand/collapse toggle) sitting above the balance tile
-     instead of merged into it.
+     same structure the Data Stream's own tile uses. Expand/collapse is the "<symbol> Pool" title alone
+     (`PoolTitleToggle`, `role="button"` + `aria-expanded`, nested in the tap button — the tap button
+     uses `aria-disabled` rather than the native `disabled` attribute so the title stays clickable
+     while the buffer is full).
 5. **Upgrade Data Stream** (`upgradeIntroCapacity`, the single consolidated upgrade button —
    replacing the former paired "Speed ×2"/Invest ladder and "Capacity ×2" actions, now removed).
    **Capacity is the only purchased progression variable**: the upgrade costs exactly the current

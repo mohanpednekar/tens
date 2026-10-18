@@ -79,11 +79,9 @@ const reveal = keyframes`
 // holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) —
 // only rendered at all while expanded, so a collapsed row contributes zero height there. There
 // is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
-// TierNameTrigger, in the 'name' area) is the trigger, and clicking anywhere else on the tile
-// that isn't a button also toggles it (see the row's own onClick below) — a React-controlled
+// TierNameTrigger, in the 'name' area) is the only trigger (no whole-tile click) — a React-controlled
 // disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// cursor: pointer signals the whole tile is clickable; Button's own cursor rule overrides it
-// for the two buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier
+// There used to be a dedicated 'autobuyer' grid row for the per-tier
 // autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
 // single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
 // needs the extra vertical space for it.
@@ -99,7 +97,6 @@ const TierLine = styled(StatCard)`
   row-gap: ${props => props.theme.space.xs};
   padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
-  cursor: pointer;
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
@@ -232,8 +229,7 @@ const SpeedCardsRow = styled.div`
 
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
 // Header that are centered rather than left-aligned. $actionable (used only by the PP display,
-// once Prestige is available) makes the whole card double as the Prestige button, matching the
-// tier rows' own whole-tile-clickable-plus-title pattern (see TierNameTrigger) rather than the
+// once Prestige is available) makes the whole card double as the Prestige button, rather than the
 // "don't combine those on a passive tile" call made for the offline notice card.
 const CenteredCard = styled(StatCard)`
   align-items: center;
@@ -870,7 +866,7 @@ const MainPage = ({ game }) => {
   // instead of the full row) regardless of whether the span is expressed via a named area or
   // explicit grid-column line numbers. This keeps TierName as the visible trigger and the
   // details content spanning the full row width, at the cost of reimplementing the
-  // expand/collapse and keyboard behavior manually (see TierNameTrigger below) instead of getting
+  // expand/collapse and keyboard behavior manually (see TierNameLabel below) instead of getting
   // it for free from native <details>.
   const [openTierDetailIds, setOpenTierDetailIds] = useState(() => new Set())
   const toggleTierDetails = tierId => setOpenTierDetailIds(previous => {

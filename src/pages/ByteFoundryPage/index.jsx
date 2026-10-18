@@ -83,11 +83,11 @@ const TapArea = styled.button`
   cursor: pointer;
   transition: filter 0.15s ease, transform 0.05s ease;
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled):not([aria-disabled='true']) {
     filter: brightness(1.2);
   }
 
-  &:active:not(:disabled) {
+  &:active:not(:disabled):not([aria-disabled='true']) {
     transform: scale(0.98);
   }
 
@@ -269,11 +269,11 @@ const FillableStatCard = styled.div`
     cursor: pointer;
     transition: filter 0.15s ease, transform 0.05s ease;
 
-    &:hover:not(:disabled) {
+    &:hover:not(:disabled):not([aria-disabled='true']) {
       filter: brightness(1.2);
     }
 
-    &:active:not(:disabled) {
+    &:active:not(:disabled):not([aria-disabled='true']) {
       transform: scale(0.98);
     }
 
@@ -282,7 +282,8 @@ const FillableStatCard = styled.div`
       outline-offset: 2px;
     }
 
-    &:disabled {
+    &:disabled,
+    &[aria-disabled='true'] {
       cursor: not-allowed;
     }
   `}
@@ -870,6 +871,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
+        const poolTapDisabled = poolBufferFull || lakeDraining || poolMultiplierCapped
         return (
           <PoolCard key={poolIndex} aria-label={`pool ${poolIndex}`}>
             {/* Title/Speed/bar/balance render INSIDE this same tappable button now (not a
@@ -881,8 +883,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             <FillableStatCard
               as="button"
               type="button"
-              onClick={() => actions.tapPoolBuffer(poolIndex)}
-              disabled={poolBufferFull || lakeDraining || poolMultiplierCapped}
+              onClick={() => {
+                if (poolTapDisabled) return
+                actions.tapPoolBuffer(poolIndex)
+              }}
+              // aria-disabled, not the native `disabled` attribute: browsers swallow clicks on
+              // descendants of a disabled <button>, which would make the nested PoolTitleToggle
+              // un-clickable exactly when the buffer is full.
+              aria-disabled={poolTapDisabled}
               aria-label={`tap pool ${poolIndex} memory`}
               title={
                 poolBufferFull

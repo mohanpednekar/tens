@@ -144,9 +144,9 @@ see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its percent read
 bar (or just past a too-narrow fill). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
-separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,
-`aria-label="expand/collapse pool {n}"`) rendered right below the tap button, not nested inside it
-(a `<button>` can't nest inside another `<button>`). An earlier iteration had the header in its own
+`PoolTitleToggle` — the "<symbol> Pool" title alone (`role="button"`, `aria-expanded`,
+`aria-label="expand/collapse pool {n}"`), nested inside the tap button (which uses `aria-disabled`, not the
+native `disabled` attribute, so the title still works while the buffer is full). An earlier iteration had the header in its own
 separate `PoolSummaryButton` (toggling expand/collapse) ABOVE the balance tile instead of merged
 into it — folded together per player feedback that the two looked like disconnected pieces rather
 than one control. A still-earlier iteration also rendered a second, always-visible, non-interactive
@@ -768,10 +768,8 @@ not at the bottom"):
 - **Money balance click-to-expand global multipliers.** The Money `CenteredCard` (`aria-label="money
   display"`) is always clickable — `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
-  by `handleResetClick`, same convention as `openTierDetailIds`) — via a new `$expandable` `CenteredCard`
-  prop (cursor/hover styling shared with `$actionable`, but its own `theme.color.accent` focus-visible
-  outline rather than `$actionable`'s gold one, since this toggle has nothing to do with triggering
-  Prestige). Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
+  by `handleResetClick`, same convention as `openTierDetailIds`) — via `MoneyHeroToggle` (wrapping only the balance figure; carries `aria-label="money display"`, cursor/hover and a
+  `theme.color.accent` focus-visible outline) — the rest of the card is not a trigger. Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
   `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
@@ -800,15 +798,9 @@ not at the bottom"):
   `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
   Perks → Unlocks' Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
   Overclock cards"/"Perks page" above) — each collapsed until the player clicks that heading.
-  *Closing* it back is more permissive: clicking the heading again (native `<summary>` toggle) or
-  clicking the revealed status line itself both work, via a shared `collapseDisclosure` click
-  handler on the `Disclosure` element (`event.target.closest('summary')` short-circuits so the
-  native toggle isn't fought, otherwise force-sets `.open = false` directly — safe since none of
-  these `<details>` are React-controlled) — mirroring the tier row's own "click anywhere on the
-  tile also toggles its Details" convention (see "Tier row details disclosure" below), scoped to
-  collapsing only here since opening still requires the heading specifically. Each card's own
+  Only the heading (native `<summary>` toggle) opens or closes it — clicking the revealed status line does nothing. Each card's own
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
-  never touches this handler at all. None of these is prose about *how* the mechanic works, only
+  never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
   “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Guide → More) live in
@@ -1126,8 +1118,8 @@ unchanged; only typography, spacing, and the details divider moved.
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate
 visible trigger at all**: `TierName` itself,
-wrapped in `TierNameTrigger` (`grid-area: name`, `role="button"`, `tabIndex={0}`, `aria-expanded`,
-`aria-controls`), is the trigger, sitting in its normal spot rather than a redundant "Details" label
+wrapped in `TierNameTrigger` (`grid-area: name`, a plain layout div), is the trigger via its inner `TierNameLabel` (`role="button"`, `tabIndex={0}`, `aria-expanded`,
+`aria-controls`), sitting in its normal spot rather than a redundant "Details" label
 elsewhere in the row. This is a **plain React-controlled disclosure**, not native `<details>`/
 `<summary>` — a `display: contents`-based version was
 tried first, but hit a real Chromium limitation: a `display: contents` ancestor breaks a promoted grid
@@ -1135,23 +1127,16 @@ child's ability to span multiple `grid-template-areas` cells, so the details con
 single column's width instead of the full row (confirmed with a minimal repro, independent of whether
 the span was expressed via a named area or explicit `grid-column` line numbers). `openTierDetailIds`
 (a `Set` of expanded tier ids, in `MainPage`) tracks which rows are expanded;
-`TierNameTrigger`'s `onClick` toggles it and calls `event.stopPropagation()`, and its `onKeyDown`
+`TierNameLabel`'s `onClick` toggles it, and its `onKeyDown`
 handles Enter/Space so keyboard operability doesn't regress from what native `<summary>` would give
-for free. Applying `role="button"` to `TierNameTrigger` doesn't affect `TierName`'s own heading
-semantics — ARIA role only overrides an element's *own* implicit role, never a nested descendant's, so
-the `<h3>` inside it stays in the heading-navigation outline. The disclosure's content (a small `<ul>`,
+for free. `TierNameLabel` sits inside the `<h3>` `TierName`, so the heading stays in the heading-navigation outline. The disclosure's content (a small `<ul>`,
 see below) is `TierDetailsContent`, a plain `grid-area: details` div rendered *only* while its tier id
 is in `openTierDetailIds` — collapsed, nothing renders there at all, so the row's `details` grid line
 contributes zero height, an even more compact collapsed footprint than a visible "Details" line would
 give, and (being a normal, non-`display: contents`-promoted grid item) correctly spans the full row
 width when expanded.
 
-Clicking the tier name isn't the only way in: `TierLine` itself carries an `onClick` that also toggles
-`openTierDetailIds` for a click anywhere else on the tile — skipped when the click originated inside a
-`<button>` (so Buy/tickspeed clicks never also toggle the disclosure); a click inside
-`TierNameTrigger` never reaches this handler at all, since its own `onClick` already stopped
-propagation. `TierLine` sets `cursor: pointer` accordingly, inherited by everything in the row except
-the two buttons, which override it via their own `disabled`-dependent cursor rule. Expanding it lists,
+Only the name toggles — the rest of the tile (and the Owned count) is inert, so Buy/tickspeed clicks can never also toggle it. Expanding it lists,
 in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
