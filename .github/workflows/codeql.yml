@@ -1,0 +1,75 @@
+name: CodeQL
+
+# Replaces GitHub's "default setup" so the slow Swift (macOS build) analysis
+# only runs when native iOS code can have changed, plus a weekly safety net.
+# JavaScript/TypeScript (fast) still runs on every push/PR.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 4 * * 1'
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ios: ${{ steps.filter.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ios:
+              - 'ios/**'
+              - '.github/workflows/codeql.yml'
+
+  analyze-js:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
+
+  analyze-swift:
+    needs: changes
+    if: github.event_name == 'schedule' || needs.changes.outputs.ios == 'true'
+    runs-on: macos-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: swift
+          build-mode: manual
+      # Build only the Swift app target, unsigned, for the simulator; skip the
+      # web build (CodeQL scans the committed native sources only).
+      - name: Build iOS app
+        run: |
+          xcodebuild build \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:swift
