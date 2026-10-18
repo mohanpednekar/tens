@@ -3245,6 +3245,13 @@ test('the pool bar shows the Data Lake rate (and the tile is inert) while the la
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
   expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
+
+  // The title toggle is a sibling of the tap button, so a disabled tap never blocks it.
+  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
+  const wasExpanded = toggle.getAttribute('aria-expanded')
+  fireEvent.click(toggle)
+  expect(within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i }))
+    .toHaveAttribute('aria-expanded', wasExpanded === 'true' ? 'false' : 'true')
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {

@@ -175,8 +175,14 @@ const PoolTapButton = styled.button`
   background: transparent;
   cursor: pointer;
 
+  transition: background 0.15s ease;
+
   &:hover:not(:disabled) {
     background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  &:active:not(:disabled) {
+    background: color-mix(in srgb, currentColor 18%, transparent);
   }
 
   &:focus-visible {
@@ -292,8 +298,8 @@ const SpeedText = styled.span`
 // standalone TapArea button below (which only renders pre-unlock). `$tappable` adds the same
 // hover/active/disabled affordance TapArea itself already has, scoped to this prop so the
 // pre-unlock (non-interactive) rendering keeps its plain, unclickable look. Each pool's own local
-// Memory buffer block reuses this SAME component, always rendered as a real <button>
-// (tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
+// Memory buffer block reuses this component as PoolTile (a plain div filled the same way, with a
+// stretched PoolTapButton on top of it — tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
 // fill-based multiplier bonus (see FILL_MULTIPLIER_* in game/layers), it never credits bits
 // directly. Everything for that section lives inside this one tile — TitleRow (title and Speed/Bandwidth),
 // the big centered balance/capacity line, and the MultiplierBar with its own percent readout — see CLAUDE.md's UI conventions.

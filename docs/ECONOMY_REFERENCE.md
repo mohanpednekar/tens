@@ -373,11 +373,10 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      contract (`aria-valuemax` always `FILL_MULTIPLIER_MAX_PERCENT` on the base/lake bar and `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` on the bonus bar), so it's still
      screen-reader-visible as a progress indicator and every test asserting on that contract is
      unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
-     target (`FillableStatCard` rendered `as="button"`, calling `tapPoolBuffer(poolIndex)`) — its own
+     target (`PoolTile` + stretched `PoolTapButton`, calling `tapPoolBuffer(poolIndex)`) — its own
      `TitleRow` (title left, centered `balance / capacity-unit` in the middle, Speed/Bandwidth right)
-     renders as the first line inside that same button; disk status/count is omitted. The
-     `MultiplierBar` is the second line. This is the
-     same structure the Data Stream's own tile uses. Expand/collapse is the "<symbol> Pool" title alone
+     renders as the first line of that tile; disk status/count is omitted. The
+     `MultiplierBar` is the second line. Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
      `PoolTapButton` behind the readouts, so the two never nest and a disabled tap can't block the title).
 5. **Upgrade Data Stream** (`upgradeIntroCapacity`, the single consolidated upgrade button —

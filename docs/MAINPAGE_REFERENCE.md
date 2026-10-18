@@ -131,9 +131,10 @@ liveness is Capacity-only" in CLAUDE.md and docs/ECONOMY_REFERENCE.md's "Byte Fo
 renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
-balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard`
-`<button>` (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
-`disabled={poolBufferFull || poolMultiplierCapped}`) — a `TitleRow` is the button's first line:
+balance/capacity, and bars all render in ONE `PoolTile` (a `FillableStatCard` div) whose tap target is a
+transparent stretched `PoolTapButton` (`aria-label="tap pool {n} memory"`, calling
+`actions.tapPoolBuffer(poolIndex)`, `disabled={poolBufferFull || lakeDraining || poolMultiplierCapped}`) behind
+the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the content's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
 or tier name in the visible text) on the left, the
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
