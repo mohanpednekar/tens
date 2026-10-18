@@ -124,16 +124,41 @@ const TierLine = styled(StatCard)`
   }
 `
 
-const ScaleUpCard = styled(StatCard)`
-  border-color: #0e7490;
-  gap: 0.35rem;
-  padding: 0.5rem 0.65rem;
+// Feature cards share one shape: neutral border, a 3px left accent stripe (same treatment as the
+// tier rows' stripe), compact padding and a 1rem heading — previously each card had its own
+// full-border hue and Latency had a much larger heading/padding than its siblings.
+const featureCard = accent => css`
+  border-left: 3px solid ${accent};
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
 
   h2 {
+    font-family: ${props => props.theme.font.display};
     font-size: 1rem;
     line-height: 1.2;
     margin: 0;
   }
+`
+
+const CardHeader = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+`
+
+const AutoChip = styled.span`
+  border: 1px solid ${props => props.theme.color.border};
+  border-radius: 999px;
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.75rem;
+  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+`
+
+const ScaleUpCard = styled(StatCard)`
+  ${featureCard('#0e7490')}
 `
 
 // Matches the tier rows' own Buy/tickspeed button font size (see BuyButton/UpgradeButton) rather
@@ -149,19 +174,11 @@ const ScaleUpButton = styled(Button)`
 `
 
 const GlobalTickspeedCard = styled(StatCard)`
-  border-color: #1d4ed8;
+  ${featureCard('#1d4ed8')}
 `
 
 const OverclockCard = styled(StatCard)`
-  border-color: #c2410c;
-  gap: 0.35rem;
-  padding: 0.5rem 0.65rem;
-
-  h2 {
-    font-size: 1rem;
-    line-height: 1.2;
-    margin: 0;
-  }
+  ${featureCard('#c2410c')}
 `
 
 // Matches ScaleUpButton's own font-size override, same rationale (stays visually consistent with
@@ -246,7 +263,7 @@ const CenteredCard = styled(StatCard)`
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
-// MutedText (still hardcoded, still used by TierList/ScaleUpCard/GlobalTickspeedCard) rather
+// MutedText (still hardcoded, still used by TierList/GlobalTickspeedCard) rather
 // than migrating those shared components here: they're each other
 // sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
 // of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's
@@ -767,15 +784,6 @@ const UpgradeButton = styled(Button)`
     font-size: ${props => props.theme.type.scale.xs.size};
     padding: 0.38em 0.4em;
   }
-`
-
-// $dimmed is the "paused" signal — a subtle opacity reduction on the same icon rather than a
-// separate written "Paused" word (see MainPage): the badge's visible content is icon-only, with
-// the active/paused state conveyed by this dimming (plus the existing $color green/amber split)
-// and spelled out in aria-label/title for assistive tech.
-const PpUpgradeBadge = styled.span`
-  color: ${props => props.$color};
-  opacity: ${props => (props.$dimmed ? 0.5 : 1)};
 `
 
 const formatCost = (amount, resourceId) =>
@@ -1584,7 +1592,14 @@ const MainPage = ({ game }) => {
 
       <SpeedCardsRow>
         <ScaleUpCard aria-label="scale up panel">
-          <h2>Scale Up</h2>
+          <CardHeader>
+            <h2>Scale Up</h2>
+            {!isFirstRun && isAutoScaleUpActive && (
+              <AutoChip $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel} title={autoScaleUpStatusTitle}>
+                ⏩ {autoScaleUpEffectivelyActive ? 'Auto' : 'Paused'}
+              </AutoChip>
+            )}
+          </CardHeader>
           <ScaleUpButton
             aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
@@ -1606,11 +1621,6 @@ const MainPage = ({ game }) => {
               aria-valuemax={100}
             />
           </ScaleUpButton>
-          {!isFirstRun && isAutoScaleUpActive && (
-            <MutedText title={autoScaleUpStatusTitle}>
-              <PpUpgradeBadge $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel}>⏩</PpUpgradeBadge>
-            </MutedText>
-          )}
         </ScaleUpCard>
 
       {overclockEverRevealed && (
