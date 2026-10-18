@@ -13,11 +13,11 @@ const RootDiv = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: ${props => props.theme.space.lg};
+  gap: ${props => props.theme.space.md};
   max-width: 480px;
   margin: 0 auto;
-  padding: calc(${props => props.theme.space.xl} + env(safe-area-inset-top))
-    ${props => props.theme.space.md} ${props => props.theme.space.xl};
+  padding: calc(${props => props.theme.space.lg} + env(safe-area-inset-top))
+    ${props => props.theme.space.sm} ${props => props.theme.space.lg};
   color: ${props => props.theme.color.text};
 `
 
@@ -148,14 +148,17 @@ const MilestoneCostLine = styled.span`
 
 // Data Stream has one shared control surface; each unlocked storage pool gets its own compact
 // derived Bandwidth/Capacity card with its three disk-array rows below it.
+// Cards wrap an already-padded tile, so their own padding stays slim (no double padding).
 const PoolCard = styled(StatCard)`
   width: 100%;
   gap: ${props => props.theme.space.sm};
+  padding: 0.4rem;
 `
 
 const DataStreamCard = styled(StatCard)`
   width: 100%;
-  gap: ${props => props.theme.space.md};
+  gap: ${props => props.theme.space.sm};
+  padding: 0.5rem;
 `
 
 // A pool's summary tile: FillableStatCard supplies the fill background, PoolTapButton is a
