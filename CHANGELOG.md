@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Buy max shows only the highest level's cost.** With Buy max on, a tier's Buy button now displays
+  the cost of the highest level it would buy (in the usual units) instead of the combined total. The
+  button is still gated on, and a click still spends, the full cost.
+
 - **Upgrade Data Stream is now a progress bar.** Clicking it pulls from the Data Stream Buffer at a constant 100% of base Speed at top priority; when the bar fills, Capacity doubles. Nothing is paused and there is no race with other Data Stream consumers. The same button shows the progress; there is no cancel. A full Buffer no longer upgrades instantly, and leftover Buffer bits are kept.
 - **Pool title is a real button.** The "KB Pool" title is now its own button (keyboard/focus support) beside a stretched tap target, so it still expands/collapses while the pool's tap is disabled (full buffer, lake draining, tap bonus capped).
 - **Byte Foundry spacing.** The Data Stream and pool tiles now sit flush in their cards (no padding around them); only the buttons, disks and Data Lake below are padded, and gaps between cards are tighter, so more fits on screen. Cards get a stronger edge and shadow against the page, while the tiles and buttons inside them use a softer fill, so contrast is higher between cards and lower within them.

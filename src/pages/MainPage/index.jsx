@@ -1425,7 +1425,7 @@ const MainPage = ({ game }) => {
           // FULL levels, preview those instead of the single-level fill below.
           const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0 }
           const buyLabel = maxLevelsPreview.levels > 0
-            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} (${formatAmount(completedLevels)} completed levels)`
+            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} total; highest level costs ${formatCurrency(maxLevelsPreview.lastLevelCost)} (${formatAmount(completedLevels)} completed levels)`
             : `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
@@ -1566,7 +1566,7 @@ const MainPage = ({ game }) => {
                 $pulse={canAfford}
               >
                 <BuyButtonIcon>🛒 {buyLevelQuantityText} </BuyButtonIcon>
-                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? maxLevelsPreview.cost : displayCost)}</BuyButtonCostLabel>
+                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? maxLevelsPreview.lastLevelCost : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}

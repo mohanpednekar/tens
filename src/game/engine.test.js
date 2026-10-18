@@ -11840,7 +11840,7 @@ describe('Buy max mode', () => {
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
     expect(after.resources[MONEY_ID]).toBe(blockCost(3) - 1)
     expect(getTierMaxLevelsPreview(withMoney(createInitialGameState(), money), tensTier.id))
-      .toEqual({ levels: 2, cost: blockCost(1) + blockCost(2) })
+      .toEqual({ levels: 2, cost: blockCost(1) + blockCost(2), lastLevelCost: blockCost(2) })
   })
 
   it('never mixes a partial level into a full-level click: partial progress gets its own ordinary click', () => {
@@ -11849,7 +11849,7 @@ describe('Buy max mode', () => {
     expect(after).toEqual(buyTierQuantity(tensTier.id, Number.MAX_SAFE_INTEGER)(state))
     expect(after.purchaseLevels[tensTier.id]).toBe(2)
     expect(after.purchaseLevelProgress[tensTier.id]).toBe(0)
-    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0 })
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0 })
   })
 
   it('falls back to an ordinary partial Buy when not even one full level is affordable', () => {
@@ -11862,7 +11862,7 @@ describe('Buy max mode', () => {
   it('is a same-reference no-op while production is frozen', () => {
     const state = withMoney(createInitialGameState(), PRESTIGE_THRESHOLD * 2)
     expect(buyTierMaxLevels(tensTier.id)(state)).toBe(state)
-    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0 })
+    expect(getTierMaxLevelsPreview(state, tensTier.id)).toEqual({ levels: 0, cost: 0, lastLevelCost: 0 })
   })
 
   it('repeatPurchaseMax chains a single-level action until it stops buying', () => {
