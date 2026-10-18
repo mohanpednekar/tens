@@ -13,7 +13,10 @@ import {
   tickComputeFlops,
   tickGame,
 } from './engine'
-import { AUTO_SCALE_UP_COST, BYTES_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
+import { AUTO_SCALE_UP_COST, BITS_PER_BYTE, MONEY_ID, COMPUTE_FLOPS_BOOST_RATE_PER_UNIT_PER_SEC, COMPUTE_FLOPS_FIRST_TIER_COST_PP, COMPUTE_FLOPS_REVEAL_PP, PRESTIGE_THRESHOLD, TICK_RATE_MS } from './layers'
+
+// Bytes and Bits are one pool (MONEY_ID) — 8 Bits per Byte.
+const bytesOf = state => (state.resources[MONEY_ID] ?? 0) / BITS_PER_BYTE
 
 const elapsed = TICK_RATE_MS / 1000
 
@@ -115,7 +118,7 @@ describe('Compute Flops screen', () => {
     const withoutFlop = { ...base, prestige: { ...base.prestige, points: 0 } }
     const afterWith = tickGame(1)(withFlop)
     const afterWithout = tickGame(1)(withoutFlop)
-    expect(afterWith.resources[BYTES_ID]).toBeGreaterThan(afterWithout.resources[BYTES_ID])
+    expect(bytesOf(afterWith)).toBeGreaterThan(bytesOf(afterWithout))
   })
 
   it('carries owned Flops tiers across prestige but resets cumulative boost', () => {

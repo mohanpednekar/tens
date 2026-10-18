@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Bytes and Bits are now one balance.** There is no separate Bytes pool any more: Kilobytes credit Bits (8 per Byte), and Latency is paid from that same balance (10 Bytes = 80 Bits at level 0), so its button can never be enabled above the balance shown. Older saves simply drop their stray Bytes counter.
+
 - **Buy button progress uses a plus sign throughout.** Every count on the tier Buy button's progress text is prefixed with `+` (`+3/8`, `+4`, `+4 +3/8`); zero parts stay hidden.
 - **Buy button no longer mixes bought and affordable counts.** The ordinary Buy button's progress text shows only the affordable count (`+3/8`) when anything is affordable, else the bought count (`3/8`); the old `3+3/8` was misleading.
 - **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).
