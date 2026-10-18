@@ -101,7 +101,7 @@ const MilestonesPage = ({ game }) => {
                 $dimmed={!chapter.reached}
                 aria-label={`${chapter.label} chapter ${chapter.reached ? 'complete' : 'not yet complete'}`}
               >
-                {chapter.reached ? '✅' : '🔒'} {chapter.label}
+                {chapter.reached ? '✅' : '🔒'}
               </Badge>
             </Row>
           ))}

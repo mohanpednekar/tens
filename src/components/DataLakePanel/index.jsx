@@ -1,4 +1,5 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
+import { COST_ICON } from 'components/icons'
 import StatCard from 'components/StatCard'
 import {
   formatDiskSize,
@@ -299,16 +300,16 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 </ActionButton>
               ) : converting ? (
                 <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
-                  {`🎯 ${nextCostSize}`}
+                  {`${COST_ICON} ${nextCostSize}`}
                 </StatusText>
               ) : entityAtCap ? (
                 <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
-                  {`🎯 ${nextCostSize}`}
+                  {`${COST_ICON} ${nextCostSize}`}
                 </StatusText>
               ) : canBuy ? (
                 poolComplete ? (
                   <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
-                    {`🎯 ${nextCostSize}`}
+                    {`${COST_ICON} ${nextCostSize}`}
                   </StatusText>
                 ) : (
                   <ActionButton
@@ -318,7 +319,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                     type="button"
                     variant="success"
                   >
-                    <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
                   </ActionButton>
                 )
               ) : upgradeAvailable ? (
@@ -333,7 +334,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 </ActionButton>
               ) : poolComplete ? (
                 <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
-                  {`🎯 ${nextCostSize}`}
+                  {`${COST_ICON} ${nextCostSize}`}
                 </StatusText>
               ) : poolReady ? (
                 <ActionButton
@@ -343,11 +344,11 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   type="button"
                   variant="success"
                 >
-                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                  <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
                 </ActionButton>
               ) : (
                 <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
-                  {`🎯 ${nextCostSize}`}
+                  {`${COST_ICON} ${nextCostSize}`}
                 </StatusText>
               )}
             </LakeHeaderRow>

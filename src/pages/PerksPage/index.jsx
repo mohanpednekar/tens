@@ -1,6 +1,7 @@
 import BuyMaxToggle from 'components/BuyMaxToggle'
 import Button, { ButtonIcon, ButtonLabel, VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
+import Switch from 'components/Switch'
 import {
   formatAmount,
   getAutobuyerUnlockMilestone,
@@ -110,22 +111,44 @@ const CategoryHeading = styled.h2`
   text-transform: uppercase;
 `
 
+// Every row is a CSS grid so columns line up row-to-row regardless of content width (a flex
+// `space-between` row let each badge drift with its siblings' widths). Default: label | control.
+// `$tier`: symbol | ⚙ cell | 🤖 cell (| Smart cell on Unlocks) — shared by the Unlocks and Toggles
+// tier lists so both tabs read as the same table.
 const Row = styled.div`
   align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: space-between;
-  padding: 0.4rem 0;
+  column-gap: 0.6rem;
+  display: grid;
+  /* Every track is fixed or fr-based (never content-sized) so separate rows' columns line up, and
+     the whole row still fits a 320px-wide phone. $tier="unlocks" keeps a fixed trailing Smart cell;
+     $tier="toggles" has no trailing cell. */
+  grid-template-columns: ${props => (props.$tier === 'unlocks'
+    ? '2.25rem minmax(0, 1fr) minmax(0, 1fr) 5.75rem'
+    : props.$tier === 'toggles'
+      ? '2.25rem minmax(0, 1fr) minmax(0, 1fr)'
+      : 'minmax(0, 1fr) auto')};
+  min-height: 2.75rem;
+  padding: 0.35rem 0;
 
   & + & {
     border-top: 1px solid ${props => props.theme.color.border};
+  }
+
+  & > :last-child {
+    justify-self: ${props => (props.$tier === 'toggles' ? 'start' : 'end')};
   }
 `
 
 const RowLabel = styled.span`
   font-weight: 600;
-  min-width: 2rem;
+  min-width: 0;
+`
+
+const RowLabelStack = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
 `
 
 const RowControls = styled.div`
@@ -139,22 +162,30 @@ const MutedText = styled.p`
   margin: 0;
 `
 
-const PpButton = styled(Button)`
+const SubText = styled.span`
+  color: ${props => props.theme.color.textMuted};
   font-size: 0.82em;
-  min-width: 8.5rem;
-  padding: 0.4em 0.6em;
+  font-weight: 400;
+`
+
+const PpButton = styled(Button)`
+  font-size: 0.85em;
+  gap: 0.35rem;
+  min-width: 5.5rem;
+  padding: 0.45em 0.7em;
+  white-space: nowrap;
 `
 
 // $dimmed is the "paused"/"locked" signal — icon-only content, state spelled out in aria-label/title.
 const Badge = styled.span`
+  align-items: center;
   color: ${props => props.$color};
-  opacity: ${props => (props.$dimmed ? 0.5 : 1)};
-`
-
-const PauseToggleButton = styled(Button)`
-  font-size: 0.75em;
-  min-width: 0;
-  padding: 0.3em 0.5em;
+  display: inline-flex;
+  font-size: 0.92em;
+  font-variant-numeric: tabular-nums;
+  gap: 0.3rem;
+  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
+  white-space: nowrap;
 `
 
 const progressPercent = (numerator, denominator) => Math.min(100, Math.round((numerator / denominator) * 100))
@@ -221,7 +252,7 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
     $progress={progressPercent(points, cost)}
     $progressColor={color}
   >
-    <ButtonIcon>{icon} </ButtonIcon>
+    <ButtonIcon>{icon}</ButtonIcon>
     <ButtonLabel>{label}</ButtonLabel>
     <VisuallyHidden
       role="progressbar"
@@ -233,27 +264,24 @@ const PpPurchaseButton = ({ ariaLabel, color, cost, points, disabled, onClick, t
   </PpButton>
 )
 
-// One pause/resume row control: status badge (green active / dimmed amber paused) + icon toggle.
+// One pause/resume control: the automation's icon (dimmed while paused, carrying the
+// "<name> active|paused" status label) beside an on/off Switch named `toggleLabel`.
 const AutomationToggle = ({ name, icon, enabled, onToggle, toggleLabel, statusLabel, statusTitle }) => (
   <RowControls>
     <Badge
-      $color={enabled ? '#4ade80' : '#facc15'}
       $dimmed={!enabled}
       aria-label={statusLabel ?? `${name} ${enabled ? 'active' : 'paused'}`}
       title={statusTitle}
     >
       {icon}
     </Badge>
-    <PauseToggleButton
-      aria-pressed={enabled}
+    <Switch
+      $on={enabled}
       aria-label={toggleLabel}
+      aria-pressed={enabled}
       onClick={onToggle}
       title={`${enabled ? 'Pause' : 'Resume'} ${toggleLabel}`}
-      type="button"
-      variant="ghost"
-    >
-      {enabled ? '⏸' : '▶'}
-    </PauseToggleButton>
+    />
   </RowControls>
 )
 
@@ -336,7 +364,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
           const smartCost = getSmartAutobuyerCost(tier.id)
           const canBuySmart = unlocked && !isFrozen && !isAutobuyerLocked && points >= smartCost
           return (
-            <Row key={tier.id} aria-label={`${tier.name} PP unlocks`}>
+            <Row key={tier.id} $tier="unlocks" aria-label={`${tier.name} PP unlocks`}>
               <TierSymbol tier={tier} />
               <MilestoneBadge
                 current={prestigeCount}
@@ -347,7 +375,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                 subject={`${tier.name}'s tickspeed autobuyer`}
                 unit="Prestige"
               />
-              <RowControls>
+              <span>
                 <MilestoneBadge
                   current={prestigeCount}
                   icon="🤖"
@@ -357,6 +385,8 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                   subject={`${tier.name}'s autobuyer`}
                   unit="Prestige"
                 />
+              </span>
+              <span>
                 {/* Owned Smart always shows (history); buying it needs the tier reachable this run. */}
                 {!isAutobuyerLocked && (isSmart || unlocked) && (
                   isSmart ? (
@@ -375,7 +405,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
                     />
                   )
                 )}
-              </RowControls>
+              </span>
             </Row>
           )
         })}
@@ -511,11 +541,13 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       <Category aria-label="prestige upgrades category">
         <CategoryHeading>Prestige</CategoryHeading>
         <Row aria-label="double PP upgrade">
-          <RowLabel>
-            ✦ Double PP
-            {doublePpLevel > 0 && ` (Lv.${doublePpLevel})`}
-          </RowLabel>
-          <MutedText>{doublePpUpgradeSummary}</MutedText>
+          <RowLabelStack>
+            <RowLabel>
+              ✦ Double PP
+              {doublePpLevel > 0 && ` (Lv.${doublePpLevel})`}
+            </RowLabel>
+            <SubText>{doublePpUpgradeSummary}</SubText>
+          </RowLabelStack>
           <PpPurchaseButton
             ariaLabel={`Buy Double PP level ${doublePpLevel + 1} for ${formatAmount(doublePpCost)} Prestige Points — ${doublePpLevel < 6 ? 'halves powers needed per PP' : 'doubles PP per power'}`}
             color="#fbbf24"
@@ -538,14 +570,14 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
         <Category aria-label="automation upgrades category">
           <CategoryHeading>Automation</CategoryHeading>
           <Row aria-label="auto-prestige upgrade">
-            <RowLabel>
-              ✦ Auto-Prestige
+            <RowLabelStack>
+              <RowLabel>✦ Auto-Prestige</RowLabel>
               {isAutoPrestigeActive && (
-                <MutedText as="span" title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol Bytes`}>
-                  {' '}Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
-                </MutedText>
+                <SubText title={`Auto-Prestige fires roughly every ${autoPrestigeIntervalSeconds}s once Bits reaches 1 Googol Bytes`}>
+                  Lv.{autoPrestigeLevel} (every ~{autoPrestigeIntervalSeconds}s)
+                </SubText>
               )}
-            </RowLabel>
+            </RowLabelStack>
             <PpPurchaseButton
               ariaLabel={isAutoPrestigeActive
                 ? `Upgrade Auto-Prestige for ${autoPrestigeCost} Prestige Points`
@@ -575,9 +607,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
       const autobuyerEnabled = state.autobuyersEnabled?.[tier.id] ?? true
       const tierTickspeedAutobuyerEnabled = state.tierTickspeedAutobuyerEnabled?.[tier.id] ?? true
       return (
-        <Row key={tier.id} aria-label={`${tier.name} automation toggles`}>
+        <Row key={tier.id} $tier="toggles" aria-label={`${tier.name} automation toggles`}>
           <TierSymbol tier={tier} />
-          {isTierTickspeedAutobuyerActive && (
+          {!isTierTickspeedAutobuyerActive ? <span /> : (
             <AutomationToggle
               enabled={tierTickspeedAutobuyerEnabled}
               icon="⚙"
@@ -586,7 +618,7 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
               toggleLabel={`${tier.name}'s tickspeed autobuyer`}
             />
           )}
-          {!isAutobuyerLocked && (
+          {isAutobuyerLocked ? <span /> : (
             <AutomationToggle
               enabled={autobuyerEnabled}
               icon="🤖"
