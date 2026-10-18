@@ -7,7 +7,7 @@ import StatCard from 'components/StatCard'
 import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isMemoryCapacityUpgradeAvailable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
 import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
-import styled from 'styled-components'
+import styled, { css } from 'styled-components'
 
 const RootDiv = styled.div`
   display: flex;
@@ -101,12 +101,25 @@ const TapArea = styled.button`
   }
 `
 
+// Contrast hierarchy: cards stand out from the page (stronger edge + shadow) while the tiles and
+// buttons inside them sit closer to the card's own surface (softened sunken fill).
+const cardEdge = ({ theme }) => css`
+  border-color: ${theme.color.borderStrong};
+  box-shadow: ${theme.shadow.md};
+`
+const softInnerFill = ({ theme }) =>
+  `color-mix(in srgb, ${theme.color.surfaceSunken} 45%, ${theme.color.surface})`
+
 const ActionsRow = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.space.sm};
   width: 100%;
   padding: ${props => props.theme.space.sm} 0.5rem 0.5rem;
+
+  button {
+    background-color: ${softInnerFill};
+  }
 `
 
 // "Upgrade Data Stream" is the single recurring upgrade — placing it in MilestonesRow keeps the
@@ -156,6 +169,7 @@ const PoolCard = styled(StatCard)`
   gap: 0;
   padding: 0;
   overflow: hidden;
+  ${cardEdge}
 `
 
 const PoolBody = styled.div`
@@ -171,6 +185,7 @@ const DataStreamCard = styled(StatCard)`
   gap: 0;
   padding: 0;
   overflow: hidden;
+  ${cardEdge}
 
   > :first-child {
     border-bottom-left-radius: 0;
@@ -333,6 +348,7 @@ const FillableStatCard = styled.div`
   border-radius: ${props => props.theme.radius.sm};
   color: ${props => props.theme.color.text};
   ${progressFill}
+  background-color: ${softInnerFill};
 
   ${props => props.$upgrading && `
     box-shadow: inset 0 0 0 2px ${props.theme.color.warn};
