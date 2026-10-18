@@ -69,12 +69,21 @@ const TierList = styled.div`
 const TierRow = styled(StatCard)`
   align-items: center;
   display: grid;
-  gap: 0.35rem 0.5rem;
-  grid-template-columns: 1fr auto;
-  padding: 0.45rem 0.55rem;
+  gap: 0.35rem 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.6rem 0.75rem;
+`
+
+// Fixed width so every tier's cost button lines up in one column regardless of digit count.
+const BuyButton = styled(Button)`
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  padding: 0.45em 0.7em;
+  width: 7.5rem;
 `
 
 const TierName = styled.span`
+  font-family: ${props => props.theme.font.display};
   font-weight: 600;
 `
 
@@ -125,9 +134,9 @@ const ComputeFlopsPage = ({ game }) => {
           return (
             <TierRow key={flopTier.id} aria-label={`${flopTier.name} compute tier`}>
               <TierName>
-                {flopTier.symbol} {flopTier.name}
+                {flopTier.name}
               </TierName>
-              <Button
+              <BuyButton
                 aria-label={`buy ${flopTier.name} for ${formatAmount(cost)} Prestige Points`}
                 disabled={!revealed || !canBuy}
                 onClick={() => actions.buyComputeFlopsTier(flopTier.id)}
@@ -140,10 +149,8 @@ const ComputeFlopsPage = ({ game }) => {
                 }
                 type="button"
               >
-                <ButtonContent>
-                  <Money>{formatAmount(cost)} PP</Money>
-                </ButtonContent>
-              </Button>
+                <ButtonContent>{formatAmount(cost)} PP</ButtonContent>
+              </BuyButton>
               <TierMeta>
                 Owned {owned} · boosts {factoryTier} ·{' '}
                 {formatComputeFlopsBoost(tierBoost)} this cycle · ×{liveMultiplier.toFixed(4)} live

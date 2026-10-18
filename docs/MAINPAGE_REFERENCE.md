@@ -105,7 +105,7 @@ upgrades immediately; below full (any fill, byte combined, not at cap, not alrea
 arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
 fills and it fires. While armed the button is hidden and the Data Stream tile itself reflects the
 status instead: a `warn`-colored inset outline (`$upgrading`) plus an `UpgradeStatusText` line
-"⏫ Upgrading to <next capacity> · outflow paused" (id `data-stream-upgrade-status`, wired to the tile
+"⏫ Upgrading to <next capacity> · ⚡ <next speed>" with a smaller second line "Outflow paused" (`UpgradeStatusNote`) (id `data-stream-upgrade-status`, wired to the tile
 via `aria-describedby`). A small neutral "✕ Cancel upgrade" button (`aria-label="cancel data stream
 upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then —
 rendered as the SAME keyed `Button` element in the same slot, so arming or cancelling never unmounts
@@ -159,15 +159,13 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Renders INSIDE the pool card matching the disk ladder's current offer (`diskPoolIndex ===
-poolIndex`), right after that pool's own Memory-buffer/Data-Lake tiles above and OUTSIDE its
-`isExpanded` disclosure (so it stays visible/usable without expanding that pool) — not alongside
-Speed in the Data Stream section — an earlier layout had it there, standalone, but that separated
-the button from the pool it actually builds into. A fallback copy renders just below the Data Stream card (outside any pool
-card) for the rare case where the disk ladder has already advanced past the last pool card
-currently VISIBLE (`getVisibleStoragePoolCount`, capacity-threshold-gated — see
-docs/ECONOMY_REFERENCE.md's "Byte Foundry" section) — keeping the button reachable rather than
-letting it disappear until that pool's card catches up. Its
+Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
+location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
+only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
+relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
+ratio>` (🏷️ is the game's cost icon — `COST_ICON` in `components/icons.js`, shared with Data Lake Boosters and Provision Disk) (ratio = `getIntroProductionRate` at the doubled Capacity ÷ now: ×1.5 / ×1.33 alternating),
+`📦 Max capacity` at the cap; its `aria-description` carries the cost and absolute next Capacity and Speed, and
+the armed status line shows them too. Its
 visible label always tracks
 `getDiskSize(state)` — an independent gapless Byte power-of-ten ladder (`DISK_LADDER_BASE_SIZE_BITS` ×
 `10^(n-1)`): 8000 bits/"1
@@ -209,18 +207,15 @@ spent funding it" entry). An earlier version DID impose a real timed countdown h
 solely to finish out a countdown a save from before that change may still be carrying; a build
 `provisionDisk` starts today never creates one. While a legacy countdown IS in flight, every IO
 operation against that size's array (auto-fill, auto-redeem, manual cache release, manual redeem) is
-disallowed, "the array provisioning." The Provision button's idle state has three label variants
-depending on `diskPassesCollected = getDiskProvisionPassesCollected(state, diskSize)` (clamped at
-`diskPassesRequired` for display, so a save carrying a stale, already-over-required stored value
-from an earlier flat-multiplier version of this ladder never shows a nonsensical "N/M" with N > M —
-see `docs/DESIGN_HISTORY.md`) and `diskPassesRequired = getDiskProvisionPassesRequired(state,
-diskSize)`: plain `"🏦 Provision {size} Disk ({cost})"` before any pass has landed on a single-pass
-disk (an array's first); `"🏦 Provision {size} Disk — 0/{passesRequired} ({cost})"` before any pass
-has landed on a disk needing MORE than one pass, so the pass count is visible up front rather than
-only after the first pass lands; or `"🏦 Provision {size} Disk — {passesCollected}/{passesRequired}"`
-once funding is under way (`diskFundingInProgress = diskPassesCollected > 0 && !diskBuildInProgress`)
-— the button itself stays enabled/disabled and clickable exactly the same way across all three
-(funding-in-progress is not a separate `disabled` state; only the visible label changes). Overall
+disallowed, "the array provisioning." The button renders two lines (`diskBuildStatus`): a label
+(`"{icon} Provision {size} Disk"`) and one terse status line per state, so ready/queued/waiting
+never read alike — `Ready · 🏷️ {cost}`; `🏷️ {cost} · tap to queue` (not affordable or outranked; the
+`title` and `aria-description` name which); `Queued · funding|after disk fill|needs buffer` (or the banked passes, `2/9 · …`, once any are collected). A queued build is the only state that reads `⏳ Provisioning {size} Disk…` (progressive title, purple `smart` variant, pulsing glow via `$pulse`, which honors reduced motion); idle states keep the imperative `🏦 Provision {size} Disk`; `{n}s left` (legacy
+countdown). Ladder exhausted shows only `✅ All Pools Complete ({size})`, no status line. A
+` · {collected}/{required}` segment appears whenever
+`diskPassesRequired > 1` or any pass is banked (`diskPassesCollected`, clamped at
+`diskPassesRequired` for display — see `docs/DESIGN_HISTORY.md`), so a single-pass disk never shows a
+redundant "0/1". The status line is also the button's `aria-description`. Overall
 the button renders three distinct BEHAVIORAL states (idle/mid-build/ladder-complete, each covering
 its own label variants above) off
 `diskBuildInProgress = intro.diskBuild` and `diskLadderExhausted =
@@ -293,9 +288,8 @@ directly, exactly as before; otherwise it calls `actions.queueDiskBuild()`, so
 then it just happens" treatment every later pass already had. `disabled` dropped its own
 affordability/priority checks — the button refuses input only while a build's own timed countdown
 is running or the ladder is exhausted for active pools, since a click in every other state now does
-something useful. Variant/icon reflect three live states: `'info'`/🏦 while turn-available (fires
-now), `'smart'`/⏳ while queued-but-not-yet-turn-available (armed, waiting), `'neutral'`/🏦
-otherwise (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
+something useful. Variant/icon reflect the live state: `'smart'`/⏳ whenever queued (checked first),
+else `'info'`/🏦 while turn-available (fires now), else `'neutral'`/🏦 (clickable to arm); `aria-label` stays anchored on "provision disk" in every one of them
 so the control's identity never changes out from under assistive tech or a `getByRole` query.
 `actions.clearDiskBuildQueue` remains implemented/tested with no UI control of its own — the same
 posture Capacity's own `queueIntroCapacityUpgrade` still has. See docs/ECONOMY_REFERENCE.md's
@@ -335,17 +329,17 @@ row, ALWAYS visible whenever an open slot exists, reading "`<fillBits>` / `<open
 for an old save — see `docs/DESIGN_HISTORY.md`), so the section never goes from entirely absent to
 already-mid-fill with no feedback in between.
 
-**The header row's control is a single "`🎯 <next Booster cost>`" element, no bottom action row at
+**The header row's control is a single "`🏷️ <next Booster cost>`" element, no bottom action row at
 all** (the old separate 💧 Fill / Buy / 🔁 Auto-Manual three-control row, and the lifetime
 "`<N>×  <Booster>`" counter text, are both gone — see `docs/DESIGN_HISTORY.md`'s "one-shot
 Data Lake conversion" entry). The cost figure alone is self-explanatory, so no separate counter is
 needed. It renders as one of four things, in priority order: (1) while
 `isDataLakeAutoConvertActive` (`converting`), an inert `StatusText` label reading the same
-`🎯 <cost>` text — no longer clickable, mid-automation; (2) once the matching compute-ladder entity
+`🏷️ <cost>` text — no longer clickable, mid-automation; (2) once the matching compute-ladder entity
 is already at its own effective cap (`entityAtCap`, `!canBuy && isBoosterEntityAtCap`), the same
-`🎯 <cost>` text as a `StatusText` explaining the entity is full; (3) whenever genuinely affordable
+`🏷️ <cost>` text as a `StatusText` explaining the entity is full; (3) whenever genuinely affordable
 right now (`canBuy`, `isBoosterPurchaseAvailable`) — even with Scale Out also available (e.g. right
-after the buffer just filled) — a clickable `🎯 <cost>` `ActionButton` (`aria-label="buy 1 <Booster>
+after the buffer just filled) — a clickable `🏷️ <cost>` `ActionButton` (`aria-label="buy 1 <Booster>
 from the <label> Data Lake"`) that calls `actions.startDataLakeAutoConvert(tierIndex)`, buying
 immediately since the cost is already banked; (4) otherwise, IF the corresponding Storage array for
 the lake's current capacity level is fully built (`upgradeAvailable`, level 0→1 needs the pool's
@@ -356,14 +350,14 @@ plain decade-power-of-10 step per level, not a literal doubling; the action/func
 see docs/ECONOMY_REFERENCE.md's "Data Lakes" section — hidden (not merely disabled) unless that array
 is actually complete, and hidden once the lake's own 1,000-unit hard cap is reached
 (`isDataLakeCapacityMaxed`); (5) once unlocked (`isDataLakeBoosterUnlocked` — the matching Storage
-pool has built at least one real disk) but not yet affordable, a clickable `🎯 <cost>` `ActionButton`
+pool has built at least one real disk) but not yet affordable, a clickable `🏷️ <cost>` `ActionButton`
 (`aria-label="start converting toward 1 <Booster> from the <label> Data Lake"`) that also calls
 `actions.startDataLakeAutoConvert(tierIndex)` — this time arming the one-shot `autoConvertActive`
 flag rather than buying immediately, since `tickDataLakeAutoConvert` (engine.js) then automatically
 draws from this pool's own buffer every tick until the cost is banked, buys exactly 1, and clears the
 flag (the control flips back to state (1)'s inert label for the whole duration — "Once automated, it
 will change from button to label," per the request this implements); or (6) before the lake is even
-unlocked, the same `🎯 <cost>` text as a non-interactive `StatusText`. Neither Scale Out nor the cost
+unlocked, the same `🏷️ <cost>` text as a non-interactive `StatusText`. Neither Scale Out nor the cost
 control is arbitrated against the other via the forced priority order at all (removed — see
 `docs/DESIGN_HISTORY.md`; array completion is Scale Out's own gate, same as the cost control's own
 affordability/unlock checks). Starting a conversion is refused outright
@@ -875,9 +869,13 @@ tabs (`role="tablist"`, `aria-label="perks view"`; visible text is just the glyp
   reachable tier's ⚙/🤖 `AutomationToggle`, kept even for fully-smart tiers), *Global Automation*
   (Tickspeed Autobuyer, Auto Scale Up, Auto-Prestige, Auto-Prestige Autobuyer), *Compute Autobuyers*
   (each Era-unlocked Flops autobuyer, `setComputeFlopsAutobuyerEnabled`). Each toggle is a status
-  badge (`"<name> active|paused"`) + `PauseToggleButton` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
+  badge (`"<name> active|paused"`) + `components/Switch` (`aria-pressed`, `aria-label` e.g. `"Auto Scale Up
   automation"`, `"<tier>'s autobuyer"`). A `no toggles notice` empty state covers the (practically
   unreachable) nothing-owned case.
+Layout: every Perks row is a CSS grid (default `label | control`; tier rows `$tier="unlocks"` = symbol | ⚙ |
+🤖 | fixed 5.75rem Smart cell, `$tier="toggles"` = symbol | ⚙ | 🤖; no content-sized tracks, fits 320px) so columns align row-to-row on both Unlocks and Toggles. Factory's Latency /
+Scale Up / Overclock cards share `featureCard(accent)` (neutral border + 3px left accent stripe, 1rem
+heading); Auto Scale Up's status is an `AutoChip` in the Scale Up card header.
 Tab dots: Unlocks `PP unlock available` (`hasAffordablePpUnlock`, incl. the Auto-Prestige Autobuyer),
 Upgrades `PP upgrade available` (`hasAffordablePpLevelUpgrade`). Every PP button keeps the shared live
 progress fill + hidden `role="progressbar"` (`PpPurchaseButton`); see "Accessibility" below.
@@ -997,8 +995,8 @@ order — rather than staying side by side down to phone width (an earlier versi
 tuned specifically to keep the pair side by side down to ~360-430px, e.g. an iPhone 14's 393px; see
 `SpeedCardsRow`'s own comment for why that was superseded). `ScaleUpCard` always renders (see below),
 so the row is never empty; it works unchanged whether or not `OverclockCard` is currently revealed
-alongside it. Both soft-reset cards deliberately override the shared `StatCard` spacing with compact
-`0.5rem 0.65rem` padding and a `0.35rem` internal gap; their headings have no default margin, their
+alongside it. Both soft-reset cards (and Latency) share `featureCard(accent)`: compact `0.6rem 0.75rem`
+padding, a `0.4rem` internal gap and a 3px left accent stripe; their headings have no default margin, their
 buttons use reduced vertical/horizontal padding, and the row gap is `0.4rem`.
 
 Unlike every other soft/hard reset control on this page, `ScaleUpCard` carries no `everRevealed`
