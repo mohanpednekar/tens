@@ -447,6 +447,12 @@ const BarPercentLabel = styled.span`
     : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color[props.$colorToken]};`}
 `
 
+// The tap emoji is yellow, the same hue as the bonus bar it sits on; a halo in the page color (dark
+// on the dark theme, light on the light one) keeps it legible there.
+const TapIcon = styled.span`
+  filter: drop-shadow(0 0 1px ${props => props.theme.color.page}) drop-shadow(0 0 2px ${props => props.theme.color.page});
+`
+
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
 // default accent/warn base+bonus pair — there is no "bonus" concept for a lake overflow reading.
 const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel, mode = 'multiplier' }) => {
@@ -492,7 +498,8 @@ const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel,
           aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
         >
           <BarFillBonus $widthPercent={bonusWidthPercent} />
-          <BarPercentLabel $colorToken="warn" $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% 👆</BarPercentLabel>
+          <BarPercentLabel $colorToken="warn" $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
+          </BarPercentLabel>
         </BarTrack>
       )}
     </BarRow>
