@@ -755,11 +755,11 @@ There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/ga
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
 (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
-production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`, displayed as whole `B`) and
-mirrors the same amount × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige / tier Buys keep moving
-(see `docs/DESIGN_HISTORY.md` for the #430 incident this mirror fixed). **Latency** (the global
-tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is funded from that Bytes pool —
-initial activation costs **10 Bytes** — not Bits. It unlocks once level 1 of tier01 is purchased; there
+production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
+`BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
+Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Latency** (the global
+tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is paid from that Bits balance —
+initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
@@ -1100,7 +1100,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   cases so this stays fast in CI.
 - `yarn test` is green (1979 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
-  'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
+  'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
   (`'Ones'`, `'money'`, `'hundreds'`, or a purchasable Bytes tier) left behind by prior renames/removals
   (see `docs/DESIGN_HISTORY.md`). Saves must use the current schema (`resources.base`,

@@ -31,9 +31,9 @@ screen (see "Byte Foundry" below), which is what now hands a fresh save its firs
 **Every tier is bought directly with the base currency, displayed as "Bits"** — `costResourceId` is
 `MONEY_ID` (`'base'`) for all of them. Once owned, a tier produces the tier immediately below it
 (`producesResourceId`), cascading production down the ladder. `tier01` (`Kilobytes`) costs Bits
-but produces Factory Bytes (`BYTES_ID = 'bytes'`, symbol `B`) for Latency funding, and
-`tickGame` mirrors each Byte produced into Bits at `production × BITS_PER_BYTE` so MoneyHero,
-Prestige, and tier Buys (still Bits-denominated) keep advancing. Higher tiers still produce the
+but produces whole Bytes (`BYTES_ID = 'bytes'`, symbol `B`); `tickGame` credits each Byte as
+`production × BITS_PER_BYTE` Bits. Bytes and Bits are ONE pool (`resources.base`): there is no
+`resources.bytes`, and Latency, MoneyHero, Prestige, and tier Buys all spend/read the same balance. Higher tiers still produce the
 tier below into both `resources` and `owned`.
 
 Each tier's `baseCost` is a fixed PER-UNIT price, independent of block size: `1000^n` for `tier0n`
@@ -1911,7 +1911,7 @@ moment the tier itself unlocks — no autobuyer unlock or PP prerequisite of any
 
 #### The global tickspeed multiplier
 
-A Bytes-funded global **Latency** track (formerly "Clock Speed") speeds every tier's delivery
+A Bits-funded (10 Bytes = 80 Bits at level 0) global **Latency** track (formerly "Clock Speed") speeds every tier's delivery
 frequency. Every level compounds
 the same `GLOBAL_TICKSPEED_PRODUCTION_STEP` (1%) — there are no milestone bonus levels; milestones
 were removed outright rather than replaced. Overclock scales this one shared step.
@@ -1922,10 +1922,10 @@ were removed outright rather than replaced. Overclock scales this one shared ste
   if `tier01` is later reset by a Prestige/Scale Up — the check never revokes an already-active
   level.
 - `getGlobalTickspeedMultiplierCost(currentLevel) = 10 ** (currentLevel + 1)` — `currentLevel` is the
-  level *before* the purchase (`null`/not-yet-bought treated as 0): 10 Money to activate (level 0 → 1),
-  100 for the next level, 1000 after that, and so on — paid in Factory Bytes (`resources[BYTES_ID]`);
-  the mirrored Bits (`cost × BITS_PER_BYTE`) are deducted from `resources[MONEY_ID]` too (clamped at 0)
-  so the headline balance drops like any other purchase.
+  level *before* the purchase (`null`/not-yet-bought treated as 0): 10 Bytes to activate (level 0 → 1),
+  100 for the next level, 1000 after that, and so on — charged as `getGlobalTickspeedMultiplierCostBits`
+  (`cost × BITS_PER_BYTE`) from `resources[MONEY_ID]`, the single shared balance (`isGlobalTickspeedAffordable`
+  is used by the button, the buy action and the nav dot).
 - `getGlobalTickspeedProductionMultiplier(level, overclockCount = 0)` returns
   `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`.
   `null` is level 0 (×1); every level uses exactly the same step (no milestone bonuses).
@@ -2931,7 +2931,7 @@ purchases were manual or automatic.
 | `buyAutoPrestige` | `state → state` | Returns the same state if `isProductionFrozen` or if there aren't enough unspent Prestige Points for the next level; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getAutoPrestigeCost(currentLevel)` — a single global upgrade track, not per-tier |
 | `buyAutoPrestigeAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if Auto-Prestige hasn't been activated yet (`state.autoPrestige` is still `null` — this automates RE-leveling only, not the initial activation), if already bought, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_PRESTIGE_AUTOBUYER_COST` PP and permanently sets `autoPrestigeAutobuyer = true`, making `tickGame` call `buyAutoPrestige` automatically every tick |
 | `isGlobalTickspeedMultiplierUnlocked` | `state → bool` | `owned[TIER_DEFINITIONS[1].id] >= 1 \|\| globalTickspeedMultiplier != null` — gates the global tickspeed multiplier's *initial* activation on owning at least 1 of the second tier; once active it stays true regardless of tier02's current owned count |
-| `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if there aren't enough Bytes; otherwise activates (`null` → 1) or upgrades (level N → N+1) via `getGlobalTickspeedMultiplierCost(currentLevel)`, spending `resources[BYTES_ID]` and deducting `cost × BITS_PER_BYTE` from `resources[MONEY_ID]` (clamped at 0; no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
+| `buyGlobalTickspeedMultiplier` | `state → state` | Returns the same state if `isProductionFrozen`, if `isGlobalTickspeedMultiplierUnlocked` is false, or if `resources[MONEY_ID]` is below `getGlobalTickspeedMultiplierCostBits(currentLevel)`; otherwise activates (`null` → 1) or upgrades (level N → N+1), spending those Bits (no PP involved) — a single global upgrade track, not per-tier, compounding every tier's production by another 1% per level |
 | `buyAutoScaleUp` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoScaleUp` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `AUTO_SCALE_UP_COST` PP and permanently sets `autoScaleUp = true`, making `tickGame` call `scaleUpGame` automatically every tick, including final-tier claims whose 3/6/9 cadence leaves Overclock available at level 5 |
 | `buyTickspeedAutobuyer` | `state → state` | Returns the same state if `isProductionFrozen`, if `autoGlobalTickspeed` is already true, or if there aren't enough unspent Prestige Points; otherwise spends `TICKSPEED_AUTOBUYER_COST` PP and permanently sets `autoGlobalTickspeed = true`, making `tickGame` call `buyGlobalTickspeedMultiplier` automatically every tick |
 | `setAutoScaleUpEnabled` | `enabled → state → state` | Unconditional (not gated by `isProductionFrozen`) and a no-op if `autoScaleUp` is still falsy; otherwise sets `autoScaleUpEnabled` to `!!enabled`, pausing/resuming `tickGame`'s automatic `scaleUpGame` call without touching `autoScaleUp` itself — see "Pause/resume for the global automations" above |
