@@ -907,6 +907,14 @@ export const getGlobalTickspeedMultiplierCost = currentLevel =>
 export const isGlobalTickspeedMultiplierUnlocked = state =>
   (state.purchaseLevels?.[TIER_DEFINITIONS[0].id] ?? 1) >= 2 || (state.globalTickspeedMultiplier ?? null) !== null
 
+// Latency is paid in Factory Bytes, but every Byte produced is mirrored into the Bits balance the
+// headline shows and tier Buys spend — so a level is affordable only when BOTH pools cover it
+// (cost Bytes and cost × BITS_PER_BYTE Bits), i.e. never more than the displayed balance.
+export const isGlobalTickspeedAffordable = state => {
+  const cost = getGlobalTickspeedMultiplierCost(state.globalTickspeedMultiplier ?? 0)
+  return (state.resources?.[BYTES_ID] ?? 0) >= cost && (state.resources?.[MONEY_ID] ?? 0) >= cost * BITS_PER_BYTE
+}
+
 // The speed multiplier every tier gets from Latency. Every level compounds the same base
 // production step, scaled by the permanent Overclock multiplier.
 export const getGlobalTickspeedProductionMultiplier = (level, overclockCount = 0) => {
@@ -6344,8 +6352,8 @@ export const buyGlobalTickspeedMultiplier = state => {
 
   const currentLevel = state.globalTickspeedMultiplier ?? null
   const cost = getGlobalTickspeedMultiplierCost(currentLevel ?? 0)
+  if (!isGlobalTickspeedAffordable(state)) return state
   const available = state.resources[BYTES_ID] ?? 0
-  if (available < cost) return state
 
   // Every Byte produced is mirrored into Bits (see tickGame), so spending Bytes also removes the
   // mirrored Bits — otherwise the headline balance wouldn't drop, unlike every other purchase.

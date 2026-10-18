@@ -144,6 +144,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **Latency can no longer be bought beyond your balance.** It checked only the separate Bytes pool, so the button could be affordable while the headline balance (which tier purchases spend) was lower. A level now needs both the Bytes and the matching Bits.
+
 - **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
 
 - **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of

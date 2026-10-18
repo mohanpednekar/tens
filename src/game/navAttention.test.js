@@ -20,6 +20,7 @@ import {
   PRESTIGE_THRESHOLD,
   TICKSPEED_AUTOBUYER_COST,
   TIER_DEFINITIONS,
+  BITS_PER_BYTE,
 } from 'game/layers'
 import {
   ATTENTION_HIGH,
@@ -385,7 +386,7 @@ describe('navAttention', () => {
       purchaseLevels: { [tier01.id]: 2 },
       resources: {
         ...createInitialGameState().resources,
-        [MONEY_ID]: 0,
+        [MONEY_ID]: 10 * BITS_PER_BYTE,
         [BYTES_ID]: 10,
       },
       globalTickspeedMultiplier: null,

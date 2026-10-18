@@ -1924,8 +1924,9 @@ were removed outright rather than replaced. Overclock scales this one shared ste
 - `getGlobalTickspeedMultiplierCost(currentLevel) = 10 ** (currentLevel + 1)` — `currentLevel` is the
   level *before* the purchase (`null`/not-yet-bought treated as 0): 10 Money to activate (level 0 → 1),
   100 for the next level, 1000 after that, and so on — paid in Factory Bytes (`resources[BYTES_ID]`);
-  the mirrored Bits (`cost × BITS_PER_BYTE`) are deducted from `resources[MONEY_ID]` too (clamped at 0)
-  so the headline balance drops like any other purchase.
+  the mirrored Bits (`cost × BITS_PER_BYTE`) are deducted from `resources[MONEY_ID]` too, and a level is
+  affordable only when BOTH pools cover it (`isGlobalTickspeedAffordable`, also used by the button and
+  nav dot) — never more than the headline balance.
 - `getGlobalTickspeedProductionMultiplier(level, overclockCount = 0)` returns
   `(1 + GLOBAL_TICKSPEED_PRODUCTION_STEP * getOverclockMultiplier(overclockCount)) ** level`.
   `null` is level 0 (×1); every level uses exactly the same step (no milestone bonuses).

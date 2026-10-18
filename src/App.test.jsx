@@ -1633,7 +1633,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 10, bytes: 10 },
+    resources: { base: 80, bytes: 10 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)

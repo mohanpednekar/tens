@@ -13,7 +13,7 @@ import {
   canBuyComputeFlopsTier,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
-  getGlobalTickspeedMultiplierCost,
+  isGlobalTickspeedAffordable,
   getIntroKilobyteConversionCost,
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
@@ -142,8 +142,7 @@ export const hasAffordableFullLevel = state => {
 export const hasAffordableGlobalTickspeed = state => {
   if (isProductionFrozen(state)) return false
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return false
-  const cost = getGlobalTickspeedMultiplierCost(state.globalTickspeedMultiplier ?? 0)
-  return (state.resources[BYTES_ID] ?? 0) >= cost
+  return isGlobalTickspeedAffordable(state)
 }
 
 export const hasScaleUpAvailable = state => {

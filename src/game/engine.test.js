@@ -313,6 +313,12 @@ const withMoney = (state, amount) => ({
   resources: { ...state.resources, [MONEY_ID]: amount },
 })
 
+// Latency needs the Bytes AND the mirrored Bits (amount × BITS_PER_BYTE) — seed both.
+const withLatencyFunds = (state, bytes) => ({
+  ...state,
+  resources: { ...state.resources, [BYTES_ID]: bytes, [MONEY_ID]: bytes * BITS_PER_BYTE },
+})
+
 const withBytes = (state, amount) => ({
   ...state,
   resources: { ...state.resources, [BYTES_ID]: amount },
@@ -7616,7 +7622,7 @@ describe('tickGame', () => {
 
   it('lets the global tickspeed autobuyer upgrade when autoGlobalTickspeedEnabled is missing from state entirely (defaults to active)', () => {
     const state = omit(
-      withBytes(withAutoGlobalTickspeed(withPurchaseLevel(createInitialGameState(), tensTier.id, 2)), 10),
+      withLatencyFunds(withAutoGlobalTickspeed(withPurchaseLevel(createInitialGameState(), tensTier.id, 2)), 10),
       'autoGlobalTickspeedEnabled'
     )
     const after = tickGame(1)(state)
@@ -8205,7 +8211,7 @@ describe('tickGame', () => {
 
   it('automatically upgrades the global tickspeed multiplier when the Tickspeed Autobuyer is bought and it is affordable', () => {
     const state = withAutoGlobalTickspeed(
-      withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
+      withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
     )
     const after = tickGame(1)(state)
     expect(after.globalTickspeedMultiplier).toBe(1)
@@ -8213,7 +8219,7 @@ describe('tickGame', () => {
 
   it('does not upgrade the global tickspeed multiplier automatically without enough Bytes', () => {
     const state = withAutoGlobalTickspeed(
-      withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 9)
+      withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 9)
     )
     const after = tickGame(1)(state)
     expect(after.globalTickspeedMultiplier).toBeNull()
@@ -8236,7 +8242,7 @@ describe('tickGame', () => {
 
   it('resumes automatically upgrading the global tickspeed multiplier once the Tickspeed Autobuyer is re-enabled', () => {
     const paused = withAutoGlobalTickspeedEnabled(
-      withAutoGlobalTickspeed(withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)),
+      withAutoGlobalTickspeed(withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)),
       false
     )
     const resumed = setAutoGlobalTickspeedEnabled(true)(paused)
@@ -8733,22 +8739,28 @@ describe('isGlobalTickspeedMultiplierUnlocked', () => {
 
 describe('buyGlobalTickspeedMultiplier', () => {
   it('spends 10 Bytes to activate Latency (global tickspeed multiplier) at level 1', () => {
-    const state = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
+    const state = withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
     const after = buyGlobalTickspeedMultiplier(state)
     expect(after.globalTickspeedMultiplier).toBe(1)
     expect(after.resources[BYTES_ID]).toBe(0)
   })
 
-  it('also deducts the mirrored Bits from the Money balance (clamped at 0)', () => {
-    const base = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
+  it('is a no-op when Bytes suffice but the Bits balance (cost × 8) does not', () => {
+    const base = withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
+    const short = { ...base, resources: { ...base.resources, [MONEY_ID]: 10 * BITS_PER_BYTE - 1 } }
+    expect(buyGlobalTickspeedMultiplier(short)).toBe(short)
+    const exact = { ...base, resources: { ...base.resources, [MONEY_ID]: 10 * BITS_PER_BYTE } }
+    expect(buyGlobalTickspeedMultiplier(exact).globalTickspeedMultiplier).toBe(1)
+  })
+
+  it('also deducts the mirrored Bits from the Money balance', () => {
+    const base = withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10)
     const rich = { ...base, resources: { ...base.resources, [MONEY_ID]: 1000 } }
     expect(buyGlobalTickspeedMultiplier(rich).resources[MONEY_ID]).toBe(1000 - 10 * BITS_PER_BYTE)
-    const poor = { ...base, resources: { ...base.resources, [MONEY_ID]: 5 } }
-    expect(buyGlobalTickspeedMultiplier(poor).resources[MONEY_ID]).toBe(0)
   })
 
   it('costs 100 Bytes for level 1 → 2, another power of ten each level after that', () => {
-    const state = withBytes(
+    const state = withLatencyFunds(
       withGlobalTickspeedMultiplier(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 1),
       100
     )
@@ -8756,7 +8768,7 @@ describe('buyGlobalTickspeedMultiplier', () => {
     expect(after.globalTickspeedMultiplier).toBe(2)
     expect(after.resources[BYTES_ID]).toBe(0)
 
-    const state2 = withBytes(
+    const state2 = withLatencyFunds(
       withGlobalTickspeedMultiplier(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 2),
       1000
     )
@@ -8766,17 +8778,17 @@ describe('buyGlobalTickspeedMultiplier', () => {
   })
 
   it('returns the same state before the first tier completes level 1, even with plenty of Bytes', () => {
-    const state = withBytes(createInitialGameState(), 1000)
+    const state = withLatencyFunds(createInitialGameState(), 1000)
     expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
   })
 
   it('returns the same state when there is not enough Bytes to activate', () => {
-    const state = withBytes(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 9)
+    const state = withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 9)
     expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
   })
 
   it('returns the same state when there is not enough Bytes to upgrade', () => {
-    const state = withBytes(
+    const state = withLatencyFunds(
       withGlobalTickspeedMultiplier(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 1),
       99
     )
@@ -8784,13 +8796,13 @@ describe('buyGlobalTickspeedMultiplier', () => {
   })
 
   it('stays purchasable even if the first tier is reset once the multiplier is already active', () => {
-    const state = withBytes(withGlobalTickspeedMultiplier(createInitialGameState(), 1), 100)
+    const state = withLatencyFunds(withGlobalTickspeedMultiplier(createInitialGameState(), 1), 100)
     const after = buyGlobalTickspeedMultiplier(state)
     expect(after.globalTickspeedMultiplier).toBe(2)
   })
 
   it('refuses to spend once production is frozen at PRESTIGE_THRESHOLD', () => {
-    const state = withBytes(withPurchaseLevel(withMoney(createInitialGameState(), PRESTIGE_THRESHOLD), TIER_DEFINITIONS[0].id, 2), 10)
+    const state = withMoney(withLatencyFunds(withPurchaseLevel(createInitialGameState(), TIER_DEFINITIONS[0].id, 2), 10), PRESTIGE_THRESHOLD)
     expect(buyGlobalTickspeedMultiplier(state)).toBe(state)
   })
 
