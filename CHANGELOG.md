@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Compute Boosts: every funding tier now gives the same multiplier and duration as Cores; spending a higher tier instead boosts more Factory tiers (Node: the first two, Cluster: the first three, …). Memory is always boosted.
 - **Data Lake header.** Each lake's header now matches the pool/Data Stream tile layout: name with the Booster target price (also the buy control) under it, the amount filled big and centered, and the current fill speed on the right.
 - **Memory amounts show at most 5 significant digits.** Unit-scaled sizes/balances/speeds (e.g. the Data Stream
   balance) now trim decimals as the integer part grows — "1,011.1 MiB" instead of "1,011.147 MiB".
