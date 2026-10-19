@@ -48,16 +48,11 @@ const BalanceText = styled.p`
   min-width: 0;
   margin: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.md.size};
+  font-size: ${props => (props.$large ? props.theme.type.scale.xl.size : props.theme.type.scale.md.size)};
   font-weight: 700;
   text-align: center;
   white-space: nowrap;
   text-shadow: 0 0 2px ${props => props.theme.color.surface};
-`
-
-const BalanceSeparator = styled.span`
-  color: ${props => props.theme.color.textMuted};
-  font-weight: 500;
 `
 
 // Tapping stays a fully live action forever (never freezes, never goes read-only — see
@@ -413,12 +408,6 @@ const formatMemoryBalanceValue = (bits, capacityBits, byteCreated, stable = true
 const formatMemoryCapacityValue = (capacityBits, byteCreated) =>
   formatMemoryAmount(capacityBits, getMemoryUnit(capacityBits, byteCreated))
 
-const formatCombinedBalance = (balance, capacity) => {
-  const balanceUnit = balance.match(/\s+(\S+)$/)?.[1]
-  const capacityUnit = capacity.match(/\s+(\S+)$/)?.[1]
-  return balanceUnit === capacityUnit ? balance.replace(/\s+\S+$/, '') : balance
-}
-
 // A balance's fixed decimal padding (formatMemoryAmountStable/formatDiskSizeStable — see either's
 // own doc comment) exists only to stop its displayed WIDTH from jittering tick to tick while the
 // value is actually changing. Once a buffer sits completely full — no longer changing — that
@@ -445,18 +434,13 @@ const useTrimBalanceAfterFull = isFull => {
 // A pool's own Memory balance, as its own tiny component (rather than inline in the pool-card
 // loop below) purely so useTrimBalanceAfterFull gets its own hook instance per pool — a hook
 // can't be called a variable number of times inside a single component's own render.
-const PoolBalanceText = ({ bits, capacityBits, isFull, poolIndex }) => {
+const PoolBalanceText = ({ bits, isFull, poolIndex, large }) => {
   const trimmed = useTrimBalanceAfterFull(isFull)
   // The balance self-sizes below this pool's own fixed unit (see formatPoolBalance's own doc
   // comment in engine.js) — capacity itself stays fixed to the pool's own unit (never auto-
   // converting up to the next one), per formatDiskSizeInPoolUnit's own doc comment.
   const balance = trimmed ? formatPoolBalance(bits, poolIndex) : formatPoolBalanceStable(bits, poolIndex)
-  const capacity = formatDiskSizeInPoolUnit(capacityBits, poolIndex)
-  return (
-    <BalanceText>
-      {formatCombinedBalance(balance, capacity)} <BalanceSeparator>/</BalanceSeparator> {capacity}
-    </BalanceText>
-  )
+  return <BalanceText $large={large}>{balance}</BalanceText>
 }
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
@@ -791,12 +775,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         >
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
-            <BalanceText>
-              {formatCombinedBalance(
-                formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed),
-                formatMemoryCapacityValue(intro.capacity, intro.byteCreated),
-              )}{' '}
-              <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
+            <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
+              {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
             {dataStreamRateText && (
               <SpeedText $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
@@ -804,13 +784,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               </SpeedText>
             )}
           </TitleRow>
-          {intro.byteCreated && (
-            <CapacityBonusRow
-              capacityText={formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
-              bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
-              ariaLabel="data stream fill-based speed multiplier"
-            />
-          )}
+          <CapacityBonusRow
+            capacityText={formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
+            bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
+            ariaLabel="data stream fill-based speed multiplier"
+          />
           <VisuallyHidden
             role="progressbar"
             aria-label="data stream bit balance"
@@ -948,7 +926,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                       <span>Pool</span>
                     </PoolTitleToggle>
                   </SectionTitle>
-                  <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
+                  <PoolBalanceText bits={poolBufferBits} isFull={poolBufferFull} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
                   <SpeedText $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
                     ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
                   </SpeedText>
