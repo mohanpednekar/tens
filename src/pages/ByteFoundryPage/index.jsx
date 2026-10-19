@@ -456,8 +456,10 @@ const clampPercent = value => Math.min(100, Math.max(0, value))
 
 const BAR_HEIGHT = 8
 
+// Three columns (side text | bar | side text) so the bar is truly centered whatever the side widths.
 const SubRow = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 40% 1fr;
   align-items: center;
   gap: ${props => props.theme.space.sm};
   width: 100%;
@@ -472,7 +474,7 @@ const CapacityText = styled.span`
 `
 
 const BonusText = styled.span`
-  flex-shrink: 0;
+  justify-self: end;
   font-weight: 600;
   color: ${props => props.theme.color.text};
   white-space: nowrap;
@@ -480,10 +482,7 @@ const BonusText = styled.span`
 
 const BarTrack = styled.div`
   position: relative;
-  flex: 1 1 auto;
   min-width: 0;
-  max-width: 40%;
-  margin: 0 auto;
   height: ${BAR_HEIGHT}px;
   border-radius: ${props => props.theme.radius.pill};
   background: transparent;
