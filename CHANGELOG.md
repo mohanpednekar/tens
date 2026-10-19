@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Foundry speed display.** The Data Stream and pool multiplier bars are gone; their Speed/Bandwidth
   figures now show the actual resulting value (3 significant digits), colored red → blue → green with
-  the fill multiplier. The tap-bonus bar stays (it hides when inactive). A collapsed pool card now also
+  the fill multiplier. Capacity now sits under each pool/Data Stream name, and the tap bonus reads "+x% 👆" under the speed beside a narrower bar (hidden when inactive). A collapsed pool card now also
   shows its Data Lake heading and Booster action.
 - Boosters page: boost controls now live in one "Boost" card, the selected funding tier is marked with a filled dot and highlighted border, and a tier's Merge/Auto row only shows for the selected tier or when there is something to act on, so idle tiers are one line. The slot dots carry the count, so the "n/10" text is gone from the tier rows (still announced to screen readers).
 - Boosters page: clearer wording — the active boost reads "💥 Burst ×20 · 19m left", preset buttons show their duration, the funding line says what a boost spends, Auto-Boost unlock is a quiet neutral button, and each tier's Merge/Auto buttons name their target.

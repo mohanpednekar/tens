@@ -461,18 +461,36 @@ const PoolBalanceText = ({ bits, capacityBits, isFull, poolIndex }) => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-const BAR_HEIGHT = 14
+const BAR_HEIGHT = 8
 
-const BarRow = styled.div`
+const SubRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: ${props => props.theme.space.sm};
   width: 100%;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+`
+
+const CapacityText = styled.span`
+  flex-shrink: 0;
+  color: ${props => props.theme.color.textMuted};
+  white-space: nowrap;
+`
+
+const BonusText = styled.span`
+  flex-shrink: 0;
+  font-weight: 600;
+  color: ${props => props.theme.color.text};
+  white-space: nowrap;
 `
 
 const BarTrack = styled.div`
   position: relative;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 40%;
+  margin: 0 auto;
   height: ${BAR_HEIGHT}px;
   border-radius: ${props => props.theme.radius.pill};
   background: transparent;
@@ -496,26 +514,6 @@ const BarFillBonus = styled(BarFillBase)`
   background: ${props => props.theme.color.warn};
 `
 
-// Percent readout. Inside its bar it is centered, in the page color (dark on the dark theme's light
-// fills, light on the light theme's dark fills) so it reads on the fill; a bar too narrow to hold
-// it (a small tap bonus or lake rate, or a full buffer's 50% floor) gets the label just past the fill's
-// right edge in the plain text color with a surface-colored halo, since that spot can sit on the
-// tile's own progress fill (green) where the bar's accent color has poor contrast.
-const BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT = 40
-
-const BarPercentLabel = styled.span`
-  position: absolute;
-  top: 50%;
-  white-space: nowrap;
-  font-size: 0.7rem;
-  font-weight: 600;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  ${props => props.$widthPercent >= BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT
-    ? `left: 50%; transform: translate(-50%, -50%); color: ${props.theme.color.page};`
-    : `left: calc(50% + ${props.$widthPercent / 2}% + 0.35rem); transform: translateY(-50%); color: ${props.theme.color.text}; text-shadow: 0 0 2px ${props.theme.color.surface}, 0 0 4px ${props.theme.color.surface};`}
-`
-
 // The tap emoji is yellow, the same hue as the bonus bar it sits on in the dark theme; a thin dark
 // outline (the same in both themes — a light halo would glow on the light theme's brown bar) keeps
 // it legible there.
@@ -523,29 +521,30 @@ const TapIcon = styled.span`
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.85));
 `
 
-// `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
-// default accent/warn base+bonus pair — there is no "bonus" concept for a lake overflow reading.
-// Only the tap-bonus bar remains (it auto-hides at 0); the fill-based multiplier itself is shown as
-// the tinted effective Speed/Bandwidth figure (see getSpeedColor/formatSpeedText).
-const TapBonusBar = ({ bonusPercent = 0, ariaLabel }) => {
+// Second row under the title row: Capacity under the section name (left), the tap bonus under the
+// Speed/Bandwidth figure (right, "+x% 👆"), and between them a narrow bonus bar that only shows
+// while a bonus is active (the fill-based multiplier itself is the tinted Speed figure, see
+// getSpeedColor/formatSpeedText).
+const CapacityBonusRow = ({ capacityText, bonusPercent = 0, ariaLabel }) => {
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
-  if (clampedBonus <= 0) return null
-  const bonusWidthPercent = (clampedBonus / FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) * 100
+  const hasBonus = clampedBonus > 0
   return (
-    <BarRow>
-      <BarTrack
-        role="progressbar"
-        aria-label={`${ariaLabel} tap bonus`}
-        aria-valuenow={Math.round(clampedBonus)}
-        aria-valuetext={`+${Math.round(clampedBonus)}%`}
-        aria-valuemin={0}
-        aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
-      >
-        <BarFillBonus $widthPercent={bonusWidthPercent} />
-        <BarPercentLabel $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
-        </BarPercentLabel>
-      </BarTrack>
-    </BarRow>
+    <SubRow>
+      <CapacityText>📦 {capacityText}</CapacityText>
+      {hasBonus && (
+        <BarTrack
+          role="progressbar"
+          aria-label={`${ariaLabel} tap bonus`}
+          aria-valuenow={Math.round(clampedBonus)}
+          aria-valuetext={`+${Math.round(clampedBonus)}%`}
+          aria-valuemin={0}
+          aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
+        >
+          <BarFillBonus $widthPercent={(clampedBonus / FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) * 100} />
+        </BarTrack>
+      )}
+      {hasBonus && <BonusText>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon></BonusText>}
+    </SubRow>
   )
 }
 
@@ -806,7 +805,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             )}
           </TitleRow>
           {intro.byteCreated && (
-            <TapBonusBar
+            <CapacityBonusRow
+              capacityText={formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
               bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
               ariaLabel="data stream fill-based speed multiplier"
             />
@@ -953,7 +953,8 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
                   </SpeedText>
                 </TitleRow>
-                <TapBonusBar
+                <CapacityBonusRow
+                  capacityText={formatDiskSizeInPoolUnit(poolBufferCapacity, poolIndex)}
                   bonusPercent={poolTapBonusPercent}
                   ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
                 />
