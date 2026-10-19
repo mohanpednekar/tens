@@ -1,6 +1,6 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
+import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -524,6 +524,13 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
 const singularize = label => label.replace(/s$/, '')
 
+// "Kilobytes" for 1 covered Factory tier, "Kilobytes–Megabytes" for 2, … — which Factory tiers a
+// boost funded from compute-ladder tier `tierIndex` applies to (see getComputeBoostCoveredTierCount).
+const describeCoveredTiers = tierIndex =>
+  tierIndex <= 1
+    ? TIER_DEFINITIONS[0].name
+    : `${TIER_DEFINITIONS[0].name}–${TIER_DEFINITIONS[Math.min(tierIndex, TIER_DEFINITIONS.length) - 1].name}`
+
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
@@ -560,7 +567,7 @@ const ComputePage = ({ game }) => {
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
         <ActiveBoostRow aria-label="active compute boost">
           <span
-            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
+            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production on ${describeCoveredTiers(activeTierIndex)}, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
           >
             {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
           </span>
@@ -569,7 +576,7 @@ const ComputePage = ({ game }) => {
 
       <ArmedStatusText>
         {armedRow
-          ? `Spends 1 ${singularize(armedRow.label)} per boost · ${armedRow.symbol} ${formatAmount(armedHeld)} held`
+          ? `Spends 1 ${singularize(armedRow.label)} per boost · boosts ${describeCoveredTiers(armedTierIndex)} · ${armedRow.symbol} ${formatAmount(armedHeld)} held`
           : 'Pick a tier below to power a boost'}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
@@ -759,7 +766,7 @@ const ComputePage = ({ game }) => {
                       onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
                       aria-pressed={armedTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
-                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
+                      title={`Select ${row.label} to arm the Boost presets above — they'll boost ${describeCoveredTiers(tierIndex)}`}
                       $selected={armedTierIndex === tierIndex}
                     >
                       <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
