@@ -6,7 +6,6 @@ import {
 } from 'game/engine'
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
-  BYTES_ID,
   COMPUTE_FLOPS_FIRST_TIER_COST_PP,
   COMPUTE_FLOPS_REVEAL_PP,
   COMPUTE_MERGE_RATIO,
@@ -16,6 +15,7 @@ import {
   INTRO_CONVERSION_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_STARTING_CAPACITY,
+  BITS_PER_BYTE,
   MONEY_ID,
   PRESTIGE_THRESHOLD,
   TICKSPEED_AUTOBUYER_COST,
@@ -76,6 +76,16 @@ describe('navAttention', () => {
     })
     expect(hasFoundryAttention(state)).toBe(true)
     expect(getNavAttention(state).foundry).toBe('high')
+  })
+
+  it('does not light Foundry for a full Buffer while an Upgrade Data Stream is running', () => {
+    const state = withIntro({
+      bits: INTRO_STARTING_CAPACITY,
+      capacity: INTRO_STARTING_CAPACITY,
+      byteCreated: true,
+      capacityUpgradeQueued: true,
+    })
+    expect(hasFoundryAttention(state)).toBe(false)
   })
 
   it('lights Foundry when combine into a Byte is ready', () => {
@@ -366,7 +376,7 @@ describe('navAttention', () => {
     expect(hasAffordablePpUpgrade(state)).toBe(false)
   })
 
-  it('lights Factory when Latency is affordable from the Bytes pool', () => {
+  it('lights Factory when Latency is affordable from the Bits balance', () => {
     const tier01 = TIER_DEFINITIONS[0]
     const state = {
       ...createInitialGameState(),
@@ -375,8 +385,7 @@ describe('navAttention', () => {
       purchaseLevels: { [tier01.id]: 2 },
       resources: {
         ...createInitialGameState().resources,
-        [MONEY_ID]: 0,
-        [BYTES_ID]: 10,
+        [MONEY_ID]: 10 * BITS_PER_BYTE,
       },
       globalTickspeedMultiplier: null,
     }
@@ -385,17 +394,12 @@ describe('navAttention', () => {
     expect(getNavAttention(state).game).toBe(ATTENTION_NORMAL)
   })
 
-  it('does not treat Latency as affordable when only Bits cover the cost', () => {
-    const tier02 = TIER_DEFINITIONS[1]
+  it('does not light Latency when the Bits balance is short of the cost', () => {
     const state = {
       ...createInitialGameState(),
       intro: { ...createInitialGameState().intro, mainGameUnlocked: true, byteCreated: true },
-      owned: { [tier02.id]: 1 },
-      resources: {
-        ...createInitialGameState().resources,
-        [MONEY_ID]: 1e12,
-        [BYTES_ID]: 0,
-      },
+      purchaseLevels: { [TIER_DEFINITIONS[0].id]: 2 },
+      resources: { ...createInitialGameState().resources, [MONEY_ID]: 10 * BITS_PER_BYTE - 1 },
       globalTickspeedMultiplier: null,
     }
     expect(hasAffordableGlobalTickspeed(state)).toBe(false)

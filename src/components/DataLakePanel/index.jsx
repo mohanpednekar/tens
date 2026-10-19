@@ -140,7 +140,7 @@ const LakePoolTile = styled.div`
   min-height: 1.8rem;
   border-radius: ${props => props.theme.radius.md};
   overflow: hidden;
-  background: ${props => props.theme.color.surfaceSunken};
+  background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 45%, ${props => props.theme.color.surface});
   display: flex;
   align-items: center;
   justify-content: center;
