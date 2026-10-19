@@ -3447,6 +3447,17 @@ longer Boost uptime (“effect time doubles after merge”) without returning to
 separate, later lever. **If flattening duration again, document why slot-cap incentives alone are
 enough.**
 
+### Compute Boost: tier funds breadth, not strength (reverses the 4× power / 2× duration scaling)
+
+Maintainer instruction: every compute-ladder tier now gives the SAME boost attributes as Cores
+(`COMPUTE_BOOST_PRESETS`' own `multiplier`/`durationSeconds`), and the funding tier instead sets how
+many Factory tiers the boost applies to — tier N covers the first N Factory tiers
+(`getComputeBoostCoveredTierCount`; Memory is always boosted). `COMPUTE_BOOST_TIER_POWER_STEP` (4) and
+`COMPUTE_BOOST_TIER_DURATION_STEP` (2) were removed. This supersedes the "4× effect + doubled duration"
+decisions above, so the earlier note ("if flattening duration again, document why slot-cap incentives
+alone are enough") is answered by the new breadth incentive: merging up still pays off, now by
+widening what the boost reaches. `simulate-run-times` has not been re-run for this change.
+
 ### Compute merge timers from live Core earn ×10; Auto-Boost 30 PP; forfeit with confirm (#377/#380)
 
 Fixed second tables (60s doubling, then 1s×10^n experiments in #370/#371/#372) drifted from Foundry
