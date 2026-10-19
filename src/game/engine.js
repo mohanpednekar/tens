@@ -3446,10 +3446,21 @@ const flooredBitsLabel = bits => {
 // (further below) so the two only ever differ in whether a trailing zero gets trimmed, never in
 // how many decimal places are computed in the first place.
 const MEMORY_AMOUNT_DECIMAL_PLACES = 3
+// Hard cap on significant digits in any unit-scaled memory amount: decimals shrink as the integer
+// part grows, so "1,011.147 MiB" renders "1,011.1 MiB". Never exceeds MEMORY_AMOUNT_DECIMAL_PLACES.
+const MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS = 5
+const getMemoryAmountDecimals = value => {
+  const integerDigits = value >= 1 ? Math.floor(Math.log10(value)) + 1 : 1
+  return Math.min(
+    MEMORY_AMOUNT_DECIMAL_PLACES,
+    Math.max(0, MEMORY_AMOUNT_MAX_SIGNIFICANT_DIGITS - integerDigits),
+  )
+}
 
 export const formatMemoryAmount = (bits, unit) => {
   if (unit) {
-    const scaled = floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES)
+    const raw = bits / unit.divisor
+    const scaled = floorToDecimals(raw, getMemoryAmountDecimals(raw))
     // Never show a "0.xyz <unit>" fraction — no significant digit before the decimal. Falls back
     // to the raw bit count instead, the one unit finer than anything either unit ladder offers
     // (both bottom out at whole Bytes, B, with no smaller SI/binary unit defined below it) — see
@@ -3471,16 +3482,16 @@ export const formatMemoryAmount = (bits, unit) => {
 // keeps the decimal digit count STABLE (always exactly MEMORY_AMOUNT_DECIMAL_PLACES once ≥ 1 in its
 // unit) so "5.6" renders as "5.600" instead. A true zero still renders bare ("0 <unit>", not
 // "0.000 <unit>"), matching formatMemoryAmount's own zero handling above.
-const fixedMemoryAmountFormatter = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: MEMORY_AMOUNT_DECIMAL_PLACES,
-  maximumFractionDigits: MEMORY_AMOUNT_DECIMAL_PLACES,
-})
+const fixedMemoryAmountFormatters = Array.from({ length: MEMORY_AMOUNT_DECIMAL_PLACES + 1 }, (_, digits) =>
+  new Intl.NumberFormat('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits }))
 export const formatMemoryAmountStable = (bits, unit) => {
   if (!unit) return flooredBitsLabel(bits)
-  const scaled = floorToDecimals(bits / unit.divisor, MEMORY_AMOUNT_DECIMAL_PLACES)
+  const raw = bits / unit.divisor
+  const decimals = getMemoryAmountDecimals(raw)
+  const scaled = floorToDecimals(raw, decimals)
   if (scaled > 0 && scaled < 1) return flooredBitsLabel(bits)
   if (scaled === 0) return `${formatAmount(scaled)} ${unit.symbol}`
-  return `${fixedMemoryAmountFormatter.format(scaled)} ${unit.symbol}`
+  return `${fixedMemoryAmountFormatters[decimals].format(scaled)} ${unit.symbol}`
 }
 
 // Any Memory-denominated amount (capacity, balance, Upgrade Data Stream cost, transfer-block cost, the
