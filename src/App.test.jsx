@@ -4374,7 +4374,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
+    expect(screen.getByText(/spends 1 core.*4 held/i)).toBeInTheDocument()
   })
 
   test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
@@ -4461,7 +4461,62 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
+    // Idle tiers collapse to one line; selecting the tier reveals its merge row.
+    fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
     expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
+  })
+
+  describe('tier detail row is progressively disclosed', () => {
+    const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
+    const nodesMerge = () => screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })
+    const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })
+
+    test('an idle, unselected tier shows no merge/auto buttons until selected', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesMerge()).not.toBeInTheDocument()
+      expect(nodesAuto()).not.toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
+      expect(nodesMerge()).toBeInTheDocument()
+      expect(nodesAuto()).toBeInTheDocument()
+    })
+
+    test('a tier with a possible merge is revealed without selecting it', () => {
+      seedIntroState({ ...base, computeNodes: 8, computeClusters: 0 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesMerge()).toBeEnabled()
+    })
+
+    test('Auto-merge unlock progress (cost tier held > 0) reveals the row', () => {
+      seedIntroState({ ...base, computeNodes: 2, computeClusters: 3 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesAuto()).toBeDisabled()
+    })
+
+    test('an in-flight reserve merge reveals the row', () => {
+      seedIntroState({ ...base, computeNodes: 2, autoMergeNodesIntoCluster: true, computeNodesMergeRemainingSeconds: 30 })
+      render(<App />)
+      openBoosters()
+
+      expect(screen.getByRole('button', { name: /nodes reserve merge in progress/i })).toBeInTheDocument()
+    })
+
+    test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
+      render(<App />)
+      openBoosters()
+
+      const nodes = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
+      fireEvent.click(nodes)
+      expect(nodes).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: /select cores to fund a compute boost/i })).toHaveAttribute('aria-pressed', 'false')
+    })
   })
 
   test('merging spends 8 of the input entity for 1 of the output entity', () => {
@@ -4681,7 +4736,7 @@ describe('Compute auto-merge automation', () => {
     openBoosters()
 
     const autoButton = screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i })
-    expect(autoButton).toHaveTextContent('🤖 6/10')
+    expect(autoButton).toHaveTextContent('🤖 Auto · 6/10 Nodes')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 
