@@ -26,7 +26,6 @@ import {
   FILL_MULTIPLIER_MIN_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_PERCENT,
   FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT,
-  FILL_MULTIPLIER_TAP_CAP_PERCENT,
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
@@ -39,6 +38,7 @@ import {
   TIER_DEFINITIONS,
   DISK_LADDER_BASE_SIZE_BITS,
 } from 'game/layers'
+import { COST_ICON } from 'components/icons'
 import { isDevModeActive } from 'game/storage'
 import App from './App'
 
@@ -726,7 +726,7 @@ test('a tier row\'s "Effective tickspeed" breakdown reflects Overclock\'s boost 
   expect(kilobytesLayer).toHaveTextContent(/effective tickspeed: every 0\.91s \(tier ×1, global ×1\.1\)/i)
 })
 
-test('clicking anywhere else on a tier row\'s tile (not a button) also expands its details', async () => {
+test('clicking elsewhere on a tier row\'s tile (not the name) does not toggle its details', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
@@ -739,14 +739,12 @@ test('clicking anywhere else on a tier row\'s tile (not a button) also expands i
   const trigger = within(megabytesLayer).getByRole('button', { name: /megabytes/i })
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
 
-  // Click the row's own container, not the name trigger and not a button.
-  await user.click(megabytesLayer)
-
-  expect(trigger).toHaveAttribute('aria-expanded', 'true')
-
-  // Clicking the tile again collapses it back.
+  // Only the name toggles — clicking the row's own container does nothing.
   await user.click(megabytesLayer)
   expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+  await user.click(trigger)
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
 })
 
 test('clicking a tier row\'s Buy/tickspeed buttons does not also toggle its details disclosure', async () => {
@@ -1635,7 +1633,7 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 10, bytes: 10 },
+    resources: { base: 80 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1655,14 +1653,15 @@ test('an Enable Latency button appears once level 1 of the first tier completes 
   expect(panel).toHaveTextContent(/lv\.1/i)
   // Level 1 is a regular (non-milestone) level, compounding the usual 1%.
   expect(panel).toHaveTextContent(/\+1%/i)
-  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('10 b')
+  // Latency spends Bits (10 B = 80 b) from the one shared balance.
+  expect(screen.getByLabelText(/^money display$/i)).toHaveTextContent('0 b')
 })
 
-test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line collapses it again', async () => {
+test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clicked, and clicking the revealed line does not collapse it', async () => {
   const user = userEvent.setup()
 
   seedMainGameState({
-    resources: { base: 999, bytes: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 1,
   })
   render(<App />)
@@ -1674,20 +1673,17 @@ test('the Latency panel\'s Lv./bonus line is collapsed until the heading is clic
   await user.click(heading)
   expect(statusLine).toBeVisible()
 
-  // Clicking the revealed line itself (not the heading) also collapses it.
+  // Only the heading toggles — clicking the revealed line itself does nothing.
   await user.click(statusLine)
-  expect(statusLine).not.toBeVisible()
-
-  await user.click(heading)
   expect(statusLine).toBeVisible()
-  // Clicking the heading again (native <summary> toggle) still works too.
+
   await user.click(heading)
   expect(statusLine).not.toBeVisible()
 })
 
-test('the Enable Latency button stays disabled without enough Bytes', () => {
+test('the Enable Latency button stays disabled without enough Bits', () => {
   seedMainGameState({
-    resources: { base: 10, bytes: 9 },
+    resources: { base: 79 },
     purchaseLevels: { tier01: 2 },
   })
   render(<App />)
@@ -1697,7 +1693,7 @@ test('the Enable Latency button stays disabled without enough Bytes', () => {
 
 test('the Latency Upgrade button costs another power of ten each level, and shows the compounding bonus with decimal precision below 100%', () => {
   seedMainGameState({
-    resources: { base: 999, bytes: 999 },
+    resources: { base: 999 },
     globalTickspeedMultiplier: 2,
   })
   render(<App />)
@@ -2656,7 +2652,7 @@ test("the Upgrade Data Stream button stays clickable (to arm) while the Buffer i
 
 // Upgrade Data Stream spends the full Buffer (cost = current capacity) and doubles Capacity —
 // Speed follows the new capacity automatically rather than being upgraded independently.
-test('Upgrade Data Stream drains the Buffer and doubles Capacity', () => {
+test('Upgrade Data Stream fills its bar from the stream and doubles Capacity', () => {
   // Fake timers so a real production tick can't race the exact post-upgrade balance assertion.
   vi.useFakeTimers()
 
@@ -2667,10 +2663,11 @@ test('Upgrade Data Stream drains the Buffer and doubles Capacity', () => {
   expect(upgradeButton).toBeEnabled()
 
   fireEvent.click(upgradeButton)
+  // A full Buffer delivers at 50%, so the 1 B bar completes after ~2s of ticks.
+  act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   // The new capacity (2 B) derives the new speed — e=log2(2B) is odd, so the mean of the
   // neighbouring even-exponent sqrts: (1 + 2)/2 = 1.5 B/s.
   const dataStream = screen.getByRole('region', { name: 'Data Stream' })
@@ -2823,6 +2820,28 @@ test('Upgrade Data Stream shows its cost in the nearest fitting binary unit', ()
   expect(upgradeButton).toHaveTextContent('64 B')
 })
 
+test('Upgrade Data Stream previews the Capacity and Speed after upgrading', () => {
+  // 512 bits (64 B) doubles to 128 B; Speed at 2^7 B is the mean of sqrt(64) and sqrt(256) = 12 B/s.
+  seedIntroState({ capacity: 512, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toHaveTextContent(`${COST_ICON} 64 B · 📦 ×2 · ⚡ ×1.5`)
+  // The absolute next values stay available to assistive tech.
+  expect(upgradeButton).toHaveAccessibleDescription('Costs 64 B; capacity 128 B and speed 12 B/s after upgrading')
+})
+
+test('Upgrade Data Stream at maximum Capacity is disabled and reads "Max capacity" without a preview', () => {
+  seedIntroState({ capacity: 1.298074214633707e33, bits: 0, byteCreated: true })
+  render(<App />)
+
+  const upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
+  expect(upgradeButton).toBeDisabled()
+  expect(upgradeButton).toHaveTextContent('Max capacity')
+  expect(upgradeButton).not.toHaveTextContent('→')
+  expect(upgradeButton).not.toHaveTextContent(COST_ICON)
+})
+
 test('each Upgrade Data Stream press doubles Capacity, and the next cost always equals the new capacity', () => {
   // Fake timers so a real production tick can't race the exact balance assertions below.
   vi.useFakeTimers()
@@ -2835,13 +2854,12 @@ test('each Upgrade Data Stream press doubles Capacity, and the next cost always 
   let upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
+  act(() => { vi.advanceTimersByTime(2_500) })
 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   expect(balanceBar).toHaveAttribute('aria-valuemax', '16')
-  expect(balanceBar).toHaveAttribute('aria-valuenow', '0')
   upgradeButton = screen.getByRole('button', { name: /upgrade data stream/i })
   expect(upgradeButton).toHaveTextContent('2 B') // cost = the new capacity
-  // The Buffer drained to 0 — the next press can only arm (not fire) until the Buffer refills.
   expect(upgradeButton).toBeEnabled()
   expect(upgradeButton).toHaveTextContent('Upgrade Data Stream')
 
@@ -2860,9 +2878,8 @@ test("Upgrade Data Stream shows fill progress toward a full Buffer, matching the
   expect(upgradeButton).toBeEnabled()
 })
 
-test('arming Upgrade Data Stream hides the button and the Data Stream tile shows the status; Cancel disarms', () => {
+test('starting Upgrade Data Stream turns the same button into an inert progress bar; there is no cancel', () => {
   vi.useFakeTimers()
-  // 1000 bits capacity, 400 banked: not a full Buffer, but armable at any fill.
   seedIntroState({ capacity: 1000, bits: 400, byteCreated: true, mainGameUnlocked: true })
   const { unmount } = render(<App />)
   fireEvent.click(screen.getByRole('button', { name: /open byte foundry/i }))
@@ -2871,20 +2888,14 @@ test('arming Upgrade Data Stream hides the button and the Data Stream tile shows
   expect(upgradeButton).toBeEnabled()
   fireEvent.click(upgradeButton)
 
-  // The upgrade button is gone while armed; the tile carries the status instead.
-  expect(screen.queryByRole('button', { name: /^upgrade data stream$/i })).not.toBeInTheDocument()
-  const dataStream = screen.getByRole('region', { name: 'Data Stream' })
-  expect(dataStream).toHaveTextContent(/Upgrading to .* · outflow paused/)
-  expect(screen.getByRole('button', { name: /tap to generate a bit/i })).toHaveAccessibleDescription(/outflow paused/)
-
-  // The same DOM node flips role in place, so keyboard focus is never dropped.
-  const cancel = screen.getByRole('button', { name: /cancel data stream upgrade/i })
-  expect(cancel).toBe(upgradeButton)
-  fireEvent.click(cancel)
-  expect(screen.getByRole('button', { name: /^upgrade data stream$/i })).toBe(upgradeButton)
-  expect(upgradeButton).toBeEnabled()
-  expect(dataStream).not.toHaveTextContent(/outflow paused/)
-  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(false)
+  // Same DOM node, now disabled and showing progress; no Cancel control and no tile status line.
+  const running = screen.getByRole('button', { name: /^upgrade data stream$/i })
+  expect(running).toBe(upgradeButton)
+  expect(running).toHaveAttribute('aria-disabled', 'true')
+  expect(running).toHaveTextContent(/Upgrading Data Stream/)
+  expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
+  expect(screen.getByRole('progressbar', { name: /data stream upgrade progress/i })).toHaveAttribute('aria-valuenow', '0')
+  expect(JSON.parse(localStorage.getItem('tens_game_state')).intro.capacityUpgradeQueued).toBe(true)
 
   unmount()
   vi.useRealTimers()
@@ -3139,17 +3150,17 @@ test('Pool balance and Capacity share one precisely centered line', () => {
   expect(balance).toHaveStyle({ textAlign: 'center' })
 })
 
-test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_TAP_CAP_PERCENT (200%)', () => {
+test('Data Stream and pool multiplier bars are progressbars capped at FILL_MULTIPLIER_MAX_PERCENT (150%)', () => {
   seedIntroState({ bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true })
   render(<App />)
 
   const dataStreamBar = screen.getByRole('progressbar', { name: /data stream fill-based speed multiplier/i })
-  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(dataStreamBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
   // Both the Data Stream Buffer and pool 1's own Memory buffer start empty — FILL_MULTIPLIER_MAX_PERCENT.
   expect(dataStreamBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
 
   const poolBar = screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })
-  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(poolBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
   expect(poolBar).toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
 })
 
@@ -3172,11 +3183,11 @@ test('the pool bar switches from the fill-based multiplier to the Data Lake over
   render(<App />)
 
   // The old "fill-based bandwidth multiplier" reading is gone — the SAME bar now reads as the
-  // Data Lake's own overflow rate instead, still on the identical 0..FILL_MULTIPLIER_TAP_CAP_PERCENT
+  // Data Lake's own overflow rate instead, still on the identical 0..FILL_MULTIPLIER_MAX_PERCENT
   // scale (never a separately-scaled bar).
   expect(screen.queryByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier/i })).not.toBeInTheDocument()
   const lakeRateBar = screen.getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })
-  expect(lakeRateBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_TAP_CAP_PERCENT))
+  expect(lakeRateBar).toHaveAttribute('aria-valuemax', String(FILL_MULTIPLIER_MAX_PERCENT))
   // A fresh, untouched lake's currently-open disk is empty, so its overflow rate reads at its own
   // ceiling (DATA_LAKE_OVERFLOW_MAX_PERCENT, 50) — the SAME numeric value FILL_MULTIPLIER_MIN_PERCENT
   // (the fill-based multiplier's own floor, reached exactly when the buffer becomes full) already
@@ -3227,6 +3238,13 @@ test('the pool bar shows the Data Lake rate (and the tile is inert) while the la
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   expect(within(pool1).getByRole('progressbar', { name: /pool 1 data lake overflow rate/i })).toBeInTheDocument()
   expect(within(pool1).getByRole('button', { name: /tap pool 1 memory/i })).toBeDisabled()
+
+  // The title toggle is a sibling of the tap button, so a disabled tap never blocks it.
+  const toggle = within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i })
+  const wasExpanded = toggle.getAttribute('aria-expanded')
+  fireEvent.click(toggle)
+  expect(within(pool1).getByRole('button', { name: /(collapse|expand) pool 1/i }))
+    .toHaveAttribute('aria-expanded', wasExpanded === 'true' ? 'false' : 'true')
 })
 
 test('the pool bar stays in fill-based-multiplier mode (never switches to the Data Lake overflow rate) while the buffer is full but no disk has been built yet for that pool', () => {
@@ -3289,7 +3307,12 @@ test('tapping a pool\'s own Memory buffer boosts only that pool\'s own multiplie
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
   expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_TAP_BONUS_PERCENT))
-  expect(screen.getByRole('button', { name: /tap pool 1 memory/i }))
+  // The displayed percentages are also exposed as aria-valuetext (the visible labels sit inside the tracks).
+  expect(screen.getByRole('progressbar', { name: /^pool 1 fill-based bandwidth multiplier$/i }))
+    .toHaveAttribute('aria-valuetext', `${FILL_MULTIPLIER_MAX_PERCENT}%`)
+  expect(screen.getByRole('progressbar', { name: /pool 1 fill-based bandwidth multiplier tap bonus/i }))
+    .toHaveAttribute('aria-valuetext', `+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}%`)
+  expect(screen.getByRole('region', { name: 'pool 1' }))
     .toHaveTextContent(`${FILL_MULTIPLIER_MAX_PERCENT}%+${FILL_MULTIPLIER_TAP_BONUS_PERCENT}% 👆`)
   expect(screen.getByRole('progressbar', { name: /^data stream fill-based speed multiplier$/i }))
     .toHaveAttribute('aria-valuenow', String(FILL_MULTIPLIER_MAX_PERCENT))
@@ -3401,10 +3424,32 @@ describe('Byte Foundry Storage', () => {
     // queues the build (diskBuildQueued) so it fires itself the moment the buffer covers a pass,
     // the same automatic continuation every LATER pass already gets once one is collected.
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/1 KB · tap to queue/)
+    expect(buildButton).toHaveAttribute('aria-description', expect.stringMatching(/pool buffer too low/))
+    expect(buildButton).not.toHaveTextContent(/Ready|Queued|Provisioning/)
+    expect(buildButton).toHaveTextContent('Provision 1 KB Disk')
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     expect(savedState.intro.diskBuildQueued).toBe(true)
+    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk….*Queued · needs buffer/)
+    expect(buildButton).not.toHaveTextContent(/tap to queue/)
     expect(savedState.intro.diskProvisionPasses ?? {}).toEqual({})
+  })
+
+  test('a queued Provision Disk reads "Provisioning …" with its banked passes, unlike the idle "Provision …" label', () => {
+    // 8 built → this is the 9th disk (9 passes); 2 already banked and the queue is armed.
+    seedIntroState({
+      bits: 0, capacity: currentBankCost, byteCreated: true,
+      disksBuiltTotal: { [currentBankSize]: DISK_ARRAY_LADDER_CAP - 1 },
+      diskProvisionPasses: { [currentBankSize]: 2 },
+      diskBuildQueued: true,
+    })
+    render(<App />)
+
+    const buildButton = screen.getByRole('button', { name: /provision disk/i })
+    expect(buildButton).toHaveTextContent(/⏳.*Provisioning 1 KB Disk…/)
+    expect(buildButton).toHaveTextContent('2/9 · needs buffer')
+    expect(buildButton).not.toHaveTextContent(/tap to queue|Ready/)
   })
 
   test('Provision Disk shows its cost in the nearest fitting SI unit (matching the Disk\'s own SI size), not a raw unitless bit count', () => {
@@ -3513,6 +3558,10 @@ describe('Byte Foundry Storage', () => {
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(provisionButton).not.toHaveTextContent('All Pools Complete')
+    // Lives in its own Provision Disk card, independent of the Data Stream card and every pool card.
+    expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(provisionButton)
+    expect(screen.getByRole('region', { name: 'Data Stream' })).not.toContainElement(provisionButton)
+    expect(pool2).not.toContainElement(provisionButton)
     // The Data Stream balance line already reads "<bits> / <capacity>" — no separate "Buffer"
     // line restating the same capacity figure a second time (see ByteFoundryPage/index.jsx).
     expect(screen.getByRole('region', { name: 'Data Stream' })).toHaveTextContent(
@@ -3520,7 +3569,7 @@ describe('Byte Foundry Storage', () => {
     )
   })
 
-  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk falling back outside any pool card', () => {
+  test('a pool with its disk-build condition met but Capacity below its own threshold stays hidden, with Provision Disk still reachable in the Data Stream card', () => {
     const size10kb = currentBankSize * 10
     const size100kb = currentBankSize * 100
     seedIntroState({
@@ -3536,12 +3585,23 @@ describe('Byte Foundry Storage', () => {
 
     expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'pool 2' })).not.toBeInTheDocument()
-    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk falls
-    // back to rendering outside any pool card (see ByteFoundryPage's provisionDiskButton fallback)
-    // rather than disappearing until pool 2's own card catches up.
+    // The disk ladder has already advanced to pool 2's first size (1 MB) — Provision Disk lives in
+    // the Data Stream card, so it stays reachable before pool 2's own card is visible.
     const provisionButton = screen.getByRole('button', { name: /provision disk/i })
     expect(provisionButton).toHaveTextContent('1 MB')
     expect(screen.getByRole('region', { name: 'pool 1' })).not.toContainElement(provisionButton)
+  })
+
+  test('Provision Disk is hidden while the pool its current offer belongs to is rebuilding', () => {
+    seedIntroState({
+      bits: 0, poolBuffers: { 1: currentBankSize }, capacity: currentBankCost, byteCreated: true,
+      diskCache: { [currentBankSize]: currentBankSize },
+      dataLakes: { 1: { rebuilding: true } },
+    })
+    render(<App />)
+
+    expect(screen.getByRole('region', { name: 'pool 1' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /provision disk/i })).not.toBeInTheDocument()
   })
 
   test('Provision Disk fires its first pass on click once affordable — the consolidated Upgrade Data Stream is now the LOWER-priority action that waits on it', () => {
@@ -3559,6 +3619,8 @@ describe('Byte Foundry Storage', () => {
 
     const buildButton = screen.getByRole('button', { name: /provision disk/i })
     expect(buildButton).not.toBeDisabled()
+    expect(buildButton).toHaveTextContent(/🏦.*Ready · /)
+    expect(screen.getByRole('region', { name: 'Provision Disk' })).toContainElement(buildButton)
     fireEvent.click(buildButton)
     const savedState = JSON.parse(localStorage.getItem('tens_game_state'))
     // The first disk needs exactly one pass, which the seeded buffer funds outright — it lands
@@ -3914,7 +3976,7 @@ describe('Byte Foundry Storage', () => {
 
     const lakeBlock = within(screen.getByRole('region', { name: 'pool 1' })).getByLabelText('KB lake')
     expect(within(lakeBlock).queryByRole('button', { name: /cores from the kb data lake/i })).not.toBeInTheDocument()
-    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent('🎯 1 KB')
+    expect(within(lakeBlock).getByTitle(/automatically buys the next cores/i)).toHaveTextContent(`${COST_ICON} 1 KB`)
   })
 
   test('an old save\'s legacy boostersUnlocked latch keeps Boosters purchasable but the pool-fill tile still reads Locked while its own Storage pool has never built a disk (Devin Review finding)', () => {
@@ -4645,9 +4707,7 @@ describe('Compute auto-merge automation', () => {
 // productionAccumulator) resets each cycle. Scale Up/Overclock remain unaffected (covered at the
 // engine.test.js level, not here).
 
-test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', async () => {
-  const user = userEvent.setup()
-
+test('a real Prestige from MainPage resets Data Stream balance but keeps Factory reachable — mainGameUnlocked no longer resets', () => {
   // prestige.count: 1 skips the mandatory first-time full-screen prompt (see the test above) in
   // favor of the ordinary top banner, so MainPage's own heading is actually on-screen to assert on.
   seedMainGameState({
@@ -4658,7 +4718,10 @@ test('a real Prestige from MainPage resets Data Stream balance but keeps Factory
   render(<App />)
 
   expect(screen.getByRole('heading', { level: 1, name: /^byte factory$/i })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /prestige \(requires/i }))
+  // A synchronous click, then an immediate read: a real timer tick can't fire in between. (An
+  // awaited userEvent click yields to the event loop, and under CPU load a live tick credits the
+  // Data Stream bits before the `bits === 0` assertion below — the old, intermittent failure.)
+  fireEvent.click(screen.getByRole('button', { name: /prestige \(requires/i }))
 
   // mainGameUnlocked is now PERMANENT (see latchMainGameUnlocked in engine.js) — a real Prestige
   // never re-gates it, so Factory stays on screen with no navigation to the Byte Foundry.
@@ -4873,6 +4936,19 @@ test('Chapters track Compute, Unbounded, and Era milestones', async () => {
   expect(screen.getByLabelText(/^go unbounded chapter$/i)).toHaveTextContent('✅')
   expect(screen.getByLabelText(/^ascend an era chapter$/i)).toHaveTextContent('✅')
   expect(screen.queryByLabelText(/^coming soon/i)).not.toBeInTheDocument()
+})
+
+test('Compute (Flops) buy buttons show their PP cost as text, not "[object Object]"', async () => {
+  seedMainGameState({
+    computeFlops: { pageUnlocked: true, owned: {}, cumulativeBoost: {} },
+    prestige: { xp: 0, points: 5000, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+  await userEvent.setup().click(screen.getByRole('button', { name: /^open compute$/i }))
+
+  const buy = screen.getByRole('button', { name: /^buy KFlops for/i })
+  expect(buy).toHaveTextContent(/^[\d,.e+]+ PP$/)
+  expect(buy).not.toHaveTextContent(/object/i)
 })
 
 test('Compute autobuyer milestones list Era unlocks once Compute is revealed', async () => {

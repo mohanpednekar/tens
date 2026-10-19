@@ -439,6 +439,10 @@ src/
                                each `ByteFoundryPage` pool card. Full contract (incl. the
                                omitted-`tierIndex` every-lake fallback mode, unused by any current
                                caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
+    icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
+                               Provision Disk status line)
+    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
+                               Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
     BuyMaxToggle/index.jsx  ← Buy max mode toggle button (Perks → Toggles only); renders nothing until
@@ -649,10 +653,10 @@ Strict three-layer separation:
    per pool below that pool's `components/DiskArrayRow`s (cache above disks) in the same disclosure
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
-   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered inside
-   the ONE `PoolCard` the ladder's current offer (`getDiskSize`) belongs to (`getPoolIndexForDiskSize`),
-   plus a fallback copy (`provisionDiskButton`) after the Data Stream card for when that card isn't
-   visible yet (`docs/DESIGN_HISTORY.md`: "Provision Disk moved back inside its pool card"). Each disk
+   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
+   its own standalone "Provision Disk" card directly below the Data Stream card (hidden while the offer's pool is
+   rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
+   (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
@@ -751,11 +755,11 @@ There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/ga
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
 (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
-production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`, displayed as whole `B`) and
-mirrors the same amount × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige / tier Buys keep moving
-(see `docs/DESIGN_HISTORY.md` for the #430 incident this mirror fixed). **Latency** (the global
-tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is funded from that Bytes pool —
-initial activation costs **10 Bytes** — not Bits. It unlocks once level 1 of tier01 is purchased; there
+production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
+`BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
+Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Latency** (the global
+tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is paid from that Bits balance —
+initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
@@ -795,14 +799,12 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via a single **Upgrade
-Data Stream** action: it requires a full Buffer, drains it (cost = current capacity), and doubles
-`intro.capacity` — Capacity is the only purchased progression variable. The button is clickable at any
-fill (`isMemoryCapacityUpgradeArmable`): a click below 100% arms it (`intro.capacityUpgradeQueued`) and
-pauses every Data Stream outflow (`isDataStreamOutflowPaused` — `tickPoolBufferFill`/Data Lake overflow,
-`tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade` fires it, so continuous pool/lake draw can't
-hold the Buffer below full indefinitely. The arm survives load and Prestige. While armed the button is
-hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control disarms it
-(`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
+Data Stream** action: a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
+and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
+(like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
+every other consumer — nothing is paused or raced; when the bar
+reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
+running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
 the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
 ×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
@@ -907,10 +909,10 @@ from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right a
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
-block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
-pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
+block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while a running Upgrade Data Stream
+pulls from the Data Stream. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
-order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🎯 `<cost>`" control that
+order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
 `tickDataLakeAutoConvert` then drives `fillDataLakeManually` one step per tick until affordable, buys
 exactly 1, and clears the flag — "one click, one full fill-then-buy conversion, then stop," never a
@@ -994,6 +996,9 @@ prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publi
 new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
+
+**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
+heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 
 ## Path aliases
 
@@ -1093,9 +1098,9 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1967 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1979 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
-  'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
+  'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
   (`'Ones'`, `'money'`, `'hundreds'`, or a purchasable Bytes tier) left behind by prior renames/removals
   (see `docs/DESIGN_HISTORY.md`). Saves must use the current schema (`resources.base`,
@@ -1110,7 +1115,8 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` that's 11 of the 17 files; the other six are
+  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
+  12 of the 18 files; the other six are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`

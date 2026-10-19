@@ -5866,6 +5866,21 @@ condition satisfied but capacity below its own threshold correctly stays hidden 
 would otherwise show, given fully-built KB+MB pools, stays absent below the 1 GiB threshold), and the
 manual transfer-block row is confirmed gone from every state that used to show it.
 
+### Cost icon: 🎯 replaced by 🏷️ (`COST_ICON`)
+
+🎯 read as "target/goal" and, on the Data Lake Booster control, doubled as the "aim and convert"
+action marker, so one glyph carried both the price and the action. Eighteen candidates were rendered
+on the real button (🪙 💰 🏷️ 💸 💎 🎟️ ⚖️ 🛒 ⛽ 🧾 🔻 📥 🔑 🧮 ¤ ⛁ ⊖); the maintainer picked 🏷️. It is now one shared
+constant (`components/icons.js`) used for every cost: Data Lake Booster, Upgrade Data Stream,
+Provision Disk. Caveat seen in the render: 🏷️ is small at this size, so keep a space after it.
+
+### Provision Disk moved into the Data Stream card
+
+Maintainer request: Provision Disk now sits in the Data Stream card directly below Upgrade Data
+Stream, reversing "Provision Disk moved back inside its pool card" below. One fixed location also
+drops the off-screen-pool fallback copy. Upgrade Data Stream gained a post-upgrade Capacity/Speed
+preview line so the player sees what the drain buys.
+
 ### Provision Disk moved back inside its pool card; pool Capacity switched from SI-clean to a plain decade-of-10 ladder
 
 Two more requests from the same conversation as the three entries above, landed together since both
@@ -8786,7 +8801,10 @@ shipped it to `1.1` — corrected to the current `1.25` in the same commit.
 **Verification.** `yarn test`: 1798/1798. `simulate-run-times` re-run and published to the
 `ideal-run-strategy` orphan branch at the final `1.25` value per this repo's own convention.
 
-### Upgrade Data Stream arms below a full Buffer (outflow pause)
+### Upgrade Data Stream arms below a full Buffer (outflow pause) — SUPERSEDED
+
+Superseded: Upgrade Data Stream now diverts 100% of nominal Speed into `intro.capacityUpgradeProgress` from `tickIntroProduction` and no outflow is paused (the pause was a source of races/confusion). The notes below describe the removed design.
+
 
 **Problem:** the Data Stream could stall below full forever. Pool buffers and — once a pool is fully
 built — its Data Lake's overflow draw from `intro.bits` every tick, while the fill-based multiplier
@@ -8861,3 +8879,18 @@ larger ×10/×100 disks are deliberately ignored. The duration upgrade, its stat
 explicitly rejected by the maintainer. Durations still grow across pools, because each pool's
 smallest disk is 1000× the previous pool's while Bandwidth is sqrt-capped. That matches how slowly
 those pools' own disks fill.
+
+## Foundry multiplier bar: one diverging bar tried and dropped (2026-10)
+
+To shrink the Data Stream/pool tiles (4 rows → 2), the balance moved onto the title row and the
+fill-multiplier and tap-bonus bars were compacted. A single bar anchored at the neutral 100%
+midpoint (blue right of center when boosted, left when penalised, yellow bonus extending it
+outward) was implemented and reviewed on screenshots; the maintainer found it unintuitive and it was
+reverted. Final design: two center-growing bars (as before) with their percent labels inside; the
+base/lake bar's scale is now 0..`FILL_MULTIPLIER_MAX_PERCENT` (150%) so it is full-width at its own
+maximum (it previously used the 200% combined cap, which the base reading never reaches), and the
+bonus bar is full-width at `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`. Lake mode still shares the base
+bar's scale, so the 50% hand-off between the two readings stays jump-free. Pill backgrounds behind
+the labels were also tried and dropped: plain page-colored text reads on both themes' fills, and
+labels move just past a fill too narrow to hold them. The tap emoji gets a thin dark outline (a
+light halo glowed on the light theme's brown bar).

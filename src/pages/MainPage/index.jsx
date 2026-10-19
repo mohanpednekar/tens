@@ -3,7 +3,7 @@ import Button, { ButtonContent, ButtonIcon, ButtonLabel, progressFill, VisuallyH
 import Money from 'components/Money'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedProductionMultiplier, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
+import { formatAmount, formatBytes, formatCurrency, formatMoneyBalance, formatOfflineDuration, getEffectiveTierTickSpeedSeconds, getGlobalTickspeedMultiplierCost, getGlobalTickspeedMultiplierCostBits, getGlobalTickspeedProductionMultiplier, isGlobalTickspeedAffordable, getLastTierXpTickspeedMinConsumption, getLastTierXpTickspeedMultiplier, getNextBytePowerProgressFraction, getOverclockMultiplier, getOverclockRequirement, getPrestigePointsAwarded, getPrestigeProductionMultiplier, getPrestigeProgressPercent, getPurchaseBlockSize, getPurchaseMilestoneMultiplier, getScaleUpRequirement, getScaleUpTargetTier, getTierScaleUpMultiplier, getTickspeedMultiplierCost, getTickspeedProductionMultiplier, getTierAffordableQuantity, getTierPurchasedCount, getTierQuantityCost, getTierSpendableAmount, getTierMaxLevelsPreview, isBuyMaxUnlocked, isGlobalTickspeedMultiplierUnlocked, isLastTierTickspeedXpUnlocked, isProductionFrozen, isTierUnlocked, isUnboundedPrestigeUnlocked } from 'game/engine'
 import { BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_PRESETS, getTierBaseTickSpeedSeconds, GLOBAL_TICKSPEED_PRODUCTION_STEP, MONEY_ID, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PURCHASE_MILESTONE_MULTIPLIER_BASE, RESOURCE_SYMBOL, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useRef, useState } from 'react'
 import styled, { css, keyframes, useTheme } from 'styled-components'
@@ -79,11 +79,9 @@ const reveal = keyframes`
 // holding the per-tier click-to-expand disclosure's content (see TierDetailsContent below) —
 // only rendered at all while expanded, so a collapsed row contributes zero height there. There
 // is no separate visible trigger for it (no "Details" label): TierName itself (wrapped in
-// TierNameTrigger, in the 'name' area) is the trigger, and clicking anywhere else on the tile
-// that isn't a button also toggles it (see the row's own onClick below) — a React-controlled
+// TierNameTrigger, in the 'name' area) is the only trigger (no whole-tile click) — a React-controlled
 // disclosure rather than native <details>/<summary>, see openTierDetailIds in MainPage for why.
-// cursor: pointer signals the whole tile is clickable; Button's own cursor rule overrides it
-// for the two buttons. There used to be a dedicated 'autobuyer' grid row for the per-tier
+// There used to be a dedicated 'autobuyer' grid row for the per-tier
 // autobuyer status badge; it's folded into the 'name' row instead now that the badge is a
 // single icon rather than a written "Active"/"Paused" line (see MainPage), so the row no longer
 // needs the extra vertical space for it.
@@ -99,7 +97,6 @@ const TierLine = styled(StatCard)`
   row-gap: ${props => props.theme.space.xs};
   padding: ${props => props.theme.space.sm} ${props => props.theme.space.md};
   border-left: 3px solid ${props => props.$accent};
-  cursor: pointer;
   transition: border-color ${props => props.theme.motion.duration.base} ${props => props.theme.motion.easing.standard};
   animation: ${props => (props.$animateReveal ? css`${reveal} 0.4s ease-out` : 'none')};
 
@@ -124,16 +121,41 @@ const TierLine = styled(StatCard)`
   }
 `
 
-const ScaleUpCard = styled(StatCard)`
-  border-color: #0e7490;
-  gap: 0.35rem;
-  padding: 0.5rem 0.65rem;
+// Feature cards share one shape: neutral border, a 3px left accent stripe (same treatment as the
+// tier rows' stripe), compact padding and a 1rem heading — previously each card had its own
+// full-border hue and Latency had a much larger heading/padding than its siblings.
+const featureCard = accent => css`
+  border-left: 3px solid ${accent};
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
 
   h2 {
+    font-family: ${props => props.theme.font.display};
     font-size: 1rem;
     line-height: 1.2;
     margin: 0;
   }
+`
+
+const CardHeader = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+`
+
+const AutoChip = styled.span`
+  border: 1px solid ${props => props.theme.color.border};
+  border-radius: 999px;
+  color: ${props => props.theme.color.textMuted};
+  font-size: 0.75rem;
+  opacity: ${props => (props.$dimmed ? 0.55 : 1)};
+  padding: 0.1rem 0.5rem;
+  white-space: nowrap;
+`
+
+const ScaleUpCard = styled(StatCard)`
+  ${featureCard('#0e7490')}
 `
 
 // Matches the tier rows' own Buy/tickspeed button font size (see BuyButton/UpgradeButton) rather
@@ -149,19 +171,11 @@ const ScaleUpButton = styled(Button)`
 `
 
 const GlobalTickspeedCard = styled(StatCard)`
-  border-color: #1d4ed8;
+  ${featureCard('#1d4ed8')}
 `
 
 const OverclockCard = styled(StatCard)`
-  border-color: #c2410c;
-  gap: 0.35rem;
-  padding: 0.5rem 0.65rem;
-
-  h2 {
-    font-size: 1rem;
-    line-height: 1.2;
-    margin: 0;
-  }
+  ${featureCard('#c2410c')}
 `
 
 // Matches ScaleUpButton's own font-size override, same rationale (stays visually consistent with
@@ -215,14 +229,13 @@ const SpeedCardsRow = styled.div`
 
 // Shared by the Money and Prestige Point balance displays — the only top-of-page blocks besides
 // Header that are centered rather than left-aligned. $actionable (used only by the PP display,
-// once Prestige is available) makes the whole card double as the Prestige button, matching the
-// tier rows' own whole-tile-clickable-plus-title pattern (see TierNameTrigger) rather than the
+// once Prestige is available) makes the whole card double as the Prestige button, rather than the
 // "don't combine those on a passive tile" call made for the offline notice card.
 const CenteredCard = styled(StatCard)`
   align-items: center;
   text-align: center;
 
-  ${props => (props.$actionable || props.$expandable) && css`
+  ${props => props.$actionable && css`
     cursor: pointer;
 
     &:hover {
@@ -237,16 +250,26 @@ const CenteredCard = styled(StatCard)`
     }
   `}
 
-  ${props => props.$expandable && css`
-    &:focus-visible {
-      outline: 2px solid ${props.theme.color.accent};
-      outline-offset: 2px;
-    }
-  `}
+`
+
+// Expand/collapse trigger for the global-multipliers breakdown: just the balance figure, not the
+// whole card (app-wide convention: only the name/label of a disclosure toggles it).
+const MoneyHeroToggle = styled.div`
+  cursor: pointer;
+  border-radius: ${props => props.theme.radius.sm};
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+  }
 `
 
 // Muted/accent text scoped to this HUD region only — a deliberate fork of the app-wide
-// MutedText (still hardcoded, still used by TierList/ScaleUpCard/GlobalTickspeedCard) rather
+// MutedText (still hardcoded, still used by TierList/GlobalTickspeedCard) rather
 // than migrating those shared components here: they're each other
 // sub-issues' own scope (#138/#139), chained to avoid touching MainPage's shared components out
 // of turn. Token-driving just these two keeps this region's own AA audit meaningful (MutedText's
@@ -458,17 +481,10 @@ const BalancesSentinel = styled.div`
 const TierNameTrigger = styled.div`
   align-items: baseline;
   column-gap: ${props => props.theme.space.sm};
-  cursor: pointer;
   display: flex;
   grid-area: name;
   min-width: 0;
   width: 100%;
-
-  &:focus-visible {
-    outline: 2px solid ${props => props.theme.color.accent};
-    outline-offset: 2px;
-    border-radius: ${props => props.theme.radius.sm};
-  }
 `
 
 // Holds the disclosure's actual content, occupying the 'details' grid area — only rendered at all
@@ -623,8 +639,20 @@ const TierName = styled.h3`
   }
 `
 
+// The only expand/collapse trigger for a tier row's details (role="button" set at the call site).
 const TierNameLabel = styled.span`
+  cursor: pointer;
   flex-shrink: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.color.accent};
+    outline-offset: 2px;
+    border-radius: ${props => props.theme.radius.sm};
+  }
 `
 
 // A native click-to-expand disclosure for a genuinely live number that would otherwise need its
@@ -660,18 +688,6 @@ const Disclosure = styled.details`
     margin-top: 0.3rem;
   }
 `
-
-// Clicking <summary> already natively toggles a <details> element open/closed; clicking
-// anywhere else inside it (e.g. the revealed status line itself) doesn't, by default, so this
-// force-closes it instead — mirroring the tier row's own "click anywhere on the tile also
-// toggles its details" convention (see TierLine's onClick below), just scoped to collapsing only
-// (opening still requires the summary specifically, per Disclosure's own contract above). Safe to
-// mutate `.open` directly since every Disclosure here is uncontrolled (no `open` prop is ever
-// passed by React).
-const collapseDisclosure = event => {
-  if (event.target.closest('summary')) return
-  event.currentTarget.open = false
-}
 
 // Owned count lives on the first line, right-aligned to the row center (pushed to the end of
 // the left half with margin-left: auto). Sibling of TierName inside TierNameTrigger — not nested
@@ -769,15 +785,6 @@ const UpgradeButton = styled(Button)`
   }
 `
 
-// $dimmed is the "paused" signal — a subtle opacity reduction on the same icon rather than a
-// separate written "Paused" word (see MainPage): the badge's visible content is icon-only, with
-// the active/paused state conveyed by this dimming (plus the existing $color green/amber split)
-// and spelled out in aria-label/title for assistive tech.
-const PpUpgradeBadge = styled.span`
-  color: ${props => props.$color};
-  opacity: ${props => (props.$dimmed ? 0.5 : 1)};
-`
-
 const formatCost = (amount, resourceId) =>
   resourceId === MONEY_ID
     ? formatCurrency(amount)
@@ -859,7 +866,7 @@ const MainPage = ({ game }) => {
   // instead of the full row) regardless of whether the span is expressed via a named area or
   // explicit grid-column line numbers. This keeps TierName as the visible trigger and the
   // details content spanning the full row width, at the cost of reimplementing the
-  // expand/collapse and keyboard behavior manually (see TierNameTrigger below) instead of getting
+  // expand/collapse and keyboard behavior manually (see TierNameLabel below) instead of getting
   // it for free from native <details>.
   const [openTierDetailIds, setOpenTierDetailIds] = useState(() => new Set())
   const toggleTierDetails = tierId => setOpenTierDetailIds(previous => {
@@ -1029,8 +1036,8 @@ const MainPage = ({ game }) => {
   const globalTickspeedMultiplier = getGlobalTickspeedProductionMultiplier(globalTickspeedLevel, overclockCount)
   const globalTickspeedCost = getGlobalTickspeedMultiplierCost(globalTickspeedLevel ?? 0)
   const globalTickspeedUnlocked = isGlobalTickspeedMultiplierUnlocked(state)
-  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && (state.resources[BYTES_ID] ?? 0) >= globalTickspeedCost
-  const globalTickspeedProgressPercent = progressPercent(state.resources[BYTES_ID] ?? 0, globalTickspeedCost)
+  const canBuyGlobalTickspeed = !isFrozen && globalTickspeedUnlocked && isGlobalTickspeedAffordable(state)
+  const globalTickspeedProgressPercent = progressPercent(state.resources[MONEY_ID] ?? 0, getGlobalTickspeedMultiplierCostBits(globalTickspeedLevel ?? 0))
   // Progressive disclosure, same pattern as overclockEverRevealed above:
   // once the card has ever been relevant (tier02 owned, or the multiplier already active from a
   // prior run), it stays visible — in a disabled state — rather than disappearing again the
@@ -1181,23 +1188,23 @@ const MainPage = ({ game }) => {
         $belowBar={showTopPrestigeBar}
         $belowBarHeight={topPrestigeBarHeight}
       >
-        <CenteredCard
-          aria-controls="global-multipliers-details"
-          aria-expanded={showGlobalMultipliers}
-          aria-label="money display"
-          $expandable
-          $raised
-          onClick={toggleGlobalMultipliers}
-          onKeyDown={event => {
-            if (event.key !== 'Enter' && event.key !== ' ') return
-            event.preventDefault()
-            toggleGlobalMultipliers()
-          }}
-          role="button"
-          tabIndex={0}
-          title="Show or hide the global production multipliers currently in effect"
-        >
-          <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+        <CenteredCard $raised>
+          <MoneyHeroToggle
+            aria-controls="global-multipliers-details"
+            aria-expanded={showGlobalMultipliers}
+            aria-label="money display"
+            onClick={toggleGlobalMultipliers}
+            onKeyDown={event => {
+              if (event.key !== 'Enter' && event.key !== ' ') return
+              event.preventDefault()
+              toggleGlobalMultipliers()
+            }}
+            role="button"
+            tabIndex={0}
+            title="Show or hide the global production multipliers currently in effect"
+          >
+            <MoneyHero>{formatMoneyBalance(state.resources[MONEY_ID])}</MoneyHero>
+          </MoneyHeroToggle>
           {!balancesCompressed && (
             <>
               <BytePowerSegments aria-hidden="true">
@@ -1281,7 +1288,7 @@ const MainPage = ({ game }) => {
 
       {globalTickspeedCardEverRevealed && (
         <GlobalTickspeedCard aria-label="global latency panel">
-          <Disclosure onClick={collapseDisclosure}>
+          <Disclosure>
             <summary><h2>Latency</h2></summary>
             {isGlobalTickspeedActive && (
               <MutedText>
@@ -1416,9 +1423,9 @@ const MainPage = ({ game }) => {
           const canUpgradeTickspeed = resources >= tickspeedCost + 1 && !isFrozen
           // Buy max mode (see BuyMaxToggle/buyTierMaxLevels): when a click would buy one or more
           // FULL levels, preview those instead of the single-level fill below.
-          const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0 }
+          const maxLevelsPreview = buyMaxActive ? getTierMaxLevelsPreview(state, tier.id) : { levels: 0, cost: 0, lastLevelCost: 0, partialQuantity: 0, partialCost: 0 }
           const buyLabel = maxLevelsPreview.levels > 0
-            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} (${formatAmount(completedLevels)} completed levels)`
+            ? `Buy ${formatAmount(maxLevelsPreview.levels)} full level${maxLevelsPreview.levels === 1 ? '' : 's'} for ${formatCurrency(maxLevelsPreview.cost)} total; highest level costs ${formatCurrency(maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost)}${maxLevelsPreview.partialQuantity > 0 ? ` (${maxLevelsPreview.partialQuantity} of ${purchaseBlockSize} purchases toward the next level)` : ''} (${formatAmount(completedLevels)} completed levels)`
             : `Buy${affordableQuantity > 1 ? ` ×${affordableQuantity}` : ''} for ${formatCurrency(displayCost)} (${formatAmount(completedLevels)} completed levels, ${formatAmount(doneInBlock)} of ${purchaseBlockSize} purchased toward the next)`
           const tickspeedLabel = `Tickspeed multiplier (+10% faster ticks) for ${formatCost(tickspeedCost, tier.id)}`
           // Compact visible text: an icon in place of the "Buy" word, and the tier's short symbol
@@ -1431,7 +1438,17 @@ const MainPage = ({ game }) => {
           // a column across tier rows regardless of the cost string's length. The level number
           // itself isn't shown here (still available via aria-label and the row's Details
           // disclosure) — this is purely "how close is the current level."
-          const buyLevelQuantityText = maxLevelsPreview.levels > 0 ? `+${formatAmount(maxLevelsPreview.levels)} Lv` : `${formatAmount(doneInBlock)}${affordableQuantity > 0 ? `+${formatAmount(affordableQuantity)}` : ''}/${formatAmount(purchaseBlockSize)}`
+          // Every count carries a "+" and zero parts are omitted: Buy-max shows "+<levels>" /
+          // "+<levels> +<n>/<block>", the ordinary Buy shows "+<affordable>/<block>" when anything
+          // is affordable, else "+<done>/<block>", and nothing at 0/<block>.
+          const blockText = formatAmount(purchaseBlockSize)
+          const buyLevelQuantityText = maxLevelsPreview.levels > 0
+            ? `+${formatAmount(maxLevelsPreview.levels)}${maxLevelsPreview.partialQuantity > 0 ? ` +${formatAmount(maxLevelsPreview.partialQuantity)}/${blockText}` : ''}`
+            : affordableQuantity > 0
+              ? `+${formatAmount(affordableQuantity)}/${blockText}`
+              : doneInBlock > 0
+                ? `+${formatAmount(doneInBlock)}/${blockText}`
+                : ''
           // A single ⚙ (the same icon used on the cumulative "⚙ +N%" badge and the tier
           // tickspeed autobuyer's "⚙ Active" badge) identifies this as the tickspeed control —
           // no separate icon for "+10%" is needed, since that step is fixed
@@ -1453,31 +1470,22 @@ const MainPage = ({ game }) => {
               aria-label={`${tier.name} layer`}
               $accent={accent}
               $animateReveal={!initialUnlockedIds.has(tier.id)}
-              onClick={event => {
-                // TierNameTrigger's own click handler (below) stops propagation before a click
-                // reaches here, so only a click elsewhere on the tile arrives — still skip a
-                // button, so Buy/tickspeed purchases never also toggle the disclosure.
-                if (event.target.closest('button')) return
-                toggleTierDetails(tier.id)
-              }}
             >
-              <TierNameTrigger
-                role="button"
-                tabIndex={0}
-                aria-expanded={isDetailsOpen}
-                aria-controls={detailsId}
-                onClick={event => {
-                  event.stopPropagation()
-                  toggleTierDetails(tier.id)
-                }}
-                onKeyDown={event => {
-                  if (event.key !== 'Enter' && event.key !== ' ') return
-                  event.preventDefault()
-                  toggleTierDetails(tier.id)
-                }}
-              >
+              <TierNameTrigger>
                 <TierName>
-                  <TierNameLabel title={tier.name}>
+                  <TierNameLabel
+                    title={tier.name}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isDetailsOpen}
+                    aria-controls={detailsId}
+                    onClick={() => toggleTierDetails(tier.id)}
+                    onKeyDown={event => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return
+                      event.preventDefault()
+                      toggleTierDetails(tier.id)
+                    }}
+                  >
                     <VisuallyHidden>{tier.name}</VisuallyHidden>
                     <span aria-hidden="true">{tier.symbol}</span>
                   </TierNameLabel>
@@ -1567,8 +1575,8 @@ const MainPage = ({ game }) => {
                 $secondaryProgress={availablePercent}
                 $pulse={canAfford}
               >
-                <BuyButtonIcon>🛒 {buyLevelQuantityText} </BuyButtonIcon>
-                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? maxLevelsPreview.cost : displayCost)}</BuyButtonCostLabel>
+                <BuyButtonIcon>🛒{buyLevelQuantityText && ` ${buyLevelQuantityText}`} </BuyButtonIcon>
+                <BuyButtonCostLabel>{formatCurrency(maxLevelsPreview.levels > 0 ? (maxLevelsPreview.partialQuantity > 0 ? maxLevelsPreview.partialCost : maxLevelsPreview.lastLevelCost) : displayCost)}</BuyButtonCostLabel>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`${tier.name} cost-block progress`}
@@ -1584,7 +1592,14 @@ const MainPage = ({ game }) => {
 
       <SpeedCardsRow>
         <ScaleUpCard aria-label="scale up panel">
-          <h2>Scale Up</h2>
+          <CardHeader>
+            <h2>Scale Up</h2>
+            {!isFirstRun && isAutoScaleUpActive && (
+              <AutoChip $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel} title={autoScaleUpStatusTitle}>
+                ⏩ {autoScaleUpEffectivelyActive ? 'Auto' : 'Paused'}
+              </AutoChip>
+            )}
+          </CardHeader>
           <ScaleUpButton
             aria-label={`Scale Up (requires ${scaleUpRequirementDisplay} completed ${scaleUpTargetTier.name} levels) — doubles production for tiers unlocked so far${scaleUpUnlocksTB ? ' and unlocks TB' : ''}`}
             color={canScaleUp ? '#22d3ee' : 'darkgrey'}
@@ -1606,16 +1621,11 @@ const MainPage = ({ game }) => {
               aria-valuemax={100}
             />
           </ScaleUpButton>
-          {!isFirstRun && isAutoScaleUpActive && (
-            <MutedText title={autoScaleUpStatusTitle}>
-              <PpUpgradeBadge $dimmed={!autoScaleUpEffectivelyActive} aria-label={autoScaleUpStatusLabel}>⏩</PpUpgradeBadge>
-            </MutedText>
-          )}
         </ScaleUpCard>
 
       {overclockEverRevealed && (
         <OverclockCard aria-label="overclock panel">
-          <Disclosure onClick={collapseDisclosure}>
+          <Disclosure>
             <summary><h2>Overclock</h2></summary>
             {overclockCount > 0 && (
               <MutedText>

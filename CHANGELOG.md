@@ -34,6 +34,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+
+- **Bytes and Bits are now one balance.** There is no separate Bytes pool any more: Kilobytes credit Bits (8 per Byte), and Latency is paid from that same balance (10 Bytes = 80 Bits at level 0), so its button can never be enabled above the balance shown. Older saves simply drop their stray Bytes counter.
+
+- **Buy button progress uses a plus sign throughout.** Every count on the tier Buy button's progress text is prefixed with `+` (`+3/8`, `+4`, `+4 +3/8`); zero parts stay hidden.
+- **Buy button no longer mixes bought and affordable counts.** The ordinary Buy button's progress text shows only the affordable count (`+3/8`) when anything is affordable, else the bought count (`3/8`); the old `3+3/8` was misleading.
+- **Buy button progress hides zeros.** The tier Buy button's progress text omits zero parts: no `0+`, and nothing at all at `0/8` (e.g. `3/8`, `+3/8`, `4`, `4+3/8`).
+- **Buy max shows levels + partial progress.** The Buy button's progress text is now `<full levels>+<affordable purchases toward the next level>/<block size>` (e.g. `4+3/8`) instead of `+N Lv`, and its cost is that of the highest level reached. Gating and spending are unchanged.
+- **Buy max shows only the highest level's cost.** With Buy max on, a tier's Buy button now displays
+  the cost of the highest level it would buy (in the usual units) instead of the combined total. The
+  button is still gated on, and a click still spends, the full cost.
+
+- **Upgrade Data Stream is now a progress bar.** Clicking it pulls from the Data Stream Buffer at a constant 100% of base Speed at top priority; when the bar fills, Capacity doubles. Nothing is paused and there is no race with other Data Stream consumers. The same button shows the progress; there is no cancel. A full Buffer no longer upgrades instantly, and leftover Buffer bits are kept.
+- **Pool title is a real button.** The "KB Pool" title is now its own button (keyboard/focus support) beside a stretched tap target, so it still expands/collapses while the pool's tap is disabled (full buffer, lake draining, tap bonus capped).
+- **Byte Foundry spacing.** The Data Stream and pool tiles now sit flush in their cards (no padding around them); only the buttons, disks and Data Lake below are padded, and gaps between cards are tighter, so more fits on screen. Cards get a stronger edge and shadow against the page, while the tiles and buttons inside them use a softer fill, so contrast is higher between cards and lower within them.
+- **Provision Disk is its own card.** The Provision Disk control no longer lives inside the Data Stream card; it sits in a separate card right below it.
+- **Name-only expand/collapse.** Storage pool cards and Factory tier rows now expand/collapse only from their name (the "KB Pool" title, the tier label); the pool's chevron strip and the whole-row click target are gone. The same rule now applies app-wide: the Latency/Overclock disclosures no longer collapse when their revealed text is clicked, and the global-multipliers breakdown toggles from the balance figure only, not the whole money card (its `money display` label now covers just the balance figure).
+- **Foundry multiplier bars read at a glance.** The fill-based multiplier (blue) and tap bonus (yellow, only while active) are two bars growing from the centre, each with its percent centred inside it. The balance now sits on the title row between a smaller name and Speed/Bandwidth, and has a halo so the fill edge no longer clips its digits.
+- **Byte Foundry: Upgrade Data Stream previews its result, and Provision Disk sits right below it.**
+  The upgrade button shows `🏷️ 4 GiB · 📦 ×2 · ⚡ ×1.5` (cost, Capacity gain and Speed gain), and the
+  Provision Disk button moved out of the pool cards into the Data Stream section, directly under it.
+- **Byte Foundry: provisioning in progress is obvious at a glance.** A queued Provision Disk build now
+  reads `⏳ Provisioning 1 KB Disk…` (with its banked passes, e.g. `2/9 · needs buffer`) and pulses;
+  idle states keep `🏦 Provision 1 KB Disk`, so the two no longer look alike.
+- **Cost icon is now 🏷️ everywhere.** The Data Lake Booster control, the Upgrade Data Stream button
+  and Provision Disk's status line all mark their cost with the same price-tag icon (replacing 🎯).
+- **Byte Foundry: armed Upgrade Data Stream status is tidier.** The headline stays on one line
+  (`Upgrading to … · ⚡ …`); "Outflow paused" moves to a smaller second line.
+- **Byte Foundry: Provision Disk always states its status.** A short second line on the button
+  reads Ready, Queued (and what it's waiting for) or "tap to queue", with the cost and pass count —
+  the button no longer looks the same while ready, queued or waiting.
 - **Boosters: timed merges now take 8 normal disk fills (#755).** A reserve merge takes as long as
   8 of the input tier's own pool's smallest disks take to fill at that pool's Bandwidth. Cores use
   the KB pool, Nodes the MB pool, and so on. Before, it was 10× "Core earn time" and grew 10× per
@@ -115,6 +145,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   lifetime-purchased-count text is gone — the cost figure alone is self-explanatory.
 
 ### Fixed
+
+- **Latency purchases now spend like any other.** Buying a Latency level also deducts the mirrored Bits from your balance, so the headline money drops instead of staying unchanged.
+
+- **Button text and layout polish.** Compute (Flops) buy buttons showed "[object Object]" instead of
+  their PP cost, and plain-word buttons (e.g. "Redeem code", "Dummy checkout", "Ascend Era…") were split
+  with a wide gap after the first word. Perks rows now line up in fixed columns, automation toggles are
+  proper on/off switches (Buy max too), the Milestones page no longer repeats each chapter name, and the
+  Factory's Latency / Scale Up / Overclock cards share one compact style with Auto Scale Up shown as a
+  header chip.
 - **Boosters page (#740).** A lower-tier merge now fills the next tier's reserve (up to 18) once
   that tier has auto-merge unlocked, so chained auto-merges keep going instead of stalling at 10.
   A timed merge finishing no longer cuts an output that grew past 10 back down to 10. The

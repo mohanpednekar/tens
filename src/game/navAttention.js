@@ -1,7 +1,6 @@
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   AUTO_SCALE_UP_COST,
-  BYTES_ID,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   COMPUTE_MERGE_RATIO,
   INTRO_BYTE_COMBINE_COST,
@@ -13,7 +12,7 @@ import {
   canBuyComputeFlopsTier,
   getComputeFieldEffectiveCap,
   getAutoPrestigeCost,
-  getGlobalTickspeedMultiplierCost,
+  isGlobalTickspeedAffordable,
   getIntroKilobyteConversionCost,
   getOverclockRequirement,
   getPrestigeDoublePpUpgradeCost,
@@ -100,7 +99,9 @@ const COMPUTE_RESERVE_MERGE_STARTS = [
   isComputeSupercomputersMergeStartAvailable,
 ]
 
-const isMemoryFull = state => (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0)
+// Not "full" for attention purposes while an Upgrade Data Stream runs — nothing is waiting on the player.
+const isMemoryFull = state =>
+  (state.intro?.bits ?? 0) >= (state.intro?.capacity ?? 0) && !state.intro?.capacityUpgradeQueued
 
 const isCombineAvailable = state =>
   !(state.intro?.byteCreated ?? false) && (state.intro?.bits ?? 0) >= INTRO_BYTE_COMBINE_COST
@@ -140,8 +141,7 @@ export const hasAffordableFullLevel = state => {
 export const hasAffordableGlobalTickspeed = state => {
   if (isProductionFrozen(state)) return false
   if (!isGlobalTickspeedMultiplierUnlocked(state)) return false
-  const cost = getGlobalTickspeedMultiplierCost(state.globalTickspeedMultiplier ?? 0)
-  return (state.resources[BYTES_ID] ?? 0) >= cost
+  return isGlobalTickspeedAffordable(state)
 }
 
 export const hasScaleUpAvailable = state => {
@@ -221,7 +221,7 @@ export const getTiersAttentionLevel = state =>
 export const hasFoundryAttention = state =>
   isMemoryFull(state) ||
   isCombineAvailable(state) ||
-  isMemoryCapacityUpgradeAvailable(state) ||
+  (isMemoryCapacityUpgradeAvailable(state) && !state.intro?.capacityUpgradeQueued) ||
   isProvisionDiskTurnAvailable(state) ||
   isTransferBlockAffordable(state)
 
