@@ -207,7 +207,12 @@ const clampFraction = value => Math.min(1, Math.max(0, value))
 // activity (it's a permanent part of that pool's own card now, not a rarity-filtered global list
 // entry) — instead of the default every-lake-with-activity behavior `getVisibleLakeTierIndexes`
 // still drives when `tierIndex` is omitted.
-const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
+// `section` splits one lake across two call sites: 'header' renders only the title + action row (the
+// always-visible part of a collapsed pool card), 'body' only the fill tile / disk squares (the
+// expanded part); omitted renders both.
+const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => {
+  const showHeader = section !== 'body'
+  const showBody = section !== 'header'
   const visibleTiers = tierIndex != null ? [tierIndex] : getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
@@ -274,8 +279,8 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
         const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
 
         return (
-          <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
-            <LakeHeaderRow>
+          <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
+            {showHeader && <LakeHeaderRow>
               <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
                 <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
                 <span>Lake</span>
@@ -351,9 +356,9 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                   {`${COST_ICON} ${nextCostSize}`}
                 </StatusText>
               )}
-            </LakeHeaderRow>
+            </LakeHeaderRow>}
 
-            {currentFillSubSize !== null && (() => {
+            {showBody && currentFillSubSize !== null && (() => {
               // Always visible, even before this lake is unlocked (isDataLakePoolReady) — showing a
               // static "0 / size" the whole time it's waiting, rather than the tile only appearing
               // out of nowhere once real progress starts. Silently absent feedback before that point
@@ -406,7 +411,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
               )
             })()}
 
-            {DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
+            {showBody && DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
               const full = diskCounts[subSize] ?? 0
               const totalSlots = slotCounts[subSize]
               // Gated on poolReady for the same reason LakePoolTile above is (see its own
@@ -445,13 +450,15 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
                 </LakeSizeRow>
               )
             })}
-            <VisuallyHidden
-              role="progressbar"
-              aria-label={`${label} lake deposits`}
-              aria-valuenow={Math.round((capacity > 0 ? getDataLakeDepositedUnits(tierIndex)(state) / capacity : 0) * 100)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
+            {showBody && (
+              <VisuallyHidden
+                role="progressbar"
+                aria-label={`${label} lake deposits`}
+                aria-valuenow={Math.round((capacity > 0 ? getDataLakeDepositedUnits(tierIndex)(state) / capacity : 0) * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              />
+            )}
           </LakeBlock>
         )
       })}
@@ -461,7 +468,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
   if (bare) {
     return (
       <>
-        <BareDivider />
+        {showHeader && <BareDivider />}
         {list}
       </>
     )

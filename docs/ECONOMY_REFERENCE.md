@@ -344,39 +344,19 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
      delivery is now continuous (`getDataStreamEffectMultiplier` is rarely exactly 1); every existing
      consumer of `intro.bits` only ever compares (`>=`/`<`) or subtracts/floor-divides it, so this is
      safe.
-   - `ByteFoundryPage` displays the live multiplier via a compact `MultiplierBar` (own component in
-     that file) — a bar that grows and shrinks from the MIDDLE: `FILL_MULTIPLIER_MAX_PERCENT`
-     (150%, the base reading's own ceiling) fills the full track width, 0% is a zero-width point at
-     dead center — rendered INSIDE the same tappable tile (`FillableStatCard`) for both the Data
-     Stream and every pool, as its own full-width row directly under the tile's `TitleRow` (title,
-     combined balance/capacity, Speed/Bandwidth), with its rounded percent readout
-     (`BarPercentLabel`) centered inside the bar (page-colored text), or, when the fill is under
-     `BAR_LABEL_INSIDE_MIN_WIDTH_PERCENT` of the track (a small tap bonus, the 50% floor/lake rate),
-     just past the fill's end in the plain text color with a surface-colored halo, since that spot can
-     sit on the tile's green progress fill. The base bar is accent blue; while a tap bonus
-     is active its own yellow bar carries a `+NN% 👆` label. Each track also exposes its displayed
-     percentage as `aria-valuetext` (the visible label sits inside the progressbar, which assistive
-     tech flattens). This replaced an earlier
-     corner needle-speedometer (a half-circle dial sweeping 0%→100%→200% with a percent readout
-     beneath it, itself replacing a still-earlier full-width linear two-tone bar) — the dial took too
-     much vertical space for how little it showed; see `docs/DESIGN_HISTORY.md`. In its default
-     `mode="multiplier"`, the normal accent-blue fill represents only the base fill multiplier. A
-     live tap bonus renders as its own yellow, center-growing bar directly below it and disappears
-     at zero. **The whole bar+percent row itself renders nothing at all whenever the reading it
-     displays (the base multiplier in `mode="multiplier"`, the lake overflow rate in `mode="lake"`)
-     is exactly 0** — a zero-width center-point bar plus an orphaned "0%" label reads as
-     stalled/broken rather than "nothing to report," so `MultiplierBar` returns `null` instead. In
-     practice this only ever fires in lake mode, once a maxed lake has no open disk slot left
-     (`getDataLakeOverflowRatePercent`'s own `DATA_LAKE_OVERFLOW_MIN_PERCENT` floor, 0) — the base
-     fill multiplier's own floor (`FILL_MULTIPLIER_MIN_PERCENT`, 50) never actually reaches 0. The bar keeps the old
-     dial's exact `role="progressbar"`/`aria-label`/`aria-valuenow`/`aria-valuemin`/`aria-valuemax`
-     contract (`aria-valuemax` always `FILL_MULTIPLIER_MAX_PERCENT` on the base/lake bar and `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT` on the bonus bar), so it's still
-     screen-reader-visible as a progress indicator and every test asserting on that contract is
-     unaffected by the visual swap. Each pool's own Memory buffer tile is now always a real tap
-     target (`PoolTile` + stretched `PoolTapButton`, calling `tapPoolBuffer(poolIndex)`) — its own
-     `TitleRow` (title left, centered `balance / capacity-unit` in the middle, Speed/Bandwidth right)
-     renders as the first line of that tile; disk status/count is omitted. The
-     `MultiplierBar` is the second line. Expand/collapse is the "<symbol> Pool" title alone
+   - `ByteFoundryPage` shows the live multiplier as the EFFECTIVE Speed/Bandwidth figure (base × multiplier,
+     truncated to 3 significant digits by `formatSpeedText`), tinted red (`FILL_MULTIPLIER_MIN_PERCENT`, 50%)
+     → blue (100%) → green (`FILL_MULTIPLIER_MAX_PERCENT`, 150%+) by `getSpeedColor`; the old center-grow
+     multiplier bar and its lake-overflow-rate mode were removed (see `docs/DESIGN_HISTORY.md`). Each tile
+     (the Data Stream's and every pool's `FillableStatCard`/`PoolTile`) has a `TileHeader` holding the
+     `TitleRow` (title left, Speed/Bandwidth right) and a `CapacityBonusRow` (📦 Capacity left, a narrow
+     centered tap-bonus bar, `+NN% 👆` right — bar and text only while a tap bonus is active, exposing
+     `role="progressbar"`/`aria-valuetext`, `aria-valuemax` `FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT`). The
+     `BalanceText` (balance only, no "/ capacity") is absolutely centered in the `TileHeader`: perfectly
+     centered, larger, with the Speed also vertically centered when no bonus is active; top-aligned at the
+     normal size when the bonus bar shows. Each pool's own Memory buffer tile is a real tap
+     target (`PoolTile` + stretched `PoolTapButton`, calling `tapPoolBuffer(poolIndex)`; disabled, with an
+     explanatory title, while `isDataLakePoolDrainAvailable` or at the tap-bonus cap). Expand/collapse is the "<symbol> Pool" title alone
      (`PoolTitleToggle`, a real `<button>` with `aria-expanded`; the tap target is a separate stretched
      `PoolTapButton` behind the readouts, so the two never nest and a disabled tap can't block the title).
 5. **Upgrade Data Stream** (`upgradeIntroCapacity`, the single consolidated upgrade button —
@@ -809,8 +789,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    `docs/DESIGN_HISTORY.md`. `getDataLakeOverflowRatePercent` now returns a plain binary
    "receiving/not-receiving" reading (`DATA_LAKE_OVERFLOW_MAX_PERCENT` while this lake has anything
    left to fill at its current capacity level, `DATA_LAKE_OVERFLOW_MIN_PERCENT` once fully maxed) —
-   these two constants remain solely so `ByteFoundryPage`'s `MultiplierBar` (below) doesn't jump at
-   the multiplier→lake handoff.
+   these two constants are retained though no UI bar displays this reading any more.
 
    `tickPoolBufferFill`'s overflow branch hands its own reserved time/Bits budget (the same
    `fillRate`/`elapsedSeconds` reservation it already computes for buffer-filling) to
@@ -830,9 +809,7 @@ Tap/Combine/Speed/Convert all stay live indefinitely, every cycle.
    excess (e.g. a huge single-tick overflow against a small/fresh lake) survives as ordinary
    spendable Bits instead of being destroyed. Deliberately independent of the pool's own fill-based
    Speed/Bandwidth multiplier (`getPoolEffectMultiplier`) as a FORMULA — neither reads the other's
-   value — even though the two readings share the SAME `MultiplierBar` (see `ByteFoundryPage`): the
-   bar switches from the fill-based multiplier reading to this lake overflow indicator
-   (`mode="lake"`, rendered in `theme.color.info`) whenever `isDataLakePoolDrainAvailable` (the lake
+   value — and `ByteFoundryPage` no longer displays this overflow rate (the bar that did was removed); the old lake mode used to apply whenever `isDataLakePoolDrainAvailable` (the lake
    drains the buffer via `tickDataLakePoolDrain`, holding it below full; the pool tile's tap is then
    disabled), or once that pool's own Memory buffer is completely
    full AND `isDataLakePoolReady` AND `isStoragePoolFullyBuilt` (that pool's own three ladder sizes
