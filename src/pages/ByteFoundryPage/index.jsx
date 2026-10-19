@@ -333,6 +333,7 @@ const PoolTitleSymbol = styled.span`
 const SpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
+  ${props => props.$centered ? 'position: absolute; right: 0; top: 50%; transform: translateY(-50%);' : ''}
   font-size: ${props => props.theme.type.scale.sm.size};
   font-weight: 600;
   color: ${props => props.$color ?? props.theme.color.textMuted};
@@ -468,7 +469,8 @@ const SubRow = styled.div`
 `
 
 const CapacityText = styled.span`
-  flex-shrink: 0;
+  justify-self: start;
+  text-align: left;
   color: ${props => props.theme.color.textMuted};
   white-space: nowrap;
 `
@@ -480,7 +482,9 @@ const BonusText = styled.span`
   justify-self: end;
   font-weight: 600;
   color: ${TAP_YELLOW};
-  text-shadow: 0 0 1px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.5);
+  padding: 0.05rem 0.4rem;
+  border-radius: ${props => props.theme.radius.pill};
+  background: rgba(20, 20, 24, 0.85);
   white-space: nowrap;
 `
 
@@ -792,7 +796,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               {formatMemoryBalanceValue(intro.bits, intro.capacity, intro.byteCreated, !dataStreamBalanceTrimmed)}
             </BalanceText>
             {dataStreamRateText && (
-              <SpeedText $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
+              <SpeedText $centered={!(intro.dataStreamTapBonusPercent > 0)} $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
                 ⚡ {dataStreamRateText}
               </SpeedText>
             )}
@@ -942,7 +946,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     </PoolTitleToggle>
                   </SectionTitle>
                   <PoolBalanceText bits={poolBufferBits} isFull={poolBufferFull} poolIndex={poolIndex} large={poolTapBonusPercent <= 0} />
-                  <SpeedText $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
+                  <SpeedText $centered={poolTapBonusPercent <= 0} $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
                     ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
                   </SpeedText>
                 </TitleRow>
