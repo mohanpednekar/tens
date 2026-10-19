@@ -4374,7 +4374,7 @@ describe('Byte Foundry Compute Boost', () => {
     render(<App />)
     openBoosters()
 
-    expect(screen.getByText(/armed:.*cores.*4 held/i)).toBeInTheDocument()
+    expect(screen.getByText(/spends 1 core.*4 held/i)).toBeInTheDocument()
   })
 
   test('render order top to bottom: active-boost status, then the Boost effects section (presets/Stack/Reclaim), then the tier entity rows — issue #326 "the effects section is at the top of the Boosters page, not at the bottom"', () => {
@@ -4681,7 +4681,7 @@ describe('Compute auto-merge automation', () => {
     openBoosters()
 
     const autoButton = screen.getByRole('button', { name: /enable auto-merge for cores into nodes/i })
-    expect(autoButton).toHaveTextContent('🤖 6/10')
+    expect(autoButton).toHaveTextContent('🤖 Auto · 6/10 Nodes')
     expect(autoButton).toBeDisabled() // below the 10-unit unlock cost
   })
 

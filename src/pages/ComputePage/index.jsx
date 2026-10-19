@@ -527,15 +527,15 @@ const ComputePage = ({ game }) => {
           <span
             title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
           >
-            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} · ${intro.computeBoostStacks}×`}
+            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
           </span>
         </ActiveBoostRow>
       )}
 
       <ArmedStatusText>
         {armedRow
-          ? `Armed: ${armedRow.symbol} ${armedRow.label} (${formatAmount(armedHeld)} held)`
-          : 'Click a tier below to arm the Boost presets'}
+          ? `Spends 1 ${singularize(armedRow.label)} per boost · ${armedRow.symbol} ${formatAmount(armedHeld)} held`
+          : 'Pick a tier below to power a boost'}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
         {Object.entries(COMPUTE_BOOST_PRESETS).map(([boostType, preset]) => {
@@ -589,7 +589,7 @@ const ComputePage = ({ game }) => {
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}×${multiplier}`}</ButtonContent>
+              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatOfflineDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}
@@ -677,9 +677,9 @@ const ComputePage = ({ game }) => {
             onClick={actions.buyComputeAutoBoost}
             title={`Unlock Auto-Boost: while a tier is full and waiting on its own in-flight merge, automatically activate your preferred preset from the biggest such tier (default Standard). Costs ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP.`}
             type="button"
-            variant="prestige"
+            variant="neutral"
           >
-            <ButtonContent>{`🤖 Auto-Boost · ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}</ButtonContent>
+            <ButtonContent>{`🤖 Unlock Auto-Boost · ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}</ButtonContent>
           </CompactButton>
         )}
       </AutoBoostRow>
@@ -771,7 +771,7 @@ const ComputePage = ({ game }) => {
                             type="button"
                             variant="prestige"
                           >
-                            <ButtonContent>⬆ Merge</ButtonContent>
+                            <ButtonContent>{`⬆ Merge ${COMPUTE_MERGE_RATIO} → 1 ${row.mergeOutputLabel}`}</ButtonContent>
                           </TierActionButton>
                           <TierActionButton
                             aria-label={row.autoAriaLabel}
@@ -782,7 +782,7 @@ const ComputePage = ({ game }) => {
                             variant="info"
                             $progress={autoUnlockProgress}
                           >
-                            <ButtonContent>{`🤖 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                            <ButtonContent>{`🤖 Auto · ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP} ${row.autoCostLabel}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )
