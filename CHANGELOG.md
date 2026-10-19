@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   contents automatically, without a conversion button.
 
 ### Changed
+- Boosters page: boost controls now live in one "Boost" card, the selected funding tier is marked with a filled dot and highlighted border, and a tier's Merge/Auto row only shows for the selected tier or when there is something to act on, so idle tiers are one line.
 - Boosters page: clearer wording — the active boost reads "💥 Burst ×20 · 19m left", preset buttons show their duration, the funding line says what a boost spends, Auto-Boost unlock is a quiet neutral button, and each tier's Merge/Auto buttons name their target.
 
 - **Bytes and Bits are now one balance.** There is no separate Bytes pool any more: Kilobytes credit Bits (8 per Byte), and Latency is paid from that same balance (10 Bytes = 80 Bits at level 0), so its button can never be enabled above the balance shown. Older saves simply drop their stray Bytes counter.

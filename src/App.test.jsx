@@ -4461,6 +4461,8 @@ describe('ComputePage merge chain', () => {
     render(<App />)
     openBoosters()
 
+    // Idle tiers collapse to one line; selecting the tier reveals its merge row.
+    fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
     expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
   })
 

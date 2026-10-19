@@ -50,10 +50,44 @@ const TierBlock = styled.div`
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 0.3rem 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: ${props => props.theme.radius.md};
+  background: ${props => props.theme.color.surface};
+  border: 1px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.border)};
+`
+
+// One card for everything that acts on a Boost (status, funding tier, presets, stack/forfeit,
+// auto) so the tier list below reads as "pick what powers it".
+const BoostCard = styled.section`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+  padding: ${props => props.theme.space.md};
   border-radius: ${props => props.theme.radius.md};
   background: ${props => props.theme.color.surface};
   border: 1px solid ${props => props.theme.color.border};
+`
+
+const SectionLabel = styled.h2`
+  margin: 0;
+  align-self: flex-start;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${props => props.theme.color.textMuted};
+`
+
+// Filled dot = the tier that powers boosts.
+const SelectMarker = styled.span`
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 1.5px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.textMuted)};
+  background: ${props => (props.$selected ? props.theme.color.warn : 'transparent')};
 `
 
 // Row 1: tier name/symbol plus a row of COMPUTE_ENTITY_CAP (10) normal slots — "First row shows 10
@@ -80,9 +114,8 @@ const TierSelectButton = styled.button`
   min-width: 0;
   border: none;
   border-radius: ${props => props.theme.radius.sm};
-  background: ${props => (props.$selected ? props.theme.color.surfaceRaised : 'none')};
-  outline: ${props => (props.$selected ? `1.5px solid ${props.theme.color.warn}` : 'none')};
-  padding: 2px 4px;
+  background: none;
+  padding: 4px;
   cursor: pointer;
   color: inherit;
   font: inherit;
@@ -522,6 +555,8 @@ const ComputePage = ({ game }) => {
         <Title>⚡ Boosters</Title>
       </Header>
 
+      <BoostCard aria-label="boost">
+      <SectionLabel>Boost</SectionLabel>
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
         <ActiveBoostRow aria-label="active compute boost">
           <span
@@ -683,10 +718,12 @@ const ComputePage = ({ game }) => {
           </CompactButton>
         )}
       </AutoBoostRow>
+      </BoostCard>
 
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
+            <SectionLabel>Power a boost with</SectionLabel>
             {ENTITY_ROWS.map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0
@@ -706,8 +743,16 @@ const ComputePage = ({ game }) => {
               const primaryHeld = Math.min(count, COMPUTE_ENTITY_CAP)
               const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
 
+              // Progressive disclosure: the merge/auto row only shows for the selected tier or when
+              // there is something to act on or watch, so idle tiers stay a single line.
+              const canMergeNow = autoEnabled ? startAvailable : canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)
+              const showDetail = hasMergeRow && (
+                armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
+                || (!autoEnabled && autoCostHeld > 0)
+              )
+
               return (
-                <TierBlock key={row.key} aria-label={`${row.label} tier`}>
+                <TierBlock key={row.key} aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex}>
                   <TierHeaderRow>
                     <TierSelectButton
                       type="button"
@@ -717,6 +762,7 @@ const ComputePage = ({ game }) => {
                       title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
                       $selected={armedTierIndex === tierIndex}
                     >
+                      <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
                       <TierLabel>{`${row.label} ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
                       <SlotsRow role="group" aria-label={`${row.label} slots`}>
@@ -727,6 +773,7 @@ const ComputePage = ({ game }) => {
                     </TierSelectButton>
                   </TierHeaderRow>
 
+                  {showDetail && (
                   <TierMergeRow>
                     {hasMergeRow && (
                       autoEnabled ? (
@@ -788,6 +835,7 @@ const ComputePage = ({ game }) => {
                       )
                     )}
                   </TierMergeRow>
+                  )}
                 </TierBlock>
               )
             })}
