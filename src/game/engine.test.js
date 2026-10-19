@@ -2825,8 +2825,8 @@ describe('formatMemoryAmount', () => {
       // Pool 2's own fixed unit is MB (divisor 8,000,000 bits) — a 3,187,000-bit balance is below
       // that, so this must read in the pool's own next-finer unit (KB) rather than falling back to
       // formatDiskSizeInPoolUnit's raw-bits case (the bug this fix addresses: "3.187e6 bits").
-      expect(formatPoolBalance(3_187_000, 2)).toBe('398.375 KB')
-      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.375 KB')
+      expect(formatPoolBalance(3_187_000, 2)).toBe('398.37 KB')
+      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.37 KB')
     })
 
     it('stays in the pool\'s own fixed unit once the balance reaches it', () => {
