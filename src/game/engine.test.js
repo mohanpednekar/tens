@@ -5784,6 +5784,20 @@ describe('tickGame Compute Boost integration', () => {
     expect(gainFor(boost(2))).toBeGreaterThan(unboosted)
   })
 
+  it('a tier-2 boost leaves tier03 unboosted, while a tier-3 boost covers it', () => {
+    const thirdTier = TIER_DEFINITIONS[2]
+    const secondTier = TIER_DEFINITIONS[1]
+    const gainFor = boostOverrides => {
+      const state = withOwned(withIntro(createInitialGameState(), boostOverrides), thirdTier.id, 1)
+      return tickGame(1000)(state).owned[secondTier.id] - (state.owned[secondTier.id] ?? 0)
+    }
+    const boost = tierIndex => ({ computeBoostType: 'burst', computeBoostTierIndex: tierIndex, computeBoostStacks: 1, computeBoostRemainingSeconds: 10_000 })
+    const unboosted = gainFor({})
+    expect(unboosted).toBeGreaterThan(0)
+    expect(gainFor(boost(2))).toBe(unboosted)
+    expect(gainFor(boost(3))).toBeGreaterThan(unboosted)
+  })
+
   it('counts the boost down as part of a regular tick, alongside everything else', () => {
     const state = withIntro(createInitialGameState(), { computeBoostType: 'sustain', computeBoostStacks: 1, computeBoostRemainingSeconds: 5 })
     const after = tickGame(1)(state)
