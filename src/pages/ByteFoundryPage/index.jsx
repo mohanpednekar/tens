@@ -44,8 +44,10 @@ const Header = styled.header`
 // Sits in the middle of TitleRow (title left, Speed/Bandwidth right). The text-shadow is a halo in
 // the card's own surface color so the digits stay legible where the progress-fill edge crosses them.
 const BalanceText = styled.p`
-  flex: 1 1 auto;
-  min-width: 0;
+  position: absolute;
+  left: 50%;
+  ${props => (props.$large ? 'top: 50%; transform: translate(-50%, -50%);' : 'top: 0; transform: translateX(-50%);')}
+  pointer-events: none;
   margin: 0;
   font-family: ${props => props.theme.font.display};
   font-size: ${props => (props.$large ? props.theme.type.scale.xl.size : props.theme.type.scale.md.size)};
@@ -295,6 +297,13 @@ const PoolTitleToggle = styled.button`
 // Speed/Bandwidth top-right — a flex row that WRAPS (Speed drops to its own right-aligned line) when a
 // long balance leaves no room on a narrow phone, rather than overlapping the neighbours. The multiplier bar(s) render below it — see
 // docs/DESIGN_HISTORY.md for the corner-speedometer → center-grow-bar redesign this replaced.
+// Positioning context for the absolutely-placed BalanceText: centered on the tile's own title/capacity
+// rows (perfectly centered when no tap-bonus bar, top-aligned with the title and Speed when there is).
+const TileHeader = styled.div`
+  position: relative;
+  width: 100%;
+`
+
 const TitleRow = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -773,6 +782,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
           $progress={fullProgress}
           $tappable={intro.mainGameUnlocked}
         >
+          <TileHeader>
           <TitleRow>
             <SectionTitle>Data Stream</SectionTitle>
             <BalanceText $large={!(intro.byteCreated && (intro.dataStreamTapBonusPercent ?? 0) > 0)}>
@@ -789,6 +799,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
             bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
             ariaLabel="data stream fill-based speed multiplier"
           />
+          </TileHeader>
           <VisuallyHidden
             role="progressbar"
             aria-label="data stream bit balance"
@@ -914,6 +925,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 }
               />
               <PoolTileContent>
+                <TileHeader>
                 <TitleRow>
                   <SectionTitle>
                     <PoolTitleToggle
@@ -936,6 +948,7 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                   bonusPercent={poolTapBonusPercent}
                   ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
                 />
+                </TileHeader>
                 <VisuallyHidden
                   role="progressbar"
                   aria-label={`pool ${poolIndex} memory buffer`}
