@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- **Data Lake header.** Under each lake's title: the current Booster target price (left, also the Booster buy control — no longer duplicated in the title row), the amount currently filled (center, larger) and the current fill speed (right).
+- **Data Lake header.** Each lake's header now matches the pool/Data Stream tile layout: name with the Booster target price (also the buy control) under it, the amount filled big and centered, and the current fill speed on the right.
 - **Foundry speed display.** The Data Stream and pool multiplier bars are gone; their Speed/Bandwidth
   figures now show the actual resulting value (3 significant digits), colored red → blue → green with
   the fill multiplier. Capacity now sits under each pool/Data Stream name (the balance shows no "/ capacity" and grows larger while no tap bonus is active), and the tap bonus reads "+x% 👆" under the speed beside a narrower bar (hidden when inactive). A collapsed pool card now also

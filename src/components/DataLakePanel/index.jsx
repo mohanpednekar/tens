@@ -79,38 +79,56 @@ const LakeTitleSymbol = styled.span`
   flex-shrink: 0;
 `
 
-// Under the header: target price left, filled amount centered, fill speed right. Three columns so
-// the middle figure stays truly centered whatever the side widths.
-const LakeStatsRow = styled.div`
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+// One lake's header laid out like a pool / Data Stream tile: name + target price on the left, fill
+// speed on the right, the filled amount absolutely centered (vertically too when nothing sits under
+// the speed).
+const LakeHeader = styled.div`
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+`
+
+const LakeSubRow = styled.div`
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${props => props.theme.space.sm};
   font-variant-numeric: tabular-nums;
   font-size: ${props => props.theme.type.scale.sm.size};
   color: ${props => props.theme.color.textMuted};
   white-space: nowrap;
+  min-height: 1.4rem;
 
-  & > :first-child {
-    justify-self: start;
+  & > p {
     text-align: left;
-  }
-
-  & > :last-child {
-    justify-self: end;
   }
 `
 
 const LakeFilledText = styled.span`
+  position: absolute;
+  left: 50%;
+  ${props => (props.$large ? 'top: 50%; transform: translate(-50%, -50%);' : 'top: 0; transform: translateX(-50%);')}
+  pointer-events: none;
   color: ${props => props.theme.color.text};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.lg.size};
+  font-size: ${props => (props.$large ? props.theme.type.scale.xl.size : props.theme.type.scale.md.size)};
   font-weight: 700;
-  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 `
 
-const LakeSpeedText = styled.span``
-
+const LakeSpeedText = styled.span`
+  flex-shrink: 0;
+  margin-left: auto;
+  ${props => (props.$centered ? 'position: absolute; right: 0; top: 50%; transform: translateY(-50%);' : '')}
+  font-size: ${props => props.theme.type.scale.sm.size};
+  font-weight: 600;
+  color: ${props => props.theme.color.textMuted};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
 
 const StatusText = styled.p`
   margin: 0;
@@ -329,44 +347,22 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
 
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
-            {showHeader && <LakeHeaderRow>
-              <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
-                <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
-                <span>Lake</span>
-              </LakeTitle>
-              {/* Header action: only the non-cost actions live here — Reset Pool, or Scale Out when no
-                  Booster purchase/conversion is the more relevant action. The Booster cost control sits
-                  in the stats row below (as its left figure), so the price is shown once. */}
-              {resetAvailable ? (
-                <ActionButton
-                  aria-label={`reset the ${label} Storage Pool`}
-                  onClick={() => actions.resetStoragePool(tierIndex)}
-                  title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
-                  type="button"
-                  variant="prestige"
-                >
-                  <ButtonContent>↻ Reset Pool</ButtonContent>
-                </ActionButton>
-              ) : upgradeAvailable && !converting && !entityAtCap && !canBuy ? (
-                <ActionButton
-                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
-                  onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
-                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
-                  type="button"
-                  variant="prestige"
-                >
-                  <ButtonContent>⚡ Scale Out</ButtonContent>
-                </ActionButton>
-              ) : null}
-            </LakeHeaderRow>}
-
             {showHeader && (
-              <LakeStatsRow>
-                {/* The lake's own next-Booster target price doubles as its sole Booster control —
-                    clicking it buys immediately if already affordable, or starts the one-shot
-                    fill-then-buy automation otherwise (see startDataLakeAutoConvert); otherwise it is a
-                    plain label. */}
-                {converting ? (
+              <LakeHeader>
+                <LakeHeaderRow>
+                  <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
+                    <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
+                    <span>Lake</span>
+                  </LakeTitle>
+                  <LakeSpeedText $centered={!(resetAvailable || (upgradeAvailable && !converting && !entityAtCap && !canBuy))} title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
+                </LakeHeaderRow>
+                {/* Same layout as a pool/Data Stream tile: name top-left with the Booster target price
+                    under it (that price is also the lake's Booster control — clicking it buys
+                    immediately if already affordable, or starts the one-shot fill-then-buy automation,
+                    see startDataLakeAutoConvert), fill speed on the right, and the amount filled big
+                    and centered. Reset Pool / Scale Out, when offered, sit under the speed. */}
+                <LakeSubRow>
+                  {converting ? (
                   <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
                     {`${COST_ICON} ${nextCostSize}`}
                   </StatusText>
@@ -403,9 +399,31 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                     {`${COST_ICON} ${nextCostSize}`}
                   </StatusText>
                 )}
-                <LakeFilledText title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
-                <LakeSpeedText title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
-              </LakeStatsRow>
+                  {resetAvailable ? (
+                <ActionButton
+                  aria-label={`reset the ${label} Storage Pool`}
+                  onClick={() => actions.resetStoragePool(tierIndex)}
+                  title={`Empty this pool and lake, add 1000 ${label} of permanent lake capacity, and begin free automatic disk rebuilding`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>↻ Reset Pool</ButtonContent>
+                </ActionButton>
+              ) : upgradeAvailable && !converting && !entityAtCap && !canBuy ? (
+                <ActionButton
+                  aria-label={`increase the ${label} Data Lake's capacity ×10`}
+                  onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
+                  title={`Empties the lake (${formatDiskSize(doublingCost)} banked) to grow its capacity from ${capacitySize} to ${formatDiskSizeInPoolUnit(nextCapacity * unitBits, tierIndex)} — unlocked by completing that array in Storage`}
+                  type="button"
+                  variant="prestige"
+                >
+                  <ButtonContent>⚡ Scale Out</ButtonContent>
+                </ActionButton>
+              ) : null}
+
+                </LakeSubRow>
+                <LakeFilledText $large={!(resetAvailable || (upgradeAvailable && !converting && !entityAtCap && !canBuy))} title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
+              </LakeHeader>
             )}
 
             {showBody && currentFillSubSize !== null && (() => {
