@@ -346,8 +346,9 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuyAutoPrestigeAutobuyer = !isFrozen && isAutoPrestigeActive && !isAutoPrestigeAutobuyerActive && points >= AUTO_PRESTIGE_AUTOBUYER_COST
   const autoPrestigeAutobuyerEnabled = state.autoPrestigeAutobuyerEnabled ?? true
 
-  const showComputeAutoBoost = isComputeCoreConversionUnlocked(state)
   const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
+  // Stays listed once bought, even after Era ascension / Reset Byte Foundry drops Capacity back below the Boosters threshold.
+  const showComputeAutoBoost = isComputeAutoBoostActive || isComputeCoreConversionUnlocked(state)
   const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
 
   const tabDots = {
