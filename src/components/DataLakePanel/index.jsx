@@ -85,6 +85,9 @@ const LakeTitleSymbol = styled.span`
 const LakeHeader = styled.div`
   position: relative;
   width: 100%;
+  /* Insets the text to the same left/right edges as the pool tile above. */
+  padding: 0 0.25rem;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -122,7 +125,7 @@ const LakeFilledText = styled.span`
 const LakeSpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
-  ${props => (props.$centered ? 'position: absolute; right: 0; top: 50%; transform: translateY(-50%);' : '')}
+  ${props => (props.$centered ? 'position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);' : '')}
   font-size: ${props => props.theme.type.scale.xs.size};
   font-weight: 600;
   color: ${props => props.theme.color.textMuted};
