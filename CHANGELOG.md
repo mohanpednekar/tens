@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Memory amounts show at most 5 significant digits.** Unit-scaled sizes/balances/speeds (e.g. the Data Stream
+  balance) now trim decimals as the integer part grows — "1,011.1 MiB" instead of "1,011.147 MiB".
+
 - **Foundry speed display.** The Data Stream and pool multiplier bars are gone; their Speed/Bandwidth
   figures now show the actual resulting value (3 significant digits), colored red → blue → green with
   the fill multiplier. Capacity now sits under each pool/Data Stream name (the balance shows no "/ capacity" and grows larger while no tap bonus is active), and the tap bonus reads "+x% 👆" under the speed beside a narrower bar (hidden when inactive). A collapsed pool card now also

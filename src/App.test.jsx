@@ -3054,7 +3054,7 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
   // drained back down the instant it tops up, which a bigger, conversion-eligible capacity would be.
   // 4000 bits is exactly 500 B (below MEMORY_BINARY_UNIT_STEP's own 1 KiB rung), a round balance so
-  // the stable/trimmed forms visibly differ ("500.000 B" vs "500 B").
+  // the stable/trimmed forms visibly differ ("500.00 B" vs "500 B").
   const capacity = 4000
   seedIntroState({ bits: capacity, capacity, byteCreated: true })
   const { unmount } = render(<App />)
@@ -3062,7 +3062,7 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.000 B')
+  expect(balanceText()).toHaveTextContent('500.00 B')
 
   act(() => { vi.advanceTimersByTime(1000) })
   expect(balanceText()).toHaveTextContent('500 B')
