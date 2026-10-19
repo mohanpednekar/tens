@@ -5,6 +5,7 @@ import {
   formatDiskSize,
   formatDiskSizeBare,
   formatDiskSizeInPoolUnit,
+  formatPoolBalance,
   getBoosterPurchaseCost,
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
@@ -17,11 +18,15 @@ import {
   getDataLakeTier,
   getDataLakeTierLabel,
   getDataLakeUnitBits,
+  getPoolBufferBits,
+  getPoolBufferCapacity,
+  getStoragePoolBandwidth,
   isBoosterEntityAtCap,
   isBoosterPurchaseAvailable,
   isDataLakeAutoConvertActive,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
+  isDataLakePoolDrainAvailable,
   isDataLakePoolReady,
   isStoragePoolFullyBuilt,
   isStoragePoolResetAvailable,
@@ -72,6 +77,32 @@ const LakeTitle = styled.h4`
 
 const LakeTitleSymbol = styled.span`
   flex-shrink: 0;
+`
+
+// Under the header: target price left, filled amount centered, fill speed right. Three columns so
+// the middle figure stays truly centered whatever the side widths.
+const LakeStatsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: ${props => props.theme.space.sm};
+  font-variant-numeric: tabular-nums;
+  font-size: ${props => props.theme.type.scale.sm.size};
+  color: ${props => props.theme.color.textMuted};
+  white-space: nowrap;
+
+  & > :first-child {
+    justify-self: start;
+  }
+
+  & > :last-child {
+    justify-self: end;
+  }
+`
+
+const LakeFilledText = styled.span`
+  color: ${props => props.theme.color.text};
+  font-weight: 700;
 `
 
 const StatusText = styled.p`
@@ -277,6 +308,17 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
         const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
+        // Everything banked in this lake (full disks + the open slot's progress), self-sized below the
+        // lake's own unit like a pool's buffer balance.
+        const filledBits = getDataLakeDepositedUnits(tierIndex)(state) * unitBits + getDataLakeFillBits(state, tierIndex)
+        // The lake fills from its pool at the pool's Bandwidth, by draining the buffer directly or by
+        // full-buffer overflow once the pool is entirely built (see tickDataLakePoolDrain /
+        // tickPoolBufferFill); otherwise it is idle (or only filling via a manual conversion).
+        const fillingAutomatically = currentFillSubSize !== null && (
+          isDataLakePoolDrainAvailable(state, tierIndex) ||
+          (poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
+        )
+        const fillSpeed = fillingAutomatically ? getStoragePoolBandwidth(state, tierIndex) : 0
 
         return (
           <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
@@ -357,6 +399,14 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 </StatusText>
               )}
             </LakeHeaderRow>}
+
+            {showHeader && (
+              <LakeStatsRow>
+                <span title={`Current ${boosterLabel} target price`}>🎯 {nextCostSize}</span>
+                <LakeFilledText title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
+                <span title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</span>
+              </LakeStatsRow>
+            )}
 
             {showBody && currentFillSubSize !== null && (() => {
               // Always visible, even before this lake is unlocked (isDataLakePoolReady) — showing a
