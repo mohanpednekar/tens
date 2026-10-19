@@ -473,10 +473,14 @@ const CapacityText = styled.span`
   white-space: nowrap;
 `
 
+// The tap emoji's own yellow, shared by the bonus bar and "+x%" text so they read as one thing.
+const TAP_YELLOW = '#ffcc4d'
+
 const BonusText = styled.span`
   justify-self: end;
   font-weight: 600;
-  color: ${props => props.theme.color.text};
+  color: ${TAP_YELLOW};
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
 `
 
@@ -503,7 +507,7 @@ const BarFillBase = styled.div`
 `
 
 const BarFillBonus = styled(BarFillBase)`
-  background: ${props => props.theme.color.warn};
+  background: ${TAP_YELLOW};
 `
 
 // The tap emoji is yellow, the same hue as the bonus bar it sits on in the dark theme; a thin dark
