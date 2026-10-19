@@ -69,8 +69,8 @@ const LakeTitle = styled.h4`
   margin: 0;
   min-width: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.md.size};
-  line-height: ${props => props.theme.type.scale.md.lineHeight};
+  font-size: ${props => props.theme.type.scale.sm.size};
+  line-height: ${props => props.theme.type.scale.sm.lineHeight};
   font-weight: 700;
   color: ${props => props.theme.color.text};
 `
@@ -96,7 +96,7 @@ const LakeSubRow = styled.div`
   justify-content: space-between;
   gap: ${props => props.theme.space.sm};
   font-variant-numeric: tabular-nums;
-  font-size: ${props => props.theme.type.scale.sm.size};
+  font-size: ${props => props.theme.type.scale.xs.size};
   color: ${props => props.theme.color.textMuted};
   white-space: nowrap;
   min-height: 1.4rem;
@@ -113,7 +113,7 @@ const LakeFilledText = styled.span`
   pointer-events: none;
   color: ${props => props.theme.color.text};
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$large ? props.theme.type.scale.xl.size : props.theme.type.scale.md.size)};
+  font-size: ${props => (props.$large ? props.theme.type.scale.lg.size : props.theme.type.scale.sm.size)};
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -123,7 +123,7 @@ const LakeSpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
   ${props => (props.$centered ? 'position: absolute; right: 0; top: 50%; transform: translateY(-50%);' : '')}
-  font-size: ${props => props.theme.type.scale.sm.size};
+  font-size: ${props => props.theme.type.scale.xs.size};
   font-weight: 600;
   color: ${props => props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
