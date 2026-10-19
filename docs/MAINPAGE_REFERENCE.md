@@ -523,7 +523,7 @@ not at the bottom"):
    active or the merge chain has unlocked yet:
    The effects section, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section>` headed "Boost"); the tier list below it is headed "Power a boost with".
-   a. An `ArmedStatusText` line (`"Spends 1 <Singular> per boost · <symbol> <N> held"`, or "Pick a
+   a. An `ArmedStatusText` line (`"Spends 1 <Singular> per boost · boosts <First>–<Last Factory tier> · <symbol> <N> held"`, or "Pick a
       tier below to power a boost" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —
       local component state (`selectedBoostTierIndex`, set by clicking a tier row below — see 3),
       falling back to the active boost's own tier (`intro.computeBoostTierIndex`) when nothing is
@@ -536,7 +536,7 @@ not at the bottom"):
       buttons, each a small `CompactButton` (`variant="prestige"`,
       `aria-label="activate <type> compute boost"`, visible label `"<icon> ×<multiplier> · <duration>"` computed
       for the CURRENTLY ARMED tier via `getComputeBoostTierMultiplier(boostType, armedTierIndex)` —
-      e.g. `"💥 ×2048 · 1m 0s"` for Burst at tier 3 (Clusters) — the preset name itself lives only in
+      e.g. `"💥 ×20 · 10m 0s"` for Burst — identical for every armed tier — the preset name itself lives only in
       `title`), calling `actions.activateComputeBoost(boostType, armedTierIndex)`.
       `disabled={!turnAvailable}` where `turnAvailable = armedTierIndex !== null &&
       isComputeBoostTurnAvailable(state, boostType, armedTierIndex)` — folds

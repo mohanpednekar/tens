@@ -11,7 +11,6 @@ import {
   COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_BOOST_MAX_STACKS,
   COMPUTE_BOOST_PRESETS,
-  COMPUTE_BOOST_TIER_POWER_STEP,
   COMPUTE_CORES_PER_NODE,
   COMPUTE_ENTITY_CAP,
   COMPUTE_ENTITY_AUTO_MERGE_CAP,
@@ -436,11 +435,13 @@ const InfoPage = () => {
         <h3>Compute Boost</h3>
         <ul>
           <li>
-            Click any tier row to arm Burst / Standard / Sustain at that tier’s scaled power
-            and duration. Spend 1 token of the armed tier to activate.
+            Click any tier row to arm Burst / Standard / Sustain. Spend 1 token of the armed tier
+            to activate. The multiplier and duration are the same whichever tier you spend; a
+            higher tier boosts more Factory tiers instead (Core: Kilobytes only, Node: Kilobytes
+            and Megabytes, Cluster: the first three, …).
           </li>
           <li>
-            Base (Core) presets:{' '}
+            Presets (same for every funding tier):{' '}
             Burst ×{COMPUTE_BOOST_PRESETS.burst.multiplier} for{' '}
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.burst.durationSeconds)}; Standard ×
             {COMPUTE_BOOST_PRESETS.standard.multiplier} for{' '}
@@ -449,9 +450,8 @@ const InfoPage = () => {
             {formatOfflineDuration(COMPUTE_BOOST_PRESETS.sustain.durationSeconds)}.
           </li>
           <li>
-            Higher tiers: multiplier ×{COMPUTE_BOOST_TIER_POWER_STEP} per step; duration ×2 per
-            step. Boost multiplies Memory production and {firstTierName} production at
-            once.
+            A boost always multiplies Memory production too, plus as many Factory tiers (from{' '}
+            {firstTierName} up) as the funding tier’s number.
           </li>
           <li>
             Only one boost runs at a time. To switch to a different preset or funding tier, you

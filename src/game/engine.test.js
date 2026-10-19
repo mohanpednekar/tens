@@ -93,6 +93,7 @@ import {
   getAutobuyerUnlockMilestone,
   getAutoPrestigeAttemptRate,
   getAutoPrestigeCost,
+  getComputeBoostCoveredTierCount,
   getComputeBoostMultiplier,
   getComputeBoostTierDurationSeconds,
   getComputeBoostTierMultiplier,
@@ -304,7 +305,7 @@ import {
   tickGame,
   tickIntroAutoInvest,
 } from './engine'
-import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_BOOST_TIER_DURATION_STEP, COMPUTE_BOOST_TIER_POWER_STEP, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
+import { AUTO_PRESTIGE_AUTOBUYER_COST, AUTO_SCALE_UP_COST, BITS_PER_BYTE, BYTES_ID, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_CORES_PER_NODE, COMPUTE_ENTITY_CAP, COMPUTE_ENTITY_AUTO_MERGE_CAP, CACHE_FILL_FROM_DISK_BANDWIDTH_MULTIPLIER, CACHE_FILL_FROM_MEMORY_BANDWIDTH_MULTIPLIER, COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_FLOPS_TIER_DEFINITIONS, COMPUTE_MERGE_RATIO, DATA_LAKE_SUB_SIZES, COMPUTE_MERGE_BOUNDARIES, COMPUTE_MERGE_RESERVE_CAP, DATA_LAKE_CAPACITY_MAX_LEVEL, DATA_LAKE_OVERFLOW_MAX_PERCENT, DATA_LAKE_OVERFLOW_MIN_PERCENT, DATA_LAKE_TIER_COUNT, DEFAULT_PURCHASE_BLOCK_SIZE, DISK_ARRAY_LADDER_CAP, DISK_BUILD_COST_MULTIPLIER, DISK_CACHE_BLOCK_COUNT, DISK_FILL_FROM_CACHE_BANDWIDTH_MULTIPLIER, DISK_LADDER_BASE_SIZE_BITS, DISK_LADDER_SIZE_MULTIPLIER, ERA_ELIGIBILITY_PP, FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, FILL_MULTIPLIER_TAP_CAP_PERCENT, FILL_MULTIPLIER_TAP_DECAY_PERCENT_PER_SECOND, getTierBaseTickSpeedSeconds, GOOGOL, INTRO_BITS_PER_KILOBYTE_CONVERSION, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_CAP_BITS, INTRO_CAPACITY_DOUBLING_STEP, INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, INTRO_DISK_UNLOCK_CAPACITY, INTRO_STARTING_CAPACITY, LAST_TIER_XP_TICKSPEED_MIN_CONSUMPTION_FLOOR, MEMORY_BINARY_UNIT_STEP, MAX_OFFLINE_SECONDS, getStoragePoolMemoryBounds, MONEY_ID, MUSEUM_PIN_CAP, OFFLINE_PROGRESS_FULL_SPEED_THRESHOLD_SECONDS, PRESTIGE_SPEED_BONUS_UNLOCK_COST, PRESTIGE_THRESHOLD, PRESTIGE_UNBOUNDED_MIN_COUNT, TICK_RATE_MS, TICKSPEED_AUTOBUYER_COST, TIER_DEFINITIONS } from './layers'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -2825,8 +2826,8 @@ describe('formatMemoryAmount', () => {
       // Pool 2's own fixed unit is MB (divisor 8,000,000 bits) — a 3,187,000-bit balance is below
       // that, so this must read in the pool's own next-finer unit (KB) rather than falling back to
       // formatDiskSizeInPoolUnit's raw-bits case (the bug this fix addresses: "3.187e6 bits").
-      expect(formatPoolBalance(3_187_000, 2)).toBe('398.375 KB')
-      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.375 KB')
+      expect(formatPoolBalance(3_187_000, 2)).toBe('398.37 KB')
+      expect(formatPoolBalanceStable(3_187_000, 2)).toBe('398.37 KB')
     })
 
     it('stays in the pool\'s own fixed unit once the balance reaches it', () => {
@@ -5417,15 +5418,13 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
     expect(getComputeBoostTierDurationSeconds('burst', 1)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds)
   })
 
-  it('scales the multiplier by COMPUTE_BOOST_TIER_POWER_STEP and duration by COMPUTE_BOOST_TIER_DURATION_STEP per tier', () => {
-    // Tier 5 (Grid): 4^4 power, 2^4 duration vs tier 1.
-    expect(getComputeBoostTierMultiplier('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.multiplier * COMPUTE_BOOST_TIER_POWER_STEP ** 4)
-    expect(getComputeBoostTierDurationSeconds('burst', 5)).toBe(COMPUTE_BOOST_PRESETS.burst.durationSeconds * COMPUTE_BOOST_TIER_DURATION_STEP ** 4)
-  })
-
-  it('tier 3 (Cluster) is 4^2 power and 2^2 duration vs base', () => {
-    expect(getComputeBoostTierMultiplier('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.multiplier * (COMPUTE_BOOST_TIER_POWER_STEP ** 2))
-    expect(getComputeBoostTierDurationSeconds('standard', 3)).toBe(COMPUTE_BOOST_PRESETS.standard.durationSeconds * (COMPUTE_BOOST_TIER_DURATION_STEP ** 2))
+  it('returns the same multiplier and duration whichever compute-ladder tier funds the boost', () => {
+    for (const boostType of Object.keys(COMPUTE_BOOST_PRESETS)) {
+      for (let tierIndex = 1; tierIndex <= 10; tierIndex += 1) {
+        expect(getComputeBoostTierMultiplier(boostType, tierIndex)).toBe(COMPUTE_BOOST_PRESETS[boostType].multiplier)
+        expect(getComputeBoostTierDurationSeconds(boostType, tierIndex)).toBe(COMPUTE_BOOST_PRESETS[boostType].durationSeconds)
+      }
+    }
   })
 
   it('returns 0 for an invalid boostType or an out-of-range tierIndex', () => {
@@ -5433,6 +5432,21 @@ describe('getComputeBoostTierMultiplier / getComputeBoostTierDurationSeconds', (
     expect(getComputeBoostTierMultiplier('burst', 0)).toBe(0)
     expect(getComputeBoostTierMultiplier('burst', 11)).toBe(0)
     expect(getComputeBoostTierDurationSeconds('burst', 0)).toBe(0)
+  })
+})
+
+describe('getComputeBoostCoveredTierCount', () => {
+  it('is 0 with no boost active', () => {
+    expect(getComputeBoostCoveredTierCount(createInitialGameState().intro)).toBe(0)
+    expect(getComputeBoostCoveredTierCount({ computeBoostType: null })).toBe(0)
+  })
+
+  it('equals the funding compute-ladder tier\'s own 1-based index, falling back to 1 (Core) for a legacy save', () => {
+    expect(getComputeBoostCoveredTierCount({ computeBoostType: 'burst', computeBoostTierIndex: 1 })).toBe(1)
+    expect(getComputeBoostCoveredTierCount({ computeBoostType: 'burst', computeBoostTierIndex: 4 })).toBe(4)
+    expect(getComputeBoostCoveredTierCount({ computeBoostType: 'burst', computeBoostTierIndex: 10 })).toBe(10)
+    expect(getComputeBoostCoveredTierCount({ computeBoostType: 'burst' })).toBe(1)
+    expect(getComputeBoostCoveredTierCount({ computeBoostType: 'burst', computeBoostTierIndex: 11 })).toBe(0)
   })
 })
 
@@ -5752,6 +5766,36 @@ describe('tickGame Compute Boost integration', () => {
     // any) is unmultiplied, so tier01's owned count only ever reflects tier02's own unboosted rate,
     // confirming the boost credit above landed solely via tier01's resource production, not owned.
     expect(after.owned[tensTier.id]).toBe(1)
+  })
+
+  it('a boost funded from tier N boosts the first N Factory tiers only — a Node boost also boosts tier02, a Core boost does not', () => {
+    const secondTier = TIER_DEFINITIONS[1]
+    const gainFor = boostOverrides => {
+      const state = withOwned(
+        withIntro(createInitialGameState(), boostOverrides),
+        secondTier.id, 1
+      )
+      return tickGame(1000)(state).owned[tensTier.id] - (state.owned[tensTier.id] ?? 0)
+    }
+    const unboosted = gainFor({})
+    const boost = tierIndex => ({ computeBoostType: 'burst', computeBoostTierIndex: tierIndex, computeBoostStacks: 1, computeBoostRemainingSeconds: 10_000 })
+    expect(unboosted).toBeGreaterThan(0)
+    expect(gainFor(boost(1))).toBe(unboosted)
+    expect(gainFor(boost(2))).toBeGreaterThan(unboosted)
+  })
+
+  it('a tier-2 boost leaves tier03 unboosted, while a tier-3 boost covers it', () => {
+    const thirdTier = TIER_DEFINITIONS[2]
+    const secondTier = TIER_DEFINITIONS[1]
+    const gainFor = boostOverrides => {
+      const state = withOwned(withIntro(createInitialGameState(), boostOverrides), thirdTier.id, 1)
+      return tickGame(1000)(state).owned[secondTier.id] - (state.owned[secondTier.id] ?? 0)
+    }
+    const boost = tierIndex => ({ computeBoostType: 'burst', computeBoostTierIndex: tierIndex, computeBoostStacks: 1, computeBoostRemainingSeconds: 10_000 })
+    const unboosted = gainFor({})
+    expect(unboosted).toBeGreaterThan(0)
+    expect(gainFor(boost(2))).toBe(unboosted)
+    expect(gainFor(boost(3))).toBeGreaterThan(unboosted)
   })
 
   it('counts the boost down as part of a regular tick, alongside everything else', () => {

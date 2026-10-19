@@ -3078,7 +3078,7 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   // one tier01 unit from intro.bits — the balance genuinely sits still at capacity instead of being
   // drained back down the instant it tops up, which a bigger, conversion-eligible capacity would be.
   // 4000 bits is exactly 500 B (below MEMORY_BINARY_UNIT_STEP's own 1 KiB rung), a round balance so
-  // the stable/trimmed forms visibly differ ("500.000 B" vs "500 B").
+  // the stable/trimmed forms visibly differ ("500.00 B" vs "500 B").
   const capacity = 4000
   seedIntroState({ bits: capacity, capacity, byteCreated: true })
   const { unmount } = render(<App />)
@@ -3086,7 +3086,7 @@ test('Data Stream balance drops its padded trailing zeros once it has been full 
   const balanceBar = screen.getByRole('progressbar', { name: /data stream bit balance/i })
   const balanceText = () => balanceBar.closest('section').querySelector('p')
   // Immediately full, but not YET trimmed — the delay hasn't elapsed.
-  expect(balanceText()).toHaveTextContent('500.000 B')
+  expect(balanceText()).toHaveTextContent('500.00 B')
 
   act(() => { vi.advanceTimersByTime(1000) })
   expect(balanceText()).toHaveTextContent('500 B')
@@ -3153,10 +3153,10 @@ test('Speed and Bandwidth render at the top-right, with disk status removed enti
   expect(within(dataStreamSection).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
 
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
-  expect(within(pool1).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
+  expect(within(pool1).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
 
   const pool2 = screen.getByRole('region', { name: 'pool 2' })
-  expect(within(pool2).getByText(/^⚡ .*\/s$/)).toBeInTheDocument()
+  expect(within(pool2).getByTitle(/^Bandwidth at/)).toBeInTheDocument()
   expect(screen.queryByLabelText(/full disks/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/💾/)).not.toBeInTheDocument()
 })
@@ -3184,7 +3184,7 @@ test('Data Stream and pool speeds show the fill-multiplied value, with no multip
   const pool1 = screen.getByRole('region', { name: 'pool 1' })
   // Empty buffer -> FILL_MULTIPLIER_MAX_PERCENT (150%) of the pool's base Bandwidth, to 3 significant digits.
   const expected = formatDiskSize(getStoragePoolBandwidth(savedState, 1) * FILL_MULTIPLIER_MAX_PERCENT / 100)
-  const speed = within(pool1).getByText(/^⚡ .*\/s$/)
+  const speed = within(pool1).getByTitle(/^Bandwidth at/)
   expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MAX_PERCENT}% fill multiplier`)
   expect(speed.textContent.replace(/^⚡ /, '').replace(/\/s$/, '').split(' ')[1]).toBe(expected.split(' ')[1])
   expect(Number(speed.textContent.match(/[\d.]+/)[0])).toBeCloseTo(parseFloat(expected), 0)
@@ -3201,7 +3201,7 @@ test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   })
   render(<App />)
 
-  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByText(/^⚡ .*\/s$/)
+  const speed = within(screen.getByRole('region', { name: 'pool 1' })).getByTitle(/^Bandwidth at/)
   expect(speed).toHaveAttribute('title', `Bandwidth at ${FILL_MULTIPLIER_MIN_PERCENT}% fill multiplier`)
   expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
 })
@@ -3223,6 +3223,27 @@ test('the pool tap tile is inert, with an explanatory title, while the Data Lake
   const tap = within(screen.getByRole('region', { name: 'pool 1' })).getByRole('button', { name: /tap pool 1 memory/i })
   expect(tap).toBeDisabled()
   expect(tap).toHaveAttribute('title', expect.stringMatching(/Data Lake is draining/))
+})
+
+test('the Data Lake header shows target price, filled amount and fill speed', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity },
+    disksBuiltTotal: { 8000: DISK_ARRAY_LADDER_CAP, 80_000: DISK_ARRAY_LADDER_CAP, 800_000: DISK_ARRAY_LADDER_CAP },
+    dataLakes: { 1: { depositedUnits: 1, fillBits: 2000, purchased: 0, boostersUnlocked: true, autoConvertActive: false, capacityLevel: 1 } },
+  })
+  render(<App />)
+
+  const lake = screen.getByLabelText('KB lake')
+  // The target price is the lake's Booster control itself (shown once, not duplicated in the header).
+  expect(within(lake).getAllByText(/1 KB/).filter(el => el.closest('h4') === null && el.textContent.includes('🏷️'))).toHaveLength(1)
+  expect(within(lake).getByTitle('Currently filled')).toHaveTextContent('1.25 KB')
+  // Buffer full + pool complete -> the lake fills at the pool's Bandwidth, so the speed is non-zero.
+  expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')
 })
 
 test('a collapsed pool still shows its Data Lake heading and action row', () => {
