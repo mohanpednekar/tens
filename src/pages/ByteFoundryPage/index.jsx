@@ -4,8 +4,8 @@ import DiskArrayRow from 'components/DiskArrayRow'
 import DataLakePanel from 'components/DataLakePanel'
 import OfflineProgressNotice from 'components/OfflineProgressNotice'
 import StatCard from 'components/StatCard'
-import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataLakeOverflowRatePercent, getDataStreamBaseMultiplierPercent, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBaseMultiplierPercent, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDataLakePoolReady, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolFullyBuilt, isStoragePoolRebuilding } from 'game/engine'
-import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
+import { formatBitsInNearestUnit, formatDiskSize, formatDiskSizeInPoolUnit, formatMemoryAmount, formatMemoryAmountStable, formatPoolBalance, formatPoolBalanceStable, getDataStreamMultiplierPercent, getDiskCost, getDiskProvisionPassesCollected, getDiskProvisionPassesRequired, getDiskRedeemTierName, getDiskSize, getDiskSizesToShow, getIntroProductionRate, getMemoryUnit, getPoolBufferBits, getPoolBufferCapacity, getPoolCacheReservationBits, getPoolIndexForDiskSize, getPoolMultiplierPercent, getPoolTapBonusPercent, getStoragePoolBandwidth, getStoragePoolCount, getVisibleStoragePoolCount, isDataLakePoolDrainAvailable, isDiskLadderExhaustedForActivePools, isMemoryCapacityUpgradeArmable, isProvisionDiskTurnAvailable, isStorageUnlocked, isStoragePoolRebuilding } from 'game/engine'
+import { FILL_MULTIPLIER_MAX_PERCENT, FILL_MULTIPLIER_MIN_PERCENT, FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, INTRO_BYTE_COMBINE_COST, INTRO_CAPACITY_DOUBLING_STEP, TIER_DEFINITIONS } from 'game/layers'
 import { useEffect, useState } from 'react'
 import styled, { css } from 'styled-components'
 
@@ -193,6 +193,14 @@ const PoolCard = styled(StatCard)`
   ${cardEdge}
 `
 
+// The lake's title/action row, shown on a collapsed pool card (an expanded one renders the full lake).
+const PoolLakeHeader = styled.div`
+  padding: 0 0.5rem 0.5rem;
+  &:empty {
+    display: none;
+  }
+`
+
 const PoolBody = styled.div`
   display: flex;
   flex-direction: column;
@@ -322,7 +330,8 @@ const SpeedText = styled.span`
   flex-shrink: 0;
   margin-left: auto;
   font-size: ${props => props.theme.type.scale.sm.size};
-  color: ${props => props.theme.color.textMuted};
+  font-weight: 600;
+  color: ${props => props.$color ?? props.theme.color.textMuted};
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 `
@@ -341,7 +350,7 @@ const SpeedText = styled.span`
 // stretched PoolTapButton on top of it — tapPoolBuffer in game/engine) — tapping either boosts that specific Data Stream/pool's own
 // fill-based multiplier bonus (see FILL_MULTIPLIER_* in game/layers), it never credits bits
 // directly. Everything for that section lives inside this one tile — TitleRow (title and Speed/Bandwidth),
-// the big centered balance/capacity line, and the MultiplierBar with its own percent readout — see CLAUDE.md's UI conventions.
+// the big centered balance/capacity line, and the tap-bonus bar — see CLAUDE.md's UI conventions.
 const FillableStatCard = styled.div`
   width: 100%;
   display: flex;
@@ -452,35 +461,7 @@ const PoolBalanceText = ({ bits, capacityBits, isFull, poolIndex }) => {
 
 const clampPercent = value => Math.min(100, Math.max(0, value))
 
-// Fill-based Speed/Bandwidth multiplier bar (see FILL_MULTIPLIER_* in game/layers and
-// getDataStreamMultiplierPercent/getPoolMultiplierPercent in game/engine) — a compact, full-width
-// bar that grows and shrinks from the MIDDLE (see docs/DESIGN_HISTORY.md for the swap from the
-// earlier corner needle-speedometer, and for the one-diverging-bar variant tried and dropped as
-// unintuitive). The bar is centered in its track: FILL_MULTIPLIER_MAX_PERCENT (150%) fills the
-// FULL track width, 0% is a zero-width point at dead center. The blue (accent) bar shows ONLY the
-// fill-based base reading; the manual tap bonus is a separate yellow (warn) bar directly below it,
-// on its own 0..FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT scale, rendered only while the bonus is above
-// 0. Each bar's percent readout is plain text centered inside it.
-//
-// For a POOL specifically, once its own Memory buffer is completely full, the SAME bar switches to
-// `mode="lake"` and represents a different quantity entirely: that pool's own Data Lake overflow
-// rate (DATA_LAKE_OVERFLOW_MAX_PERCENT at an empty currently-filling disk, down toward
-// DATA_LAKE_OVERFLOW_MIN_PERCENT as it nears completion — see getDataLakeOverflowRatePercent in
-// game/engine, NOT the lake's overall total), drawn as a single `theme.color.info` layer on the
-// SAME 0..FILL_MULTIPLIER_MAX_PERCENT scale the multiplier reading uses. FILL_MULTIPLIER_MIN_PERCENT
-// and DATA_LAKE_OVERFLOW_MAX_PERCENT are numerically the same value (50) by design, so the bar's
-// width doesn't jump when its meaning switches. This bar only ever shows a RATE, never a level (the
-// lake's accumulation has its own bar — see FillableStatCard usage below). The Data Stream card has
-// no lake, so it always renders `mode="multiplier"`. Keeps the role="progressbar"/aria-label/
-// aria-valuenow/min/max contract (always 0..FILL_MULTIPLIER_MAX_PERCENT regardless of mode), plus an
-// aria-valuetext with the displayed percentage — the visible label is a descendant of the
-// progressbar, which assistive tech flattens, so the text would otherwise not be exposed.
 const BAR_HEIGHT = 14
-
-const clampBarValue = value => Math.min(FILL_MULTIPLIER_MAX_PERCENT, Math.max(0, value))
-
-// 0% -> 0 width (a point at the track's own center), FILL_MULTIPLIER_MAX_PERCENT -> full width.
-const percentToBarWidthPercent = percent => (clampBarValue(percent) / FILL_MULTIPLIER_MAX_PERCENT) * 100
 
 const BarRow = styled.div`
   display: flex;
@@ -515,10 +496,6 @@ const BarFillBonus = styled(BarFillBase)`
   background: ${props => props.theme.color.warn};
 `
 
-const BarFillLake = styled(BarFillBase)`
-  background: ${props => props.theme.color.info};
-`
-
 // Percent readout. Inside its bar it is centered, in the page color (dark on the dark theme's light
 // fills, light on the light theme's dark fills) so it reads on the fill; a bar too narrow to hold
 // it (a small tap bonus or lake rate, or a full buffer's 50% floor) gets the label just past the fill's
@@ -548,58 +525,57 @@ const TapIcon = styled.span`
 
 // `mode="lake"` renders a single info-colored layer (see the doc comment above) instead of the
 // default accent/warn base+bonus pair — there is no "bonus" concept for a lake overflow reading.
-const MultiplierBar = ({ basePercent, bonusPercent = 0, totalPercent, ariaLabel, mode = 'multiplier' }) => {
-  const isLakeMode = mode === 'lake'
-  const clampedBase = clampBarValue(isLakeMode ? 0 : basePercent)
-  const clampedTotal = clampBarValue(totalPercent)
-  const baseWidthPercent = isLakeMode ? 0 : percentToBarWidthPercent(clampedBase)
-  const lakeWidthPercent = isLakeMode ? percentToBarWidthPercent(clampedTotal) : 0
+// Only the tap-bonus bar remains (it auto-hides at 0); the fill-based multiplier itself is shown as
+// the tinted effective Speed/Bandwidth figure (see getSpeedColor/formatSpeedText).
+const TapBonusBar = ({ bonusPercent = 0, ariaLabel }) => {
   const clampedBonus = Math.min(FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT, Math.max(0, bonusPercent))
+  if (clampedBonus <= 0) return null
   const bonusWidthPercent = (clampedBonus / FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT) * 100
-  const hasBonus = !isLakeMode && clampedBonus > 0
-  // The reading this bar actually displays (never the base while in lake mode, which is forced to
-  // 0 above and would otherwise always suppress the lake reading). A genuine 0 here — reachable
-  // only in lake mode, via getDataLakeOverflowRatePercent's own DATA_LAKE_OVERFLOW_MIN_PERCENT
-  // floor once a maxed lake has no open disk slot left to report a rate for — has nothing
-  // meaningful to draw, so the whole row is hidden. The base multiplier reading itself never
-  // reaches 0 (its floor is FILL_MULTIPLIER_MIN_PERCENT, 50), so this never hides the ordinary bar.
-  const displayPercent = isLakeMode ? clampedTotal : clampedBase
-  if (displayPercent <= 0) return null
-
   return (
     <BarRow>
       <BarTrack
         role="progressbar"
-        aria-label={ariaLabel}
-        aria-valuenow={Math.round(displayPercent)}
-        aria-valuetext={`${Math.round(displayPercent)}%`}
+        aria-label={`${ariaLabel} tap bonus`}
+        aria-valuenow={Math.round(clampedBonus)}
+        aria-valuetext={`+${Math.round(clampedBonus)}%`}
         aria-valuemin={0}
-        aria-valuemax={FILL_MULTIPLIER_MAX_PERCENT}
+        aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
       >
-        {isLakeMode
-          ? lakeWidthPercent > 0 && <BarFillLake $widthPercent={lakeWidthPercent} />
-          : baseWidthPercent > 0 && <BarFillBase $widthPercent={baseWidthPercent} />}
-        <BarPercentLabel $widthPercent={isLakeMode ? lakeWidthPercent : baseWidthPercent}>
-          {Math.round(displayPercent)}%
+        <BarFillBonus $widthPercent={bonusWidthPercent} />
+        <BarPercentLabel $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
         </BarPercentLabel>
       </BarTrack>
-      {hasBonus && (
-        <BarTrack
-          role="progressbar"
-          aria-label={`${ariaLabel} tap bonus`}
-          aria-valuenow={Math.round(clampedBonus)}
-          aria-valuetext={`+${Math.round(clampedBonus)}%`}
-          aria-valuemin={0}
-          aria-valuemax={FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}
-        >
-          <BarFillBonus $widthPercent={bonusWidthPercent} />
-          <BarPercentLabel $widthPercent={bonusWidthPercent}>+{Math.round(clampedBonus)}% <TapIcon>👆</TapIcon>
-          </BarPercentLabel>
-        </BarTrack>
-      )}
     </BarRow>
   )
 }
+
+// Red (FILL_MULTIPLIER_MIN_PERCENT) → blue (100%) → green (FILL_MULTIPLIER_MAX_PERCENT and above).
+const SPEED_COLOR_STOPS = [
+  [FILL_MULTIPLIER_MIN_PERCENT, [229, 72, 77]],
+  [100, [59, 130, 246]],
+  [FILL_MULTIPLIER_MAX_PERCENT, [48, 164, 108]],
+]
+
+const getSpeedColor = percent => {
+  const last = SPEED_COLOR_STOPS.length - 1
+  if (percent <= SPEED_COLOR_STOPS[0][0]) return `rgb(${SPEED_COLOR_STOPS[0][1].join(',')})`
+  if (percent >= SPEED_COLOR_STOPS[last][0]) return `rgb(${SPEED_COLOR_STOPS[last][1].join(',')})`
+  const upper = SPEED_COLOR_STOPS.findIndex(([stop]) => percent <= stop)
+  const [fromStop, fromRgb] = SPEED_COLOR_STOPS[upper - 1]
+  const [toStop, toRgb] = SPEED_COLOR_STOPS[upper]
+  const t = (percent - fromStop) / (toStop - fromStop)
+  return `rgb(${fromRgb.map((c, i) => Math.round(c + (toRgb[i] - c) * t)).join(',')})`
+}
+
+// Truncates (never overstates) the leading number of an already-unit-formatted amount to 3
+// significant digits, e.g. "1.2345 KB" -> "1.23 KB".
+const formatSpeedText = formatted =>
+  formatted.replace(/^[\d,]*\.?\d+/, match => {
+    const value = Number(match.replace(/,/g, ''))
+    if (value <= 0) return '0'
+    const scale = 10 ** (Math.floor(Math.log10(value)) - 2)
+    return String(Number((Math.floor(value / scale + 1e-9) * scale).toPrecision(12)))
+  })
 
 // Before intro.mainGameUnlocked this page is a mandatory gate with no way out via Tiers (AppNav
 // still shows Guide/More). Once unlocked, AppNav's Foundry item reopens it at any time — nothing
@@ -631,12 +607,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
   // longer "bytes/sec" this used to spell out.
   const dataStreamRateText = !intro.byteCreated
     ? null
-    : `${formatBitsInNearestUnit(productionRate)}/s`
+    : `${formatSpeedText(formatBitsInNearestUnit(productionRate * getDataStreamMultiplierPercent(intro) / 100))}/s`
   // Fill-based multiplier (see FILL_MULTIPLIER_* in game/layers.js): productionRate above stays
   // exactly what applies at 100% of this — the real per-tick delivery scales by this percent
   // instead (see getDataStreamEffectMultiplier in game/engine).
   const dataStreamMultiplierPercent = getDataStreamMultiplierPercent(intro)
-  const dataStreamBaseMultiplierPercent = getDataStreamBaseMultiplierPercent(intro)
   // Matches tapIntroBit's own post-reveal no-op guard (engine.js) — only relevant once Storage
   // pools are revealed (visiblePoolCount >= 1), the same condition that switches the tap itself
   // from a direct bit credit into a multiplier-bonus tap.
@@ -824,13 +799,15 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
               )}{' '}
               <BalanceSeparator>/</BalanceSeparator> {formatMemoryCapacityValue(intro.capacity, intro.byteCreated)}
             </BalanceText>
-            {dataStreamRateText && <SpeedText>⚡ {dataStreamRateText}</SpeedText>}
+            {dataStreamRateText && (
+              <SpeedText $color={getSpeedColor(dataStreamMultiplierPercent)} title={`Speed at ${Math.round(dataStreamMultiplierPercent)}% fill multiplier`}>
+                ⚡ {dataStreamRateText}
+              </SpeedText>
+            )}
           </TitleRow>
           {intro.byteCreated && (
-            <MultiplierBar
-              basePercent={dataStreamBaseMultiplierPercent}
+            <TapBonusBar
               bonusPercent={intro.dataStreamTapBonusPercent ?? 0}
-              totalPercent={dataStreamMultiplierPercent}
               ariaLabel="data stream fill-based speed multiplier"
             />
           )}
@@ -928,35 +905,14 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
         // stays exactly what applies at 100% of this — the real per-tick buffer fill scales by
         // this percent instead (see getPoolEffectMultiplier in game/engine).
         const poolMultiplierPercent = getPoolMultiplierPercent(state, poolIndex)
-        const poolBaseMultiplierPercent = getPoolBaseMultiplierPercent(state, poolIndex)
         // Matches tapPoolBuffer's own no-op guards (engine.js) — the button must be disabled for
         // both, not just a full buffer, or a capped tap silently does nothing with no feedback.
         const poolTapBonusPercent = getPoolTapBonusPercent(state, poolIndex)
         const poolMultiplierCapped = poolTapBonusPercent >= FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT
-        // This pool's own Data Lake overflow rate — feeds the MultiplierBar's `mode="lake"` reading
-        // above (once poolBufferFull). The lake's own current-disk-fill LEVEL renders inside
-        // DataLakePanel itself (the "data lake area," see LakePoolTile in components/DataLakePanel)
-        // once the pool card is expanded, not as a second standalone bar here.
-        const lakeRatePercent = getDataLakeOverflowRatePercent(state, poolIndex)
-        // Same isDataLakePoolReady this pool's own DataLakePanel/LakePoolTile already keys its
-        // "Locked" placeholder on (see components/DataLakePanel) — required here too, not just
-        // poolBufferFull: tickPoolBufferFill's overflow branch (engine.js) won't credit this lake
-        // at all until a real Storage disk has been built for it, so a pool whose buffer fills
-        // before that (the common, non-legacy case — pool 1 in particular, visible from the very
-        // start) would otherwise switch the bar to "lake" mode and show a constant nonzero
-        // "incoming rate" that can never actually turn into real progress — the exact
-        // stalled-tile-shown-as-active misrepresentation Devin Review flagged for LakePoolTile,
-        // just on this page's own bar instead. isStoragePoolFullyBuilt is required too, for the
-        // exact same reason: AUTOMATIC overflow (what this rate reading describes) only starts once
-        // the pool is entirely complete — before that, the lake fills manually only (see
-        // isDataLakeManualFillAvailable in engine.js), so showing an "incoming rate" here would be
-        // just as misleading as it would be for a pool that's never built a disk at all.
-        const poolReady = isDataLakePoolReady(state, poolIndex) && isStoragePoolFullyBuilt(state, poolIndex)
-        // tickDataLakePoolDrain (engine.js) also feeds the lake straight from this pool's buffer
-        // whenever isDataLakePoolDrainAvailable — which keeps the buffer below full, so lake mode must key on that too, not only on a full buffer. A tap can't
-        // speed the lake up then (the drain is capped at Bandwidth), so the tile is disabled.
+        // tickDataLakePoolDrain (engine.js) feeds the lake straight from this pool's buffer whenever
+        // isDataLakePoolDrainAvailable. A tap can't speed the lake up then (the drain is capped at
+        // Bandwidth), so the tile is disabled.
         const lakeDraining = isDataLakePoolDrainAvailable(state, poolIndex)
-        const showLakeMode = lakeDraining || (poolBufferFull && poolReady)
         const poolSizes = diskSizesToShow.filter(size => getPoolIndexForDiskSize(size) === poolIndex)
         const isExpanded = visibleExpandedPool === poolIndex
         const poolTapDisabled = poolBufferFull || lakeDraining || poolMultiplierCapped
@@ -993,18 +949,13 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                     </PoolTitleToggle>
                   </SectionTitle>
                   <PoolBalanceText bits={poolBufferBits} capacityBits={poolBufferCapacity} isFull={poolBufferFull} poolIndex={poolIndex} />
-                  <SpeedText>⚡ {formatDiskSize(poolBandwidth)}/s</SpeedText>
+                  <SpeedText $color={getSpeedColor(poolMultiplierPercent)} title={`Bandwidth at ${Math.round(poolMultiplierPercent)}% fill multiplier`}>
+                    ⚡ {formatSpeedText(formatDiskSize(poolBandwidth * poolMultiplierPercent / 100))}/s
+                  </SpeedText>
                 </TitleRow>
-                <MultiplierBar
-                  basePercent={showLakeMode ? 0 : poolBaseMultiplierPercent}
+                <TapBonusBar
                   bonusPercent={poolTapBonusPercent}
-                  totalPercent={showLakeMode ? lakeRatePercent : poolMultiplierPercent}
-                  ariaLabel={
-                    showLakeMode
-                      ? `pool ${poolIndex} data lake overflow rate`
-                      : `pool ${poolIndex} fill-based bandwidth multiplier`
-                  }
-                  mode={showLakeMode ? 'lake' : 'multiplier'}
+                  ariaLabel={`pool ${poolIndex} fill-based bandwidth multiplier`}
                 />
                 <VisuallyHidden
                   role="progressbar"
@@ -1015,6 +966,11 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 />
               </PoolTileContent>
             </PoolTile>
+            {!isExpanded && (
+              <PoolLakeHeader>
+                <DataLakePanel actions={actions} state={state} bare section="header" tierIndex={poolIndex} />
+              </PoolLakeHeader>
+            )}
             {isExpanded && (
               <PoolBody>
                 {poolSizes.map(size => (
