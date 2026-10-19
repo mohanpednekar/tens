@@ -551,7 +551,8 @@ const mergeState = saved => {
     ),
     autoScaleUp: saved.autoScaleUp ?? legacyAutoSpeedUp ?? fresh.autoScaleUp,
     autoScaleUpEnabled: saved.autoScaleUpEnabled ?? legacyAutoSpeedUpEnabled ?? fresh.autoScaleUpEnabled,
-    resources: mergeTierMap(fresh.resources, saved.resources),
+    // A legacy separate `bytes` pool is dropped: its Bytes were already mirrored into Bits (one pool now).
+    resources: mergeTierMap(fresh.resources, (({ bytes, ...rest }) => rest)(saved.resources ?? {})),
     owned: mergeTierMap(fresh.owned, saved.owned),
     purchased: mergeTierMap(fresh.purchased, saved.purchased),
     purchaseLevels: mergeTierMap(fresh.purchaseLevels, saved.purchaseLevels),
