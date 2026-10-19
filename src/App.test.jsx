@@ -3182,6 +3182,25 @@ test('a pool\'s speed tints red at the full-buffer 50% floor', () => {
   expect(speed).toHaveStyle({ color: 'rgb(229, 72, 77)' })
 })
 
+test('the pool tap tile is inert, with an explanatory title, while the Data Lake drains a half-full buffer', () => {
+  const poolCapacity = getPoolBufferCapacity(
+    { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },
+    1,
+  )
+  seedIntroState({
+    bits: 0, capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true,
+    poolBuffers: { 1: poolCapacity / 2 },
+    disksBuiltTotal: { [DISK_LADDER_BASE_SIZE_BITS]: 2 },
+    disks: { [DISK_LADDER_BASE_SIZE_BITS]: 2 },
+    diskCache: { [DISK_LADDER_BASE_SIZE_BITS]: DISK_LADDER_BASE_SIZE_BITS },
+  })
+  render(<App />)
+
+  const tap = within(screen.getByRole('region', { name: 'pool 1' })).getByRole('button', { name: /tap pool 1 memory/i })
+  expect(tap).toBeDisabled()
+  expect(tap).toHaveAttribute('title', expect.stringMatching(/Data Lake is draining/))
+})
+
 test('a collapsed pool still shows its Data Lake heading and action row', () => {
   const poolCapacity = getPoolBufferCapacity(
     { intro: { capacity: INTRO_DISK_UNLOCK_CAPACITY, byteCreated: true } },

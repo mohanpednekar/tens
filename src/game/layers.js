@@ -541,7 +541,7 @@ export const DATA_LAKE_CAPACITY_BY_LEVEL = [1, 10, 100, 1000]
 // getDataLakeOverflowRatePercent (engine.js) now reports as a plain binary "receiving/not
 // receiving" indicator for ByteFoundryPage's own `mode="lake"` bar, chosen to match
 // FILL_MULTIPLIER_MIN_PERCENT so that bar's width still doesn't jump at the multiplier→lake
-// handoff (see MultiplierBar's own doc comment).
+// handoff (the UI bar that showed it was removed).
 export const DATA_LAKE_OVERFLOW_MAX_PERCENT = 50
 export const DATA_LAKE_OVERFLOW_MIN_PERCENT = 0
 

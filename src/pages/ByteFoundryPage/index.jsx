@@ -918,7 +918,9 @@ const ByteFoundryPage = ({ game, focusNonce: _focusNonce = 0 }) => {
                 disabled={poolTapDisabled}
                 aria-label={`tap pool ${poolIndex} memory`}
                 title={
-                  poolBufferFull
+                  lakeDraining
+                    ? 'The Data Lake is draining this buffer — tapping cannot speed it up'
+                    : poolBufferFull
                     ? undefined
                     : poolMultiplierCapped
                       ? `Tap bonus already at the ${FILL_MULTIPLIER_TAP_BONUS_CAP_PERCENT}% cap`

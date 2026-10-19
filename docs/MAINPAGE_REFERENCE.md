@@ -58,14 +58,11 @@ continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into th
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). Its second line is the fill-based
-`MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
-compact bar that grows/shrinks from the MIDDLE (FILL_MULTIPLIER_MAX_PERCENT, 150%, fills the full track width; the yellow tap bonus is a second bar below it, only while active), with each bar's own
-percent readout centered inside it (or just past the fill when it is too narrow to hold it) — replacing an earlier corner needle-speedometer that
-took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
+(`aria-label="data stream bit balance"`). Its second line is a `CapacityBonusRow` (📦 Capacity left, a narrow tap-bonus bar centered, "+x% 👆" right — bar and text only while a bonus is active; the fill multiplier itself is the tinted ⚡ Speed figure, see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), — replacing an earlier corner needle-speedometer that
+took too much vertical space. The production rate, shown as its EFFECTIVE value (base × fill multiplier, 3 significant digits, tinted red→blue→green) — `` `⚡ ${formatSpeedText(formatBitsInNearestUnit(rate × multiplier))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
-appears in the title row rather than a footer; Capacity appears in the centered balance line. There
+appears in the title row rather than a footer; Capacity appears in the row below the title (the balance line shows the balance only). There
 is no segmented block-bar rate meter any more (an earlier 8-block segmented `role="progressbar"` version was replaced once the bar
 itself started carrying the fill-multiplier reading). There is no separate Cache tile — the same
 progress the old Cache tile showed (progress toward the next convertible Data Stream→Kilobyte unit) is
@@ -133,11 +130,7 @@ the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the 
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
 or tier name in the visible text) on the left, the
 Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
-(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the pool's own `MultiplierBar` (switching to
-`mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow, or
-whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests below full and the tile's tap is disabled (`lakeDraining`) —
-see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its percent readout inside the
-bar (or just past a too-narrow fill). Only ONE pool is expanded at a time by default — the
+(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the same `CapacityBonusRow` (pool Capacity, tap bonus). While `isDataLakePoolDrainAvailable` the lake drains the buffer directly and the tile's tap is disabled (`lakeDraining`; the tap button's title says so). The lake's title/action row also shows on a collapsed pool (`DataLakePanel section="header"`). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
 `PoolTitleToggle` — the "<symbol> Pool" title alone (`aria-expanded`,
