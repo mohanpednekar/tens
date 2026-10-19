@@ -43,24 +43,25 @@ that structure.
 `DataStreamCard` would double-box the same region) — containing everything for that section (title,
 Speed, combined balance/capacity, and bars) as one control, so the whole thing reads (and, once
 interactive, taps) as one piece rather than a separate header sitting above a boxed balance tile.
-Its first line is a `TitleRow`: a "Data Stream" `SectionTitle` at top-left and live Speed at
-top-right. Disk status/count is not shown. An earlier
+Its first line is a `TitleRow`: a "Data Stream" `SectionTitle` at top-left, the combined balance in the
+middle, and live Speed at top-right (the row wraps, Speed dropping to its own right-aligned line, when
+a long balance leaves no room on a narrow phone). Disk status/count is not shown. An earlier
 iteration rendered this header row as a separate element ABOVE the `FillableStatCard` instead of
-inside it — merged together per player feedback that the two read as disconnected pieces. Its
-second line applies `components/Button`'s own
+inside it — merged together per player feedback that the two read as disconnected pieces. The tile
+applies `components/Button`'s own
 `progressFill` gradient directly via its `$progress` prop (`= bits / capacity`), so the tile fills
 toward Capacity the same visual way every button on this page already does, and shows balance and
-capacity together in a bigger, centered `BalanceText` (`balance / capacity-unit`, using
+capacity together in the middle, centered `BalanceText` (`balance / capacity-unit`, using
 `formatMemoryBalanceValue`; see "Numbers are formatted"
 below — `useTrimBalanceAfterFull` switches it to the ordinary trimmed form once `isFull` has held
 continuously for `FULL_BALANCE_TRIM_DELAY_MS`, 1 real second) — scaled into the same binary unit `capacity` picks (raw bits before the Byte generator
 exists, since before that the Buffer is always exactly 8 bits/1 Byte with nothing meaningful to
 denominate in yet, then B/KiB/MiB/…/QiB by 1024 each step once it does, extending
 `TIER_DEFINITIONS`' own tier symbols with an "i") — plus a hidden `role="progressbar"`
-(`aria-label="data stream bit balance"`). Its third line, below the balance, is the fill-based
+(`aria-label="data stream bit balance"`). Its second line is the fill-based
 `MultiplierBar` (once `byteCreated` — see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md) — a
-compact bar that grows/shrinks from the MIDDLE (200% fills the full track width), with its own
-percent readout rendered below the bar itself — replacing an earlier corner needle-speedometer that
+compact bar that grows/shrinks from the MIDDLE (FILL_MULTIPLIER_MAX_PERCENT, 150%, fills the full track width; the yellow tap bonus is a second bar below it, only while active), with each bar's own
+percent readout centered inside it (or just past the fill when it is too narrow to hold it) — replacing an earlier corner needle-speedometer that
 took too much vertical space. The production rate — `` `⚡ ${formatBitsInNearestUnit(getIntroProductionRate(intro))}/s` `` (e.g. "⚡ 4
 bits/s" below 1 Byte/sec, "⚡ 1 B/s" at/above it, "⚡ 2 KiB/s" once the rate itself crosses the next
 binary-unit threshold — the SAME binary B/KiB/MiB/… ladder the balance line above it renders in) —
@@ -100,16 +101,11 @@ B/s at even `log2` exponents and the arithmetic mean of the two neighbouring eve
 odd exponents (alternating ×1.5/×4/3 growth, exactly ×2 per two upgrades). The current Capacity and
 derived Speed stay visible above the button on the Data Stream tile's own footer row; there is no
 after-upgrade preview. `disabled={!capacityUpgradeClickable}` where `capacityUpgradeClickable =
-isMemoryCapacityUpgradeAvailable(state) || isMemoryCapacityUpgradeArmable(state)`: a full Buffer
-upgrades immediately; below full (any fill, byte combined, not at cap, not already armed) a click
-arms the upgrade (`intro.capacityUpgradeQueued`), pausing every Data Stream outflow until the Buffer
-fills and it fires. While armed the button is hidden and the Data Stream tile itself reflects the
-status instead: a `warn`-colored inset outline (`$upgrading`) plus an `UpgradeStatusText` line
-"⏫ Upgrading to <next capacity> · ⚡ <next speed>" with a smaller second line "Outflow paused" (`UpgradeStatusNote`) (id `data-stream-upgrade-status`, wired to the tile
-via `aria-describedby`). A small neutral "✕ Cancel upgrade" button (`aria-label="cancel data stream
-upgrade"`, `actions.clearIntroCapacityUpgradeQueue`) takes the upgrade button's place until then —
-rendered as the SAME keyed `Button` element in the same slot, so arming or cancelling never unmounts
-the focused control (keyboard focus stays put). Upgrade Data Stream sits outside the forced priority order (see
+isMemoryCapacityUpgradeArmable(state)`: a click at any fill (byte combined, not at cap, not already
+running) starts the upgrade (`intro.capacityUpgradeQueued`); `tickCapacityUpgradeDrain` then pulls 100% of
+base Speed from the Buffer into `intro.capacityUpgradeProgress`. While running, the SAME `Button` becomes
+an inert progress bar ("⏫ Upgrading Data Stream…", fill = progress/Capacity, hidden `progressbar`
+`aria-label="data stream upgrade progress"`); there is no cancel, and the tile is unchanged. Upgrade Data Stream sits outside the forced priority order (see
 docs/ECONOMY_REFERENCE.md).
 
 Compute lives entirely on its own dedicated screen (`ComputePage` — see below), reached via AppNav
@@ -130,22 +126,22 @@ liveness is Capacity-only" in CLAUDE.md and docs/ECONOMY_REFERENCE.md's "Byte Fo
 renders its own separate `PoolCard`
 (`styled(StatCard)`, `aria-label="pool {n}"`), stacked below `DataStreamCard` in ascending order —
 NOT one continuous card shared across pools or with Data Stream. A pool's own title/Speed,
-balance/capacity, and bars all render INSIDE the SAME tappable `FillableStatCard`
-`<button>` (`aria-label="tap pool {n} memory"`, calling `actions.tapPoolBuffer(poolIndex)`,
-`disabled={poolBufferFull || poolMultiplierCapped}`) — a `TitleRow` is the button's first line:
+balance/capacity, and bars all render in ONE `PoolTile` (a `FillableStatCard` div) whose tap target is a
+transparent stretched `PoolTapButton` (`aria-label="tap pool {n} memory"`, calling
+`actions.tapPoolBuffer(poolIndex)`, `disabled={poolBufferFull || lakeDraining || poolMultiplierCapped}`) behind
+the `PoolTileContent` readouts (`pointer-events: none`) — a `TitleRow` is the content's first line:
 title "`<symbol>` Pool" (e.g. "KB Pool" — `TIER_DEFINITIONS[poolIndex - 1].symbol`, no index number
-or tier name in the visible text) on the left, and Bandwidth on the right. Its second line is the
-Memory buffer balance and Capacity (`balance / capacity-unit`) in a bigger, centered `BalanceText`, same as Data Stream's own tile
-above. Its third line, below the balance, is the pool's own `MultiplierBar` (switching to
+or tier name in the visible text) on the left, the
+Memory buffer balance and Capacity (`balance / capacity-unit`) in a centered `BalanceText` in the middle, and Bandwidth on the right
+(same as Data Stream's own tile above, including the narrow-phone wrap). Its second line is the pool's own `MultiplierBar` (switching to
 `mode="lake"` once that pool's own buffer is full AND its Data Lake is ready to receive overflow, or
 whenever `isDataLakePoolDrainAvailable` — the lake then drains the buffer directly, so it rests below full and the tile's tap is disabled (`lakeDraining`) —
-see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its own percent readout below the
-bar itself. Only ONE pool is expanded at a time by default — the
+see "Fill-based Speed/Bandwidth multiplier" in CLAUDE.md), with its percent readout inside the
+bar (or just past a too-narrow fill). Only ONE pool is expanded at a time by default — the
 largest currently visible one (`expandedPoolIndex` local state: `null` follows the largest unlocked
 pool, an explicit `0` means "all collapsed", any other value pins one specific pool) — toggled by a
-separate, slim `ExpandToggleButton` (a plain ▲/▼ chevron, `aria-expanded`,
-`aria-label="expand/collapse pool {n}"`) rendered right below the tap button, not nested inside it
-(a `<button>` can't nest inside another `<button>`). An earlier iteration had the header in its own
+`PoolTitleToggle` — the "<symbol> Pool" title alone (`aria-expanded`,
+`aria-label="expand/collapse pool {n}"`), a real `<button>` that is a sibling of the stretched `PoolTapButton` (tap target) rather than nested in it, so a disabled tap never blocks it. An earlier iteration had the header in its own
 separate `PoolSummaryButton` (toggling expand/collapse) ABOVE the balance tile instead of merged
 into it — folded together per player feedback that the two looked like disconnected pieces rather
 than one control. A still-earlier iteration also rendered a second, always-visible, non-interactive
@@ -159,7 +155,7 @@ Storage is continuous on this same page: **Provision Disk** — the common disk-
 hidden until `storageRevealed` (`isStorageUnlocked(state)` — Buffer has reached `INTRO_DISK_UNLOCK_CAPACITY`, 8,192 bits — "1 KiB" in Memory's own binary
 scale, deliberately equal to pool 1's own `getPoolCapacityUnlockThresholdBits(1)` so Storage and
 pool 1's card reveal simultaneously — a later gate than `revealed`'s own 8000-bit ("1,000 B") one above).
-Renders in the Data Stream card's own `ActionsRow`, directly below Upgrade Data Stream (one
+Renders in its own standalone `ProvisionCard` (`aria-label="Provision Disk"`, no padding — the button fills the card flush), directly below the Data Stream card (one
 location regardless of which pool the offer belongs to — no per-pool copy, no fallback slot), hidden
 only while `isStoragePoolRebuilding(state, diskPoolIndex)`. Upgrade Data Stream itself shows only
 relative gains (current values are on the tile): `🏷️ <current Capacity (= cost)> · 📦 ×2 · ⚡ ×<speed
@@ -767,10 +763,8 @@ not at the bottom"):
 - **Money balance click-to-expand global multipliers.** The Money `CenteredCard` (`aria-label="money
   display"`) is always clickable — `role="button"`, `tabIndex={0}`, an Enter/Space `onKeyDown` handler,
   and `onClick` toggling a local `showGlobalMultipliers` boolean (plain `useState`, not persisted/reset
-  by `handleResetClick`, same convention as `openTierDetailIds`) — via a new `$expandable` `CenteredCard`
-  prop (cursor/hover styling shared with `$actionable`, but its own `theme.color.accent` focus-visible
-  outline rather than `$actionable`'s gold one, since this toggle has nothing to do with triggering
-  Prestige). Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
+  by `handleResetClick`, same convention as `openTierDetailIds`) — via `MoneyHeroToggle` (wrapping only the balance figure; carries `aria-label="money display"`, cursor/hover and a
+  `theme.color.accent` focus-visible outline) — the rest of the card is not a trigger. Expanding it renders a `GlobalMultipliersList` (`<ul>`, left-aligned to override
   `CenteredCard`'s own `text-align: center`, same technique `FullScreenCard`'s own `ul` already uses;
   text color `theme.color.textMuted`) listing every *global*
   (not per-tier) production multiplier and its current effect: the Prestige speed bonus (once
@@ -799,15 +793,9 @@ not at the bottom"):
   `Lv.N — +N% faster ticks on every tier.`, `OverclockCard`'s current per-level rate, and the
   Perks → Unlocks' Tier Tickspeed Autobuyers start-Prestige/step pattern (see "Scale Up and
   Overclock cards"/"Perks page" above) — each collapsed until the player clicks that heading.
-  *Closing* it back is more permissive: clicking the heading again (native `<summary>` toggle) or
-  clicking the revealed status line itself both work, via a shared `collapseDisclosure` click
-  handler on the `Disclosure` element (`event.target.closest('summary')` short-circuits so the
-  native toggle isn't fought, otherwise force-sets `.open = false` directly — safe since none of
-  these `<details>` are React-controlled) — mirroring the tier row's own "click anywhere on the
-  tile also toggles its Details" convention (see "Tier row details disclosure" below), scoped to
-  collapsing only here since opening still requires the heading specifically. Each card's own
+  Only the heading (native `<summary>` toggle) opens or closes it — clicking the revealed status line does nothing. Each card's own
   action button sits *outside* its `Disclosure` as a sibling, so clicking Buy/Upgrade/Overclock
-  never touches this handler at all. None of these is prose about *how* the mechanic works, only
+  never touches the disclosure. None of these is prose about *how* the mechanic works, only
   *what its current numbers are*.
 - **Page title.** The MainPage header is `<h1>Byte Factory</h1>` (screen name; AppNav short label **Factory** — not the game name
   “Tens”). Top-level destinations (Foundry → Boosters → Compute → Factory → Guide → More) live in
@@ -1125,8 +1113,8 @@ unchanged; only typography, spacing, and the details divider moved.
 **Tier row details disclosure.** Unlike the native `<details>`-based `Disclosure` a few other
 cards/categories use (see "No description prose on this page" above), a tier row has **no separate
 visible trigger at all**: `TierName` itself,
-wrapped in `TierNameTrigger` (`grid-area: name`, `role="button"`, `tabIndex={0}`, `aria-expanded`,
-`aria-controls`), is the trigger, sitting in its normal spot rather than a redundant "Details" label
+wrapped in `TierNameTrigger` (`grid-area: name`, a plain layout div), is the trigger via its inner `TierNameLabel` (`role="button"`, `tabIndex={0}`, `aria-expanded`,
+`aria-controls`), sitting in its normal spot rather than a redundant "Details" label
 elsewhere in the row. This is a **plain React-controlled disclosure**, not native `<details>`/
 `<summary>` — a `display: contents`-based version was
 tried first, but hit a real Chromium limitation: a `display: contents` ancestor breaks a promoted grid
@@ -1134,23 +1122,16 @@ child's ability to span multiple `grid-template-areas` cells, so the details con
 single column's width instead of the full row (confirmed with a minimal repro, independent of whether
 the span was expressed via a named area or explicit `grid-column` line numbers). `openTierDetailIds`
 (a `Set` of expanded tier ids, in `MainPage`) tracks which rows are expanded;
-`TierNameTrigger`'s `onClick` toggles it and calls `event.stopPropagation()`, and its `onKeyDown`
+`TierNameLabel`'s `onClick` toggles it, and its `onKeyDown`
 handles Enter/Space so keyboard operability doesn't regress from what native `<summary>` would give
-for free. Applying `role="button"` to `TierNameTrigger` doesn't affect `TierName`'s own heading
-semantics — ARIA role only overrides an element's *own* implicit role, never a nested descendant's, so
-the `<h3>` inside it stays in the heading-navigation outline. The disclosure's content (a small `<ul>`,
+for free. `TierNameLabel` sits inside the `<h3>` `TierName`, so the heading stays in the heading-navigation outline. The disclosure's content (a small `<ul>`,
 see below) is `TierDetailsContent`, a plain `grid-area: details` div rendered *only* while its tier id
 is in `openTierDetailIds` — collapsed, nothing renders there at all, so the row's `details` grid line
 contributes zero height, an even more compact collapsed footprint than a visible "Details" line would
 give, and (being a normal, non-`display: contents`-promoted grid item) correctly spans the full row
 width when expanded.
 
-Clicking the tier name isn't the only way in: `TierLine` itself carries an `onClick` that also toggles
-`openTierDetailIds` for a click anywhere else on the tile — skipped when the click originated inside a
-`<button>` (so Buy/tickspeed clicks never also toggle the disclosure); a click inside
-`TierNameTrigger` never reaches this handler at all, since its own `onClick` already stopped
-propagation. `TierLine` sets `cursor: pointer` accordingly, inherited by everything in the row except
-the two buttons, which override it via their own `disabled`-dependent cursor rule. Expanding it lists,
+Only the name toggles — the rest of the tile (and the Owned count) is inert, so Buy/tickspeed clicks can never also toggle it. Expanding it lists,
 in the `<ul>`: the tier's base tickspeed (`getTierBaseTickSpeedSeconds`, from `layers.js`) and effective
 tickspeed (`getEffectiveTierTickSpeedSeconds`, with the contributing tier/global tickspeed multipliers
 named inline), the purchase milestone multiplier and the lifetime purchase count driving it
