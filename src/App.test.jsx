@@ -3215,7 +3215,8 @@ test('the Data Lake header shows target price, filled amount and fill speed', ()
   render(<App />)
 
   const lake = screen.getByLabelText('KB lake')
-  expect(within(lake).getByTitle('Current Cores target price')).toHaveTextContent('🎯 1 KB')
+  // The target price is the lake's Booster control itself (shown once, not duplicated in the header).
+  expect(within(lake).getAllByText(/1 KB/).filter(el => el.closest('h4') === null && el.textContent.includes('🏷️'))).toHaveLength(1)
   expect(within(lake).getByTitle('Currently filled')).toHaveTextContent('1.25 KB')
   // Buffer full + pool complete -> the lake fills at the pool's Bandwidth, so the speed is non-zero.
   expect(within(lake).getByTitle('Current fill speed')).not.toHaveTextContent('⚡ 0 B/s')

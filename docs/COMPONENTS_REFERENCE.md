@@ -108,7 +108,7 @@ directly below its disks, not in a separate panel after all the pool cards.
 not a labelled table row: a header row pairing the lake's title ("`<symbol>` Lake", e.g. "KB Lake" —
 the size unit is always part of the visible name) with a single next-Booster-cost control in place of
 a lifetime-purchased-count readout (the cost figure alone is self-explanatory — see below for what
-this control does); then a `LakeStatsRow` (🎯 current Booster target price left, filled amount — full disks plus the open slot, `formatPoolBalance` — centered, ⚡ current fill speed right: the pool's Bandwidth while the lake drains/overflows automatically, else 0); then a dedicated `LakePoolTile` (own
+this control does); then a `LakeStatsRow` (current Booster target price + buy control (🏷️) left, filled amount — full disks plus the open slot, `formatPoolBalance` — centered, ⚡ current fill speed right: the pool's Bandwidth while the lake drains/overflows automatically, else 0); then a dedicated `LakePoolTile` (own
 `FillableStatCard`-style element, purely additive over the per-square fill overlay below — same
 `fillBits`/`getDataLakeCurrentFillSubSize` data, no separate mechanic) showing "`<fillBits>` /
 `<open slot size>`" — ALWAYS rendered whenever an open slot exists (`currentFillSubSize !== null`),
