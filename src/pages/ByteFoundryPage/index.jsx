@@ -282,10 +282,6 @@ const PoolTitleToggle = styled.button`
   pointer-events: auto;
   border-radius: ${props => props.theme.radius.sm};
 
-  &:hover {
-    text-decoration: underline;
-  }
-
   &:focus-visible {
     outline: 2px solid ${props => props.theme.color.accent};
     outline-offset: 2px;
