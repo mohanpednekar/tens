@@ -482,9 +482,9 @@ const BonusText = styled.span`
   justify-self: end;
   font-weight: 600;
   color: ${TAP_YELLOW};
-  padding: 0.05rem 0.4rem;
-  border-radius: ${props => props.theme.radius.pill};
-  background: rgba(20, 20, 24, 0.85);
+  /* A dark outline under the yellow fill keeps it legible on the light theme too. */
+  -webkit-text-stroke: 3px rgba(40, 28, 0, 0.9);
+  paint-order: stroke fill;
   white-space: nowrap;
 `
 
