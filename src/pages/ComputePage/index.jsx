@@ -555,7 +555,7 @@ const ComputePage = ({ game }) => {
         <Title>⚡ Boosters</Title>
       </Header>
 
-      <BoostCard aria-label="boost">
+      <BoostCard>
       <SectionLabel>Boost</SectionLabel>
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
         <ActiveBoostRow aria-label="active compute boost">

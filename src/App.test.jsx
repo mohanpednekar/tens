@@ -4466,6 +4466,59 @@ describe('ComputePage merge chain', () => {
     expect(screen.getByRole('button', { name: /merge 8 nodes into 1 cluster/i })).toBeDisabled()
   })
 
+  describe('tier detail row is progressively disclosed', () => {
+    const base = { bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true }
+    const nodesMerge = () => screen.queryByRole('button', { name: /merge 8 nodes into 1 cluster/i })
+    const nodesAuto = () => screen.queryByRole('button', { name: /enable auto-merge for nodes into clusters/i })
+
+    test('an idle, unselected tier shows no merge/auto buttons until selected', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesMerge()).not.toBeInTheDocument()
+      expect(nodesAuto()).not.toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: /select nodes to fund a compute boost/i }))
+      expect(nodesMerge()).toBeInTheDocument()
+      expect(nodesAuto()).toBeInTheDocument()
+    })
+
+    test('a tier with a possible merge is revealed without selecting it', () => {
+      seedIntroState({ ...base, computeNodes: 8, computeClusters: 0 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesMerge()).toBeEnabled()
+    })
+
+    test('Auto-merge unlock progress (cost tier held > 0) reveals the row', () => {
+      seedIntroState({ ...base, computeNodes: 2, computeClusters: 3 })
+      render(<App />)
+      openBoosters()
+
+      expect(nodesAuto()).toBeDisabled()
+    })
+
+    test('an in-flight reserve merge reveals the row', () => {
+      seedIntroState({ ...base, computeNodes: 2, autoMergeNodesIntoCluster: true, computeNodesMergeRemainingSeconds: 30 })
+      render(<App />)
+      openBoosters()
+
+      expect(screen.getByRole('button', { name: /nodes reserve merge in progress/i })).toBeInTheDocument()
+    })
+
+    test('the selected tier is marked via aria-pressed and a single tier is armed at a time', () => {
+      seedIntroState({ ...base, computeCores: 1, computeNodes: 2 })
+      render(<App />)
+      openBoosters()
+
+      const nodes = screen.getByRole('button', { name: /select nodes to fund a compute boost/i })
+      fireEvent.click(nodes)
+      expect(nodes).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: /select cores to fund a compute boost/i })).toHaveAttribute('aria-pressed', 'false')
+    })
+  })
+
   test('merging spends 8 of the input entity for 1 of the output entity', () => {
     seedIntroState({
       bits: 0, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY, byteCreated: true, computeMergePageUnlocked: true,
