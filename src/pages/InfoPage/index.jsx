@@ -471,7 +471,7 @@ const InfoPage = () => {
             <strong>Auto-Boost</strong> ({COMPUTE_AUTO_BOOST_UNLOCK_COST} PP, one-time): when a
             tier is full and waiting on its own in-flight reserve merge, automatically activates
             (or stacks) your preferred preset from the <strong>biggest</strong> such tier (default
-            Standard). Preference is selectable on Boosters after unlock. Never forfeits an active
+            Standard). Unlock it on Perks → Unlocks; the preference is selectable on Boosters afterwards. Never forfeits an active
             boost to switch presets.
           </li>
           <li>Megacomputer’s only use is funding a Boost.</li>

@@ -15,6 +15,7 @@ import {
   getSmartAutobuyerCost,
   getTierTickspeedAutobuyerMilestone,
   isBuyMaxUnlocked,
+  isComputeCoreConversionUnlocked,
   isProductionFrozen,
   isTierUnlocked,
   isUnboundedPrestigeUnlocked,
@@ -22,6 +23,7 @@ import {
 import {
   AUTO_PRESTIGE_AUTOBUYER_COST,
   AUTO_SCALE_UP_COST,
+  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   COMPUTE_FLOPS_TIER_DEFINITIONS,
   PRESTIGE_SPEED_BONUS_UNLOCK_COST,
   PRESTIGE_UNBOUNDED_MIN_COUNT,
@@ -344,6 +346,10 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
   const canBuyAutoPrestigeAutobuyer = !isFrozen && isAutoPrestigeActive && !isAutoPrestigeAutobuyerActive && points >= AUTO_PRESTIGE_AUTOBUYER_COST
   const autoPrestigeAutobuyerEnabled = state.autoPrestigeAutobuyerEnabled ?? true
 
+  const showComputeAutoBoost = isComputeCoreConversionUnlocked(state)
+  const isComputeAutoBoostActive = state.computeAutoBoostUnlocked ?? false
+  const canBuyComputeAutoBoost = !isFrozen && !isComputeAutoBoostActive && points >= COMPUTE_AUTO_BOOST_UNLOCK_COST
+
   const tabDots = {
     unlocks: hasAffordablePpUnlock(state) && 'PP unlock available',
     upgrades: hasAffordablePpLevelUpgrade(state) && 'PP upgrade available',
@@ -451,6 +457,27 @@ const PerksPage = ({ game, focusNonce = 0 }) => {
             />
           )}
         </Row>
+        {showComputeAutoBoost && (
+          <Row aria-label="compute auto boost upgrade">
+            <RowLabel>🤖 Auto-Boost</RowLabel>
+            {isComputeAutoBoostActive ? (
+              <UnlockedBadge icon="🤖" name="Auto-Boost" />
+            ) : (
+              <PpPurchaseButton
+                ariaLabel={`Unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} Prestige Points`}
+                color="#38bdf8"
+                cost={COMPUTE_AUTO_BOOST_UNLOCK_COST}
+                disabled={!canBuyComputeAutoBoost}
+                icon="🔓"
+                label={`${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}
+                onClick={actions.buyComputeAutoBoost}
+                points={points}
+                progressLabel="Auto-Boost Prestige Point progress"
+                title="Spend Prestige Points so a full tier waiting on its own in-flight merge automatically activates your preferred Boost preset (choose it on Boosters)"
+              />
+            )}
+          </Row>
+        )}
         {allTiersFullyAutomated && isAutoPrestigeActive && (
           <Row aria-label="auto-prestige autobuyer upgrade">
             <RowLabel>🔁 Auto-Prestige Autobuyer</RowLabel>

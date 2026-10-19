@@ -521,7 +521,7 @@ not at the bottom"):
    control here any more — it moved to the Stack + Reclaim row below (see 2c).
 2. Right below that, the Boost EFFECTS section itself — always rendered, whether or not a boost is
    active or the merge chain has unlocked yet:
-   The effects section, Stack/Reclaim/Forfeit row and Auto-Boost control all live in one `BoostCard`
+   The effects section, Stack/Reclaim/Forfeit row and (once unlocked) the Auto-Boost preference picker all live in one `BoostCard`. The Auto-Boost UNLOCK itself is a Perks → Unlocks → Global Automation row (`aria-label="compute auto boost upgrade"`, shown once `isComputeCoreConversionUnlocked`, also lights the Perks dot via `hasAffordablePpUnlock`); Boosters shows nothing for it while locked
    (a `<section>` headed "Boost"); the tier list below it is headed "Power a boost with".
    a. An `ArmedStatusText` line (`"Spends 1 <Singular> per boost · <symbol> <N> held"`, or "Pick a
       tier below to power a boost" if nothing's armed yet) naming whichever compute-ladder tier is currently armed —

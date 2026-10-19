@@ -29,6 +29,7 @@ import {
   INTRO_BITS_PER_KILOBYTE_CONVERSION,
   INTRO_BYTE_COMBINE_COST,
   INTRO_CAPACITY_CAP_BITS,
+  COMPUTE_AUTO_BOOST_UNLOCK_COST,
   INTRO_COMPUTE_CORE_UNLOCK_CAPACITY,
   INTRO_DISK_UNLOCK_CAPACITY,
   INTRO_STARTING_CAPACITY,
@@ -1517,6 +1518,29 @@ test('an Enable Auto Scale Up button appears on the PP Upgrades page after the f
   expect(screen.getByLabelText('Auto Scale Up unlocked')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /enable auto scale up/i })).not.toBeInTheDocument()
   expect(screen.getByLabelText(/^prestige points display$/i)).toHaveTextContent('0 PP')
+})
+
+test('Auto-Boost is unlocked from Perks → Unlocks (30 PP), not on Boosters, which then shows its preset preference', async () => {
+  const user = userEvent.setup()
+
+  seedMainGameState({
+    intro: { mainGameUnlocked: true, byteCreated: true, capacity: INTRO_COMPUTE_CORE_UNLOCK_CAPACITY },
+    prestige: { xp: 0, points: COMPUTE_AUTO_BOOST_UNLOCK_COST, count: 1, highestMilestone: 1 },
+  })
+  render(<App />)
+
+  fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
+  expect(screen.queryByRole('button', { name: /unlock compute auto boost/i })).not.toBeInTheDocument()
+  expect(screen.queryByLabelText(/^compute auto boost$/i)).not.toBeInTheDocument()
+
+  await openPerksTab(user, /open unlocks/i)
+  const unlock = screen.getByRole('button', { name: new RegExp(`unlock compute auto boost for ${COMPUTE_AUTO_BOOST_UNLOCK_COST} prestige points`, 'i') })
+  expect(unlock).toBeEnabled()
+  await user.click(unlock)
+  expect(screen.getByLabelText('Auto-Boost unlocked')).toBeInTheDocument()
+
+  fireEvent.click(screen.getByRole('button', { name: /open boosters/i }))
+  expect(screen.getByRole('group', { name: /auto boost preference/i })).toBeInTheDocument()
 })
 
 test('the global latency panel renders above the tier list, not below it', () => {
