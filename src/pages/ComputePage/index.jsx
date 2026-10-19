@@ -1,4 +1,4 @@
-import Button, { ButtonContent } from 'components/Button'
+import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
 import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
 import { useState } from 'react'
@@ -764,7 +764,10 @@ const ComputePage = ({ game }) => {
                     >
                       <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
-                      <TierLabel>{`${row.label} ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
+                      <TierLabel>
+                        {row.label}
+                        <VisuallyHidden>{` ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</VisuallyHidden>
+                      </TierLabel>
                       <SlotsRow role="group" aria-label={`${row.label} slots`}>
                         {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
                           <NormalSlot key={index} $filled={index < primaryHeld} aria-hidden="true" />
