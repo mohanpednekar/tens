@@ -1,6 +1,6 @@
-import Button, { ButtonContent } from 'components/Button'
+import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
 import { canActivateComputeBoost, canForfeitComputeBoost, canReclaimComputeBoost, formatAmount, formatOfflineDuration, getComputeBoostTierDurationSeconds, getComputeBoostTierMultiplier, getComputeFieldEffectiveCap, getComputeMergeDurationSeconds, getComputeReserveHeld, isComputeBoostTurnAvailable, isComputeMergeStartAvailableAtBoundary, isDiskFillAvailable, isProductionFrozen, isProvisionDiskAvailable, isStackComputeBoostTurnAvailable } from 'game/engine'
-import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP } from 'game/layers'
+import { COMPUTE_AUTO_BOOST_UNLOCK_COST, COMPUTE_BOOST_MAX_STACKS, COMPUTE_BOOST_PRESETS, COMPUTE_ENTITY_CAP, COMPUTE_MERGE_RATIO, COMPUTE_MERGE_RESERVE_CAP, TIER_DEFINITIONS } from 'game/layers'
 import { useState } from 'react'
 import styled from 'styled-components'
 
@@ -50,10 +50,44 @@ const TierBlock = styled.div`
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 0.3rem 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: ${props => props.theme.radius.md};
+  background: ${props => props.theme.color.surface};
+  border: 1px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.border)};
+`
+
+// One card for everything that acts on a Boost (status, funding tier, presets, stack/forfeit,
+// auto) so the tier list below reads as "pick what powers it".
+const BoostCard = styled.section`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.space.sm};
+  width: 100%;
+  padding: ${props => props.theme.space.md};
   border-radius: ${props => props.theme.radius.md};
   background: ${props => props.theme.color.surface};
   border: 1px solid ${props => props.theme.color.border};
+`
+
+const SectionLabel = styled.h2`
+  margin: 0;
+  align-self: flex-start;
+  font-size: ${props => props.theme.type.scale.xs.size};
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${props => props.theme.color.textMuted};
+`
+
+// Filled dot = the tier that powers boosts.
+const SelectMarker = styled.span`
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  border: 1.5px solid ${props => (props.$selected ? props.theme.color.warn : props.theme.color.textMuted)};
+  background: ${props => (props.$selected ? props.theme.color.warn : 'transparent')};
 `
 
 // Row 1: tier name/symbol plus a row of COMPUTE_ENTITY_CAP (10) normal slots — "First row shows 10
@@ -80,9 +114,8 @@ const TierSelectButton = styled.button`
   min-width: 0;
   border: none;
   border-radius: ${props => props.theme.radius.sm};
-  background: ${props => (props.$selected ? props.theme.color.surfaceRaised : 'none')};
-  outline: ${props => (props.$selected ? `1.5px solid ${props.theme.color.warn}` : 'none')};
-  padding: 2px 4px;
+  background: none;
+  padding: 4px;
   cursor: pointer;
   color: inherit;
   font: inherit;
@@ -491,6 +524,13 @@ const canMerge = (input, output, outputCap) => input >= COMPUTE_MERGE_RATIO && o
 // cost/spend sentence naming exactly 1 of a tier (e.g. "spend 1 Core", not "spend 1 Cores").
 const singularize = label => label.replace(/s$/, '')
 
+// "Kilobytes" for 1 covered Factory tier, "Kilobytes–Megabytes" for 2, … — which Factory tiers a
+// boost funded from compute-ladder tier `tierIndex` applies to (see getComputeBoostCoveredTierCount).
+const describeCoveredTiers = tierIndex =>
+  tierIndex <= 1
+    ? TIER_DEFINITIONS[0].name
+    : `${TIER_DEFINITIONS[0].name}–${TIER_DEFINITIONS[Math.min(tierIndex, TIER_DEFINITIONS.length) - 1].name}`
+
 const ComputePage = ({ game }) => {
   const { actions, state } = game
   const { intro } = state
@@ -522,20 +562,22 @@ const ComputePage = ({ game }) => {
         <Title>⚡ Boosters</Title>
       </Header>
 
+      <BoostCard>
+      <SectionLabel>Boost</SectionLabel>
       {boostActive && COMPUTE_BOOST_PRESETS[intro.computeBoostType] && (
         <ActiveBoostRow aria-label="active compute boost">
           <span
-            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
+            title={`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} (${activeRow?.label ?? ''}) active: ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} production on ${describeCoveredTiers(activeTierIndex)}, ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left, ${intro.computeBoostStacks}x stacked`}
           >
-            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} · ${intro.computeBoostStacks}×`}
+            {`${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.icon ?? '⚡'} ${COMPUTE_BOOST_DISPLAY[intro.computeBoostType]?.label ?? intro.computeBoostType} ×${getComputeBoostTierMultiplier(intro.computeBoostType, activeTierIndex)} · ${formatOfflineDuration(intro.computeBoostRemainingSeconds)} left${intro.computeBoostStacks > 1 ? ` · ${intro.computeBoostStacks} stacked` : ''}`}
           </span>
         </ActiveBoostRow>
       )}
 
       <ArmedStatusText>
         {armedRow
-          ? `Armed: ${armedRow.symbol} ${armedRow.label} (${formatAmount(armedHeld)} held)`
-          : 'Click a tier below to arm the Boost presets'}
+          ? `Spends 1 ${singularize(armedRow.label)} per boost · boosts ${describeCoveredTiers(armedTierIndex)} · ${armedRow.symbol} ${formatAmount(armedHeld)} held`
+          : 'Pick a tier below to power a boost'}
       </ArmedStatusText>
       <BoostRow role="group" aria-label="compute boost">
         {Object.entries(COMPUTE_BOOST_PRESETS).map(([boostType, preset]) => {
@@ -589,7 +631,7 @@ const ComputePage = ({ game }) => {
               type="button"
               variant="prestige"
             >
-              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon}×${multiplier}`}</ButtonContent>
+              <ButtonContent>{`${COMPUTE_BOOST_DISPLAY[boostType].icon} ×${multiplier} · ${formatOfflineDuration(durationSeconds)}`}</ButtonContent>
             </CompactButton>
           )
         })}
@@ -677,16 +719,18 @@ const ComputePage = ({ game }) => {
             onClick={actions.buyComputeAutoBoost}
             title={`Unlock Auto-Boost: while a tier is full and waiting on its own in-flight merge, automatically activate your preferred preset from the biggest such tier (default Standard). Costs ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP.`}
             type="button"
-            variant="prestige"
+            variant="neutral"
           >
-            <ButtonContent>{`🤖 Auto-Boost · ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}</ButtonContent>
+            <ButtonContent>{`🤖 Unlock Auto-Boost · ${COMPUTE_AUTO_BOOST_UNLOCK_COST} PP`}</ButtonContent>
           </CompactButton>
         )}
       </AutoBoostRow>
+      </BoostCard>
 
       {intro.computeMergePageUnlocked
         ? (
           <TierBlocksGroup aria-label="compute entities">
+            <SectionLabel>Power a boost with</SectionLabel>
             {ENTITY_ROWS.map((row, rowIndex) => {
               const tierIndex = rowIndex + 1
               const count = intro[row.countField] ?? 0
@@ -706,19 +750,31 @@ const ComputePage = ({ game }) => {
               const primaryHeld = Math.min(count, COMPUTE_ENTITY_CAP)
               const reserveHeld = hasMergeRow ? getComputeReserveHeld(state, tierIndex) : 0
 
+              // Progressive disclosure: the merge/auto row only shows for the selected tier or when
+              // there is something to act on or watch, so idle tiers stay a single line.
+              const canMergeNow = autoEnabled ? startAvailable : canMerge(count, intro[row.mergeOutputField] ?? 0, outputCap)
+              const showDetail = hasMergeRow && (
+                armedTierIndex === tierIndex || merging || canMergeNow || reserveHeld > 0
+                || (!autoEnabled && autoCostHeld > 0)
+              )
+
               return (
-                <TierBlock key={row.key} aria-label={`${row.label} tier`}>
+                <TierBlock key={row.key} aria-label={`${row.label} tier`} $selected={armedTierIndex === tierIndex}>
                   <TierHeaderRow>
                     <TierSelectButton
                       type="button"
                       onClick={() => setSelectedBoostTierIndex(armedTierIndex === tierIndex ? null : tierIndex)}
                       aria-pressed={armedTierIndex === tierIndex}
                       aria-label={`select ${row.label} to fund a compute boost`}
-                      title={`Select ${row.label} to arm the Boost presets above at this tier's own power`}
+                      title={`Select ${row.label} to arm the Boost presets above — they'll boost ${describeCoveredTiers(tierIndex)}`}
                       $selected={armedTierIndex === tierIndex}
                     >
+                      <SelectMarker aria-hidden="true" $selected={armedTierIndex === tierIndex} />
                       <TierSymbol aria-hidden="true">{row.symbol}</TierSymbol>
-                      <TierLabel>{`${row.label} ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</TierLabel>
+                      <TierLabel>
+                        {row.label}
+                        <VisuallyHidden>{` ${formatAmount(primaryHeld)}/${COMPUTE_ENTITY_CAP}`}</VisuallyHidden>
+                      </TierLabel>
                       <SlotsRow role="group" aria-label={`${row.label} slots`}>
                         {Array.from({ length: COMPUTE_ENTITY_CAP }, (_, index) => (
                           <NormalSlot key={index} $filled={index < primaryHeld} aria-hidden="true" />
@@ -727,6 +783,7 @@ const ComputePage = ({ game }) => {
                     </TierSelectButton>
                   </TierHeaderRow>
 
+                  {showDetail && (
                   <TierMergeRow>
                     {hasMergeRow && (
                       autoEnabled ? (
@@ -771,7 +828,7 @@ const ComputePage = ({ game }) => {
                             type="button"
                             variant="prestige"
                           >
-                            <ButtonContent>⬆ Merge</ButtonContent>
+                            <ButtonContent>{`⬆ Merge ${COMPUTE_MERGE_RATIO} → 1 ${row.mergeOutputLabel}`}</ButtonContent>
                           </TierActionButton>
                           <TierActionButton
                             aria-label={row.autoAriaLabel}
@@ -782,12 +839,13 @@ const ComputePage = ({ game }) => {
                             variant="info"
                             $progress={autoUnlockProgress}
                           >
-                            <ButtonContent>{`🤖 ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP}`}</ButtonContent>
+                            <ButtonContent>{`🤖 Auto · ${formatAmount(autoCostHeld)}/${COMPUTE_ENTITY_CAP} ${row.autoCostLabel}`}</ButtonContent>
                           </TierActionButton>
                         </>
                       )
                     )}
                   </TierMergeRow>
+                  )}
                 </TierBlock>
               )
             })}
