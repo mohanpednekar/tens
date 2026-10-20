@@ -1,13 +1,17 @@
+import { VisuallyHidden } from 'components/Button'
 import StatCard from 'components/StatCard'
 import {
+  getAutobuyerUnlockMilestone,
+  getFlopsAutobuyerUnlockEra,
+  getTierTickspeedAutobuyerMilestone,
   isEraEligible,
   isUnboundedPrestigeUnlocked,
 } from 'game/engine'
-import { ERA_ELIGIBILITY_PP } from 'game/layers'
+import { COMPUTE_FLOPS_TIER_DEFINITIONS, ERA_ELIGIBILITY_PP, TIER_DEFINITIONS } from 'game/layers'
 import styled, { useTheme } from 'styled-components'
 
-// Standalone Milestones screen — Chapters and Era ascension status (autobuyer unlock milestones live
-// once, on Perks → Unlocks); reachable from every screen via AppNav → More without requiring the main game to be unlocked
+// Standalone Milestones screen — Chapters, tier-autobuyer, tickspeed-autobuyer, and Compute-autobuyer
+// status; reachable from every screen via AppNav → More without requiring the main game to be unlocked
 // first (Chapters in particular is useful during the Foundry gate).
 
 const RootDiv = styled.main`
@@ -69,10 +73,22 @@ const Badge = styled.span`
   opacity: ${props => (props.$dimmed ? 0.75 : 1)};
 `
 
+const TierNameLabel = styled.span`
+  font-weight: 600;
+  min-width: 2rem;
+`
+
+const RowControls = styled.div`
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+`
+
 const MilestonesPage = ({ game }) => {
   const { state } = game
   const theme = useTheme()
   const { prestige } = state
+  const isFirstRun = (prestige.count ?? 0) === 0
   const eraCount = state.era?.count ?? 0
   const eonsBalance = state.eons?.balance ?? 0
   const eraEligible = isEraEligible(state)
@@ -101,7 +117,7 @@ const MilestonesPage = ({ game }) => {
                 $dimmed={!chapter.reached}
                 aria-label={`${chapter.label} chapter ${chapter.reached ? 'complete' : 'not yet complete'}`}
               >
-                {chapter.reached ? '✅' : '🔒'}
+                {chapter.reached ? '✅' : '🔒'} {chapter.label}
               </Badge>
             </Row>
           ))}
@@ -139,6 +155,134 @@ const MilestonesPage = ({ game }) => {
           </Row>
         </Category>
 
+        {!isFirstRun && (
+          <>
+            <Category aria-label="tier autobuyer unlock milestones category">
+              <CategoryHeading>Tier Autobuyer Unlocks</CategoryHeading>
+              {TIER_DEFINITIONS.map(tier => {
+                const milestone = getAutobuyerUnlockMilestone(tier.id)
+                const reached = (state.autobuyers[tier.id] ?? null) !== null
+                return (
+                  <Row key={tier.id} aria-label={`${tier.name} autobuyer unlock milestone`}>
+                    <TierNameLabel title={tier.name}>
+                      <VisuallyHidden>{tier.name}</VisuallyHidden>
+                      <span aria-hidden="true">{tier.symbol}</span>
+                    </TierNameLabel>
+                    {reached ? (
+                      <Badge $color={theme.color.good} aria-label={`${tier.name}'s autobuyer unlocked at Prestige ${milestone}`}>
+                        ✅ Prestige {milestone}
+                      </Badge>
+                    ) : (
+                      <RowControls>
+                        <Badge
+                          $color={theme.color.disabled}
+                          $dimmed
+                          aria-label={`${tier.name}'s autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
+                          title={`You're at Prestige ${prestige.count}`}
+                        >
+                          🔒 Prestige {milestone}
+                        </Badge>
+                        <VisuallyHidden
+                          role="progressbar"
+                          aria-label={`${tier.name} autobuyer unlock milestone progress`}
+                          aria-valuenow={Math.min(prestige.count, milestone)}
+                          aria-valuemin={0}
+                          aria-valuemax={milestone}
+                        />
+                      </RowControls>
+                    )}
+                  </Row>
+                )
+              })}
+            </Category>
+
+            <Category aria-label="tier tickspeed autobuyer milestones category">
+              <CategoryHeading>Tier Tickspeed Autobuyers</CategoryHeading>
+              {TIER_DEFINITIONS.map(tier => {
+                const milestone = getTierTickspeedAutobuyerMilestone(tier.id)
+                const reached = !!state.tierTickspeedAutobuyer?.[tier.id]
+                return (
+                  <Row key={tier.id} aria-label={`${tier.name} tickspeed autobuyer milestone`}>
+                    <TierNameLabel title={tier.name}>
+                      <VisuallyHidden>{tier.name}</VisuallyHidden>
+                      <span aria-hidden="true">{tier.symbol}</span>
+                    </TierNameLabel>
+                    {reached ? (
+                      <Badge
+                        $color={theme.color.good}
+                        aria-label={`${tier.name}'s tickspeed autobuyer unlocked at Prestige ${milestone}`}
+                      >
+                        ✅ Prestige {milestone}
+                      </Badge>
+                    ) : (
+                      <RowControls>
+                        <Badge
+                          $color={theme.color.disabled}
+                          $dimmed
+                          aria-label={`${tier.name}'s tickspeed autobuyer unlocks at Prestige ${milestone}, currently at Prestige ${prestige.count}`}
+                          title={`You're at Prestige ${prestige.count}`}
+                        >
+                          🔒 Prestige {milestone}
+                        </Badge>
+                        <VisuallyHidden
+                          role="progressbar"
+                          aria-label={`${tier.name} tickspeed autobuyer milestone progress`}
+                          aria-valuenow={Math.min(prestige.count, milestone)}
+                          aria-valuemin={0}
+                          aria-valuemax={milestone}
+                        />
+                      </RowControls>
+                    )}
+                  </Row>
+                )
+              })}
+            </Category>
+
+            {state.computeFlops?.pageUnlocked && (
+              <Category aria-label="compute autobuyer unlock milestones category">
+                <CategoryHeading>Compute Autobuyer Unlocks</CategoryHeading>
+                {COMPUTE_FLOPS_TIER_DEFINITIONS.map(flopTier => {
+                  const milestone = getFlopsAutobuyerUnlockEra(flopTier.id)
+                  const reached = (state.computeFlopsAutobuyers?.[flopTier.id] ?? null) !== null
+                  return (
+                    <Row key={flopTier.id} aria-label={`${flopTier.name} autobuyer unlock milestone`}>
+                      <TierNameLabel title={flopTier.name}>
+                        <VisuallyHidden>{flopTier.name}</VisuallyHidden>
+                        <span aria-hidden="true">{flopTier.symbol}</span>
+                      </TierNameLabel>
+                      {reached ? (
+                        <Badge
+                          $color={theme.color.good}
+                          aria-label={`${flopTier.name}'s autobuyer unlocked at Era ${milestone}`}
+                        >
+                          ✅ Era {milestone}
+                        </Badge>
+                      ) : (
+                        <RowControls>
+                          <Badge
+                            $color={theme.color.disabled}
+                            $dimmed
+                            aria-label={`${flopTier.name}'s autobuyer unlocks at Era ${milestone}, currently at Era ${eraCount}`}
+                            title={`You're at Era ${eraCount}`}
+                          >
+                            🔒 Era {milestone}
+                          </Badge>
+                          <VisuallyHidden
+                            role="progressbar"
+                            aria-label={`${flopTier.name} autobuyer unlock milestone progress`}
+                            aria-valuenow={Math.min(eraCount, milestone)}
+                            aria-valuemin={0}
+                            aria-valuemax={milestone}
+                          />
+                        </RowControls>
+                      )}
+                    </Row>
+                  )
+                })}
+              </Category>
+            )}
+          </>
+        )}
       </List>
     </RootDiv>
   )

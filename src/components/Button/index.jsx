@@ -158,24 +158,21 @@ export const ButtonLabel = styled.span`
 `
 
 // Splits a button's compact visible text ("🛒 Lv.10 $100") into a fixed-position ButtonIcon and
-// a centered ButtonLabel at the first space — but only when the text actually starts with an icon
-// glyph (anything that isn't a letter/digit/currency/bracket). Plain-word labels ("Redeem code",
-// "Ascend Era…") stay one centered ButtonLabel; splitting them at the first word used to push that
-// word to the far left and leave a wide gap ("Dummy      checkout (free)").
+// a centered ButtonLabel at the first space — every such label in this app follows the
+// icon-then-word convention (see MainPage), so the first space always lands right after the
+// icon glyph. Falls back to a single centered ButtonLabel for icon-less text (e.g. "Dismiss",
+// or any string with no space at all) rather than misreading its first word as an icon.
 //
-// `children` is an array whenever the caller's JSX mixes literal text with an embedded
-// {expression}; plain string/number segments are joined with '' (not Array#toString's commas).
-// Element children (e.g. <Money>) are rendered as-is inside one ButtonLabel — stringifying them
-// printed "[object Object]".
-const ICON_START = /^[^\p{L}\p{N}$€£(\[{"'“‘…+\-−×]/u
-
+// `children` is an array, not a single string, whenever the caller's JSX mixes literal text with
+// an embedded {expression} (e.g. `<ButtonContent>Cost ({formatAmount(x)} B)</ButtonContent>`) —
+// JSX gives each text/expression segment its own array entry. Plain `String(children)` on such an
+// array uses Array.prototype.toString(), which joins with a bare comma (no space) — silently
+// splicing a "," into the rendered label at every interpolation boundary. Join with '' instead so
+// the segments concatenate back into the single string the caller actually wrote.
 export const ButtonContent = ({ children }) => {
-  const parts = Array.isArray(children) ? children : [children]
-  const allText = parts.every(part => typeof part === 'string' || typeof part === 'number')
-  if (!allText) return <ButtonLabel>{children}</ButtonLabel>
-  const text = parts.join('')
+  const text = Array.isArray(children) ? children.join('') : String(children)
   const spaceIndex = text.indexOf(' ')
-  if (spaceIndex === -1 || !ICON_START.test(text)) return <ButtonLabel>{text}</ButtonLabel>
+  if (spaceIndex === -1) return <ButtonLabel>{text}</ButtonLabel>
   return (
     <>
       <ButtonIcon>{text.slice(0, spaceIndex + 1)}</ButtonIcon>

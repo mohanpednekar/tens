@@ -8,9 +8,8 @@ import DevModePage from 'pages/DevModePage'
 import InfoPage from 'pages/InfoPage'
 import MainPage from 'pages/MainPage'
 import MilestonesPage from 'pages/MilestonesPage'
-import PerksPage from 'pages/PerksPage'
 import SettingsPage from 'pages/SettingsPage'
-import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isPerksPageRevealed, isProductionFrozen } from 'game/engine'
+import { isComputeCoreConversionUnlocked, isComputeFlopsPageRevealed, isProductionFrozen } from 'game/engine'
 import { getNavAttention } from 'game/navAttention'
 import { useIncrementalGame } from 'game/useIncrementalGame'
 import { buildResetActiveSlotConfirmMessage, buildResetByteFoundryConfirmMessage, loadThemePreference, saveThemePreference } from 'game/storage'
@@ -44,8 +43,8 @@ function App() {
   // cycle goes straight to Factory with no replay of the gate.
   const [page, setPage] = useState('game')
   const [menuOpen, setMenuOpen] = useState(false)
-  // Bumped when AppNav selects Perks so it resets to its Unlocks tab.
-  const [perksFocusNonce, setPerksFocusNonce] = useState(0)
+  // Bumped when AppNav selects Byte Factory so MainPage resets to the Factory tab (not Upgrades).
+  const [tiersFocusNonce, setTiersFocusNonce] = useState(0)
   // Bumped on legacy `storage` navigations (and available for future Foundry focus resets).
   // ByteFoundryPage no longer has Memory | Storage tabs; focusNonce is accepted for API parity.
   const [foundryFocusNonce, setFoundryFocusNonce] = useState(0)
@@ -61,13 +60,11 @@ function App() {
   // Factory is the only progress-gated primary destination — utilities (Guide / More) stay available
   // from the first launch, including during the mandatory gate.
   const showTiers = mainGameUnlocked
-  const showPerks = mainGameUnlocked && isPerksPageRevealed(game.state)
 
   const navigate = nextPage => {
     if (nextPage === 'boosters' && !showBoosters) return
     if (nextPage === 'compute' && !showComputeFlops) return
     if (nextPage === 'game' && !mainGameUnlocked) return
-    if (nextPage === 'perks' && !showPerks) return
     // Legacy 'storage' deep-links → Foundry (Disks are continuous Foundry sections now).
     if (nextPage === 'storage') {
       setMenuOpen(false)
@@ -76,7 +73,7 @@ function App() {
       return
     }
     setMenuOpen(false)
-    if (nextPage === 'perks') setPerksFocusNonce(n => n + 1)
+    if (nextPage === 'game') setTiersFocusNonce(n => n + 1)
     if (nextPage === 'foundry') setFoundryFocusNonce(n => n + 1)
     setPage(nextPage)
   }
@@ -131,16 +128,14 @@ function App() {
     content = <ComputePage game={game} />
   } else if (page === 'compute') {
     content = <ComputeFlopsPage game={game} />
-  } else if (page === 'perks' && showPerks) {
-    content = <PerksPage focusNonce={perksFocusNonce} game={game} />
   } else if (page === 'milestones') {
     content = <MilestonesPage game={game} />
   } else if (page === 'dev') {
-    content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage game={game} />
+    content = import.meta.env.DEV ? <DevModePage game={game} /> : <MainPage focusNonce={tiersFocusNonce} game={game} />
   } else if (page === 'settings') {
     content = <SettingsPage game={game} onReset={handleReset} onResetByteFoundry={handleResetByteFoundry} onThemePreferenceChange={handleThemePreferenceChange} themePreference={themePreference} />
   } else {
-    content = <MainPage game={game} />
+    content = <MainPage focusNonce={tiersFocusNonce} game={game} />
   }
 
   const navAttention = getNavAttention(game.state)
@@ -159,7 +154,6 @@ function App() {
         onOpenMore={() => setMenuOpen(open => !open)}
         showBoosters={showBoosters}
         showComputeFlops={showComputeFlops}
-        showPerks={showPerks}
         showTiers={showTiers}
       />
       <AppMenu

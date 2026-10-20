@@ -1,11 +1,9 @@
 import Button, { ButtonContent, VisuallyHidden } from 'components/Button'
-import { COST_ICON } from 'components/icons'
 import StatCard from 'components/StatCard'
 import {
   formatDiskSize,
   formatDiskSizeBare,
   formatDiskSizeInPoolUnit,
-  formatPoolBalance,
   getBoosterPurchaseCost,
   getDataLakeCapacity,
   getDataLakeCapacityDoublingCost,
@@ -18,15 +16,11 @@ import {
   getDataLakeTier,
   getDataLakeTierLabel,
   getDataLakeUnitBits,
-  getPoolBufferBits,
-  getPoolBufferCapacity,
-  getStoragePoolBandwidth,
   isBoosterEntityAtCap,
   isBoosterPurchaseAvailable,
   isDataLakeAutoConvertActive,
   isDataLakeCapacityDoublingAvailable,
   isDataLakeCapacityMaxed,
-  isDataLakePoolDrainAvailable,
   isDataLakePoolReady,
   isStoragePoolFullyBuilt,
   isStoragePoolResetAvailable,
@@ -69,68 +63,14 @@ const LakeTitle = styled.h4`
   margin: 0;
   min-width: 0;
   font-family: ${props => props.theme.font.display};
-  font-size: ${props => props.theme.type.scale.sm.size};
-  line-height: ${props => props.theme.type.scale.sm.lineHeight};
+  font-size: ${props => props.theme.type.scale.md.size};
+  line-height: ${props => props.theme.type.scale.md.lineHeight};
   font-weight: 700;
   color: ${props => props.theme.color.text};
 `
 
 const LakeTitleSymbol = styled.span`
   flex-shrink: 0;
-`
-
-// One lake's header laid out like a pool / Data Stream tile: name + target price on the left, fill
-// speed on the right, the filled amount absolutely centered (vertically too when nothing sits under
-// the speed).
-const LakeHeader = styled.div`
-  position: relative;
-  width: 100%;
-  /* Insets the text to the same left/right edges as the pool tile above. */
-  padding: 0 0.25rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-`
-
-const LakeSubRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${props => props.theme.space.sm};
-  font-variant-numeric: tabular-nums;
-  font-size: ${props => props.theme.type.scale.xs.size};
-  color: ${props => props.theme.color.textMuted};
-  white-space: nowrap;
-  min-height: 1.4rem;
-
-  & > p {
-    text-align: left;
-  }
-`
-
-const LakeFilledText = styled.span`
-  position: absolute;
-  left: 50%;
-  ${props => (props.$large ? 'top: 50%; transform: translate(-50%, -50%);' : 'top: 0; transform: translateX(-50%);')}
-  pointer-events: none;
-  color: ${props => props.theme.color.text};
-  font-family: ${props => props.theme.font.display};
-  font-size: ${props => (props.$large ? props.theme.type.scale.lg.size : props.theme.type.scale.sm.size)};
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-`
-
-const LakeSpeedText = styled.span`
-  flex-shrink: 0;
-  margin-left: auto;
-  ${props => (props.$centered ? 'position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);' : '')}
-  font-size: ${props => props.theme.type.scale.xs.size};
-  font-weight: 600;
-  color: ${props => props.theme.color.textMuted};
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 `
 
 const StatusText = styled.p`
@@ -199,7 +139,7 @@ const LakePoolTile = styled.div`
   min-height: 1.8rem;
   border-radius: ${props => props.theme.radius.md};
   overflow: hidden;
-  background: color-mix(in srgb, ${props => props.theme.color.surfaceSunken} 45%, ${props => props.theme.color.surface});
+  background: ${props => props.theme.color.surfaceSunken};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,12 +206,7 @@ const clampFraction = value => Math.min(1, Math.max(0, value))
 // activity (it's a permanent part of that pool's own card now, not a rarity-filtered global list
 // entry) — instead of the default every-lake-with-activity behavior `getVisibleLakeTierIndexes`
 // still drives when `tierIndex` is omitted.
-// `section` splits one lake across two call sites: 'header' renders only the title + action row (the
-// always-visible part of a collapsed pool card), 'body' only the fill tile / disk squares (the
-// expanded part); omitted renders both.
-const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => {
-  const showHeader = section !== 'body'
-  const showBody = section !== 'header'
+const DataLakePanel = ({ actions, state, bare = false, tierIndex }) => {
   const visibleTiers = tierIndex != null ? [tierIndex] : getVisibleLakeTierIndexes(state)
   if (visibleTiers.length === 0) return null
 
@@ -336,73 +271,23 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
         // than a button for the whole duration (below).
         const converting = isDataLakeAutoConvertActive(state, tierIndex)
         const resetAvailable = isStoragePoolResetAvailable(state, tierIndex)
-        // Everything banked in this lake (full disks + the open slot's progress), self-sized below the
-        // lake's own unit like a pool's buffer balance.
-        const filledBits = getDataLakeDepositedUnits(tierIndex)(state) * unitBits + getDataLakeFillBits(state, tierIndex)
-        // The lake fills from its pool at the pool's Bandwidth, by draining the buffer directly or by
-        // full-buffer overflow once the pool is entirely built (see tickDataLakePoolDrain /
-        // tickPoolBufferFill); otherwise it is idle (or only filling via a manual conversion).
-        const fillingAutomatically = currentFillSubSize !== null && (
-          isDataLakePoolDrainAvailable(state, tierIndex) ||
-          (poolComplete && getPoolBufferBits(state, tierIndex) >= getPoolBufferCapacity(state, tierIndex))
-        )
-        const fillSpeed = fillingAutomatically ? getStoragePoolBandwidth(state, tierIndex) : 0
 
         return (
-          <LakeBlock aria-label={showHeader ? `${label} lake` : undefined} key={tierIndex}>
-            {showHeader && (
-              <LakeHeader>
-                <LakeHeaderRow>
-                  <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
-                    <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
-                    <span>Lake</span>
-                  </LakeTitle>
-                  <LakeSpeedText $centered={!(resetAvailable || (upgradeAvailable && !converting && !entityAtCap && !canBuy))} title="Current fill speed">⚡ {formatDiskSize(fillSpeed)}/s</LakeSpeedText>
-                </LakeHeaderRow>
-                {/* Same layout as a pool/Data Stream tile: name top-left with the Booster target price
-                    under it (that price is also the lake's Booster control — clicking it buys
-                    immediately if already affordable, or starts the one-shot fill-then-buy automation,
-                    see startDataLakeAutoConvert), fill speed on the right, and the amount filled big
-                    and centered. Reset Pool / Scale Out, when offered, sit under the speed. */}
-                <LakeSubRow>
-                  {converting ? (
-                  <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
-                    {`${COST_ICON} ${nextCostSize}`}
-                  </StatusText>
-                ) : entityAtCap ? (
-                  <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
-                    {`${COST_ICON} ${nextCostSize}`}
-                  </StatusText>
-                ) : poolComplete ? (
-                  <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
-                    {`${COST_ICON} ${nextCostSize}`}
-                  </StatusText>
-                ) : canBuy ? (
-                  <ActionButton
-                    aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
-                    onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
-                    title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
-                    type="button"
-                    variant="success"
-                  >
-                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
-                  </ActionButton>
-                ) : poolReady ? (
-                  <ActionButton
-                    aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
-                    onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
-                    title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this ENTIRE pool is built`}
-                    type="button"
-                    variant="success"
-                  >
-                    <ButtonContent>{`${COST_ICON} ${nextCostSize}`}</ButtonContent>
-                  </ActionButton>
-                ) : (
-                  <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
-                    {`${COST_ICON} ${nextCostSize}`}
-                  </StatusText>
-                )}
-                  {resetAvailable ? (
+          <LakeBlock aria-label={`${label} lake`} key={tierIndex}>
+            <LakeHeaderRow>
+              <LakeTitle title={`${label} Data Lake — funds ${boosterLabel}`}>
+                <LakeTitleSymbol aria-hidden="true">{label}</LakeTitleSymbol>
+                <span>Lake</span>
+              </LakeTitle>
+              {/* The lake's own next-Booster cost doubles as its sole action control — clicking it
+                  buys immediately if already affordable, or starts the one-shot fill-then-buy
+                  automation otherwise (see startDataLakeAutoConvert's own doc comment); no separate
+                  Fill/Buy/Auto-Manual row is needed. Upgrade (Scale Out) still shares this same slot
+                  whenever it's the more relevant action (see the ternary below) — same "one action
+                  slot, priority-ordered" convention this row always used. Showing a lifetime
+                  purchased count here as well would be redundant: the cost figure alone already says
+                  everything a player needs at a glance. */}
+              {resetAvailable ? (
                 <ActionButton
                   aria-label={`reset the ${label} Storage Pool`}
                   onClick={() => actions.resetStoragePool(tierIndex)}
@@ -412,7 +297,31 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 >
                   <ButtonContent>↻ Reset Pool</ButtonContent>
                 </ActionButton>
-              ) : upgradeAvailable && !converting && !entityAtCap && !canBuy ? (
+              ) : converting ? (
+                <StatusText title={`Auto-converting toward the next ${boosterLabel} — drawing from this pool's own buffer until ${nextCostSize} is banked, then buys 1 and stops`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              ) : entityAtCap ? (
+                <StatusText title={`${boosterLabel} is already at the max — spend or merge it down first`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              ) : canBuy ? (
+                poolComplete ? (
+                  <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
+                    {`🎯 ${nextCostSize}`}
+                  </StatusText>
+                ) : (
+                  <ActionButton
+                    aria-label={`buy 1 ${boosterLabel} from the ${label} Data Lake`}
+                    onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
+                    title={`Buy 1 ${boosterLabel} for ${nextCostSize}`}
+                    type="button"
+                    variant="success"
+                  >
+                    <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                  </ActionButton>
+                )
+              ) : upgradeAvailable ? (
                 <ActionButton
                   aria-label={`increase the ${label} Data Lake's capacity ×10`}
                   onClick={() => actions.doubleDataLakeCapacity(tierIndex)}
@@ -422,14 +331,28 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 >
                   <ButtonContent>⚡ Scale Out</ButtonContent>
                 </ActionButton>
-              ) : null}
+              ) : poolComplete ? (
+                <StatusText title={`Automatically buys the next ${boosterLabel} for ${nextCostSize} whenever this lake has enough stored`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              ) : poolReady ? (
+                <ActionButton
+                  aria-label={`start converting toward 1 ${boosterLabel} from the ${label} Data Lake`}
+                  onClick={() => actions.startDataLakeAutoConvert(tierIndex)}
+                  title={`Draws from this pool's own buffer automatically until ${nextCostSize} is banked, then buys 1 ${boosterLabel} and stops — automatic overflow fill takes over once this ENTIRE pool is built`}
+                  type="button"
+                  variant="success"
+                >
+                  <ButtonContent>{`🎯 ${nextCostSize}`}</ButtonContent>
+                </ActionButton>
+              ) : (
+                <StatusText title={`Build a ${formatDiskSize(unitBits)} disk in Storage to unlock Boosters here`}>
+                  {`🎯 ${nextCostSize}`}
+                </StatusText>
+              )}
+            </LakeHeaderRow>
 
-                </LakeSubRow>
-                <LakeFilledText $large={!(resetAvailable || (upgradeAvailable && !converting && !entityAtCap && !canBuy))} title="Currently filled">{formatPoolBalance(filledBits, tierIndex)}</LakeFilledText>
-              </LakeHeader>
-            )}
-
-            {showBody && currentFillSubSize !== null && (() => {
+            {currentFillSubSize !== null && (() => {
               // Always visible, even before this lake is unlocked (isDataLakePoolReady) — showing a
               // static "0 / size" the whole time it's waiting, rather than the tile only appearing
               // out of nowhere once real progress starts. Silently absent feedback before that point
@@ -482,7 +405,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
               )
             })()}
 
-            {showBody && DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
+            {DATA_LAKE_SUB_SIZES.filter(subSize => (slotCounts[subSize] ?? 0) > 0).map(subSize => {
               const full = diskCounts[subSize] ?? 0
               const totalSlots = slotCounts[subSize]
               // Gated on poolReady for the same reason LakePoolTile above is (see its own
@@ -521,15 +444,13 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
                 </LakeSizeRow>
               )
             })}
-            {showBody && (
-              <VisuallyHidden
-                role="progressbar"
-                aria-label={`${label} lake deposits`}
-                aria-valuenow={Math.round((capacity > 0 ? getDataLakeDepositedUnits(tierIndex)(state) / capacity : 0) * 100)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              />
-            )}
+            <VisuallyHidden
+              role="progressbar"
+              aria-label={`${label} lake deposits`}
+              aria-valuenow={Math.round((capacity > 0 ? getDataLakeDepositedUnits(tierIndex)(state) / capacity : 0) * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
           </LakeBlock>
         )
       })}
@@ -539,7 +460,7 @@ const DataLakePanel = ({ actions, state, bare = false, tierIndex, section }) => 
   if (bare) {
     return (
       <>
-        {showHeader && <BareDivider />}
+        <BareDivider />
         {list}
       </>
     )

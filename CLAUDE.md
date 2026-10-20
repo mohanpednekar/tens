@@ -10,11 +10,10 @@ changing a formula, workflow, or mechanic a past iteration may already have trie
 **Tens** — a React incremental game; every mechanic (costs, production, prestige) is themed around
 powers of ten. No routing library, no backend — state lives in React and persists to `localStorage`.
 `App.jsx` switches top-level screens via a plain `useState` toggle plus a shared bottom `AppNav`
-(Foundry → Boosters → Compute → Factory → Perks → Guide → More) — not a router (see "Architecture"):
+(Foundry → Boosters → Compute → Factory → Guide → More) — not a router (see "Architecture"):
 `ByteFoundryPage` (tap-to-earn bootstrap; a one-time-ever mandatory gate on a save's very first cycle,
 until Storage's own capacity threshold is reached — never again after that, permanently revisitable),
-`MainPage` (tier ladder), `PerksPage` (after first Prestige: 🔓 Unlocks / ⏫ Upgrades / 🎛 Toggles icon
-tabs — PP purchases, autobuyer milestones, Buy max + automation pause toggles), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
+`MainPage` (tier ladder + PP Upgrades), `InfoPage` (Guide), `ComputePage`/`ComputeFlopsPage` (Boosters
 once Foundry Compute unlocks; PP Flops Compute at 100 PP). `StoragePage` is not an AppNav destination —
 disk arrays live under Foundry as continuous Memory + Storage sections on the same screen (no
 second-level tabs). Guide and More (Milestones / Settings) are always available, including during the
@@ -418,7 +417,7 @@ src/
                                DESIGN_HISTORY.md "Save persistence".
   components/
     AppNav/index.jsx        ← fixed bottom bar, progression order Foundry → Boosters → Compute → Factory →
-                               Perks → Guide → More; Factory omits during the Foundry gate (Guide/More stay);
+                               Guide → More; Factory omits during the Foundry gate (Guide/More stay);
                                green attention dots via game/navAttention.js
     AppMenu/index.jsx       ← More sheet — Milestones / Settings (always reachable; Reset / Reset Byte
                                Foundry are Settings → Danger zone only)
@@ -439,13 +438,9 @@ src/
                                each `ByteFoundryPage` pool card. Full contract (incl. the
                                omitted-`tierIndex` every-lake fallback mode, unused by any current
                                caller): `docs/COMPONENTS_REFERENCE.md`. Mechanic: "Economy model".
-    icons.js                ← shared glyphs (`COST_ICON` 🏷️ marks every cost: Data Lake Booster, Upgrade Data Stream,
-                               Provision Disk status line)
-    Switch/index.js         ← accessible on/off switch (`$on` + `aria-pressed`) for Perks → Toggles and
-                               Buy max. Full contract: `docs/COMPONENTS_REFERENCE.md`
     Money/index.js          ← styled money/amount display, `theme.color.text` + tabular-nums.
                                Full contract: `docs/COMPONENTS_REFERENCE.md`
-    BuyMaxToggle/index.jsx  ← Buy max mode toggle button (Perks → Toggles only); renders nothing until
+    BuyMaxToggle/index.jsx  ← Buy max mode toggle (MainPage + ComputeFlopsPage); renders nothing until
                                `isBuyMaxUnlocked` (first Prestige). See "Buy max mode" below
     ConfirmDialog/index.jsx ← in-game confirm overlay (StatCard + Cancel/Confirm); used by
                                SettingsPage's Era ascension action. Full contract:
@@ -472,19 +467,14 @@ src/
     ComputePage/index.jsx   ← Foundry Boosters screen: merge chain + Boost (Architecture 4b)
     ComputeFlopsPage/index.jsx ← PP Compute (Flops) screen; page id `'compute'`. Takes `{ game }`
                                (Architecture 4c / "Economy model")
-    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game }`.
-                               No second-level tabs. Full reference: `docs/MAINPAGE_REFERENCE.md`
-    PerksPage/index.jsx     ← page id `'perks'`, AppNav item once `isPerksPageRevealed` (= first
-                               Prestige/Era). Takes `{ game, focusNonce }`. Icon tabs: 🔓 Unlocks
-                               (one-time PP unlocks + every free autobuyer/Compute-autobuyer/Unbounded
-                               milestone, shown once), ⏫ Upgrades (Double PP, Auto-Prestige), 🎛
-                               Toggles (Buy max + every owned automation's pause). Tab dots:
-                               `hasAffordablePpUnlock`/`hasAffordablePpLevelUpgrade`
-                               (`docs/MAINPAGE_REFERENCE.md`)
+    MainPage/index.jsx      ← the tier ladder (see "Architecture"). Takes `{ game, focusNonce }`.
+                               Second-level tabs: Factory | Upgrades (after first Prestige). Full
+                               reference: `docs/MAINPAGE_REFERENCE.md`
     InfoPage/index.jsx      ← the Guide page (Architecture 5), including Byte Foundry/Storage/Compute
                                sections. Reached via AppNav's Guide item; takes no navigation props
                                (AppNav is the exit)
-    MilestonesPage/index.jsx ← Chapters / Era ascension status (Architecture 6)
+    MilestonesPage/index.jsx ← Chapters / tier-autobuyer / tickspeed-autobuyer / Compute-autobuyer
+                               status (Architecture 6)
     SettingsPage/index.jsx  ← Supporter pack, save slots, Prestige museum, Era ascension, Appearance,
                                Ops dashboard, Danger zone (Architecture 7)
     DevModePage/index.jsx   ← dev-only sandbox (see "Dev Mode"); reached via AppNav → More, rendered only
@@ -512,9 +502,9 @@ src/
                                <MainPage/>/<InfoPage/>/<ComputePage/>/<ComputeFlopsPage/>/
                                <MilestonesPage/>/<SettingsPage/>/<DevModePage/> via a local `page`
                                useState (`'game'`/`'info'`/`'foundry'`/`'boosters'`/`'compute'`/
-                               `'perks'`/`'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing
+                               `'milestones'`/`'settings'`/`'dev'`, default `'game'`) — not a routing
                                library — plus a shared fixed bottom `AppNav` (Foundry → Boosters →
-                               Compute → Factory → Perks → Guide → More) and `AppMenu` (More sheet → Milestones /
+                               Compute → Factory → Guide → More) and `AppMenu` (More sheet → Milestones /
                                Settings / Dev Mode in dev builds). Legacy `page === 'storage'` rewrites
                                to `'foundry'`. Which screen renders is derived, not `page` directly:
                                `showingFoundry = !GATE_EXEMPT_PAGES.has(page) && (!intro.mainGameUnlocked
@@ -589,7 +579,7 @@ Strict three-layer separation:
    and no side effects. Every mutation returns a new state object; invalid actions (can't afford, tier
    locked) return the *same* state reference unchanged, which callers use as a no-op signal (see
    `tickGame`'s autobuyer loop, which breaks as soon as `buyTierQuantity` returns the same object
-   back).
+   back — `buyTier` itself is only invoked one level down, inside `buyTierQuantity`'s own loop).
 2. **`useIncrementalGame.js`** — the only place holding React state. Called once, in `App.jsx` (lifted
    up from MainPage so `ByteFoundryPage` shares the save/tick loop). Owns the `setInterval` tick timer
    and the localStorage persistence effect, and exposes `{ state, actions, resetGame,
@@ -653,10 +643,10 @@ Strict three-layer separation:
    per pool below that pool's `components/DiskArrayRow`s (cache above disks) in the same disclosure
    (`docs/DESIGN_HISTORY.md`: "Pool titles simplified to `<symbol>` Pool; each pool's Data Lake moved
    inside its own card"). Disk Fill is fully automatic every tick (`DiskArrayRow` is a pure status
-   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered in
-   its own standalone "Provision Disk" card directly below the Data Stream card (hidden while the offer's pool is
-   rebuilding); Upgrade Data Stream previews the post-upgrade Capacity and Speed
-   (`docs/DESIGN_HISTORY.md`: "Provision Disk moved into the Data Stream card"). Each disk
+   display). Provision Disk is a single shared control (one disk ladder spans every pool) rendered inside
+   the ONE `PoolCard` the ladder's current offer (`getDiskSize`) belongs to (`getPoolIndexForDiskSize`),
+   plus a fallback copy (`provisionDiskButton`) after the Data Stream card for when that card isn't
+   visible yet (`docs/DESIGN_HISTORY.md`: "Provision Disk moved back inside its pool card"). Each disk
    array shows every size from `getDiskSizesToShow`, all `DISK_ARRAY_LADDER_CAP` (9) slots in one row.
    The "queue next build" pin-icon toggle was removed from the UI, but the auto-arming queue stays wired
    and live (see "Disks"; `docs/MAINPAGE_REFERENCE.md`'s Provision Disk button section);
@@ -685,7 +675,7 @@ Strict three-layer separation:
    this in the engine too), THEN each merge-boundary tier's two rows (issues #321/#326/#363): row 1 is the
    `COMPUTE_ENTITY_CAP` (10) normal-slot squares (never above 10/10, even once auto-merge is unlocked and
    the entity has grown into its reserve) plus a `TierSelectButton` arming the Boost presets at that
-   tier's own boost (same multiplier/duration for every tier; a tier-N boost covers the first N Factory tiers, `getComputeBoostCoveredTierCount`); row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
+   tier's scaled power; row 2 is, before auto-merge unlocks, Merge (`COMPUTE_MERGE_RATIO`, 8) + Unlock
    Auto-merge `TierActionButton`s (the latter with a live progress fill toward its
    `COMPUTE_ENTITY_CAP`-unit cost), or, once unlocked, the `COMPUTE_MERGE_RESERVE_CAP` (8) reserve-slot
    squares (gradually filled, `getComputeReserveHeld`) as the manual-start trigger — Megacomputer has no
@@ -705,8 +695,8 @@ Strict three-layer separation:
    constants the game uses, so they can't drift. Reads no `useIncrementalGame` state — only pure
    constants/formulas. Header shows the app version (`v{version}` from `package.json` via build-time
    import) — the **only** in-app version surface. Reached via AppNav's Guide item.
-6. **`MilestonesPage/index.jsx`** — Chapters / Era ascension status screen (autobuyer unlock
-   milestones live once, on Perks → Unlocks — not repeated here). Chapters: the first KiloByte, Go Googol, Open
+6. **`MilestonesPage/index.jsx`** — Chapters / tier-autobuyer / tickspeed-autobuyer /
+   Compute-autobuyer / Era ascension status screen. Chapters: the first KiloByte, Go Googol, Open
    Compute, Go Unbounded, Ascend an Era. Reached via AppNav → More (`page = 'milestones'`); always
    reachable, including during the Foundry gate. Takes `{ game }`. Pure renderer.
 7. **`SettingsPage/index.jsx`** — always-reachable utilities via AppNav → More (`page = 'settings'`):
@@ -755,11 +745,11 @@ There are 10 tiers, ids `tier01` through `tier10` (`TIER_DEFINITIONS` in `src/ga
 display names `Kilobytes` through `Quettabytes`. Every tier is bought directly with the base currency
 (`MONEY_ID = 'base'`, display name "Bits") and, once owned, produces the tier immediately below it,
 cascading down the ladder; `tier01` (Kilobytes) is the special case where cost is still Bits but
-production is a whole-Byte amount (`BYTES_ID = 'bytes'`, displayed as `B`) credited to Bits at
-`BITS_PER_BYTE` (8) per Byte. **Bytes and Bits are ONE pool** (`resources.base`) — there is no separate
-Bytes balance; 8 Bits = 1 Byte everywhere (see `docs/DESIGN_HISTORY.md`). **Latency** (the global
-tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is paid from that Bits balance —
-initial activation costs **10 Bytes (80 Bits)**. It unlocks once level 1 of tier01 is purchased; there
+production credits the separate Factory Bytes pool (`BYTES_ID = 'bytes'`, displayed as whole `B`) and
+mirrors the same amount × `BITS_PER_BYTE` into Bits so MoneyHero / Prestige / tier Buys keep moving
+(see `docs/DESIGN_HISTORY.md` for the #430 incident this mirror fixed). **Latency** (the global
+tickspeed multiplier on MainPage, formerly "Tickspeed"/"Clock Speed") is funded from that Bytes pool —
+initial activation costs **10 Bytes** — not Bits. It unlocks once level 1 of tier01 is purchased; there
 are no milestone bonus levels — every level compounds the same Overclock-scaled 1% step.
 Reaching Money ≥ `PRESTIGE_THRESHOLD` (`GOOGOL * BITS_PER_BYTE` = 8e100 — "1 Googol Bytes," in Bits
 since a Byte is 8 Bits) freezes the economy except for Prestige — unless `isUnboundedPrestigeUnlocked(state)`
@@ -799,12 +789,14 @@ generator. Combine creates the generator without snapping Capacity; save load vi
 keeps the generator (`byteCreated`) and the `mainGameUnlocked` latch but resets Capacity to
 `INTRO_STARTING_CAPACITY` with the rest of the Foundry (`buildEraIntroReset`) — Capacity is rebuilt each
 Era, Factory access never goes away again once earned. Production and storage grow via a single **Upgrade
-Data Stream** action: a click starts it (`isMemoryCapacityUpgradeArmable`, `intro.capacityUpgradeQueued`),
-and from then on `tickCapacityUpgradeDrain` pulls from the Buffer at a constant 100% of the base Speed
-(like a pool pulling at its Bandwidth, regardless of the fill multiplier) into `intro.capacityUpgradeProgress`, ahead of
-every other consumer — nothing is paused or raced; when the bar
-reaches the current Capacity (the cost) `intro.capacity` doubles. The run survives load and Prestige. While
-running, the same button becomes an inert progress bar (no cancel; the tile is unchanged). Displayed Speed is purely *derived* from Capacity
+Data Stream** action: it requires a full Buffer, drains it (cost = current capacity), and doubles
+`intro.capacity` — Capacity is the only purchased progression variable. The button is clickable at any
+fill (`isMemoryCapacityUpgradeArmable`): a click below 100% arms it (`intro.capacityUpgradeQueued`) and
+pauses every Data Stream outflow (`isDataStreamOutflowPaused` — `tickPoolBufferFill`/Data Lake overflow,
+`tickIntroAutoInvest`) until `tickQueuedCapacityUpgrade` fires it, so continuous pool/lake draw can't
+hold the Buffer below full indefinitely. The arm survives load and Prestige. While armed the button is
+hidden, the Data Stream tile shows the upgrade status, and a "Cancel upgrade" control disarms it
+(`clearIntroCapacityUpgradeQueue`). Displayed Speed is purely *derived* from Capacity
 (`getDataStreamSpeedBytesPerSecond`): at even powers of 2 it's `sqrt(capacityBytes)` B/s, at odd powers
 the arithmetic mean of the neighbouring even-exponent speeds — alternating ×1.5 and ×4/3 growth, exactly
 ×2 per two upgrades. Later, Disks (`StoragePage`) and Compute Cores/Nodes/Compute Boost (`ComputePage`,
@@ -833,11 +825,11 @@ each cycle. Nothing here ever fully freezes — every action stays live indefini
 `engine.js`) — the displayed Speed/Bandwidth never change; a separate fill-dependent multiplier (150%
 empty → 100% at 50% full → 50% at full buffer) scales only the real per-tick amount delivered into the
 buffer, boosted temporarily by tapping (+5%, decaying 1%/sec, hard-capped at 200% total).
-`ByteFoundryPage` no longer draws a multiplier bar: the Data Stream's Speed and each pool's Bandwidth
-show the EFFECTIVE value (base × multiplier, 3 significant digits, `formatSpeedText`), tinted
-red (50%) → blue (100%) → green (150%+) by `getSpeedColor`; each tile also gets a `CapacityBonusRow` (📦 Capacity under the name, a narrow tap-bonus bar, and "+x% 👆" under the speed; bar and bonus text auto-hide at 0).
-A collapsed pool card also shows its Data Lake title/action row (`DataLakePanel section="header"`; an
-expanded pool renders the full lake). Tap-bonus headroom clamping: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
+`ByteFoundryPage` shows it via a `MultiplierBar`; for a pool whose buffer is full AND whose Data Lake can
+receive AUTOMATIC overflow (`isDataLakePoolReady` AND `isStoragePoolFullyBuilt`), or whenever
+`isDataLakePoolDrainAvailable`, it switches `mode="lake"` to show the lake's overflow RATE (tile tap
+disabled; `DataLakePanel`'s `LakePoolTile` tracks fill LEVEL). Bar rendering, tap-bonus headroom
+clamping, lake-mode handoff: `docs/ECONOMY_REFERENCE.md`, `docs/MAINPAGE_REFERENCE.md`.
 
 **Data Stream Buffer / pool Memory Capacity** — **standing rule: non-binary (SI-clean or decade-power)
 transforms are for storage-pool-scoped values only; `intro.capacity` itself keeps doubling plainly in
@@ -909,10 +901,10 @@ from its pool's buffer at the pool's Bandwidth (`tickDataLakePoolDrain`, right a
 filling — only while every BUILT disk is full and no build is in progress in that pool, the lake has
 room, and the buffer holds more than the read cache's reservation (`isDataLakePoolDrainAvailable`; while
 it applies, full-buffer overflow yields to it so a tick isn't credited twice; unprovisioned slots don't
-block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while a running Upgrade Data Stream
-pulls from the Data Stream. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
+block it, even before the pool is complete). It's independent of the Data Stream, so lakes keep filling while an armed Upgrade Data Stream
+pauses Data Stream outflow. Manual fill (`fillDataLakeManually`/`isDataLakeManualFillAvailable`) spends
 directly from that pool's buffer up to what the next Booster still needs, outside the forced priority
-order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🏷️ `<cost>`" control that
+order, same as Buy. Not a standalone UI action: `DataLakePanel` has a single "🎯 `<cost>`" control that
 buys immediately (already affordable) or arms `intro.dataLakes[tier].autoConvertActive`;
 `tickDataLakeAutoConvert` then drives `fillDataLakeManually` one step per tick until affordable, buys
 exactly 1, and clears the flag — "one click, one full fill-then-buy conversion, then stop," never a
@@ -969,7 +961,7 @@ constant or formula — and check `docs/DESIGN_HISTORY.md` first if you're about
 formula/gate a past iteration may already have tried and rejected (e.g. the `<=` vs. `===`
 bank-redeemability check, the flat vs. dynamic transfer cost).
 
-**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`; toggled on Perks → Toggles) — a per-device toggle
+**Buy max mode** (unlocked after the first Prestige, `isBuyMaxUnlocked`) — a per-device toggle
 (`tens_buy_max_mode`, not game state) making each manual leveled purchase buy every affordable level:
 `buyTierMaxLevels` for Factory tiers (FULL levels only; partial progress or an unaffordable full level
 falls back to the ordinary single-level click) and `repeatPurchaseMax` for single-level ladders.
@@ -996,9 +988,6 @@ prestige rules, purchase-batch behavior, or the skill's own bot strategy). Publi
 new file per run** onto the stable orphan branch `ideal-run-strategy` via
 `publish-strategy.sh` (`runs/<UTC-stamp>-<sha>.md` + `README.md` index) — never merge that branch
 into `main`, and do not rename it with an agent/session suffix.
-
-**Expand/collapse convention:** only a disclosure's name/label (pool title, tier label, Latency/Overclock
-heading, money balance) toggles it — never the surrounding card/row, a chevron strip, or revealed content.
 
 ## Path aliases
 
@@ -1098,9 +1087,9 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   `engine.test.js`, asserting invariants (monotonicity in level/money-exponent, resource balances never
   negative) across generated inputs. `fc.assert(fc.property(...), { numRuns: 200 })` bounds generated
   cases so this stays fast in CI.
-- `yarn test` is green (1986 tests). The four core test files (`engine.test.js`, `layers.test.js`,
+- `yarn test` is green (1960 tests). The four core test files (`engine.test.js`, `layers.test.js`,
   `storage.test.js`, `App.test.jsx`) assert against the current tier/resource id scheme (`MONEY_ID =
-  'base'`, display name "Bits", symbol `b`; Bytes unit marker `BYTES_ID = 'bytes'` (no stored pool — Bits only), symbol `B`; tier ids
+  'base'`, display name "Bits", symbol `b`; Factory Bytes pool `BYTES_ID = 'bytes'`, symbol `B`; tier ids
   `tier01`/`tier02`/… with display names `Kilobytes`/`Megabytes`/…) — don't reintroduce an older scheme
   (`'Ones'`, `'money'`, `'hundreds'`, or a purchasable Bytes tier) left behind by prior renames/removals
   (see `docs/DESIGN_HISTORY.md`). Saves must use the current schema (`resources.base`,
@@ -1115,8 +1104,7 @@ is deliberately not present — a solo, AI-driven hobby project not soliciting e
   (Flops) screen; `capacitorConfig.test.js` pins the Capacitor Vite `createViteConfig` path;
   `pages/DevModePage/stateFields.test.js` covers Dev Mode's Variables-tree helpers
   (`prettifySegment`/`isEditableScalar`/`setValueAtPath`). With `save-migration/index.test.js`/
-  `navAttention.test.js` and `components/Button/index.test.jsx` (`ButtonContent` icon-split rules) that's
-  12 of the 18 files; the other six are
+  `navAttention.test.js` that's 11 of the 17 files; the other six are
   `scripts/adversarialReviewMarker.test.js`, `scripts/pr-low-risk-eligible.test.js`,
   `scripts/bump-version.test.js`, `scripts/check-graphify-freshness.test.js`,
   `scripts/classify-claude-failure.test.js`, and `scripts/lint-workflow-shell.test.js` — Vitest's default glob picks these up since `vite.config.js`'s `test`
